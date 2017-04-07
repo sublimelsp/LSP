@@ -1,0 +1,9 @@
+[
+    {
+        "keys": ["("],
+        "command": "signature_popup",
+        "context": [
+            { "key": "paren_pressed"}
+        ]
+    }
+]

@@ -251,6 +251,9 @@ def handle_initialize_result(result):
     global didopen_after_initialize
     capabilities = result.get("capabilities")
     initialize_document_sync(capabilities.get("textDocumentSync"))
+
+    # TODO: initialize completions, signatureHelp etc
+
     Events.subscribe('document.diagnostics', handle_diagnostics)
     for view in didopen_after_initialize:
         notify_did_open(view)
@@ -324,6 +327,8 @@ class AppendToErrorPanelCommand(sublime_plugin.TextCommand):
     def run(self, edit, message):
         self.view.insert(edit, self.view.size(), message + "\n")
 
+UNDERLINE_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE
+
 def handle_diagnostics(update):
     global phantomset
     file_path = uri_to_filename(update.get('uri'))
@@ -344,13 +349,12 @@ def handle_diagnostics(update):
     else:
         phantoms = list(create_phantom(view, diagnostic) for diagnostic in diagnostics)
 
-
-
     if phantomset is None:
         phantomset = sublime.PhantomSet(view, "diagnostics")
 
     if (len(regions)) > 0:
-        view.add_regions("errors", regions, "invalid", "dot", sublime.DRAW_OUTLINED)
+        # steal SublimeLinter's coloring.
+        view.add_regions("errors", regions, "sublimelinter.mark.error", "dot", sublime.DRAW_SQUIGGLY_UNDERLINE | UNDERLINE_FLAGS)
     else:
         view.erase_regions("errors")
 
@@ -382,7 +386,13 @@ def get_client(view):
         initializeParams = {
             "processId": client.process.pid,
             "rootPath": project_path,
-            "capabilities": {}
+            "capabilities": {
+                "completion": {
+                    "completionItem": {
+                        "snippetSupport": True
+                    }
+                }
+            }
         }
         client.send_request(Request.initialize(initializeParams), handle_initialize_result)
 
@@ -541,16 +551,16 @@ class CompletionHandler(sublime_plugin.EventListener):
         self.refreshing = False
         return self.completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
 
+    def format_completion(self, item):
+        label = item.get("label")
+        kind = item.get("kind")
+        detail = item.get("detail")
+        return ("{}\t{}".format(label, detail), label)
+
     def handle_response(self, response):
         items = response.get("items")
-        self.completions = []
-        for item in items:
-            label = item.get("label")
-            kind = item.get("kind")
-            detail = item.get("detail")
-
-            self.completions.append(("{}\t{}".format(label, detail), label))
-            self.run_auto_complete()
+        self.completions = list(self.format_completion(item) for item in items)
+        self.run_auto_complete()
 
     def run_auto_complete(self):
         self.refreshing = True
@@ -570,11 +580,17 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         syntax = settings.get('syntax')
         return syntax == 'Packages/TypeScript-TmLanguage/TypeScript.tmLanguage'
 
-    def on_modified(self):
+    def on_modified_async(self):
         pos = self.view.sel()[0].begin()
-        if (self.view.substr(pos - 1) == '('):
+        last_char = self.view.substr(pos - 1)
+        # TODO: this will fire too often, narrow down using scopes or regex
+        if (last_char == '(') or last_char == ',':
             client.send_request(Request.signatureHelp(get_document_position(self.view, pos)),
                                 lambda response: self.handle_response(response, pos))
+        else:
+            # TODO: this hides too soon.
+            if self.view.is_popup_visible():
+                self.view.hide_popup()
 
     def handle_response(self, response, point):
         signatures = response.get("signatures")
@@ -584,7 +600,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             html += '<p>' + signature.get('documentation') + '</p>'
             for parameter in signature.get('parameters'):
                 html += '<p>' + parameter.get('label') + ': ' + parameter.get('documentation') + '</p>'
-            self.view.show_popup(html, flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=point, max_width=800)
+            self.view.show_popup(html, flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=-1, max_width=800)
 
 
 class SaveListener(sublime_plugin.EventListener):

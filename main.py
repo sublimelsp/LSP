@@ -555,7 +555,9 @@ class CompletionHandler(sublime_plugin.EventListener):
         label = item.get("label")
         kind = item.get("kind")
         detail = item.get("detail")
-        return ("{}\t{}".format(label, detail), label)
+        if item.get("insertTextFormat") == 2:
+            insertText = item.get("insertText")
+        return ("{}\t{}".format(label, detail), insertText if insertText else label)
 
     def handle_response(self, response):
         items = response.get("items")

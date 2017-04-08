@@ -1,57 +1,11 @@
 const pants = "pants";
 console.error(pants);
-pants.charAt(3)
+// pants.
 
+const array = [1, 2, 3, 4];
 
+// doTasdhig();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Math.PI.toString();
 const error = "";
+// doThing();

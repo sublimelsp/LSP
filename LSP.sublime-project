@@ -1,0 +1,29 @@
+{
+	"build_systems":
+	[
+		{
+			"file_regex": "^[ ]*File \"(...*?)\", line ([0-9]*)",
+			"name": "Anaconda Python Builder",
+			"selector": "source.python",
+			"shell_cmd": "\"python\" -u \"$file\""
+		},
+		{
+			"name": "ESLint Fix",
+			"selector": "source.js",
+			"shell_cmd": "$project_path/node_modules/.bin/eslint --fix $file"
+		},
+		{
+			"name": "TSLint Fix",
+			"selector": "source.ts",
+			"working_dir": "$project_path",
+			"shell_cmd": "tslint --fix \"$file\""
+		}
+
+	],
+	"folders":
+	[
+		{
+			"path": "."
+		}
+	]
+}

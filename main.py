@@ -299,6 +299,7 @@ def create_phantom_html(text):
 
 def create_phantom(view, diagnostic):
     region = create_region(view, diagnostic)
+    # TODO: hook up hide phantom (if keeping them)
     return sublime.Phantom(region, '<p>' + create_phantom_html(diagnostic.get('message')) + '</p>', sublime.LAYOUT_BELOW)
 
 def create_region(view, diagnostic):
@@ -369,7 +370,9 @@ def handle_diagnostics(update):
 
         window.run_command("show_panel", {"panel": "output.diagnostics"})
         for message in output:
-            panel.run_command("append_to_error_panel", {"message": message})
+            # exec.py just calls append command with extra params, check https://github.com/randy3k/sublime-default/blob/master/exec.py
+            # panel.run_command("append_to_error_panel", {"message": message})
+            panel.run_command('append', {'characters': message + "\n", 'force': True, 'scroll_to_end': True})
 
     else:
         window.run_command("hide_panel", {"panel": "output.diagnostics"})

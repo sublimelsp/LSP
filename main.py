@@ -558,6 +558,7 @@ class CompletionHandler(sublime_plugin.EventListener):
         label = item.get("label")
         kind = item.get("kind")
         detail = item.get("detail")
+        insertText = None
         if item.get("insertTextFormat") == 2:
             insertText = item.get("insertText")
         return ("{}\t{}".format(label, detail), insertText if insertText else label)
@@ -604,7 +605,11 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             html = '<h4>' + signature.get('label') + '</h4>'
             html += '<p>' + signature.get('documentation') + '</p>'
             for parameter in signature.get('parameters'):
-                html += '<p>' + parameter.get('label') + ': ' + parameter.get('documentation') + '</p>'
+                paramDocs = parameter.get('documentation')
+                html += '<p>' + parameter.get('label')
+                if paramDocs:
+                    html += ': ' + paramDocs
+                html += '</p>'
             self.view.show_popup(html, flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=-1, max_width=800)
 
 

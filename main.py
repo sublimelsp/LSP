@@ -11,6 +11,9 @@ import html
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
 
+server_binary_path = "javascript-typescript-stdio"
+supported_scope = 'source.ts'
+supported_syntaxes = ['Packages/TypeScript-TmLanguage/TypeScript.tmLanguage']
 
 def format_request(request):
     """Converts the request into json and adds the Content-Length header"""
@@ -65,7 +68,7 @@ class Client(object):
                 content_length = 0
 
                 while in_headers:
-                    header = self.process.stdout.readline().strip() #.decode('UTF-8')
+                    header = self.process.stdout.readline().strip()
                     if (len(header) == 0):
                         in_headers = False
 
@@ -157,17 +160,17 @@ def first_folder(window):
 def plugin_loaded():
     Events.subscribe("view.on_load_async", initialize_on_open)
     Events.subscribe("view.on_activated_async", initialize_on_open)
-    debug("LSP plugin loaded")
+    debug("plugin loaded")
 
 
 def plugin_unloaded():
     if client is not None:
         client.send_notification(Notification.exit())
-    debug("LSP plugin unloaded")
+    debug("plugin unloaded")
 
 
 def is_supported_view(view):
-    return view.match_selector(view.sel()[0].begin(), "source.ts")
+    return view.match_selector(view.sel()[0].begin(), supported_scope)
 
 
 client = None
@@ -384,7 +387,7 @@ def handle_diagnostics(update):
 def get_client(view):
     global client
     if client is None:
-        client = start_server("javascript-typescript-stdio")
+        client = start_server(server_binary_path)
         project_path = first_folder(view.window())
         initializeParams = {
             "processId": client.process.pid,
@@ -515,7 +518,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return syntax == 'Packages/TypeScript-TmLanguage/TypeScript.tmLanguage'
+        return syntax in supported_syntaxes
 
     def on_hover(self, point, hover_zone):
         if hover_zone == sublime.HOVER_TEXT:
@@ -584,7 +587,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return syntax == 'Packages/TypeScript-TmLanguage/TypeScript.tmLanguage'
+        return syntax in supported_syntaxes
 
     def on_modified_async(self):
         pos = self.view.sel()[0].begin()
@@ -627,7 +630,7 @@ class Listener(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return syntax == 'Packages/TypeScript-TmLanguage/TypeScript.tmLanguage'
+        return syntax in supported_syntaxes
 
     @classmethod
     def applies_to_primary_view_only(cls):

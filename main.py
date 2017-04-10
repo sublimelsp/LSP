@@ -14,6 +14,10 @@ SUBLIME_WORD_MASK = 515
 server_binary_path = "javascript-typescript-stdio"
 supported_scope = 'source.ts'
 supported_syntaxes = ['Packages/TypeScript-TmLanguage/TypeScript.tmLanguage']
+autocomplete_triggers = []
+signature_help_triggers = []
+is_hover_available = False
+
 
 def format_request(request):
     """Converts the request into json and adds the Content-Length header"""
@@ -53,7 +57,6 @@ class Client(object):
             self.process.stdin.flush()
         except BrokenPipeError as e:
             printf("client unexpectedly died:", e)
-
 
     def read_stdout(self):
         """
@@ -182,11 +185,14 @@ TextDocumentSyncKindIncremental = 2
 
 didopen_after_initialize = list()
 
+
 def filename_to_uri(path):
     return urljoin('file:', urllib.pathname2url(path))
 
+
 def uri_to_filename(uri):
     return urllib.url2pathname(uri).replace("file://", "")
+
 
 def initialize_on_open(view):
     global client, didopen_after_initialize
@@ -208,6 +214,7 @@ def notify_did_open(view):
     }
     client.send_notification(Notification.didOpen(params))
 
+
 def notify_did_close(view):
     global client
     params = {
@@ -216,6 +223,7 @@ def notify_did_close(view):
         }
     }
     client.send_notification(Notification.didClose(params))
+
 
 def notify_did_save(view):
     global client
@@ -226,7 +234,9 @@ def notify_did_save(view):
     }
     client.send_notification(Notification.didSave(params))
 
+
 documentVersion = 0
+
 
 def notify_did_change(view):
     global client
@@ -244,23 +254,53 @@ def notify_did_change(view):
     }
     client.send_notification(Notification.didChange(params))
 
+
 def initialize_document_sync(text_document_sync_kind):
     Events.subscribe('view.on_load_async', notify_did_open)
     Events.subscribe('view.on_modified_async', notify_did_change)
     Events.subscribe('view.on_post_save_async', notify_did_save)
     Events.subscribe('view.on_close', notify_did_close)
 
+
+def initialize_document_completion(completion_capabilities):
+    triggers = completion_capabilities.get("triggerCharacters")
+    autocomplete_triggers.extend(triggers)
+
+
+def initialize_signature_help(signature_help_capabilities):
+    triggers = signature_help_capabilities.get("triggerCharacters")
+    signature_help_triggers.extend(triggers)
+
+
+def initialize_hover():
+    is_hover_available = True
+
+
 def handle_initialize_result(result):
     global didopen_after_initialize
     capabilities = result.get("capabilities")
-    initialize_document_sync(capabilities.get("textDocumentSync"))
 
-    # TODO: initialize completions, signatureHelp etc
+    document_sync = capabilities.get("textDocumentSync")
+    if document_sync:
+        initialize_document_sync(document_sync)
+
+    completion_provider = capabilities.get("completionProvider")
+    if completion_provider:
+        initialize_document_completion(completion_provider)
+
+    signature_help_provider = capabilities.get("signatureHelpProvider")
+    if signature_help_provider:
+        initialize_signature_help(signature_help_provider)
+
+    hover_provider = capabilities.get("hoverProvider")
+    if hover_provider:
+        initialize_hover()
 
     Events.subscribe('document.diagnostics', handle_diagnostics)
     for view in didopen_after_initialize:
         notify_did_open(view)
     didopen_after_initialize = list()
+
 
 phantomset = None
 
@@ -291,6 +331,7 @@ stylesheet = '''
             </style>
         '''
 
+
 def create_phantom_html(text):
     global stylesheet
     return """<body id=inline-error>{}
@@ -300,10 +341,12 @@ def create_phantom_html(text):
                 </div>
                 </body>""".format(stylesheet, html.escape(text, quote=False), chr(0x00D7))
 
+
 def create_phantom(view, diagnostic):
     region = create_region(view, diagnostic)
     # TODO: hook up hide phantom (if keeping them)
     return sublime.Phantom(region, '<p>' + create_phantom_html(diagnostic.get('message')) + '</p>', sublime.LAYOUT_BELOW)
+
 
 def create_region(view, diagnostic):
     start = diagnostic.get('range').get('start')
@@ -311,6 +354,7 @@ def create_region(view, diagnostic):
     region = sublime.Region(view.text_point(start.get('line'), start.get('character')),
                             view.text_point(end.get('line'), end.get('character')))
     return region
+
 
 def format_diagnostic(file_path, diagnostic):
     start = diagnostic.get('range').get('start')
@@ -324,6 +368,7 @@ class ClearErrorPanelCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         self.view.erase(edit, sublime.Region(0, self.view.size()))
 
+
 class AppendToErrorPanelCommand(sublime_plugin.TextCommand):
     """
     An append_to_error_panel command to append text to the error panel.
@@ -331,7 +376,9 @@ class AppendToErrorPanelCommand(sublime_plugin.TextCommand):
     def run(self, edit, message):
         self.view.insert(edit, self.view.size(), message + "\n")
 
+
 UNDERLINE_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE
+
 
 def handle_diagnostics(update):
     global phantomset
@@ -459,7 +506,6 @@ class Request:
     def signatureHelp(cls, params):
         return Request("textDocument/signatureHelp", params)
 
-
     def __repr__(self):
         return self.method + " " + str(self.params)
 
@@ -521,7 +567,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         return syntax in supported_syntaxes
 
     def on_hover(self, point, hover_zone):
-        if hover_zone == sublime.HOVER_TEXT:
+        if is_hover_available and hover_zone == sublime.HOVER_TEXT:
             word_at_sel = self.view.classify(point)
             if word_at_sel & SUBLIME_WORD_MASK:
                 client.send_request(Request.hover(get_document_position(self.view, point)),
@@ -549,7 +595,7 @@ class CompletionHandler(sublime_plugin.EventListener):
             if locations[0] > 0:
                 self.completions = []
                 prev_char = view.substr(sublime.Region(locations[0] - 1, locations[0]))
-                if prev_char != ".":
+                if prev_char not in autocomplete_triggers:
                     return None
 
             client.send_request(Request.complete(get_document_position(view, locations[0])), self.handle_response)
@@ -579,6 +625,7 @@ class CompletionHandler(sublime_plugin.EventListener):
             'next_completion_if_showing': False,
             'auto_complete_commit_on_tab': True,
         })
+
 
 class SignatureHelpListener(sublime_plugin.ViewEventListener):
     def __init__(self, view):
@@ -645,11 +692,9 @@ class Listener(sublime_plugin.ViewEventListener):
         #TODO check if more views are open for this file.
         Events.publish("view.on_close", self.view)
 
-
     def on_modified_async(self):
         debug("on_modified_async", self.view.file_name())
         Events.publish("view.on_modified_async", self.view)
-
 
     def on_activated_async(self):
         debug("on_activated_async", self.view.file_name())

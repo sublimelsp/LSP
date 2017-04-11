@@ -236,17 +236,33 @@ def notify_did_save(view):
 
 
 documentVersion = 0
+document_states = {}
+
+
+class DocumentState:
+    def __init__(self, path):
+        self.path = path
+        self.version = 0
+
+    def inc_version(self):
+        self.version += 1
+        return self.version
+
+
+def get_document_state(path):
+    if path not in document_states:
+        document_states[path] = DocumentState(path)
+    return document_states.get(path)
 
 
 def notify_did_change(view):
     global client
-    global documentVersion
-    documentVersion = documentVersion + 1
+    document_state = get_document_state(view.file_name())
     params = {
         "textDocument": {
            "uri": filename_to_uri(view.file_name()),
            "languageId": "ts",
-           "version": documentVersion,
+           "version": document_state.inc_version(),
         },
         "contentChanges": [{
             "text": view.substr(sublime.Region(0, view.size()))

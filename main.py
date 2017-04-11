@@ -161,6 +161,7 @@ def first_folder(window):
 
 
 def plugin_loaded():
+    # TODO: unsubscribe once plugin is loaded?
     Events.subscribe("view.on_load_async", initialize_on_open)
     Events.subscribe("view.on_activated_async", initialize_on_open)
     debug("plugin loaded")
@@ -686,7 +687,7 @@ class SaveListener(sublime_plugin.EventListener):
             Events.publish("view.on_post_save_async", view)
 
 
-class Listener(sublime_plugin.ViewEventListener):
+class DocumentSyncListener(sublime_plugin.ViewEventListener):
     def __init__(self, view):
         self.view = view
 
@@ -704,15 +705,18 @@ class Listener(sublime_plugin.ViewEventListener):
         Events.publish("view.on_load_async", self.view)
 
     def on_close(self):
-        debug("on_close", self.view.file_name())
-        #TODO check if more views are open for this file.
-        Events.publish("view.on_close", self.view)
+        if self.view.file_name():
+            debug("on_close", self.view.file_name())
+            #TODO check if more views are open for this file.
+            Events.publish("view.on_close", self.view)
 
     def on_modified_async(self):
-        debug("on_modified_async", self.view.file_name())
-        Events.publish("view.on_modified_async", self.view)
+        if self.view.file_name():
+            debug("on_modified_async", self.view.file_name())
+            Events.publish("view.on_modified_async", self.view)
 
     def on_activated_async(self):
-        debug("on_activated_async", self.view.file_name())
-        Events.publish("view.on_activated_async", self.view)
+        if self.view.file_name():
+            debug("on_activated_async", self.view.file_name())
+            Events.publish("view.on_activated_async", self.view)
 

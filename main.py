@@ -18,6 +18,7 @@ autocomplete_triggers = []
 signature_help_triggers = []
 is_hover_available = False
 is_references_available = False
+is_definition_available = False
 
 
 def format_request(request):
@@ -301,6 +302,10 @@ def initialize_hover():
     global is_hover_available
     is_hover_available = True
 
+def initialize_definition():
+    global is_definition_available
+    is_definition_available = True
+
 
 def handle_initialize_result(result):
     global didopen_after_initialize
@@ -325,6 +330,10 @@ def handle_initialize_result(result):
     references_provider = capabilities.get("referencesProvider")
     if references_provider:
         initialize_references()
+
+    definition_provider = capabilities.get("definitionProvider")
+    if definition_provider:
+        initialize_definition()
 
     Events.subscribe('document.diagnostics', handle_diagnostics)
     for view in didopen_after_initialize:
@@ -391,6 +400,41 @@ def format_diagnostic(file_path, diagnostic):
     return "{}\t{}:{}\t{}".format(file_path, start.get('line'), start.get('character'), diagnostic.get('message'))
 
 
+class SymbolDefinitionCommand(sublime_plugin.TextCommand):
+    def is_enabled(self):
+        global is_definition_available
+        # TODO: check what kind of scope we're in.
+        if is_definition_available and is_supported_view(self.view):
+            point = self.view.sel()[0].begin()
+            word_at_sel = self.view.classify(point)
+            if word_at_sel & SUBLIME_WORD_MASK:
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    def run(self, edit):
+        pos = self.view.sel()[0].begin()
+        last_char = self.view.substr(pos - 1)
+        client.send_request(Request.definition(get_document_position(self.view, pos)),
+                            lambda response: self.handle_response(response, pos))
+
+    def handle_response(self, response, position):
+        window = sublime.active_window()
+        if len(response) < 1:
+                # view.set_status("diagnostics", "{} errors".format(len(diagnostics)))
+            view.set_status("definition", "Could not find definition")
+        else:
+            location = response[0]
+            file_path = uri_to_filename(location.get("uri"))
+            start = location.get('range').get('start')
+            file_location = "{}:{}:{}".format(file_path, start.get('line') + 1, start.get('character') + 1)
+            debug("opening location", location)
+            window.open_file(file_location, sublime.ENCODED_POSITION)
+            # TODO: can add region here.
+
+
 class SymbolReferencesCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
         global is_references_available
@@ -407,7 +451,6 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
 
 
     def run(self, edit):
-        debug("find symbol references", self.view.file_name())
         pos = self.view.sel()[0].begin()
         last_char = self.view.substr(pos - 1)
         client.send_request(Request.references(get_document_position(self.view, pos)),
@@ -580,6 +623,10 @@ class Request:
     @classmethod
     def references(cls, params):
         return Request("textDocument/references", params)
+
+    @classmethod
+    def definition(cls, params):
+        return Request("textDocument/definition", params)
 
     def __repr__(self):
         return self.method + " " + str(self.params)

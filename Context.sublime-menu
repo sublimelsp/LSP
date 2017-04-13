@@ -1,0 +1,10 @@
+[
+    {
+        "command": "symbol_references",
+        "caption": "Find Symbol References"
+    },
+    {
+        "command": "symbol_definition",
+        "caption": "Go To Symbol Definition"
+    }
+]

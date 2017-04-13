@@ -17,6 +17,7 @@ supported_syntaxes = ['Packages/TypeScript-TmLanguage/TypeScript.tmLanguage']
 autocomplete_triggers = []
 signature_help_triggers = []
 is_hover_available = False
+is_references_available = False
 
 
 def format_request(request):
@@ -91,7 +92,9 @@ class Client(object):
                         continue
 
                     try:
-                        if "id" in response:
+                        if "error" in response:
+                            debug("got error: ", response.get("error"))
+                        elif "id" in response:
                             self.response_handler(response)
                         else:
                             self.notification_handler(response)
@@ -289,7 +292,13 @@ def initialize_signature_help(signature_help_capabilities):
     signature_help_triggers.extend(triggers)
 
 
+def initialize_references():
+    global is_references_available
+    is_references_available = True
+
+
 def initialize_hover():
+    global is_hover_available
     is_hover_available = True
 
 
@@ -312,6 +321,10 @@ def handle_initialize_result(result):
     hover_provider = capabilities.get("hoverProvider")
     if hover_provider:
         initialize_hover()
+
+    references_provider = capabilities.get("referencesProvider")
+    if references_provider:
+        initialize_references()
 
     Events.subscribe('document.diagnostics', handle_diagnostics)
     for view in didopen_after_initialize:
@@ -378,20 +391,61 @@ def format_diagnostic(file_path, diagnostic):
     return "{}\t{}:{}\t{}".format(file_path, start.get('line'), start.get('character'), diagnostic.get('message'))
 
 
+class SymbolReferencesCommand(sublime_plugin.TextCommand):
+    def is_enabled(self):
+        global is_references_available
+        # TODO: check what kind of scope we're in.
+        if is_references_available and is_supported_view(self.view):
+            point = self.view.sel()[0].begin()
+            word_at_sel = self.view.classify(point)
+            if word_at_sel & SUBLIME_WORD_MASK:
+                return True
+            else:
+                return False
+        else:
+            return False
+
+
+    def run(self, edit):
+        debug("find symbol references", self.view.file_name())
+        pos = self.view.sel()[0].begin()
+        last_char = self.view.substr(pos - 1)
+        client.send_request(Request.references(get_document_position(self.view, pos)),
+                            lambda response: self.handle_response(response, pos))
+
+    def handle_response(self, response, pos):
+        window = sublime.active_window()
+        references = list(format_reference(item) for item in response)
+
+        if (len(response)) > 0:
+            panel = window.find_output_panel("references")
+            if panel is None:
+                debug("creating panel")
+                panel = window.create_output_panel("references")
+                panel.settings().set("result_file_regex", r"^(.*)\t([0-9]+):?([0-9]+)$")
+
+            panel.run_command("clear_error_panel")
+
+            window.run_command("show_panel", {"panel": "output.references"})
+            for reference in references:
+                panel.run_command('append', {'characters': reference + "\n", 'force': True, 'scroll_to_end': True})
+
+        else:
+            window.run_command("hide_panel", {"panel": "output.references"})
+
+
+def format_reference(reference):
+    start = reference.get('range').get('start')
+    file_path = uri_to_filename(reference.get("uri"))
+    return "{}\t{}:{}".format(file_path, start.get('line'), start.get('character'))
+
+
 class ClearErrorPanelCommand(sublime_plugin.TextCommand):
     """
     A clear_error_panel command to clear the error panel.
     """
     def run(self, edit):
         self.view.erase(edit, sublime.Region(0, self.view.size()))
-
-
-class AppendToErrorPanelCommand(sublime_plugin.TextCommand):
-    """
-    An append_to_error_panel command to append text to the error panel.
-    """
-    def run(self, edit, message):
-        self.view.insert(edit, self.view.size(), message + "\n")
 
 
 UNDERLINE_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE
@@ -523,6 +577,10 @@ class Request:
     def signatureHelp(cls, params):
         return Request("textDocument/signatureHelp", params)
 
+    @classmethod
+    def references(cls, params):
+        return Request("textDocument/references", params)
+
     def __repr__(self):
         return self.method + " " + str(self.params)
 
@@ -584,6 +642,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         return syntax in supported_syntaxes
 
     def on_hover(self, point, hover_zone):
+        global is_hover_available
         if is_hover_available and hover_zone == sublime.HOVER_TEXT:
             word_at_sel = self.view.classify(point)
             if word_at_sel & SUBLIME_WORD_MASK:

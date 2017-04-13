@@ -134,7 +134,15 @@ class Client(object):
             debug("No handler found for id" + response.get("id"))
 
     def notification_handler(self, response):
-        Events.publish("document.diagnostics", response.get("params"))
+        method = response.get("method")
+        if method == "textDocument/publishDiagnostics":
+            Events.publish("document.diagnostics", response.get("params"))
+        elif method == "window/showMessage":
+            sublime.active_window().message_dialog(response.get("params").get("message"))
+        elif method == "window/logMessage":
+            printf(response.get("params").get("message"))
+        else:
+            debug("Unhandled notification:", method)
 
 
 def debug(*args):
@@ -734,8 +742,9 @@ class HoverHandler(sublime_plugin.ViewEventListener):
 
     def handle_response(self, response, point):
         contents = response.get('contents')
-        if len(contents) > 0:
-            html = '<h4>' + contents[0].get('value') + '</h4>'
+        if len(contents) < 1:
+            return
+        html = '<h4>' + contents[0].get('value') + '</h4>'
         if len(contents) > 1:
             html += '<p>' + contents[1] + '</p>'
         self.view.show_popup(html, flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=point, max_width=800)

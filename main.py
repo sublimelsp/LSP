@@ -19,6 +19,7 @@ signature_help_triggers = []
 is_hover_available = False
 is_references_available = False
 is_definition_available = False
+is_rename_available = False
 
 
 def format_request(request):
@@ -302,9 +303,15 @@ def initialize_hover():
     global is_hover_available
     is_hover_available = True
 
+
 def initialize_definition():
     global is_definition_available
     is_definition_available = True
+
+
+def initialize_rename():
+    global is_rename_available
+    is_rename_available = True
 
 
 def handle_initialize_result(result):
@@ -399,6 +406,33 @@ def format_diagnostic(file_path, diagnostic):
     start = diagnostic.get('range').get('start')
     return "{}\t{}:{}\t{}".format(file_path, start.get('line'), start.get('character'), diagnostic.get('message'))
 
+class SymbolRenameCommand(sublime_plugin.TextCommand):
+    def is_enabled(self):
+        global is_rename_available
+        # TODO: check what kind of scope we're in.
+        if is_rename_available and is_supported_view(self.view):
+            point = self.view.sel()[0].begin()
+            word_at_sel = self.view.classify(point)
+            if word_at_sel & SUBLIME_WORD_MASK:
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    def run(self, edit):
+        pos = self.view.sel()[0].begin()
+        params = get_document_position(self.view, pos)
+        sublime.active_window().show_input_panel("New name:", "", lambda text: self.request_rename(params, text), None, None)
+
+    def request_rename(self, params, new_name):
+        params["newName"] = new_name
+        client.send_request(Request.rename(params),
+                            lambda response: self.handle_response(response, pos))
+
+    def handle_response(self, response, pos):
+        debug(response)
+
 
 class SymbolDefinitionCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
@@ -416,7 +450,6 @@ class SymbolDefinitionCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
         pos = self.view.sel()[0].begin()
-        last_char = self.view.substr(pos - 1)
         client.send_request(Request.definition(get_document_position(self.view, pos)),
                             lambda response: self.handle_response(response, pos))
 
@@ -452,7 +485,6 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
         pos = self.view.sel()[0].begin()
-        last_char = self.view.substr(pos - 1)
         client.send_request(Request.references(get_document_position(self.view, pos)),
                             lambda response: self.handle_response(response, pos))
 
@@ -627,6 +659,10 @@ class Request:
     @classmethod
     def definition(cls, params):
         return Request("textDocument/definition", params)
+
+    @classmethod
+    def rename(cls, params):
+        return Request("textDocument/rename", params)
 
     def __repr__(self):
         return self.method + " " + str(self.params)

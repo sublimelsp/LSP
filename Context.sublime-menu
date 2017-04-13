@@ -1,4 +1,5 @@
 [
+    { "caption": "-", "id": "lsp" },
     {
         "command": "symbol_references",
         "caption": "Find Symbol References"
@@ -6,5 +7,10 @@
     {
         "command": "symbol_definition",
         "caption": "Go To Symbol Definition"
-    }
+    },
+    {
+        "command": "symbol_rename",
+        "caption": "Rename Symbol"
+    },
+    { "caption": "-", "id": "lsp_end"}
 ]

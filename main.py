@@ -88,7 +88,7 @@ class Client(object):
                     response = None
                     try:
                         response = json.loads(content)
-                        debug("got json: ", response)
+                        # debug("got json: ", response)
                     except:
                         printf("Got a non-JSON response: ", content)
                         continue
@@ -98,8 +98,10 @@ class Client(object):
                             debug("got error: ", response.get("error"))
                         elif "id" in response:
                             self.response_handler(response)
-                        else:
+                        elif "method" in response:
                             self.notification_handler(response)
+                        else:
+                            debug("Unknown response type: ", response)
                     except Exception as err:
                         printf("Error handling server content:", err)
 
@@ -140,7 +142,7 @@ class Client(object):
         elif method == "window/showMessage":
             sublime.active_window().message_dialog(response.get("params").get("message"))
         elif method == "window/logMessage":
-            printf(response.get("params").get("message"))
+            server_log(response.get("params").get("message"))
         else:
             debug("Unhandled notification:", method)
 
@@ -149,6 +151,14 @@ def debug(*args):
     """Print args to the console if the "debug" setting is True."""
     # if settings.get('debug'):
     printf(*args)
+
+def server_log(*args):
+    print(server_binary_path + ": ", end='')
+
+    for arg in args:
+        print(arg, end=' ')
+
+    print()
 
 
 def printf(*args):
@@ -834,7 +844,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 class SaveListener(sublime_plugin.EventListener):
     def on_post_save_async(self, view):
         if is_supported_view(view):
-            debug("on_post_save_async", view.file_name())
+            # debug("on_post_save_async", view.file_name())
             Events.publish("view.on_post_save_async", view)
 
 
@@ -852,22 +862,22 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
         return False
 
     def on_load_async(self):
-        debug("on_load_async", self.view.file_name())
+        # debug("on_load_async", self.view.file_name())
         Events.publish("view.on_load_async", self.view)
 
     def on_close(self):
         if self.view.file_name():
-            debug("on_close", self.view.file_name())
+            # debug("on_close", self.view.file_name())
             #TODO check if more views are open for this file.
             Events.publish("view.on_close", self.view)
 
     def on_modified_async(self):
         if self.view.file_name():
-            debug("on_modified_async", self.view.file_name())
+            # debug("on_modified_async", self.view.file_name())
             Events.publish("view.on_modified_async", self.view)
 
     def on_activated_async(self):
         if self.view.file_name():
-            debug("on_activated_async", self.view.file_name())
+            # debug("on_activated_async", self.view.file_name())
             Events.publish("view.on_activated_async", self.view)
 

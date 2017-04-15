@@ -544,55 +544,65 @@ class ClearErrorPanelCommand(sublime_plugin.TextCommand):
 UNDERLINE_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE
 
 
+file_diagnostics = dict()
+
 def handle_diagnostics(update):
+    # TODO: should be per view?
     global phantomset
     file_path = uri_to_filename(update.get('uri'))
     window = sublime.active_window()
-    view = window.find_open_file(file_path)
-
-    if view is None:
-        debug("View not found for", file_path)
-        return
 
     diagnostics = update.get('diagnostics')
     phantoms = list()
     regions = list()
+
+    view = window.find_open_file(file_path)
+    if view is not None:
+        if view.is_dirty():
+            regions = list(create_region(view, diagnostic) for diagnostic in diagnostics)
+        else:
+            phantoms = list(create_phantom(view, diagnostic) for diagnostic in diagnostics)
+
+        if phantomset is None:
+            phantomset = sublime.PhantomSet(view, "diagnostics")
+
+        phantomset.update(phantoms)
+
+        if (len(regions)) > 0:
+            # steal SublimeLinter's coloring.
+            view.add_regions("errors", regions, "sublimelinter.mark.error", "dot", sublime.DRAW_SQUIGGLY_UNDERLINE | UNDERLINE_FLAGS)
+        else:
+            view.erase_regions("errors")
+
     output = list(format_diagnostic(file_path, diagnostic) for diagnostic in diagnostics)
-
-    if view.is_dirty():
-        regions = list(create_region(view, diagnostic) for diagnostic in diagnostics)
+    if output:
+        file_diagnostics[file_path] = output
     else:
-        phantoms = list(create_phantom(view, diagnostic) for diagnostic in diagnostics)
+        if file_path in file_diagnostics:
+            del file_diagnostics[file_path]
 
-    if phantomset is None:
-        phantomset = sublime.PhantomSet(view, "diagnostics")
+    update_output_panel(window)
 
-    if (len(regions)) > 0:
-        # steal SublimeLinter's coloring.
-        view.add_regions("errors", regions, "sublimelinter.mark.error", "dot", sublime.DRAW_SQUIGGLY_UNDERLINE | UNDERLINE_FLAGS)
+def update_output_panel(window):
+    panel = window.find_output_panel("diagnostics")
+    if panel is None:
+        panel = window.create_output_panel("diagnostics")
+        panel.settings().set("result_file_regex", r"^(.*)\t([0-9]+):?([0-9]+)\t(.*)$")
     else:
-        view.erase_regions("errors")
-
-    if (len(output)) > 0:
-        panel = window.find_output_panel("diagnostics")
-        if panel is None:
-            debug("creating panel")
-            panel = window.create_output_panel("diagnostics")
-            panel.settings().set("result_file_regex", r"^(.*)\t([0-9]+):?([0-9]+)\t(.*)$")
-
         panel.run_command("clear_error_panel")
-
         window.run_command("show_panel", {"panel": "output.diagnostics"})
-        for message in output:
-            # exec.py just calls append command with extra params, check https://github.com/randy3k/sublime-default/blob/master/exec.py
-            # panel.run_command("append_to_error_panel", {"message": message})
-            panel.run_command('append', {'characters': message + "\n", 'force': True, 'scroll_to_end': True})
 
+    if file_diagnostics:
+        for file_path, diagnostics in file_diagnostics.items():
+            if (len(diagnostics)) > 0:
+                for message in diagnostics:
+                    # exec.py just calls append command with extra params, check https://github.com/randy3k/sublime-default/blob/master/exec.py
+                    # panel.run_command("append_to_error_panel", {"message": message})
+                    panel.run_command('append', {'characters': message + "\n", 'force': True, 'scroll_to_end': True})
     else:
         window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
     # view.set_status("diagnostics", "{} errors".format(len(diagnostics)))
-    phantomset.update(phantoms)
 
 
 def get_client(view):

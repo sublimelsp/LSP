@@ -826,10 +826,11 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         return syntax in supported_syntaxes
 
     def on_modified_async(self):
+        global signature_help_triggers
         pos = self.view.sel()[0].begin()
         last_char = self.view.substr(pos - 1)
         # TODO: this will fire too often, narrow down using scopes or regex
-        if (last_char == '(') or last_char == ',':
+        if last_char in signature_help_triggers:
             client.send_request(Request.signatureHelp(get_document_position(self.view, pos)),
                                 lambda response: self.handle_response(response, pos))
         else:

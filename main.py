@@ -612,7 +612,8 @@ def get_client(view):
         project_path = first_folder(view.window())
         initializeParams = {
             "processId": client.process.pid,
-            "rootPath": project_path,
+            "rootUri": filename_to_uri(project_path),
+            # "rootPath": project_path,
             "capabilities": {
                 "completion": {
                     "completionItem": {

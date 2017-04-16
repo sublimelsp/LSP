@@ -230,16 +230,16 @@ def initialize_on_open(view):
 
 def notify_did_open(view):
     global client
-    params = {
-        "textDocument": {
-           "uri": filename_to_uri(view.file_name()),
-           "languageId": "ts",
-           # "version": 0,
-           "text": view.substr(sublime.Region(0, view.size()))
-
+    if view.file_name() not in document_states:
+        get_document_state(view.file_name())
+        params = {
+            "textDocument": {
+               "uri": filename_to_uri(view.file_name()),
+               "languageId": "ts",
+               "text": view.substr(sublime.Region(0, view.size()))
+            }
         }
-    }
-    client.send_notification(Notification.didOpen(params))
+        client.send_notification(Notification.didOpen(params))
 
 
 def notify_did_close(view):
@@ -300,6 +300,7 @@ def notify_did_change(view):
 
 def initialize_document_sync(text_document_sync_kind):
     Events.subscribe('view.on_load_async', notify_did_open)
+    Events.subscribe('view.on_activated_async', notify_did_open)
     Events.subscribe('view.on_modified_async', notify_did_change)
     Events.subscribe('view.on_post_save_async', notify_did_save)
     Events.subscribe('view.on_close', notify_did_close)

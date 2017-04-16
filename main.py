@@ -8,6 +8,7 @@ import sys
 import urllib.request as urllib
 from urllib.parse import urljoin
 import html
+import mdpopups
 
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
@@ -801,10 +802,24 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         contents = response.get('contents')
         if len(contents) < 1:
             return
-        html = '<h4>' + contents[0].get('value') + '</h4>'
-        if len(contents) > 1:
-            html += '<p>' + contents[1] + '</p>'
-        self.view.show_popup(html, flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=point, max_width=800)
+        # html = '<h4>' + contents[0].get('value') + '</h4>'
+        # if len(contents) > 1:
+        #     html += '<p>' + contents[1] + '</p>'
+        # self.view.show_popup(html, flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=point, max_width=800)
+        formatted = []
+        for item in contents:
+            if isinstance(item, str):
+                formatted.append(item)
+            else:
+                value = item.get("value")
+                language = item.get("language")
+                if language:
+                    formatted.append("```{}\n{}\n```".format(language, value))
+                else:
+                    formatted.append(value)
+
+        mdpopups.show_popup(self.view, "\n" + "\n".join(formatted) + "\n", md=True, css="body: { padding: 10px }", flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=point, max_width=800)
+
 
 
 class CompletionHandler(sublime_plugin.EventListener):

@@ -3,6 +3,7 @@ import sublime
 import subprocess
 import threading
 import json
+import os
 import sys
 import urllib.request as urllib
 from urllib.parse import urljoin
@@ -426,7 +427,19 @@ def create_region(view, diagnostic):
 
 def format_diagnostic(file_path, diagnostic):
     start = diagnostic.get('range').get('start')
-    return "{}\t{}:{}\t{}".format(file_path, start.get('line'), start.get('character'), diagnostic.get('message'))
+    line = start.get('line') or 0
+    character = start.get('character') or 0
+    return "\t{}:{}\t{}".format(line + 1, character + 1, diagnostic.get('message'))
+
+
+def build_diagnostic(file_path, diagnostic):
+    start = diagnostic.get('range').get('start')
+    line = start.get('line') or 0
+    character = start.get('character') or 0
+    level = "error"
+    source = "lsp"
+    return "\t{}:{}\t{}\t{}\t{}".format(line + 1, character + 1, source, level, diagnostic.get('message'))
+
 
 class SymbolRenameCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
@@ -517,7 +530,7 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
         if (len(response)) > 0:
             panel = window.find_output_panel("references")
             if panel is None:
-                debug("creating panel")
+                # debug("creating panel")
                 panel = window.create_output_panel("references")
                 panel.settings().set("result_file_regex", r"^(.*)\t([0-9]+):?([0-9]+)$")
 
@@ -578,20 +591,32 @@ def handle_diagnostics(update):
         else:
             view.erase_regions("errors")
 
-    output = list(format_diagnostic(file_path, diagnostic) for diagnostic in diagnostics)
+    base_dir = first_folder(window)
+    relative_file_path = os.path.relpath(file_path, base_dir)
+
+    output = list(build_diagnostic(relative_file_path, diagnostic) for diagnostic in diagnostics)
     if output:
-        file_diagnostics[file_path] = output
+        file_diagnostics[relative_file_path] = output
     else:
-        if file_path in file_diagnostics:
-            del file_diagnostics[file_path]
+        if relative_file_path in file_diagnostics:
+            del file_diagnostics[relative_file_path]
 
     update_output_panel(window)
 
 def update_output_panel(window):
+    base_dir = first_folder(window)
     panel = window.find_output_panel("diagnostics")
     if panel is None:
         panel = window.create_output_panel("diagnostics")
-        panel.settings().set("result_file_regex", r"^(.*)\t([0-9]+):?([0-9]+)\t(.*)$")
+        panel.settings().set("result_file_regex", r"^(.*):$")
+        panel.settings().set("result_line_regex", r"^\t([0-9]+):?([0-9]+)\t.*\t.*\t(.*)$")
+        panel.settings().set("result_base_dir", base_dir)
+        panel.settings().set("line_numbers", False)
+        panel.assign_syntax("Packages/" + PLUGIN_NAME + "/Diagnostics.sublime-syntax")
+
+        # Call create_output_panel a second time after assigning the above
+        # settings, so that it'll be picked up as a result buffer
+        window.create_output_panel("diagnostics")
     else:
         panel.run_command("clear_error_panel")
         window.run_command("show_panel", {"panel": "output.diagnostics"})
@@ -599,6 +624,7 @@ def update_output_panel(window):
     if file_diagnostics:
         for file_path, diagnostics in file_diagnostics.items():
             if (len(diagnostics)) > 0:
+                panel.run_command('append', {'characters': file_path + ":\n", 'force': True})
                 for message in diagnostics:
                     # exec.py just calls append command with extra params, check https://github.com/randy3k/sublime-default/blob/master/exec.py
                     # panel.run_command("append_to_error_panel", {"message": message})

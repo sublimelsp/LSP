@@ -818,7 +818,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
                 else:
                     formatted.append(value)
 
-        mdpopups.show_popup(self.view, "\n" + "\n".join(formatted) + "\n", md=True, css="body: { padding: 10px }", flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=point, max_width=800)
+        mdpopups.show_popup(self.view, "\n".join(formatted), md=True, flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=point, max_width=800)
 
 
 

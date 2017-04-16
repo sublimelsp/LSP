@@ -184,9 +184,9 @@ def first_folder(window):
 
 
 def plugin_loaded():
-    # TODO: unsubscribe once plugin is loaded?
-    Events.subscribe("view.on_load_async", initialize_on_open)
-    Events.subscribe("view.on_activated_async", initialize_on_open)
+    global unsubscribe_initialize_on_load, unsubscribe_initialize_on_activated
+    unsubscribe_initialize_on_load = Events.subscribe("view.on_load_async", initialize_on_open)
+    unsubscribe_initialize_on_activated = Events.subscribe("view.on_activated_async", initialize_on_open)
     debug("plugin loaded")
 
 
@@ -208,7 +208,8 @@ TextDocumentSyncKindFull = 1
 TextDocumentSyncKindIncremental = 2
 
 didopen_after_initialize = list()
-
+unsubscribe_initialize_on_load = None
+unsubscribe_initialize_on_activated = None
 
 def filename_to_uri(path):
     return urljoin('file:', urllib.pathname2url(path))
@@ -219,9 +220,11 @@ def uri_to_filename(uri):
 
 
 def initialize_on_open(view):
-    global client, didopen_after_initialize
+    global client, didopen_after_initialize, unsubscribe_initialize_on_load, unsubscribe_initialize_on_activated
     if is_supported_view(view) and client is None:
         didopen_after_initialize.append(view)
+        unsubscribe_initialize_on_load()
+        unsubscribe_initialize_on_activated()
         get_client(view)
 
 
@@ -736,6 +739,12 @@ class Events:
             cls.listener_dict[key].append(listener)
         else:
             cls.listener_dict[key] = [listener]
+        return lambda : cls.unsubscribe(key, listener)
+
+    @classmethod
+    def unsubscribe(cls, key, listener):
+        if key in cls.listener_dict:
+            cls.listener_dict[key].remove(listener)
 
     @classmethod
     def publish(cls, key, *args):

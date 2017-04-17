@@ -575,19 +575,23 @@ UNDERLINE_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_
 
 file_diagnostics = dict()
 
-def update_view_diagnostics(view, source, location_severity_messages):
-    debug(file_diagnostics)
-    window = view.window()
-    base_dir = first_folder(window)
-    relative_file_path = os.path.relpath(view.file_name(), base_dir)
+def update_file_diagnostics(relative_file_path, source, location_severity_messages):
     debug("updating", relative_file_path, "from", source, "with", location_severity_messages)
     if location_severity_messages:
         file_diagnostics.setdefault(relative_file_path, dict())[source] = location_severity_messages
     else:
-        del file_diagnostics[relative_file_path][source]
-        if not file_diagnostics[relative_file_path]:
-            del file_diagnostics[relative_file_path]
+        if relative_file_path in file_diagnostics:
+            if source in file_diagnostics[relative_file_path]:
+                del file_diagnostics[relative_file_path][source]
+            if not file_diagnostics[relative_file_path]:
+                del file_diagnostics[relative_file_path]
 
+
+def update_view_diagnostics(view, source, location_severity_messages):
+    window = view.window()
+    base_dir = first_folder(window)
+    relative_file_path = os.path.relpath(view.file_name(), base_dir)
+    update_file_diagnostics(relative_file_path, source, location_severity_messages)
     update_output_panel(window)
 
 
@@ -625,7 +629,8 @@ def handle_diagnostics(update):
     # output = list(build_diagnostic(relative_file_path, diagnostic) for diagnostic in diagnostics)
     location_severity_messages = list(build_location_severity_message(diagnostic) for diagnostic in diagnostics)
     # if location_severity_messages:
-    update_view_diagnostics(view, 'lsp', location_severity_messages)
+    update_file_diagnostics(relative_file_path, 'lsp', location_severity_messages)
+    update_output_panel(window)
         # file_diagnostics[relative_file_path] = output
     # else:
         # if relative_file_path in file_diagnostics:

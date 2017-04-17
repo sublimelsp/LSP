@@ -893,15 +893,30 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         signatures = response.get("signatures")
         if len(signatures) > 0:
             signature = signatures[response.get("activeSignature")]
-            html = '<h4>' + signature.get('label') + '</h4>'
-            html += '<p>' + signature.get('documentation') + '</p>'
+            # html = '<h4>' + signature.get('label') + '</h4>'
+            # html += '<p>' + signature.get('documentation') + '</p>'
+            # for parameter in signature.get('parameters'):
+            #     paramDocs = parameter.get('documentation')
+            #     html += '<p>' + parameter.get('label')
+            #     if paramDocs:
+            #         html += ': ' + paramDocs
+            #     html += '</p>'
+            # self.view.show_popup(html, flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=-1, max_width=800)
+
+            formatted = []
+            formatted.append("```{}\n{}\n```".format("typescript", signature.get('label')))
             for parameter in signature.get('parameters'):
                 paramDocs = parameter.get('documentation')
-                html += '<p>' + parameter.get('label')
+                formatted.append("**{}**\n".format(parameter.get('label')))
                 if paramDocs:
-                    html += ': ' + paramDocs
-                html += '</p>'
-            self.view.show_popup(html, flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=-1, max_width=800)
+                    formatted.append("* *{}*\n".format(paramDocs))
+
+            formatted.append("&nbsp;")
+            formatted.append(signature.get('documentation'))
+
+
+            mdpopups.show_popup(self.view, "\n".join(formatted), css=".mdpopups .lsp_signature { margin: 4px; }", md=True, flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=point, wrapper_class="lsp_signature", max_width=800)
+
 
 
 class SaveListener(sublime_plugin.EventListener):

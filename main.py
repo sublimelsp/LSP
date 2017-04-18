@@ -13,9 +13,17 @@ import mdpopups
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
 
-server_binary_path = "javascript-typescript-stdio"
+# javascript/typescript config
+server_binary_args = ["javascript-typescript-stdio"] # "-t", "--logfile", "lspserver.log"
 supported_scope = 'source.ts'
 supported_syntaxes = ['Packages/TypeScript-TmLanguage/TypeScript.tmLanguage']
+
+# rust config
+server_binary_args = ["rustup", "run", "nightly", "rls"]
+supported_scope = "source.rust"
+supported_syntaxes = ['Packages/Rust/Rust.sublime-syntax']
+
+
 autocomplete_triggers = []
 signature_help_triggers = []
 is_hover_available = False
@@ -155,7 +163,7 @@ def debug(*args):
     printf(*args)
 
 def server_log(*args):
-    print(server_binary_path + ": ", end='')
+    print(" ".join(server_binary_args) + ": ", end='')
 
     for arg in args:
         print(arg, end=' ')
@@ -674,7 +682,7 @@ def update_output_panel(window):
 def get_client(view):
     global client
     if client is None:
-        client = start_server(server_binary_path)
+        client = start_server(server_binary_args)
         project_path = first_folder(view.window())
         initializeParams = {
             "processId": client.process.pid,
@@ -693,8 +701,8 @@ def get_client(view):
     return client
 
 
-def start_server(binary_path):
-    args = [binary_path] #, "-t", "--logfile", "lspserver.log"]
+def start_server(server_binary_args):
+    args = server_binary_args
     debug("starting " + str(args))
     try:
         process = subprocess.Popen(

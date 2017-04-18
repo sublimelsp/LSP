@@ -896,7 +896,7 @@ class CompletionHandler(sublime_plugin.EventListener):
         return ("{}\t{}".format(label, detail), insertText if insertText else label)
 
     def handle_response(self, response):
-        items = response.get("items")
+        items = response.get("items") if isinstance(response, dict) else response
         self.completions = list(self.format_completion(item) for item in items)
         self.run_auto_complete()
 

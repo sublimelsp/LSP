@@ -682,8 +682,8 @@ def update_output_panel(window):
 def get_client(view):
     global client
     if client is None:
-        client = start_server(server_binary_args)
         project_path = first_folder(view.window())
+        client = start_server(server_binary_args, project_path)
         initializeParams = {
             "processId": client.process.pid,
             "rootUri": filename_to_uri(project_path),
@@ -701,7 +701,7 @@ def get_client(view):
     return client
 
 
-def start_server(server_binary_args):
+def start_server(server_binary_args, working_dir):
     args = server_binary_args
     debug("starting " + str(args))
     try:
@@ -710,7 +710,8 @@ def start_server(server_binary_args):
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd="/Users/tomv/Library/Application Support/Sublime Text 3/Packages/LSP/")
+            cwd=working_dir
+        )
         return Client(process)
 
     except Exception as err:

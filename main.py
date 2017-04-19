@@ -209,10 +209,8 @@ def first_folder(window):
 
 
 def plugin_loaded():
-    # TODO: this needs to work at least once per window.
-    global unsubscribe_initialize_on_load, unsubscribe_initialize_on_activated
-    unsubscribe_initialize_on_load = Events.subscribe("view.on_load_async", initialize_on_open)
-    unsubscribe_initialize_on_activated = Events.subscribe("view.on_activated_async", initialize_on_open)
+    Events.subscribe("view.on_load_async", initialize_on_open)
+    Events.subscribe("view.on_activated_async", initialize_on_open)
     debug("plugin loaded")
 
 
@@ -295,14 +293,11 @@ def window_clients(window):
 
 
 def initialize_on_open(view):
-    debug("opening for view", view.file_name())
-    global client, didopen_after_initialize, unsubscribe_initialize_on_load, unsubscribe_initialize_on_activated
+    global didopen_after_initialize
     config = config_for_scope(view)
     if config:
         if config.name not in window_clients(view.window()):
             didopen_after_initialize.append(view)
-            unsubscribe_initialize_on_load()
-            unsubscribe_initialize_on_activated()
             get_window_client(view, config)
 
 

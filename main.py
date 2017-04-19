@@ -671,10 +671,10 @@ def update_view_diagnostics(view, source, location_severity_messages):
     update_file_diagnostics(relative_file_path, source, location_severity_messages)
     update_output_panel(window)
 
+phantom_sets_by_buffer = {}
 
 def handle_diagnostics(update):
-    # TODO: should be per view?
-    global phantomset
+    global phantom_sets_by_buffer
     #debug(update)
     file_path = uri_to_filename(update.get('uri'))
     window = sublime.active_window()
@@ -690,10 +690,14 @@ def handle_diagnostics(update):
         else:
             phantoms = list(create_phantom(view, diagnostic) for diagnostic in diagnostics)
 
-        if phantomset is None:
-            phantomset = sublime.PhantomSet(view, "diagnostics")
+        buffer_id = view.buffer_id()
+        if buffer_id not in phantom_sets_by_buffer:
+            phantom_set = sublime.PhantomSet(view, "diagnostics")
+            phantom_sets_by_buffer[buffer_id] = phantom_set
+        else:
+            phantom_set = phantom_sets_by_buffer[buffer_id]
 
-        phantomset.update(phantoms)
+        phantom_set.update(phantoms)
 
         if (len(regions)) > 0:
             # steal SublimeLinter's coloring.

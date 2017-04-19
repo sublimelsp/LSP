@@ -13,16 +13,30 @@ import mdpopups
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
 
-# javascript/typescript config
-server_binary_args = ["javascript-typescript-stdio"] # "-t", "--logfile", "lspserver.log"
-supported_scope = 'source.ts'
-supported_syntaxes = ['Packages/TypeScript-TmLanguage/TypeScript.tmLanguage']
 
-# rust config
-server_binary_args = ["rustup", "run", "nightly", "rls"]
-supported_scope = "source.rust"
-supported_syntaxes = ['Packages/Rust/Rust.sublime-syntax']
+class Config(object):
+    def __init__(self, name, binary_args, scopes, syntaxes):
+        self.name = name
+        self.binary_args = binary_args
+        self.scopes = scopes
+        self.syntaxes = syntaxes
 
+
+configs = [
+    Config(
+        'jsts',
+        ["javascript-typescript-stdio"],
+        ['source.ts'],
+        ['Packages/TypeScript-TmLanguage/TypeScript.tmLanguage']
+    ),
+    Config(
+        'rls',
+        ["rustup", "run", "nightly", "rls"],
+        ["source.rust"],
+        ['Packages/Rust/Rust.sublime-syntax'])
+]
+
+# supported_scopes = list(config for config in configs for scope in config.scopes)
 
 autocomplete_triggers = []
 signature_help_triggers = []
@@ -98,7 +112,7 @@ class Client(object):
                     response = None
                     try:
                         response = json.loads(content)
-                        # debug("got json: ", response)
+                        debug("got json: ", response)
                     except:
                         printf("Got a non-JSON response: ", content)
                         continue
@@ -162,6 +176,7 @@ def debug(*args):
     # if settings.get('debug'):
     printf(*args)
 
+
 def server_log(*args):
     print(" ".join(server_binary_args) + ": ", end='')
 
@@ -189,11 +204,12 @@ def first_folder(window):
     if len(window.folders()):
         return window.folders()[0]
     else:
-        debug("Couldn't find a folder for stack-ide-sublime")
+        debug("Couldn't determine project directory")
         return None
 
 
 def plugin_loaded():
+    # TODO: this needs to work at least once per window.
     global unsubscribe_initialize_on_load, unsubscribe_initialize_on_activated
     unsubscribe_initialize_on_load = Events.subscribe("view.on_load_async", initialize_on_open)
     unsubscribe_initialize_on_activated = Events.subscribe("view.on_activated_async", initialize_on_open)
@@ -201,13 +217,38 @@ def plugin_loaded():
 
 
 def plugin_unloaded():
-    if client is not None:
-        client.send_notification(Notification.exit())
+    for window in sublime.windows():
+        for client in window_clients(window).values():
+            client.send_notification(Notification.exit())
     debug("plugin unloaded")
 
 
+def config_for_scope(view):
+    for config in configs:
+        for scope in config.scopes:
+            if view.match_selector(view.sel()[0].begin(), scope):
+                return config
+    return None
+
+
+def is_supported_syntax(syntax):
+    for config in configs:
+        if syntax in config.syntaxes:
+            return True
+    return False
+
+
 def is_supported_view(view):
-    return view.match_selector(view.sel()[0].begin(), supported_scope)
+    # TODO: perhaps make this check for a client instead of a config
+    if config_for_scope(view):
+        return True
+    else:
+        return False
+
+    # for supported_scope in supported_scopes:
+    #     if view.match_selector(view.sel()[0].begin(), supported_scope):
+    #         return True
+    # return False
 
 
 client = None
@@ -221,6 +262,7 @@ didopen_after_initialize = list()
 unsubscribe_initialize_on_load = None
 unsubscribe_initialize_on_activated = None
 
+
 def filename_to_uri(path):
     return urljoin('file:', urllib.pathname2url(path))
 
@@ -229,17 +271,43 @@ def uri_to_filename(uri):
     return urllib.url2pathname(uri).replace("file://", "")
 
 
+def client_for_view(view):
+    config = config_for_scope(view)
+    if not config:
+        debug("config not available for view", view.file_name())
+        return None
+    clients = window_clients(view.window())
+    if config.name not in clients:
+        debug(config.name, "not available for view", view.file_name(), "in window", view.window().id())
+    else:
+        return clients[config.name]
+
+
+clients_by_window = {}
+
+def window_clients(window):
+    global clients_by_window
+    if window.id() in clients_by_window:
+        return clients_by_window[window.id()]
+    else:
+        debug("no clients found for window", window.id())
+        return {}
+
+
 def initialize_on_open(view):
+    debug("opening for view", view.file_name())
     global client, didopen_after_initialize, unsubscribe_initialize_on_load, unsubscribe_initialize_on_activated
-    if is_supported_view(view) and client is None:
-        didopen_after_initialize.append(view)
-        unsubscribe_initialize_on_load()
-        unsubscribe_initialize_on_activated()
-        get_client(view)
+    config = config_for_scope(view)
+    if config:
+        if config.name not in window_clients(view.window()):
+            didopen_after_initialize.append(view)
+            unsubscribe_initialize_on_load()
+            unsubscribe_initialize_on_activated()
+            get_window_client(view, config)
 
 
 def notify_did_open(view):
-    global client
+    client = client_for_view(view)
     if view.file_name() not in document_states:
         get_document_state(view.file_name())
         params = {
@@ -253,7 +321,7 @@ def notify_did_open(view):
 
 
 def notify_did_close(view):
-    global client
+    client = client_for_view(view)
     params = {
         "textDocument": {
             "uri": filename_to_uri(view.file_name())
@@ -263,7 +331,7 @@ def notify_did_close(view):
 
 
 def notify_did_save(view):
-    global client
+    client = client_for_view(view)
     params = {
         "textDocument": {
             "uri": filename_to_uri(view.file_name())
@@ -293,7 +361,7 @@ def get_document_state(path):
 
 
 def notify_did_change(view):
-    global client
+    client = client_for_view(view)
     document_state = get_document_state(view.file_name())
     params = {
         "textDocument": {
@@ -481,6 +549,7 @@ class SymbolRenameCommand(sublime_plugin.TextCommand):
         sublime.active_window().show_input_panel("New name:", "", lambda text: self.request_rename(params, text), None, None)
 
     def request_rename(self, params, new_name):
+        client = client_for_view(self.view)
         params["newName"] = new_name
         client.send_request(Request.rename(params),
                             lambda response: self.handle_response(response, pos))
@@ -504,6 +573,7 @@ class SymbolDefinitionCommand(sublime_plugin.TextCommand):
             return False
 
     def run(self, edit):
+        client = client_for_view(self.view)
         pos = self.view.sel()[0].begin()
         client.send_request(Request.definition(get_document_position(self.view, pos)),
                             lambda response: self.handle_response(response, pos))
@@ -512,7 +582,7 @@ class SymbolDefinitionCommand(sublime_plugin.TextCommand):
         window = sublime.active_window()
         if len(response) < 1:
                 # view.set_status("diagnostics", "{} errors".format(len(diagnostics)))
-            view.set_status("definition", "Could not find definition")
+            self.view.set_status("definition", "Could not find definition")
         else:
             location = response[0]
             file_path = uri_to_filename(location.get("uri"))
@@ -539,6 +609,7 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
 
 
     def run(self, edit):
+        client = client_for_view(view)
         pos = self.view.sel()[0].begin()
         client.send_request(Request.references(get_document_position(self.view, pos)),
                             lambda response: self.handle_response(response, pos))
@@ -584,7 +655,7 @@ UNDERLINE_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_
 file_diagnostics = dict()
 
 def update_file_diagnostics(relative_file_path, source, location_severity_messages):
-    debug("updating", relative_file_path, "from", source, "with", location_severity_messages)
+    # debug("updating", relative_file_path, "from", source, "with", location_severity_messages)
     if location_severity_messages:
         file_diagnostics.setdefault(relative_file_path, dict())[source] = location_severity_messages
     else:
@@ -606,6 +677,7 @@ def update_view_diagnostics(view, source, location_severity_messages):
 def handle_diagnostics(update):
     # TODO: should be per view?
     global phantomset
+    #debug(update)
     file_path = uri_to_filename(update.get('uri'))
     window = sublime.active_window()
 
@@ -667,7 +739,7 @@ def update_output_panel(window):
         for file_path, source_diagnostics in file_diagnostics.items():
             if source_diagnostics:
                 panel.run_command('append', {'characters': file_path + ":\n", 'force': True})
-                debug("source diagnostics for", file_path, source_diagnostics)
+                # debug("source diagnostics for", file_path, source_diagnostics)
                 for source, location_severity_messages in source_diagnostics.items():
                     for location, severity, message in location_severity_messages:
                         line, character = location
@@ -679,26 +751,61 @@ def update_output_panel(window):
     # view.set_status("diagnostics", "{} errors".format(len(diagnostics)))
 
 
-def get_client(view):
-    global client
-    if client is None:
-        project_path = first_folder(view.window())
-        client = start_server(server_binary_args, project_path)
-        initializeParams = {
-            "processId": client.process.pid,
-            "rootUri": filename_to_uri(project_path),
-            # "rootPath": project_path,
-            "capabilities": {
-                "completion": {
-                    "completionItem": {
-                        "snippetSupport": True
-                    }
+def start_client(window, config):
+    project_path = first_folder(window)
+    client = start_server(config.binary_args, project_path)
+    initializeParams = {
+        "processId": client.process.pid,
+        "rootUri": filename_to_uri(project_path),
+        # "rootPath": project_path,
+        "capabilities": {
+            "completion": {
+                "completionItem": {
+                    "snippetSupport": True
                 }
             }
         }
-        client.send_request(Request.initialize(initializeParams), handle_initialize_result)
+    }
+    client.send_request(Request.initialize(initializeParams), handle_initialize_result)
+    return client
+
+
+def get_window_client(view, config):
+    global clients_by_window
+
+    window = view.window()
+    clients = window_clients(window)
+    if config.name not in clients:
+        project_path = first_folder(window)
+        client = start_client(window, config)
+        clients_by_window.setdefault(window.id(), {})[config.name] = client
+        debug("client registered for window", window.id(), window_clients(window))
+    else:
+        client = clients[config.name]
 
     return client
+
+
+# def get_client(view):
+#     global client
+#     if client is None:
+#         project_path = first_folder(view.window())
+#         client = start_server(server_binary_args, project_path)
+#         initializeParams = {
+#             "processId": client.process.pid,
+#             "rootUri": filename_to_uri(project_path),
+#             # "rootPath": project_path,
+#             "capabilities": {
+#                 "completion": {
+#                     "completionItem": {
+#                         "snippetSupport": True
+#                     }
+#                 }
+#             }
+#         }
+#         client.send_request(Request.initialize(initializeParams), handle_initialize_result)
+
+#     return client
 
 
 def start_server(server_binary_args, working_dir):
@@ -832,9 +939,13 @@ class HoverHandler(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return syntax in supported_syntaxes
+        return is_supported_syntax(syntax)
 
     def on_hover(self, point, hover_zone):
+        client = client_for_view(self.view)
+        if not client:
+            return
+        # TODO: move all these to the client config itself
         global is_hover_available
         if is_hover_available and hover_zone == sublime.HOVER_TEXT:
             word_at_sel = self.view.classify(point)
@@ -843,6 +954,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
                                     lambda response: self.handle_response(response, point))
 
     def handle_response(self, response, point):
+        debug(response)
         contents = response.get('contents')
         if len(contents) < 1:
             return
@@ -876,6 +988,8 @@ class CompletionHandler(sublime_plugin.EventListener):
             return None
 
         if not self.refreshing:
+            client = client_for_view(view)
+
             if locations[0] > 0:
                 self.completions = []
                 prev_char = view.substr(sublime.Region(locations[0] - 1, locations[0]))
@@ -918,7 +1032,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return syntax in supported_syntaxes
+        return is_supported_syntax(syntax)
 
     def on_modified_async(self):
         global signature_help_triggers
@@ -926,6 +1040,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         last_char = self.view.substr(pos - 1)
         # TODO: this will fire too often, narrow down using scopes or regex
         if last_char in signature_help_triggers:
+            client = client_for_view(self.view)
             client.send_request(Request.signatureHelp(get_document_position(self.view, pos)),
                                 lambda response: self.handle_response(response, pos))
         else:
@@ -935,6 +1050,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
     def handle_response(self, response, point):
         signatures = response.get("signatures")
+        debug(signatures)
         if len(signatures) > 0:
             signature = signatures[response.get("activeSignature")]
             # html = '<h4>' + signature.get('label') + '</h4>'
@@ -977,7 +1093,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return syntax in supported_syntaxes
+        return is_supported_syntax(syntax)
 
     @classmethod
     def applies_to_primary_view_only(cls):

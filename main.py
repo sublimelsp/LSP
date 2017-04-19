@@ -316,13 +316,16 @@ def notify_did_open(view):
 
 
 def notify_did_close(view):
-    client = client_for_view(view)
-    params = {
-        "textDocument": {
-            "uri": filename_to_uri(view.file_name())
+    config = config_for_scope(view)
+    clients = window_clients(sublime.active_window())
+    if config and config.name in clients:
+        client = clients[config.name]
+        params = {
+            "textDocument": {
+                "uri": filename_to_uri(view.file_name())
+            }
         }
-    }
-    client.send_notification(Notification.didClose(params))
+        client.send_notification(Notification.didClose(params))
 
 
 def notify_did_save(view):
@@ -1080,6 +1083,11 @@ class SaveListener(sublime_plugin.EventListener):
             # debug("on_post_save_async", view.file_name())
             Events.publish("view.on_post_save_async", view)
 
+    def on_close(self, view):
+        if is_supported_view(view):
+            #TODO check if more views are open for this file.
+            Events.publish("view.on_close", view)
+
 
 class DocumentSyncListener(sublime_plugin.ViewEventListener):
     def __init__(self, view):
@@ -1098,11 +1106,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
         # debug("on_load_async", self.view.file_name())
         Events.publish("view.on_load_async", self.view)
 
-    def on_close(self):
-        if self.view.file_name():
-            # debug("on_close", self.view.file_name())
-            #TODO check if more views are open for this file.
-            Events.publish("view.on_close", self.view)
 
     def on_modified_async(self):
         if self.view.file_name():

@@ -649,7 +649,7 @@ UNDERLINE_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_
 window_file_diagnostics = dict()
 
 def update_file_diagnostics(window, relative_file_path, source, location_severity_messages):
-    debug("window", window.id(), "updating", relative_file_path, "from", source, "with", location_severity_messages)
+    # debug("window", window.id(), "updating", relative_file_path, "from", source, "with", location_severity_messages)
     if location_severity_messages:
         window_file_diagnostics.setdefault(window.id(), dict()).setdefault(relative_file_path, dict())[source] = location_severity_messages
         # file_diagnostics.setdefault(relative_file_path, dict())[source] = location_severity_messages

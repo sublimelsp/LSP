@@ -249,9 +249,6 @@ def is_supported_view(view):
     # return False
 
 
-client = None
-
-
 TextDocumentSyncKindNone = 0
 TextDocumentSyncKindFull = 1
 TextDocumentSyncKindIncremental = 2
@@ -391,6 +388,7 @@ def initialize_signature_help(signature_help_capabilities):
     triggers = signature_help_capabilities.get("triggerCharacters")
     signature_help_triggers.extend(triggers)
 
+# TODO fix all these globals (they should be capabilities stored on the client)
 
 def initialize_references():
     global is_references_available
@@ -445,8 +443,6 @@ def handle_initialize_result(result):
         notify_did_open(view)
     didopen_after_initialize = list()
 
-
-phantomset = None
 
 stylesheet = '''
             <style>
@@ -650,25 +646,28 @@ class ClearErrorPanelCommand(sublime_plugin.TextCommand):
 UNDERLINE_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE
 
 
-file_diagnostics = dict()
+window_file_diagnostics = dict()
 
-def update_file_diagnostics(relative_file_path, source, location_severity_messages):
-    # debug("updating", relative_file_path, "from", source, "with", location_severity_messages)
+def update_file_diagnostics(window, relative_file_path, source, location_severity_messages):
+    debug("window", window.id(), "updating", relative_file_path, "from", source, "with", location_severity_messages)
     if location_severity_messages:
-        file_diagnostics.setdefault(relative_file_path, dict())[source] = location_severity_messages
+        window_file_diagnostics.setdefault(window.id(), dict()).setdefault(relative_file_path, dict())[source] = location_severity_messages
+        # file_diagnostics.setdefault(relative_file_path, dict())[source] = location_severity_messages
     else:
-        if relative_file_path in file_diagnostics:
-            if source in file_diagnostics[relative_file_path]:
-                del file_diagnostics[relative_file_path][source]
-            if not file_diagnostics[relative_file_path]:
-                del file_diagnostics[relative_file_path]
+        if window.id() in window_file_diagnostics:
+            file_diagnostics = window_file_diagnostics[window.id()]
+            if relative_file_path in file_diagnostics:
+                if source in file_diagnostics[relative_file_path]:
+                    del file_diagnostics[relative_file_path][source]
+                if not file_diagnostics[relative_file_path]:
+                    del file_diagnostics[relative_file_path]
 
 
 def update_view_diagnostics(view, source, location_severity_messages):
     window = view.window()
     base_dir = first_folder(window)
     relative_file_path = os.path.relpath(view.file_name(), base_dir)
-    update_file_diagnostics(relative_file_path, source, location_severity_messages)
+    update_file_diagnostics(window, relative_file_path, source, location_severity_messages)
     update_output_panel(window)
 
 phantom_sets_by_buffer = {}
@@ -711,7 +710,7 @@ def handle_diagnostics(update):
     # output = list(build_diagnostic(relative_file_path, diagnostic) for diagnostic in diagnostics)
     location_severity_messages = list(build_location_severity_message(diagnostic) for diagnostic in diagnostics)
     # if location_severity_messages:
-    update_file_diagnostics(relative_file_path, 'lsp', location_severity_messages)
+    update_file_diagnostics(window, relative_file_path, 'lsp', location_severity_messages)
     update_output_panel(window)
         # file_diagnostics[relative_file_path] = output
     # else:
@@ -737,7 +736,8 @@ def update_output_panel(window):
         panel.run_command("clear_error_panel")
         window.run_command("show_panel", {"panel": "output.diagnostics"})
 
-    if file_diagnostics:
+    if window.id() in window_file_diagnostics:
+        file_diagnostics = window_file_diagnostics[window.id()]
         for file_path, source_diagnostics in file_diagnostics.items():
             if source_diagnostics:
                 panel.run_command('append', {'characters': file_path + ":\n", 'force': True})
@@ -749,8 +749,6 @@ def update_output_panel(window):
                         panel.run_command('append', {'characters': item + "\n", 'force': True, 'scroll_to_end': True})
     else:
         window.run_command("hide_panel", {"panel": "output.diagnostics"})
-
-    # view.set_status("diagnostics", "{} errors".format(len(diagnostics)))
 
 
 def start_client(window, config):
@@ -786,28 +784,6 @@ def get_window_client(view, config):
         client = clients[config.name]
 
     return client
-
-
-# def get_client(view):
-#     global client
-#     if client is None:
-#         project_path = first_folder(view.window())
-#         client = start_server(server_binary_args, project_path)
-#         initializeParams = {
-#             "processId": client.process.pid,
-#             "rootUri": filename_to_uri(project_path),
-#             # "rootPath": project_path,
-#             "capabilities": {
-#                 "completion": {
-#                     "completionItem": {
-#                         "snippetSupport": True
-#                     }
-#                 }
-#             }
-#         }
-#         client.send_request(Request.initialize(initializeParams), handle_initialize_result)
-
-#     return client
 
 
 def start_server(server_binary_args, working_dir):
@@ -956,14 +932,10 @@ class HoverHandler(sublime_plugin.ViewEventListener):
                                     lambda response: self.handle_response(response, point))
 
     def handle_response(self, response, point):
-        debug(response)
+        # debug(response)
         contents = response.get('contents')
         if len(contents) < 1:
             return
-        # html = '<h4>' + contents[0].get('value') + '</h4>'
-        # if len(contents) > 1:
-        #     html += '<p>' + contents[1] + '</p>'
-        # self.view.show_popup(html, flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=point, max_width=800)
         formatted = []
         for item in contents:
             if isinstance(item, str):
@@ -1055,16 +1027,6 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         debug(signatures)
         if len(signatures) > 0:
             signature = signatures[response.get("activeSignature")]
-            # html = '<h4>' + signature.get('label') + '</h4>'
-            # html += '<p>' + signature.get('documentation') + '</p>'
-            # for parameter in signature.get('parameters'):
-            #     paramDocs = parameter.get('documentation')
-            #     html += '<p>' + parameter.get('label')
-            #     if paramDocs:
-            #         html += ': ' + paramDocs
-            #     html += '</p>'
-            # self.view.show_popup(html, flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=-1, max_width=800)
-
             formatted = []
             formatted.append("```{}\n{}\n```".format("typescript", signature.get('label')))
             for parameter in signature.get('parameters'):

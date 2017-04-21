@@ -36,14 +36,6 @@ configs = [
         ['Packages/Rust/Rust.sublime-syntax'])
 ]
 
-# supported_scopes = list(config for config in configs for scope in config.scopes)
-
-autocomplete_triggers = []
-signature_help_triggers = []
-is_hover_available = False
-is_references_available = False
-is_definition_available = False
-is_rename_available = False
 
 
 def format_request(request):
@@ -65,6 +57,16 @@ class Client(object):
         self.stderr_thread.start()
         self.request_id = 0
         self.handlers = {}
+        self.capabilities = {}
+
+    def set_capabilities(self, capabilities):
+        self.capabilities = capabilities
+
+    def has_capability(self, capability):
+        return capability in self.capabilities
+
+    def get_capability(self, capability):
+        return self.capabilities.get(capability)
 
     def send_request(self, request, handler):
         self.request_id += 1
@@ -379,64 +381,18 @@ def initialize_document_sync(text_document_sync_kind):
     Events.subscribe('view.on_close', notify_did_close)
 
 
-def initialize_document_completion(completion_capabilities):
-    triggers = completion_capabilities.get("triggerCharacters")
-    autocomplete_triggers.extend(triggers)
-
-
-def initialize_signature_help(signature_help_capabilities):
-    triggers = signature_help_capabilities.get("triggerCharacters")
-    signature_help_triggers.extend(triggers)
-
 # TODO fix all these globals (they should be capabilities stored on the client)
 
-def initialize_references():
-    global is_references_available
-    is_references_available = True
-
-
-def initialize_hover():
-    global is_hover_available
-    is_hover_available = True
-
-
-def initialize_definition():
-    global is_definition_available
-    is_definition_available = True
-
-
-def initialize_rename():
-    global is_rename_available
-    is_rename_available = True
-
-
-def handle_initialize_result(result):
+def handle_initialize_result(result, client):
     global didopen_after_initialize
     capabilities = result.get("capabilities")
+    client.set_capabilities(capabilities)
 
+    # TODO: These handlers is already filtered by syntax but does not need to be enabled 2x per client
+    # Move filtering?
     document_sync = capabilities.get("textDocumentSync")
     if document_sync:
         initialize_document_sync(document_sync)
-
-    completion_provider = capabilities.get("completionProvider")
-    if completion_provider:
-        initialize_document_completion(completion_provider)
-
-    signature_help_provider = capabilities.get("signatureHelpProvider")
-    if signature_help_provider:
-        initialize_signature_help(signature_help_provider)
-
-    hover_provider = capabilities.get("hoverProvider")
-    if hover_provider:
-        initialize_hover()
-
-    references_provider = capabilities.get("referencesProvider")
-    if references_provider:
-        initialize_references()
-
-    definition_provider = capabilities.get("definitionProvider")
-    if definition_provider:
-        initialize_definition()
 
     Events.subscribe('document.diagnostics', handle_diagnostics)
     for view in didopen_after_initialize:
@@ -525,17 +481,15 @@ def format_diagnostic(line, character, source, level, message):
 
 class SymbolRenameCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
-        global is_rename_available
         # TODO: check what kind of scope we're in.
-        if is_rename_available and is_supported_view(self.view):
-            point = self.view.sel()[0].begin()
-            word_at_sel = self.view.classify(point)
-            if word_at_sel & SUBLIME_WORD_MASK:
-                return True
-            else:
-                return False
-        else:
-            return False
+        if is_supported_view(self.view):
+            client = client_for_view(self.view)
+            if client.has_capability('rename'):
+                point = self.view.sel()[0].begin()
+                word_at_sel = self.view.classify(point)
+                if word_at_sel & SUBLIME_WORD_MASK:
+                    return True
+        return False
 
     def run(self, edit):
         pos = self.view.sel()[0].begin()
@@ -554,17 +508,15 @@ class SymbolRenameCommand(sublime_plugin.TextCommand):
 
 class SymbolDefinitionCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
-        global is_definition_available
         # TODO: check what kind of scope we're in.
-        if is_definition_available and is_supported_view(self.view):
-            point = self.view.sel()[0].begin()
-            word_at_sel = self.view.classify(point)
-            if word_at_sel & SUBLIME_WORD_MASK:
-                return True
-            else:
-                return False
-        else:
-            return False
+        if is_supported_view(self.view):
+            client = client_for_view(self.view)
+            if client.has_capability('definition'):
+                point = self.view.sel()[0].begin()
+                word_at_sel = self.view.classify(point)
+                if word_at_sel & SUBLIME_WORD_MASK:
+                    return True
+        return False
 
     def run(self, edit):
         client = client_for_view(self.view)
@@ -589,17 +541,14 @@ class SymbolDefinitionCommand(sublime_plugin.TextCommand):
 
 class SymbolReferencesCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
-        global is_references_available
-        # TODO: check what kind of scope we're in.
-        if is_references_available and is_supported_view(self.view):
-            point = self.view.sel()[0].begin()
-            word_at_sel = self.view.classify(point)
-            if word_at_sel & SUBLIME_WORD_MASK:
-                return True
-            else:
-                return False
-        else:
-            return False
+        if is_supported_view(self.view):
+            client = client_for_view(self.view)
+            if client and client.has_capability('references'):
+                point = self.view.sel()[0].begin()
+                word_at_sel = self.view.classify(point)
+                if word_at_sel & SUBLIME_WORD_MASK:
+                    return True
+        return False
 
 
     def run(self, edit):
@@ -738,17 +687,18 @@ def update_output_panel(window):
 
     if window.id() in window_file_diagnostics:
         file_diagnostics = window_file_diagnostics[window.id()]
-        for file_path, source_diagnostics in file_diagnostics.items():
-            if source_diagnostics:
-                panel.run_command('append', {'characters': file_path + ":\n", 'force': True})
-                # debug("source diagnostics for", file_path, source_diagnostics)
-                for source, location_severity_messages in source_diagnostics.items():
-                    for location, severity, message in location_severity_messages:
-                        line, character = location
-                        item = format_diagnostic(line, character, source, severity, message)
-                        panel.run_command('append', {'characters': item + "\n", 'force': True, 'scroll_to_end': True})
-    else:
-        window.run_command("hide_panel", {"panel": "output.diagnostics"})
+        if file_diagnostics:
+            for file_path, source_diagnostics in file_diagnostics.items():
+                if source_diagnostics:
+                    panel.run_command('append', {'characters': file_path + ":\n", 'force': True})
+                    # debug("source diagnostics for", file_path, source_diagnostics)
+                    for source, location_severity_messages in source_diagnostics.items():
+                        for location, severity, message in location_severity_messages:
+                            line, character = location
+                            item = format_diagnostic(line, character, source, severity, message)
+                            panel.run_command('append', {'characters': item + "\n", 'force': True, 'scroll_to_end': True})
+        else:
+            window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
 
 def start_client(window, config):
@@ -766,7 +716,8 @@ def start_client(window, config):
             }
         }
     }
-    client.send_request(Request.initialize(initializeParams), handle_initialize_result)
+    client.send_request(Request.initialize(initializeParams),
+                        lambda result: handle_initialize_result(result, client))
     return client
 
 
@@ -923,9 +874,10 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         client = client_for_view(self.view)
         if not client:
             return
-        # TODO: move all these to the client config itself
-        global is_hover_available
-        if is_hover_available and hover_zone == sublime.HOVER_TEXT:
+        if not client.has_capability('hoverProvider'):
+            return
+
+        if hover_zone == sublime.HOVER_TEXT:
             word_at_sel = self.view.classify(point)
             if word_at_sel & SUBLIME_WORD_MASK:
                 client.send_request(Request.hover(get_document_position(self.view, point)),
@@ -963,6 +915,15 @@ class CompletionHandler(sublime_plugin.EventListener):
 
         if not self.refreshing:
             client = client_for_view(view)
+
+            if not client:
+                return
+
+            completionProvider = client.get_capability('completionProvider')
+            if not completionProvider:
+                return
+
+            autocomplete_triggers = completionProvider.get('triggerCharacters')
 
             if locations[0] > 0:
                 self.completions = []
@@ -1002,18 +963,32 @@ class CompletionHandler(sublime_plugin.EventListener):
 class SignatureHelpListener(sublime_plugin.ViewEventListener):
     def __init__(self, view):
         self.view = view
+        self.signature_help_triggers = None
 
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
         return is_supported_syntax(syntax)
 
+    def initialize_triggers(self):
+        client = client_for_view(self.view)
+        if client:
+            signatureHelpProvider = client.get_capability('signatureHelpProvider')
+            if signatureHelpProvider:
+                self.signature_help_triggers = signatureHelpProvider.get('triggerCharacters')
+                return
+
+        self.signature_help_triggers = []
+
+
     def on_modified_async(self):
-        global signature_help_triggers
         pos = self.view.sel()[0].begin()
         last_char = self.view.substr(pos - 1)
         # TODO: this will fire too often, narrow down using scopes or regex
-        if last_char in signature_help_triggers:
+        if self.signature_help_triggers is None:
+            self.initialize_triggers()
+
+        if last_char in self.signature_help_triggers:
             client = client_for_view(self.view)
             client.send_request(Request.signatureHelp(get_document_position(self.view, pos)),
                                 lambda response: self.handle_response(response, pos))

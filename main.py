@@ -357,7 +357,32 @@ def get_document_state(path):
     return document_states.get(path)
 
 
+pending_buffer_changes = dict()
+
+
+def queue_did_change(view):
+    buffer_id = view.buffer_id()
+    buffer_version = 1
+    if buffer_id in pending_buffer_changes:
+        pending_buffer = pending_buffer_changes[buffer_id]
+        buffer_version = pending_buffer["version"] + 1
+        pending_buffer["version"] = buffer_version
+    else:
+        pending_buffer_changes[buffer_id] = {"view": view, "version": buffer_version}
+
+    sublime.set_timeout(lambda: purge_did_change(buffer_id, buffer_version), 500)
+
+
+def purge_did_change(buffer_id, buffer_version=None):
+    if buffer_id in pending_buffer_changes:
+        pending_buffer = pending_buffer_changes[buffer_id]
+        if buffer_version is None or buffer_version == pending_buffer["version"]:
+            notify_did_change(pending_buffer["view"])
+
+
 def notify_did_change(view):
+    if view.buffer_id() in pending_buffer_changes:
+        del pending_buffer_changes[view.buffer_id()]
     client = client_for_view(view)
     document_state = get_document_state(view.file_name())
     params = {
@@ -376,7 +401,7 @@ def notify_did_change(view):
 def initialize_document_sync(text_document_sync_kind):
     Events.subscribe('view.on_load_async', notify_did_open)
     Events.subscribe('view.on_activated_async', notify_did_open)
-    Events.subscribe('view.on_modified_async', notify_did_change)
+    Events.subscribe('view.on_modified_async', queue_did_change)
     Events.subscribe('view.on_post_save_async', notify_did_save)
     Events.subscribe('view.on_close', notify_did_close)
 
@@ -931,6 +956,7 @@ class CompletionHandler(sublime_plugin.EventListener):
                 if prev_char not in autocomplete_triggers:
                     return None
 
+            purge_did_change(view.buffer_id())
             client.send_request(Request.complete(get_document_position(view, locations[0])), self.handle_response)
 
         self.refreshing = False
@@ -990,6 +1016,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
         if last_char in self.signature_help_triggers:
             client = client_for_view(self.view)
+            purge_did_change(self.view.buffer_id())
             client.send_request(Request.signatureHelp(get_document_position(self.view, pos)),
                                 lambda response: self.handle_response(response, pos))
         else:

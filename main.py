@@ -119,7 +119,8 @@ class Client(object):
                     try:
                         response = json.loads(content)
                         limit = min(len(content), 200)
-                        debug("got json: ", content[0:limit])
+                        if response.get("method") != "window/logMessage":
+                            debug("got json: ", content[0:limit])
                     except:
                         printf("Got a non-JSON response: ", content)
                         continue

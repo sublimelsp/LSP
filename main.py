@@ -273,7 +273,7 @@ def filename_to_uri(path):
 
 def uri_to_filename(uri):
     if os.name == 'nt':
-        return urllib.url2pathname(uri.replace("file://", ""))[1:]
+        return urllib.url2pathname(uri.replace("file://", ""))
     else:
         return urllib.url2pathname(uri).replace("file://", "")
 
@@ -690,6 +690,7 @@ def handle_diagnostics(update):
 
     base_dir = first_folder(window)
     relative_file_path = os.path.relpath(file_path, base_dir)
+    debug('relpath', file_path, base_dir, relative_file_path)
 
     # output = list(build_diagnostic(relative_file_path, diagnostic) for diagnostic in diagnostics)
     location_severity_messages = list(build_location_severity_message(diagnostic) for diagnostic in diagnostics)

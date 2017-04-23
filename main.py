@@ -22,10 +22,14 @@ class Config(object):
         self.syntaxes = syntaxes
 
 
+jsts_command = "javascript-typescript-stdio"
+if os.name == 'nt':
+    jsts_command = "javascript-typescript-stdio.cmd"
+
 configs = [
     Config(
         'jsts',
-        ["javascript-typescript-stdio"],
+        [jsts_command],
         ['source.ts'],
         ['Packages/TypeScript-TmLanguage/TypeScript.tmLanguage']
     ),
@@ -114,7 +118,7 @@ class Client(object):
                     response = None
                     try:
                         response = json.loads(content)
-                        debug("got json: ", response)
+                        # debug("got json: ", response)
                     except:
                         printf("Got a non-JSON response: ", content)
                         continue
@@ -168,9 +172,10 @@ class Client(object):
         elif method == "window/showMessage":
             sublime.active_window().message_dialog(response.get("params").get("message"))
         elif method == "window/logMessage":
-            server_log(response.get("params").get("message"))
+            server_log(self.process.args[0], response.get("params").get("message"))
         else:
             debug("Unhandled notification:", method)
+
 
 
 def debug(*args):
@@ -179,8 +184,8 @@ def debug(*args):
     printf(*args)
 
 
-def server_log(*args):
-    print(" ".join(server_binary_args) + ": ", end='')
+def server_log(binary, *args):
+    print(binary + ': ', end='')
 
     for arg in args:
         print(arg, end=' ')
@@ -265,7 +270,10 @@ def filename_to_uri(path):
 
 
 def uri_to_filename(uri):
-    return urllib.url2pathname(uri).replace("file://", "")
+    if os.name == 'nt':
+        return urllib.url2pathname(uri.replace("file://", ""))[1:]
+    else:
+        return urllib.url2pathname(uri).replace("file://", "")
 
 
 def client_for_view(view):
@@ -765,13 +773,18 @@ def get_window_client(view, config):
 def start_server(server_binary_args, working_dir):
     args = server_binary_args
     debug("starting " + str(args))
+    si = None
+    if os.name == "nt":
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW
     try:
         process = subprocess.Popen(
             args,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd=working_dir
+            cwd=working_dir,
+            startupinfo=si
         )
         return Client(process)
 

@@ -118,7 +118,8 @@ class Client(object):
                     response = None
                     try:
                         response = json.loads(content)
-                        # debug("got json: ", response)
+                        limit = min(len(content), 200)
+                        debug("got json: ", content[0:limit])
                     except:
                         printf("Got a non-JSON response: ", content)
                         continue
@@ -517,7 +518,7 @@ class SymbolRenameCommand(sublime_plugin.TextCommand):
         # TODO: check what kind of scope we're in.
         if is_supported_view(self.view):
             client = client_for_view(self.view)
-            if client.has_capability('rename'):
+            if client.has_capability('renameProvider'):
                 point = self.view.sel()[0].begin()
                 word_at_sel = self.view.classify(point)
                 if word_at_sel & SUBLIME_WORD_MASK:
@@ -544,7 +545,7 @@ class SymbolDefinitionCommand(sublime_plugin.TextCommand):
         # TODO: check what kind of scope we're in.
         if is_supported_view(self.view):
             client = client_for_view(self.view)
-            if client.has_capability('definition'):
+            if client.has_capability('definitionProvider'):
                 point = self.view.sel()[0].begin()
                 word_at_sel = self.view.classify(point)
                 if word_at_sel & SUBLIME_WORD_MASK:
@@ -576,7 +577,7 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
-            if client and client.has_capability('references'):
+            if client and client.has_capability('referencesProvider'):
                 point = self.view.sel()[0].begin()
                 word_at_sel = self.view.classify(point)
                 if word_at_sel & SUBLIME_WORD_MASK:
@@ -585,7 +586,7 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
 
 
     def run(self, edit):
-        client = client_for_view(view)
+        client = client_for_view(self.view)
         pos = self.view.sel()[0].begin()
         client.send_request(Request.references(get_document_position(self.view, pos)),
                             lambda response: self.handle_response(response, pos))
@@ -614,7 +615,7 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
 def format_reference(reference):
     start = reference.get('range').get('start')
     file_path = uri_to_filename(reference.get("uri"))
-    return "{}\t{}:{}".format(file_path, start.get('line'), start.get('character'))
+    return "{}\t{}:{}".format(file_path, start.get('line') + 1, start.get('character') + 1)
 
 
 class ClearErrorPanelCommand(sublime_plugin.TextCommand):

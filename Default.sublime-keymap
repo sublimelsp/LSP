@@ -5,5 +5,10 @@
         "context": [
             { "key": "paren_pressed"}
         ]
+    },
+    {
+    	"keys": ["super+."],
+    	"command": "fix_diagnostic"
     }
+
 ]

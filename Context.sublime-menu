@@ -12,5 +12,9 @@
         "command": "symbol_rename",
         "caption": "Rename Symbol"
     },
+    {
+        "command": "fix_diagnostic",
+        "caption": "Fix Diagnostic"
+    },
     { "caption": "-", "id": "lsp_end"}
 ]

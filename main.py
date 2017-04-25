@@ -41,7 +41,6 @@ configs = [
 ]
 
 
-
 def format_request(request):
     """Converts the request into json and adds the Content-Length header"""
     content = json.dumps(request, indent=2)
@@ -794,6 +793,24 @@ def start_server(server_binary_args, working_dir):
     except Exception as err:
         print(err)
 
+def get_document_range(view):
+    range = {
+        "start": {
+            "line": 0,
+            "character": 0
+        },
+        "end": {
+            "line": 0,
+            "character": 0
+        }
+    }
+    return {
+        "textDocument": {
+            "uri": filename_to_uri(view.file_name())
+        },
+        "range": range
+    }
+
 
 def get_document_position(view, point):
     if (point):
@@ -844,6 +861,14 @@ class Request:
     @classmethod
     def rename(cls, params):
         return Request("textDocument/rename", params)
+
+    @classmethod
+    def codeAction(cls, params):
+        return Request("textDocument/codeAction", params)
+
+    @classmethod
+    def executeCommand(cls, params):
+        return Request("workspace/executeCommand", params)
 
     def __repr__(self):
         return self.method + " " + str(self.params)
@@ -1056,8 +1081,65 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             formatted.append("&nbsp;")
             formatted.append(signature.get('documentation'))
 
-
             mdpopups.show_popup(self.view, "\n".join(formatted), css=".mdpopups .lsp_signature { margin: 4px; }", md=True, flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=point, wrapper_class="lsp_signature", max_width=800)
+
+
+class FixDiagnosticCommand(sublime_plugin.TextCommand):
+    def is_enabled(self):
+        return True
+        if is_supported_view(self.view):
+            client = client_for_view(self.view)
+            if client and client.has_capability('codeActionProvider'):
+                return True
+        return True
+        #         point = self.view.sel()[0].begin()
+        #         word_at_sel = self.view.classify(point)
+        #         if word_at_sel & SUBLIME_WORD_MASK:
+        #             return True
+        # return False
+
+
+    def run(self, edit):
+        client = client_for_view(self.view)
+        params = get_document_range(self.view)
+        self.handle_codeaction_response({"commands": [{"title": "Hello World"}]})
+        # TODO params["context"] = {
+        #   "diagnostics": relevantdiagnostics
+        # }
+        # client.send_request(Request.codeAction(params),
+                            # lambda response: self.handle_codeaction_response)
+        # pos = self.view.sel()[0].begin()
+        # client.send_request(Request.references(get_document_position(self.view, pos)),
+        #                     lambda response: self.handle_response(response, pos))
+
+    def handle_codeaction_response(self, response):
+        titles = []
+        self.commands = response.get('commands')
+        for command in self.commands:
+            titles.append(command.get('title')) # TODO parse command and arguments
+        self.view.show_popup_menu(titles, self.handle_select)
+
+
+    def handle_select(self, index):
+        debug('selected', index)
+        client = client_for_view(self.view)
+        client.send_request(Request.executeCommand(self.commands[index]), self.handle_command_response)
+
+
+    def handle_command_response(self, response):
+        debug('executeCommand response:', response)
+        # TODO also support 'changes'
+        # apply_workspace_edit(self.view.window(), response)
+
+
+def apply_workspace_edit(window, response):
+    for document_edit in response.get('documentChanges'):
+        document = document_edit.get('textDocument')
+        path = uri_to_filename(document.get('uri'))
+        edits = document_edit.get('edits')
+        for edit in edits:
+            range = edit.get('range')
+            newText = edit.get('newText')
 
 
 

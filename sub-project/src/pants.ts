@@ -1,0 +1,1 @@
+const num: number = "asef";

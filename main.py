@@ -486,12 +486,6 @@ def create_region(view, diagnostic):
     return region
 
 
-# def format_diagnostic(file_path, diagnostic):
-#     start = diagnostic.get('range').get('start')
-#     line = start.get('line') or 0
-#     character = start.get('character') or 0
-#     return "\t{}:{}\t{}".format(line + 1, character + 1, diagnostic.get('message'))
-
 def build_location_severity_message(diagnostic):
     start = diagnostic.get('range').get('start')
     line = start.get('line') or 0
@@ -655,6 +649,8 @@ def update_view_diagnostics(view, source, location_severity_messages):
 
 phantom_sets_by_buffer = {}
 
+file_diagnostics = {}
+
 def handle_diagnostics(update):
     global phantom_sets_by_buffer
     #debug(update)
@@ -689,17 +685,11 @@ def handle_diagnostics(update):
 
     base_dir = first_folder(window)
     relative_file_path = os.path.relpath(file_path, base_dir)
-    debug('relpath', file_path, base_dir, relative_file_path)
+    file_diagnostics[file_path] = diagnostics
 
-    # output = list(build_diagnostic(relative_file_path, diagnostic) for diagnostic in diagnostics)
     location_severity_messages = list(build_location_severity_message(diagnostic) for diagnostic in diagnostics)
-    # if location_severity_messages:
     update_file_diagnostics(window, relative_file_path, 'lsp', location_severity_messages)
     update_output_panel(window)
-        # file_diagnostics[relative_file_path] = output
-    # else:
-        # if relative_file_path in file_diagnostics:
-            # del file_diagnostics[relative_file_path]
 
 
 def update_output_panel(window):
@@ -1101,21 +1091,40 @@ class FixDiagnosticCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
         client = client_for_view(self.view)
-        params = get_document_range(self.view)
-        self.handle_codeaction_response({"commands": [{"title": "Hello World"}]})
-        # TODO params["context"] = {
-        #   "diagnostics": relevantdiagnostics
+        # get current diagnostic from cursor position (how does sublimelinter do this?)
+        # for now just use the first diagnostic in the document
+        if self.view.file_name() in file_diagnostics:
+            diagnostics = file_diagnostics[self.view.file_name()]
+            if len(diagnostics) > 0:
+                diagnostic = diagnostics[0]
+                params = {
+                    "textDocument": {
+                        "uri": filename_to_uri(self.view.file_name())
+                    },
+                    "range": diagnostic.get('range'),
+                    "context": {
+                        "diagnostics": [diagnostic]
+                    }
+                }
+                client.send_request(Request.codeAction(params), self.handle_codeaction_response)
+
+        # params = get_document_range(self.view)
+        # # self.handle_codeaction_response({"commands": [{"title": "Hello World"}]})
+        # params["context"] = {
+        #   "diagnostics": []
         # }
         # client.send_request(Request.codeAction(params),
-                            # lambda response: self.handle_codeaction_response)
-        # pos = self.view.sel()[0].begin()
+        #                     lambda response: self.handle_codeaction_response)
+        # # pos = self.view.sel()[0].begin()
         # client.send_request(Request.references(get_document_position(self.view, pos)),
         #                     lambda response: self.handle_response(response, pos))
 
     def handle_codeaction_response(self, response):
         titles = []
-        self.commands = response.get('commands')
+        debug(response)
+        self.commands = response
         for command in self.commands:
+            debug(command, command.get('title'))
             titles.append(command.get('title')) # TODO parse command and arguments
         self.view.show_popup_menu(titles, self.handle_select)
 

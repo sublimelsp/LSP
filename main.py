@@ -114,25 +114,28 @@ class Client(object):
                     content = self.process.stdout.read(content_length).decode("UTF-8")
                     # debug(content)
 
-                    response = None
+                    payload = None
                     try:
-                        response = json.loads(content)
+                        payload = json.loads(content)
                         limit = min(len(content), 200)
-                        if response.get("method") != "window/logMessage":
+                        if payload.get("method") != "window/logMessage":
                             debug("got json: ", content[0:limit])
                     except:
-                        printf("Got a non-JSON response: ", content)
+                        printf("Got a non-JSON payload: ", content)
                         continue
 
                     try:
-                        if "error" in response:
-                            debug("got error: ", response.get("error"))
-                        elif "id" in response:
-                            self.response_handler(response)
-                        elif "method" in response:
-                            self.notification_handler(response)
+                        if "error" in payload:
+                            debug("got error: ", payload.get("error"))
+                        elif "method" in payload:
+                            if "id" in payload:
+                                self.request_handler(payload)
+                            else:
+                                self.notification_handler(payload)
+                        elif "id" in payload:
+                            self.response_handler(payload)
                         else:
-                            debug("Unknown response type: ", response)
+                            debug("Unknown payload type: ", payload)
                     except Exception as err:
                         printf("Error handling server content:", err)
 
@@ -165,6 +168,13 @@ class Client(object):
             self.handlers[response.get("id")](response.get("result"))
         else:
             debug("No handler found for id" + response.get("id"))
+
+    def request_handler(self, request):
+        method = request.get("method")
+        if method == "workspace/applyEdit":
+            apply_workspace_edit(sublime.active_window(), request.get("params"))
+        else:
+            debug("Unhandled request", method)
 
     def notification_handler(self, response):
         method = response.get("method")
@@ -1108,48 +1118,38 @@ class FixDiagnosticCommand(sublime_plugin.TextCommand):
                 }
                 client.send_request(Request.codeAction(params), self.handle_codeaction_response)
 
-        # params = get_document_range(self.view)
-        # # self.handle_codeaction_response({"commands": [{"title": "Hello World"}]})
-        # params["context"] = {
-        #   "diagnostics": []
-        # }
-        # client.send_request(Request.codeAction(params),
-        #                     lambda response: self.handle_codeaction_response)
-        # # pos = self.view.sel()[0].begin()
-        # client.send_request(Request.references(get_document_position(self.view, pos)),
-        #                     lambda response: self.handle_response(response, pos))
 
     def handle_codeaction_response(self, response):
         titles = []
         debug(response)
         self.commands = response
         for command in self.commands:
-            debug(command, command.get('title'))
             titles.append(command.get('title')) # TODO parse command and arguments
         self.view.show_popup_menu(titles, self.handle_select)
 
 
     def handle_select(self, index):
-        debug('selected', index)
         client = client_for_view(self.view)
         client.send_request(Request.executeCommand(self.commands[index]), self.handle_command_response)
 
 
     def handle_command_response(self, response):
-        debug('executeCommand response:', response)
-        # TODO also support 'changes'
-        # apply_workspace_edit(self.view.window(), response)
+        pass
+        # debug('executeCommand response:', response)
 
 
-def apply_workspace_edit(window, response):
-    for document_edit in response.get('documentChanges'):
+def apply_workspace_edit(window, params):
+    edit = params.get('edit')
+    for document_edit in edit.get('documentChanges') or []:
         document = document_edit.get('textDocument')
         path = uri_to_filename(document.get('uri'))
         edits = document_edit.get('edits')
         for edit in edits:
             range = edit.get('range')
             newText = edit.get('newText')
-
+    if edit.get('changes'):
+        for file, changes in edit.get('changes').items():
+            debug('apply', file, changes)
 
 
 class SaveListener(sublime_plugin.EventListener):

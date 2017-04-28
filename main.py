@@ -1125,7 +1125,8 @@ class FixDiagnosticCommand(sublime_plugin.TextCommand):
         self.commands = response
         for command in self.commands:
             titles.append(command.get('title')) # TODO parse command and arguments
-        self.view.show_popup_menu(titles, self.handle_select)
+        if len(self.commands) > 0:
+            self.view.show_popup_menu(titles, self.handle_select)
 
 
     def handle_select(self, index):
@@ -1140,16 +1141,49 @@ class FixDiagnosticCommand(sublime_plugin.TextCommand):
 
 def apply_workspace_edit(window, params):
     edit = params.get('edit')
-    for document_edit in edit.get('documentChanges') or []:
-        document = document_edit.get('textDocument')
-        path = uri_to_filename(document.get('uri'))
-        edits = document_edit.get('edits')
-        for edit in edits:
-            range = edit.get('range')
-            newText = edit.get('newText')
-    if edit.get('changes'):
-        for file, changes in edit.get('changes').items():
-            debug('apply', file, changes)
+    window.run_command('apply_workspace_edit', {'changes': edit})
+
+class ApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
+    def run(self, changes):
+        debug('workspace edit', changes)
+        # for document_edit in changes.get('documentChanges') or []:
+        #     document = document_edit.get('textDocument')
+        #     path = uri_to_filename(document.get('uri'))
+        #     edits = document_edit.get('edits')
+        #     for edit in edits:
+        #         range = edit.get('range')
+        #         newText = edit.get('newText')
+        if changes.get('changes'):
+            for uri, file_changes in changes.get('changes').items():
+                path = uri_to_filename(uri)
+                view = self.window.open_file(path)
+                if view:
+                    if view.is_loading():
+                        # TODO: schedule
+                        debug('view not ready', view)
+                    else:
+                        view.run_command('apply_document_edit', {'changes': file_changes})
+                else:
+                    debug('view not found to apply', path, file_changes)
+
+
+class ApplyDocumentEditCommand(sublime_plugin.TextCommand):
+    def run(self, edit, changes):
+        for change in changes:
+            newText = change.get('newText')
+            # TODO create a Range type
+            start = change.get('range').get('start')
+            end = change.get('range').get('end')
+            start_position = self.view.text_point(start.get('line'), start.get('character'))
+            end_position = self.view.text_point(end.get('line'), end.get('character'))
+            region = sublime.Region(start_position, end_position)
+            if region.empty():
+                self.view.insert(edit, start_position, newText)
+            else:
+                if len(newText) > 0:
+                    self.view.replace(edit, region, newText)
+                else:
+                    self.view.erase(edit, region)
 
 
 class SaveListener(sublime_plugin.EventListener):

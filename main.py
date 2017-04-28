@@ -24,7 +24,7 @@ class Config(object):
 
 jsts_command = "javascript-typescript-stdio"
 if os.name == 'nt':
-    jsts_command = "javascript-typescript-stdio.cmd"
+    jsts_command = "javascript-typescript-stdio.cmd" # ["C:\\Users\\tvanommeren\\AppData\\Roaming\\npm\\javascript-typescript-stdio.cmd", "-l", "lspserver.log"]
 
 configs = [
     Config(
@@ -81,6 +81,9 @@ class Client(object):
     def send_notification(self, notification):
         self.send_call(notification)
 
+    def kill(self):
+        self.process.kill()
+
     def send_call(self, payload):
         try:
             debug(payload)
@@ -96,23 +99,26 @@ class Client(object):
         """
         ContentLengthHeader = b"Content-Length: "
 
+        debug("start polling stdout")
         while self.process.poll() is None:
+            # debug("poll not none")
             try:
 
                 in_headers = True
                 content_length = 0
-
+                debug("in loop")
                 while in_headers:
+                    debug("waiting for headers again")
                     header = self.process.stdout.readline().strip()
                     if (len(header) == 0):
                         in_headers = False
 
-                    if (header.startswith(ContentLengthHeader)):
-                        content_length = int(header[len(ContentLengthHeader):])
+                    if header.startswith(ContentLengthHeader):
+                        content_length = int(header[len(ContentLengthHeader):])# for windows
+                        debug("Got content length header for", content_length)
 
                 if (content_length > 0):
                     content = self.process.stdout.read(content_length).decode("UTF-8")
-                    # debug(content)
 
                     payload = None
                     try:
@@ -235,7 +241,14 @@ def plugin_loaded():
 def plugin_unloaded():
     for window in sublime.windows():
         for client in window_clients(window).values():
-            client.send_notification(Notification.exit())
+            debug("unloading client", client)
+            try:
+                client.send_notification(Notification.exit())
+                client.kill()
+            except Exception as e:
+                debug("error exiting", e)
+
+
     debug("plugin unloaded")
 
 
@@ -389,7 +402,7 @@ def queue_did_change(view):
     else:
         pending_buffer_changes[buffer_id] = {"view": view, "version": buffer_version}
 
-    sublime.set_timeout(lambda: purge_did_change(buffer_id, buffer_version), 500)
+    sublime.set_timeout_async(lambda: purge_did_change(buffer_id, buffer_version), 500)
 
 
 def purge_did_change(buffer_id, buffer_version=None):
@@ -738,6 +751,7 @@ def update_output_panel(window):
 
 def start_client(window, config):
     project_path = first_folder(window)
+    debug("starting in", project_path)
     client = start_server(config.binary_args, project_path)
     initializeParams = {
         "processId": client.process.pid,

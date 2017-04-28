@@ -106,16 +106,15 @@ class Client(object):
 
                 in_headers = True
                 content_length = 0
-                debug("in loop")
                 while in_headers:
-                    debug("waiting for headers again")
+                    # debug("waiting for headers again")
                     header = self.process.stdout.readline().strip()
                     if (len(header) == 0):
                         in_headers = False
 
                     if header.startswith(ContentLengthHeader):
                         content_length = int(header[len(ContentLengthHeader):])# for windows
-                        debug("Got content length header for", content_length)
+                        # debug("Got content length header for", content_length)
 
                 if (content_length > 0):
                     content = self.process.stdout.read(content_length).decode("UTF-8")

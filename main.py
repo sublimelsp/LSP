@@ -544,16 +544,18 @@ class SymbolRenameCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         pos = self.view.sel()[0].begin()
         params = get_document_position(self.view, pos)
-        sublime.active_window().show_input_panel("New name:", "", lambda text: self.request_rename(params, text), None, None)
+        self.view.window().show_input_panel("New name:", "", lambda text: self.request_rename(params, text), None, None)
 
     def request_rename(self, params, new_name):
         client = client_for_view(self.view)
         params["newName"] = new_name
-        client.send_request(Request.rename(params),
-                            lambda response: self.handle_response(response, pos))
+        client.send_request(Request.rename(params), self.handle_response)
 
-    def handle_response(self, response, pos):
-        debug(response)
+    def handle_response(self, response):
+        if 'changes' in response:
+            changes = response.get('changes')
+            if len(changes) > 0:
+                self.view.window().run_command('apply_workspace_edit', {'changes': response})
 
 
 class SymbolDefinitionCommand(sublime_plugin.TextCommand):
@@ -1099,12 +1101,11 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
 class FixDiagnosticCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
-        return True
         if is_supported_view(self.view):
             client = client_for_view(self.view)
             if client and client.has_capability('codeActionProvider'):
                 return True
-        return True
+        return False
         #         point = self.view.sel()[0].begin()
         #         word_at_sel = self.view.classify(point)
         #         if word_at_sel & SUBLIME_WORD_MASK:
@@ -1155,6 +1156,7 @@ class FixDiagnosticCommand(sublime_plugin.TextCommand):
 def apply_workspace_edit(window, params):
     edit = params.get('edit')
     window.run_command('apply_workspace_edit', {'changes': edit})
+
 
 class ApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
     def run(self, changes):

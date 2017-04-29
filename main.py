@@ -1104,33 +1104,38 @@ class FixDiagnosticCommand(sublime_plugin.TextCommand):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
             if client and client.has_capability('codeActionProvider'):
-                return True
+                # debug('code action is enabled, but should it be?')
+                return len(self.get_line_diagnostics()) > 0
         return False
-        #         point = self.view.sel()[0].begin()
-        #         word_at_sel = self.view.classify(point)
-        #         if word_at_sel & SUBLIME_WORD_MASK:
-        #             return True
-        # return False
 
+    def get_line_diagnostics(self):
+        line_diagnostics = []
+        if self.view.file_name() in file_diagnostics:
+            row, col = self.view.rowcol(self.view.sel()[0].begin())
+            diagnostics = file_diagnostics[self.view.file_name()]
+            if len(diagnostics) > 0:
+                for diagnostic in diagnostics:
+                    start_line = diagnostic.get('range').get('start').get('line')
+                    end_line = diagnostic.get('range').get('end').get('line')
+                    if row >= start_line and row <= end_line:
+                        line_diagnostics.append(diagnostic)
+        return line_diagnostics
 
     def run(self, edit):
         client = client_for_view(self.view)
-        # get current diagnostic from cursor position (how does sublimelinter do this?)
-        # for now just use the first diagnostic in the document
-        if self.view.file_name() in file_diagnostics:
-            diagnostics = file_diagnostics[self.view.file_name()]
-            if len(diagnostics) > 0:
-                diagnostic = diagnostics[0]
-                params = {
-                    "textDocument": {
-                        "uri": filename_to_uri(self.view.file_name())
-                    },
-                    "range": diagnostic.get('range'),
-                    "context": {
-                        "diagnostics": [diagnostic]
-                    }
+        line_diagnostics = self.get_line_diagnostics()
+        if len(line_diagnostics) > 0:
+            diagnostic = line_diagnostics[0]
+            params = {
+                "textDocument": {
+                    "uri": filename_to_uri(self.view.file_name())
+                },
+                "range": diagnostic.get('range'),
+                "context": {
+                    "diagnostics": line_diagnostics
                 }
-                client.send_request(Request.codeAction(params), self.handle_codeaction_response)
+            }
+            client.send_request(Request.codeAction(params), self.handle_codeaction_response)
 
 
     def handle_codeaction_response(self, response):

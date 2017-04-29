@@ -527,7 +527,7 @@ def build_diagnostic(file_path, diagnostic):
 
 def format_diagnostic(line, character, source, level, message):
     location = "{}:{}".format(line + 1, character + 1)
-    return "\t{:<8}\t{:<8}\t{:<8}\t{}".format(location, source, level, message)
+    return "\t{:<8}\t{:<8}\t{:<8}\t{}".format(location, source, level, message.replace("\n", "").replace("\r", ""))
 
 class SymbolRenameCommand(sublime_plugin.TextCommand):
     def is_enabled(self):

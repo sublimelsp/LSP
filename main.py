@@ -219,13 +219,21 @@ def printf(*args):
     print()
 
 
-def first_folder(window):
+def get_project_path(window):
     """
     We only support running one stack-ide instance per window currently,
     on the first folder open in that window.
     """
     if len(window.folders()):
-        return window.folders()[0]
+        folder_paths = window.folders()
+        return os.path.commonprefix(folder_paths)
+        # common_path = None
+        # for folder_path in folder_paths:
+        #     if common_path is None:
+        #         common_path = folder_path
+        #     else:
+
+        # return window.folders()[0]
     else:
         debug("Couldn't determine project directory")
         return None
@@ -666,7 +674,7 @@ def update_file_diagnostics(window, relative_file_path, source, location_severit
 
 def update_view_diagnostics(view, source, location_severity_messages):
     window = view.window()
-    base_dir = first_folder(window)
+    base_dir = get_project_path(window)
     relative_file_path = os.path.relpath(view.file_name(), base_dir)
     update_file_diagnostics(window, relative_file_path, source, location_severity_messages)
     update_output_panel(window)
@@ -707,7 +715,7 @@ def handle_diagnostics(update):
         else:
             view.erase_regions("errors")
 
-    base_dir = first_folder(window)
+    base_dir = get_project_path(window)
     relative_file_path = os.path.relpath(file_path, base_dir)
     file_diagnostics[file_path] = diagnostics
 
@@ -751,7 +759,7 @@ def update_output_panel(window):
 
 
 def start_client(window, config):
-    project_path = first_folder(window)
+    project_path = get_project_path(window)
     debug("starting in", project_path)
     client = start_server(config.binary_args, project_path)
     initializeParams = {
@@ -777,7 +785,7 @@ def get_window_client(view, config):
     window = view.window()
     clients = window_clients(window)
     if config.name not in clients:
-        project_path = first_folder(window)
+        project_path = get_project_path(window)
         client = start_client(window, config)
         clients_by_window.setdefault(window.id(), {})[config.name] = client
         debug("client registered for window", window.id(), window_clients(window))

@@ -99,15 +99,12 @@ class Client(object):
         """
         ContentLengthHeader = b"Content-Length: "
 
-        debug("start polling stdout")
         while self.process.poll() is None:
-            # debug("poll not none")
             try:
 
                 in_headers = True
                 content_length = 0
                 while in_headers:
-                    # debug("waiting for headers again")
                     header = self.process.stdout.readline().strip()
                     if (len(header) == 0):
                         in_headers = False
@@ -123,8 +120,8 @@ class Client(object):
                     try:
                         payload = json.loads(content)
                         limit = min(len(content), 200)
-                        if payload.get("method") != "window/logMessage":
-                            debug("got json: ", content[0:limit])
+                        #if payload.get("method") != "window/logMessage":
+                            # debug("got json: ", content[0:limit])
                     except:
                         printf("Got a non-JSON payload: ", content)
                         continue
@@ -221,8 +218,7 @@ def printf(*args):
 
 def get_project_path(window):
     """
-    We only support running one stack-ide instance per window currently,
-    on the first folder open in that window.
+    Returns the common root of all open folders in the window
     """
     if len(window.folders()):
         folder_paths = window.folders()
@@ -245,16 +241,32 @@ def plugin_loaded():
     debug("plugin loaded")
 
 
+def check_window_unloaded():
+    global clients_by_window
+    open_window_ids = list(window.id() for window in sublime.windows())
+    iterable_clients_by_window = clients_by_window.copy()
+    for id, window_clients in iterable_clients_by_window.items():
+        if id not in open_window_ids:
+            debug("window closed", id)
+            del clients_by_window[id]
+            for config, client in window_clients.items():
+                debug("unloading client", config, client)
+                unload_client(client)
+
+
+def unload_client(client):
+    debug("unloading client", client)
+    try:
+        client.send_notification(Notification.exit())
+        client.kill()
+    except Exception as e:
+        debug("error exiting", e)
+
+
 def plugin_unloaded():
     for window in sublime.windows():
         for client in window_clients(window).values():
-            debug("unloading client", client)
-            try:
-                client.send_notification(Notification.exit())
-                client.kill()
-            except Exception as e:
-                debug("error exiting", e)
-
+            unload_client(client)
 
     debug("plugin unloaded")
 
@@ -437,6 +449,8 @@ def notify_did_change(view):
     client.send_notification(Notification.didChange(params))
 
 
+
+
 def initialize_document_sync(text_document_sync_kind):
     Events.subscribe('view.on_load_async', notify_did_open)
     Events.subscribe('view.on_activated_async', notify_did_open)
@@ -459,8 +473,8 @@ def handle_initialize_result(result, client):
         initialize_document_sync(document_sync)
 
     Events.subscribe('document.diagnostics', handle_diagnostics)
-    for view in didopen_after_initialize:
-        notify_did_open(view)
+    # for view in didopen_after_initialize:
+    #     notify_did_open(view)
     didopen_after_initialize = list()
 
 
@@ -497,9 +511,15 @@ def create_phantom_html(text):
     return """<body id=inline-error>{}
                 <div class="error">
                     <span class="message">{}</span>
-                    <a href=hide>{}</a>
                 </div>
-                </body>""".format(stylesheet, html.escape(text, quote=False), chr(0x00D7))
+                </body>""".format(stylesheet, html.escape(text, quote=False))
+    # to add a close button:
+    # return """<body id=inline-error>{}
+    #             <div class="error">
+    #                 <span class="message">{}</span>
+    #                 <a href=hide>{}</a>
+    #             </div>
+    #             </body>""".format(stylesheet, html.escape(text, quote=False), chr(0x00D7))
 
 
 def create_phantom(view, diagnostic):
@@ -725,37 +745,38 @@ def handle_diagnostics(update):
 
 
 def update_output_panel(window):
-    base_dir = first_folder(window)
-    panel = window.find_output_panel("diagnostics")
-    if panel is None:
-        panel = window.create_output_panel("diagnostics")
-        panel.settings().set("result_file_regex", r"^(.*):$")
-        panel.settings().set("result_line_regex", r"^\t([0-9]+):?([0-9]+)\s*\t.*\t.*\t(.*)$")
-        panel.settings().set("result_base_dir", base_dir)
-        panel.settings().set("line_numbers", False)
-        panel.assign_syntax("Packages/" + PLUGIN_NAME + "/Diagnostics.sublime-syntax")
+    base_dir = get_project_path(window)
+    # panel = window.find_output_panel("diagnostics")
+    # if panel is None:
+    #     panel = window.create_output_panel("diagnostics")
+    #     panel.settings().set("result_file_regex", r"^(.*):$")
+    #     panel.settings().set("result_line_regex", r"^\t([0-9]+):?([0-9]+)\s*\t.*\t.*\t(.*)$")
+    #     panel.settings().set("result_base_dir", base_dir)
+    #     panel.settings().set("line_numbers", False)
+    #     panel.assign_syntax("Packages/" + PLUGIN_NAME + "/Diagnostics.sublime-syntax")
 
-        # Call create_output_panel a second time after assigning the above
-        # settings, so that it'll be picked up as a result buffer
-        window.create_output_panel("diagnostics")
-    else:
-        panel.run_command("clear_error_panel")
-        window.run_command("show_panel", {"panel": "output.diagnostics"})
+    #     # Call create_output_panel a second time after assigning the above
+    #     # settings, so that it'll be picked up as a result buffer
+    #     window.create_output_panel("diagnostics")
+    # else:
+    #     panel.run_command("clear_error_panel")
+    #     window.run_command("show_panel", {"panel": "output.diagnostics"})
 
     if window.id() in window_file_diagnostics:
         file_diagnostics = window_file_diagnostics[window.id()]
         if file_diagnostics:
             for file_path, source_diagnostics in file_diagnostics.items():
                 if source_diagnostics:
-                    panel.run_command('append', {'characters': file_path + ":\n", 'force': True})
+                    # panel.run_command('append', {'characters': file_path + ":\n", 'force': True})
                     # debug("source diagnostics for", file_path, source_diagnostics)
                     for source, location_severity_messages in source_diagnostics.items():
                         for location, severity, message in location_severity_messages:
                             line, character = location
                             item = format_diagnostic(line, character, source, severity, message)
-                            panel.run_command('append', {'characters': item + "\n", 'force': True, 'scroll_to_end': True})
-        else:
-            window.run_command("hide_panel", {"panel": "output.diagnostics"})
+                            debug(file_path, item)
+                            # panel.run_command('append', {'characters': item + "\n", 'force': True, 'scroll_to_end': True})
+        # else:
+            # window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
 
 def start_client(window, config):
@@ -1212,6 +1233,11 @@ class ApplyDocumentEditCommand(sublime_plugin.TextCommand):
                     self.view.replace(edit, region, newText)
                 else:
                     self.view.erase(edit, region)
+
+
+class CloseListener(sublime_plugin.EventListener):
+    def on_close(self, view):
+        sublime.set_timeout_async(check_window_unloaded, 500)
 
 
 class SaveListener(sublime_plugin.EventListener):

@@ -120,8 +120,8 @@ class Client(object):
                     try:
                         payload = json.loads(content)
                         limit = min(len(content), 200)
-                        #if payload.get("method") != "window/logMessage":
-                            # debug("got json: ", content[0:limit])
+                        if payload.get("method") != "window/logMessage":
+                            debug("got json: ", content[0:limit])
                     except:
                         printf("Got a non-JSON payload: ", content)
                         continue
@@ -473,8 +473,8 @@ def handle_initialize_result(result, client):
         initialize_document_sync(document_sync)
 
     Events.subscribe('document.diagnostics', handle_diagnostics)
-    # for view in didopen_after_initialize:
-    #     notify_did_open(view)
+    for view in didopen_after_initialize:
+        notify_did_open(view)
     didopen_after_initialize = list()
 
 
@@ -693,6 +693,7 @@ def update_file_diagnostics(window, relative_file_path, source, location_severit
 
 
 def update_view_diagnostics(view, source, location_severity_messages):
+    debug("got view diags", source, location_severity_messages)
     window = view.window()
     base_dir = get_project_path(window)
     relative_file_path = os.path.relpath(view.file_name(), base_dir)
@@ -746,37 +747,36 @@ def handle_diagnostics(update):
 
 def update_output_panel(window):
     base_dir = get_project_path(window)
-    # panel = window.find_output_panel("diagnostics")
-    # if panel is None:
-    #     panel = window.create_output_panel("diagnostics")
-    #     panel.settings().set("result_file_regex", r"^(.*):$")
-    #     panel.settings().set("result_line_regex", r"^\t([0-9]+):?([0-9]+)\s*\t.*\t.*\t(.*)$")
-    #     panel.settings().set("result_base_dir", base_dir)
-    #     panel.settings().set("line_numbers", False)
-    #     panel.assign_syntax("Packages/" + PLUGIN_NAME + "/Diagnostics.sublime-syntax")
+    panel = window.find_output_panel("diagnostics")
+    if panel is None:
+        panel = window.create_output_panel("diagnostics")
+        panel.settings().set("result_file_regex", r"^(.*):$")
+        panel.settings().set("result_line_regex", r"^\t([0-9]+):?([0-9]+)\s*\t.*\t.*\t(.*)$")
+        panel.settings().set("result_base_dir", base_dir)
+        panel.settings().set("line_numbers", False)
+        panel.assign_syntax("Packages/" + PLUGIN_NAME + "/Diagnostics.sublime-syntax")
+        # Call create_output_panel a second time after assigning the above
+        # settings, so that it'll be picked up as a result buffer
+        window.create_output_panel("diagnostics")
 
-    #     # Call create_output_panel a second time after assigning the above
-    #     # settings, so that it'll be picked up as a result buffer
-    #     window.create_output_panel("diagnostics")
-    # else:
-    #     panel.run_command("clear_error_panel")
-    #     window.run_command("show_panel", {"panel": "output.diagnostics"})
 
     if window.id() in window_file_diagnostics:
+        panel.run_command("clear_error_panel")
         file_diagnostics = window_file_diagnostics[window.id()]
         if file_diagnostics:
             for file_path, source_diagnostics in file_diagnostics.items():
                 if source_diagnostics:
-                    # panel.run_command('append', {'characters': file_path + ":\n", 'force': True})
+                    panel.run_command('append', {'characters': file_path + ":\n", 'force': True})
                     # debug("source diagnostics for", file_path, source_diagnostics)
                     for source, location_severity_messages in source_diagnostics.items():
                         for location, severity, message in location_severity_messages:
                             line, character = location
                             item = format_diagnostic(line, character, source, severity, message)
-                            debug(file_path, item)
-                            # panel.run_command('append', {'characters': item + "\n", 'force': True, 'scroll_to_end': True})
-        # else:
-            # window.run_command("hide_panel", {"panel": "output.diagnostics"})
+                            # debug(file_path, item)
+                            panel.run_command('append', {'characters': item + "\n", 'force': True, 'scroll_to_end': True})
+            window.run_command("show_panel", {"panel": "output.diagnostics"})
+        else:
+            window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
 
 def start_client(window, config):
@@ -786,7 +786,6 @@ def start_client(window, config):
     initializeParams = {
         "processId": client.process.pid,
         "rootUri": filename_to_uri(project_path),
-        # "rootPath": project_path,
         "capabilities": {
             "completion": {
                 "completionItem": {

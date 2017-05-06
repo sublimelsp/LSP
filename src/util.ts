@@ -3,13 +3,12 @@
  * It does a lot of things, including calming the monkeys
  * @return {string} the fruit of yolo
  */
-export function yolo(): string {
+export function harlo(): string {
     return "bananas";
 }
 
-yolo();
+harlo();
 
-const bi = Math.PI;
 export const num: number = 55;
 export const text: string = "asdf";
 

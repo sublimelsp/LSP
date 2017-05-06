@@ -1,9 +1,23 @@
 {
     "compilerOptions": {
-        "module": "commonjs",
-        "target": "es5",
-        "noImplicitAny": false,
-        "sourceMap": false
+	    "target": "es2016",
+	    "lib": [
+	      "es2016",
+	      "dom"
+	    ],
+	    "module": "commonjs",
+	    "moduleResolution": "node",
+	    "sourceMap": true,
+	    "outDir": "lib",
+	    "declaration": true,
+	    "allowUnreachableCode": false,
+	    "allowUnusedLabels": false,
+	    "noImplicitReturns": true,
+	    "noImplicitThis": true,
+	    "noUnusedLocals": true,
+	    "noImplicitAny": true,
+	    "strictNullChecks": true
+	    // "skipLibCheck": true
     },
     "include": [
 		"src/**/*.ts"

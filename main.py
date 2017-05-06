@@ -1153,12 +1153,18 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
     def handle_response(self, response, point):
         signatures = response.get("signatures")
-        debug(signatures)
+        activeSignature = response.get("activeSignature")
+        debug("got signatures, active is", len(signatures), activeSignature)
         if len(signatures) > 0:
-            signature = signatures[response.get("activeSignature")]
+            signature = signatures[activeSignature]
+            debug("active signature", signature)
             formatted = []
             formatted.append("```{}\n{}\n```".format("typescript", signature.get('label')))
-            for parameter in signature.get('parameters'):
+            params = signature.get('parameters')
+            if params is None:  # for pyls TODO create issue?
+                params = signature.get('params')
+            debug("params", params)
+            for parameter in params:
                 paramDocs = parameter.get('documentation')
                 formatted.append("**{}**\n".format(parameter.get('label')))
                 if paramDocs:

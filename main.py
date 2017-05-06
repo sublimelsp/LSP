@@ -24,9 +24,16 @@ class Config(object):
 
 jsts_command = "javascript-typescript-stdio"
 if os.name == 'nt':
-    jsts_command = "javascript-typescript-stdio.cmd" # ["C:\\Users\\tvanommeren\\AppData\\Roaming\\npm\\javascript-typescript-stdio.cmd", "-l", "lspserver.log"]
+    jsts_command = "javascript-typescript-stdio.cmd"
+    # ["javascript-typescript-stdio.cmd", "-l", "lspserver.log"]
 
 configs = [
+    Config(
+        'pyls',
+        'pyls',
+        'source.python',
+        'Packages/Python/Python.sublime-syntax'
+    ),
     Config(
         'jsts',
         [jsts_command],
@@ -110,8 +117,7 @@ class Client(object):
                         in_headers = False
 
                     if header.startswith(ContentLengthHeader):
-                        content_length = int(header[len(ContentLengthHeader):])# for windows
-                        # debug("Got content length header for", content_length)
+                        content_length = int(header[len(ContentLengthHeader):])
 
                 if (content_length > 0):
                     content = self.process.stdout.read(content_length).decode("UTF-8")
@@ -122,7 +128,7 @@ class Client(object):
                         limit = min(len(content), 200)
                         if payload.get("method") != "window/logMessage":
                             debug("got json: ", content[0:limit])
-                    except:
+                    except IOError:
                         printf("Got a non-JSON payload: ", content)
                         continue
 
@@ -141,8 +147,9 @@ class Client(object):
                     except Exception as err:
                         printf("Error handling server content:", err)
 
-            except:
-                printf("LSP stdout process ending due to exception: ", sys.exc_info())
+            except IOError:
+                printf("LSP stdout process ending due to exception: ",
+                       sys.exc_info())
                 self.process.terminate()
                 self.process = None
                 return
@@ -158,8 +165,9 @@ class Client(object):
                 error = self.process.stderr.readline().decode('UTF-8')
                 if len(error) > 0:
                     printf("LSP error: ", error)
-            except:
-                printf("LSP stderr process ending due to exception: ", sys.exc_info())
+            except IOError:
+                printf("LSP stderr process ending due to exception: ",
+                       sys.exc_info())
                 return
 
         debug("LSP stderr process ended.")
@@ -174,7 +182,8 @@ class Client(object):
     def request_handler(self, request):
         method = request.get("method")
         if method == "workspace/applyEdit":
-            apply_workspace_edit(sublime.active_window(), request.get("params"))
+            apply_workspace_edit(sublime.active_window(),
+                                 request.get("params"))
         else:
             debug("Unhandled request", method)
 
@@ -188,7 +197,6 @@ class Client(object):
             server_log(self.process.args[0], response.get("params").get("message"))
         else:
             debug("Unhandled notification:", method)
-
 
 
 def debug(*args):
@@ -326,12 +334,14 @@ def client_for_view(view):
         return None
     clients = window_clients(view.window())
     if config.name not in clients:
-        debug(config.name, "not available for view", view.file_name(), "in window", view.window().id())
+        debug(config.name, "not available for view", view.file_name(),
+              "in window", view.window().id())
     else:
         return clients[config.name]
 
 
 clients_by_window = {}
+
 
 def window_clients(window):
     global clients_by_window
@@ -357,9 +367,9 @@ def notify_did_open(view):
         get_document_state(view.file_name())
         params = {
             "textDocument": {
-               "uri": filename_to_uri(view.file_name()),
-               "languageId": "ts",
-               "text": view.substr(sublime.Region(0, view.size()))
+                "uri": filename_to_uri(view.file_name()),
+                "languageId": "ts",
+                "text": view.substr(sublime.Region(0, view.size()))
             }
         }
         client.send_notification(Notification.didOpen(params))
@@ -419,9 +429,13 @@ def queue_did_change(view):
         buffer_version = pending_buffer["version"] + 1
         pending_buffer["version"] = buffer_version
     else:
-        pending_buffer_changes[buffer_id] = {"view": view, "version": buffer_version}
+        pending_buffer_changes[buffer_id] = {
+            "view": view,
+            "version": buffer_version
+        }
 
-    sublime.set_timeout_async(lambda: purge_did_change(buffer_id, buffer_version), 500)
+    sublime.set_timeout_async(
+        lambda: purge_did_change(buffer_id, buffer_version), 500)
 
 
 def purge_did_change(buffer_id, buffer_version=None):
@@ -438,17 +452,15 @@ def notify_did_change(view):
     document_state = get_document_state(view.file_name())
     params = {
         "textDocument": {
-           "uri": filename_to_uri(view.file_name()),
-           "languageId": "ts",
-           "version": document_state.inc_version(),
+            "uri": filename_to_uri(view.file_name()),
+            "languageId": "ts",
+            "version": document_state.inc_version(),
         },
         "contentChanges": [{
             "text": view.substr(sublime.Region(0, view.size()))
         }]
     }
     client.send_notification(Notification.didChange(params))
-
-
 
 
 def initialize_document_sync(text_document_sync_kind):
@@ -459,14 +471,13 @@ def initialize_document_sync(text_document_sync_kind):
     Events.subscribe('view.on_close', notify_did_close)
 
 
-# TODO fix all these globals (they should be capabilities stored on the client)
-
 def handle_initialize_result(result, client):
     global didopen_after_initialize
     capabilities = result.get("capabilities")
     client.set_capabilities(capabilities)
 
-    # TODO: These handlers is already filtered by syntax but does not need to be enabled 2x per client
+    # TODO: These handlers is already filtered by syntax but does not need to
+    # be enabled 2x per client
     # Move filtering?
     document_sync = capabilities.get("textDocumentSync")
     if document_sync:
@@ -519,20 +530,25 @@ def create_phantom_html(text):
     #                 <span class="message">{}</span>
     #                 <a href=hide>{}</a>
     #             </div>
-    #             </body>""".format(stylesheet, html.escape(text, quote=False), chr(0x00D7))
+    #             </body>""".format(stylesheet, html.escape(text, quote=False),
+    #              chr(0x00D7))
 
 
 def create_phantom(view, diagnostic):
     region = create_region(view, diagnostic)
     # TODO: hook up hide phantom (if keeping them)
-    return sublime.Phantom(region, '<p>' + create_phantom_html(diagnostic.get('message')) + '</p>', sublime.LAYOUT_BELOW)
+    content = create_phantom_html(diagnostic.get('message'))
+    return sublime.Phantom(region, '<p>' + content + '</p>',
+                           sublime.LAYOUT_BELOW)
 
 
 def create_region(view, diagnostic):
     start = diagnostic.get('range').get('start')
     end = diagnostic.get('range').get('end')
-    region = sublime.Region(view.text_point(start.get('line'), start.get('character')),
-                            view.text_point(end.get('line'), end.get('character')))
+    region = sublime.Region(
+        view.text_point(start.get('line'), start.get('character')),
+        view.text_point(end.get('line'), end.get('character'))
+    )
     return region
 
 
@@ -550,12 +566,18 @@ def build_diagnostic(file_path, diagnostic):
     character = start.get('character') or 0
     level = "error"
     source = "lsp"
-    return format_diagnostic(line, character, source, level, diagnostic.get('message'))
-    #return "\t{}:{}\t{}\t{}\t{}".format(line + 1, character + 1, source, level, diagnostic.get('message'))
+    return format_diagnostic(line, character, source, level,
+                             diagnostic.get('message'))
+    # return "\t{}:{}\t{}\t{}\t{}".format(line + 1, character + 1,
+    # source, level, diagnostic.get('message'))
+
 
 def format_diagnostic(line, character, source, level, message):
     location = "{}:{}".format(line + 1, character + 1)
-    return "\t{:<8}\t{:<8}\t{:<8}\t{}".format(location, source, level, message.replace("\n", "").replace("\r", ""))
+    formattedMessage = message.replace("\n", "").replace("\r", "")
+    return "\t{:<8}\t{:<8}\t{:<8}\t{}".format(location, source, level,
+                                              formattedMessage)
+
 
 class SymbolRenameCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
@@ -572,7 +594,8 @@ class SymbolRenameCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         pos = self.view.sel()[0].begin()
         params = get_document_position(self.view, pos)
-        self.view.window().show_input_panel("New name:", "", lambda text: self.request_rename(params, text), None, None)
+        self.view.window().show_input_panel("New name:", "",
+                                            lambda text: self.request_rename(params, text), None, None)
 
     def request_rename(self, params, new_name):
         client = client_for_view(self.view)
@@ -583,7 +606,8 @@ class SymbolRenameCommand(sublime_plugin.TextCommand):
         if 'changes' in response:
             changes = response.get('changes')
             if len(changes) > 0:
-                self.view.window().run_command('apply_workspace_edit', {'changes': response})
+                self.view.window().run_command('apply_workspace_edit',
+                                               {'changes': response})
 
 
 class SymbolDefinitionCommand(sublime_plugin.TextCommand):
@@ -601,13 +625,14 @@ class SymbolDefinitionCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         client = client_for_view(self.view)
         pos = self.view.sel()[0].begin()
-        client.send_request(Request.definition(get_document_position(self.view, pos)),
+        request = Request.definition(get_document_position(self.view, pos))
+        client.send_request(request,
                             lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response, position):
         window = sublime.active_window()
         if len(response) < 1:
-                # view.set_status("diagnostics", "{} errors".format(len(diagnostics)))
+            # view.set_status("diagnostics", "{} errors".format(len(diagnostics)))
             self.view.set_status("definition", "Could not find definition")
         else:
             location = response[0]
@@ -630,12 +655,14 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
                     return True
         return False
 
-
     def run(self, edit):
         client = client_for_view(self.view)
         pos = self.view.sel()[0].begin()
-        client.send_request(Request.references(get_document_position(self.view, pos)),
-                            lambda response: self.handle_response(response, pos))
+        request = Request.references(get_document_position(self.view, pos))
+        client.send_request(
+            request,
+            lambda response: self.handle_response(response, pos)
+        )
 
     def handle_response(self, response, pos):
         window = sublime.active_window()
@@ -677,6 +704,7 @@ UNDERLINE_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_
 
 window_file_diagnostics = dict()
 
+
 def update_file_diagnostics(window, relative_file_path, source, location_severity_messages):
     # debug("window", window.id(), "updating", relative_file_path, "from", source, "with", location_severity_messages)
     if location_severity_messages:
@@ -697,16 +725,19 @@ def update_view_diagnostics(view, source, location_severity_messages):
     window = view.window()
     base_dir = get_project_path(window)
     relative_file_path = os.path.relpath(view.file_name(), base_dir)
-    update_file_diagnostics(window, relative_file_path, source, location_severity_messages)
+    update_file_diagnostics(window, relative_file_path, source,
+                            location_severity_messages)
     update_output_panel(window)
+
 
 phantom_sets_by_buffer = {}
 
 file_diagnostics = {}
 
+
 def handle_diagnostics(update):
     global phantom_sets_by_buffer
-    #debug(update)
+    # debug(update)
     file_path = uri_to_filename(update.get('uri'))
     window = sublime.active_window()
 
@@ -717,9 +748,11 @@ def handle_diagnostics(update):
     view = window.find_open_file(file_path)
     if view is not None:
         if view.is_dirty():
-            regions = list(create_region(view, diagnostic) for diagnostic in diagnostics)
+            regions = list(create_region(view, diagnostic)
+                           for diagnostic in diagnostics)
         else:
-            phantoms = list(create_phantom(view, diagnostic) for diagnostic in diagnostics)
+            phantoms = list(create_phantom(view, diagnostic)
+                            for diagnostic in diagnostics)
 
         buffer_id = view.buffer_id()
         if buffer_id not in phantom_sets_by_buffer:
@@ -732,7 +765,9 @@ def handle_diagnostics(update):
 
         if (len(regions)) > 0:
             # steal SublimeLinter's coloring.
-            view.add_regions("errors", regions, "sublimelinter.mark.error", "dot", sublime.DRAW_SQUIGGLY_UNDERLINE | UNDERLINE_FLAGS)
+            view.add_regions("errors", regions, "sublimelinter.mark.error",
+                             "dot",
+                             sublime.DRAW_SQUIGGLY_UNDERLINE | UNDERLINE_FLAGS)
         else:
             view.erase_regions("errors")
 
@@ -740,8 +775,12 @@ def handle_diagnostics(update):
     relative_file_path = os.path.relpath(file_path, base_dir)
     file_diagnostics[file_path] = diagnostics
 
-    location_severity_messages = list(build_location_severity_message(diagnostic) for diagnostic in diagnostics)
-    update_file_diagnostics(window, relative_file_path, 'lsp', location_severity_messages)
+    location_severity_messages = list(
+        build_location_severity_message(diagnostic)
+        for diagnostic in diagnostics
+    )
+    update_file_diagnostics(window, relative_file_path, 'lsp',
+                            location_severity_messages)
     update_output_panel(window)
 
 
@@ -751,14 +790,15 @@ def update_output_panel(window):
     if panel is None:
         panel = window.create_output_panel("diagnostics")
         panel.settings().set("result_file_regex", r"^(.*):$")
-        panel.settings().set("result_line_regex", r"^\t([0-9]+):?([0-9]+)\s*\t.*\t.*\t(.*)$")
+        panel.settings().set("result_line_regex",
+                             r"^\t([0-9]+):?([0-9]+)\s*\t.*\t.*\t(.*)$")
         panel.settings().set("result_base_dir", base_dir)
         panel.settings().set("line_numbers", False)
-        panel.assign_syntax("Packages/" + PLUGIN_NAME + "/Diagnostics.sublime-syntax")
+        panel.assign_syntax(
+            "Packages/" + PLUGIN_NAME + "/Diagnostics.sublime-syntax")
         # Call create_output_panel a second time after assigning the above
         # settings, so that it'll be picked up as a result buffer
         window.create_output_panel("diagnostics")
-
 
     if window.id() in window_file_diagnostics:
         panel.run_command("clear_error_panel")
@@ -766,8 +806,11 @@ def update_output_panel(window):
         if file_diagnostics:
             for file_path, source_diagnostics in file_diagnostics.items():
                 if source_diagnostics:
-                    panel.run_command('append', {'characters': file_path + ":\n", 'force': True})
-                    # debug("source diagnostics for", file_path, source_diagnostics)
+                    panel.run_command('append',
+                                      {'characters': file_path + ":\n",
+                                       'force': True})
+                    # debug("source diagnostics for", file_path,
+                    # source_diagnostics)
                     for source, location_severity_messages in source_diagnostics.items():
                         for location, severity, message in location_severity_messages:
                             line, character = location
@@ -786,6 +829,7 @@ def start_client(window, config):
     initializeParams = {
         "processId": client.process.pid,
         "rootUri": filename_to_uri(project_path),
+        "rootPath": project_path,
         "capabilities": {
             "completion": {
                 "completionItem": {
@@ -835,6 +879,7 @@ def start_server(server_binary_args, working_dir):
 
     except Exception as err:
         print(err)
+
 
 def get_document_range(view):
     range = {
@@ -956,7 +1001,7 @@ class Events:
             cls.listener_dict[key].append(listener)
         else:
             cls.listener_dict[key] = [listener]
-        return lambda : cls.unsubscribe(key, listener)
+        return lambda: cls.unsubscribe(key, listener)
 
     @classmethod
     def unsubscribe(cls, key, listener):
@@ -1010,7 +1055,6 @@ class HoverHandler(sublime_plugin.ViewEventListener):
                     formatted.append(value)
 
         mdpopups.show_popup(self.view, "\n".join(formatted), css=".mdpopups .lsp_hover { margin: 4px; }", md=True, flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=point, wrapper_class="lsp_hover", max_width=800)
-
 
 
 class CompletionHandler(sublime_plugin.EventListener):
@@ -1090,7 +1134,6 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
         self.signature_help_triggers = []
 
-
     def on_modified_async(self):
         pos = self.view.sel()[0].begin()
         last_char = self.view.substr(pos - 1)
@@ -1165,21 +1208,18 @@ class FixDiagnosticCommand(sublime_plugin.TextCommand):
             }
             client.send_request(Request.codeAction(params), self.handle_codeaction_response)
 
-
     def handle_codeaction_response(self, response):
         titles = []
         debug(response)
         self.commands = response
         for command in self.commands:
-            titles.append(command.get('title')) # TODO parse command and arguments
+            titles.append(command.get('title'))  # TODO parse command and arguments
         if len(self.commands) > 0:
             self.view.show_popup_menu(titles, self.handle_select)
-
 
     def handle_select(self, index):
         client = client_for_view(self.view)
         client.send_request(Request.executeCommand(self.commands[index]), self.handle_command_response)
-
 
     def handle_command_response(self, response):
         pass
@@ -1210,7 +1250,8 @@ class ApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
                         # TODO: schedule
                         debug('view not ready', view)
                     else:
-                        view.run_command('apply_document_edit', {'changes': file_changes})
+                        view.run_command('apply_document_edit',
+                                         {'changes': file_changes})
                 else:
                     debug('view not found to apply', path, file_changes)
 
@@ -1247,7 +1288,7 @@ class SaveListener(sublime_plugin.EventListener):
 
     def on_close(self, view):
         if is_supported_view(view):
-            #TODO check if more views are open for this file.
+            # TODO check if more views are open for this file.
             Events.publish("view.on_close", view)
 
 
@@ -1268,7 +1309,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
         # debug("on_load_async", self.view.file_name())
         Events.publish("view.on_load_async", self.view)
 
-
     def on_modified_async(self):
         if self.view.file_name():
             # debug("on_modified_async", self.view.file_name())
@@ -1278,4 +1318,3 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
         if self.view.file_name():
             # debug("on_activated_async", self.view.file_name())
             Events.publish("view.on_activated_async", self.view)
-

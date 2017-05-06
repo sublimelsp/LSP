@@ -28,23 +28,12 @@ if os.name == 'nt':
     # ["javascript-typescript-stdio.cmd", "-l", "lspserver.log"]
 
 configs = [
-    Config(
-        'pyls',
-        'pyls',
-        'source.python',
-        'Packages/Python/Python.sublime-syntax'
-    ),
-    Config(
-        'jsts',
-        [jsts_command],
-        ['source.ts'],
-        ['Packages/TypeScript-TmLanguage/TypeScript.tmLanguage']
-    ),
-    Config(
-        'rls',
-        ["rustup", "run", "nightly", "rls"],
-        ["source.rust"],
-        ['Packages/Rust/Rust.sublime-syntax'])
+    Config('pyls', 'pyls', 'source.python',
+           'Packages/Python/Python.sublime-syntax'),
+    Config('jsts', [jsts_command], ['source.ts'],
+           ['Packages/TypeScript-TmLanguage/TypeScript.tmLanguage']), Config(
+               'rls', ["rustup", "run", "nightly", "rls"], ["source.rust"],
+               ['Packages/Rust/Rust.sublime-syntax'])
 ]
 
 
@@ -58,7 +47,6 @@ def format_request(request):
 
 
 class Client(object):
-
     def __init__(self, process):
         self.process = process
         self.stdout_thread = threading.Thread(target=self.read_stdout)
@@ -120,7 +108,8 @@ class Client(object):
                         content_length = int(header[len(ContentLengthHeader):])
 
                 if (content_length > 0):
-                    content = self.process.stdout.read(content_length).decode("UTF-8")
+                    content = self.process.stdout.read(content_length).decode(
+                        "UTF-8")
 
                     payload = None
                     try:
@@ -192,9 +181,11 @@ class Client(object):
         if method == "textDocument/publishDiagnostics":
             Events.publish("document.diagnostics", response.get("params"))
         elif method == "window/showMessage":
-            sublime.active_window().message_dialog(response.get("params").get("message"))
+            sublime.active_window().message_dialog(
+                response.get("params").get("message"))
         elif method == "window/logMessage":
-            server_log(self.process.args[0], response.get("params").get("message"))
+            server_log(self.process.args[0],
+                       response.get("params").get("message"))
         else:
             debug("Unhandled notification:", method)
 
@@ -206,7 +197,7 @@ def debug(*args):
 
 
 def server_log(binary, *args):
-    print(binary + ': ', end='')
+    print(binary + ": ", end='')
 
     for arg in args:
         print(arg, end=' ')
@@ -334,8 +325,8 @@ def client_for_view(view):
         return None
     clients = window_clients(view.window())
     if config.name not in clients:
-        debug(config.name, "not available for view", view.file_name(),
-              "in window", view.window().id())
+        debug(config.name, "not available for view",
+              view.file_name(), "in window", view.window().id())
     else:
         return clients[config.name]
 
@@ -380,21 +371,13 @@ def notify_did_close(view):
     clients = window_clients(sublime.active_window())
     if config and config.name in clients:
         client = clients[config.name]
-        params = {
-            "textDocument": {
-                "uri": filename_to_uri(view.file_name())
-            }
-        }
+        params = {"textDocument": {"uri": filename_to_uri(view.file_name())}}
         client.send_notification(Notification.didClose(params))
 
 
 def notify_did_save(view):
     client = client_for_view(view)
-    params = {
-        "textDocument": {
-            "uri": filename_to_uri(view.file_name())
-        }
-    }
+    params = {"textDocument": {"uri": filename_to_uri(view.file_name())}}
     client.send_notification(Notification.didSave(params))
 
 
@@ -424,6 +407,7 @@ pending_buffer_changes = dict()
 def queue_did_change(view):
     buffer_id = view.buffer_id()
     buffer_version = 1
+    pending_buffer = None
     if buffer_id in pending_buffer_changes:
         pending_buffer = pending_buffer_changes[buffer_id]
         buffer_version = pending_buffer["version"] + 1
@@ -439,10 +423,13 @@ def queue_did_change(view):
 
 
 def purge_did_change(buffer_id, buffer_version=None):
-    if buffer_id in pending_buffer_changes:
-        pending_buffer = pending_buffer_changes[buffer_id]
-        if buffer_version is None or buffer_version == pending_buffer["version"]:
-            notify_did_change(pending_buffer["view"])
+    if buffer_id not in pending_buffer_changes:
+        return
+
+    pending_buffer = pending_buffer_changes.get(buffer_id)
+
+    if buffer_version is None or buffer_version == pending_buffer["version"]:
+        notify_did_change(pending_buffer["view"])
 
 
 def notify_did_change(view):
@@ -547,8 +534,7 @@ def create_region(view, diagnostic):
     end = diagnostic.get('range').get('end')
     region = sublime.Region(
         view.text_point(start.get('line'), start.get('character')),
-        view.text_point(end.get('line'), end.get('character'))
-    )
+        view.text_point(end.get('line'), end.get('character')))
     return region
 
 
@@ -594,8 +580,9 @@ class SymbolRenameCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         pos = self.view.sel()[0].begin()
         params = get_document_position(self.view, pos)
-        self.view.window().show_input_panel("New name:", "",
-                                            lambda text: self.request_rename(params, text), None, None)
+        self.view.window().show_input_panel(
+            "New name:", "", lambda text: self.request_rename(params, text),
+            None, None)
 
     def request_rename(self, params, new_name):
         client = client_for_view(self.view)
@@ -626,19 +613,20 @@ class SymbolDefinitionCommand(sublime_plugin.TextCommand):
         client = client_for_view(self.view)
         pos = self.view.sel()[0].begin()
         request = Request.definition(get_document_position(self.view, pos))
-        client.send_request(request,
-                            lambda response: self.handle_response(response, pos))
+        client.send_request(
+            request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response, position):
         window = sublime.active_window()
         if len(response) < 1:
-            # view.set_status("diagnostics", "{} errors".format(len(diagnostics)))
             self.view.set_status("definition", "Could not find definition")
         else:
             location = response[0]
             file_path = uri_to_filename(location.get("uri"))
             start = location.get('range').get('start')
-            file_location = "{}:{}:{}".format(file_path, start.get('line') + 1, start.get('character') + 1)
+            file_location = "{}:{}:{}".format(file_path,
+                                              start.get('line') + 1,
+                                              start.get('character') + 1)
             debug("opening location", location)
             window.open_file(file_location, sublime.ENCODED_POSITION)
             # TODO: can add region here.
@@ -660,9 +648,7 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
         pos = self.view.sel()[0].begin()
         request = Request.references(get_document_position(self.view, pos))
         client.send_request(
-            request,
-            lambda response: self.handle_response(response, pos)
-        )
+            request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response, pos):
         window = sublime.active_window()
@@ -673,13 +659,18 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
             if panel is None:
                 # debug("creating panel")
                 panel = window.create_output_panel("references")
-                panel.settings().set("result_file_regex", r"^(.*)\t([0-9]+):?([0-9]+)$")
+                panel.settings().set("result_file_regex",
+                                     r"^(.*)\t([0-9]+):?([0-9]+)$")
 
             panel.run_command("clear_error_panel")
 
             window.run_command("show_panel", {"panel": "output.references"})
             for reference in references:
-                panel.run_command('append', {'characters': reference + "\n", 'force': True, 'scroll_to_end': True})
+                panel.run_command('append', {
+                    'characters': reference + "\n",
+                    'force': True,
+                    'scroll_to_end': True
+                })
 
         else:
             window.run_command("hide_panel", {"panel": "output.references"})
@@ -688,28 +679,32 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
 def format_reference(reference):
     start = reference.get('range').get('start')
     file_path = uri_to_filename(reference.get("uri"))
-    return "{}\t{}:{}".format(file_path, start.get('line') + 1, start.get('character') + 1)
+    return "{}\t{}:{}".format(file_path,
+                              start.get('line') + 1,
+                              start.get('character') + 1)
 
 
 class ClearErrorPanelCommand(sublime_plugin.TextCommand):
     """
     A clear_error_panel command to clear the error panel.
     """
+
     def run(self, edit):
         self.view.erase(edit, sublime.Region(0, self.view.size()))
 
 
-UNDERLINE_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_EMPTY_AS_OVERWRITE
-
+UNDERLINE_FLAGS = (sublime.DRAW_NO_FILL
+                   | sublime.DRAW_NO_OUTLINE
+                   | sublime.DRAW_EMPTY_AS_OVERWRITE)
 
 window_file_diagnostics = dict()
 
 
-def update_file_diagnostics(window, relative_file_path, source, location_severity_messages):
-    # debug("window", window.id(), "updating", relative_file_path, "from", source, "with", location_severity_messages)
+def update_file_diagnostics(window, relative_file_path, source,
+                            location_severity_messages):
     if location_severity_messages:
-        window_file_diagnostics.setdefault(window.id(), dict()).setdefault(relative_file_path, dict())[source] = location_severity_messages
-        # file_diagnostics.setdefault(relative_file_path, dict())[source] = location_severity_messages
+        window_file_diagnostics.setdefault(window.id(), dict()).setdefault(
+            relative_file_path, dict())[source] = location_severity_messages
     else:
         if window.id() in window_file_diagnostics:
             file_diagnostics = window_file_diagnostics[window.id()]
@@ -737,7 +732,6 @@ file_diagnostics = {}
 
 def handle_diagnostics(update):
     global phantom_sets_by_buffer
-    # debug(update)
     file_path = uri_to_filename(update.get('uri'))
     window = sublime.active_window()
 
@@ -748,11 +742,11 @@ def handle_diagnostics(update):
     view = window.find_open_file(file_path)
     if view is not None:
         if view.is_dirty():
-            regions = list(create_region(view, diagnostic)
-                           for diagnostic in diagnostics)
+            regions = list(
+                create_region(view, diagnostic) for diagnostic in diagnostics)
         else:
-            phantoms = list(create_phantom(view, diagnostic)
-                            for diagnostic in diagnostics)
+            phantoms = list(
+                create_phantom(view, diagnostic) for diagnostic in diagnostics)
 
         buffer_id = view.buffer_id()
         if buffer_id not in phantom_sets_by_buffer:
@@ -777,8 +771,7 @@ def handle_diagnostics(update):
 
     location_severity_messages = list(
         build_location_severity_message(diagnostic)
-        for diagnostic in diagnostics
-    )
+        for diagnostic in diagnostics)
     update_file_diagnostics(window, relative_file_path, 'lsp',
                             location_severity_messages)
     update_output_panel(window)
@@ -794,8 +787,8 @@ def update_output_panel(window):
                              r"^\t([0-9]+):?([0-9]+)\s*\t.*\t.*\t(.*)$")
         panel.settings().set("result_base_dir", base_dir)
         panel.settings().set("line_numbers", False)
-        panel.assign_syntax(
-            "Packages/" + PLUGIN_NAME + "/Diagnostics.sublime-syntax")
+        panel.assign_syntax("Packages/" + PLUGIN_NAME +
+                            "/Diagnostics.sublime-syntax")
         # Call create_output_panel a second time after assigning the above
         # settings, so that it'll be picked up as a result buffer
         window.create_output_panel("diagnostics")
@@ -806,20 +799,27 @@ def update_output_panel(window):
         if file_diagnostics:
             for file_path, source_diagnostics in file_diagnostics.items():
                 if source_diagnostics:
-                    panel.run_command('append',
-                                      {'characters': file_path + ":\n",
-                                       'force': True})
-                    # debug("source diagnostics for", file_path,
-                    # source_diagnostics)
-                    for source, location_severity_messages in source_diagnostics.items():
-                        for location, severity, message in location_severity_messages:
-                            line, character = location
-                            item = format_diagnostic(line, character, source, severity, message)
-                            # debug(file_path, item)
-                            panel.run_command('append', {'characters': item + "\n", 'force': True, 'scroll_to_end': True})
+                    append_diagnostics(panel, file_path, source_diagnostics)
             window.run_command("show_panel", {"panel": "output.diagnostics"})
         else:
             window.run_command("hide_panel", {"panel": "output.diagnostics"})
+
+
+def append_diagnostics(panel, file_path, source_diagnostics):
+    panel.run_command('append', {
+        'characters': file_path + ":\n",
+        'force': True
+    })
+    for source, location_severity_messages in source_diagnostics.items():
+        for location, severity, message in location_severity_messages:
+            line, character = location
+            item = format_diagnostic(line, character, source,
+                                     severity, message)
+            panel.run_command('append', {
+                'characters': item + "\n",
+                'force': True,
+                'scroll_to_end': True
+            })
 
 
 def start_client(window, config):
@@ -838,8 +838,9 @@ def start_client(window, config):
             }
         }
     }
-    client.send_request(Request.initialize(initializeParams),
-                        lambda result: handle_initialize_result(result, client))
+    client.send_request(
+        Request.initialize(initializeParams),
+        lambda result: handle_initialize_result(result, client))
     return client
 
 
@@ -849,10 +850,10 @@ def get_window_client(view, config):
     window = view.window()
     clients = window_clients(window)
     if config.name not in clients:
-        project_path = get_project_path(window)
         client = start_client(window, config)
         clients_by_window.setdefault(window.id(), {})[config.name] = client
-        debug("client registered for window", window.id(), window_clients(window))
+        debug("client registered for window",
+              window.id(), window_clients(window))
     else:
         client = clients[config.name]
 
@@ -873,8 +874,7 @@ def start_server(server_binary_args, working_dir):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=working_dir,
-            startupinfo=si
-        )
+            startupinfo=si)
         return Client(process)
 
     except Exception as err:
@@ -1034,8 +1034,9 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         if hover_zone == sublime.HOVER_TEXT:
             word_at_sel = self.view.classify(point)
             if word_at_sel & SUBLIME_WORD_MASK:
-                client.send_request(Request.hover(get_document_position(self.view, point)),
-                                    lambda response: self.handle_response(response, point))
+                client.send_request(
+                    Request.hover(get_document_position(self.view, point)),
+                    lambda response: self.handle_response(response, point))
 
     def handle_response(self, response, point):
         # debug(response)
@@ -1054,7 +1055,15 @@ class HoverHandler(sublime_plugin.ViewEventListener):
                 else:
                     formatted.append(value)
 
-        mdpopups.show_popup(self.view, "\n".join(formatted), css=".mdpopups .lsp_hover { margin: 4px; }", md=True, flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=point, wrapper_class="lsp_hover", max_width=800)
+        mdpopups.show_popup(
+            self.view,
+            "\n".join(formatted),
+            css=".mdpopups .lsp_hover { margin: 4px; }",
+            md=True,
+            flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+            location=point,
+            wrapper_class="lsp_hover",
+            max_width=800)
 
 
 class CompletionHandler(sublime_plugin.EventListener):
@@ -1080,38 +1089,45 @@ class CompletionHandler(sublime_plugin.EventListener):
 
             if locations[0] > 0:
                 self.completions = []
-                prev_char = view.substr(sublime.Region(locations[0] - 1, locations[0]))
+                prev_char = view.substr(
+                    sublime.Region(locations[0] - 1, locations[0]))
                 if prev_char not in autocomplete_triggers:
                     return None
 
             purge_did_change(view.buffer_id())
-            client.send_request(Request.complete(get_document_position(view, locations[0])), self.handle_response)
+            client.send_request(
+                Request.complete(get_document_position(view, locations[0])),
+                self.handle_response)
 
         self.refreshing = False
-        return self.completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
+        return self.completions, (sublime.INHIBIT_WORD_COMPLETIONS
+                                  | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
     def format_completion(self, item):
         label = item.get("label")
-        kind = item.get("kind")
+        # kind = item.get("kind")
         detail = item.get("detail")
         insertText = None
         if item.get("insertTextFormat") == 2:
             insertText = item.get("insertText")
-        return ("{}\t{}".format(label, detail), insertText if insertText else label)
+        return ("{}\t{}".format(label, detail), insertText
+                if insertText else label)
 
     def handle_response(self, response):
-        items = response.get("items") if isinstance(response, dict) else response
+        items = response.get("items") if isinstance(response,
+                                                    dict) else response
         self.completions = list(self.format_completion(item) for item in items)
         self.run_auto_complete()
 
     def run_auto_complete(self):
         self.refreshing = True
-        sublime.active_window().active_view().run_command("auto_complete", {
-            'disable_auto_insert': True,
-            'api_completions_only': False,
-            'next_completion_if_showing': False,
-            'auto_complete_commit_on_tab': True,
-        })
+        sublime.active_window().active_view().run_command(
+            "auto_complete", {
+                'disable_auto_insert': True,
+                'api_completions_only': False,
+                'next_completion_if_showing': False,
+                'auto_complete_commit_on_tab': True,
+            })
 
 
 class SignatureHelpListener(sublime_plugin.ViewEventListener):
@@ -1127,9 +1143,11 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
     def initialize_triggers(self):
         client = client_for_view(self.view)
         if client:
-            signatureHelpProvider = client.get_capability('signatureHelpProvider')
+            signatureHelpProvider = client.get_capability(
+                'signatureHelpProvider')
             if signatureHelpProvider:
-                self.signature_help_triggers = signatureHelpProvider.get('triggerCharacters')
+                self.signature_help_triggers = signatureHelpProvider.get(
+                    'triggerCharacters')
                 return
 
         self.signature_help_triggers = []
@@ -1144,8 +1162,9 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         if last_char in self.signature_help_triggers:
             client = client_for_view(self.view)
             purge_did_change(self.view.buffer_id())
-            client.send_request(Request.signatureHelp(get_document_position(self.view, pos)),
-                                lambda response: self.handle_response(response, pos))
+            client.send_request(
+                Request.signatureHelp(get_document_position(self.view, pos)),
+                lambda response: self.handle_response(response, pos))
         else:
             # TODO: this hides too soon.
             if self.view.is_popup_visible():
@@ -1159,7 +1178,8 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             signature = signatures[activeSignature]
             debug("active signature", signature)
             formatted = []
-            formatted.append("```{}\n{}\n```".format("typescript", signature.get('label')))
+            formatted.append(
+                "```{}\n{}\n```".format("typescript", signature.get('label')))
             params = signature.get('parameters')
             if params is None:  # for pyls TODO create issue?
                 params = signature.get('params')
@@ -1173,7 +1193,15 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             formatted.append("&nbsp;")
             formatted.append(signature.get('documentation'))
 
-            mdpopups.show_popup(self.view, "\n".join(formatted), css=".mdpopups .lsp_signature { margin: 4px; }", md=True, flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY, location=point, wrapper_class="lsp_signature", max_width=800)
+            mdpopups.show_popup(
+                self.view,
+                "\n".join(formatted),
+                css=".mdpopups .lsp_signature { margin: 4px; }",
+                md=True,
+                flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+                location=point,
+                wrapper_class="lsp_signature",
+                max_width=800)
 
 
 class FixDiagnosticCommand(sublime_plugin.TextCommand):
@@ -1192,7 +1220,8 @@ class FixDiagnosticCommand(sublime_plugin.TextCommand):
             diagnostics = file_diagnostics[self.view.file_name()]
             if len(diagnostics) > 0:
                 for diagnostic in diagnostics:
-                    start_line = diagnostic.get('range').get('start').get('line')
+                    start_line = diagnostic.get('range').get('start').get(
+                        'line')
                     end_line = diagnostic.get('range').get('end').get('line')
                     if row >= start_line and row <= end_line:
                         line_diagnostics.append(diagnostic)
@@ -1212,20 +1241,24 @@ class FixDiagnosticCommand(sublime_plugin.TextCommand):
                     "diagnostics": line_diagnostics
                 }
             }
-            client.send_request(Request.codeAction(params), self.handle_codeaction_response)
+            client.send_request(
+                Request.codeAction(params), self.handle_codeaction_response)
 
     def handle_codeaction_response(self, response):
         titles = []
         debug(response)
         self.commands = response
         for command in self.commands:
-            titles.append(command.get('title'))  # TODO parse command and arguments
+            titles.append(
+                command.get('title'))  # TODO parse command and arguments
         if len(self.commands) > 0:
             self.view.show_popup_menu(titles, self.handle_select)
 
     def handle_select(self, index):
         client = client_for_view(self.view)
-        client.send_request(Request.executeCommand(self.commands[index]), self.handle_command_response)
+        client.send_request(
+            Request.executeCommand(self.commands[index]),
+            self.handle_command_response)
 
     def handle_command_response(self, response):
         pass
@@ -1269,8 +1302,10 @@ class ApplyDocumentEditCommand(sublime_plugin.TextCommand):
             # TODO create a Range type
             start = change.get('range').get('start')
             end = change.get('range').get('end')
-            start_position = self.view.text_point(start.get('line'), start.get('character'))
-            end_position = self.view.text_point(end.get('line'), end.get('character'))
+            start_position = self.view.text_point(
+                start.get('line'), start.get('character'))
+            end_position = self.view.text_point(
+                end.get('line'), end.get('character'))
             region = sublime.Region(start_position, end_position)
             if region.empty():
                 self.view.insert(edit, start_position, newText)
@@ -1312,15 +1347,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
         return False
 
     def on_load_async(self):
-        # debug("on_load_async", self.view.file_name())
         Events.publish("view.on_load_async", self.view)
 
     def on_modified_async(self):
         if self.view.file_name():
-            # debug("on_modified_async", self.view.file_name())
             Events.publish("view.on_modified_async", self.view)
 
     def on_activated_async(self):
         if self.view.file_name():
-            # debug("on_activated_async", self.view.file_name())
             Events.publish("view.on_activated_async", self.view)

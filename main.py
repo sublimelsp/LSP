@@ -1043,6 +1043,10 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         contents = response.get('contents')
         if len(contents) < 1:
             return
+
+        self.show_hover(point, contents)
+
+    def show_hover(self, point, *contents):
         formatted = []
         for item in contents:
             if isinstance(item, str):

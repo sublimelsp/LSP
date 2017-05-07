@@ -3,5 +3,11 @@
         "caption": "Show Signature Info",
         "command": "signature_popup",
         "args": {}
+    },
+    {
+    	"caption": "LSP: Format Document",
+    	"command": "format_document",
+    	"args": {}
     }
+
 ]

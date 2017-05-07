@@ -41,7 +41,6 @@ def format_request(request):
     """Converts the request into json and adds the Content-Length header"""
     content = json.dumps(request, indent=2)
     content_length = len(content)
-
     result = "Content-Length: {}\r\n\r\n{}".format(content_length, content)
     return result
 
@@ -597,6 +596,35 @@ class SymbolRenameCommand(sublime_plugin.TextCommand):
                                                {'changes': response})
 
 
+class FormatDocumentCommand(sublime_plugin.TextCommand):
+    def is_enabled(self):
+        if is_supported_view(self.view):
+            client = client_for_view(self.view)
+            if client.has_capability('documentFormattingProvider'):
+                return True
+        return False
+
+    def run(self, edit):
+        client = client_for_view(self.view)
+        pos = self.view.sel()[0].begin()
+        params = {
+            "textDocument": {
+                "uri": filename_to_uri(self.view.file_name())
+            },
+            "options": {
+                "tabSize": 4,
+                "insertSpaces": True
+            }
+        }
+        request = Request.formatting(params)
+        client.send_request(
+            request, lambda response: self.handle_response(response, pos))
+
+    def handle_response(self, response, pos):
+        self.view.run_command('apply_document_edit',
+                              {'changes': response})
+
+
 class SymbolDefinitionCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
         # TODO: check what kind of scope we're in.
@@ -958,6 +986,10 @@ class Request:
     def executeCommand(cls, params):
         return Request("workspace/executeCommand", params)
 
+    @classmethod
+    def formatting(cls, params):
+        return Request("textDocument/formatting", params)
+
     def __repr__(self):
         return self.method + " " + str(self.params)
 
@@ -1277,13 +1309,6 @@ def apply_workspace_edit(window, params):
 class ApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
     def run(self, changes):
         debug('workspace edit', changes)
-        # for document_edit in changes.get('documentChanges') or []:
-        #     document = document_edit.get('textDocument')
-        #     path = uri_to_filename(document.get('uri'))
-        #     edits = document_edit.get('edits')
-        #     for edit in edits:
-        #         range = edit.get('range')
-        #         newText = edit.get('newText')
         if changes.get('changes'):
             for uri, file_changes in changes.get('changes').items():
                 path = uri_to_filename(uri)

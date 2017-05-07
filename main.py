@@ -28,12 +28,12 @@ if os.name == 'nt':
     # ["javascript-typescript-stdio.cmd", "-l", "lspserver.log"]
 
 configs = [
-    Config('pyls', 'pyls', 'source.python',
-           'Packages/Python/Python.sublime-syntax'),
+    Config('pyls', ['pyls'], ['source.python'],
+           ['Packages/Python/Python.sublime-syntax']),
     Config('jsts', [jsts_command], ['source.ts'],
-           ['Packages/TypeScript-TmLanguage/TypeScript.tmLanguage']), Config(
-               'rls', ["rustup", "run", "nightly", "rls"], ["source.rust"],
-               ['Packages/Rust/Rust.sublime-syntax'])
+           ['Packages/TypeScript-TmLanguage/TypeScript.tmLanguage']),
+    Config('rls', ["rustup", "run", "nightly", "rls"], ["source.rust"],
+           ['Packages/Rust/Rust.sublime-syntax'])
 ]
 
 
@@ -366,6 +366,7 @@ def notify_did_open(view):
 
 
 def notify_did_close(view):
+    debug('notify_did_close')
     config = config_for_scope(view)
     clients = window_clients(sublime.active_window())
     if config and config.name in clients:
@@ -449,7 +450,15 @@ def notify_did_change(view):
     client.send_notification(Notification.didChange(params))
 
 
+document_sync_initialized = False
+
+
 def initialize_document_sync(text_document_sync_kind):
+    global document_sync_initialized
+    if document_sync_initialized:
+        return
+    document_sync_initialized = True
+    # TODO: hook up events per scope/client
     Events.subscribe('view.on_load_async', notify_did_open)
     Events.subscribe('view.on_activated_async', notify_did_open)
     Events.subscribe('view.on_modified_async', queue_did_change)
@@ -1078,12 +1087,12 @@ class HoverHandler(sublime_plugin.ViewEventListener):
 
         self.show_hover(point, contents)
 
-    def show_hover(self, point, *contents):
+    def show_hover(self, point, contents):
         formatted = []
-        for item in contents:
-            if isinstance(item, str):
-                formatted.append(item)
-            else:
+        if isinstance(contents, str):
+            formatted.append(contents)
+        else:
+            for item in contents:
                 value = item.get("value")
                 language = item.get("language")
                 if language:

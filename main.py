@@ -863,6 +863,10 @@ def start_client(window, config):
     project_path = get_project_path(window)
     debug("starting in", project_path)
     client = start_server(config.binary_args, project_path)
+    if not client:
+        debug("Could not start", config.binary_args, ", disabling")
+        return
+
     initializeParams = {
         "processId": client.process.pid,
         "rootUri": filename_to_uri(project_path),

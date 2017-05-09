@@ -700,7 +700,6 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
                                      r"^(.*)\t([0-9]+):?([0-9]+)$")
 
             panel.run_command("clear_error_panel")
-
             window.run_command("show_panel", {"panel": "output.references"})
             for reference in references:
                 panel.run_command('append', {
@@ -831,15 +830,20 @@ def update_output_panel(window):
         window.create_output_panel("diagnostics")
 
     if window.id() in window_file_diagnostics:
+        debug('panel is', window.active_panel())
+        active_panel = window.active_panel()
+        is_active_panel = (active_panel == "output.diagnostics")
         panel.run_command("clear_error_panel")
         file_diagnostics = window_file_diagnostics[window.id()]
         if file_diagnostics:
             for file_path, source_diagnostics in file_diagnostics.items():
                 if source_diagnostics:
                     append_diagnostics(panel, file_path, source_diagnostics)
-            window.run_command("show_panel", {"panel": "output.diagnostics"})
+            if not active_panel:
+                window.run_command("show_panel", {"panel": "output.diagnostics"})
         else:
-            window.run_command("hide_panel", {"panel": "output.diagnostics"})
+            if is_active_panel:
+                window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
 
 def append_diagnostics(panel, file_path, source_diagnostics):
@@ -1097,8 +1101,13 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             formatted.append(contents)
         else:
             for item in contents:
-                value = item.get("value")
-                language = item.get("language")
+                value = ""
+                language = None
+                if isinstance(item, str):
+                    value = item
+                else:
+                    value = item.get("value")
+                    language = item.get("language")
                 if language:
                     formatted.append("```{}\n{}\n```".format(language, value))
                 else:

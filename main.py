@@ -1348,23 +1348,44 @@ class ApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
 
 class ApplyDocumentEditCommand(sublime_plugin.TextCommand):
     def run(self, edit, changes):
+        changes.sort(key=lambda change: self.get_change_sortkey(change))
+        # per line, maintain a char offset
+        # if newline inserted, maintian a line offset
+        current_line = -1
+        char_offset = 0
         for change in changes:
             newText = change.get('newText')
             # TODO create a Range type
             start = change.get('range').get('start')
             end = change.get('range').get('end')
+
+            # reset char offset on new lines
+            if start.get('line') != current_line:
+                current_line = start.get('line')
+                char_offset = 0
+
+            debug('char offset at', char_offset)
+
             start_position = self.view.text_point(
                 start.get('line'), start.get('character'))
             end_position = self.view.text_point(
                 end.get('line'), end.get('character'))
-            region = sublime.Region(start_position, end_position)
+            region = sublime.Region(start_position + char_offset, end_position + char_offset)
             if region.empty():
                 self.view.insert(edit, start_position, newText)
+                char_offset += len(newText)
             else:
                 if len(newText) > 0:
                     self.view.replace(edit, region, newText)
+                    char_offset += (len(newText) - region.size())
                 else:
                     self.view.erase(edit, region)
+                    char_offset -= region.size()
+
+    def get_change_sortkey(self, change):
+        start = change.get('range').get('start')
+        return "{0:05d}-{1:05d}".format(start.get('line'), start.get('character'))
+
 
 
 class CloseListener(sublime_plugin.EventListener):

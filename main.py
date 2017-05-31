@@ -691,8 +691,12 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
             request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response, pos):
-        window = sublime.active_window()
-        references = list(format_reference(item) for item in response)
+        window = self.view.window()
+        word = self.view.substr(self.view.word(pos))
+        base_dir = get_project_path(window)
+        relative_file_path = os.path.relpath(self.view.file_name(), base_dir)
+
+        references = list(format_reference(item, base_dir) for item in response)
 
         if (len(response)) > 0:
             panel = window.find_output_panel("references")
@@ -700,9 +704,18 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
                 # debug("creating panel")
                 panel = window.create_output_panel("references")
                 panel.settings().set("result_file_regex",
-                                     r"^(.*)\t([0-9]+):?([0-9]+)$")
+                                     r"^\t(.*)\t([0-9]+):?([0-9]+)$")
+                panel.settings().set("result_base_dir", base_dir)
+                panel.settings().set("line_numbers", False)
+                panel.assign_syntax("Packages/" + PLUGIN_NAME +
+                                    "/References.sublime-syntax")
+                # call a second time to apply settings
+                window.create_output_panel("references")
 
-            panel.run_command("clear_error_panel")
+            panel.run_command("clear_panel")
+            panel.run_command('append', {
+                    'characters': 'References to "' + word + '" at ' + relative_file_path + ':\n'
+                })
             window.run_command("show_panel", {"panel": "output.references"})
             for reference in references:
                 panel.run_command('append', {
@@ -715,17 +728,18 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
             window.run_command("hide_panel", {"panel": "output.references"})
 
 
-def format_reference(reference):
+def format_reference(reference, base_dir):
     start = reference.get('range').get('start')
     file_path = uri_to_filename(reference.get("uri"))
-    return "{}\t{}:{}".format(file_path,
+    relative_file_path = os.path.relpath(file_path, base_dir)
+    return "\t{}\t{}:{}".format(relative_file_path,
                               start.get('line') + 1,
                               start.get('character') + 1)
 
 
-class ClearErrorPanelCommand(sublime_plugin.TextCommand):
+class ClearPanelCommand(sublime_plugin.TextCommand):
     """
-    A clear_error_panel command to clear the error panel.
+    A clear_panel command to clear the error panel.
     """
 
     def run(self, edit):
@@ -836,7 +850,7 @@ def update_output_panel(window):
         debug('panel is', window.active_panel())
         active_panel = window.active_panel()
         is_active_panel = (active_panel == "output.diagnostics")
-        panel.run_command("clear_error_panel")
+        panel.run_command("clear_panel")
         file_diagnostics = window_file_diagnostics[window.id()]
         if file_diagnostics:
             for file_path, source_diagnostics in file_diagnostics.items():
@@ -1091,7 +1105,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
                     lambda response: self.handle_response(response, point))
 
     def handle_response(self, response, point):
-        # debug(response)
+        debug(response)
         contents = response.get('contents')
         if len(contents) < 1:
             return

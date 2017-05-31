@@ -1,0 +1,14 @@
+%YAML 1.2
+---
+hidden: true
+scope: references
+
+contexts:
+  main:
+    - match: ^(.*):$
+      scope: keyword.other.references.file
+    - match: ^\t(.*)\t(.*)$
+      captures:
+        1: meta.references.message
+        2: punctuation.comment.references.location
+

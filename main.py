@@ -588,8 +588,11 @@ class SymbolRenameCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         pos = self.view.sel()[0].begin()
         params = get_document_position(self.view, pos)
+        current_name = self.view.substr(self.view.word(pos))
+        if not current_name:
+            current_name = ""
         self.view.window().show_input_panel(
-            "New name:", "", lambda text: self.request_rename(params, text),
+            "New name:", current_name, lambda text: self.request_rename(params, text),
             None, None)
 
     def request_rename(self, params, new_name):

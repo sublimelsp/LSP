@@ -7,7 +7,7 @@ contexts:
   main:
     - match: ^(.*):$
       scope: keyword.other.references.file
-    - match: ^\t(.*)\t(.*)$
+    - match: ^\s+(.*)\s+(\d*+:\d+)$
       captures:
         1: meta.references.message
         2: punctuation.comment.references.location

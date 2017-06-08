@@ -7,13 +7,13 @@ contexts:
   main:
     - match: ^(.*):$
       scope: keyword.other.diagnostics.file
-    - match: ^\t([0-9]+:?[0-9]+)\s*\t(.*)\t(error)\s*\t(.*)$
+    - match: ^\s*([0-9]+:?[0-9]+)\s*(.*)\s*(error)\s*(.*)$
       captures:
         1: punctuation.comment.diagnostics.location
         2: comment.source.item.diagnostics
         3: sublimelinter.mark.error
         4: meta.diagnostics.message
-    - match: ^\t([0-9]+:?[0-9]+)\s*\t(.*)\t(warning)\s*\t(.*)$
+    - match: ^\s*([0-9]+:?[0-9]+)\s*(.*)\s*(warning)\s*(.*)$
       captures:
         1: punctuation.comment.diagnostics.location
         2: comment.source.item.diagnostics

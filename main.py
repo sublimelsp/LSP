@@ -28,10 +28,10 @@ if os.name == 'nt':
     # ["javascript-typescript-stdio.cmd", "-l", "lspserver.log"]
 
 configs = [
-    Config('pyls', ['pyls'], ['source.python'],
-           ['Packages/Python/Python.sublime-syntax']),
-    Config('jsts', [jsts_command], ['source.ts'],
-           ['Packages/TypeScript-TmLanguage/TypeScript.tmLanguage']),
+    # Config('pyls', ['pyls'], ['source.python'],
+    #        ['Packages/Python/Python.sublime-syntax']),
+    Config('jsts', [jsts_command], ['source.ts', 'source.tsx'],
+           ['Packages/TypeScript-TmLanguage/TypeScript.tmLanguage', 'Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage']),
     Config('rls', ["rustup", "run", "nightly", "rls"], ["source.rust"],
            ['Packages/Rust/Rust.sublime-syntax'])
 ]
@@ -704,7 +704,7 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
                 # debug("creating panel")
                 panel = window.create_output_panel("references")
                 panel.settings().set("result_file_regex",
-                                     r"^\t(.*)\t([0-9]+):?([0-9]+)$")
+                                     r"^\s+(.*)\s+([0-9]+):?([0-9]+)$")
                 panel.settings().set("result_base_dir", base_dir)
                 panel.settings().set("line_numbers", False)
                 panel.assign_syntax("Packages/" + PLUGIN_NAME +
@@ -837,7 +837,7 @@ def update_output_panel(window):
         panel = window.create_output_panel("diagnostics")
         panel.settings().set("result_file_regex", r"^(.*):$")
         panel.settings().set("result_line_regex",
-                             r"^\t([0-9]+):?([0-9]+)\s*\t.*\t.*\t(.*)$")
+                             r"^\s+([0-9]+):?([0-9]+).*$")
         panel.settings().set("result_base_dir", base_dir)
         panel.settings().set("line_numbers", False)
         panel.assign_syntax("Packages/" + PLUGIN_NAME +
@@ -891,7 +891,7 @@ def start_client(window, config):
     initializeParams = {
         "processId": client.process.pid,
         "rootUri": filename_to_uri(project_path),
-        "rootPath": project_path,
+        # "rootPath": project_path,
         "capabilities": {
             "textDocument": {
                 "completion": {

@@ -1,0 +1,14 @@
+[
+    {
+        "keys": ["("],
+        "command": "signature_popup",
+        "context": [
+            { "key": "paren_pressed"}
+        ]
+    },
+    {
+    	"keys": ["ctrl+."],
+    	"command": "fix_diagnostic"
+    }
+
+]

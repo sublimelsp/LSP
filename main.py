@@ -893,9 +893,11 @@ def start_client(window, config):
         "rootUri": filename_to_uri(project_path),
         "rootPath": project_path,
         "capabilities": {
-            "completion": {
-                "completionItem": {
-                    "snippetSupport": True
+            "textDocument": {
+                "completion": {
+                    "completionItem": {
+                        "snippetSupport": True
+                    }
                 }
             }
         }

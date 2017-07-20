@@ -13,6 +13,31 @@ import mdpopups
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
 
+configs = []
+
+def read_client_config(name, client_config):
+    return Config(name,
+        client_config.get("command", []),
+        client_config.get("scopes", []),
+        client_config.get("syntaxes", [])
+        )
+
+def load_settings():
+    settings_obj = sublime.load_settings("LSP.sublime-settings")
+    # jsts_command = "javascript-typescript-stdio.cmd"
+    # ["javascript-typescript-stdio.cmd", "-l", "lspserver.log"]
+
+    if settings_obj.has("clients"):
+        client_configs = settings_obj.get("clients", {})
+        for client_name, client_config in client_configs.items():
+            config = read_client_config(client_name, client_config)
+            if config:
+                debug("Config added:", client_name)
+                configs.append(config)
+
+    # TODO: reload on settings change?
+    # settings_obj.add_on_change("_on_new_settings", on_settings_changed)
+
 
 class Config(object):
     def __init__(self, name, binary_args, scopes, syntaxes):
@@ -20,21 +45,6 @@ class Config(object):
         self.binary_args = binary_args
         self.scopes = scopes
         self.syntaxes = syntaxes
-
-
-jsts_command = "javascript-typescript-stdio"
-if os.name == 'nt':
-    jsts_command = "javascript-typescript-stdio.cmd"
-    # ["javascript-typescript-stdio.cmd", "-l", "lspserver.log"]
-
-configs = [
-    # Config('pyls', ['pyls'], ['source.python'],
-    #        ['Packages/Python/Python.sublime-syntax']),
-    Config('jsts', [jsts_command], ['source.ts', 'source.tsx'],
-           ['Packages/TypeScript-TmLanguage/TypeScript.tmLanguage', 'Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage']),
-    Config('rls', ["rustup", "run", "nightly", "rls"], ["source.rust"],
-           ['Packages/Rust/Rust.sublime-syntax'])
-]
 
 
 def format_request(request):
@@ -234,6 +244,7 @@ def get_project_path(window):
 
 
 def plugin_loaded():
+    load_settings()
     Events.subscribe("view.on_load_async", initialize_on_open)
     Events.subscribe("view.on_activated_async", initialize_on_open)
     debug("plugin loaded")

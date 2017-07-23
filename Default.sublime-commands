@@ -8,6 +8,11 @@
     	"caption": "LSP: Format Document",
     	"command": "format_document",
     	"args": {}
+    },
+    {
+        "caption": "LSP: Restart Clients",
+        "command": "restart_client",
+        "args": {}
     }
 
 ]

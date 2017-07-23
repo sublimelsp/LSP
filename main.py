@@ -257,13 +257,22 @@ def check_window_unloaded():
     global clients_by_window
     open_window_ids = list(window.id() for window in sublime.windows())
     iterable_clients_by_window = clients_by_window.copy()
+    closed_windows = []
     for id, window_clients in iterable_clients_by_window.items():
         if id not in open_window_ids:
             debug("window closed", id)
-            del clients_by_window[id]
-            for config, client in window_clients.items():
-                debug("unloading client", config, client)
-                unload_client(client)
+            closed_windows.append(id)
+    for closed_window_id in closed_windows:
+        unload_window_clients(closed_window_id)
+
+
+def unload_window_clients(window_id):
+    global clients_by_window
+    window_clients = clients_by_window[window_id]
+    del clients_by_window[window_id]
+    for config, client in window_clients.items():
+        debug("unloading client", config, client)
+        unload_client(client)
 
 
 def unload_client(client):
@@ -1367,6 +1376,15 @@ class FixDiagnosticCommand(sublime_plugin.TextCommand):
 def apply_workspace_edit(window, params):
     edit = params.get('edit')
     window.run_command('apply_workspace_edit', {'changes': edit})
+
+
+class RestartClientCommand(sublime_plugin.TextCommand):
+    def is_enabled(self):
+        return is_supported_view(self.view)
+
+    def run(self, edit):
+        window = self.view.window()
+        unload_window_clients(window.id())
 
 
 class ApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):

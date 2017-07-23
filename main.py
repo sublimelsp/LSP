@@ -797,17 +797,12 @@ phantom_sets_by_buffer = {}
 
 file_diagnostics = {}
 
-
-def handle_diagnostics(update):
+def update_diagnostics_in_view(view, diagnostics):
     global phantom_sets_by_buffer
-    file_path = uri_to_filename(update.get('uri'))
-    window = sublime.active_window()
 
-    diagnostics = update.get('diagnostics')
     phantoms = list()
     regions = list()
 
-    view = window.find_open_file(file_path)
     if view is not None:
         if view.is_dirty():
             regions = list(
@@ -833,16 +828,28 @@ def handle_diagnostics(update):
         else:
             view.erase_regions("errors")
 
-    base_dir = get_project_path(window)
-    relative_file_path = os.path.relpath(file_path, base_dir)
-    file_diagnostics[file_path] = diagnostics
 
-    location_severity_messages = list(
-        build_location_severity_message(diagnostic)
-        for diagnostic in diagnostics)
-    update_file_diagnostics(window, relative_file_path, 'lsp',
-                            location_severity_messages)
-    update_output_panel(window)
+def handle_diagnostics(update):
+    file_path = uri_to_filename(update.get('uri'))
+    window = sublime.active_window()
+    view = window.find_open_file(file_path)
+
+    diagnostics = update.get('diagnostics')
+
+    update_diagnostics_in_view(view, diagnostics)
+
+    if not update_output_panel is None:
+        # update panel if available
+        base_dir = get_project_path(window)
+        relative_file_path = os.path.relpath(file_path, base_dir)
+        file_diagnostics[file_path] = diagnostics
+
+        location_severity_messages = list(
+            build_location_severity_message(diagnostic)
+            for diagnostic in diagnostics)
+        update_file_diagnostics(window, relative_file_path, 'lsp',
+                                location_severity_messages)
+        update_output_panel(window)
 
 
 def update_output_panel(window):

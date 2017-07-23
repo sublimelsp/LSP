@@ -174,8 +174,9 @@ class Client(object):
 
     def response_handler(self, response):
         # todo: try catch ?
-        if (self.handlers[response.get("id")]):
-            self.handlers[response.get("id")](response.get("result"))
+        handler_id = int(response.get("id")) # dotty sends strings back :(
+        if (self.handlers[handler_id]):
+            self.handlers[handler_id](response.get("result"))
         else:
             debug("No handler found for id" + response.get("id"))
 

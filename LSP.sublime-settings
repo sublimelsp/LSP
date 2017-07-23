@@ -3,27 +3,32 @@
    		"pyls": {
    			"command": ["pyls"],
    			"scopes": ["source.python"],
-   			"syntaxes": ["Packages/Python/Python.sublime-syntax"]
+   			"syntaxes": ["Packages/Python/Python.sublime-syntax"],
+   			"languageId": "python"
    		},
    		"jsts": {
    			"command": ["javascript-typescript-stdio"],
    			"scopes": ["source.ts", "source.tsx"],
-   			"syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"]
+   			"syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"],
+   			"langaugeId": "typescript"
    		},
    		"rls": {
    			"command": ["rustup", "run", "nightly", "rls"],
    			"scopes": ["source.rust"],
-   			"syntaxes": ["Packages/Rust/Rust.sublime-syntax"]
+   			"syntaxes": ["Packages/Rust/Rust.sublime-syntax"],
+   			"languageId": "rust"
    		},
    		"dotty": {
    			"command": ["coursier", "launch", "ch.epfl.lamp:dotty-language-server_0.2:0.2.0-RC1", "-M", "dotty.tools.languageserver.Main", "--", "-stdio"],
    			"scopes": ["source.scala"],
-   			"syntaxes": ["Packages/Scala/Scala.sublime-syntax"]
+   			"syntaxes": ["Packages/Scala/Scala.sublime-syntax"],
+   			"langaugeId": "scala"
    		},
    		"mscpp": {
    			"command": ["/Users/tomv/.vscode/extensions/ms-vscode.cpptools-0.12.0/bin/Microsoft.VSCode.CPP.Extension.darwin"],
    			"scopes": ["source.c++"],
-   			"syntaxes": ["Packages/C++/C++.sublime-syntax"]
+   			"syntaxes": ["Packages/C++/C++.sublime-syntax"],
+   			"languageId": "cpp"
    		}
    }
 }

@@ -19,7 +19,8 @@ def read_client_config(name, client_config):
     return Config(name,
         client_config.get("command", []),
         client_config.get("scopes", []),
-        client_config.get("syntaxes", [])
+        client_config.get("syntaxes", []),
+        client_config.get("languageId", )
         )
 
 def load_settings():
@@ -40,11 +41,12 @@ def load_settings():
 
 
 class Config(object):
-    def __init__(self, name, binary_args, scopes, syntaxes):
+    def __init__(self, name, binary_args, scopes, syntaxes, languageId):
         self.name = name
         self.binary_args = binary_args
         self.scopes = scopes
         self.syntaxes = syntaxes
+        self.languageId = languageId
 
 
 def format_request(request):
@@ -363,13 +365,14 @@ def initialize_on_open(view):
 
 
 def notify_did_open(view):
+    config = config_for_scope(view)
     client = client_for_view(view)
     if view.file_name() not in document_states:
         get_document_state(view.file_name())
         params = {
             "textDocument": {
                 "uri": filename_to_uri(view.file_name()),
-                "languageId": "ts",
+                "languageId": config.languageId,
                 "text": view.substr(sublime.Region(0, view.size()))
             }
         }

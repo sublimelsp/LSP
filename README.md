@@ -2,6 +2,19 @@
 
 Language Server Protocol support for Sublime Text 3
 
+# Installing
+
+Until this project is submitted to PackageControl's repository, only a manual clone into your Packages directory is supported
+
+# Configuring
+
+You will need to configure an autocomplete trigger for your language in `Preferences: Settings - Syntax Specific`. Here is an example for python:
+```
+{
+    "auto_complete_triggers": [ {"selector": "source.python", "characters": "."} ],
+}
+```
+
 # Workable language servers
 
 Python language server (Palantir) (https://github.com/palantir/python-language-server)

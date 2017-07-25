@@ -714,7 +714,11 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         client = client_for_view(self.view)
         pos = self.view.sel()[0].begin()
-        request = Request.references(get_document_position(self.view, pos))
+        document_position = get_document_position(self.view, pos)
+        document_position['context'] = {
+            "includeDeclaration": False
+        }
+        request = Request.references(document_position)
         client.send_request(
             request, lambda response: self.handle_response(response, pos))
 

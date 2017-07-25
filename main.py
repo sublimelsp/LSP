@@ -15,13 +15,16 @@ SUBLIME_WORD_MASK = 515
 
 configs = []
 
+
 def read_client_config(name, client_config):
-    return Config(name,
+    return Config(
+        name,
         client_config.get("command", []),
         client_config.get("scopes", []),
         client_config.get("syntaxes", []),
         client_config.get("languageId", )
-        )
+    )
+
 
 def load_settings():
     settings_obj = sublime.load_settings("LSP.sublime-settings")
@@ -174,7 +177,7 @@ class Client(object):
 
     def response_handler(self, response):
         # todo: try catch ?
-        handler_id = int(response.get("id")) # dotty sends strings back :(
+        handler_id = int(response.get("id"))  # dotty sends strings back :(
         if (self.handlers[handler_id]):
             self.handlers[handler_id](response.get("result"))
         else:
@@ -738,8 +741,8 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
 
             panel.run_command("clear_panel")
             panel.run_command('append', {
-                    'characters': 'References to "' + word + '" at ' + relative_file_path + ':\n'
-                })
+                'characters': 'References to "' + word + '" at ' + relative_file_path + ':\n'
+            })
             window.run_command("show_panel", {"panel": "output.references"})
             for reference in references:
                 panel.run_command('append', {
@@ -756,9 +759,11 @@ def format_reference(reference, base_dir):
     start = reference.get('range').get('start')
     file_path = uri_to_filename(reference.get("uri"))
     relative_file_path = os.path.relpath(file_path, base_dir)
-    return "\t{}\t{}:{}".format(relative_file_path,
-                              start.get('line') + 1,
-                              start.get('character') + 1)
+    return "\t{}\t{}:{}".format(
+        relative_file_path,
+        start.get('line') + 1,
+        start.get('character') + 1
+    )
 
 
 class ClearPanelCommand(sublime_plugin.TextCommand):
@@ -806,6 +811,7 @@ phantom_sets_by_buffer = {}
 
 file_diagnostics = {}
 
+
 def update_diagnostics_in_view(view, diagnostics):
     global phantom_sets_by_buffer
 
@@ -847,7 +853,7 @@ def handle_diagnostics(update):
 
     update_diagnostics_in_view(view, diagnostics)
 
-    if not update_output_panel is None:
+    if update_output_panel is not None:
         # update panel if available
         base_dir = get_project_path(window)
         relative_file_path = os.path.relpath(file_path, base_dir)
@@ -1444,7 +1450,6 @@ class ApplyDocumentEditCommand(sublime_plugin.TextCommand):
     def get_change_sortkey(self, change):
         start = change.get('range').get('start')
         return "{0:05d}-{1:05d}".format(start.get('line'), start.get('character'))
-
 
 
 class CloseListener(sublime_plugin.EventListener):

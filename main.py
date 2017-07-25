@@ -178,8 +178,9 @@ class Client(object):
     def response_handler(self, response):
         # todo: try catch ?
         handler_id = int(response.get("id"))  # dotty sends strings back :(
+        result = response.get('result', None)
         if (self.handlers[handler_id]):
-            self.handlers[handler_id](response.get("result"))
+            self.handlers[handler_id](result)
         else:
             debug("No handler found for id" + response.get("id"))
 
@@ -1285,37 +1286,38 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 self.view.hide_popup()
 
     def handle_response(self, response, point):
-        signatures = response.get("signatures")
-        activeSignature = response.get("activeSignature")
-        debug("got signatures, active is", len(signatures), activeSignature)
-        if len(signatures) > 0:
-            signature = signatures[activeSignature]
-            debug("active signature", signature)
-            formatted = []
-            formatted.append(
-                "```{}\n{}\n```".format("typescript", signature.get('label')))
-            params = signature.get('parameters')
-            if params is None:  # for pyls TODO create issue?
-                params = signature.get('params')
-            debug("params", params)
-            for parameter in params:
-                paramDocs = parameter.get('documentation')
-                formatted.append("**{}**\n".format(parameter.get('label')))
-                if paramDocs:
-                    formatted.append("* *{}*\n".format(paramDocs))
+        if response is not None:
+            signatures = response.get("signatures")
+            activeSignature = response.get("activeSignature")
+            debug("got signatures, active is", len(signatures), activeSignature)
+            if len(signatures) > 0:
+                signature = signatures[activeSignature]
+                debug("active signature", signature)
+                formatted = []
+                formatted.append(
+                    "```{}\n{}\n```".format("typescript", signature.get('label')))
+                params = signature.get('parameters')
+                if params is None:  # for pyls TODO create issue?
+                    params = signature.get('params')
+                debug("params", params)
+                for parameter in params:
+                    paramDocs = parameter.get('documentation')
+                    formatted.append("**{}**\n".format(parameter.get('label')))
+                    if paramDocs:
+                        formatted.append("* *{}*\n".format(paramDocs))
 
-            formatted.append("&nbsp;")
-            formatted.append(signature.get('documentation'))
+                formatted.append("&nbsp;")
+                formatted.append(signature.get('documentation'))
 
-            mdpopups.show_popup(
-                self.view,
-                "\n".join(formatted),
-                css=".mdpopups .lsp_signature { margin: 4px; }",
-                md=True,
-                flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
-                location=point,
-                wrapper_class="lsp_signature",
-                max_width=800)
+                mdpopups.show_popup(
+                    self.view,
+                    "\n".join(formatted),
+                    css=".mdpopups .lsp_signature { margin: 4px; }",
+                    md=True,
+                    flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+                    location=point,
+                    wrapper_class="lsp_signature",
+                    max_width=800)
 
 
 class FixDiagnosticCommand(sublime_plugin.TextCommand):

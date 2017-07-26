@@ -45,6 +45,7 @@ symbol_kind_names = {
     SymbolKind.Class: "class",
     SymbolKind.Method: "method",
     SymbolKind.Function: "function",
+    SymbolKind.Field: "field",
     SymbolKind.Variable: "variable",
     SymbolKind.Constant: "constant"
 }

@@ -16,5 +16,9 @@
         "command": "fix_diagnostic",
         "caption": "Fix Diagnostic"
     },
+    {
+        "command": "format_document",
+        "caption": "Format Document"
+    },
     { "caption": "-", "id": "lsp_end"}
 ]

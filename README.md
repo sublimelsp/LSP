@@ -27,9 +27,28 @@ Javascript/Typescript language server (Sourcegraph) (https://github.com/sourcegr
 
 # Other language servers
 
-Rust language server
-Scala (dotty) language server
-Microsoft's CPP service (not sure what dialect of LSP it speaks)
+## Rust language server
+
+## Scala (dotty) language server
+
+This is developed against VS Code, so ignore instructions related to code itself
+
+Get the project compiling with dotty first (see https://github.com/lampepfl/dotty-example-project#using-dotty-in-an-existing-project)
+
+At this point LSP should complain in the logs 
+`java.util.concurrent.CompletionException: java.io.FileNotFoundException: /Users/tomv/Projects/tomv564/dottytest/finagle/doc/src/sphinx/code/quickstart/.dotty-ide.json`
+
+Then run `sbt configureIDE` to create the .dotty-ide.json file
+Then the LSP plugin should launch via coursier
+
+
+## Microsoft's CPP service (not sure what dialect of LSP it speaks)
+
+Not sure what language it speaks, but it doesn't respond to LSP requests :(
+
+## clangd
+
+Have not tried this yet
 
 # Developing
 

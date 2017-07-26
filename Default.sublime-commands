@@ -13,6 +13,10 @@
         "caption": "LSP: Restart Clients",
         "command": "restart_client",
         "args": {}
+    },
+    {
+        "caption": "LSP: Document Symbols",
+        "command": "document_symbols",
+        "args": {}
     }
-
 ]

@@ -16,6 +16,40 @@ SUBLIME_WORD_MASK = 515
 configs = []
 
 
+class SymbolKind(object):
+    File = 1
+    Module = 2
+    Namespace = 3
+    Package = 4
+    Class = 5
+    Method = 6
+    Property = 7
+    Field = 8
+    Constructor = 9
+    Enum = 10
+    Interface = 11
+    Function = 12
+    Variable = 13
+    Constant = 14
+    String = 15
+    Number = 16
+    Boolean = 17
+    Array = 18
+
+
+symbol_kind_names = {
+    SymbolKind.File: "file",
+    SymbolKind.Module: "module",
+    SymbolKind.Namespace: "namspace",
+    SymbolKind.Package: "package",
+    SymbolKind.Class: "class",
+    SymbolKind.Method: "method",
+    SymbolKind.Function: "function",
+    SymbolKind.Variable: "variable",
+    SymbolKind.Constant: "constant"
+}
+
+
 def read_client_config(name, client_config):
     return Config(
         name,
@@ -700,6 +734,56 @@ class SymbolDefinitionCommand(sublime_plugin.TextCommand):
             # TODO: can add region here.
 
 
+def format_symbol_kind(kind):
+    return symbol_kind_names.get(kind, str(kind))
+
+
+def format_symbol(item):
+    """
+    items may be a list of strings, or a list of string lists.
+    In the latter case, each entry in the quick panel will show multiple rows
+    """
+    # file_path = uri_to_filename(location.get("uri"))
+    kind = format_symbol_kind(item.get("kind"))
+    return [item.get("name"), kind]
+
+
+class DocumentSymbolsCommand(sublime_plugin.TextCommand):
+    def is_enabled(self):
+        if is_supported_view(self.view):
+            client = client_for_view(self.view)
+            if client and client.has_capability('documentSymbolProvider'):
+                return True
+        return False
+
+    def run(self, edit):
+        client = client_for_view(self.view)
+        params = {
+            "textDocument": {
+                "uri": filename_to_uri(self.view.file_name())
+            }
+        }
+        request = Request.documentSymbols(params)
+        client.send_request(request, self.handle_response)
+
+    def handle_response(self, response):
+        symbols = list(format_symbol(item) for item in response)
+        self.symbols = response
+        self.view.window().show_quick_panel(symbols, self.on_symbol_selected)
+
+    def on_symbol_selected(self, symbol_index):
+        selected_symbol = self.symbols[symbol_index]
+        location = selected_symbol.get("location")
+        start = location.get("range").get("start")
+        end = location.get("range").get("end")
+        startpos = self.view.text_point(start.get('line'), start.get('character'))
+        endpos = self.view.text_point(end.get('line'), end.get('character'))
+        region = sublime.Region(startpos, endpos)
+        self.view.show_at_center(region)
+        self.view.sel().clear()
+        self.view.sel().add(region)
+
+
 class SymbolReferencesCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
         if is_supported_view(self.view):
@@ -1067,6 +1151,10 @@ class Request:
     @classmethod
     def formatting(cls, params):
         return Request("textDocument/formatting", params)
+
+    @classmethod
+    def documentSymbols(cls, params):
+        return Request("textDocument/documentSymbol", params)
 
     def __repr__(self):
         return self.method + " " + str(self.params)

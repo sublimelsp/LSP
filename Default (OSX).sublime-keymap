@@ -9,6 +9,10 @@
     {
     	"keys": ["super+."],
     	"command": "fix_diagnostic"
+    },
+    {
+        "keys": ["super+option+r"],
+        "command": "document_symbols"
     }
 
 ]

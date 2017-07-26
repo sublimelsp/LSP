@@ -284,6 +284,12 @@ def get_project_path(window):
         return None
 
 
+def is_in_workspace(window, file_path):
+    workspace_path = get_project_path(window)
+    common_dir = os.path.commonprefix([workspace_path, file_path])
+    return workspace_path == common_dir
+
+
 def plugin_loaded():
     load_settings()
     Events.subscribe("view.on_load_async", initialize_on_open)
@@ -936,6 +942,11 @@ def update_diagnostics_in_view(view, diagnostics):
 def handle_diagnostics(update):
     file_path = uri_to_filename(update.get('uri'))
     window = sublime.active_window()
+
+    if not is_in_workspace(window, file_path):
+        debug("Skipping diagnostics for file", file_path, " it is not in the workspace")
+        return
+
     view = window.find_open_file(file_path)
 
     diagnostics = update.get('diagnostics')
@@ -1563,6 +1574,11 @@ class SaveListener(sublime_plugin.EventListener):
             Events.publish("view.on_close", view)
 
 
+def is_transient_view(view):
+    window = view.window()
+    return view == window.transient_view_in_group(window.active_group())
+
+
 class DocumentSyncListener(sublime_plugin.ViewEventListener):
     def __init__(self, view):
         self.view = view
@@ -1577,6 +1593,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
         return False
 
     def on_load_async(self):
+        # skip transient views: if not is_transient_view(self.view):
         Events.publish("view.on_load_async", self.view)
 
     def on_modified_async(self):

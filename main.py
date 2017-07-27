@@ -9,13 +9,17 @@ import urllib.request as urllib
 from urllib.parse import urljoin
 import html
 import mdpopups
+try:
+    from typing import List, Dict, Tuple, Callable
+except Exception as e:
+    pass
 
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
 show_status_messages = True
 show_view_status = True
 
-configs = []
+configs = []  # type: List[Config]
 
 
 class SymbolKind(object):
@@ -407,7 +411,7 @@ def client_for_view(view):
         return clients[config.name]
 
 
-clients_by_window = {}
+clients_by_window = {}  # type: Dict[int, Dict[str, Client]]
 
 
 def window_clients(window):
@@ -470,7 +474,7 @@ documentVersion = 0
 
 
 # TODO: this should be per-window ?
-document_states = {}
+document_states = {}  # type: Dict[str, DocumentState]
 
 
 class DocumentState:
@@ -489,7 +493,7 @@ def get_document_state(path):
     return document_states.get(path)
 
 
-pending_buffer_changes = dict()
+pending_buffer_changes = dict()  # type: Dict[int, Dict]
 
 
 def queue_did_change(view):
@@ -896,7 +900,7 @@ UNDERLINE_FLAGS = (sublime.DRAW_NO_FILL
                    | sublime.DRAW_NO_OUTLINE
                    | sublime.DRAW_EMPTY_AS_OVERWRITE)
 
-window_file_diagnostics = dict()
+window_file_diagnostics = dict()  # type: Dict[int, Dict[str, Dict[str, List[Tuple[Tuple[int,int], str, str]]]]]
 
 
 def update_file_diagnostics(window, relative_file_path, source,
@@ -924,7 +928,7 @@ def update_view_diagnostics(view, source, location_severity_messages):
     update_output_panel(window)
 
 
-phantom_sets_by_buffer = {}
+phantom_sets_by_buffer = {}  # type: Dict[int, sublime.PhantomSet]
 
 file_diagnostics = {}
 
@@ -1227,7 +1231,7 @@ class Notification:
 
 
 class Events:
-    listener_dict = dict()
+    listener_dict = dict()  # type: Dict[str, Callable[..., None]]
 
     @classmethod
     def subscribe(cls, key, listener):

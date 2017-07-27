@@ -852,7 +852,7 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
                 panel.settings().set("result_base_dir", base_dir)
                 panel.settings().set("line_numbers", False)
                 panel.assign_syntax("Packages/" + PLUGIN_NAME +
-                                    "/References.sublime-syntax")
+                                    "/Syntaxes/References.sublime-syntax")
                 # call a second time to apply settings
                 window.create_output_panel("references")
 
@@ -1000,7 +1000,7 @@ def update_output_panel(window):
         panel.settings().set("result_base_dir", base_dir)
         panel.settings().set("line_numbers", False)
         panel.assign_syntax("Packages/" + PLUGIN_NAME +
-                            "/Diagnostics.sublime-syntax")
+                            "/Syntaxes/Diagnostics.sublime-syntax")
         # Call create_output_panel a second time after assigning the above
         # settings, so that it'll be picked up as a result buffer
         window.create_output_panel("diagnostics")

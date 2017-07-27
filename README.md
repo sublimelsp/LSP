@@ -1,5 +1,7 @@
 # LSP
 
+[![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
+
 Language Server Protocol support for Sublime Text 3
 
 # Installing

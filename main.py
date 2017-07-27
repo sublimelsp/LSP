@@ -448,6 +448,7 @@ def notify_did_open(view):
 def notify_did_close(view):
     debug('notify_did_close')
     if view.file_name() in document_states:
+        del document_states[view.file_name()]
         config = config_for_scope(view)
         clients = window_clients(sublime.active_window())
         if config and config.name in clients:

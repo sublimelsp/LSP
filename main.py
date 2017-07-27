@@ -1057,7 +1057,7 @@ def start_client(window, config):
     initializeParams = {
         "processId": client.process.pid,
         "rootUri": filename_to_uri(project_path),
-        # "rootPath": project_path,
+        "rootPath": project_path,
         "capabilities": {
             "textDocument": {
                 "completion": {

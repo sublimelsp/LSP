@@ -30,5 +30,7 @@
    			"syntaxes": ["Packages/C++/C++.sublime-syntax"],
    			"languageId": "cpp"
    		}
-   }
+   },
+   "show_status_messages": true,
+   "show_view_status": true
 }

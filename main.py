@@ -12,6 +12,8 @@ import mdpopups
 
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
+show_status_messages = True
+show_view_status = True
 
 configs = []
 
@@ -62,20 +64,25 @@ def read_client_config(name, client_config):
 
 
 def load_settings():
+    global show_status_messages
+    global show_view_status
+    global configs
     settings_obj = sublime.load_settings("LSP.sublime-settings")
     # jsts_command = "javascript-typescript-stdio.cmd"
     # ["javascript-typescript-stdio.cmd", "-l", "lspserver.log"]
 
-    if settings_obj.has("clients"):
-        client_configs = settings_obj.get("clients", {})
-        for client_name, client_config in client_configs.items():
-            config = read_client_config(client_name, client_config)
-            if config:
-                debug("Config added:", client_name)
-                configs.append(config)
+    configs = []
+    client_configs = settings_obj.get("clients", {})
+    for client_name, client_config in client_configs.items():
+        config = read_client_config(client_name, client_config)
+        if config:
+            debug("Config added:", client_name)
+            configs.append(config)
 
-    # TODO: reload on settings change?
-    # settings_obj.add_on_change("_on_new_settings", on_settings_changed)
+    show_status_messages = settings_obj.get("show_status_messages", True)
+    show_view_status = settings_obj.get("show_view_status", True)
+
+    settings_obj.add_on_change("_on_new_settings", load_settings)
 
 
 class Config(object):
@@ -296,6 +303,8 @@ def plugin_loaded():
     Events.subscribe("view.on_load_async", initialize_on_open)
     Events.subscribe("view.on_activated_async", initialize_on_open)
     debug("plugin loaded")
+    if show_status_messages:
+        sublime.status_message("LSP initialized")
 
 
 def check_window_unloaded():
@@ -424,6 +433,8 @@ def notify_did_open(view):
     client = client_for_view(view)
     if view.file_name() not in document_states:
         get_document_state(view.file_name())
+        if show_view_status:
+            view.set_status("lsp_clients", config.name)
         params = {
             "textDocument": {
                 "uri": filename_to_uri(view.file_name()),
@@ -436,21 +447,28 @@ def notify_did_open(view):
 
 def notify_did_close(view):
     debug('notify_did_close')
-    config = config_for_scope(view)
-    clients = window_clients(sublime.active_window())
-    if config and config.name in clients:
-        client = clients[config.name]
-        params = {"textDocument": {"uri": filename_to_uri(view.file_name())}}
-        client.send_notification(Notification.didClose(params))
+    if view.file_name() in document_states:
+        config = config_for_scope(view)
+        clients = window_clients(sublime.active_window())
+        if config and config.name in clients:
+            client = clients[config.name]
+            params = {"textDocument": {"uri": filename_to_uri(view.file_name())}}
+            client.send_notification(Notification.didClose(params))
 
 
 def notify_did_save(view):
-    client = client_for_view(view)
-    params = {"textDocument": {"uri": filename_to_uri(view.file_name())}}
-    client.send_notification(Notification.didSave(params))
+    if view.file_name() in document_states:
+        client = client_for_view(view)
+        params = {"textDocument": {"uri": filename_to_uri(view.file_name())}}
+        client.send_notification(Notification.didSave(params))
+    else:
+        debug('document not tracked', view.file_name())
 
 
 documentVersion = 0
+
+
+# TODO: this should be per-window ?
 document_states = {}
 
 
@@ -535,7 +553,7 @@ def initialize_document_sync(text_document_sync_kind):
     Events.subscribe('view.on_close', notify_did_close)
 
 
-def handle_initialize_result(result, client):
+def handle_initialize_result(result, client, window, config):
     global didopen_after_initialize
     capabilities = result.get("capabilities")
     client.set_capabilities(capabilities)
@@ -550,6 +568,8 @@ def handle_initialize_result(result, client):
     Events.subscribe('document.diagnostics', handle_diagnostics)
     for view in didopen_after_initialize:
         notify_did_open(view)
+    if show_status_messages:
+        window.status_message("{} initialized".format(config.name))
     didopen_after_initialize = list()
 
 
@@ -821,7 +841,7 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
 
         references = list(format_reference(item, base_dir) for item in response)
 
-        if (len(response)) > 0:
+        if (len(references)) > 0:
             panel = window.find_output_panel("references")
             if panel is None:
                 # debug("creating panel")
@@ -1020,9 +1040,12 @@ def append_diagnostics(panel, file_path, source_diagnostics):
 
 def start_client(window, config):
     project_path = get_project_path(window)
+    if show_status_messages:
+        window.status_message("Starting " + config.name + "...")
     debug("starting in", project_path)
     client = start_server(config.binary_args, project_path)
     if not client:
+        window.status_message("Could not start" + config.name + ", disabling")
         debug("Could not start", config.binary_args, ", disabling")
         return
 
@@ -1042,7 +1065,7 @@ def start_client(window, config):
     }
     client.send_request(
         Request.initialize(initializeParams),
-        lambda result: handle_initialize_result(result, client))
+        lambda result: handle_initialize_result(result, client, window, config))
     return client
 
 

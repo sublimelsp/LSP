@@ -142,11 +142,13 @@ class Client(object):
     def send_request(self, request, handler):
         self.request_id += 1
         request.id = self.request_id
+        debug('request {}: {}'.format(request.id, request.method))
         if handler is not None:
             self.handlers[request.id] = handler
         self.send_call(request)
 
     def send_notification(self, notification):
+        debug('notify: ' + notification.method)
         self.send_call(notification)
 
     def kill(self):
@@ -154,7 +156,6 @@ class Client(object):
 
     def send_call(self, payload):
         try:
-            debug(payload)
             message = format_request(payload.__dict__)
             self.process.stdin.write(bytes(message, 'UTF-8'))
             self.process.stdin.flush()

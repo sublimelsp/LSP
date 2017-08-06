@@ -1495,17 +1495,13 @@ class CodeActionsCommand(sublime_plugin.TextCommand):
     def get_line_diagnostics(self, row, col):
         line_diagnostics = []
         file_diagnostics = window_file_diagnostics.get(self.view.window().id(), {})
-        # debug(file_diagnostics.keys())
         if self.view.file_name() in file_diagnostics:
             source_diagnostics = file_diagnostics[self.view.file_name()]
             diagnostics = source_diagnostics.get('lsp', [])
-            debug(diagnostics)
             if len(diagnostics) > 0:
                 for diagnostic in diagnostics:
-                    debug(diagnostic)
                     (start_line, _) = diagnostic.range.start
                     (end_line, _) = diagnostic.range.end
-                    debug("checking if diagnostic from {} to {} fits on line {}".format(start_line, end_line, row))
                     if row >= start_line and row <= end_line:
                         line_diagnostics.append(diagnostic)
         return line_diagnostics
@@ -1541,10 +1537,11 @@ class CodeActionsCommand(sublime_plugin.TextCommand):
             self.view.show_popup_menu(titles, self.handle_select)
 
     def handle_select(self, index):
-        client = client_for_view(self.view)
-        client.send_request(
-            Request.executeCommand(self.commands[index]),
-            self.handle_command_response)
+        if index > -1:
+            client = client_for_view(self.view)
+            client.send_request(
+                Request.executeCommand(self.commands[index]),
+                self.handle_command_response)
 
     def handle_command_response(self, response):
         pass

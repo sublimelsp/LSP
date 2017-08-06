@@ -386,11 +386,6 @@ def is_supported_view(view):
     else:
         return False
 
-    # for supported_scope in supported_scopes:
-    #     if view.match_selector(view.sel()[0].begin(), supported_scope):
-    #         return True
-    # return False
-
 
 TextDocumentSyncKindNone = 0
 TextDocumentSyncKindFull = 1

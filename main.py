@@ -1451,6 +1451,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
     def handle_response(self, response, point):
         if response is not None:
+            config = config_for_scope(self.view)
             signatures = response.get("signatures")
             activeSignature = response.get("activeSignature")
             debug("got signatures, active is", len(signatures), activeSignature)
@@ -1459,18 +1460,17 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 debug("active signature", signature)
                 formatted = []
                 formatted.append(
-                    "```{}\n{}\n```".format("typescript", signature.get('label')))
+                    "```{}\n{}\n```".format(config.languageId, signature.get('label')))
                 params = signature.get('parameters')
                 if params is None:  # for pyls TODO create issue?
                     params = signature.get('params')
                 debug("params", params)
                 for parameter in params:
                     paramDocs = parameter.get('documentation')
-                    formatted.append("**{}**\n".format(parameter.get('label')))
                     if paramDocs:
+                        formatted.append("**{}**\n".format(parameter.get('label')))
                         formatted.append("* *{}*\n".format(paramDocs))
 
-                formatted.append("&nbsp;")
                 formatted.append(signature.get('documentation'))
 
                 mdpopups.show_popup(

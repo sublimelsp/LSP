@@ -13,6 +13,10 @@
     {
         "keys": ["super+option+r"],
         "command": "document_symbols"
+    },
+    {
+        "keys": ["super+shift+m"],
+        "command": "show_diagnostics_panel"
     }
 
 ]

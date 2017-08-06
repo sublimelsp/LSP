@@ -1023,24 +1023,38 @@ def handle_diagnostics(update):
     origin = 'lsp'  # TODO: use actual client name to be able to update diagnostics per client
 
     update_file_diagnostics(window, file_path, origin, diagnostics)
+    update_diagnostics_panel(window)
 
-    update_output_panel(window)
+
+class ShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
+    def run(self):
+        ensure_diagnostics_panel(self.window)
+        self.window.run_command("show_panel", {"panel": "output.diagnostics"})
 
 
-def update_output_panel(window):
+def create_diagnostics_panel(window):
     base_dir = get_project_path(window)
-    panel = window.find_output_panel("diagnostics")
-    if panel is None:
-        panel = window.create_output_panel("diagnostics")
-        panel.settings().set("result_file_regex", r"^(.*):$")
-        panel.settings().set("result_line_regex", r"^\s+([0-9]+):?([0-9]+).*$")
-        panel.settings().set("result_base_dir", base_dir)
-        panel.settings().set("line_numbers", False)
-        panel.assign_syntax("Packages/" + PLUGIN_NAME +
-                            "/Syntaxes/Diagnostics.sublime-syntax")
-        # Call create_output_panel a second time after assigning the above
-        # settings, so that it'll be picked up as a result buffer
-        window.create_output_panel("diagnostics")
+    panel = window.create_output_panel("diagnostics")
+    panel.settings().set("result_file_regex", r"^(.*):$")
+    panel.settings().set("result_line_regex", r"^\s+([0-9]+):?([0-9]+).*$")
+    panel.settings().set("result_base_dir", base_dir)
+    panel.settings().set("line_numbers", False)
+    panel.assign_syntax("Packages/" + PLUGIN_NAME +
+                        "/Syntaxes/Diagnostics.sublime-syntax")
+    # Call create_output_panel a second time after assigning the above
+    # settings, so that it'll be picked up as a result buffer
+    window.create_output_panel("diagnostics")
+
+
+def ensure_diagnostics_panel(window):
+    panel = window.find_output_panel("diagnostics") or create_diagnostics_panel(window)
+    return panel
+
+
+def update_diagnostics_panel(window):
+    base_dir = get_project_path(window)
+
+    panel = ensure_diagnostics_panel(window)
 
     if window.id() in window_file_diagnostics:
         active_panel = window.active_panel()

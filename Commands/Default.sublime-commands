@@ -25,5 +25,10 @@
         "caption": "LSP: Document Symbols",
         "command": "document_symbols",
         "args": {}
+    },
+    {
+        "caption": "LSP: Show Diagnostics",
+        "command": "show_diagnostics_panel",
+        "args": {}
     }
 ]

@@ -9,6 +9,11 @@
     {
     	"keys": ["ctrl+."],
     	"command": "code_actions"
+    },
+    {
+        "keys": ["ctrl+shift+m"],
+        "command": "show_diagnostics_panel"
     }
+
 
 ]

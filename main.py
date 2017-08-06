@@ -773,8 +773,9 @@ def format_symbol(item):
     In the latter case, each entry in the quick panel will show multiple rows
     """
     # file_path = uri_to_filename(location.get("uri"))
-    kind = format_symbol_kind(item.get("kind"))
-    return [item.get("name"), kind]
+    # kind = format_symbol_kind(item.get("kind"))
+    # return [item.get("name"), kind]
+    return [item.get("name")]
 
 
 class DocumentSymbolsCommand(sublime_plugin.TextCommand):

@@ -621,6 +621,7 @@ def create_phantom_html(text):
     return """<body id=inline-error>{}
                 <div class="error">
                     <span class="message">{}</span>
+                    <a href="code-actions">Code Actions</a>
                 </div>
                 </body>""".format(stylesheet, html.escape(text, quote=False))
     # to add a close button:
@@ -633,12 +634,25 @@ def create_phantom_html(text):
     #              chr(0x00D7))
 
 
+def on_phantom_navigate(view, href, point):
+    # TODO: don't mess with the user's cursor.
+    sel = view.sel()
+    sel.clear()
+    sel.add(sublime.Region(point, point))
+    view.run_command("code_actions")
+
+
 def create_phantom(view, diagnostic):
     region = create_region(view, diagnostic)
     # TODO: hook up hide phantom (if keeping them)
     content = create_phantom_html(diagnostic.message)
-    return sublime.Phantom(region, '<p>' + content + '</p>',
-                           sublime.LAYOUT_BELOW)
+    point = view.text_point(*diagnostic.range.start)
+    return sublime.Phantom(
+        region,
+        '<p>' + content + '</p>',
+        sublime.LAYOUT_BELOW,
+        lambda href: on_phantom_navigate(view, href, point)
+    )
 
 
 def create_region(view, diagnostic):
@@ -1564,6 +1578,21 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                     max_width=800)
 
 
+def get_line_diagnostics(view, row, col):
+    line_diagnostics = []
+    file_diagnostics = window_file_diagnostics.get(view.window().id(), {})
+    if view.file_name() in file_diagnostics:
+        source_diagnostics = file_diagnostics[view.file_name()]
+        diagnostics = source_diagnostics.get('lsp', [])
+        if len(diagnostics) > 0:
+            for diagnostic in diagnostics:
+                (start_line, _) = diagnostic.range.start
+                (end_line, _) = diagnostic.range.end
+                if row >= start_line and row <= end_line:
+                    line_diagnostics.append(diagnostic)
+    return line_diagnostics
+
+
 class CodeActionsCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
         if is_supported_view(self.view):
@@ -1571,24 +1600,10 @@ class CodeActionsCommand(sublime_plugin.TextCommand):
             return client and client.has_capability('codeActionProvider')
         return False
 
-    def get_line_diagnostics(self, row, col):
-        line_diagnostics = []
-        file_diagnostics = window_file_diagnostics.get(self.view.window().id(), {})
-        if self.view.file_name() in file_diagnostics:
-            source_diagnostics = file_diagnostics[self.view.file_name()]
-            diagnostics = source_diagnostics.get('lsp', [])
-            if len(diagnostics) > 0:
-                for diagnostic in diagnostics:
-                    (start_line, _) = diagnostic.range.start
-                    (end_line, _) = diagnostic.range.end
-                    if row >= start_line and row <= end_line:
-                        line_diagnostics.append(diagnostic)
-        return line_diagnostics
-
     def run(self, edit):
         client = client_for_view(self.view)
         row, col = self.view.rowcol(self.view.sel()[0].begin())
-        line_diagnostics = self.get_line_diagnostics(row, col)
+        line_diagnostics = get_line_diagnostics(self.view, row, col)
         params = {
             "textDocument": {
                 "uri": filename_to_uri(self.view.file_name())

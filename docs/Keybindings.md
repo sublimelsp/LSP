@@ -2,7 +2,8 @@
 
 **Document actions**
 
-Show Code Actions: `cmd+.`
+* Show Code Actions: `cmd+.`
+* Symbol References: `shift+f12`
 
 
 **Workspace actions**

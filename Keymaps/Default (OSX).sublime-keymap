@@ -17,6 +17,10 @@
     {
         "keys": ["super+shift+m"],
         "command": "show_diagnostics_panel"
+    },
+    {
+        "keys": ["shift+f12"],
+        "command": "symbol_references"
     }
 
 ]

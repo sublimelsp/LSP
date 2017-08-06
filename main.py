@@ -1622,7 +1622,6 @@ class CodeActionsCommand(sublime_plugin.TextCommand):
 
     def handle_codeaction_response(self, response):
         titles = []
-        debug(response)
         self.commands = response
         for command in self.commands:
             titles.append(
@@ -1639,7 +1638,6 @@ class CodeActionsCommand(sublime_plugin.TextCommand):
 
     def handle_command_response(self, response):
         pass
-        # debug('executeCommand response:', response)
 
 
 def apply_workspace_edit(window, params):

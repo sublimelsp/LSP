@@ -61,7 +61,7 @@ class SymbolKind(object):
 symbol_kind_names = {
     SymbolKind.File: "file",
     SymbolKind.Module: "module",
-    SymbolKind.Namespace: "namspace",
+    SymbolKind.Namespace: "namespace",
     SymbolKind.Package: "package",
     SymbolKind.Class: "class",
     SymbolKind.Method: "method",
@@ -78,7 +78,7 @@ def read_client_config(name, client_config):
         client_config.get("command", []),
         client_config.get("scopes", []),
         client_config.get("syntaxes", []),
-        client_config.get("languageId", )
+        client_config.get("languageId", "")
     )
 
 

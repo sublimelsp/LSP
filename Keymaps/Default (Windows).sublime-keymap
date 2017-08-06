@@ -8,7 +8,7 @@
     },
     {
     	"keys": ["ctrl+."],
-    	"command": "fix_diagnostic"
+    	"command": "code_actions"
     }
 
 ]

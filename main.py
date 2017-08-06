@@ -916,13 +916,26 @@ class Range(object):
             (end.get('line'), end.get('character'))
         )
 
+    def to_lsp(self):
+        return make_lsp_range(self.start, self.end)
+
+
+def make_lsp_range(start_rowcol, end_rowcol):
+    (start_line, start_character) = start_rowcol
+    (end_line, end_character) = end_rowcol
+    return {
+        "start": {"line": start_line, "character": start_character},
+        "end": {"line": end_line, "character": end_character}
+    }
+
 
 class Diagnostic(object):
-    def __init__(self, message, range, severity, source):
+    def __init__(self, message, range, severity, source, lsp_diagnostic):
         self.message = message
         self.range = range
         self.severity = severity
         self.source = source
+        self._lsp_diagnostic = lsp_diagnostic
 
     @classmethod
     def from_lsp(cls, lsp_diagnostic):
@@ -930,28 +943,30 @@ class Diagnostic(object):
             lsp_diagnostic.get('message'),
             Range.from_lsp(lsp_diagnostic.get('range')),
             lsp_diagnostic.get('severity', DiagnosticSeverity.Error),
-            lsp_diagnostic.get('source')
+            lsp_diagnostic.get('source'),
+            lsp_diagnostic
         )
 
+    def to_lsp(self):
+        return self._lsp_diagnostic
 
-def update_file_diagnostics(window, relative_file_path, source,
+
+def update_file_diagnostics(window, file_path, source,
                             location_severity_messages):
     if location_severity_messages:
         window_file_diagnostics.setdefault(window.id(), dict()).setdefault(
-            relative_file_path, dict())[source] = location_severity_messages
+            file_path, dict())[source] = location_severity_messages
     else:
         if window.id() in window_file_diagnostics:
             file_diagnostics = window_file_diagnostics[window.id()]
-            if relative_file_path in file_diagnostics:
-                if source in file_diagnostics[relative_file_path]:
-                    del file_diagnostics[relative_file_path][source]
-                if not file_diagnostics[relative_file_path]:
-                    del file_diagnostics[relative_file_path]
+            if file_path in file_diagnostics:
+                if source in file_diagnostics[file_path]:
+                    del file_diagnostics[file_path][source]
+                if not file_diagnostics[file_path]:
+                    del file_diagnostics[file_path]
 
 
 phantom_sets_by_buffer = {}  # type: Dict[int, sublime.PhantomSet]
-
-file_diagnostics = {}
 
 
 def update_diagnostics_in_view(view, diagnostics):
@@ -1005,12 +1020,10 @@ def handle_diagnostics(update):
     update_diagnostics_in_view(view, diagnostics)
 
     # update panel if available
-    base_dir = get_project_path(window)
-    relative_file_path = os.path.relpath(file_path, base_dir)
 
     origin = 'lsp'  # TODO: use actual client name to be able to update diagnostics per client
 
-    update_file_diagnostics(window, relative_file_path, origin, diagnostics)
+    update_file_diagnostics(window, file_path, origin, diagnostics)
 
     update_output_panel(window)
 
@@ -1037,8 +1050,9 @@ def update_output_panel(window):
         file_diagnostics = window_file_diagnostics[window.id()]
         if file_diagnostics:
             for file_path, source_diagnostics in file_diagnostics.items():
+                relative_file_path = os.path.relpath(file_path, base_dir)
                 if source_diagnostics:
-                    append_diagnostics(panel, file_path, source_diagnostics)
+                    append_diagnostics(panel, relative_file_path, source_diagnostics)
             if not active_panel:
                 window.run_command("show_panel",
                                    {"panel": "output.diagnostics"})
@@ -1471,45 +1485,50 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                     max_width=800)
 
 
-class FixDiagnosticCommand(sublime_plugin.TextCommand):
+class CodeActionsCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
-            if client and client.has_capability('codeActionProvider'):
-                # debug('code action is enabled, but should it be?')
-                return len(self.get_line_diagnostics()) > 0
+            return client and client.has_capability('codeActionProvider')
         return False
 
-    def get_line_diagnostics(self):
+    def get_line_diagnostics(self, row, col):
         line_diagnostics = []
+        file_diagnostics = window_file_diagnostics.get(self.view.window().id(), {})
+        # debug(file_diagnostics.keys())
         if self.view.file_name() in file_diagnostics:
-            row, col = self.view.rowcol(self.view.sel()[0].begin())
-            diagnostics = file_diagnostics[self.view.file_name()]
+            source_diagnostics = file_diagnostics[self.view.file_name()]
+            diagnostics = source_diagnostics.get('lsp', [])
+            debug(diagnostics)
             if len(diagnostics) > 0:
                 for diagnostic in diagnostics:
-                    start_line = diagnostic.get('range').get('start').get(
-                        'line')
-                    end_line = diagnostic.get('range').get('end').get('line')
+                    debug(diagnostic)
+                    (start_line, _) = diagnostic.range.start
+                    (end_line, _) = diagnostic.range.end
+                    debug("checking if diagnostic from {} to {} fits on line {}".format(start_line, end_line, row))
                     if row >= start_line and row <= end_line:
                         line_diagnostics.append(diagnostic)
         return line_diagnostics
 
     def run(self, edit):
         client = client_for_view(self.view)
-        line_diagnostics = self.get_line_diagnostics()
-        if len(line_diagnostics) > 0:
-            diagnostic = line_diagnostics[0]
-            params = {
-                "textDocument": {
-                    "uri": filename_to_uri(self.view.file_name())
-                },
-                "range": diagnostic.get('range'),
-                "context": {
-                    "diagnostics": line_diagnostics
-                }
+        row, col = self.view.rowcol(self.view.sel()[0].begin())
+        line_diagnostics = self.get_line_diagnostics(row, col)
+        params = {
+            "textDocument": {
+                "uri": filename_to_uri(self.view.file_name())
+            },
+            "context": {
+                "diagnostics": list(diagnostic.to_lsp() for diagnostic in line_diagnostics)
             }
-            client.send_request(
-                Request.codeAction(params), self.handle_codeaction_response)
+        }
+        if len(line_diagnostics) > 0:
+            # TODO: merge ranges.
+            params["range"] = line_diagnostics[0].range.to_lsp()
+        else:
+            params["range"] = make_lsp_range((row, col), (row, col))
+
+        client.send_request(Request.codeAction(params), self.handle_codeaction_response)
 
     def handle_codeaction_response(self, response):
         titles = []

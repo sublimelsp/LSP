@@ -8,7 +8,7 @@
     },
     {
     	"keys": ["super+."],
-    	"command": "fix_diagnostic"
+    	"command": "code_actions"
     },
     {
         "keys": ["super+option+r"],

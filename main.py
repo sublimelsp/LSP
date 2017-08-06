@@ -580,6 +580,7 @@ def handle_initialize_result(result, client, window, config):
         initialize_document_sync(document_sync)
 
     Events.subscribe('document.diagnostics', handle_diagnostics)
+    Events.subscribe('view.on_close', remove_diagnostics)
     for view in didopen_after_initialize:
         notify_did_open(view)
     if show_status_messages:
@@ -872,7 +873,6 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
             sublime.status_message("No references found")
 
 
-
 def format_reference(reference, base_dir):
     start = reference.get('range').get('start')
     file_path = uri_to_filename(reference.get("uri"))
@@ -1000,6 +1000,18 @@ def update_diagnostics_in_view(view, diagnostics):
             view.erase_regions("errors")
 
 
+def remove_diagnostics(view):
+    """Removes diagnostics for a file if no views exist for it
+    """
+    window = sublime.active_window()
+    file_path = view.file_name()
+    if not window.find_open_file(view.file_name()):
+        update_file_diagnostics(window, file_path, 'lsp', [])
+        update_diagnostics_panel(window)
+    else:
+        debug('file still open?')
+
+
 def handle_diagnostics(update):
     file_path = uri_to_filename(update.get('uri'))
     window = sublime.active_window()
@@ -1047,8 +1059,7 @@ def create_diagnostics_panel(window):
 
 
 def ensure_diagnostics_panel(window):
-    panel = window.find_output_panel("diagnostics") or create_diagnostics_panel(window)
-    return panel
+    return window.find_output_panel("diagnostics") or create_diagnostics_panel(window)
 
 
 def update_diagnostics_panel(window):

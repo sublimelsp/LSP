@@ -17,6 +17,11 @@
     {
         "keys": ["shift+f12"],
         "command": "symbol_references"
+    },
+    {
+        "keys": ["f12"],
+        "command": "symbol_definition"
     }
+
 
 ]

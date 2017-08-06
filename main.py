@@ -749,7 +749,8 @@ class SymbolDefinitionCommand(sublime_plugin.TextCommand):
     def handle_response(self, response, position):
         window = sublime.active_window()
         if len(response) < 1:
-            self.view.set_status("definition", "Could not find definition")
+            window.run_command("goto_definition")
+            # self.view.set_status("definition", "Could not find definition")
         else:
             location = response[0]
             file_path = uri_to_filename(location.get("uri"))

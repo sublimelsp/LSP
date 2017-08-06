@@ -1114,7 +1114,7 @@ def start_server(server_binary_args, working_dir):
     si = None
     if os.name == "nt":
         si = subprocess.STARTUPINFO()
-        si.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW
+        si.dwFlags |= subprocess._subprocess.SW_HIDE | subprocess._subprocess.STARTF_USESHOWWINDOW
     try:
         process = subprocess.Popen(
             args,

@@ -733,10 +733,7 @@ class SymbolDefinitionCommand(sublime_plugin.TextCommand):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
             if client.has_capability('definitionProvider'):
-                point = self.view.sel()[0].begin()
-                word_at_sel = self.view.classify(point)
-                if word_at_sel & SUBLIME_WORD_MASK:
-                    return True
+                return is_at_word(self.view)
         return False
 
     def run(self, edit):
@@ -750,7 +747,6 @@ class SymbolDefinitionCommand(sublime_plugin.TextCommand):
         window = sublime.active_window()
         if len(response) < 1:
             window.run_command("goto_definition")
-            # self.view.set_status("definition", "Could not find definition")
         else:
             location = response[0]
             file_path = uri_to_filename(location.get("uri"))
@@ -814,15 +810,21 @@ class DocumentSymbolsCommand(sublime_plugin.TextCommand):
         self.view.sel().add(region)
 
 
+def is_at_word(view):
+    point = view.sel()[0].begin()
+    point_classification = view.classify(point)
+    if point_classification & SUBLIME_WORD_MASK:
+        return True
+    else:
+        return False
+
+
 class SymbolReferencesCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
             if client and client.has_capability('referencesProvider'):
-                point = self.view.sel()[0].begin()
-                word_at_sel = self.view.classify(point)
-                if word_at_sel & SUBLIME_WORD_MASK:
-                    return True
+                return is_at_word(self.view)
         return False
 
     def run(self, edit):
@@ -872,6 +874,8 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
 
         else:
             window.run_command("hide_panel", {"panel": "output.references"})
+            sublime.status_message("No references found")
+
 
 
 def format_reference(reference, base_dir):

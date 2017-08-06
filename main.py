@@ -951,10 +951,10 @@ class Diagnostic(object):
 
 
 def update_file_diagnostics(window, file_path, source,
-                            location_severity_messages):
-    if location_severity_messages:
+                            diagnostics):
+    if diagnostics:
         window_file_diagnostics.setdefault(window.id(), dict()).setdefault(
-            file_path, dict())[source] = location_severity_messages
+            file_path, dict())[source] = diagnostics
     else:
         if window.id() in window_file_diagnostics:
             file_diagnostics = window_file_diagnostics[window.id()]

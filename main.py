@@ -898,7 +898,7 @@ UNDERLINE_FLAGS = (sublime.DRAW_NO_FILL
                    | sublime.DRAW_EMPTY_AS_OVERWRITE)
 
 window_file_diagnostics = dict(
-)  # type: Dict[int, Dict[str, Dict[str, List[Tuple[Tuple[int,int], str, str]]]]]
+)  # type: Dict[int, Dict[str, Dict[str, List[Diagnostic]]]]
 
 
 class Range(object):

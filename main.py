@@ -73,7 +73,7 @@ symbol_kind_names = {
 
 
 def read_client_config(name, client_config):
-    return Config(
+    return ClientConfig(
         name,
         client_config.get("command", []),
         client_config.get("scopes", []),
@@ -87,8 +87,6 @@ def load_settings():
     global show_view_status
     global configs
     settings_obj = sublime.load_settings("LSP.sublime-settings")
-    # jsts_command = "javascript-typescript-stdio.cmd"
-    # ["javascript-typescript-stdio.cmd", "-l", "lspserver.log"]
 
     configs = []
     client_configs = settings_obj.get("clients", {})
@@ -104,7 +102,7 @@ def load_settings():
     settings_obj.add_on_change("_on_new_settings", load_settings)
 
 
-class Config(object):
+class ClientConfig(object):
     def __init__(self, name, binary_args, scopes, syntaxes, languageId):
         self.name = name
         self.binary_args = binary_args

@@ -1345,6 +1345,7 @@ class DiagnosticsHoverHandler(sublime_plugin.ViewEventListener):
 
     def show_hover(self, point, diagnostics):
         formatted = list("{}: {}".format(diagnostic.source, diagnostic.message) for diagnostic in diagnostics)
+        formatted.append("[{}]({})".format('Code Actions', 'code-actions'))
         mdpopups.show_popup(
             self.view,
             "\n".join(formatted),
@@ -1353,7 +1354,15 @@ class DiagnosticsHoverHandler(sublime_plugin.ViewEventListener):
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
             location=point,
             wrapper_class="lsp_hover",
-            max_width=800)
+            max_width=800,
+            on_navigate=lambda href: self.on_navigate(href, point, diagnostics))
+
+    def on_navigate(self, href, point, diagnostics):
+        # TODO: don't mess with the user's cursor.
+        sel = self.view.sel()
+        sel.clear()
+        sel.add(sublime.Region(point, point))
+        self.view.run_command("code_actions")
 
 
 class HoverHandler(sublime_plugin.ViewEventListener):

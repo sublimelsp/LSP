@@ -22,6 +22,21 @@ show_view_status = True
 configs = []  # type: List[Config]
 
 
+class DiagnosticSeverity(object):
+    Error = 1
+    Warning = 2
+    Information = 3
+    Hint = 4
+
+
+diagnostic_severity_names = {
+    DiagnosticSeverity.Error: "error",
+    DiagnosticSeverity.Warning: "warning",
+    DiagnosticSeverity.Information: "info",
+    DiagnosticSeverity.Hint: "hint"
+}
+
+
 class SymbolKind(object):
     File = 1
     Module = 2
@@ -626,45 +641,27 @@ def create_phantom_html(text):
 def create_phantom(view, diagnostic):
     region = create_region(view, diagnostic)
     # TODO: hook up hide phantom (if keeping them)
-    content = create_phantom_html(diagnostic.get('message'))
+    content = create_phantom_html(diagnostic.message)
     return sublime.Phantom(region, '<p>' + content + '</p>',
                            sublime.LAYOUT_BELOW)
 
 
 def create_region(view, diagnostic):
-    start = diagnostic.get('range').get('start')
-    end = diagnostic.get('range').get('end')
-    region = sublime.Region(
-        view.text_point(start.get('line'), start.get('character')),
-        view.text_point(end.get('line'), end.get('character')))
-    return region
+    return sublime.Region(
+        view.text_point(*diagnostic.range.start),
+        view.text_point(*diagnostic.range.end))
 
 
-def build_location_severity_message(diagnostic):
-    start = diagnostic.get('range').get('start')
-    line = start.get('line') or 0
-    character = start.get('character') or 0
-    level = "error"
-    return ((line, character), level, diagnostic.get('message'))
+def format_severity(severity):
+    return diagnostic_severity_names[severity]
 
 
-def build_diagnostic(file_path, diagnostic):
-    start = diagnostic.get('range').get('start')
-    line = start.get('line') or 0
-    character = start.get('character') or 0
-    level = "error"
-    source = "lsp"
-    return format_diagnostic(line, character, source, level,
-                             diagnostic.get('message'))
-    # return "\t{}:{}\t{}\t{}\t{}".format(line + 1, character + 1,
-    # source, level, diagnostic.get('message'))
-
-
-def format_diagnostic(line, character, source, level, message):
+def format_diagnostic(diagnostic):
+    (line, character) = diagnostic.range.start
     location = "{}:{}".format(line + 1, character + 1)
-    formattedMessage = message.replace("\n", "").replace("\r", "")
-    return "\t{:<8}\t{:<8}\t{:<8}\t{}".format(location, source, level,
-                                              formattedMessage)
+    formattedMessage = diagnostic.message.replace("\n", "").replace("\r", "")
+    return "\t{:<8}\t{:<8}\t{:<8}\t{}".format(
+        location, diagnostic.source, format_severity(diagnostic.severity), formattedMessage)
 
 
 class SymbolRenameCommand(sublime_plugin.TextCommand):
@@ -900,7 +897,40 @@ UNDERLINE_FLAGS = (sublime.DRAW_NO_FILL
                    | sublime.DRAW_NO_OUTLINE
                    | sublime.DRAW_EMPTY_AS_OVERWRITE)
 
-window_file_diagnostics = dict()  # type: Dict[int, Dict[str, Dict[str, List[Tuple[Tuple[int,int], str, str]]]]]
+window_file_diagnostics = dict(
+)  # type: Dict[int, Dict[str, Dict[str, List[Tuple[Tuple[int,int], str, str]]]]]
+
+
+class Range(object):
+    def __init__(self, start, end):
+        self.start = start
+        self.end = end
+
+    @classmethod
+    def from_lsp(cls, lsp_range):
+        start = lsp_range.get('start')
+        end = lsp_range.get('end')
+        return Range(
+            (start.get('line'), start.get('character')),
+            (end.get('line'), end.get('character'))
+        )
+
+
+class Diagnostic(object):
+    def __init__(self, message, range, severity, source):
+        self.message = message
+        self.range = range
+        self.severity = severity
+        self.source = source
+
+    @classmethod
+    def from_lsp(cls, lsp_diagnostic):
+        return Diagnostic(
+            lsp_diagnostic.get('message'),
+            Range.from_lsp(lsp_diagnostic.get('range')),
+            lsp_diagnostic.get('severity', DiagnosticSeverity.Error),
+            lsp_diagnostic.get('source')
+        )
 
 
 def update_file_diagnostics(window, relative_file_path, source,
@@ -916,16 +946,6 @@ def update_file_diagnostics(window, relative_file_path, source,
                     del file_diagnostics[relative_file_path][source]
                 if not file_diagnostics[relative_file_path]:
                     del file_diagnostics[relative_file_path]
-
-
-def update_view_diagnostics(view, source, location_severity_messages):
-    debug("got view diags", source, location_severity_messages)
-    window = view.window()
-    base_dir = get_project_path(window)
-    relative_file_path = os.path.relpath(view.file_name(), base_dir)
-    update_file_diagnostics(window, relative_file_path, source,
-                            location_severity_messages)
-    update_output_panel(window)
 
 
 phantom_sets_by_buffer = {}  # type: Dict[int, sublime.PhantomSet]
@@ -957,7 +977,7 @@ def update_diagnostics_in_view(view, diagnostics):
         phantom_set.update(phantoms)
 
         if (len(regions)) > 0:
-            # steal SublimeLinter's coloring.
+            # TODO: stop stealing SublimeLinter's coloring.
             view.add_regions("errors", regions, "sublimelinter.mark.error",
                              "dot",
                              sublime.DRAW_SQUIGGLY_UNDERLINE | UNDERLINE_FLAGS)
@@ -970,27 +990,28 @@ def handle_diagnostics(update):
     window = sublime.active_window()
 
     if not is_in_workspace(window, file_path):
-        debug("Skipping diagnostics for file", file_path, " it is not in the workspace")
+        debug("Skipping diagnostics for file", file_path,
+              " it is not in the workspace")
         return
+
+    diagnostics = list(
+        Diagnostic.from_lsp(item) for item in update.get('diagnostics', []))
 
     view = window.find_open_file(file_path)
 
-    diagnostics = update.get('diagnostics')
+    # diagnostics = update.get('diagnostics')
 
     update_diagnostics_in_view(view, diagnostics)
 
-    if update_output_panel is not None:
-        # update panel if available
-        base_dir = get_project_path(window)
-        relative_file_path = os.path.relpath(file_path, base_dir)
-        file_diagnostics[file_path] = diagnostics
+    # update panel if available
+    base_dir = get_project_path(window)
+    relative_file_path = os.path.relpath(file_path, base_dir)
 
-        location_severity_messages = list(
-            build_location_severity_message(diagnostic)
-            for diagnostic in diagnostics)
-        update_file_diagnostics(window, relative_file_path, 'lsp',
-                                location_severity_messages)
-        update_output_panel(window)
+    origin = 'lsp'  # TODO: use actual client name to be able to update diagnostics per client
+
+    update_file_diagnostics(window, relative_file_path, origin, diagnostics)
+
+    update_output_panel(window)
 
 
 def update_output_panel(window):
@@ -999,8 +1020,7 @@ def update_output_panel(window):
     if panel is None:
         panel = window.create_output_panel("diagnostics")
         panel.settings().set("result_file_regex", r"^(.*):$")
-        panel.settings().set("result_line_regex",
-                             r"^\s+([0-9]+):?([0-9]+).*$")
+        panel.settings().set("result_line_regex", r"^\s+([0-9]+):?([0-9]+).*$")
         panel.settings().set("result_base_dir", base_dir)
         panel.settings().set("line_numbers", False)
         panel.assign_syntax("Packages/" + PLUGIN_NAME +
@@ -1010,7 +1030,6 @@ def update_output_panel(window):
         window.create_output_panel("diagnostics")
 
     if window.id() in window_file_diagnostics:
-        debug('panel is', window.active_panel())
         active_panel = window.active_panel()
         is_active_panel = (active_panel == "output.diagnostics")
         panel.run_command("clear_panel")
@@ -1020,22 +1039,21 @@ def update_output_panel(window):
                 if source_diagnostics:
                     append_diagnostics(panel, file_path, source_diagnostics)
             if not active_panel:
-                window.run_command("show_panel", {"panel": "output.diagnostics"})
+                window.run_command("show_panel",
+                                   {"panel": "output.diagnostics"})
         else:
             if is_active_panel:
-                window.run_command("hide_panel", {"panel": "output.diagnostics"})
+                window.run_command("hide_panel",
+                                   {"panel": "output.diagnostics"})
 
 
-def append_diagnostics(panel, file_path, source_diagnostics):
-    panel.run_command('append', {
-        'characters': file_path + ":\n",
-        'force': True
-    })
-    for source, location_severity_messages in source_diagnostics.items():
-        for location, severity, message in location_severity_messages:
-            line, character = location
-            item = format_diagnostic(line, character, source,
-                                     severity, message)
+def append_diagnostics(panel, file_path, origin_diagnostics):
+    panel.run_command('append',
+                      {'characters': file_path + ":\n",
+                       'force': True})
+    for origin, diagnostics in origin_diagnostics.items():
+        for diagnostic in diagnostics:
+            item = format_diagnostic(diagnostic)
             panel.run_command('append', {
                 'characters': item + "\n",
                 'force': True,

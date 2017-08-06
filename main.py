@@ -1310,6 +1310,52 @@ class Events:
                 listener(*args)
 
 
+def get_diagnostics_for_view(view):
+    window = view.window()
+    file_path = view.file_name()
+    origin = 'lsp'
+    if window.id() in window_file_diagnostics:
+        file_diagnostics = window_file_diagnostics[window.id()]
+        if file_path in file_diagnostics:
+            if origin in file_diagnostics[file_path]:
+                return file_diagnostics[file_path][origin]
+    return []
+
+
+class DiagnosticsHoverHandler(sublime_plugin.ViewEventListener):
+    def __init__(self, view):
+        self.view = view
+
+    @classmethod
+    def is_applicable(cls, settings):
+        syntax = settings.get('syntax')
+        return is_supported_syntax(syntax)
+
+    def on_hover(self, point, hover_zone):
+        (row, col) = self.view.rowcol(point)
+        diagnostics = get_diagnostics_for_view(self.view)
+        line_diagnostics = []
+        for diagnostic in diagnostics:
+            (start_line, _) = diagnostic.range.start
+            (end_line, _) = diagnostic.range.end
+            if row >= start_line and row <= end_line:
+                line_diagnostics.append(diagnostic)
+        if line_diagnostics:
+            self.show_hover(point, line_diagnostics)
+
+    def show_hover(self, point, diagnostics):
+        formatted = list("{}: {}".format(diagnostic.source, diagnostic.message) for diagnostic in diagnostics)
+        mdpopups.show_popup(
+            self.view,
+            "\n".join(formatted),
+            css=".mdpopups .lsp_hover { margin: 4px; }",
+            md=True,
+            flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+            location=point,
+            wrapper_class="lsp_hover",
+            max_width=800)
+
+
 class HoverHandler(sublime_plugin.ViewEventListener):
     def __init__(self, view):
         self.view = view

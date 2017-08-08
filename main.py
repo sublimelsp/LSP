@@ -7,12 +7,10 @@ import os
 import sys
 import urllib.request as urllib
 from urllib.parse import urljoin
+from collections import OrderedDict
 import html
 import mdpopups
-try:
-    from typing import List, Dict, Tuple, Callable, Any, Optional
-except Exception as e:
-    pass
+from typing import List, Dict, Tuple, Callable, Any, Optional
 
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
@@ -244,9 +242,12 @@ class ClientConfig(object):
         self.languageId = languageId
 
 
-def format_request(request):
+def format_request(request: Dict[str, Any]):
     """Converts the request into json and adds the Content-Length header"""
-    content = json.dumps(request, indent=2)
+    # TODO: ordering parameters needed for clangd which calls the handler when params field is parsed.
+    ordered = OrderedDict(request)
+    ordered.move_to_end('params')
+    content = json.dumps(ordered, indent=2)
     content_length = len(content)
     result = "Content-Length: {}\r\n\r\n{}".format(content_length, content)
     return result
@@ -360,7 +361,7 @@ class Client(object):
             try:
                 error = self.process.stderr.readline().decode('UTF-8')
                 if len(error) > 0:
-                    printf("LSP error: ", error)
+                    printf("(stderr): ", error.strip())
             except IOError:
                 printf("LSP stderr process ending due to exception: ",
                        sys.exc_info())
@@ -1149,9 +1150,11 @@ def ensure_diagnostics_panel(window):
 
 
 def update_diagnostics_panel(window):
+    assert window, "missing window!"
     base_dir = get_project_path(window)
 
     panel = ensure_diagnostics_panel(window)
+    assert panel, "must have a panel now!"
 
     if window.id() in window_file_diagnostics:
         active_panel = window.active_panel()

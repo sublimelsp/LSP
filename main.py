@@ -10,7 +10,11 @@ from urllib.parse import urljoin
 from collections import OrderedDict
 import html
 import mdpopups
-from typing import List, Dict, Tuple, Callable, Any, Optional
+try:
+    from typing import Any, List, Dict, Tuple, Callable, Optional
+except ImportError:
+    pass
+
 
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
@@ -169,7 +173,6 @@ class Notification:
         return r
 
 
-
 class Range(object):
     def __init__(self, start, end):
         self.start = start
@@ -258,7 +261,7 @@ class ClientConfig(object):
         self.languageId = languageId
 
 
-def format_request(payload: Dict[str, Any]):
+def format_request(payload: 'Dict[str, Any]'):
     """Converts the request into json and adds the Content-Length header"""
     content = json.dumps(payload, sort_keys=False)
     content_length = len(content)
@@ -286,7 +289,7 @@ class Client(object):
     def get_capability(self, capability):
         return self.capabilities.get(capability)
 
-    def send_request(self, request: Request, handler: Callable):
+    def send_request(self, request: Request, handler: 'Callable'):
         self.request_id += 1
         if handler is not None:
             self.handlers[self.request_id] = handler
@@ -439,7 +442,7 @@ def printf(*args):
     print()
 
 
-def get_project_path(window: sublime.Window) -> Optional[str]:
+def get_project_path(window: sublime.Window) -> 'Optional[str]':
     """
     Returns the common root of all open folders in the window
     """
@@ -502,7 +505,7 @@ def plugin_unloaded():
             unload_client(client)
 
 
-def config_for_scope(view: sublime.View) -> Optional[ClientConfig]:
+def config_for_scope(view: sublime.View) -> 'Optional[ClientConfig]':
     for config in configs:
         for scope in config.scopes:
             if view.match_selector(view.sel()[0].begin(), scope):
@@ -545,7 +548,7 @@ def uri_to_filename(uri: str) -> str:
         return urllib.url2pathname(uri).replace("file://", "")
 
 
-def client_for_view(view: sublime.View) -> Optional[Client]:
+def client_for_view(view: sublime.View) -> 'Optional[Client]':
     config = config_for_scope(view)
     if not config:
         debug("config not available for view", view.file_name())
@@ -561,7 +564,7 @@ def client_for_view(view: sublime.View) -> Optional[Client]:
 clients_by_window = {}  # type: Dict[int, Dict[str, Client]]
 
 
-def window_clients(window: sublime.Window) -> Dict[str, Client]:
+def window_clients(window: sublime.Window) -> 'Dict[str, Client]':
     global clients_by_window
     if window.id() in clients_by_window:
         return clients_by_window[window.id()]
@@ -1053,7 +1056,7 @@ window_file_diagnostics = dict(
 
 
 def update_file_diagnostics(window: sublime.Window, file_path: str, source: str,
-                            diagnostics: List[Diagnostic]):
+                            diagnostics: 'List[Diagnostic]'):
     if diagnostics:
         window_file_diagnostics.setdefault(window.id(), dict()).setdefault(
             file_path, dict())[source] = diagnostics
@@ -1070,7 +1073,7 @@ def update_file_diagnostics(window: sublime.Window, file_path: str, source: str,
 phantom_sets_by_buffer = {}  # type: Dict[int, sublime.PhantomSet]
 
 
-def update_diagnostics_in_view(view: sublime.View, diagnostics: List[Diagnostic]):
+def update_diagnostics_in_view(view: sublime.View, diagnostics: 'List[Diagnostic]'):
     global phantom_sets_by_buffer
 
     phantoms = []  # type: List[sublime.Phantom]
@@ -1114,7 +1117,7 @@ def remove_diagnostics(view: sublime.View):
         debug('file still open?')
 
 
-def handle_diagnostics(update: Any):
+def handle_diagnostics(update: 'Any'):
     file_path = uri_to_filename(update.get('uri'))
     window = sublime.active_window()
 
@@ -1272,7 +1275,7 @@ def start_server(server_binary_args, working_dir):
         print(err)
 
 
-def get_document_range(view: sublime.View) -> Any:
+def get_document_range(view: sublime.View) -> 'Any':
     range = {
         "start": {
             "line": 0,
@@ -1327,7 +1330,7 @@ class Events:
                 listener(*args)
 
 
-def get_diagnostics_for_view(view: sublime.View) -> List[Diagnostic]:
+def get_diagnostics_for_view(view: sublime.View) -> 'List[Diagnostic]':
     window = view.window()
     file_path = view.file_name()
     origin = 'lsp'
@@ -1479,7 +1482,7 @@ class CompletionHandler(sublime_plugin.EventListener):
         return self.completions, (sublime.INHIBIT_WORD_COMPLETIONS
                                   | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
-    def format_completion(self, item) -> Tuple[str, str]:
+    def format_completion(self, item) -> 'Tuple[str, str]':
         label = item.get("label")
         # kind = item.get("kind")
         detail = item.get("detail")
@@ -1582,7 +1585,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                     max_width=800)
 
 
-def get_line_diagnostics(view: sublime.View, row: int, col: int) -> List[Diagnostic]:
+def get_line_diagnostics(view: sublime.View, row: int, col: int) -> 'List[Diagnostic]':
     line_diagnostics = []
     file_diagnostics = window_file_diagnostics.get(view.window().id(), {})
     if view.file_name() in file_diagnostics:

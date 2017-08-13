@@ -123,6 +123,14 @@ class Request:
     def __repr__(self):
         return self.method + " " + str(self.params)
 
+    def to_payload(self, id):
+        r = OrderedDict()
+        r["jsonrpc"] = "2.0"
+        r["id"] = id
+        r["method"] = self.method
+        r["params"] = self.params
+        return r
+
 
 class Notification:
     def __init__(self, method, params):
@@ -152,6 +160,14 @@ class Notification:
 
     def __repr__(self):
         return self.method + " " + str(self.params)
+
+    def to_payload(self):
+        r = OrderedDict()
+        r["jsonrpc"] = "2.0"
+        r["method"] = self.method
+        r["params"] = self.params
+        return r
+
 
 
 class Range(object):
@@ -242,12 +258,9 @@ class ClientConfig(object):
         self.languageId = languageId
 
 
-def format_request(request: Dict[str, Any]):
+def format_request(payload: Dict[str, Any]):
     """Converts the request into json and adds the Content-Length header"""
-    # TODO: ordering parameters needed for clangd which calls the handler when params field is parsed.
-    ordered = OrderedDict(request)
-    ordered.move_to_end('params')
-    content = json.dumps(ordered, indent=2)
+    content = json.dumps(payload, sort_keys=False)
     content_length = len(content)
     result = "Content-Length: {}\r\n\r\n{}".format(content_length, content)
     return result
@@ -275,22 +288,20 @@ class Client(object):
 
     def send_request(self, request: Request, handler: Callable):
         self.request_id += 1
-        request.id = self.request_id
-        debug('request {}: {}'.format(request.id, request.method))
         if handler is not None:
-            self.handlers[request.id] = handler
-        self.send_call(request)
+            self.handlers[self.request_id] = handler
+        self.send_payload(request.to_payload(self.request_id))
 
     def send_notification(self, notification: Notification):
         debug('notify: ' + notification.method)
-        self.send_call(notification)
+        self.send_payload(notification.to_payload())
 
     def kill(self):
         self.process.kill()
 
-    def send_call(self, payload):
+    def send_payload(self, payload):
         try:
-            message = format_request(payload.__dict__)
+            message = format_request(payload)
             self.process.stdin.write(bytes(message, 'UTF-8'))
             self.process.stdin.flush()
         except BrokenPipeError as e:
@@ -1277,19 +1288,16 @@ def get_document_range(view: sublime.View) -> Any:
 
 
 def get_document_position(view, point):
-    if (point):
+    if point:
         (row, col) = view.rowcol(point)
     else:
         view.sel()
-    return {
-        "textDocument": {
-            "uri": filename_to_uri(view.file_name())
-        },
-        "position": {
-            "line": row,
-            "character": col
-        }
-    }
+    uri = filename_to_uri(view.file_name())
+    position = OrderedDict(line=row, character=col)
+    dp = OrderedDict()
+    dp["textDocument"] = {"uri": uri}
+    dp["position"] = position
+    return dp
 
 
 class Events:

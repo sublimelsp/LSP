@@ -959,7 +959,7 @@ def create_references_panel(window: sublime.Window):
                         "/Syntaxes/References.sublime-syntax")
 
     # call a second time to apply settings
-    window.create_output_panel("references")
+    return window.create_output_panel("references")
 
 
 class SymbolReferencesCommand(sublime_plugin.TextCommand):
@@ -1142,7 +1142,7 @@ def create_diagnostics_panel(window):
                         "/Syntaxes/Diagnostics.sublime-syntax")
     # Call create_output_panel a second time after assigning the above
     # settings, so that it'll be picked up as a result buffer
-    window.create_output_panel("diagnostics")
+    return window.create_output_panel("diagnostics")
 
 
 def ensure_diagnostics_panel(window):

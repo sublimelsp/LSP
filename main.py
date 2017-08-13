@@ -381,13 +381,16 @@ class Client(object):
         debug("LSP stderr process ended.")
 
     def response_handler(self, response):
-        # todo: try catch ?
-        handler_id = int(response.get("id"))  # dotty sends strings back :(
-        result = response.get('result', None)
-        if (self.handlers[handler_id]):
-            self.handlers[handler_id](result)
-        else:
-            debug("No handler found for id" + response.get("id"))
+        try:
+            handler_id = int(response.get("id"))  # dotty sends strings back :(
+            result = response.get('result', None)
+            if (self.handlers[handler_id]):
+                self.handlers[handler_id](result)
+            else:
+                debug("No handler found for id" + response.get("id"))
+        except Exception as e:
+            debug("error handling response", handler_id)
+            raise
 
     def request_handler(self, request):
         method = request.get("method")

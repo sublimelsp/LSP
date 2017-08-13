@@ -597,7 +597,6 @@ def notify_did_open(view: sublime.View):
 
 
 def notify_did_close(view: sublime.View):
-    debug('notify_did_close')
     if view.file_name() in document_states:
         del document_states[view.file_name()]
         config = config_for_scope(view)
@@ -673,12 +672,14 @@ def purge_did_change(buffer_id: int, buffer_version=None):
 def notify_did_change(view: sublime.View):
     if view.buffer_id() in pending_buffer_changes:
         del pending_buffer_changes[view.buffer_id()]
+    # config = config_for_scope(view)
     client = client_for_view(view)
     document_state = get_document_state(view.file_name())
+    uri = filename_to_uri(view.file_name())
     params = {
         "textDocument": {
-            "uri": filename_to_uri(view.file_name()),
-            "languageId": "ts",
+            "uri": uri,
+            # "languageId": config.languageId, clangd does not like this field, but no server uses it?
             "version": document_state.inc_version(),
         },
         "contentChanges": [{

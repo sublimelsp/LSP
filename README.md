@@ -4,19 +4,30 @@
 
 Universal Language Server support for Sublime Text 3 using the Language Server Protocol.
 
-TODO: screenshots
+Features:
 
 * Hover
 * Completions
-* Document symbols
-* Go to definition
-* Find references
+* Go to document symbol
+* Go to symbol definition
+* Find symbol references
 * Diagnostics
 * Code Actions
 
-Tested against language servers for javascript/typescript, python, clang, scala (dotty), rust.
+Tested against language servers for javascript/typescript, python, c/c++ (clangd), scala (dotty), rust.
 
 See [langserver.org](http://langserver.org) for available implementations
+
+## Screenshots
+
+Rich hover support from js/ts language server 
+
+![hover screenshot](https://github.com/tomv564/LSP/blob/master/docs/images/screenshot-hover.png)
+
+Cycle through diagnostics shown in output panel with `F4`. Code actions supplied by tslint language server plugin, applied by `super+.`
+
+![diagnostics screenshot](https://github.com/tomv564/LSP/blob/master/docs/images/screenshot-diagnostics-action.png)
+
 
 ## Installing
 

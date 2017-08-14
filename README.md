@@ -2,58 +2,42 @@
 
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
 
-Language Server Protocol support for Sublime Text 3
+Universal Language Server support for Sublime Text 3 using the Language Server Protocol.
 
-# Installing
+TODO: screenshots
 
-Until this project is submitted to PackageControl's repository, only a manual clone into your Packages directory is supported
+* Hover
+* Completions
+* Document symbols
+* Go to definition
+* Find references
+* Diagnostics
+* Code Actions
 
-# Configuring
+Tested against language servers for javascript/typescript, python, clang, scala (dotty), rust.
 
-You will need to configure an autocomplete trigger for your language in `Preferences: Settings - Syntax Specific`. Here is an example for python:
+See [langserver.org](http://langserver.org) for available implementations
+
+## Installing
+
+Until this project is submitted to PackageControl's repository, only a manual clone into your Packages directory is supported:
+
 ```
-{
-    "auto_complete_triggers": [ {"selector": "source.python", "characters": "."} ],
-}
+# on a Mac
+cd "$HOME/Library/Application Support/Sublime Text 3/Packages"
+# on Linux
+cd $HOME/.config/sublime-text-3/Packages
+# on Windows (PowerShell)
+cd "$env:appdata\Sublime Text 3\Packages\"
+
+git clone git@github.com:tomv564/LSP.git
+
+# Package Control need to be installed https://packagecontrol.io/installation
+# install dependencies from command line
+subl --command 'satisfy_dependencies'
+# or open Command Palette and run 'Package Control: Satisfy Dependencies'
 ```
 
-# Workable language servers
+## Configuration
 
-Python language server (Palantir) (https://github.com/palantir/python-language-server)
-* Has not upgraded to LSP 3
-* requires `rootPath` to be set
-* raises KeyError on hover (workspace.py: `return self._docs[doc_uri]`)
-
-Javascript/Typescript language server (Sourcegraph) (https://github.com/sourcegraph/javascript-typescript-langserver)
-* Has some issues resolving types due to module loading strategy.
-
-# Other language servers
-
-## Rust language server
-
-## Scala (dotty) language server
-
-This is developed against VS Code, so ignore instructions related to code itself
-
-Get the project compiling with dotty first (see https://github.com/lampepfl/dotty-example-project#using-dotty-in-an-existing-project)
-
-At this point LSP should complain in the logs 
-`java.util.concurrent.CompletionException: java.io.FileNotFoundException: /Users/tomv/Projects/tomv564/dottytest/finagle/doc/src/sphinx/code/quickstart/.dotty-ide.json`
-
-Then run `sbt configureIDE` to create the .dotty-ide.json file
-Then the LSP plugin should launch via coursier
-
-
-## Microsoft's CPP service (not sure what dialect of LSP it speaks)
-
-Not sure what language it speaks, but it doesn't respond to LSP requests :(
-
-## clangd
-
-Have not tried this yet
-
-# Developing
-
-If you are using Pyls, be sure the language server is running in a Python 3 interpreter (eg. on OS-X, you may need to activate a virtualenv before lauching subl)
-
-
+Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io) or [in the docs directory](https://github.com/tomv564/LSP/blob/master/docs/index.md)  

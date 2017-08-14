@@ -1,6 +1,3 @@
-Welcome to LSP
---------------
-
 This package provides Sublime Text support for the Language Server Protocol.
 
 You will need to configure your language servers in LSP's Package Settings.

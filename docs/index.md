@@ -21,18 +21,42 @@ On windows you will need to override client config to launch `javascript-typescr
 
 See: [github](https://github.com/sourcegraph/javascript-typescript-langserver)
 
+```
+"auto_complete_triggers": [ 
+        {
+            "characters": ".",
+            "selector": "source.js"
+        },
+        {
+            "characters": ".",
+            "selector": "source.ts"
+        }
+]
+```
+
 ### Python<a name="python"></a>
 
 `pip install python-language-server`
 
 See: [github](https://github.com/palantir/python-language-server)
 
+Autocomplete triggers:
+
+```
+"auto_complete_triggers": [ {"selector": "source.python", "characters": "."} ],
+```
 
 ### Rust<a name="rust"></a>
 
 Requires Rust Nightly.
 
 See [github](https://github.com/rust-lang-nursery/rls) for up-to-date installation instructions.
+
+Autocomplete triggers:  
+
+```
+"auto_complete_triggers": [ {"selector": "source.rust", "characters": ".:"} ]
+```
 
 
 ### Scala<a name="scala"></a>
@@ -45,7 +69,16 @@ At this point LSP should complain in the logs
 `java.util.concurrent.CompletionException: java.io.FileNotFoundException: /Users/tomv/Projects/tomv564/dottytest/finagle/doc/src/sphinx/code/quickstart/.dotty-ide.json`
 
 Then run `sbt configureIDE` to create the .dotty-ide.json file
-Then the LSP plugin should launch via coursier
+Then the LSP plugin should launch as configured in LSP.sublime-settings using coursier.
+
+
+### C/C++ (Clangd)<a name="clang"></a>
+
+You will need to build from source, see [instructions](https://clang.llvm.org/extra/clangd.html)
+
+```
+"auto_complete_triggers": [ {"selector": "source.c++", "characters": ".>:" }]
+```
 
 ### Other<a name="other"></a>
 

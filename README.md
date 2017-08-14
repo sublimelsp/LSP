@@ -14,9 +14,7 @@ Features:
 * Diagnostics
 * Code Actions
 
-Tested against language servers for javascript/typescript, python, c/c++ (clangd), scala (dotty), rust.
-
-See [langserver.org](http://langserver.org) for available implementations
+Tested against language servers for javascript/typescript, python, c/c++ (clangd), scala (dotty), rust. See [langserver.org](http://langserver.org) for available implementations
 
 ## Screenshots
 

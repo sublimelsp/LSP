@@ -11,8 +11,8 @@
       "jsts":
       {
         "command": ["javascript-typescript-stdio"],
-        "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"],
+        "scopes": ["source.ts", "source.tsx", "source.js", "source.jsx"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage", "Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/Javascript/Javascript.tmLanguage"],
         "languageId": "typescript"
       },
       "rls":
@@ -29,12 +29,6 @@
         "syntaxes": ["Packages/Scala/Scala.sublime-syntax"],
         "languageId": "scala"
       },
-      // "mscpp": {
-      //   "command": ["/Users/tomv/.vscode/extensions/ms-vscode.cpptools-0.12.0/bin/Microsoft.VSCode.CPP.Extension.darwin"],
-      //   "scopes": ["source.c++"],
-      //   "syntaxes": ["Packages/C++/C++.sublime-syntax"],
-      //   "languageId": "cpp"
-      // },
       "clangd":
       {
         "command": ["clangd"],

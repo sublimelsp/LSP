@@ -1015,7 +1015,8 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
         window = self.view.window()
         word = self.view.substr(self.view.word(pos))
         base_dir = get_project_path(window)
-        relative_file_path = os.path.relpath(self.view.file_name(), base_dir)
+        file_path = self.view.file_name()
+        relative_file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
 
         references = list(format_reference(item, base_dir) for item in response)
 
@@ -1193,7 +1194,7 @@ def update_diagnostics_panel(window):
         file_diagnostics = window_file_diagnostics[window.id()]
         if file_diagnostics:
             for file_path, source_diagnostics in file_diagnostics.items():
-                relative_file_path = os.path.relpath(file_path, base_dir)
+                relative_file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
                 if source_diagnostics:
                     append_diagnostics(panel, relative_file_path, source_diagnostics)
             if not active_panel:
@@ -1221,33 +1222,34 @@ def append_diagnostics(panel, file_path, origin_diagnostics):
 
 def start_client(window: sublime.Window, config: ClientConfig):
     project_path = get_project_path(window)
-    if show_status_messages:
-        window.status_message("Starting " + config.name + "...")
-    debug("starting in", project_path)
-    client = start_server(config.binary_args, project_path)
-    if not client:
-        window.status_message("Could not start" + config.name + ", disabling")
-        debug("Could not start", config.binary_args, ", disabling")
-        return
+    if project_path:
+        if show_status_messages:
+            window.status_message("Starting " + config.name + "...")
+        debug("starting in", project_path)
+        client = start_server(config.binary_args, project_path)
+        if not client:
+            window.status_message("Could not start" + config.name + ", disabling")
+            debug("Could not start", config.binary_args, ", disabling")
+            return
 
-    initializeParams = {
-        "processId": client.process.pid,
-        "rootUri": filename_to_uri(project_path),
-        "rootPath": project_path,
-        "capabilities": {
-            "textDocument": {
-                "completion": {
-                    "completionItem": {
-                        "snippetSupport": True
+        initializeParams = {
+            "processId": client.process.pid,
+            "rootUri": filename_to_uri(project_path),
+            "rootPath": project_path,
+            "capabilities": {
+                "textDocument": {
+                    "completion": {
+                        "completionItem": {
+                            "snippetSupport": True
+                        }
                     }
                 }
             }
         }
-    }
-    client.send_request(
-        Request.initialize(initializeParams),
-        lambda result: handle_initialize_result(result, client, window, config))
-    return client
+        client.send_request(
+            Request.initialize(initializeParams),
+            lambda result: handle_initialize_result(result, client, window, config))
+        return client
 
 
 def get_window_client(view: sublime.View, config: ClientConfig) -> Client:
@@ -1271,8 +1273,8 @@ def start_server(server_binary_args, working_dir):
     debug("starting " + str(args))
     si = None
     if os.name == "nt":
-        si = subprocess.STARTUPINFO()
-        si.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW
+        si = subprocess.STARTUPINFO()  # type: ignore
+        si.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW  # type: ignore
     try:
         process = subprocess.Popen(
             args,
@@ -1569,7 +1571,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             signatures = response.get("signatures")
             activeSignature = response.get("activeSignature")
             debug("got signatures, active is", len(signatures), activeSignature)
-            if len(signatures) > 0:
+            if len(signatures) > 0 and config:
                 signature = signatures[activeSignature]
                 debug("active signature", signature)
                 formatted = []

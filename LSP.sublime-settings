@@ -8,8 +8,8 @@
    		},
    		"jsts": {
    			"command": ["javascript-typescript-stdio"],
-   			"scopes": ["source.ts", "source.tsx"],
-   			"syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"],
+            "scopes": ["source.ts", "source.tsx", "source.js", "source.jsx"],
+            "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage", "Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/Javascript/Javascript.tmLanguage"],
    			"languageId": "typescript"
    		},
    		"rls": {

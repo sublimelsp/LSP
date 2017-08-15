@@ -1,0 +1,7 @@
+language: python
+python:
+    - "3.3"  # sublime text 3
+before_install:
+    - pip install mypy
+script:
+    - mypy main.py

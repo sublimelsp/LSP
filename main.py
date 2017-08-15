@@ -128,7 +128,7 @@ class Request:
         return self.method + " " + str(self.params)
 
     def to_payload(self, id):
-        r = OrderedDict()
+        r = OrderedDict()  # type: OrderedDict[str, Any]
         r["jsonrpc"] = "2.0"
         r["id"] = id
         r["method"] = self.method
@@ -166,7 +166,7 @@ class Notification:
         return self.method + " " + str(self.params)
 
     def to_payload(self):
-        r = OrderedDict()
+        r = OrderedDict()  # type: OrderedDict[str, Any]
         r["jsonrpc"] = "2.0"
         r["method"] = self.method
         r["params"] = self.params
@@ -277,7 +277,7 @@ class Client(object):
         self.stderr_thread = threading.Thread(target=self.read_stderr)
         self.stderr_thread.start()
         self.request_id = 0
-        self.handlers = {}  # type: Dict[str, Callable]
+        self.handlers = {}  # type: Dict[int, Callable]
         self.capabilities = {}  # type: Dict[str, Any]
 
     def set_capabilities(self, capabilities):
@@ -456,6 +456,9 @@ def get_project_path(window: sublime.Window) -> 'Optional[str]':
 
 def is_in_workspace(window: sublime.Window, file_path: str) -> bool:
     workspace_path = get_project_path(window)
+    if workspace_path is None:
+        return False
+
     common_dir = os.path.commonprefix([workspace_path, file_path])
     return workspace_path == common_dir
 
@@ -557,6 +560,7 @@ def client_for_view(view: sublime.View) -> 'Optional[Client]':
     if config.name not in clients:
         debug(config.name, "not available for view",
               view.file_name(), "in window", view.window().id())
+        return None
     else:
         return clients[config.name]
 
@@ -585,18 +589,19 @@ def initialize_on_open(view: sublime.View):
 def notify_did_open(view: sublime.View):
     config = config_for_scope(view)
     client = client_for_view(view)
-    if view.file_name() not in document_states:
-        get_document_state(view.file_name())
-        if show_view_status:
-            view.set_status("lsp_clients", config.name)
-        params = {
-            "textDocument": {
-                "uri": filename_to_uri(view.file_name()),
-                "languageId": config.languageId,
-                "text": view.substr(sublime.Region(0, view.size()))
+    if client and config:
+        if view.file_name() not in document_states:
+            get_document_state(view.file_name())
+            if show_view_status:
+                view.set_status("lsp_clients", config.name)
+            params = {
+                "textDocument": {
+                    "uri": filename_to_uri(view.file_name()),
+                    "languageId": config.languageId,
+                    "text": view.substr(sublime.Region(0, view.size()))
+                }
             }
-        }
-        client.send_notification(Notification.didOpen(params))
+            client.send_notification(Notification.didOpen(params))
 
 
 def notify_did_close(view: sublime.View):
@@ -613,8 +618,9 @@ def notify_did_close(view: sublime.View):
 def notify_did_save(view: sublime.View):
     if view.file_name() in document_states:
         client = client_for_view(view)
-        params = {"textDocument": {"uri": filename_to_uri(view.file_name())}}
-        client.send_notification(Notification.didSave(params))
+        if client:
+            params = {"textDocument": {"uri": filename_to_uri(view.file_name())}}
+            client.send_notification(Notification.didSave(params))
     else:
         debug('document not tracked', view.file_name())
 
@@ -625,7 +631,7 @@ document_states = {}  # type: Dict[str, DocumentState]
 
 class DocumentState:
     """Stores version count for documents open in a language service"""
-    def __init__(self, path: str):
+    def __init__(self, path: str) -> 'None':
         self.path = path
         self.version = 0
 
@@ -637,7 +643,7 @@ class DocumentState:
 def get_document_state(path: str) -> DocumentState:
     if path not in document_states:
         document_states[path] = DocumentState(path)
-    return document_states.get(path)
+    return document_states[path]
 
 
 pending_buffer_changes = dict()  # type: Dict[int, Dict]
@@ -677,19 +683,20 @@ def notify_did_change(view: sublime.View):
         del pending_buffer_changes[view.buffer_id()]
     # config = config_for_scope(view)
     client = client_for_view(view)
-    document_state = get_document_state(view.file_name())
-    uri = filename_to_uri(view.file_name())
-    params = {
-        "textDocument": {
-            "uri": uri,
-            # "languageId": config.languageId, clangd does not like this field, but no server uses it?
-            "version": document_state.inc_version(),
-        },
-        "contentChanges": [{
-            "text": view.substr(sublime.Region(0, view.size()))
-        }]
-    }
-    client.send_notification(Notification.didChange(params))
+    if client:
+        document_state = get_document_state(view.file_name())
+        uri = filename_to_uri(view.file_name())
+        params = {
+            "textDocument": {
+                "uri": uri,
+                # "languageId": config.languageId, clangd does not like this field, but no server uses it?
+                "version": document_state.inc_version(),
+            },
+            "contentChanges": [{
+                "text": view.substr(sublime.Region(0, view.size()))
+            }]
+        }
+        client.send_notification(Notification.didChange(params))
 
 
 document_sync_initialized = False
@@ -811,7 +818,7 @@ class SymbolRenameCommand(sublime_plugin.TextCommand):
         # TODO: check what kind of scope we're in.
         if is_supported_view(self.view):
             client = client_for_view(self.view)
-            if client.has_capability('renameProvider'):
+            if client and client.has_capability('renameProvider'):
                 point = self.view.sel()[0].begin()
                 word_at_sel = self.view.classify(point)
                 if word_at_sel & SUBLIME_WORD_MASK:
@@ -830,8 +837,9 @@ class SymbolRenameCommand(sublime_plugin.TextCommand):
 
     def request_rename(self, params, new_name):
         client = client_for_view(self.view)
-        params["newName"] = new_name
-        client.send_request(Request.rename(params), self.handle_response)
+        if client:
+            params["newName"] = new_name
+            client.send_request(Request.rename(params), self.handle_response)
 
     def handle_response(self, response):
         if 'changes' in response:
@@ -845,25 +853,26 @@ class FormatDocumentCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
-            if client.has_capability('documentFormattingProvider'):
+            if client and client.has_capability('documentFormattingProvider'):
                 return True
         return False
 
     def run(self, edit):
         client = client_for_view(self.view)
-        pos = self.view.sel()[0].begin()
-        params = {
-            "textDocument": {
-                "uri": filename_to_uri(self.view.file_name())
-            },
-            "options": {
-                "tabSize": 4,
-                "insertSpaces": True
+        if client:
+            pos = self.view.sel()[0].begin()
+            params = {
+                "textDocument": {
+                    "uri": filename_to_uri(self.view.file_name())
+                },
+                "options": {
+                    "tabSize": 4,
+                    "insertSpaces": True
+                }
             }
-        }
-        request = Request.formatting(params)
-        client.send_request(
-            request, lambda response: self.handle_response(response, pos))
+            request = Request.formatting(params)
+            client.send_request(
+                request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response, pos):
         self.view.run_command('apply_document_edit',
@@ -875,16 +884,17 @@ class SymbolDefinitionCommand(sublime_plugin.TextCommand):
         # TODO: check what kind of scope we're in.
         if is_supported_view(self.view):
             client = client_for_view(self.view)
-            if client.has_capability('definitionProvider'):
+            if client and client.has_capability('definitionProvider'):
                 return is_at_word(self.view)
         return False
 
     def run(self, edit):
         client = client_for_view(self.view)
-        pos = self.view.sel()[0].begin()
-        request = Request.definition(get_document_position(self.view, pos))
-        client.send_request(
-            request, lambda response: self.handle_response(response, pos))
+        if client:
+            pos = self.view.sel()[0].begin()
+            request = Request.definition(get_document_position(self.view, pos))
+            client.send_request(
+                request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response, position):
         window = sublime.active_window()
@@ -927,13 +937,14 @@ class DocumentSymbolsCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
         client = client_for_view(self.view)
-        params = {
-            "textDocument": {
-                "uri": filename_to_uri(self.view.file_name())
+        if client:
+            params = {
+                "textDocument": {
+                    "uri": filename_to_uri(self.view.file_name())
+                }
             }
-        }
-        request = Request.documentSymbols(params)
-        client.send_request(request, self.handle_response)
+            request = Request.documentSymbols(params)
+            client.send_request(request, self.handle_response)
 
     def handle_response(self, response):
         symbols = list(format_symbol(item) for item in response)
@@ -990,14 +1001,15 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
         client = client_for_view(self.view)
-        pos = self.view.sel()[0].begin()
-        document_position = get_document_position(self.view, pos)
-        document_position['context'] = {
-            "includeDeclaration": False
-        }
-        request = Request.references(document_position)
-        client.send_request(
-            request, lambda response: self.handle_response(response, pos))
+        if client:
+            pos = self.view.sel()[0].begin()
+            document_position = get_document_position(self.view, pos)
+            document_position['context'] = {
+                "includeDeclaration": False
+            }
+            request = Request.references(document_position)
+            client.send_request(
+                request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response, pos):
         window = self.view.window()
@@ -1301,7 +1313,7 @@ def get_document_position(view, point):
         view.sel()
     uri = filename_to_uri(view.file_name())
     position = OrderedDict(line=row, character=col)
-    dp = OrderedDict()
+    dp = OrderedDict()  # type: Dict[str, Any]
     dp["textDocument"] = {"uri": uri}
     dp["position"] = position
     return dp
@@ -1493,8 +1505,8 @@ class CompletionHandler(sublime_plugin.EventListener):
                 if insertText else label)
 
     def handle_response(self, response):
-        items = response.get("items") if isinstance(response,
-                                                    dict) else response
+        items = response["items"] if isinstance(response,
+                                                dict) else response
         self.completions = list(self.format_completion(item) for item in items)
         self.run_auto_complete()
 
@@ -1541,10 +1553,11 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         if self.signature_help_triggers:
             if last_char in self.signature_help_triggers:
                 client = client_for_view(self.view)
-                purge_did_change(self.view.buffer_id())
-                client.send_request(
-                    Request.signatureHelp(get_document_position(self.view, pos)),
-                    lambda response: self.handle_response(response, pos))
+                if client:
+                    purge_did_change(self.view.buffer_id())
+                    client.send_request(
+                        Request.signatureHelp(get_document_position(self.view, pos)),
+                        lambda response: self.handle_response(response, pos))
             else:
                 # TODO: this hides too soon.
                 if self.view.is_popup_visible():
@@ -1609,23 +1622,24 @@ class CodeActionsCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
         client = client_for_view(self.view)
-        row, col = self.view.rowcol(self.view.sel()[0].begin())
-        line_diagnostics = get_line_diagnostics(self.view, row, col)
-        params = {
-            "textDocument": {
-                "uri": filename_to_uri(self.view.file_name())
-            },
-            "context": {
-                "diagnostics": list(diagnostic.to_lsp() for diagnostic in line_diagnostics)
+        if client:
+            row, col = self.view.rowcol(self.view.sel()[0].begin())
+            line_diagnostics = get_line_diagnostics(self.view, row, col)
+            params = {
+                "textDocument": {
+                    "uri": filename_to_uri(self.view.file_name())
+                },
+                "context": {
+                    "diagnostics": list(diagnostic.to_lsp() for diagnostic in line_diagnostics)
+                }
             }
-        }
-        if len(line_diagnostics) > 0:
-            # TODO: merge ranges.
-            params["range"] = line_diagnostics[0].range.to_lsp()
-        else:
-            params["range"] = make_lsp_range((row, col), (row, col))
+            if len(line_diagnostics) > 0:
+                # TODO: merge ranges.
+                params["range"] = line_diagnostics[0].range.to_lsp()
+            else:
+                params["range"] = make_lsp_range((row, col), (row, col))
 
-        client.send_request(Request.codeAction(params), self.handle_codeaction_response)
+            client.send_request(Request.codeAction(params), self.handle_codeaction_response)
 
     def handle_codeaction_response(self, response):
         titles = []
@@ -1639,9 +1653,10 @@ class CodeActionsCommand(sublime_plugin.TextCommand):
     def handle_select(self, index):
         if index > -1:
             client = client_for_view(self.view)
-            client.send_request(
-                Request.executeCommand(self.commands[index]),
-                self.handle_command_response)
+            if client:
+                client.send_request(
+                    Request.executeCommand(self.commands[index]),
+                    self.handle_command_response)
 
     def handle_command_response(self, response):
         pass

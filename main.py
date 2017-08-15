@@ -20,6 +20,7 @@ PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
 show_status_messages = True
 show_view_status = True
+auto_show_diagnostics_panel = True
 
 configs = []  # type: List[ClientConfig]
 
@@ -235,6 +236,7 @@ def read_client_config(name, client_config):
 def load_settings():
     global show_status_messages
     global show_view_status
+    global auto_show_diagnostics_panel
     global configs
     settings_obj = sublime.load_settings("LSP.sublime-settings")
 
@@ -248,6 +250,7 @@ def load_settings():
 
     show_status_messages = settings_obj.get("show_status_messages", True)
     show_view_status = settings_obj.get("show_view_status", True)
+    auto_show_diagnostics_panel = settings_obj.get("auto_show_diagnostics_panel", True)
 
     settings_obj.add_on_change("_on_new_settings", load_settings)
 
@@ -1197,11 +1200,11 @@ def update_diagnostics_panel(window):
                 relative_file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
                 if source_diagnostics:
                     append_diagnostics(panel, relative_file_path, source_diagnostics)
-            if not active_panel:
+            if auto_show_diagnostics_panel and not active_panel:
                 window.run_command("show_panel",
                                    {"panel": "output.diagnostics"})
         else:
-            if is_active_panel:
+            if auto_show_diagnostics_panel and is_active_panel:
                 window.run_command("hide_panel",
                                    {"panel": "output.diagnostics"})
 

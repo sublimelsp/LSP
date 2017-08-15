@@ -3,5 +3,7 @@ python:
     - "3.3"  # sublime text 3
 before_install:
     - pip install mypy
+    - pip install flake8
 script:
     - mypy main.py
+    - flake8

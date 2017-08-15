@@ -1,6 +1,6 @@
 # LSP
 
-[![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
+[![Build Status](https://travis-ci.org/tomv564/LSP.svg?branch=master)](https://travis-ci.org/tomv564/LSP) [![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
 
 Universal Language Server support for Sublime Text 3 using the Language Server Protocol.
 

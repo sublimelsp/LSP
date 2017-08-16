@@ -822,19 +822,16 @@ def format_diagnostic(diagnostic: Diagnostic) -> str:
 
 
 class SymbolRenameCommand(sublime_plugin.TextCommand):
-    def is_enabled(self):
+    def is_enabled(self, event=None):
         # TODO: check what kind of scope we're in.
         if is_supported_view(self.view):
             client = client_for_view(self.view)
             if client and client.has_capability('renameProvider'):
-                point = self.view.sel()[0].begin()
-                word_at_sel = self.view.classify(point)
-                if word_at_sel & SUBLIME_WORD_MASK:
-                    return True
+                return is_at_word(self.view, event)
         return False
 
-    def run(self, edit):
-        pos = self.view.sel()[0].begin()
+    def run(self, edit, event=None):
+        pos = get_position(self.view, event)
         params = get_document_position(self.view, pos)
         current_name = self.view.substr(self.view.word(pos))
         if not current_name:
@@ -855,6 +852,9 @@ class SymbolRenameCommand(sublime_plugin.TextCommand):
             if len(changes) > 0:
                 self.view.window().run_command('apply_workspace_edit',
                                                {'changes': response})
+
+    def want_event(self):
+        return True
 
 
 class FormatDocumentCommand(sublime_plugin.TextCommand):
@@ -888,18 +888,18 @@ class FormatDocumentCommand(sublime_plugin.TextCommand):
 
 
 class SymbolDefinitionCommand(sublime_plugin.TextCommand):
-    def is_enabled(self):
+    def is_enabled(self, event=None):
         # TODO: check what kind of scope we're in.
         if is_supported_view(self.view):
             client = client_for_view(self.view)
             if client and client.has_capability('definitionProvider'):
-                return is_at_word(self.view)
+                return is_at_word(self.view, event)
         return False
 
-    def run(self, edit):
+    def run(self, edit, event=None):
         client = client_for_view(self.view)
         if client:
-            pos = self.view.sel()[0].begin()
+            pos = get_position(self.view, event)
             request = Request.definition(get_document_position(self.view, pos))
             client.send_request(
                 request, lambda response: self.handle_response(response, pos))
@@ -918,6 +918,9 @@ class SymbolDefinitionCommand(sublime_plugin.TextCommand):
             debug("opening location", location)
             window.open_file(file_location, sublime.ENCODED_POSITION)
             # TODO: can add region here.
+
+    def want_event(self):
+        return True
 
 
 def format_symbol_kind(kind):
@@ -972,9 +975,16 @@ class DocumentSymbolsCommand(sublime_plugin.TextCommand):
         self.view.sel().add(region)
 
 
-def is_at_word(view: sublime.View) -> bool:
-    point = view.sel()[0].begin()
-    point_classification = view.classify(point)
+def get_position(view: sublime.View, event=None) -> int:
+    if event:
+        return view.window_to_text((event["x"], event["y"]))
+    else:
+        return view.sel()[0].begin()
+
+
+def is_at_word(view: sublime.View, event) -> bool:
+    pos = get_position(view, event)
+    point_classification = view.classify(pos)
     if point_classification & SUBLIME_WORD_MASK:
         return True
     else:
@@ -1000,17 +1010,17 @@ def create_references_panel(window: sublime.Window):
 
 
 class SymbolReferencesCommand(sublime_plugin.TextCommand):
-    def is_enabled(self):
+    def is_enabled(self, event=None):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
             if client and client.has_capability('referencesProvider'):
-                return is_at_word(self.view)
+                return is_at_word(self.view, event)
         return False
 
-    def run(self, edit):
+    def run(self, edit, event=None):
         client = client_for_view(self.view)
         if client:
-            pos = self.view.sel()[0].begin()
+            pos = get_position(self.view, event)
             document_position = get_document_position(self.view, pos)
             document_position['context'] = {
                 "includeDeclaration": False
@@ -1046,6 +1056,9 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
         else:
             window.run_command("hide_panel", {"panel": "output.references"})
             sublime.status_message("No references found")
+
+    def want_event(self):
+        return True
 
 
 def format_reference(reference, base_dir):
@@ -1625,16 +1638,17 @@ def get_line_diagnostics(view: sublime.View, row: int, col: int) -> 'List[Diagno
 
 
 class CodeActionsCommand(sublime_plugin.TextCommand):
-    def is_enabled(self):
+    def is_enabled(self, event=None):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
             return client and client.has_capability('codeActionProvider')
         return False
 
-    def run(self, edit):
+    def run(self, edit, event=None):
         client = client_for_view(self.view)
         if client:
-            row, col = self.view.rowcol(self.view.sel()[0].begin())
+            pos = get_position(self.view, event)
+            row, col = self.view.rowcol(pos)
             line_diagnostics = get_line_diagnostics(self.view, row, col)
             params = {
                 "textDocument": {
@@ -1649,6 +1663,11 @@ class CodeActionsCommand(sublime_plugin.TextCommand):
                 params["range"] = line_diagnostics[0].range.to_lsp()
             else:
                 params["range"] = make_lsp_range((row, col), (row, col))
+
+            if event:  # if right-clicked, set cursor to menu position
+                sel = self.view.sel()
+                sel.clear()
+                sel.add(sublime.Region(pos))
 
             client.send_request(Request.codeAction(params), self.handle_codeaction_response)
 
@@ -1671,6 +1690,9 @@ class CodeActionsCommand(sublime_plugin.TextCommand):
 
     def handle_command_response(self, response):
         pass
+
+    def want_event(self):
+        return True
 
 
 def apply_workspace_edit(window, params):

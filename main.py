@@ -351,7 +351,9 @@ class Client(object):
 
                     try:
                         if "error" in payload:
-                            debug("got error: ", payload.get("error"))
+                            error = payload['error']
+                            debug("got error: ", error)
+                            sublime.status_message(error.get('message'))
                         elif "method" in payload:
                             if "id" in payload:
                                 self.request_handler(payload)

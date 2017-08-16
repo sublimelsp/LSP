@@ -1690,8 +1690,11 @@ class ApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
                 view = self.window.open_file(path)
                 if view:
                     if view.is_loading():
-                        # TODO: schedule
-                        debug('view not ready', view)
+                        # TODO: wait for event instead.
+                        sublime.set_timeout_async(
+                            lambda: view.run_command('apply_document_edit', {'changes': file_changes}),
+                            500
+                        )
                     else:
                         view.run_command('apply_document_edit',
                                          {'changes': file_changes})
@@ -1701,43 +1704,34 @@ class ApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
 
 class ApplyDocumentEditCommand(sublime_plugin.TextCommand):
     def run(self, edit, changes):
-        changes.sort(key=lambda change: self.get_change_sortkey(change))
-        # per line, maintain a char offset
-        # if newline inserted, maintian a line offset
-        current_line = -1
-        char_offset = 0
-        for change in changes:
-            newText = change.get('newText')
-            # TODO create a Range type
-            start = change.get('range').get('start')
-            end = change.get('range').get('end')
+        regions = list(self.create_region(change) for change in changes)
+        replacements = list(change.get('newText') for change in changes)
 
-            # reset char offset on new lines
-            if start.get('line') != current_line:
-                current_line = start.get('line')
-                char_offset = 0
+        self.view.add_regions('lsp_edit', regions, "source.python")
 
-            debug('char offset at', char_offset)
+        index = 0
+        # use regions from view as they are correctly updated after edits.
+        for newText in replacements:
+            region = self.view.get_regions('lsp_edit')[index]
+            self.apply_change(region, newText, edit)
+            index += 1
 
-            start_position = self.view.text_point(
-                start.get('line'), start.get('character'))
-            end_position = self.view.text_point(
-                end.get('line'), end.get('character'))
-            region = sublime.Region(start_position + char_offset, end_position + char_offset)
-            if region.empty():
-                self.view.insert(edit, start_position, newText)
-                char_offset += len(newText)
+        self.view.erase_regions('lsp_edit')
+
+    def create_region(self, change):
+        range = Range.from_lsp(change.get('range'))
+        start_position = self.view.text_point(*range.start)
+        end_position = self.view.text_point(*range.end)
+        return sublime.Region(start_position, end_position)
+
+    def apply_change(self, region, newText, edit):
+        if region.empty():
+            self.view.insert(edit, region.a, newText)
+        else:
+            if len(newText) > 0:
+                self.view.replace(edit, region, newText)
             else:
-                if len(newText) > 0:
-                    self.view.replace(edit, region, newText)
-                    char_offset += (len(newText) - region.size())
-                else:
-                    self.view.erase(edit, region)
-                    char_offset -= region.size()
-
-    def get_change_sortkey(self, change):
-        start = change.get('range').get('start')
-        return "{0:05d}-{1:05d}".format(start.get('line'), start.get('character'))
+                self.view.erase(edit, region)
 
 
 class CloseListener(sublime_plugin.EventListener):

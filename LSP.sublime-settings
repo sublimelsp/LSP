@@ -38,5 +38,6 @@
       }
   },
   "show_status_messages": true,
-  "show_view_status": true
+  "show_view_status": true,
+  "auto_show_diagnostics_panel": true
 }

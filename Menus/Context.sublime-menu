@@ -13,8 +13,8 @@
         "caption": "Rename Symbol"
     },
     {
-        "command": "fix_diagnostic",
-        "caption": "Fix Diagnostic"
+        "command": "code_actions",
+        "caption": "Code Actions"
     },
     {
         "command": "format_document",

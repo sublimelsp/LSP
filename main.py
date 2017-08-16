@@ -21,6 +21,7 @@ SUBLIME_WORD_MASK = 515
 show_status_messages = True
 show_view_status = True
 auto_show_diagnostics_panel = True
+show_diagnostics_phantoms = True
 
 configs = []  # type: List[ClientConfig]
 
@@ -237,6 +238,7 @@ def load_settings():
     global show_status_messages
     global show_view_status
     global auto_show_diagnostics_panel
+    global show_diagnostics_phantoms
     global configs
     settings_obj = sublime.load_settings("LSP.sublime-settings")
 
@@ -251,6 +253,7 @@ def load_settings():
     show_status_messages = settings_obj.get("show_status_messages", True)
     show_view_status = settings_obj.get("show_view_status", True)
     auto_show_diagnostics_panel = settings_obj.get("auto_show_diagnostics_panel", True)
+    show_diagnostics_phantoms = settings_obj.get("show_diagnostics_phantoms", True)
 
     settings_obj.add_on_change("_on_new_settings", load_settings)
 
@@ -1096,13 +1099,14 @@ def update_diagnostics_in_view(view: sublime.View, diagnostics: 'List[Diagnostic
     regions = []  # type: List[sublime.Region]
 
     if view is not None:
-        if view.is_dirty():
+        if view.is_dirty() or not show_diagnostics_phantoms:
             regions = list(
                 create_region(view, diagnostic) for diagnostic in diagnostics)
         else:
             phantoms = list(
                 create_phantom(view, diagnostic) for diagnostic in diagnostics)
 
+        # TODO: if phantoms are disabled, this logic can be skipped
         buffer_id = view.buffer_id()
         if buffer_id not in phantom_sets_by_buffer:
             phantom_set = sublime.PhantomSet(view, "diagnostics")

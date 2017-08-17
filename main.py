@@ -11,7 +11,8 @@ from collections import OrderedDict
 import html
 import mdpopups
 try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional  # NOQA
+    from typing import Any, List, Dict, Tuple, Callable, Optional
+    assert Any and List and Dict and Tuple and Callable and Optional
 except ImportError:
     pass
 

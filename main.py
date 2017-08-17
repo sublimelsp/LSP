@@ -1680,6 +1680,8 @@ class LspCodeActionsCommand(sublime_plugin.TextCommand):
                 command.get('title'))  # TODO parse command and arguments
         if len(self.commands) > 0:
             self.view.show_popup_menu(titles, self.handle_select)
+        else:
+            self.view.show_popup('No actions available', sublime.HIDE_ON_MOUSE_MOVE_AWAY)
 
     def handle_select(self, index):
         if index > -1:

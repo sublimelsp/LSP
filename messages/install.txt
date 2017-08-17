@@ -1,7 +1,10 @@
 This package provides Sublime Text support for the Language Server Protocol.
 
 You will need to configure your language servers in LSP's Package Settings.
-See https://lsp.readthedocs.io/ for documentation.
 
+For improved functionality, adding autocomplete triggers and keybindings is recommended.
+
+See https://lsp.readthedocs.io/ for documentation.
 For issues and development updates, see https://github.com/tomv564/LSP
+For an up-to-date list of language servers, see http://langserver.org/#implementations-server
 

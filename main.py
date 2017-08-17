@@ -1416,6 +1416,8 @@ class DiagnosticsHoverHandler(sublime_plugin.ViewEventListener):
 
     def on_navigate(self, href, point, diagnostics):
         # TODO: don't mess with the user's cursor.
+        # Instead, pass code actions requested from phantoms & hovers should call lsp_code_actions with
+        # diagnostics as args, positioning resulting UI close to the clicked link.
         sel = self.view.sel()
         sel.clear()
         sel.add(sublime.Region(point, point))

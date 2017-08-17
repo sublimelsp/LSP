@@ -12,7 +12,7 @@
     	"args": {}
     },
     {
-        "caption": "LSP: Restart Clients",
+        "caption": "LSP: Restart Servers",
         "command": "lsp_restart_client",
         "args": {}
     },

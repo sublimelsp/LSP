@@ -598,6 +598,7 @@ def notify_did_open(view: sublime.View):
     config = config_for_scope(view)
     client = client_for_view(view)
     if client and config:
+        view.settings().set("show_definitions", False)
         if view.file_name() not in document_states:
             get_document_state(view.file_name())
             if show_view_status:

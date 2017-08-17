@@ -1,23 +1,23 @@
 [
     { "caption": "-", "id": "lsp" },
     {
-        "command": "symbol_references",
+        "command": "lsp_symbol_references",
         "caption": "Find Symbol References"
     },
     {
-        "command": "symbol_definition",
+        "command": "lsp_symbol_definition",
         "caption": "Go To Symbol Definition"
     },
     {
-        "command": "symbol_rename",
+        "command": "lsp_symbol_rename",
         "caption": "Rename Symbol"
     },
     {
-        "command": "code_actions",
+        "command": "lsp_code_actions",
         "caption": "Code Actions"
     },
     {
-        "command": "format_document",
+        "command": "lsp_format_document",
         "caption": "Format Document"
     },
     { "caption": "-", "id": "lsp_end"}

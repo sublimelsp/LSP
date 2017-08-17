@@ -1,30 +1,15 @@
 [
     {
-        "keys": ["("],
-        "command": "signature_popup",
-        "context": [
-            { "key": "paren_pressed"}
-        ]
-    },
-    {
     	"keys": ["super+."],
-    	"command": "code_actions"
-    },
-    {
-        "keys": ["super+option+r"],
-        "command": "document_symbols"
+    	"command": "lsp_code_actions"
     },
     {
         "keys": ["super+shift+m"],
-        "command": "show_diagnostics_panel"
+        "command": "lsp_show_diagnostics_panel"
     },
     {
         "keys": ["shift+f12"],
-        "command": "symbol_references"
+        "command": "lsp_symbol_references"
     },
-    {
-        "keys": ["f12"],
-        "command": "symbol_definition"
-    }
 
 ]

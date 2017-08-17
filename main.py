@@ -787,7 +787,7 @@ def on_phantom_navigate(view: sublime.View, href: str, point: int):
     sel = view.sel()
     sel.clear()
     sel.add(sublime.Region(point))
-    view.run_command("code_actions")
+    view.run_command("lsp_code_actions")
 
 
 def create_phantom(view: sublime.View, diagnostic: Diagnostic) -> sublime.Phantom:
@@ -821,7 +821,7 @@ def format_diagnostic(diagnostic: Diagnostic) -> str:
         location, diagnostic.source, format_severity(diagnostic.severity), formattedMessage)
 
 
-class SymbolRenameCommand(sublime_plugin.TextCommand):
+class LspSymbolRenameCommand(sublime_plugin.TextCommand):
     def is_enabled(self, event=None):
         # TODO: check what kind of scope we're in.
         if is_supported_view(self.view):
@@ -850,14 +850,14 @@ class SymbolRenameCommand(sublime_plugin.TextCommand):
         if 'changes' in response:
             changes = response.get('changes')
             if len(changes) > 0:
-                self.view.window().run_command('apply_workspace_edit',
+                self.view.window().run_command('lsp_apply_workspace_edit',
                                                {'changes': response})
 
     def want_event(self):
         return True
 
 
-class FormatDocumentCommand(sublime_plugin.TextCommand):
+class LspFormatDocumentCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
@@ -883,11 +883,11 @@ class FormatDocumentCommand(sublime_plugin.TextCommand):
                 request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response, pos):
-        self.view.run_command('apply_document_edit',
+        self.view.run_command('lsp_apply_document_edit',
                               {'changes': response})
 
 
-class SymbolDefinitionCommand(sublime_plugin.TextCommand):
+class LspSymbolDefinitionCommand(sublime_plugin.TextCommand):
     def is_enabled(self, event=None):
         # TODO: check what kind of scope we're in.
         if is_supported_view(self.view):
@@ -938,7 +938,7 @@ def format_symbol(item):
     return [item.get("name")]
 
 
-class DocumentSymbolsCommand(sublime_plugin.TextCommand):
+class LspDocumentSymbolsCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
@@ -1009,7 +1009,7 @@ def create_references_panel(window: sublime.Window):
     return window.create_output_panel("references")
 
 
-class SymbolReferencesCommand(sublime_plugin.TextCommand):
+class LspSymbolReferencesCommand(sublime_plugin.TextCommand):
     def is_enabled(self, event=None):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
@@ -1041,7 +1041,7 @@ class SymbolReferencesCommand(sublime_plugin.TextCommand):
         if (len(references)) > 0:
             panel = ensure_references_panel(window)
 
-            panel.run_command("clear_panel")
+            panel.run_command("lsp_clear_panel")
             panel.run_command('append', {
                 'characters': 'References to "' + word + '" at ' + relative_file_path + ':\n'
             })
@@ -1072,7 +1072,7 @@ def format_reference(reference, base_dir):
     )
 
 
-class ClearPanelCommand(sublime_plugin.TextCommand):
+class LspClearPanelCommand(sublime_plugin.TextCommand):
     """
     A clear_panel command to clear the error panel.
     """
@@ -1178,7 +1178,7 @@ def handle_diagnostics(update: 'Any'):
     update_diagnostics_panel(window)
 
 
-class ShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
+class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
     def run(self):
         ensure_diagnostics_panel(self.window)
         self.window.run_command("show_panel", {"panel": "output.diagnostics"})
@@ -1212,7 +1212,7 @@ def update_diagnostics_panel(window):
     if window.id() in window_file_diagnostics:
         active_panel = window.active_panel()
         is_active_panel = (active_panel == "output.diagnostics")
-        panel.run_command("clear_panel")
+        panel.run_command("lsp_clear_panel")
         file_diagnostics = window_file_diagnostics[window.id()]
         if file_diagnostics:
             for file_path, source_diagnostics in file_diagnostics.items():
@@ -1418,7 +1418,7 @@ class DiagnosticsHoverHandler(sublime_plugin.ViewEventListener):
         sel = self.view.sel()
         sel.clear()
         sel.add(sublime.Region(point, point))
-        self.view.run_command("code_actions")
+        self.view.run_command("lsp_code_actions")
 
 
 class HoverHandler(sublime_plugin.ViewEventListener):
@@ -1637,7 +1637,7 @@ def get_line_diagnostics(view: sublime.View, row: int, col: int) -> 'List[Diagno
     return line_diagnostics
 
 
-class CodeActionsCommand(sublime_plugin.TextCommand):
+class LspCodeActionsCommand(sublime_plugin.TextCommand):
     def is_enabled(self, event=None):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
@@ -1697,10 +1697,10 @@ class CodeActionsCommand(sublime_plugin.TextCommand):
 
 def apply_workspace_edit(window, params):
     edit = params.get('edit')
-    window.run_command('apply_workspace_edit', {'changes': edit})
+    window.run_command('lsp_apply_workspace_edit', {'changes': edit})
 
 
-class RestartClientCommand(sublime_plugin.TextCommand):
+class LspRestartClientCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
         return is_supported_view(self.view)
 
@@ -1709,7 +1709,7 @@ class RestartClientCommand(sublime_plugin.TextCommand):
         unload_window_clients(window.id())
 
 
-class ApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
+class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
     def run(self, changes):
         debug('workspace edit', changes)
         if changes.get('changes'):
@@ -1720,17 +1720,17 @@ class ApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
                     if view.is_loading():
                         # TODO: wait for event instead.
                         sublime.set_timeout_async(
-                            lambda: view.run_command('apply_document_edit', {'changes': file_changes}),
+                            lambda: view.run_command('lsp_apply_document_edit', {'changes': file_changes}),
                             500
                         )
                     else:
-                        view.run_command('apply_document_edit',
+                        view.run_command('lsp_apply_document_edit',
                                          {'changes': file_changes})
                 else:
                     debug('view not found to apply', path, file_changes)
 
 
-class ApplyDocumentEditCommand(sublime_plugin.TextCommand):
+class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
     def run(self, edit, changes):
         regions = list(self.create_region(change) for change in changes)
         replacements = list(change.get('newText') for change in changes)

@@ -7,28 +7,23 @@
           "default": "// Settings in here override those in \"LSP/LSP.sublime-settings\",\n\n{\n\t$0\n}\n"}
     },
     {
-        "caption": "Show Signature Info",
-        "command": "signature_popup",
-        "args": {}
-    },
-    {
     	"caption": "LSP: Format Document",
-    	"command": "format_document",
+    	"command": "lsp_format_document",
     	"args": {}
     },
     {
         "caption": "LSP: Restart Clients",
-        "command": "restart_client",
+        "command": "lsp_restart_client",
         "args": {}
     },
     {
         "caption": "LSP: Document Symbols",
-        "command": "document_symbols",
+        "command": "lsp_document_symbols",
         "args": {}
     },
     {
         "caption": "LSP: Show Diagnostics",
-        "command": "show_diagnostics_panel",
+        "command": "lsp_show_diagnostics_panel",
         "args": {}
     }
 ]

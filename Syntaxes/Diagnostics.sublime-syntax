@@ -1,21 +1,49 @@
 %YAML 1.2
 ---
 hidden: true
-scope: diagnostics
+scope: output.lsp.diagnostics
 
 contexts:
   main:
-    - match: ^(.*):$
-      scope: keyword.other.diagnostics.file
-    - match: ^\s*([0-9]+:?[0-9]+)\s*(.*)\s*(error)\s*(.*)$
+    - include: diagnostic-preamble
+    - include: diagnostic-body
+
+  diagnostic-preamble:
+    - match: ^(.*)(:)$
       captures:
-        1: punctuation.comment.diagnostics.location
-        2: comment.source.item.diagnostics
-        3: sublimelinter.mark.error
-        4: meta.diagnostics.message
-    - match: ^\s*([0-9]+:?[0-9]+)\s*(.*)\s*(warning)\s*(.*)$
-      captures:
-        1: punctuation.comment.diagnostics.location
-        2: comment.source.item.diagnostics
-        3: sublimelinter.mark.warning
-        4: meta.diagnostics.message
+        0: meta.diagnostic.preamble.lsp
+        1: string.unquoted.lsp
+        2: punctuation.separator.lsp
+
+  diagnostic-body:
+    - match: ^\s+(?=\d)
+      push:
+        - meta_scope: meta.diagnostic.body.lsp
+        - include: pop-at-end
+        - match: (\d+)(?:(:)(\d+))?
+          captures:
+            1: constant.numeric.integer.decimal.lsp
+            2: punctuation.separator.lsp
+            3: constant.numeric.integer.decimal.lsp
+          push:
+            - include: pop-at-end
+            - match: '[^\s]+'
+              scope: comment.line.lsp
+              push:
+                - include: pop-at-end
+                - match: \berror\b
+                  scope: markup.deleted.lsp markup.error.lsp
+                  push: after-diagnostic-type-token
+                - match: \bwarning\b
+                  scope: markup.heading.lsp markup.warning.lsp
+                  push: after-diagnostic-type-token
+                - match: \binfo\b
+                  scope: markup.inserted.lsp markup.info.lsp
+                  push: after-diagnostic-type-token
+
+  after-diagnostic-type-token:
+    - include: pop-at-end
+
+  pop-at-end:
+    - match: $
+      pop: true

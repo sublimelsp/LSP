@@ -19,10 +19,12 @@ except ImportError:
 
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
+SUBLIME_LINTER_MARK_ERROR = 'sublimelinter.mark.error'
 show_status_messages = True
 show_view_status = True
 auto_show_diagnostics_panel = True
 show_diagnostics_phantoms = True
+diagnostic_error_region_scope = SUBLIME_LINTER_MARK_ERROR  # 'markup.deleted.diff'
 
 configs = []  # type: List[ClientConfig]
 
@@ -240,6 +242,7 @@ def load_settings():
     global show_view_status
     global auto_show_diagnostics_panel
     global show_diagnostics_phantoms
+    global diagnostic_error_region_scope
     global configs
     settings_obj = sublime.load_settings("LSP.sublime-settings")
 
@@ -255,7 +258,7 @@ def load_settings():
     show_view_status = settings_obj.get("show_view_status", True)
     auto_show_diagnostics_panel = settings_obj.get("auto_show_diagnostics_panel", True)
     show_diagnostics_phantoms = settings_obj.get("show_diagnostics_phantoms", True)
-
+    diagnostic_error_region_scope = settings_obj.get("diagnostic_error_region_scope", SUBLIME_LINTER_MARK_ERROR)
     settings_obj.add_on_change("_on_new_settings", load_settings)
 
 
@@ -1132,10 +1135,10 @@ def update_diagnostics_in_view(view: sublime.View, diagnostics: 'List[Diagnostic
             phantom_set = phantom_sets_by_buffer[buffer_id]
 
         phantom_set.update(phantoms)
-
+        # TODO: split between warning and error
         if (len(regions)) > 0:
             # TODO: stop stealing SublimeLinter's coloring.
-            view.add_regions("errors", regions, "sublimelinter.mark.error",
+            view.add_regions("errors", regions, diagnostic_error_region_scope,
                              "dot",
                              sublime.DRAW_SQUIGGLY_UNDERLINE | UNDERLINE_FLAGS)
         else:

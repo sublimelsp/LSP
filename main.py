@@ -996,20 +996,36 @@ def is_at_word(view: sublime.View, event) -> bool:
         return False
 
 
+def create_output_panel(window: sublime.Window, name: str) -> sublime.View:
+    panel = window.create_output_panel(name)
+    settings = panel.settings()
+    # Don't mess with my indenting Sublime!
+    settings.set("auto_indent", False)
+    # Don't need gutter or line numbers
+    settings.set("gutter", False)
+    # Don't draw indent guide lines
+    settings.set("indent_guide_options", [])
+    # Let all plugins no to leave this view alone
+    settings.set('is_widget', True)
+    # Set a tab size wich may result in best table view
+    settings.set("tab_size", 8)
+    # Don't translate anything.
+    settings.set("translate_tabs_to_spaces", False)
+    base_dir = get_project_path(window)
+    settings.set("result_base_dir", base_dir)
+    return panel
+
+
 def ensure_references_panel(window: sublime.Window):
     return window.find_output_panel("references") or create_references_panel(window)
 
 
 def create_references_panel(window: sublime.Window):
-    panel = window.create_output_panel("references")
-    base_dir = get_project_path(window)
+    panel = create_output_panel(window, "references")
     panel.settings().set("result_file_regex",
                          r"^\s+(\S*)\s+([0-9]+):?([0-9]+)$")
-    panel.settings().set("result_base_dir", base_dir)
-    panel.settings().set("line_numbers", False)
     panel.assign_syntax("Packages/" + PLUGIN_NAME +
                         "/Syntaxes/References.sublime-syntax")
-
     # call a second time to apply settings
     return window.create_output_panel("references")
 
@@ -1190,12 +1206,9 @@ class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
 
 
 def create_diagnostics_panel(window):
-    base_dir = get_project_path(window)
-    panel = window.create_output_panel("diagnostics")
+    panel = create_output_panel(window, "diagnostics")
     panel.settings().set("result_file_regex", r"^(.*):$")
     panel.settings().set("result_line_regex", r"^\s+([0-9]+):?([0-9]+).*$")
-    panel.settings().set("result_base_dir", base_dir)
-    panel.settings().set("line_numbers", False)
     panel.assign_syntax("Packages/" + PLUGIN_NAME +
                         "/Syntaxes/Diagnostics.sublime-syntax")
     # Call create_output_panel a second time after assigning the above

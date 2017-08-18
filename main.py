@@ -1061,7 +1061,7 @@ class LspSymbolReferencesCommand(sublime_plugin.TextCommand):
 
         if (len(references)) > 0:
             panel = ensure_references_panel(window)
-
+            panel.set_read_only(False)
             panel.run_command("lsp_clear_panel")
             panel.run_command('append', {
                 'characters': 'References to "' + word + '" at ' + relative_file_path + ':\n'
@@ -1073,6 +1073,7 @@ class LspSymbolReferencesCommand(sublime_plugin.TextCommand):
                     'force': True,
                     'scroll_to_end': True
                 })
+            panel.set_read_only(True)
 
         else:
             window.run_command("hide_panel", {"panel": "output.references"})
@@ -1230,6 +1231,7 @@ def update_diagnostics_panel(window):
     if window.id() in window_file_diagnostics:
         active_panel = window.active_panel()
         is_active_panel = (active_panel == "output.diagnostics")
+        panel.set_read_only(False)
         panel.run_command("lsp_clear_panel")
         file_diagnostics = window_file_diagnostics[window.id()]
         if file_diagnostics:
@@ -1244,6 +1246,7 @@ def update_diagnostics_panel(window):
             if auto_show_diagnostics_panel and is_active_panel:
                 window.run_command("hide_panel",
                                    {"panel": "output.diagnostics"})
+        panel.set_read_only(True)
 
 
 def append_diagnostics(panel, file_path, origin_diagnostics):

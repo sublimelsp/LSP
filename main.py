@@ -19,12 +19,12 @@ except ImportError:
 
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
-SUBLIME_LINTER_MARK_ERROR = 'sublimelinter.mark.error'
+MARKUP_ERROR = 'markup.error sublimelinter.mark.error'
 show_status_messages = True
 show_view_status = True
 auto_show_diagnostics_panel = True
 show_diagnostics_phantoms = True
-diagnostic_error_region_scope = SUBLIME_LINTER_MARK_ERROR  # 'markup.deleted.diff'
+diagnostic_error_region_scope = MARKUP_ERROR
 
 configs = []  # type: List[ClientConfig]
 
@@ -258,7 +258,7 @@ def load_settings():
     show_view_status = settings_obj.get("show_view_status", True)
     auto_show_diagnostics_panel = settings_obj.get("auto_show_diagnostics_panel", True)
     show_diagnostics_phantoms = settings_obj.get("show_diagnostics_phantoms", True)
-    diagnostic_error_region_scope = settings_obj.get("diagnostic_error_region_scope", SUBLIME_LINTER_MARK_ERROR)
+    diagnostic_error_region_scope = settings_obj.get("diagnostic_error_region_scope", MARKUP_ERROR)
     settings_obj.add_on_change("_on_new_settings", load_settings)
 
 

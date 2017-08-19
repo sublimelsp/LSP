@@ -1026,8 +1026,7 @@ def create_references_panel(window: sublime.Window):
                          r"^\s+(\S*)\s+([0-9]+):?([0-9]+)$")
     panel.assign_syntax("Packages/" + PLUGIN_NAME +
                         "/Syntaxes/References.sublime-syntax")
-    # call a second time to apply settings
-    return window.create_output_panel("references")
+    return panel
 
 
 class LspSymbolReferencesCommand(sublime_plugin.TextCommand):
@@ -1212,9 +1211,7 @@ def create_diagnostics_panel(window):
     panel.settings().set("result_line_regex", r"^\s+([0-9]+):?([0-9]+).*$")
     panel.assign_syntax("Packages/" + PLUGIN_NAME +
                         "/Syntaxes/Diagnostics.sublime-syntax")
-    # Call create_output_panel a second time after assigning the above
-    # settings, so that it'll be picked up as a result buffer
-    return window.create_output_panel("diagnostics")
+    return panel
 
 
 def ensure_diagnostics_panel(window):

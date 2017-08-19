@@ -37,12 +37,12 @@ contexts:
 
   expect-diag-message:
     # Various server-specific tokens may get special treatment here in the diag message.
-    - match: $
-      pop: true
+    - include: pop-at-end
 
   expect-diag-type:
     # See: https://github.com/sublimehq/Packages/issues/1036
     # We use old markup scopes too so that old color schemes can catch up.
+    - include: pop-at-end
     - match: \berror\b
       scope: markup.error.lsp markup.deleted.lsp
       pop: true
@@ -54,14 +54,20 @@ contexts:
       pop: true
 
   expect-linter-type:
+    - include: pop-at-end
     - match: \S+
       scope: comment.line.lsp
       pop: true
 
   expect-line-maybe-column:
+    - include: pop-at-end
     - match: (\d+)(?:(:)(\d+))?
       captures:
         1: constant.numeric.integer.decimal.lsp
         2: punctuation.separator.lsp
         3: constant.numeric.integer.decimal.lsp
+      pop: true
+
+  pop-at-end:
+    - match: $
       pop: true

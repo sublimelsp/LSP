@@ -819,11 +819,11 @@ def format_severity(severity: int) -> str:
 
 
 def format_diagnostic(diagnostic: Diagnostic) -> str:
-    (line, character) = diagnostic.range.start
-    location = "{}:{}".format(line + 1, character + 1)
-    formattedMessage = diagnostic.message.replace("\n", "").replace("\r", "")
-    return "\t{:<8}\t{:<8}\t{:<8}\t{}".format(
-        location, diagnostic.source, format_severity(diagnostic.severity), formattedMessage)
+    line, column = diagnostic.range.start
+    location = "{:>8}:{:<4}".format(line + 1, column + 1)
+    message = diagnostic.message.replace("\n", " ").replace("\r", "")
+    return "{}\t{:<12}\t{:<10}\t{}".format(
+        location, diagnostic.source, format_severity(diagnostic.severity), message)
 
 
 class LspSymbolRenameCommand(sublime_plugin.TextCommand):
@@ -1001,18 +1001,28 @@ def create_output_panel(window: sublime.Window, name: str) -> sublime.View:
     settings = panel.settings()
     # Don't mess with my indenting Sublime!
     settings.set("auto_indent", False)
+    # Don't draw indent guide lines
+    settings.set("draw_indent_guides", False)
+    # Don't draw white space dots
+    settings.set("draw_white_space", "None")
     # Don't need gutter or line numbers
     settings.set("gutter", False)
-    # Don't draw indent guide lines
-    settings.set("indent_guide_options", [])
     # Let all plugins no to leave this view alone
     settings.set('is_widget', True)
+    # Don't show line numbers
+    settings.set("line_numbers", False)
+    # Don't need extra spacing
+    settings.set("margin", 3)
+    # Don't highlight matching brackets
+    settings.set("match_brackets", False)
+    # Don't make output panel seem empty
+    settings.set("scroll_past_end", False)
     # Set a tab size wich may result in best table view
-    settings.set("tab_size", 8)
-    # Don't translate anything.
+    settings.set("tab_size", 4)
+    # Don't translate anything
     settings.set("translate_tabs_to_spaces", False)
-    base_dir = get_project_path(window)
-    settings.set("result_base_dir", base_dir)
+    # Don't Wrap too long lines
+    settings.set("word_wrap", False)
     return panel
 
 

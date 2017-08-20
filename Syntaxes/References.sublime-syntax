@@ -17,13 +17,18 @@ contexts:
         2: punctuation.separator.lsp
 
   references-body:
+    # Must match the
+    #    - "result_file_regex" setting
+    #    - reference output format
     # Examples:
-    #    c:\path name\file name.py 423:32
-    #    /unixpath/file.py 815:1
-    - match: ^\s+(\S.+)\s+(\d+)(?:(:)(\d+))?$
+    #    ◌ c:\path name\file name.py 423:32
+    #    ◌ /unixpath/file.py 815:1
+    - match: ^\s+(\S)\s+((\S.+)\s+(\d+)(?:(:)(\d+))?)$
       captures:
         0: meta.references.body.lsp
-        1: meta.path.file.lsp
-        2: constant.numeric.integer.decimal.lsp
-        3: punctuation.separator.lsp
+        1: punctuation.section.path.reference.lsp
+        2: meta.path.reference.lsp
+        3: entity.name.file.lsp
         4: constant.numeric.integer.decimal.lsp
+        5: punctuation.separator.lsp
+        6: constant.numeric.integer.decimal.lsp

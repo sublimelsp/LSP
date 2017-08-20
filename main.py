@@ -1023,7 +1023,7 @@ def ensure_references_panel(window: sublime.Window):
 def create_references_panel(window: sublime.Window):
     panel = create_output_panel(window, "references")
     panel.settings().set("result_file_regex",
-                         r"^\s+(\S*)\s+([0-9]+):?([0-9]+)$")
+                         r"^\s+\S\s+(\S.+)\s+(\d+):?(\d+)$")
     panel.assign_syntax("Packages/" + PLUGIN_NAME +
                         "/Syntaxes/References.sublime-syntax")
     return panel
@@ -1086,7 +1086,7 @@ def format_reference(reference, base_dir):
     start = reference.get('range').get('start')
     file_path = uri_to_filename(reference.get("uri"))
     relative_file_path = os.path.relpath(file_path, base_dir)
-    return "\t{} {}:{}".format(
+    return " ◌ {} {}:{}".format(
         relative_file_path,
         start.get('line') + 1,
         start.get('character') + 1

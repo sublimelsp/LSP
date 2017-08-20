@@ -819,11 +819,11 @@ def format_severity(severity: int) -> str:
 
 
 def format_diagnostic(diagnostic: Diagnostic) -> str:
-    (line, character) = diagnostic.range.start
-    location = "{}:{}".format(line + 1, character + 1)
-    formattedMessage = diagnostic.message.replace("\n", "").replace("\r", "")
-    return "\t{:<8}\t{:<8}\t{:<8}\t{}".format(
-        location, diagnostic.source, format_severity(diagnostic.severity), formattedMessage)
+    line, column = diagnostic.range.start
+    location = "{:>8}:{:<4}".format(line + 1, column + 1)
+    message = diagnostic.message.replace("\n", " ").replace("\r", "")
+    return " {}\t{:<12}\t{:<10}\t{}".format(
+        location, diagnostic.source, format_severity(diagnostic.severity), message)
 
 
 class LspSymbolRenameCommand(sublime_plugin.TextCommand):
@@ -996,23 +996,27 @@ def is_at_word(view: sublime.View, event) -> bool:
         return False
 
 
+OUTPUT_PANEL_SETTINGS = {
+    "auto_indent": False,
+    "draw_indent_guides": False,
+    "draw_white_space": "None",
+    "gutter": False,
+    'is_widget': True,
+    "line_numbers": False,
+    "margin": 3,
+    "match_brackets": False,
+    "scroll_past_end": False,
+    "tab_size": 4,
+    "translate_tabs_to_spaces": False,
+    "word_wrap": False
+}
+
+
 def create_output_panel(window: sublime.Window, name: str) -> sublime.View:
     panel = window.create_output_panel(name)
     settings = panel.settings()
-    # Don't mess with my indenting Sublime!
-    settings.set("auto_indent", False)
-    # Don't need gutter or line numbers
-    settings.set("gutter", False)
-    # Don't draw indent guide lines
-    settings.set("indent_guide_options", [])
-    # Let all plugins no to leave this view alone
-    settings.set('is_widget', True)
-    # Set a tab size wich may result in best table view
-    settings.set("tab_size", 8)
-    # Don't translate anything.
-    settings.set("translate_tabs_to_spaces", False)
-    base_dir = get_project_path(window)
-    settings.set("result_base_dir", base_dir)
+    for key, value in OUTPUT_PANEL_SETTINGS.items():
+        settings.set(key, value)
     return panel
 
 
@@ -1060,6 +1064,7 @@ class LspSymbolReferencesCommand(sublime_plugin.TextCommand):
 
         if (len(references)) > 0:
             panel = ensure_references_panel(window)
+            panel.settings().set("result_base_dir", base_dir)
             panel.set_read_only(False)
             panel.run_command("lsp_clear_panel")
             panel.run_command('append', {
@@ -1207,7 +1212,7 @@ class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
 
 def create_diagnostics_panel(window):
     panel = create_output_panel(window, "diagnostics")
-    panel.settings().set("result_file_regex", r"^(.*):$")
+    panel.settings().set("result_file_regex", r"^\s*\S\s+(\S.*):$")
     panel.settings().set("result_line_regex", r"^\s+([0-9]+):?([0-9]+).*$")
     panel.assign_syntax("Packages/" + PLUGIN_NAME +
                         "/Syntaxes/Diagnostics.sublime-syntax")
@@ -1228,6 +1233,7 @@ def update_diagnostics_panel(window):
     if window.id() in window_file_diagnostics:
         active_panel = window.active_panel()
         is_active_panel = (active_panel == "output.diagnostics")
+        panel.settings().set("result_base_dir", base_dir)
         panel.set_read_only(False)
         panel.run_command("lsp_clear_panel")
         file_diagnostics = window_file_diagnostics[window.id()]
@@ -1248,7 +1254,7 @@ def update_diagnostics_panel(window):
 
 def append_diagnostics(panel, file_path, origin_diagnostics):
     panel.run_command('append',
-                      {'characters': file_path + ":\n",
+                      {'characters':  " ◌ {}:\n".format(file_path),
                        'force': True})
     for origin, diagnostics in origin_diagnostics.items():
         for diagnostic in diagnostics:

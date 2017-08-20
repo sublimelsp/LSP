@@ -996,33 +996,27 @@ def is_at_word(view: sublime.View, event) -> bool:
         return False
 
 
+OUTPUT_SETTINGS = {
+    "auto_indent": False,
+    "draw_indent_guides": False,
+    "draw_white_space": "None",
+    "gutter": False,
+    'is_widget': True,
+    "line_numbers": False,
+    "margin": 3,
+    "match_brackets": False,
+    "scroll_past_end": False,
+    "tab_size": 4,
+    "translate_tabs_to_spaces": False,
+    "word_wrap": False
+}
+
+
 def create_output_panel(window: sublime.Window, name: str) -> sublime.View:
     panel = window.create_output_panel(name)
     settings = panel.settings()
-    # Don't mess with my indenting Sublime!
-    settings.set("auto_indent", False)
-    # Don't draw indent guide lines
-    settings.set("draw_indent_guides", False)
-    # Don't draw white space dots
-    settings.set("draw_white_space", "None")
-    # Don't need gutter or line numbers
-    settings.set("gutter", False)
-    # Let all plugins no to leave this view alone
-    settings.set('is_widget', True)
-    # Don't show line numbers
-    settings.set("line_numbers", False)
-    # Don't need extra spacing
-    settings.set("margin", 3)
-    # Don't highlight matching brackets
-    settings.set("match_brackets", False)
-    # Don't make output panel seem empty
-    settings.set("scroll_past_end", False)
-    # Set a tab size wich may result in best table view
-    settings.set("tab_size", 4)
-    # Don't translate anything
-    settings.set("translate_tabs_to_spaces", False)
-    # Don't Wrap too long lines
-    settings.set("word_wrap", False)
+    for key, value in OUTPUT_SETTINGS.items():
+        settings.set(key, value)
     return panel
 
 
@@ -1070,6 +1064,7 @@ class LspSymbolReferencesCommand(sublime_plugin.TextCommand):
 
         if (len(references)) > 0:
             panel = ensure_references_panel(window)
+            panel.settings().set("result_base_dir", base_dir)
             panel.set_read_only(False)
             panel.run_command("lsp_clear_panel")
             panel.run_command('append', {
@@ -1238,6 +1233,7 @@ def update_diagnostics_panel(window):
     if window.id() in window_file_diagnostics:
         active_panel = window.active_panel()
         is_active_panel = (active_panel == "output.diagnostics")
+        panel.settings().set("result_base_dir", base_dir)
         panel.set_read_only(False)
         panel.run_command("lsp_clear_panel")
         file_diagnostics = window_file_diagnostics[window.id()]

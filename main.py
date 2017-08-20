@@ -996,7 +996,7 @@ def is_at_word(view: sublime.View, event) -> bool:
         return False
 
 
-OUTPUT_SETTINGS = {
+OUTPUT_PANEL_SETTINGS = {
     "auto_indent": False,
     "draw_indent_guides": False,
     "draw_white_space": "None",
@@ -1015,7 +1015,7 @@ OUTPUT_SETTINGS = {
 def create_output_panel(window: sublime.Window, name: str) -> sublime.View:
     panel = window.create_output_panel(name)
     settings = panel.settings()
-    for key, value in OUTPUT_SETTINGS.items():
+    for key, value in OUTPUT_PANEL_SETTINGS.items():
         settings.set(key, value)
     return panel
 

@@ -40,11 +40,9 @@
   "show_status_messages": true,
   "show_view_status": true,
   "auto_show_diagnostics_panel": true,
-  "show_diagnostics_phantoms": true,
+  "show_diagnostics_phantoms": false,
   "show_diagnostics_in_view_status": true,
-  "diagnostic_error_region_scope": "markup.error.lsp sublimelinter.mark.error",
   "log_debug": false,
   "log_server": true,
   "log_stderr": false
-
 }

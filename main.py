@@ -23,7 +23,6 @@ import mdpopups
 
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
-MARKUP_ERROR = 'markup.error.lsp sublimelinter.mark.error'
 show_status_messages = True
 show_view_status = True
 auto_show_diagnostics_panel = True
@@ -32,7 +31,6 @@ show_diagnostics_in_view_status = True
 log_debug = True
 log_server = True
 log_stderr = False
-diagnostic_error_region_scope = MARKUP_ERROR
 
 configs = []  # type: List[ClientConfig]
 
@@ -49,6 +47,13 @@ diagnostic_severity_names = {
     DiagnosticSeverity.Warning: "warning",
     DiagnosticSeverity.Information: "info",
     DiagnosticSeverity.Hint: "hint"
+}
+
+diagnostic_severity_scopes = {
+    DiagnosticSeverity.Error: 'markup.error.lsp sublimelinter.mark.error',
+    DiagnosticSeverity.Warning: 'markup.warning.lsp sublimelinter.mark.warning',
+    DiagnosticSeverity.Information: 'markup.info.lsp sublimelinter.gutter-mark',
+    DiagnosticSeverity.Hint: 'markup.info.suggestion.lsp sublimelinter.gutter-mark'
 }
 
 
@@ -257,7 +262,6 @@ def update_settings(settings_obj: sublime.Settings):
     global auto_show_diagnostics_panel
     global show_diagnostics_phantoms
     global show_diagnostics_in_view_status
-    global diagnostic_error_region_scope
     global log_debug
     global log_server
     global log_stderr
@@ -276,7 +280,6 @@ def update_settings(settings_obj: sublime.Settings):
     auto_show_diagnostics_panel = settings_obj.get("auto_show_diagnostics_panel", True)
     show_diagnostics_phantoms = settings_obj.get("show_diagnostics_phantoms", True)
     show_diagnostics_in_view_status = settings_obj.get("show_diagnostics_in_view_status", True)
-    diagnostic_error_region_scope = settings_obj.get("diagnostic_error_region_scope", MARKUP_ERROR)
     log_debug = settings_obj.get("log_debug", False)
     log_server = settings_obj.get("log_server", True)
     log_stderr = settings_obj.get("log_stderr", False)
@@ -1159,37 +1162,45 @@ def update_file_diagnostics(window: sublime.Window, file_path: str, source: str,
 phantom_sets_by_buffer = {}  # type: Dict[int, sublime.PhantomSet]
 
 
-def update_diagnostics_in_view(view: sublime.View, diagnostics: 'List[Diagnostic]'):
+def update_diagnostics_phantoms(view: sublime.View, diagnostics: 'List[Diagnostic]'):
     global phantom_sets_by_buffer
 
-    phantoms = []  # type: List[sublime.Phantom]
-    regions = []  # type: List[sublime.Region]
-
-    if view is not None:
-        if view.is_dirty() or not show_diagnostics_phantoms:
-            regions = list(
-                create_region(view, diagnostic) for diagnostic in diagnostics)
-        else:
-            phantoms = list(
-                create_phantom(view, diagnostic) for diagnostic in diagnostics)
-
-        # TODO: if phantoms are disabled, this logic can be skipped
-        buffer_id = view.buffer_id()
-        if buffer_id not in phantom_sets_by_buffer:
-            phantom_set = sublime.PhantomSet(view, "diagnostics")
+    buffer_id = view.buffer_id()
+    if show_diagnostics_phantoms and not view.is_dirty():
+        phantoms = list(
+            create_phantom(view, diagnostic) for diagnostic in diagnostics)
+    else:
+        phantoms = None  # type: ignore
+    if phantoms:
+        phantom_set = phantom_sets_by_buffer.get(buffer_id)
+        if not phantom_set:
+            phantom_set = sublime.PhantomSet(view, "lsp_diagnostics")
             phantom_sets_by_buffer[buffer_id] = phantom_set
-        else:
-            phantom_set = phantom_sets_by_buffer[buffer_id]
-
         phantom_set.update(phantoms)
-        # TODO: split between warning and error
-        if (len(regions)) > 0:
-            # TODO: stop stealing SublimeLinter's coloring.
-            view.add_regions("lsp_errors", regions, diagnostic_error_region_scope,
-                             "dot",
-                             sublime.DRAW_SQUIGGLY_UNDERLINE | UNDERLINE_FLAGS)
-        else:
-            view.erase_regions("lsp_errors")
+    else:
+        phantom_sets_by_buffer.pop(buffer_id, None)
+
+
+def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic]', severity: int):
+    region_name = "lsp_" + format_severity(severity)
+    if show_diagnostics_phantoms and not view.is_dirty():
+        regions = None  # type: ignore
+    else:
+        regions = list(create_region(view, diagnostic) for diagnostic in diagnostics
+                       if diagnostic.severity == severity)
+    if regions:
+        scope_name = diagnostic_severity_scopes[severity]
+        view.add_regions(region_name, regions, scope_name, "dot",
+                         sublime.DRAW_SQUIGGLY_UNDERLINE | UNDERLINE_FLAGS)
+    else:
+        view.erase_regions(region_name)
+
+
+def update_diagnostics_in_view(view: sublime.View, diagnostics: 'List[Diagnostic]'):
+    if view and view.is_valid():
+        update_diagnostics_phantoms(view, diagnostics)
+        for severity in range(DiagnosticSeverity.Error, DiagnosticSeverity.Information):
+            update_diagnostics_regions(view, diagnostics, severity)
 
 
 def remove_diagnostics(view: sublime.View):

@@ -1,20 +1,24 @@
-import sublime_plugin
-import sublime
-import subprocess
-import threading
+import html
 import json
 import os
+import subprocess
 import sys
-import urllib.request as urllib
-from urllib.parse import urljoin
+import threading
 from collections import OrderedDict
-import html
-import mdpopups
+from urllib.parse import urljoin
+from urllib.parse import urlparse
+from urllib.request import pathname2url
+from urllib.request import url2pathname
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
     assert Any and List and Dict and Tuple and Callable and Optional
 except ImportError:
     pass
+
+import sublime_plugin
+import sublime
+
+import mdpopups
 
 
 PLUGIN_NAME = 'LSP'
@@ -564,14 +568,11 @@ unsubscribe_initialize_on_activated = None
 
 
 def filename_to_uri(path: str) -> str:
-    return urljoin('file:', urllib.pathname2url(path))
+    return urljoin('file:', pathname2url(path))
 
 
 def uri_to_filename(uri: str) -> str:
-    if os.name == 'nt':
-        return urllib.url2pathname(uri.replace("file://", ""))
-    else:
-        return urllib.url2pathname(uri).replace("file://", "")
+    return url2pathname(urlparse(uri).path)
 
 
 def client_for_view(view: sublime.View) -> 'Optional[Client]':

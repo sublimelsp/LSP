@@ -7,7 +7,7 @@ scope: output.lsp.diagnostics
 
 variables:
   start_of_diag_body: ^\s+(?=\d)
-  filename_and_colon: ^(.*)(:)$
+  filename_and_colon: ^\s*(\S)\s+(.*)(:)$
 
 contexts:
   main:
@@ -18,8 +18,9 @@ contexts:
     - match: '{{filename_and_colon}}'
       captures:
         0: meta.diagnostic.preamble.lsp
-        1: string.unquoted.lsp
-        2: punctuation.separator.lsp
+        1: punctuation.section.diagnostics.preample.lsp
+        2: string.unquoted.lsp
+        3: punctuation.separator.lsp
 
   diagnostic-body:
     - match: '{{start_of_diag_body}}'

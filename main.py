@@ -1212,7 +1212,7 @@ class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
 
 def create_diagnostics_panel(window):
     panel = create_output_panel(window, "diagnostics")
-    panel.settings().set("result_file_regex", r"^(.*):$")
+    panel.settings().set("result_file_regex", r"^\s*\S\s+(\S.*):$")
     panel.settings().set("result_line_regex", r"^\s+([0-9]+):?([0-9]+).*$")
     panel.assign_syntax("Packages/" + PLUGIN_NAME +
                         "/Syntaxes/Diagnostics.sublime-syntax")
@@ -1252,9 +1252,10 @@ def update_diagnostics_panel(window):
         panel.set_read_only(True)
 
 
+
 def append_diagnostics(panel, file_path, origin_diagnostics):
     panel.run_command('append',
-                      {'characters': file_path + ":\n",
+                      {'characters':  " ◌ {}:\n".format(file_path),
                        'force': True})
     for origin, diagnostics in origin_diagnostics.items():
         for diagnostic in diagnostics:

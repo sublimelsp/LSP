@@ -1497,7 +1497,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         mdpopups.show_popup(
             self.view,
             "\n".join(formatted),
-            css=".mdpopups .lsp_hover { margin: 4px; }",
+            css=".mdpopups .lsp_hover { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
             md=True,
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
             location=point,
@@ -1639,7 +1639,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 mdpopups.show_popup(
                     self.view,
                     "\n".join(formatted),
-                    css=".mdpopups .lsp_signature { margin: 4px; }",
+                    css=".mdpopups .lsp_signature { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
                     md=True,
                     flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
                     location=point,

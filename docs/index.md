@@ -19,6 +19,8 @@ The default LSP.sublime-settings contains some default LSP client configuration 
 
 `npm install -g javascript-typescript-langserver`
 
+See: [github:sourcegraph/javascript-typescript-langserver](https://github.com/sourcegraph/javascript-typescript-langserver)
+
 On windows you will need to override client config to launch `javascript-typescript-stdio.cmd` instead.
 
 See: [github](https://github.com/sourcegraph/javascript-typescript-langserver)
@@ -36,11 +38,27 @@ See: [github](https://github.com/sourcegraph/javascript-typescript-langserver)
 ]
 ```
 
+### Flow (Javascript)<a name="flow"></a>
+
+See: [github](https://github.com/flowtype/flow-language-server)
+
+Client configuration:
+```
+      "flow":
+      {
+        "command": ["flow-language-server", "--stdio"],
+        "scopes": ["source.js"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+        "languageId": "javascript"
+      }
+```
+
+
 ### Python<a name="python"></a>
 
 `pip install python-language-server`
 
-See: [github](https://github.com/palantir/python-language-server)
+See: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
 
 Autocomplete triggers:
 
@@ -48,11 +66,26 @@ Autocomplete triggers:
 "auto_complete_triggers": [ {"selector": "source.python", "characters": "."} ],
 ```
 
+### PHP<a name="php"></a>
+
+See: [github:felixfbecker/php-language-server](https://github.com/felixfbecker/php-language-server)
+
+Client configuration
+```
+      "phpls":
+      {
+          "command": ["php", "/PATH-TO-HOME-DIR/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"],
+          "scopes": ["source.php"],
+          "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
+          "languageId": "php"
+      }
+```
+
 ### Rust<a name="rust"></a>
 
 Requires Rust Nightly.
 
-See [github](https://github.com/rust-lang-nursery/rls) for up-to-date installation instructions.
+See [github:rust-lang-nursery/rls](https://github.com/rust-lang-nursery/rls) for up-to-date installation instructions.
 
 Autocomplete triggers:  
 

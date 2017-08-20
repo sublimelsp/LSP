@@ -1466,6 +1466,10 @@ class HoverHandler(sublime_plugin.ViewEventListener):
 
     def handle_response(self, response, point):
         debug(response)
+        if response is None:
+            # Flow returns None sometimes
+            # See: https://github.com/flowtype/flow-language-server/issues/51
+            return
         contents = response.get('contents')
         if len(contents) < 1:
             return
@@ -1474,21 +1478,21 @@ class HoverHandler(sublime_plugin.ViewEventListener):
 
     def show_hover(self, point, contents):
         formatted = []
-        if isinstance(contents, str):
-            formatted.append(contents)
-        else:
-            for item in contents:
-                value = ""
-                language = None
-                if isinstance(item, str):
-                    value = item
-                else:
-                    value = item.get("value")
-                    language = item.get("language")
-                if language:
-                    formatted.append("```{}\n{}\n```".format(language, value))
-                else:
-                    formatted.append(value)
+        if not isinstance(contents, list):
+            contents = [contents]
+
+        for item in contents:
+            value = ""
+            language = None
+            if isinstance(item, str):
+                value = item
+            else:
+                value = item.get("value")
+                language = item.get("language")
+            if language:
+                formatted.append("```{}\n{}\n```".format(language, value))
+            else:
+                formatted.append(value)
 
         mdpopups.show_popup(
             self.view,

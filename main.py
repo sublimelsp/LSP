@@ -1563,11 +1563,12 @@ class CompletionHandler(sublime_plugin.EventListener):
         label = item.get("label")
         # kind = item.get("kind")
         detail = item.get("detail")
-        insertText = None
+        insertText = label
         if item.get("insertTextFormat") == 2:
             insertText = item.get("insertText")
-        return ("{}\t{}".format(label, detail), insertText
-                if insertText else label)
+        if insertText[0] == '$': # sublime needs leading '$' escaped.
+            insertText = '\$' + insertText[1:]
+        return ("{}\t{}".format(label, detail), insertText)
 
     def handle_response(self, response):
         items = response["items"] if isinstance(response,

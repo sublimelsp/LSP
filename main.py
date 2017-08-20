@@ -1174,7 +1174,7 @@ def update_diagnostics_in_view(view: sublime.View, diagnostics: 'List[Diagnostic
                              "dot",
                              sublime.DRAW_SQUIGGLY_UNDERLINE | UNDERLINE_FLAGS)
         else:
-            view.erase_regions("errors")
+            view.erase_regions("lsp-errors")
 
 
 def remove_diagnostics(view: sublime.View):

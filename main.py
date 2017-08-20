@@ -822,7 +822,7 @@ def format_diagnostic(diagnostic: Diagnostic) -> str:
     line, column = diagnostic.range.start
     location = "{:>8}:{:<4}".format(line + 1, column + 1)
     message = diagnostic.message.replace("\n", " ").replace("\r", "")
-    return "{}\t{:<12}\t{:<10}\t{}".format(
+    return " {}\t{:<12}\t{:<10}\t{}".format(
         location, diagnostic.source, format_severity(diagnostic.severity), message)
 
 

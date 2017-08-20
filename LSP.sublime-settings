@@ -41,5 +41,5 @@
   "show_view_status": true,
   "auto_show_diagnostics_panel": true,
   "show_diagnostics_phantoms": true,
-  "diagnostic_error_region_scope": "markup.error sublimelinter.mark.error"
+  "diagnostic_error_region_scope": "markup.error.lsp sublimelinter.mark.error"
 }

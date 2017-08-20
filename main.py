@@ -19,7 +19,7 @@ except ImportError:
 
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
-MARKUP_ERROR = 'markup.error sublimelinter.mark.error'
+MARKUP_ERROR = 'markup.error.lsp sublimelinter.mark.error'
 show_status_messages = True
 show_view_status = True
 auto_show_diagnostics_panel = True
@@ -1138,7 +1138,7 @@ def update_diagnostics_in_view(view: sublime.View, diagnostics: 'List[Diagnostic
         # TODO: split between warning and error
         if (len(regions)) > 0:
             # TODO: stop stealing SublimeLinter's coloring.
-            view.add_regions("errors", regions, diagnostic_error_region_scope,
+            view.add_regions("lsp_errors", regions, diagnostic_error_region_scope,
                              "dot",
                              sublime.DRAW_SQUIGGLY_UNDERLINE | UNDERLINE_FLAGS)
         else:

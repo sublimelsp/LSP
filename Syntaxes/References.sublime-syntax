@@ -1,14 +1,29 @@
 %YAML 1.2
 ---
 hidden: true
-scope: references
+scope: output.lsp.references
 
 contexts:
   main:
-    - match: ^(.*):$
-      scope: keyword.other.references.file
-    - match: ^\s+(.*)\s+(\d*+:\d+)$
-      captures:
-        1: meta.references.message
-        2: punctuation.comment.references.location
+    - include: references-preamble
+    - include: references-body
 
+  references-preamble:
+    # References to "function" at path\file.py:
+    - match: ^(.*)(:)$
+      captures:
+        0: meta.references.preamble.lsp
+        1: string.unquoted.lsp
+        2: punctuation.separator.lsp
+
+  references-body:
+    # Examples:
+    #    c:\path name\file name.py 423:32
+    #    /unixpath/file.py 815:1
+    - match: ^\s+(\S.+)\s+(\d+)(?:(:)(\d+))?$
+      captures:
+        0: meta.references.body.lsp
+        1: meta.path.file.lsp
+        2: constant.numeric.integer.decimal.lsp
+        3: punctuation.separator.lsp
+        4: constant.numeric.integer.decimal.lsp

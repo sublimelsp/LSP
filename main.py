@@ -1086,7 +1086,7 @@ def format_reference(reference, base_dir):
     start = reference.get('range').get('start')
     file_path = uri_to_filename(reference.get("uri"))
     relative_file_path = os.path.relpath(file_path, base_dir)
-    return "\t{}\t{}:{}".format(
+    return "\t{} {}:{}".format(
         relative_file_path,
         start.get('line') + 1,
         start.get('character') + 1

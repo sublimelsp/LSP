@@ -1252,7 +1252,6 @@ def update_diagnostics_panel(window):
         panel.set_read_only(True)
 
 
-
 def append_diagnostics(panel, file_path, origin_diagnostics):
     panel.run_command('append',
                       {'characters':  " ◌ {}:\n".format(file_path),

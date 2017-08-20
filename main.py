@@ -24,6 +24,9 @@ show_status_messages = True
 show_view_status = True
 auto_show_diagnostics_panel = True
 show_diagnostics_phantoms = True
+log_debug = False
+log_server = True
+log_stderr = False
 diagnostic_error_region_scope = MARKUP_ERROR
 
 configs = []  # type: List[ClientConfig]
@@ -243,7 +246,11 @@ def load_settings():
     global auto_show_diagnostics_panel
     global show_diagnostics_phantoms
     global diagnostic_error_region_scope
+    global log_debug
+    global log_server
+    global log_stderr
     global configs
+
     settings_obj = sublime.load_settings("LSP.sublime-settings")
 
     configs = []
@@ -259,6 +266,10 @@ def load_settings():
     auto_show_diagnostics_panel = settings_obj.get("auto_show_diagnostics_panel", True)
     show_diagnostics_phantoms = settings_obj.get("show_diagnostics_phantoms", True)
     diagnostic_error_region_scope = settings_obj.get("diagnostic_error_region_scope", MARKUP_ERROR)
+    log_debug = settings_obj.get("log_debug", False)
+    log_server = settings_obj.get("log_server", True)
+    log_stderr = settings_obj.get("log_stderr", False)
+
     settings_obj.add_on_change("_on_new_settings", load_settings)
 
 
@@ -385,9 +396,9 @@ class Client(object):
         """
         while self.process.poll() is None:
             try:
-                error = self.process.stderr.readline().decode('UTF-8')
-                if len(error) > 0:
-                    printf("(stderr): ", error.strip())
+                content = self.process.stderr.readline()
+                if log_stderr and len(content) > 0:
+                    printf("(stderr): ", content.strip())
             except IOError:
                 printf("LSP stderr process ending due to exception: ",
                        sys.exc_info())
@@ -422,7 +433,7 @@ class Client(object):
         elif method == "window/showMessage":
             sublime.active_window().message_dialog(
                 response.get("params").get("message"))
-        elif method == "window/logMessage":
+        elif method == "window/logMessage" and log_server:
             server_log(self.process.args[0],
                        response.get("params").get("message"))
         else:
@@ -431,8 +442,8 @@ class Client(object):
 
 def debug(*args):
     """Print args to the console if the "debug" setting is True."""
-    # if settings.get('debug'):
-    printf(*args)
+    if log_debug:
+        printf(*args)
 
 
 def server_log(binary, *args):

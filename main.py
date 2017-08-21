@@ -28,7 +28,8 @@ show_status_messages = True
 show_view_status = True
 auto_show_diagnostics_panel = True
 show_diagnostics_phantoms = True
-log_debug = False
+show_diagnostics_in_view_status = True
+log_debug = True
 log_server = True
 log_stderr = False
 diagnostic_error_region_scope = MARKUP_ERROR
@@ -249,6 +250,7 @@ def load_settings():
     global show_view_status
     global auto_show_diagnostics_panel
     global show_diagnostics_phantoms
+    global show_diagnostics_in_view_status
     global diagnostic_error_region_scope
     global log_debug
     global log_server
@@ -269,6 +271,7 @@ def load_settings():
     show_view_status = settings_obj.get("show_view_status", True)
     auto_show_diagnostics_panel = settings_obj.get("auto_show_diagnostics_panel", True)
     show_diagnostics_phantoms = settings_obj.get("show_diagnostics_phantoms", True)
+    show_diagnostics_in_view_status = settings_obj.get("show_diagnostics_in_view_status", True)
     diagnostic_error_region_scope = settings_obj.get("diagnostic_error_region_scope", MARKUP_ERROR)
     log_debug = settings_obj.get("log_debug", False)
     log_server = settings_obj.get("log_server", True)
@@ -1809,6 +1812,34 @@ class SaveListener(sublime_plugin.EventListener):
 def is_transient_view(view):
     window = view.window()
     return view == window.transient_view_in_group(window.active_group())
+
+
+class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
+    def __init__(self, view):
+        self.view = view
+        self.has_status = False
+
+    @classmethod
+    def is_applicable(cls, settings):
+        syntax = settings.get('syntax')
+        global show_diagnostics_in_view_status
+        return show_diagnostics_in_view_status and is_supported_syntax(syntax)
+
+    def on_selection_modified_async(self):
+        pos = self.view.sel()[0].begin()
+        line_diagnostics = get_line_diagnostics(self.view, pos)
+        if len(line_diagnostics) > 0:
+            self.show_diagnostics_status(line_diagnostics)
+        elif self.has_status:
+            self.clear_diagnostics_status()
+
+    def show_diagnostics_status(self, line_diagnostics):
+        self.has_status = True
+        self.view.set_status('lsp_diagnostics', line_diagnostics[0].message)
+
+    def clear_diagnostics_status(self):
+        self.view.set_status('lsp_diagnostics', "")
+        self.has_status = False
 
 
 class DocumentSyncListener(sublime_plugin.ViewEventListener):

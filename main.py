@@ -1401,63 +1401,6 @@ class Events:
                 listener(*args)
 
 
-def get_diagnostics_for_view(view: sublime.View) -> 'List[Diagnostic]':
-    window = view.window()
-    file_path = view.file_name()
-    origin = 'lsp'
-    if window.id() in window_file_diagnostics:
-        file_diagnostics = window_file_diagnostics[window.id()]
-        if file_path in file_diagnostics:
-            if origin in file_diagnostics[file_path]:
-                return file_diagnostics[file_path][origin]
-    return []
-
-
-class DiagnosticsHoverHandler(sublime_plugin.ViewEventListener):
-    def __init__(self, view):
-        self.view = view
-
-    @classmethod
-    def is_applicable(cls, settings):
-        syntax = settings.get('syntax')
-        return is_supported_syntax(syntax)
-
-    def on_hover(self, point, hover_zone):
-        (row, col) = self.view.rowcol(point)
-        diagnostics = get_diagnostics_for_view(self.view)
-        line_diagnostics = []
-        for diagnostic in diagnostics:
-            (start_line, _) = diagnostic.range.start
-            (end_line, _) = diagnostic.range.end
-            if row >= start_line and row <= end_line:
-                line_diagnostics.append(diagnostic)
-        if line_diagnostics:
-            self.show_hover(point, line_diagnostics)
-
-    def show_hover(self, point, diagnostics):
-        formatted = list("{}: {}".format(diagnostic.source, diagnostic.message) for diagnostic in diagnostics)
-        formatted.append("[{}]({})".format('Code Actions', 'code-actions'))
-        mdpopups.show_popup(
-            self.view,
-            "\n".join(formatted),
-            css=".mdpopups .lsp_hover { margin: 4px; }",
-            md=True,
-            flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
-            location=point,
-            wrapper_class="lsp_hover",
-            max_width=800,
-            on_navigate=lambda href: self.on_navigate(href, point, diagnostics))
-
-    def on_navigate(self, href, point, diagnostics):
-        # TODO: don't mess with the user's cursor.
-        # Instead, pass code actions requested from phantoms & hovers should call lsp_code_actions with
-        # diagnostics as args, positioning resulting UI close to the clicked link.
-        sel = self.view.sel()
-        sel.clear()
-        sel.add(sublime.Region(point, point))
-        self.view.run_command("lsp_code_actions")
-
-
 class HoverHandler(sublime_plugin.ViewEventListener):
     def __init__(self, view):
         self.view = view
@@ -1468,6 +1411,13 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         return is_supported_syntax(syntax)
 
     def on_hover(self, point, hover_zone):
+        line_diagnostics = get_line_diagnostics(self.view, point)
+        if len(line_diagnostics) > 0:
+            self.show_diagnostics_hover(point, line_diagnostics)
+        else:
+            self.request_symbol_hover(point, hover_zone)
+
+    def request_symbol_hover(self, point, hover_zone):
         client = client_for_view(self.view)
         if not client:
             return
@@ -1492,6 +1442,29 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             return
 
         self.show_hover(point, contents)
+
+    def show_diagnostics_hover(self, point, diagnostics):
+        formatted = list("{}: {}".format(diagnostic.source, diagnostic.message) for diagnostic in diagnostics)
+        formatted.append("[{}]({})".format('Code Actions', 'code-actions'))
+        mdpopups.show_popup(
+            self.view,
+            "\n".join(formatted),
+            css=".mdpopups .lsp_hover { margin: 4px; }",
+            md=True,
+            flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+            location=point,
+            wrapper_class="lsp_hover",
+            max_width=800,
+            on_navigate=lambda href: self.on_diagnostics_navigate(self, href, point, diagnostics))
+
+    def on_diagnostics_navigate(self, href, point, diagnostics):
+        # TODO: don't mess with the user's cursor.
+        # Instead, pass code actions requested from phantoms & hovers should call lsp_code_actions with
+        # diagnostics as args, positioning resulting UI close to the clicked link.
+        sel = self.view.sel()
+        sel.clear()
+        sel.add(sublime.Region(point, point))
+        self.view.run_command("lsp_code_actions")
 
     def show_hover(self, point, contents):
         formatted = []
@@ -1566,7 +1539,7 @@ class CompletionHandler(sublime_plugin.EventListener):
         insertText = label
         if item.get("insertTextFormat") == 2:
             insertText = item.get("insertText")
-        if insertText[0] == '$': # sublime needs leading '$' escaped.
+        if insertText[0] == '$':  # sublime needs leading '$' escaped.
             insertText = '\$' + insertText[1:]
         return ("{}\t{}".format(label, detail), insertText)
 
@@ -1664,19 +1637,28 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                     max_width=800)
 
 
-def get_line_diagnostics(view: sublime.View, row: int, col: int) -> 'List[Diagnostic]':
+def get_line_diagnostics(view, point):
+    (row, col) = view.rowcol(point)
+    diagnostics = get_diagnostics_for_view(view)
     line_diagnostics = []
-    file_diagnostics = window_file_diagnostics.get(view.window().id(), {})
-    if view.file_name() in file_diagnostics:
-        source_diagnostics = file_diagnostics[view.file_name()]
-        diagnostics = source_diagnostics.get('lsp', [])
-        if len(diagnostics) > 0:
-            for diagnostic in diagnostics:
-                (start_line, _) = diagnostic.range.start
-                (end_line, _) = diagnostic.range.end
-                if row >= start_line and row <= end_line:
-                    line_diagnostics.append(diagnostic)
+    for diagnostic in diagnostics:
+        (start_line, _) = diagnostic.range.start
+        (end_line, _) = diagnostic.range.end
+        if row >= start_line and row <= end_line:
+            line_diagnostics.append(diagnostic)
     return line_diagnostics
+
+
+def get_diagnostics_for_view(view: sublime.View) -> 'List[Diagnostic]':
+    window = view.window()
+    file_path = view.file_name()
+    origin = 'lsp'
+    if window.id() in window_file_diagnostics:
+        file_diagnostics = window_file_diagnostics[window.id()]
+        if file_path in file_diagnostics:
+            if origin in file_diagnostics[file_path]:
+                return file_diagnostics[file_path][origin]
+    return []
 
 
 class LspCodeActionsCommand(sublime_plugin.TextCommand):
@@ -1691,7 +1673,7 @@ class LspCodeActionsCommand(sublime_plugin.TextCommand):
         if client:
             pos = get_position(self.view, event)
             row, col = self.view.rowcol(pos)
-            line_diagnostics = get_line_diagnostics(self.view, row, col)
+            line_diagnostics = get_line_diagnostics(self.view, pos)
             params = {
                 "textDocument": {
                     "uri": filename_to_uri(self.view.file_name())

@@ -7,7 +7,6 @@ import os
 import sys
 import urllib.request as urllib
 from urllib.parse import urljoin
-from collections import OrderedDict
 import html
 import mdpopups
 try:
@@ -83,6 +82,7 @@ symbol_kind_names = {
 
 
 class Request:
+
     def __init__(self, method, params):
         self.method = method
         self.params = params
@@ -133,18 +133,19 @@ class Request:
         return Request("textDocument/documentSymbol", params)
 
     def __repr__(self):
-        return self.method + " " + str(self.params)
+        return "{} {}".format(self.method, self.params)
 
     def to_payload(self, id):
-        r = OrderedDict()  # type: OrderedDict[str, Any]
-        r["jsonrpc"] = "2.0"
-        r["id"] = id
-        r["method"] = self.method
-        r["params"] = self.params
-        return r
+        return {
+            "jsonrpc": self.jsonrpc,
+            "id": id,
+            "method": self.method,
+            "params": self.params
+        }
 
 
 class Notification:
+
     def __init__(self, method, params):
         self.method = method
         self.params = params
@@ -171,14 +172,14 @@ class Notification:
         return Notification("exit", None)
 
     def __repr__(self):
-        return self.method + " " + str(self.params)
+        return "{} {}".format(self.method, self.params)
 
     def to_payload(self):
-        r = OrderedDict()  # type: OrderedDict[str, Any]
-        r["jsonrpc"] = "2.0"
-        r["method"] = self.method
-        r["params"] = self.params
-        return r
+        return {
+            "jsonrpc": self.jsonrpc,
+            "method": self.method,
+            "params": self.params
+        }
 
 
 class Range(object):
@@ -1347,35 +1348,34 @@ def start_server(server_binary_args, working_dir):
 
 
 def get_document_range(view: sublime.View) -> 'Any':
-    range = {
-        "start": {
-            "line": 0,
-            "character": 0
-        },
-        "end": {
-            "line": 0,
-            "character": 0
-        }
-    }
     return {
         "textDocument": {
             "uri": filename_to_uri(view.file_name())
         },
-        "range": range
+        "range": {
+            "start": {
+                "line": 0,
+                "character": 0
+            },
+            "end": {
+                "line": 0,
+                "character": 0
+            }
+        }
     }
 
 
-def get_document_position(view, point):
-    if point:
-        (row, col) = view.rowcol(point)
-    else:
-        view.sel()
-    uri = filename_to_uri(view.file_name())
-    position = OrderedDict(line=row, character=col)
-    dp = OrderedDict()  # type: Dict[str, Any]
-    dp["textDocument"] = {"uri": uri}
-    dp["position"] = position
-    return dp
+def get_document_position(view: sublime.View, point: int) -> dict:
+    row, col = view.rowcol(point or view.sel()[0].begin())
+    return {
+        "textDocument": {
+            "uri": filename_to_uri(view.file_name())
+        },
+        "position": {
+            "line": row,
+            "character": col
+        }
+    }
 
 
 class Events:

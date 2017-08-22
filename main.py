@@ -245,6 +245,12 @@ def read_client_config(name, client_config):
 
 
 def load_settings():
+    settings_obj = sublime.load_settings("LSP.sublime-settings")
+    update_settings(settings_obj)
+    settings_obj.add_on_change("_on_new_settings", lambda: update_settings(settings_obj))
+
+
+def update_settings(settings_obj: sublime.Settings):
     global show_status_messages
     global show_view_status
     global auto_show_diagnostics_panel
@@ -254,8 +260,6 @@ def load_settings():
     global log_server
     global log_stderr
     global configs
-
-    settings_obj = sublime.load_settings("LSP.sublime-settings")
 
     configs = []
     client_configs = settings_obj.get("clients", {})
@@ -273,8 +277,6 @@ def load_settings():
     log_debug = settings_obj.get("log_debug", False)
     log_server = settings_obj.get("log_server", True)
     log_stderr = settings_obj.get("log_stderr", False)
-
-    settings_obj.add_on_change("_on_new_settings", load_settings)
 
 
 class ClientConfig(object):

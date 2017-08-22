@@ -23,16 +23,6 @@ import mdpopups
 
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
-show_status_messages = True
-show_view_status = True
-auto_show_diagnostics_panel = True
-show_diagnostics_phantoms = False
-show_diagnostics_in_view_status = True
-log_debug = True
-log_server = True
-log_stderr = False
-
-configs = []  # type: List[ClientConfig]
 
 
 class DiagnosticSeverity(object):
@@ -240,58 +230,66 @@ class Diagnostic(object):
         return self._lsp_diagnostic
 
 
-def read_client_config(name, client_config):
-    return ClientConfig(
-        name,
-        client_config.get("command", []),
-        client_config.get("scopes", []),
-        client_config.get("syntaxes", []),
-        client_config.get("languageId", "")
-    )
-
-
-def load_settings():
-    settings_obj = sublime.load_settings("LSP.sublime-settings")
-    update_settings(settings_obj)
-    settings_obj.add_on_change("_on_new_settings", lambda: update_settings(settings_obj))
-
-
-def update_settings(settings_obj: sublime.Settings):
-    global show_status_messages
-    global show_view_status
-    global auto_show_diagnostics_panel
-    global show_diagnostics_phantoms
-    global show_diagnostics_in_view_status
-    global log_debug
-    global log_server
-    global log_stderr
-    global configs
-
-    configs = []
-    client_configs = settings_obj.get("clients", {})
-    for client_name, client_config in client_configs.items():
-        config = read_client_config(client_name, client_config)
-        if config:
-            debug("Config added:", client_name)
-            configs.append(config)
-
-    show_status_messages = settings_obj.get("show_status_messages", True)
-    show_view_status = settings_obj.get("show_view_status", True)
-    auto_show_diagnostics_panel = settings_obj.get("auto_show_diagnostics_panel", True)
-    show_diagnostics_phantoms = settings_obj.get("show_diagnostics_phantoms", False)
-    show_diagnostics_in_view_status = settings_obj.get("show_diagnostics_in_view_status", True)
-    log_debug = settings_obj.get("log_debug", False)
-    log_server = settings_obj.get("log_server", True)
-    log_stderr = settings_obj.get("log_stderr", False)
-
-
 class ClientConfig(object):
-    def __init__(self, name, binary_args, scopes, syntaxes, languageId):
+
+    def __init__(self, name, data):
         self.name = name
-        self.binary_args = binary_args
-        self.scopes = scopes
-        self.syntaxes = syntaxes
-        self.languageId = languageId
+        self.command = data.get("command") or []
+        self.scopes = data.get("scopes") or []
+        self.syntaxes = data.get("syntaxes") or []
+        self.languageId = data.get("languageId") or ""
+
+    def __hash__(self):
+        return hash(self.name)
+
+
+class LspSettings(object):
+
+    # template of handled settings and their failsafe defaults.
+    LSP_SETTINGS = {
+        "show_status_messages": True,
+        "show_view_status": True,
+        "auto_show_diagnostics_panel": True,
+        "show_diagnostics_phantoms": True,
+        "show_diagnostics_in_view_status": True,
+        "log_debug": False,
+        "log_server": True,
+        "log_stderr": False
+    }
+
+    def __init__(self):
+        self.clients = set()
+        self.settings = None  # type: ignore
+        # initialize defaults until self.load() is called
+        for key, default in self.LSP_SETTINGS.items():
+            setattr(self, key, default)
+
+    def __del__(self):
+        if self.settings:
+            self.settings.clear_on_change("LspSettings.update")
+
+    def load(self):
+        if not self.settings:
+            self.settings = sublime.load_settings("LSP.sublime-settings")
+            self.settings.add_on_change(
+                "LspSettings.update", lambda: self.on_change(self))
+        self.update()
+
+    @staticmethod
+    def on_change(obj):
+        obj.update()
+
+    def update(self):
+        """Update class attributes from sublime.Settings object."""
+        for key, default in self.LSP_SETTINGS.items():
+            setattr(self, key, self.settings.get(key, default))
+        self.clients.clear()
+        client_configs = self.settings.get("clients", {})
+        for client_name, client_config in client_configs.items():
+            self.clients.add(ClientConfig(client_name, client_config))
+
+
+lsp_settings = LspSettings()
 
 
 def format_request(payload: 'Dict[str, Any]'):
@@ -409,7 +407,7 @@ class Client(object):
         while self.process.poll() is None:
             try:
                 content = self.process.stderr.readline()
-                if log_stderr and len(content) > 0:
+                if lsp_settings.log_stderr and len(content) > 0:
                     printf("(stderr): ", content.strip())
             except IOError:
                 printf("LSP stderr process ending due to exception: ",
@@ -445,7 +443,7 @@ class Client(object):
         elif method == "window/showMessage":
             sublime.active_window().message_dialog(
                 response.get("params").get("message"))
-        elif method == "window/logMessage" and log_server:
+        elif method == "window/logMessage" and lsp_settings.log_server:
             server_log(self.process.args[0],
                        response.get("params").get("message"))
         else:
@@ -454,7 +452,7 @@ class Client(object):
 
 def debug(*args):
     """Print args to the console if the "debug" setting is True."""
-    if log_debug:
+    if lsp_settings.log_debug:
         printf(*args)
 
 
@@ -489,10 +487,10 @@ def is_in_workspace(window: sublime.Window, file_path: str) -> bool:
 
 
 def plugin_loaded():
-    load_settings()
+    lsp_settings.load()
     Events.subscribe("view.on_load_async", initialize_on_open)
     Events.subscribe("view.on_activated_async", initialize_on_open)
-    if show_status_messages:
+    if lsp_settings.show_status_messages:
         sublime.status_message("LSP initialized")
     start_active_view()
 
@@ -543,7 +541,7 @@ def plugin_unloaded():
 
 
 def config_for_scope(view: sublime.View) -> 'Optional[ClientConfig]':
-    for config in configs:
+    for config in lsp_settings.clients:
         for scope in config.scopes:
             if view.match_selector(view.sel()[0].begin(), scope):
                 return config
@@ -551,7 +549,7 @@ def config_for_scope(view: sublime.View) -> 'Optional[ClientConfig]':
 
 
 def is_supported_syntax(syntax: str) -> bool:
-    for config in configs:
+    for config in lsp_settings.clients:
         if syntax in config.syntaxes:
             return True
     return False
@@ -624,7 +622,7 @@ def notify_did_open(view: sublime.View):
         view.settings().set("show_definitions", False)
         if view.file_name() not in document_states:
             get_document_state(view.file_name())
-            if show_view_status:
+            if lsp_settings.show_view_status:  # type: ignore
                 view.set_status("lsp_clients", config.name)
             params = {
                 "textDocument": {
@@ -763,7 +761,7 @@ def handle_initialize_result(result, client, window, config):
     Events.subscribe('view.on_close', remove_diagnostics)
     for view in didopen_after_initialize:
         notify_did_open(view)
-    if show_status_messages:
+    if lsp_settings.show_status_messages:
         window.status_message("{} initialized".format(config.name))
     didopen_after_initialize = list()
 
@@ -1156,7 +1154,7 @@ def update_diagnostics_phantoms(view: sublime.View, diagnostics: 'List[Diagnosti
     global phantom_sets_by_buffer
 
     buffer_id = view.buffer_id()
-    if not show_diagnostics_phantoms or view.is_dirty():
+    if not lsp_settings.show_diagnostics_phantoms or view.is_dirty():
         phantoms = None
     else:
         phantoms = list(
@@ -1173,7 +1171,7 @@ def update_diagnostics_phantoms(view: sublime.View, diagnostics: 'List[Diagnosti
 
 def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic]', severity: int):
     region_name = "lsp_" + format_severity(severity)
-    if show_diagnostics_phantoms and not view.is_dirty():
+    if lsp_settings.show_diagnostics_phantoms and not view.is_dirty():
         regions = None
     else:
         regions = list(create_region(view, diagnostic) for diagnostic in diagnostics
@@ -1269,11 +1267,11 @@ def update_diagnostics_panel(window):
                 relative_file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
                 if source_diagnostics:
                     append_diagnostics(panel, relative_file_path, source_diagnostics)
-            if auto_show_diagnostics_panel and not active_panel:
+            if lsp_settings.auto_show_diagnostics_panel and not active_panel:
                 window.run_command("show_panel",
                                    {"panel": "output.diagnostics"})
         else:
-            if auto_show_diagnostics_panel and is_active_panel:
+            if lsp_settings.auto_show_diagnostics_panel and is_active_panel:
                 window.run_command("hide_panel",
                                    {"panel": "output.diagnostics"})
         panel.set_read_only(True)
@@ -1296,13 +1294,13 @@ def append_diagnostics(panel, file_path, origin_diagnostics):
 def start_client(window: sublime.Window, config: ClientConfig):
     project_path = get_project_path(window)
     if project_path:
-        if show_status_messages:
+        if lsp_settings.show_status_messages:  # type: ignore
             window.status_message("Starting " + config.name + "...")
         debug("starting in", project_path)
-        client = start_server(config.binary_args, project_path)
+        client = start_server(config.command, project_path)
         if not client:
             window.status_message("Could not start" + config.name + ", disabling")
-            debug("Could not start", config.binary_args, ", disabling")
+            debug("Could not start", config.command, ", disabling")
             return
 
         initializeParams = {
@@ -1832,9 +1830,8 @@ class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
 
     @classmethod
     def is_applicable(cls, settings):
-        syntax = settings.get('syntax')
-        global show_diagnostics_in_view_status
-        return show_diagnostics_in_view_status and is_supported_syntax(syntax)
+        return (lsp_settings.show_diagnostics_in_view_status and
+                is_supported_syntax(settings.get('syntax')))
 
     def on_selection_modified_async(self):
         pos = self.view.sel()[0].begin()

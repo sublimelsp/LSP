@@ -501,6 +501,15 @@ def plugin_loaded():
     Events.subscribe("view.on_activated_async", initialize_on_open)
     if show_status_messages:
         sublime.status_message("LSP initialized")
+    start_active_view()
+
+
+def start_active_view():
+    window = sublime.active_window()
+    if window:
+        view = window.active_view()
+        if view and is_supported_view(view):
+            initialize_on_open(view)
 
 
 def check_window_unloaded():

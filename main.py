@@ -451,22 +451,12 @@ def debug(*args):
 
 
 def server_log(binary, *args):
-    print(binary + ": ", end='')
-
-    for arg in args:
-        print(arg, end=' ')
-
-    print()
+    printf(args, prefix=binary)
 
 
-def printf(*args):
+def printf(*args, prefix=PLUGIN_NAME):
     """Print args to the console, prefixed by the plugin name."""
-    print(PLUGIN_NAME + ': ', end='')
-
-    for arg in args:
-        print(arg, end=' ')
-
-    print()
+    print(prefix + ":", args)
 
 
 def get_project_path(window: sublime.Window) -> 'Optional[str]':

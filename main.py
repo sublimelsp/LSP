@@ -1334,7 +1334,7 @@ def start_server(server_binary_args, working_dir):
         return Client(process)
 
     except Exception as err:
-        print(err)
+        printf(err)
 
 
 def get_document_range(view: sublime.View) -> 'Any':

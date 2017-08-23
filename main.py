@@ -26,7 +26,7 @@ SUBLIME_WORD_MASK = 515
 show_status_messages = True
 show_view_status = True
 auto_show_diagnostics_panel = True
-show_diagnostics_phantoms = True
+show_diagnostics_phantoms = False
 show_diagnostics_in_view_status = True
 log_debug = True
 log_server = True
@@ -50,10 +50,10 @@ diagnostic_severity_names = {
 }
 
 diagnostic_severity_scopes = {
-    DiagnosticSeverity.Error: 'markup.error.lsp sublimelinter.mark.error',
-    DiagnosticSeverity.Warning: 'markup.warning.lsp sublimelinter.mark.warning',
-    DiagnosticSeverity.Information: 'markup.info.lsp sublimelinter.gutter-mark',
-    DiagnosticSeverity.Hint: 'markup.info.suggestion.lsp sublimelinter.gutter-mark'
+    DiagnosticSeverity.Error: 'markup.deleted.lsp sublimelinter.mark.error markup.error.lsp',
+    DiagnosticSeverity.Warning: 'markup.changed.lsp sublimelinter.mark.warning markup.warning.lsp',
+    DiagnosticSeverity.Information: 'markup.inserted.lsp sublimelinter.gutter-mark markup.info.lsp',
+    DiagnosticSeverity.Hint: 'markup.inserted.lsp sublimelinter.gutter-mark markup.info.suggestion.lsp'
 }
 
 
@@ -278,7 +278,7 @@ def update_settings(settings_obj: sublime.Settings):
     show_status_messages = settings_obj.get("show_status_messages", True)
     show_view_status = settings_obj.get("show_view_status", True)
     auto_show_diagnostics_panel = settings_obj.get("auto_show_diagnostics_panel", True)
-    show_diagnostics_phantoms = settings_obj.get("show_diagnostics_phantoms", True)
+    show_diagnostics_phantoms = settings_obj.get("show_diagnostics_phantoms", False)
     show_diagnostics_in_view_status = settings_obj.get("show_diagnostics_in_view_status", True)
     log_debug = settings_obj.get("log_debug", False)
     log_server = settings_obj.get("log_server", True)

@@ -45,13 +45,13 @@ contexts:
     # We use sublimelinter markup scopes too so that old color schemes can catch up.
     - include: pop-at-end
     - match: \berror\b
-      scope: markup.error.lsp sublimelinter.mark.error
+      scope: markup.deleted.lsp sublimelinter.mark.error markup.error.lsp
       pop: true
     - match: \bwarning\b
-      scope: markup.warning.lsp sublimelinter.mark.warning
+      scope: markup.changed.lsp sublimelinter.mark.warning markup.warning.lsp
       pop: true
     - match: \binfo\b
-      scope: markup.info.lsp sublimelinter.gutter-mark
+      scope: markup.inserted.lsp sublimelinter.gutter-mark markup.info.lsp
       pop: true
 
   expect-linter-type:

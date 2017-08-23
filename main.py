@@ -1156,11 +1156,11 @@ def update_diagnostics_phantoms(view: sublime.View, diagnostics: 'List[Diagnosti
     global phantom_sets_by_buffer
 
     buffer_id = view.buffer_id()
-    if show_diagnostics_phantoms and not view.is_dirty():
+    if not show_diagnostics_phantoms or view.is_dirty():
+        phantoms = None
+    else:
         phantoms = list(
             create_phantom(view, diagnostic) for diagnostic in diagnostics)
-    else:
-        phantoms = None  # type: ignore
     if phantoms:
         phantom_set = phantom_sets_by_buffer.get(buffer_id)
         if not phantom_set:
@@ -1174,7 +1174,7 @@ def update_diagnostics_phantoms(view: sublime.View, diagnostics: 'List[Diagnosti
 def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic]', severity: int):
     region_name = "lsp_" + format_severity(severity)
     if show_diagnostics_phantoms and not view.is_dirty():
-        regions = None  # type: ignore
+        regions = None
     else:
         regions = list(create_region(view, diagnostic) for diagnostic in diagnostics
                        if diagnostic.severity == severity)

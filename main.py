@@ -28,6 +28,7 @@ show_view_status = True
 auto_show_diagnostics_panel = True
 show_diagnostics_phantoms = False
 show_diagnostics_in_view_status = True
+only_complete_on_trigger_characters = False
 log_debug = True
 log_server = True
 log_stderr = False
@@ -1513,13 +1514,14 @@ class HoverHandler(sublime_plugin.ViewEventListener):
 class CompletionHandler(sublime_plugin.EventListener):
     def __init__(self):
         self.completions = []  # type: List[Tuple[str, str]]
+        self.requesting = False
         self.refreshing = False
 
     def on_query_completions(self, view, prefix, locations):
         if not is_supported_view(view):
             return None
 
-        if not self.refreshing:
+        if not self.refreshing and not self.requesting:
             client = client_for_view(view)
 
             if not client:
@@ -1529,19 +1531,28 @@ class CompletionHandler(sublime_plugin.EventListener):
             if not completionProvider:
                 return
 
-            autocomplete_triggers = completionProvider.get('triggerCharacters')
+            if only_complete_on_trigger_characters:
+                autocomplete_triggers = completionProvider.get('triggerCharacters')
 
-            if locations[0] > 0:
-                self.completions = []
-                prev_char = view.substr(
-                    sublime.Region(locations[0] - 1, locations[0]))
-                if prev_char not in autocomplete_triggers:
-                    return None
+                if locations[0] > 0:
+                    self.completions = []
+                    prev_char = view.substr(
+                        sublime.Region(locations[0] - 1, locations[0]))
+                    if prev_char not in autocomplete_triggers:
+                        return None
+
+            # TODO: cancel last completion list when backspacing.
 
             purge_did_change(view.buffer_id())
+            row, col = view.rowcol(locations[0])
+            debug('requesting for: ', prefix, row, ':', col)
             client.send_request(
                 Request.complete(get_document_position(view, locations[0])),
                 self.handle_response)
+            self.requesting = True
+            if not only_complete_on_trigger_characters:
+                return [], (sublime.INHIBIT_WORD_COMPLETIONS
+                            | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
         self.refreshing = False
         return self.completions, (sublime.INHIBIT_WORD_COMPLETIONS
@@ -1562,6 +1573,7 @@ class CompletionHandler(sublime_plugin.EventListener):
         items = response["items"] if isinstance(response,
                                                 dict) else response
         self.completions = list(self.format_completion(item) for item in items)
+        self.requesting = False
         self.run_auto_complete()
 
     def run_auto_complete(self):
@@ -1569,7 +1581,7 @@ class CompletionHandler(sublime_plugin.EventListener):
         sublime.active_window().active_view().run_command(
             "auto_complete", {
                 'disable_auto_insert': True,
-                'api_completions_only': False,
+                'api_completions_only': True,
                 'next_completion_if_showing': False,
                 'auto_complete_commit_on_tab': True,
             })

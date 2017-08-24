@@ -1436,6 +1436,9 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             self.request_symbol_hover(point, hover_zone)
 
     def request_symbol_hover(self, point, hover_zone):
+        filter = 'comment, constant, keyword, storage, string'
+        if self.view.match_selector(point, filter):
+            return
         client = client_for_view(self.view)
         if client and client.has_capability('hoverProvider'):
             word_at_sel = self.view.classify(point)

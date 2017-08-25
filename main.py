@@ -1453,6 +1453,8 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             return
         contents = "No description available."
         if isinstance(response, dict):
+            # Flow returns None sometimes
+            # See: https://github.com/flowtype/flow-language-server/issues/51
             contents = response.get('contents') or contents
         self.show_hover(point, contents)
 

@@ -1427,20 +1427,20 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         return is_supported_syntax(syntax)
 
     def on_hover(self, point, hover_zone):
+        if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():
+            return
         line_diagnostics = get_line_diagnostics(self.view, point)
-        if len(line_diagnostics) > 0:
+        if line_diagnostics:
             self.show_diagnostics_hover(point, line_diagnostics)
         else:
             self.request_symbol_hover(point, hover_zone)
 
     def request_symbol_hover(self, point, hover_zone):
+        filter = 'comment, constant, keyword, storage, string'
+        if self.view.match_selector(point, filter):
+            return
         client = client_for_view(self.view)
-        if not client:
-            return
-        if not client.has_capability('hoverProvider'):
-            return
-
-        if hover_zone == sublime.HOVER_TEXT:
+        if client and client.has_capability('hoverProvider'):
             word_at_sel = self.view.classify(point)
             if word_at_sel & SUBLIME_WORD_MASK:
                 client.send_request(
@@ -1449,14 +1449,13 @@ class HoverHandler(sublime_plugin.ViewEventListener):
 
     def handle_response(self, response, point):
         debug(response)
-        if response is None:
+        if self.view.is_popup_visible():
+            return
+        contents = "No description available."
+        if isinstance(response, dict):
             # Flow returns None sometimes
             # See: https://github.com/flowtype/flow-language-server/issues/51
-            return
-        contents = response.get('contents')
-        if len(contents) < 1:
-            return
-
+            contents = response.get('contents') or contents
         self.show_hover(point, contents)
 
     def show_diagnostics_hover(self, point, diagnostics):
@@ -1503,7 +1502,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         mdpopups.show_popup(
             self.view,
             "\n".join(formatted),
-            css=".mdpopups .lsp_hover { margin: 4px; }",
+            css=".mdpopups .lsp_hover { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
             md=True,
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
             location=point,
@@ -1645,7 +1644,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 mdpopups.show_popup(
                     self.view,
                     "\n".join(formatted),
-                    css=".mdpopups .lsp_signature { margin: 4px; }",
+                    css=".mdpopups .lsp_signature { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
                     md=True,
                     flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
                     location=point,

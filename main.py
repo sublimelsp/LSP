@@ -1604,7 +1604,7 @@ class CompletionHandler2(sublime_plugin.ViewEventListener):
             insertText = item.get("insertText")
         if insertText[0] == '$':  # sublime needs leading '$' escaped.
             insertText = '\$' + insertText[1:]
-        return ["{}\t{}".format(label, detail), insertText]
+        return "{}\t{}".format(label, detail), insertText
 
     def handle_response(self, response):
         if self.state == CompletionState.REQUESTING:

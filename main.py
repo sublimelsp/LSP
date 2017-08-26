@@ -193,15 +193,26 @@ class Notification:
 
 class Point(object):
     def __init__(self, row: int, col: int) -> None:
+        if not isinstance(row, int):
+            raise ValueError('row')
+        if not isinstance(col, int):
+            raise ValueError('col')
         self.row = row
         self.col = col
 
+    def __repr__(self):
+        return "{}:{}".format(self.row, self.col)
+
     @classmethod
-    def from_lsp(cls, lsp_point: dict) -> 'Point':
-        return Point(lsp_point.get('line', -1), lsp_point.get('character', -1))
+    def from_lsp(cls, point: dict) -> 'Point':
+        return Point(point['line'], point['character'])
 
     def to_lsp(self) -> dict:
         return {"line": self.row, "character": self.col}
+
+    @classmethod
+    def from_text_point(self, view: sublime.View, point: int) -> 'Point':
+        return Point(*view.rowcol(point))
 
     def to_text_point(self, view) -> int:
         return view.text_point(self.row, self.col)
@@ -212,13 +223,22 @@ class Range(object):
         self.start = start
         self.end = end
 
+    def __repr__(self):
+        return "({} {})".format(self.start, self.end)
+
     @classmethod
-    def from_lsp(cls, lsp_range: dict) -> 'Range':
-        return Range(Point.from_lsp(lsp_range.get('start')),
-                     Point.from_lsp(lsp_range.get('end')))
+    def from_lsp(cls, range: dict) -> 'Range':
+        return Range(Point.from_lsp(range['start']), Point.from_lsp(range['end']))
 
     def to_lsp(self) -> dict:
         return {"start": self.start.to_lsp(), "end": self.end.to_lsp()}
+
+    @classmethod
+    def from_region(self, view: sublime.View, region: sublime.Region) -> 'Range':
+        return Range(
+            Point.from_text_point(view, region.begin()),
+            Point.from_text_point(view, region.end())
+        )
 
     def to_region(self, view: sublime.View) -> sublime.Region:
         return sublime.Region(self.start.to_text_point(view), self.end.to_text_point(view))
@@ -235,8 +255,10 @@ class Diagnostic(object):
     @classmethod
     def from_lsp(cls, lsp_diagnostic):
         return Diagnostic(
-            lsp_diagnostic.get('message'),
-            Range.from_lsp(lsp_diagnostic.get('range')),
+            # crucial keys
+            lsp_diagnostic['message'],
+            Range.from_lsp(lsp_diagnostic['range']),
+            # optional keys
             lsp_diagnostic.get('severity', DiagnosticSeverity.Error),
             lsp_diagnostic.get('source'),
             lsp_diagnostic
@@ -934,7 +956,7 @@ class LspSymbolDefinitionCommand(sublime_plugin.TextCommand):
         else:
             location = response[0]
             file_path = uri_to_filename(location.get("uri"))
-            start = Point.from_lsp(location.get('range').get('start'))
+            start = Point.from_lsp(location['range']['start'])
             file_location = "{}:{}:{}".format(file_path, start.row + 1, start.col + 1)
             debug("opening location", location)
             window.open_file(file_location, sublime.ENCODED_POSITION)
@@ -985,7 +1007,7 @@ class LspDocumentSymbolsCommand(sublime_plugin.TextCommand):
 
     def on_symbol_selected(self, symbol_index):
         selected_symbol = self.symbols[symbol_index]
-        range = selected_symbol.get("location").get("range")
+        range = selected_symbol['location']['range']
         region = Range.from_lsp(range).to_region(self.view)
         self.view.show_at_center(region)
         self.view.sel().clear()
@@ -1775,7 +1797,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         self.view.erase_regions('lsp_edit')
 
     def create_region(self, change):
-        return Range.from_lsp(change.get('range')).to_region(self.view)
+        return Range.from_lsp(change['range']).to_region(self.view)
 
     def apply_change(self, region, newText, edit):
         if region.empty():

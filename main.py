@@ -1427,7 +1427,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return is_supported_syntax(syntax)
+        return syntax and is_supported_syntax(syntax)
 
     def on_hover(self, point, hover_zone):
         if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():
@@ -1533,7 +1533,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return is_supported_syntax(syntax)
+        return syntax and is_supported_syntax(syntax)
 
     def initialize(self):
         self.initialized = True
@@ -1641,7 +1641,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return is_supported_syntax(syntax)
+        return syntax and is_supported_syntax(syntax)
 
     def initialize_triggers(self):
         client = client_for_view(self.view)
@@ -1892,7 +1892,7 @@ class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
         global show_diagnostics_in_view_status
-        return show_diagnostics_in_view_status and is_supported_syntax(syntax)
+        return show_diagnostics_in_view_status and syntax and is_supported_syntax(syntax)
 
     def on_selection_modified_async(self):
         pos = self.view.sel()[0].begin()
@@ -1918,7 +1918,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return is_supported_syntax(syntax)
+        return syntax and is_supported_syntax(syntax)
 
     @classmethod
     def applies_to_primary_view_only(cls):

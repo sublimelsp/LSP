@@ -1,0 +1,19 @@
+# Stuff not being exported to ZIP and therefore
+# prevented from being packed into LSP.sublime-package
+
+## git
+.github/          export-ignore
+gh-pages/         export-ignore
+*.git             export-ignore
+*.gitignore       export-ignore
+*.gitattributes   export-ignore
+
+## unit testing
+tests/            export-ignore
+unittesting.json  export-ignore
+
+## other configs
+stubs/            export-ignore
+.travis.yml       export-ignore
+*.ini             export-ignore
+*.cfg             export-ignore

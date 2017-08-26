@@ -28,7 +28,7 @@ show_view_status = True
 auto_show_diagnostics_panel = True
 show_diagnostics_phantoms = False
 show_diagnostics_in_view_status = True
-only_complete_on_trigger_characters = False
+complete_all_chars = False
 log_debug = True
 log_server = True
 log_stderr = False
@@ -263,6 +263,7 @@ def update_settings(settings_obj: sublime.Settings):
     global auto_show_diagnostics_panel
     global show_diagnostics_phantoms
     global show_diagnostics_in_view_status
+    global complete_all_chars
     global log_debug
     global log_server
     global log_stderr
@@ -281,6 +282,7 @@ def update_settings(settings_obj: sublime.Settings):
     auto_show_diagnostics_panel = settings_obj.get("auto_show_diagnostics_panel", True)
     show_diagnostics_phantoms = settings_obj.get("show_diagnostics_phantoms", False)
     show_diagnostics_in_view_status = settings_obj.get("show_diagnostics_in_view_status", True)
+    complete_all_chars = settings_obj.get("complete_all_chars", True)
     log_debug = settings_obj.get("log_debug", False)
     log_server = settings_obj.get("log_server", True)
     log_stderr = settings_obj.get("log_stderr", False)
@@ -1518,10 +1520,12 @@ class CompletionState(object):
     CANCELLING = 3
 
 
-class CompletionHandler2(sublime_plugin.ViewEventListener):
+class CompletionHandler(sublime_plugin.ViewEventListener):
     def __init__(self, view):
         self.view = view
-        self.autocomplete_triggers = None
+        self.initialized = False
+        self.enabled = False
+        self.trigger_chars = []  # type: List[str]
         self.completions = []  # type: List[Tuple[str, str]]
         self.state = CompletionState.IDLE
         self.next_request = None
@@ -1531,69 +1535,65 @@ class CompletionHandler2(sublime_plugin.ViewEventListener):
         syntax = settings.get('syntax')
         return is_supported_syntax(syntax)
 
-    def initialize_triggers(self):
+    def initialize(self):
+        self.initialized = True
         client = client_for_view(self.view)
         if client:
             completionProvider = client.get_capability(
                 'completionProvider')
             if completionProvider:
-                self.autocomplete_triggers = completionProvider.get(
-                    'triggerCharacters')
+                self.enabled = True
+                self.trigger_chars = completionProvider.get(
+                    'triggerCharacters') or []
                 return
-
-        self.autocomplete_triggers = []
 
     def is_after_trigger_character(self, location):
         if location > 0:
             prev_char = self.view.substr(
                 sublime.Region(location - 1, location))
-            return prev_char in self.autocomplete_triggers
+            return prev_char in self.trigger_chars
 
     def on_query_completions(self, prefix, locations):
-        debug('enter at state {}'.format(self.state))
-        if self.state == CompletionState.IDLE:
-            self.do_request(prefix, locations)
-            self.completions = []
+        if not self.initialized:
+            self.initialize()
 
-        elif self.state == CompletionState.REQUESTING or self.state == CompletionState.CANCELLING:
-            debug('replacing request')
-            self.next_request = (prefix, locations)
-            self.state = CompletionState.CANCELLING
+        if self.enabled:
+            debug('enter at state {}'.format(self.state))
+            if self.state == CompletionState.IDLE:
+                self.do_request(prefix, locations)
+                self.completions = []  # type: List[Tuple[str, str]]
 
-        elif self.state == CompletionState.APPLYING:
-            debug('applying', self.completions)
-            self.state = CompletionState.IDLE
+            elif self.state == CompletionState.REQUESTING or self.state == CompletionState.CANCELLING:
+                debug('replacing request')
+                self.next_request = (prefix, locations)
+                self.state = CompletionState.CANCELLING
 
-        return self.completions, (sublime.INHIBIT_WORD_COMPLETIONS
-                                  | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+            elif self.state == CompletionState.APPLYING:
+                debug('applying', self.completions)
+                self.state = CompletionState.IDLE
+
+            return self.completions, (sublime.INHIBIT_WORD_COMPLETIONS
+                                      | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
     def do_request(self, prefix, locations):
         self.next_request = None
         view = self.view
 
-        if not is_supported_view(view):
-            return None
-
+        # don't store client so we can handle restarts
         client = client_for_view(view)
         if not client:
             return
 
-        completionProvider = client.get_capability('completionProvider')
-        if not completionProvider:
-            return
+        if complete_all_chars or self.is_after_trigger_character(locations[0]):
+            snapshot = view.substr(view.full_line(locations[0])).strip()
+            row, col = view.rowcol(locations[0])
+            debug('requesting for: "{}" {}:{}'.format(snapshot, row, col))
 
-        if only_complete_on_trigger_characters and not self.is_after_trigger_character():
-            return
-
-        snapshot = view.substr(view.full_line(locations[0])).strip()
-        row, col = view.rowcol(locations[0])
-        debug('requesting for: "{}" {}:{}'.format(snapshot, row, col))
-
-        purge_did_change(view.buffer_id())
-        client.send_request(
-            Request.complete(get_document_position(view, locations[0])),
-            self.handle_response)
-        self.state = CompletionState.REQUESTING
+            purge_did_change(view.buffer_id())
+            client.send_request(
+                Request.complete(get_document_position(view, locations[0])),
+                self.handle_response)
+            self.state = CompletionState.REQUESTING
 
     def format_completion(self, item) -> 'Tuple[str, str]':
         label = item.get("label")

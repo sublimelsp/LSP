@@ -42,6 +42,7 @@
   "auto_show_diagnostics_panel": true,
   "show_diagnostics_phantoms": false,
   "show_diagnostics_in_view_status": true,
+  "complete_all_chars": true,
   "log_debug": false,
   "log_server": true,
   "log_stderr": false

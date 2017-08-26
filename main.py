@@ -208,7 +208,10 @@ class Point(object):
         return Point(point['line'], point['character'])
 
     def to_lsp(self) -> dict:
-        return {"line": self.row, "character": self.col}
+        r = OrderedDict()  # type: OrderedDict[str, Any]
+        r['line'] = self.row
+        r['character'] = self.col
+        return r
 
     @classmethod
     def from_text_point(self, view: sublime.View, point: int) -> 'Point':
@@ -231,7 +234,10 @@ class Range(object):
         return Range(Point.from_lsp(range['start']), Point.from_lsp(range['end']))
 
     def to_lsp(self) -> dict:
-        return {"start": self.start.to_lsp(), "end": self.end.to_lsp()}
+        r = OrderedDict()  # type: OrderedDict[str, Any]
+        r['start'] = self.start.to_lsp()
+        r['end'] = self.end.to_lsp()
+        return r
 
     @classmethod
     def from_region(self, view: sublime.View, region: sublime.Region) -> 'Range':
@@ -1373,36 +1379,20 @@ def start_server(server_binary_args, working_dir):
         printf(err)
 
 
-def get_document_range(view: sublime.View) -> 'Any':
-    range = {
-        "start": {
-            "line": 0,
-            "character": 0
-        },
-        "end": {
-            "line": 0,
-            "character": 0
-        }
-    }
-    return {
-        "textDocument": {
-            "uri": filename_to_uri(view.file_name())
-        },
-        "range": range
-    }
+def get_document_range(view: sublime.View, region: sublime.Region) -> OrderedDict:
+    d = OrderedDict()  # type: OrderedDict[str, Any]
+    d['textDocument'] = {"uri": filename_to_uri(view.file_name())}
+    d['range'] = Range.from_region(view, region).to_lsp()
+    return d
 
 
-def get_document_position(view, point):
-    if point:
-        (row, col) = view.rowcol(point)
-    else:
-        view.sel()
-    uri = filename_to_uri(view.file_name())
-    position = OrderedDict(line=row, character=col)
-    dp = OrderedDict()  # type: Dict[str, Any]
-    dp["textDocument"] = {"uri": uri}
-    dp["position"] = position
-    return dp
+def get_document_position(view: sublime.View, point) -> OrderedDict:
+    if not point:
+        point = view.sel()[0].begin()
+    d = OrderedDict()  # type: OrderedDict[str, Any]
+    d['textDocument'] = {"uri": filename_to_uri(view.file_name())}
+    d['position'] = Point.from_text_point(view, point).to_lsp()
+    return d
 
 
 class Events:

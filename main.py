@@ -20,6 +20,8 @@ import sublime
 
 import mdpopups
 
+from .modules.settings import ClientConfig
+from .modules.settings import lsp_settings
 
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
@@ -228,68 +230,6 @@ class Diagnostic(object):
 
     def to_lsp(self):
         return self._lsp_diagnostic
-
-
-class ClientConfig(object):
-
-    def __init__(self, name, data):
-        self.name = name
-        self.command = data.get("command") or []
-        self.scopes = data.get("scopes") or []
-        self.syntaxes = data.get("syntaxes") or []
-        self.languageId = data.get("languageId") or ""
-
-    def __hash__(self):
-        return hash(self.name)
-
-
-class LspSettings(object):
-
-    # template of handled settings and their failsafe defaults.
-    LSP_SETTINGS = {
-        "show_status_messages": True,
-        "show_view_status": True,
-        "auto_show_diagnostics_panel": True,
-        "show_diagnostics_phantoms": True,
-        "show_diagnostics_in_view_status": True,
-        "log_debug": False,
-        "log_server": True,
-        "log_stderr": False
-    }
-
-    def __init__(self):
-        self.clients = set()
-        self.settings = None  # type: ignore
-        # initialize defaults until self.load() is called
-        for key, default in self.LSP_SETTINGS.items():
-            setattr(self, key, default)
-
-    def __del__(self):
-        if self.settings:
-            self.settings.clear_on_change("LspSettings.update")
-
-    def load(self):
-        if not self.settings:
-            self.settings = sublime.load_settings("LSP.sublime-settings")
-            self.settings.add_on_change(
-                "LspSettings.update", lambda: self.on_change(self))
-        self.update()
-
-    @staticmethod
-    def on_change(obj):
-        obj.update()
-
-    def update(self):
-        """Update class attributes from sublime.Settings object."""
-        for key, default in self.LSP_SETTINGS.items():
-            setattr(self, key, self.settings.get(key, default))
-        self.clients.clear()
-        client_configs = self.settings.get("clients", {})
-        for client_name, client_config in client_configs.items():
-            self.clients.add(ClientConfig(client_name, client_config))
-
-
-lsp_settings = LspSettings()
 
 
 def format_request(payload: 'Dict[str, Any]'):

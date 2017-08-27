@@ -1654,13 +1654,12 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
 
 def get_line_diagnostics(view, point):
-    (row, col) = view.rowcol(point)
+    row, _ = view.rowcol(point)
     diagnostics = get_diagnostics_for_view(view)
-    line_diagnostics = []
-    for diagnostic in diagnostics:
-        if row >= diagnostic.range.start.row and row <= diagnostic.range.end.row:
-            line_diagnostics.append(diagnostic)
-    return line_diagnostics
+    return tuple(
+        diagnostic for diagnostic in diagnostics
+        if diagnostic.range.start.row <= row <= diagnostic.range.end.row
+    )
 
 
 def get_diagnostics_for_view(view: sublime.View) -> 'List[Diagnostic]':

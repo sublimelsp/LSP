@@ -1563,7 +1563,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 self.do_request(prefix, locations)
                 self.completions = []  # type: List[Tuple[str, str]]
 
-            elif self.state == CompletionState.REQUESTING or self.state == CompletionState.CANCELLING:
+            elif self.state in (CompletionState.REQUESTING, CompletionState.CANCELLING):
                 debug('replacing request')
                 self.next_request = (prefix, locations)
                 self.state = CompletionState.CANCELLING

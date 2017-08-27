@@ -1545,7 +1545,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 self.enabled = True
                 self.trigger_chars = completionProvider.get(
                     'triggerCharacters') or []
-                return
 
     def is_after_trigger_character(self, location):
         if location > 0:
@@ -1558,22 +1557,21 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             self.initialize()
 
         if self.enabled:
-            debug('enter at state {}'.format(self.state))
             if self.state == CompletionState.IDLE:
                 self.do_request(prefix, locations)
                 self.completions = []  # type: List[Tuple[str, str]]
 
             elif self.state in (CompletionState.REQUESTING, CompletionState.CANCELLING):
-                debug('replacing request')
                 self.next_request = (prefix, locations)
                 self.state = CompletionState.CANCELLING
 
             elif self.state == CompletionState.APPLYING:
-                debug('applying', self.completions)
                 self.state = CompletionState.IDLE
 
-            return self.completions, (sublime.INHIBIT_WORD_COMPLETIONS
-                                      | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+            return (
+                self.completions,
+                sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
+            )
 
     def do_request(self, prefix, locations):
         self.next_request = None
@@ -1585,10 +1583,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             return
 
         if complete_all_chars or self.is_after_trigger_character(locations[0]):
-            snapshot = view.substr(view.full_line(locations[0])).strip()
-            row, col = view.rowcol(locations[0])
-            debug('requesting for: "{}" {}:{}'.format(snapshot, row, col))
-
             purge_did_change(view.buffer_id())
             client.send_request(
                 Request.complete(get_document_position(view, locations[0])),
@@ -1610,16 +1604,11 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         if self.state == CompletionState.REQUESTING:
             items = response["items"] if isinstance(response,
                                                     dict) else response
-            names = list(item.get('label') for item in items)
-            debug('got completions', names)
             self.completions = list(self.format_completion(item) for item in items)
             self.state = CompletionState.APPLYING
             self.run_auto_complete()
-
         elif self.state == CompletionState.CANCELLING:
-            debug('replacing request')
             self.do_request(*self.next_request)
-
         else:
             debug('Got unexpected response while in state {}'.format(self.state))
 

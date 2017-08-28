@@ -1202,13 +1202,15 @@ def update_diagnostics_in_view(view: sublime.View, diagnostics: 'List[Diagnostic
 def remove_diagnostics(view: sublime.View):
     """Removes diagnostics for a file if no views exist for it
     """
-    window = sublime.active_window()
-    file_path = view.file_name()
-    if not window.find_open_file(view.file_name()):
-        update_file_diagnostics(window, file_path, 'lsp', [])
-        update_diagnostics_panel(window)
-    else:
-        debug('file still open?')
+    if is_supported_view(view):
+        window = sublime.active_window()
+
+        file_path = view.file_name()
+        if not window.find_open_file(view.file_name()):
+            update_file_diagnostics(window, file_path, 'lsp', [])
+            update_diagnostics_panel(window)
+        else:
+            debug('file still open?')
 
 
 def handle_diagnostics(update: 'Any'):

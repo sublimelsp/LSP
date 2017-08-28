@@ -193,12 +193,8 @@ class Notification:
 
 class Point(object):
     def __init__(self, row: int, col: int) -> None:
-        if not isinstance(row, int):
-            raise ValueError('row')
-        if not isinstance(col, int):
-            raise ValueError('col')
-        self.row = row
-        self.col = col
+        self.row = int(row)
+        self.col = int(col)
 
     def __repr__(self):
         return "{}:{}".format(self.row, self.col)

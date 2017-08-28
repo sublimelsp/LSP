@@ -28,6 +28,7 @@ show_view_status = True
 auto_show_diagnostics_panel = True
 show_diagnostics_phantoms = False
 show_diagnostics_in_view_status = True
+complete_all_chars = False
 log_debug = True
 log_server = True
 log_stderr = False
@@ -262,6 +263,7 @@ def update_settings(settings_obj: sublime.Settings):
     global auto_show_diagnostics_panel
     global show_diagnostics_phantoms
     global show_diagnostics_in_view_status
+    global complete_all_chars
     global log_debug
     global log_server
     global log_stderr
@@ -280,6 +282,7 @@ def update_settings(settings_obj: sublime.Settings):
     auto_show_diagnostics_panel = settings_obj.get("auto_show_diagnostics_panel", True)
     show_diagnostics_phantoms = settings_obj.get("show_diagnostics_phantoms", False)
     show_diagnostics_in_view_status = settings_obj.get("show_diagnostics_in_view_status", True)
+    complete_all_chars = settings_obj.get("complete_all_chars", True)
     log_debug = settings_obj.get("log_debug", False)
     log_server = settings_obj.get("log_server", True)
     log_stderr = settings_obj.get("log_stderr", False)
@@ -1424,7 +1427,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return is_supported_syntax(syntax)
+        return syntax and is_supported_syntax(syntax)
 
     def on_hover(self, point, hover_zone):
         if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():
@@ -1510,42 +1513,81 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             max_width=800)
 
 
-class CompletionHandler(sublime_plugin.EventListener):
-    def __init__(self):
+class CompletionState(object):
+    IDLE = 0
+    REQUESTING = 1
+    APPLYING = 2
+    CANCELLING = 3
+
+
+class CompletionHandler(sublime_plugin.ViewEventListener):
+    def __init__(self, view):
+        self.view = view
+        self.initialized = False
+        self.enabled = False
+        self.trigger_chars = []  # type: List[str]
         self.completions = []  # type: List[Tuple[str, str]]
-        self.refreshing = False
+        self.state = CompletionState.IDLE
+        self.next_request = None
 
-    def on_query_completions(self, view, prefix, locations):
-        if not is_supported_view(view):
-            return None
+    @classmethod
+    def is_applicable(cls, settings):
+        syntax = settings.get('syntax')
+        return syntax and is_supported_syntax(syntax)
 
-        if not self.refreshing:
-            client = client_for_view(view)
+    def initialize(self):
+        self.initialized = True
+        client = client_for_view(self.view)
+        if client:
+            completionProvider = client.get_capability(
+                'completionProvider')
+            if completionProvider:
+                self.enabled = True
+                self.trigger_chars = completionProvider.get(
+                    'triggerCharacters') or []
 
-            if not client:
-                return
+    def is_after_trigger_character(self, location):
+        if location > 0:
+            prev_char = self.view.substr(
+                sublime.Region(location - 1, location))
+            return prev_char in self.trigger_chars
 
-            completionProvider = client.get_capability('completionProvider')
-            if not completionProvider:
-                return
+    def on_query_completions(self, prefix, locations):
+        if not self.initialized:
+            self.initialize()
 
-            autocomplete_triggers = completionProvider.get('triggerCharacters')
+        if self.enabled:
+            if self.state == CompletionState.IDLE:
+                self.do_request(prefix, locations)
+                self.completions = []  # type: List[Tuple[str, str]]
 
-            if locations[0] > 0:
-                self.completions = []
-                prev_char = view.substr(
-                    sublime.Region(locations[0] - 1, locations[0]))
-                if prev_char not in autocomplete_triggers:
-                    return None
+            elif self.state in (CompletionState.REQUESTING, CompletionState.CANCELLING):
+                self.next_request = (prefix, locations)
+                self.state = CompletionState.CANCELLING
 
+            elif self.state == CompletionState.APPLYING:
+                self.state = CompletionState.IDLE
+
+            return (
+                self.completions,
+                sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
+            )
+
+    def do_request(self, prefix, locations):
+        self.next_request = None
+        view = self.view
+
+        # don't store client so we can handle restarts
+        client = client_for_view(view)
+        if not client:
+            return
+
+        if complete_all_chars or self.is_after_trigger_character(locations[0]):
             purge_did_change(view.buffer_id())
             client.send_request(
                 Request.complete(get_document_position(view, locations[0])),
                 self.handle_response)
-
-        self.refreshing = False
-        return self.completions, (sublime.INHIBIT_WORD_COMPLETIONS
-                                  | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+            self.state = CompletionState.REQUESTING
 
     def format_completion(self, item) -> 'Tuple[str, str]':
         label = item.get("label")
@@ -1556,20 +1598,25 @@ class CompletionHandler(sublime_plugin.EventListener):
             insertText = item.get("insertText")
         if insertText[0] == '$':  # sublime needs leading '$' escaped.
             insertText = '\$' + insertText[1:]
-        return ("{}\t{}".format(label, detail), insertText)
+        return "{}\t{}".format(label, detail), insertText
 
     def handle_response(self, response):
-        items = response["items"] if isinstance(response,
-                                                dict) else response
-        self.completions = list(self.format_completion(item) for item in items)
-        self.run_auto_complete()
+        if self.state == CompletionState.REQUESTING:
+            items = response["items"] if isinstance(response,
+                                                    dict) else response
+            self.completions = list(self.format_completion(item) for item in items)
+            self.state = CompletionState.APPLYING
+            self.run_auto_complete()
+        elif self.state == CompletionState.CANCELLING:
+            self.do_request(*self.next_request)
+        else:
+            debug('Got unexpected response while in state {}'.format(self.state))
 
     def run_auto_complete(self):
-        self.refreshing = True
-        sublime.active_window().active_view().run_command(
+        self.view.run_command(
             "auto_complete", {
                 'disable_auto_insert': True,
-                'api_completions_only': False,
+                'api_completions_only': True,
                 'next_completion_if_showing': False,
                 'auto_complete_commit_on_tab': True,
             })
@@ -1583,7 +1630,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return is_supported_syntax(syntax)
+        return syntax and is_supported_syntax(syntax)
 
     def initialize_triggers(self):
         client = client_for_view(self.view)
@@ -1834,7 +1881,7 @@ class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
         global show_diagnostics_in_view_status
-        return show_diagnostics_in_view_status and is_supported_syntax(syntax)
+        return show_diagnostics_in_view_status and syntax and is_supported_syntax(syntax)
 
     def on_selection_modified_async(self):
         pos = self.view.sel()[0].begin()
@@ -1860,7 +1907,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return is_supported_syntax(syntax)
+        return syntax and is_supported_syntax(syntax)
 
     @classmethod
     def applies_to_primary_view_only(cls):

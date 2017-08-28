@@ -68,18 +68,41 @@ Autocomplete triggers:
 
 ### PHP<a name="php"></a>
 
+1. modify `~/.composer/composer.json` to set
+```
+"minimum-stability": "dev",
+"prefer-stable": true,
+```
+2. run `composer global require felixfbecker/language-server`
+3. run `composer run-script --working-dir=~/.composer/vendor/felixfbecker/language-server parse-stubs`
+4. modify `LSP.sublime-settings - User`
+```
+{
+  "clients": {
+    "phpls": {
+      "command": ["php", "/PATH-TO-HOME-DIR/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"],
+      "scopes": ["source.php"],
+      "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
+      "languageId": "php"
+    }
+  }
+}
+```
+
+5. add triggers to `Preferences.sublime-settings - User`
+```
+"auto_complete_triggers":
+[
+  {
+    "characters": "$>:\\",
+    "selector": "source.php"
+  }
+]
+```
+
+
 See: [github:felixfbecker/php-language-server](https://github.com/felixfbecker/php-language-server)
 
-Client configuration
-```
-      "phpls":
-      {
-          "command": ["php", "/PATH-TO-HOME-DIR/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"],
-          "scopes": ["source.php"],
-          "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
-          "languageId": "php"
-      }
-```
 
 ### Rust<a name="rust"></a>
 

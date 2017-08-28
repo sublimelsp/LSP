@@ -329,6 +329,7 @@ class Client(object):
 
     def send_request(self, request: Request, handler: 'Callable'):
         self.request_id += 1
+        debug('request {}: {} '.format(self.request_id, request.method))
         if handler is not None:
             self.handlers[self.request_id] = handler
         self.send_payload(request.to_payload(self.request_id))

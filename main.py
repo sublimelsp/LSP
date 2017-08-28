@@ -23,6 +23,8 @@ import mdpopups
 
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
+NO_HOVER_SCOPES = 'comment, constant, keyword, storage, string'
+NO_COMPLETION_SCOPES = 'comment, string'
 show_status_messages = True
 show_view_status = True
 auto_show_diagnostics_panel = True
@@ -1436,11 +1438,10 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         if line_diagnostics:
             self.show_diagnostics_hover(point, line_diagnostics)
         else:
-            self.request_symbol_hover(point, hover_zone)
+            self.request_symbol_hover(point)
 
-    def request_symbol_hover(self, point, hover_zone):
-        filter = 'comment, constant, keyword, storage, string'
-        if self.view.match_selector(point, filter):
+    def request_symbol_hover(self, point):
+        if self.view.match_selector(point, NO_HOVER_SCOPES):
             return
         client = client_for_view(self.view)
         if client and client.has_capability('hoverProvider'):
@@ -1553,6 +1554,9 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             return prev_char in self.trigger_chars
 
     def on_query_completions(self, prefix, locations):
+        if self.view.match_selector(locations[0], NO_COMPLETION_SCOPES):
+            return
+
         if not self.initialized:
             self.initialize()
 

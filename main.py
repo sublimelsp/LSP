@@ -289,6 +289,14 @@ def load_settings():
     settings_obj.add_on_change("_on_new_settings", lambda: update_settings(settings_obj))
 
 
+def read_bool_setting(settings_obj: sublime.Settings, key: str, default: bool) -> bool:
+    val = settings_obj.get(key)
+    if isinstance(val, bool):
+        return val
+    else:
+        return default
+
+
 def update_settings(settings_obj: sublime.Settings):
     global show_status_messages
     global show_view_status
@@ -303,21 +311,24 @@ def update_settings(settings_obj: sublime.Settings):
 
     configs = []
     client_configs = settings_obj.get("clients", {})
-    for client_name, client_config in client_configs.items():
-        config = read_client_config(client_name, client_config)
-        if config:
-            debug("Config added:", client_name)
-            configs.append(config)
+    if isinstance(client_configs, dict):
+        for client_name, client_config in client_configs.items():
+            config = read_client_config(client_name, client_config)
+            if config:
+                debug("Config added:", client_name)
+                configs.append(config)
+    else:
+        raise ValueError("client_configs")
 
-    show_status_messages = settings_obj.get("show_status_messages", True)
-    show_view_status = settings_obj.get("show_view_status", True)
-    auto_show_diagnostics_panel = settings_obj.get("auto_show_diagnostics_panel", True)
-    show_diagnostics_phantoms = settings_obj.get("show_diagnostics_phantoms", False)
-    show_diagnostics_in_view_status = settings_obj.get("show_diagnostics_in_view_status", True)
-    complete_all_chars = settings_obj.get("complete_all_chars", True)
-    log_debug = settings_obj.get("log_debug", False)
-    log_server = settings_obj.get("log_server", True)
-    log_stderr = settings_obj.get("log_stderr", False)
+    show_status_messages = read_bool_setting(settings_obj, "show_status_messages", True)
+    show_view_status = read_bool_setting(settings_obj, "show_view_status", True)
+    auto_show_diagnostics_panel = read_bool_setting(settings_obj, "auto_show_diagnostics_panel", True)
+    show_diagnostics_phantoms = read_bool_setting(settings_obj, "show_diagnostics_phantoms", False)
+    show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
+    complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
+    log_debug = read_bool_setting(settings_obj, "log_debug", False)
+    log_server = read_bool_setting(settings_obj, "log_server", True)
+    log_stderr = read_bool_setting(settings_obj, "log_stderr", False)
 
 
 class ClientConfig(object):
@@ -1549,7 +1560,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
     def is_after_trigger_character(self, location):
         if location > 0:
-            prev_char = self.view.substr(location - 1)
+            prev_char = self.view.substr()
             return prev_char in self.trigger_chars
 
     def on_query_completions(self, prefix, locations):

@@ -2,10 +2,22 @@
 
 # Configuration
 
-## Global Settings
 
-* `show_status_messages` `true` *plugin shows messages in the status bar for a few seconds*
-* `show_view_status` `true` *plugin shows permanent status in the status bar* 
+## Sublime Settings
+
+* `mdpopups.use_sublime_highlighter` `true` *correct syntax highlighting in hover popups
+
+## LSP Settings
+
+* `complete_all_chars` `true` *request completions for all characters, not just trigger characters*
+* `show_status_messages` `true` *show messages in the status bar for a few seconds*
+* `show_view_status` `true` *show permanent language server status in the status bar* 
+* `auto_show_diagnostics_panel` `true` *open and close the diagnostics panel automatically*
+* `show_diagnostics_phantoms` `false` *show diagnostics as phantoms while the file has no changes*
+* `show_diagnostics_in_view_status` `true` *when on a diagnostic with the cursor, show the text in the status bar*
+* `log_debug` `false` *show debug logging in the sublime console*
+* `log_server` `true` *show server/logMessage notifications from language servers in the console* 
+* `log_stderr` `false` *show language server stderr output in the console*
 
 ## Language Specific Setup
 
@@ -136,6 +148,21 @@ You will need to build from source, see [instructions](https://clang.llvm.org/ex
 
 ```
 "auto_complete_triggers": [ {"selector": "source.c++", "characters": ".>:" }]
+```
+
+### Ocaml/Reason<a name="reason"></a>
+
+See [github:freebroccolo/ocaml-language-server](https://github.com/freebroccolo/ocaml-language-server)
+
+You will need to install the `sublime-reason` package to get the syntax listed below:
+
+```
+"reason": {
+  "command": ["ocaml-language-server", "--stdio"],
+  "scopes": ["source.reason"]
+  "syntaxes": ["Packages/User/sublime-reason/Reason.tmLanguage"],
+  "languageId": "reason"
+}
 ```
 
 ### Other<a name="other"></a>

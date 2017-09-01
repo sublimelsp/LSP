@@ -35,7 +35,18 @@
         "scopes": ["source.c", "source.c++", "source.objc", "source.objc++"],
         "syntaxes": ["Packages/C++/C.sublime-syntax", "Packages/C++/C++.sublime-syntax", "Packages/Objective-C/Objective-C.sublime-syntax", "Packages/Objective-C/Objective-C++.sublime-syntax"],
         "languageId": "c-family"
-      }
+      },
+      "julia":
+      {
+        "command": [
+          "julia",
+          "--startup-file=no", "--history-file=no", "-e",
+          "using LanguageServer; server = LanguageServer.LanguageServerInstance(STDIN, STDOUT, false); server.runlinter = true; run(server);"
+        ],
+        "scopes": ["source.julia"],
+        "syntaxes": ["Packages/Julia/Julia.sublime-syntax"],
+        "languageId": "julia"
+      },
   },
   "show_status_messages": true,
   "show_view_status": true,

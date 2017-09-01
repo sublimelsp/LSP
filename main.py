@@ -164,6 +164,10 @@ class Notification:
         self.jsonrpc = "2.0"
 
     @classmethod
+    def initialized(cls):
+        return Notification("initialized", None)
+
+    @classmethod
     def didOpen(cls, params):
         return Notification("textDocument/didOpen", params)
 
@@ -802,6 +806,8 @@ def handle_initialize_result(result, client, window, config):
     if show_status_messages:
         window.status_message("{} initialized".format(config.name))
     didopen_after_initialize = list()
+
+    client.send_notification(Notification.initialized())
 
 
 stylesheet = '''

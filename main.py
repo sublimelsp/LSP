@@ -659,14 +659,15 @@ def notify_did_open(view: sublime.View):
     if client and config:
         view.settings().set("show_definitions", False)
         if view.file_name() not in document_states:
-            get_document_state(view.file_name())
+            ds = get_document_state(view.file_name())
             if show_view_status:
                 view.set_status("lsp_clients", config.name)
             params = {
                 "textDocument": {
                     "uri": filename_to_uri(view.file_name()),
                     "languageId": config.languageId,
-                    "text": view.substr(sublime.Region(0, view.size()))
+                    "text": view.substr(sublime.Region(0, view.size())),
+                    "version": ds.version
                 }
             }
             client.send_notification(Notification.didOpen(params))

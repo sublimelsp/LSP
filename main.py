@@ -1612,11 +1612,14 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
     def format_completion(self, item) -> 'Tuple[str, str]':
         label = item.get("label")
-        # kind = item.get("kind")
         detail = item.get("detail")
-        insertText = label
-        if item.get("insertTextFormat") == 2:
-            insertText = item.get("insertText")
+        insertText = item.get("insertText", None)
+        insertTextFormat = item.get("insertTextFormat", 1)
+        if insertTextFormat == 1:
+            if not insertText:
+                insertText = label
+        elif insertTextFormat == 2 and not insertText:
+            raise Exception("Must have insertText when insertTextFormat == Snippet")
         if insertText[0] == '$':  # sublime needs leading '$' escaped.
             insertText = '\$' + insertText[1:]
         return "{}\t{}".format(label, detail), insertText

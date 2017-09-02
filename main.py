@@ -1611,15 +1611,12 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             self.state = CompletionState.REQUESTING
 
     def format_completion(self, item) -> 'Tuple[str, str]':
+        # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
         label = item.get("label")
         detail = item.get("detail")
         insertText = item.get("insertText", None)
-        insertTextFormat = item.get("insertTextFormat", 1)
-        if insertTextFormat == 1:
-            if not insertText:
-                insertText = label
-        elif insertTextFormat == 2 and not insertText:
-            raise Exception("Must have insertText when insertTextFormat == Snippet")
+        if not insertText:
+            insertText = label
         if insertText[0] == '$':  # sublime needs leading '$' escaped.
             insertText = '\$' + insertText[1:]
         return "{}\t{}".format(label, detail), insertText

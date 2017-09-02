@@ -95,6 +95,30 @@ symbol_kind_names = {
 }
 
 
+class CompletionItemKind(object):
+    Text = 1
+    Method = 2
+    Function = 3
+    Constructor = 4
+    Field = 5
+    Variable = 6
+    Class = 7
+    Interface = 8
+    Module = 9
+    Property = 10
+    Unit = 11
+    Value = 12
+    Enum = 13
+    Keyword = 14
+    Snippet = 15
+    Color = 16
+    File = 17
+    Reference = 18
+
+
+completion_item_kind_names = {v: k for k, v in CompletionItemKind.__dict__.items()}
+
+
 class Request:
     def __init__(self, method, params):
         self.method = method
@@ -1614,6 +1638,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
         label = item.get("label")
         detail = item.get("detail")
+        kind = item.get("kind")
+        if not detail:
+            if kind is not None:
+                detail = completion_item_kind_names[kind]
         insertText = item.get("insertText", None)
         if not insertText:
             insertText = label

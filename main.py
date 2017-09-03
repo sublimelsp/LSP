@@ -209,6 +209,10 @@ class Notification:
         return Notification("textDocument/didClose", params)
 
     @classmethod
+    def didChangeConfiguration(cls, params):
+        return Notification("workspace/didChangeConfiguration", params)
+
+    @classmethod
     def exit(cls):
         return Notification("exit", None)
 
@@ -363,7 +367,8 @@ def update_settings(settings_obj: sublime.Settings):
 
 
 class ClientConfig(object):
-    def __init__(self, name, binary_args, scopes, syntaxes, languageId, enabled=True, init_options=dict()):
+    def __init__(self, name, binary_args, scopes, syntaxes, languageId,
+                 enabled=True, init_options=dict(), settings=dict()):
         self.name = name
         self.binary_args = binary_args
         self.scopes = scopes
@@ -371,6 +376,7 @@ class ClientConfig(object):
         self.languageId = languageId
         self.enabled = enabled
         self.init_options = init_options
+        self.settings = settings
 
 
 def format_request(payload: 'Dict[str, Any]'):
@@ -668,7 +674,8 @@ def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -
             overrides.get("syntaxes", client_config.syntaxes),
             overrides.get("languageId", client_config.languageId),
             overrides.get("enabled", client_config.enabled),
-            merged_init_options)
+            merged_init_options,
+            overrides.get("settings", dict()))
     else:
         return client_config
 
@@ -903,6 +910,11 @@ def handle_initialize_result(result, client, window, config):
     Events.subscribe('view.on_close', remove_diagnostics)
 
     client.send_notification(Notification.initialized())
+    if config.settings:
+        configParams = {
+            'settings': config.settings
+        }
+        client.send_notification(Notification.didChangeConfiguration(configParams))
 
     for view in didopen_after_initialize:
         notify_did_open(view)

@@ -1737,10 +1737,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             elif self.state == CompletionState.APPLYING:
                 self.state = CompletionState.IDLE
 
-            return (
-                self.completions,
-                sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
-            )
+            return self.completions
 
     def do_request(self, prefix, locations):
         self.next_request = None

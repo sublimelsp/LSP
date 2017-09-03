@@ -30,6 +30,7 @@ show_view_status = True
 auto_show_diagnostics_panel = True
 show_diagnostics_phantoms = False
 show_diagnostics_in_view_status = True
+diagnostics_highlight_style = "underline"
 complete_all_chars = False
 log_debug = True
 log_server = True
@@ -325,12 +326,21 @@ def read_bool_setting(settings_obj: sublime.Settings, key: str, default: bool) -
         return default
 
 
+def read_str_setting(settings_obj: sublime.Settings, key: str, default: str) -> str:
+    val = settings_obj.get(key)
+    if isinstance(val, str):
+        return val
+    else:
+        return default
+
+
 def update_settings(settings_obj: sublime.Settings):
     global show_status_messages
     global show_view_status
     global auto_show_diagnostics_panel
     global show_diagnostics_phantoms
     global show_diagnostics_in_view_status
+    global diagnostics_highlight_style
     global complete_all_chars
     global log_debug
     global log_server
@@ -353,6 +363,7 @@ def update_settings(settings_obj: sublime.Settings):
     auto_show_diagnostics_panel = read_bool_setting(settings_obj, "auto_show_diagnostics_panel", True)
     show_diagnostics_phantoms = read_bool_setting(settings_obj, "show_diagnostics_phantoms", False)
     show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
+    diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
     complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
     log_debug = read_bool_setting(settings_obj, "log_debug", False)
     log_server = read_bool_setting(settings_obj, "log_server", True)
@@ -1187,9 +1198,12 @@ class LspClearPanelCommand(sublime_plugin.TextCommand):
         self.view.erase(edit, sublime.Region(0, self.view.size()))
 
 
-UNDERLINE_FLAGS = (sublime.DRAW_NO_FILL
+UNDERLINE_FLAGS = (sublime.DRAW_SQUIGGLY_UNDERLINE
                    | sublime.DRAW_NO_OUTLINE
+                   | sublime.DRAW_NO_FILL
                    | sublime.DRAW_EMPTY_AS_OVERWRITE)
+
+BOX_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_EMPTY_AS_OVERWRITE
 
 window_file_diagnostics = dict(
 )  # type: Dict[int, Dict[str, Dict[str, List[Diagnostic]]]]
@@ -1241,8 +1255,9 @@ def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic
                        if diagnostic.severity == severity)
     if regions:
         scope_name = diagnostic_severity_scopes[severity]
-        view.add_regions(region_name, regions, scope_name, "dot",
-                         sublime.DRAW_SQUIGGLY_UNDERLINE | UNDERLINE_FLAGS)
+        view.add_regions(
+            region_name, regions, scope_name, "dot",
+            UNDERLINE_FLAGS if diagnostics_highlight_style == "underline" else BOX_FLAGS)
     else:
         view.erase_regions(region_name)
 

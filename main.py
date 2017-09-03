@@ -901,13 +901,14 @@ def handle_initialize_result(result, client, window, config):
 
     Events.subscribe('document.diagnostics', handle_diagnostics)
     Events.subscribe('view.on_close', remove_diagnostics)
+
+    client.send_notification(Notification.initialized())
+
     for view in didopen_after_initialize:
         notify_did_open(view)
     if show_status_messages:
         window.status_message("{} initialized".format(config.name))
     didopen_after_initialize = list()
-
-    client.send_notification(Notification.initialized())
 
 
 stylesheet = '''

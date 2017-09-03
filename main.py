@@ -310,7 +310,7 @@ def read_client_config(name, client_config):
         client_config.get("syntaxes", []),
         client_config.get("languageId", ""),
         client_config.get("enabled", True),
-        client_config.get("options", dict())
+        client_config.get("initializationOptions", dict())
     )
 
 
@@ -363,14 +363,14 @@ def update_settings(settings_obj: sublime.Settings):
 
 
 class ClientConfig(object):
-    def __init__(self, name, binary_args, scopes, syntaxes, languageId, enabled=True, options=dict()):
+    def __init__(self, name, binary_args, scopes, syntaxes, languageId, enabled=True, init_options=dict()):
         self.name = name
         self.binary_args = binary_args
         self.scopes = scopes
         self.syntaxes = syntaxes
         self.languageId = languageId
         self.enabled = enabled
-        self.options = options
+        self.init_options = init_options
 
 
 def format_request(payload: 'Dict[str, Any]'):
@@ -659,6 +659,8 @@ def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -
     if client_config.name in window_config:
         overrides = window_config[client_config.name]
         debug('window has override for', client_config.name, overrides)
+        merged_init_options = dict(client_config.init_options)
+        merged_init_options.update(overrides.get("initializationOptions", dict()))
         return ClientConfig(
             client_config.name,
             overrides.get("command", client_config.binary_args),
@@ -666,7 +668,7 @@ def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -
             overrides.get("syntaxes", client_config.syntaxes),
             overrides.get("languageId", client_config.languageId),
             overrides.get("enabled", client_config.enabled),
-            overrides.get("options", client_config.options))
+            merged_init_options)
     else:
         return client_config
 
@@ -676,7 +678,7 @@ def config_for_scope(view: sublime.View) -> 'Optional[ClientConfig]':
     window_client_config = get_window_client_config(view)
     if not window_client_config:
         global_client_config = get_global_client_config(view)
-        if global_client_config:
+        if global_client_config and view.window():
             window_client_config = apply_window_settings(global_client_config, view)
             add_window_client_config(view.window(), window_client_config)
             return window_client_config
@@ -1444,6 +1446,9 @@ def start_client(window: sublime.Window, config: ClientConfig):
                 }
             }
         }
+        if config.init_options:
+            initializeParams['initializationOptions'] = config.init_options
+
         client.send_request(
             Request.initialize(initializeParams),
             lambda result: handle_initialize_result(result, client, window, config))

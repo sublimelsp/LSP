@@ -189,6 +189,40 @@ These can be customized as follows by adding an override in the User LSP.sublime
 * `scopes` - add language flavours, eg. `source.js`, `source.jsx`.
 * `syntaxes` - syntaxes that enable LSP features on a document, eg. `Packages/Babel/JavaScript (Babel).tmLanguage`
 * `languageId` - used both by the language servers and to select a syntax highlighter for sublime popups.
+* `enabled` - disable a language server globally, or per-project
+* `settings` - per-project settings (equivalent to VS Code's Workspace Settings)
+* `initializationOptions` - options to send to the server at startup (rarely used)
+
+## Per-project overrides
+
+Any fields in a client configuration can be overridden by adding an LSP settings block to your `.sublime-project` file:
+
+```json
+{
+  "folders":
+  [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "LSP": {
+      "jsts": {
+        "enabled": false,
+      },
+      "eslintls": {
+        "settings": {
+          "eslint": {
+            "autoFixOnSave": true
+          }
+        }
+      }
+    }
+  }
+}
+
+```
+
 
 # Features
 

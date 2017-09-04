@@ -36,7 +36,8 @@ log_debug = True
 log_server = True
 log_stderr = False
 
-configs = []  # type: List[ClientConfig]
+global_client_configs = []  # type: List[ClientConfig]
+window_client_configs = dict()  # type: Dict[int, List[ClientConfig]]
 
 
 class DiagnosticSeverity(object):
@@ -209,6 +210,10 @@ class Notification:
         return Notification("textDocument/didClose", params)
 
     @classmethod
+    def didChangeConfiguration(cls, params):
+        return Notification("workspace/didChangeConfiguration", params)
+
+    @classmethod
     def exit(cls):
         return Notification("exit", None)
 
@@ -308,7 +313,9 @@ def read_client_config(name, client_config):
         client_config.get("command", []),
         client_config.get("scopes", []),
         client_config.get("syntaxes", []),
-        client_config.get("languageId", "")
+        client_config.get("languageId", ""),
+        client_config.get("enabled", True),
+        client_config.get("initializationOptions", dict())
     )
 
 
@@ -345,16 +352,16 @@ def update_settings(settings_obj: sublime.Settings):
     global log_debug
     global log_server
     global log_stderr
-    global configs
+    global global_client_configs
 
-    configs = []
+    global_client_configs = []
     client_configs = settings_obj.get("clients", {})
     if isinstance(client_configs, dict):
         for client_name, client_config in client_configs.items():
             config = read_client_config(client_name, client_config)
             if config:
-                debug("Config added:", client_name)
-                configs.append(config)
+                debug("Config added:", client_name, '(enabled)' if config.enabled else '(disabled)')
+                global_client_configs.append(config)
     else:
         raise ValueError("client_configs")
 
@@ -371,12 +378,16 @@ def update_settings(settings_obj: sublime.Settings):
 
 
 class ClientConfig(object):
-    def __init__(self, name, binary_args, scopes, syntaxes, languageId):
+    def __init__(self, name, binary_args, scopes, syntaxes, languageId,
+                 enabled=True, init_options=dict(), settings=dict()):
         self.name = name
         self.binary_args = binary_args
         self.scopes = scopes
         self.syntaxes = syntaxes
         self.languageId = languageId
+        self.enabled = enabled
+        self.init_options = init_options
+        self.settings = settings
 
 
 def format_request(payload: 'Dict[str, Any]'):
@@ -628,16 +639,73 @@ def plugin_unloaded():
             unload_client(client)
 
 
-def config_for_scope(view: sublime.View) -> 'Optional[ClientConfig]':
+def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':
     for config in configs:
         for scope in config.scopes:
             if view.match_selector(view.sel()[0].begin(), scope):
                 return config
+
     return None
 
 
+def get_global_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
+    return get_scope_client_config(view, global_client_configs)
+
+
+def get_project_config(view: sublime.View) -> dict:
+    view_settings = view.settings().get('LSP', dict())
+    return view_settings if view_settings else dict()
+
+
+def get_window_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
+    if view.window():
+        configs_for_window = window_client_configs.get(view.window().id(), [])
+        return get_scope_client_config(view, configs_for_window)
+    else:
+        return None
+
+
+def add_window_client_config(window: 'sublime.Window', config: 'ClientConfig'):
+    global window_client_configs
+    window_client_configs.setdefault(window.id(), []).append(config)
+
+
+def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -> 'ClientConfig':
+    window_config = get_project_config(view)
+
+    if client_config.name in window_config:
+        overrides = window_config[client_config.name]
+        debug('window has override for', client_config.name, overrides)
+        merged_init_options = dict(client_config.init_options)
+        merged_init_options.update(overrides.get("initializationOptions", dict()))
+        return ClientConfig(
+            client_config.name,
+            overrides.get("command", client_config.binary_args),
+            overrides.get("scopes", client_config.scopes),
+            overrides.get("syntaxes", client_config.syntaxes),
+            overrides.get("languageId", client_config.languageId),
+            overrides.get("enabled", client_config.enabled),
+            merged_init_options,
+            overrides.get("settings", dict()))
+    else:
+        return client_config
+
+
+def config_for_scope(view: sublime.View) -> 'Optional[ClientConfig]':
+    # check window_client_config first
+    window_client_config = get_window_client_config(view)
+    if not window_client_config:
+        global_client_config = get_global_client_config(view)
+        if global_client_config and view.window():
+            window_client_config = apply_window_settings(global_client_config, view)
+            add_window_client_config(view.window(), window_client_config)
+            return window_client_config
+
+    return window_client_config
+
+
 def is_supported_syntax(syntax: str) -> bool:
-    for config in configs:
+    for config in global_client_configs:
         if syntax in config.syntaxes:
             return True
     return False
@@ -698,9 +766,12 @@ def initialize_on_open(view: sublime.View):
     global didopen_after_initialize
     config = config_for_scope(view)
     if config:
-        if config.name not in window_clients(view.window()):
-            didopen_after_initialize.append(view)
-            get_window_client(view, config)
+        if config.enabled:
+            if config.name not in window_clients(view.window()):
+                didopen_after_initialize.append(view)
+                get_window_client(view, config)
+        else:
+            debug(config.name, 'is not enabled')
 
 
 def notify_did_open(view: sublime.View):
@@ -848,13 +919,19 @@ def handle_initialize_result(result, client, window, config):
 
     Events.subscribe('document.diagnostics', handle_diagnostics)
     Events.subscribe('view.on_close', remove_diagnostics)
+
+    client.send_notification(Notification.initialized())
+    if config.settings:
+        configParams = {
+            'settings': config.settings
+        }
+        client.send_notification(Notification.didChangeConfiguration(configParams))
+
     for view in didopen_after_initialize:
         notify_did_open(view)
     if show_status_messages:
         window.status_message("{} initialized".format(config.name))
     didopen_after_initialize = list()
-
-    client.send_notification(Notification.initialized())
 
 
 stylesheet = '''
@@ -1397,6 +1474,9 @@ def start_client(window: sublime.Window, config: ClientConfig):
                 }
             }
         }
+        if config.init_options:
+            initializeParams['initializationOptions'] = config.init_options
+
         client.send_request(
             Request.initialize(initializeParams),
             lambda result: handle_initialize_result(result, client, window, config))

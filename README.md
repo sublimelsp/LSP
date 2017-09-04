@@ -20,11 +20,11 @@ Tested against language servers for javascript/typescript, python, c/c++ (clangd
 
 Rich hover support from js/ts language server 
 
-![hover screenshot](https://github.com/tomv564/LSP/blob/master/docs/images/screenshot-hover.png)
+![hover screenshot](https://raw.githubusercontent.com/tomv564/LSP/master/docs/images/screenshot-hover.png)
 
 Cycle through diagnostics shown in output panel with `F4`. Code actions supplied by tslint language server plugin, applied by `super+.`
 
-![diagnostics screenshot](https://github.com/tomv564/LSP/blob/master/docs/images/screenshot-diagnostics-action.png)
+![diagnostics screenshot](https://raw.githubusercontent.com/tomv564/LSP/master/docs/images/screenshot-diagnostics-action.png)
 
 ## Installing
 

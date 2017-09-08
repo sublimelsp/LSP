@@ -580,10 +580,8 @@ def get_common_parent(paths: 'List[str]') -> str:
     """
     Get the common parent directory of multiple paths.
     """
-    try:
+    if 'commonpath' in dir(os.path):
         return os.path.commonpath(paths)
-    except:
-        pass
 
     return os.path.commonprefix([path + '/' for path in paths]).rstrip('/')
 

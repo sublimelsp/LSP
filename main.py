@@ -570,7 +570,7 @@ def get_project_path(window: sublime.Window) -> 'Optional[str]':
     """
     if len(window.folders()):
         folder_paths = window.folders()
-        return os.path.commonprefix(folder_paths)
+        return folder_paths[0]
     else:
         debug("Couldn't determine project directory")
         return None

@@ -1558,6 +1558,19 @@ class Events:
             for listener in cls.listener_dict[key]:
                 listener(*args)
 
+def is_applicable(settings):
+    syntax = settings.get('syntax')
+    return syntax and is_supported_syntax(syntax)
+
+class DefinitionHandler(sublime_plugin.EventListener):
+    def on_text_command(self, view, command_name, args):
+        if not is_applicable(view.settings()):
+            return None
+
+        if command_name != 'context_goto_definition':
+            return None
+
+        return ('lsp_symbol_definition', args)
 
 class HoverHandler(sublime_plugin.ViewEventListener):
     def __init__(self, view):
@@ -1565,8 +1578,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
 
     @classmethod
     def is_applicable(cls, settings):
-        syntax = settings.get('syntax')
-        return syntax and is_supported_syntax(syntax)
+        return is_applicable(settings)
 
     def on_hover(self, point, hover_zone):
         if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():

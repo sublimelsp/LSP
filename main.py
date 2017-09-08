@@ -578,23 +578,14 @@ def get_project_path(window: sublime.Window) -> 'Optional[str]':
 
 def get_common_parent(paths: 'List[str]') -> str:
     """
-    Get the common parent of multiple paths. Attempts to use native method
-    if available.
+    Get the common parent directory of multiple paths.
     """
     try:
         return os.path.commonpath(paths)
     except:
         pass
 
-    groups = [s.split(os.path.sep) for s in paths]
-    min_len = min(len(group) for group in groups)
-    common = []
-    for i in range(min_len):
-        bits = set(group[i] for group in groups)
-        if len(bits) != 1:
-            break
-        common.append(bits.pop())
-    return os.path.sep.join(common)
+    return os.path.commonprefix([path + '/' for path in paths]).rstrip('/')
 
 
 def is_in_workspace(window: sublime.Window, file_path: str) -> bool:

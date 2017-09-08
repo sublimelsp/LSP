@@ -153,18 +153,7 @@ You will need to build from source, see [instructions](https://clang.llvm.org/ex
 
 ### Ocaml/Reason<a name="reason"></a>
 
-See [github:freebroccolo/ocaml-language-server](https://github.com/freebroccolo/ocaml-language-server)
-
-You will need to install the `sublime-reason` package to get the syntax listed below:
-
-```
-"reason": {
-  "command": ["ocaml-language-server", "--stdio"],
-  "scopes": ["source.reason"]
-  "syntaxes": ["Packages/User/sublime-reason/Reason.tmLanguage"],
-  "languageId": "reason"
-}
-```
+You will need to install the [sublime-reason](https://github.com/reasonml-editor/sublime-reason) package. That repo also contains the other necessary installations, such as [ocaml-language-server](https://github.com/freebroccolo/ocaml-language-server).
 
 ### Other<a name="other"></a>
 

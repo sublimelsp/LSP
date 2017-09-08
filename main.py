@@ -581,7 +581,7 @@ def is_in_workspace(window: sublime.Window, file_path: str) -> bool:
     if workspace_path is None:
         return False
 
-    common_dir = os.path.commonprefix([workspace_path, file_path])
+    common_dir = os.path.commonpath([workspace_path, file_path])
     return workspace_path == common_dir
 
 

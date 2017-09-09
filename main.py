@@ -579,10 +579,10 @@ def get_project_path(window: sublime.Window) -> 'Optional[str]':
 def get_common_parent(paths: 'List[str]') -> str:
     """
     Get the common parent directory of multiple paths.
-    """
-    if 'commonpath' in dir(os.path):
-        return os.path.commonpath(paths)
 
+    Python 3.5+ includes os.path.commonpath which does this, however Sublime
+    currently embeds Python 3.3.
+    """
     return os.path.commonprefix([path + '/' for path in paths]).rstrip('/')
 
 

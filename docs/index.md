@@ -15,6 +15,7 @@
 * `auto_show_diagnostics_panel` `true` *open and close the diagnostics panel automatically*
 * `show_diagnostics_phantoms` `false` *show diagnostics as phantoms while the file has no changes*
 * `show_diagnostics_in_view_status` `true` *when on a diagnostic with the cursor, show the text in the status bar*
+* `diagnostics_highlight_style` `"underline"` *highlight style of code diagnostics, `"underline"` or `"box"`*
 * `log_debug` `false` *show debug logging in the sublime console*
 * `log_server` `true` *show server/logMessage notifications from language servers in the console* 
 * `log_stderr` `false` *show language server stderr output in the console*
@@ -152,18 +153,7 @@ You will need to build from source, see [instructions](https://clang.llvm.org/ex
 
 ### Ocaml/Reason<a name="reason"></a>
 
-See [github:freebroccolo/ocaml-language-server](https://github.com/freebroccolo/ocaml-language-server)
-
-You will need to install the `sublime-reason` package to get the syntax listed below:
-
-```
-"reason": {
-  "command": ["ocaml-language-server", "--stdio"],
-  "scopes": ["source.reason"]
-  "syntaxes": ["Packages/User/sublime-reason/Reason.tmLanguage"],
-  "languageId": "reason"
-}
-```
+You will need to install the [sublime-reason](https://github.com/reasonml-editor/sublime-reason) package. That repo also contains the other necessary installations, such as [ocaml-language-server](https://github.com/freebroccolo/ocaml-language-server).
 
 ### Other<a name="other"></a>
 
@@ -188,6 +178,40 @@ These can be customized as follows by adding an override in the User LSP.sublime
 * `scopes` - add language flavours, eg. `source.js`, `source.jsx`.
 * `syntaxes` - syntaxes that enable LSP features on a document, eg. `Packages/Babel/JavaScript (Babel).tmLanguage`
 * `languageId` - used both by the language servers and to select a syntax highlighter for sublime popups.
+* `enabled` - disable a language server globally, or per-project
+* `settings` - per-project settings (equivalent to VS Code's Workspace Settings)
+* `initializationOptions` - options to send to the server at startup (rarely used)
+
+## Per-project overrides
+
+Any fields in a client configuration can be overridden by adding an LSP settings block to your `.sublime-project` file:
+
+```json
+{
+  "folders":
+  [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "LSP": {
+      "jsts": {
+        "enabled": false,
+      },
+      "eslintls": {
+        "settings": {
+          "eslint": {
+            "autoFixOnSave": true
+          }
+        }
+      }
+    }
+  }
+}
+
+```
+
 
 # Features
 

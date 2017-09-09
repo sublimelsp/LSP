@@ -35,6 +35,13 @@
         "scopes": ["source.c", "source.c++", "source.objc", "source.objc++"],
         "syntaxes": ["Packages/C++/C.sublime-syntax", "Packages/C++/C++.sublime-syntax", "Packages/Objective-C/Objective-C.sublime-syntax", "Packages/Objective-C/Objective-C++.sublime-syntax"],
         "languageId": "c-family"
+      },
+      "reason":
+      {
+        "command": ["ocaml-language-server", "--stdio"],
+        "scopes": ["source.reason", "source.ocaml"],
+        "syntaxes": ["Packages/sublime-reason/Reason.tmLanguage"],
+        "languageId": "reason"
       }
   },
   "show_status_messages": true,

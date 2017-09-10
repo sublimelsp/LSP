@@ -1479,7 +1479,13 @@ def start_client(window: sublime.Window, config: ClientConfig):
                         "completionItem": {
                             "snippetSupport": True
                         }
+                    },
+                    "synchronization": {
+                        "didSave": True
                     }
+                },
+                "workspace": {
+                    "applyEdit": True
                 }
             }
         }

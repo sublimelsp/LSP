@@ -39,9 +39,16 @@
       "reason":
       {
         "command": ["ocaml-language-server", "--stdio"],
-        "scopes": ["source.reason", "source.ocaml"],
+        "scopes": ["source.reason"],
         "syntaxes": ["Packages/sublime-reason/Reason.tmLanguage"],
         "languageId": "reason"
+      },
+      "ocaml":
+      {
+        "command": ["ocaml-language-server", "--stdio"],
+        "scopes": ["source.ocaml"],
+        "syntaxes": ["Packages/OCaml/OCaml.sublime-syntax"],
+        "languageId": "ocaml"
       }
   },
   "show_status_messages": true,

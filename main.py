@@ -1463,7 +1463,11 @@ def start_client(window: sublime.Window, config: ClientConfig):
         if show_status_messages:
             window.status_message("Starting " + config.name + "...")
         debug("starting in", project_path)
-        client = start_server(config.binary_args, project_path)
+
+        variables = window.extract_variables()
+        expanded_args = list(sublime.expand_variables(os.path.expanduser(arg), variables) for arg in config.binary_args)
+
+        client = start_server(expanded_args, project_path)
         if not client:
             window.status_message("Could not start" + config.name + ", disabling")
             debug("Could not start", config.binary_args, ", disabling")
@@ -1515,15 +1519,14 @@ def get_window_client(view: sublime.View, config: ClientConfig) -> Client:
 
 
 def start_server(server_binary_args, working_dir):
-    args = server_binary_args
-    debug("starting " + str(args))
+    debug("starting " + str(server_binary_args))
     si = None
     if os.name == "nt":
         si = subprocess.STARTUPINFO()  # type: ignore
         si.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW  # type: ignore
     try:
         process = subprocess.Popen(
-            args,
+            server_binary_args,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

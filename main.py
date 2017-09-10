@@ -1359,15 +1359,14 @@ def update_diagnostics_in_view(view: sublime.View, diagnostics: 'List[Diagnostic
 def remove_diagnostics(view: sublime.View):
     """Removes diagnostics for a file if no views exist for it
     """
-    if is_supported_view(view):
-        window = sublime.active_window()
+    window = sublime.active_window()
 
-        file_path = view.file_name()
-        if not window.find_open_file(view.file_name()):
-            update_file_diagnostics(window, file_path, 'lsp', [])
-            update_diagnostics_panel(window)
-        else:
-            debug('file still open?')
+    file_path = view.file_name()
+    if not window.find_open_file(view.file_name()):
+        update_file_diagnostics(window, file_path, 'lsp', [])
+        update_diagnostics_panel(window)
+    else:
+        debug('file still open?')
 
 
 def handle_diagnostics(update: 'Any'):
@@ -2000,19 +1999,15 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
 
 class CloseListener(sublime_plugin.EventListener):
     def on_close(self, view):
+        if is_supported_syntax(view.settings().get("syntax")):
+            Events.publish("view.on_close", view)
         sublime.set_timeout_async(check_window_unloaded, 500)
 
 
 class SaveListener(sublime_plugin.EventListener):
     def on_post_save_async(self, view):
         if is_supported_view(view):
-            # debug("on_post_save_async", view.file_name())
             Events.publish("view.on_post_save_async", view)
-
-    def on_close(self, view):
-        if is_supported_view(view):
-            # TODO check if more views are open for this file.
-            Events.publish("view.on_close", view)
 
 
 def is_transient_view(view):

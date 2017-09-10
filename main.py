@@ -172,6 +172,10 @@ class Request:
     def documentSymbols(cls, params):
         return Request("textDocument/documentSymbol", params)
 
+    @classmethod
+    def resolveCompletionItem(cls, params):
+        return Request("completionItem/resolve", params)
+
     def __repr__(self):
         return self.method + " " + str(self.params)
 
@@ -1718,13 +1722,31 @@ class CompletionState(object):
     CANCELLING = 3
 
 
+class CompletionSnippetHandler(sublime_plugin.EventListener):
+    def on_query_completions(self, view, prefix, locations):
+        self.begin = view.sel()[0].begin()
+        debug('completion started at', self.begin)
+
+    def on_text_command(self, view, command_name, args):
+        self.last_command = command_name
+
+    def on_modified(self, view):
+        if self.last_command in ('commit_completion', 'insert_best_completion'):
+            self.end = view.sel()[0].end()
+            inserted = view.substr(sublime.Region(self.begin, self.end))
+            debug('completion inserted:', inserted, self.begin, self.end)
+            # TODO: resolve completion and insert as snippet instead.
+            self.last_command = ""
+
+
 class CompletionHandler(sublime_plugin.ViewEventListener):
     def __init__(self, view):
         self.view = view
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
-        self.completions = []  # type: List[Tuple[str, str]]
+        self.resolve = False
+        self.resolve_details = []  # type: List[Tuple[str, str]]
         self.state = CompletionState.IDLE
         self.next_request = None
 
@@ -1743,6 +1765,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 self.enabled = True
                 self.trigger_chars = completionProvider.get(
                     'triggerCharacters') or []
+                self.resolve_details = completionProvider.get('resolveProvider', False)
 
     def is_after_trigger_character(self, location):
         if location > 0:
@@ -1790,6 +1813,18 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 self.handle_response)
             self.state = CompletionState.REQUESTING
 
+    def resolve_completion(self, item):
+        client = client_for_view(self.view)
+        if not client:
+            return
+
+        client.send_request(
+            Request.resolveCompletionItem(item),
+            self.handle_resolve_response)
+
+    def handle_resolve_response(self, response):
+        debug('got resolved completion', response)
+
     def format_completion(self, item) -> 'Tuple[str, str]':
         # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
         label = item.get("label")
@@ -1810,6 +1845,8 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             items = response["items"] if isinstance(response,
                                                     dict) else response
             self.completions = list(self.format_completion(item) for item in items)
+            if self.resolve_details and len(items) > 0:
+                self.resolve_completion(items[0])
             self.state = CompletionState.APPLYING
             self.run_auto_complete()
         elif self.state == CompletionState.CANCELLING:

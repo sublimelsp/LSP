@@ -1435,35 +1435,32 @@ def update_diagnostics_panel(window):
         is_active_panel = (active_panel == "output.diagnostics")
         panel.settings().set("result_base_dir", base_dir)
         panel.set_read_only(False)
-        panel.run_command("lsp_clear_panel")
         file_diagnostics = window_file_diagnostics[window.id()]
         if file_diagnostics:
+            to_render = []
             for file_path, source_diagnostics in file_diagnostics.items():
                 relative_file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
                 if source_diagnostics:
-                    append_diagnostics(panel, relative_file_path, source_diagnostics)
+                    to_render.append(format_diagnostics(relative_file_path, source_diagnostics))
+            panel.run_command("lsp_update_panel", {"characters": "\n".join(to_render)})
             if auto_show_diagnostics_panel and not active_panel:
                 window.run_command("show_panel",
                                    {"panel": "output.diagnostics"})
         else:
+            panel.run_command("lsp_clear_panel")
             if auto_show_diagnostics_panel and is_active_panel:
                 window.run_command("hide_panel",
                                    {"panel": "output.diagnostics"})
         panel.set_read_only(True)
 
 
-def append_diagnostics(panel, file_path, origin_diagnostics):
-    panel.run_command('append',
-                      {'characters':  " ◌ {}:\n".format(file_path),
-                       'force': True})
+def format_diagnostics(file_path, origin_diagnostics):
+    content = " ◌ {}:\n".format(file_path)
     for origin, diagnostics in origin_diagnostics.items():
         for diagnostic in diagnostics:
             item = format_diagnostic(diagnostic)
-            panel.run_command('append', {
-                'characters': item + "\n",
-                'force': True,
-                'scroll_to_end': True
-            })
+            content += item + "\n"
+    return content
 
 
 def start_client(window: sublime.Window, config: ClientConfig):

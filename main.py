@@ -1285,6 +1285,15 @@ class LspClearPanelCommand(sublime_plugin.TextCommand):
         self.view.erase(edit, sublime.Region(0, self.view.size()))
 
 
+class LspUpdatePanelCommand(sublime_plugin.TextCommand):
+    """
+    A update_panel command to update the error panel with new text.
+    """
+
+    def run(self, edit, characters):
+        self.view.replace(edit, sublime.Region(0, self.view.size()), characters)
+
+
 UNDERLINE_FLAGS = (sublime.DRAW_SQUIGGLY_UNDERLINE
                    | sublime.DRAW_NO_OUTLINE
                    | sublime.DRAW_NO_FILL

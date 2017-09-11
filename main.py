@@ -1722,21 +1722,92 @@ class CompletionState(object):
     CANCELLING = 3
 
 
+resolvable_completion_items = []  # type: List[Any]
+
+
+def find_completion_item(label: str) -> 'Optional[Any]':
+    matches = list(filter(lambda i: i.get("label") == label, resolvable_completion_items))
+    return matches[0] if matches else None
+
+
+class CompletionContext(object):
+
+    def __init__(self, begin):
+        self.begin = begin  # type: Optional[int]
+        self.end = None  # type: Optional[int]
+        self.region = None  # type: Optional[sublime.Region]
+        self.committing = False
+        debug('resolvable completion started at', self.begin)
+
+    def committed_at(self, end):
+        self.end = end
+        self.region = sublime.Region(self.begin, self.end)
+        self.committing = False
+        debug('completion inserted:', self.begin, self.end)
+
+
+current_completion = None  # type: Optional[CompletionContext]
+
+
+def has_resolvable_completions(view):
+    client = client_for_view(view)
+    if client:
+        completionProvider = client.get_capability(
+            'completionProvider')
+        if completionProvider:
+            if completionProvider.get('resolveProvider', False):
+                return True
+    return False
+
+
 class CompletionSnippetHandler(sublime_plugin.EventListener):
+
     def on_query_completions(self, view, prefix, locations):
-        self.begin = view.sel()[0].begin()
-        debug('completion started at', self.begin)
+        global current_completion
+        if has_resolvable_completions(view):
+            current_completion = CompletionContext(view.sel()[0].begin())
 
     def on_text_command(self, view, command_name, args):
-        self.last_command = command_name
+        if current_completion:
+            current_completion.committing = command_name in ('commit_completion', 'insert_best_completion')
 
     def on_modified(self, view):
-        if self.last_command in ('commit_completion', 'insert_best_completion'):
-            self.end = view.sel()[0].end()
-            inserted = view.substr(sublime.Region(self.begin, self.end))
-            debug('completion inserted:', inserted, self.begin, self.end)
-            # TODO: resolve completion and insert as snippet instead.
-            self.last_command = ""
+        global current_completion
+
+        if view.file_name():
+            if current_completion and current_completion.committing:
+                current_completion.committed_at(view.sel()[0].end())
+                inserted = view.substr(current_completion.region)
+                debug('inserted: ', inserted)
+                item = find_completion_item(inserted)
+                if item:
+                    self.enhance_completion(item, view)
+                else:
+                    current_completion = None
+
+    def enhance_completion(self, item, view):
+        client = client_for_view(view)
+        if not client:
+            return
+
+        client.send_request(
+            Request.resolveCompletionItem(item),
+            lambda response: self.handle_resolve_response(response, view))
+
+    def handle_resolve_response(self, response, view):
+        debug('got resolved completion', response)
+        if current_completion and response.get('insertTextFormat') == 2:  # snippet
+            insertText = response.get('insertText')
+            debug('replacing with snippet:', insertText)
+            try:
+                sel = view.sel()
+                sel.clear()
+                sel.add(current_completion.region)
+                view.run_command("insert_snippet", {"contents": response.get("insertText")})
+            except Exception as e:
+                debug('error inserting snippet', e)
+        else:
+            debug('not a snippet')
 
 
 class CompletionHandler(sublime_plugin.ViewEventListener):
@@ -1765,7 +1836,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 self.enabled = True
                 self.trigger_chars = completionProvider.get(
                     'triggerCharacters') or []
-                self.resolve_details = completionProvider.get('resolveProvider', False)
+                self.has_resolve_provider = completionProvider.get('resolveProvider', False)
 
     def is_after_trigger_character(self, location):
         if location > 0:
@@ -1813,18 +1884,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 self.handle_response)
             self.state = CompletionState.REQUESTING
 
-    def resolve_completion(self, item):
-        client = client_for_view(self.view)
-        if not client:
-            return
-
-        client.send_request(
-            Request.resolveCompletionItem(item),
-            self.handle_resolve_response)
-
-    def handle_resolve_response(self, response):
-        debug('got resolved completion', response)
-
     def format_completion(self, item) -> 'Tuple[str, str]':
         # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
         label = item.get("label")
@@ -1841,12 +1900,15 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         return "{}\t{}".format(label, detail) if detail else label, insertText
 
     def handle_response(self, response):
+        global resolvable_completion_items
         if self.state == CompletionState.REQUESTING:
             items = response["items"] if isinstance(response,
                                                     dict) else response
             self.completions = list(self.format_completion(item) for item in items)
-            if self.resolve_details and len(items) > 0:
-                self.resolve_completion(items[0])
+
+            if self.has_resolve_provider:
+                resolvable_completion_items = items
+
             self.state = CompletionState.APPLYING
             self.run_auto_complete()
         elif self.state == CompletionState.CANCELLING:

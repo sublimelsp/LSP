@@ -30,6 +30,7 @@ show_view_status = True
 auto_show_diagnostics_panel = True
 show_diagnostics_phantoms = False
 show_diagnostics_in_view_status = True
+only_show_lsp_completions = False
 diagnostics_highlight_style = "underline"
 complete_all_chars = False
 log_debug = True
@@ -347,6 +348,7 @@ def update_settings(settings_obj: sublime.Settings):
     global auto_show_diagnostics_panel
     global show_diagnostics_phantoms
     global show_diagnostics_in_view_status
+    global only_show_lsp_completions
     global diagnostics_highlight_style
     global complete_all_chars
     global log_debug
@@ -371,6 +373,7 @@ def update_settings(settings_obj: sublime.Settings):
     show_diagnostics_phantoms = read_bool_setting(settings_obj, "show_diagnostics_phantoms", False)
     show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
     diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
+    only_show_lsp_completions = read_bool_setting(settings_obj, "only_show_lsp_completions", False)
     complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
     log_debug = read_bool_setting(settings_obj, "log_debug", False)
     log_server = read_bool_setting(settings_obj, "log_server", True)
@@ -1737,7 +1740,11 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             elif self.state == CompletionState.APPLYING:
                 self.state = CompletionState.IDLE
 
-            return self.completions
+            return (
+                self.completions,
+                0 if self.state == CompletionState.IDLE and not only_show_lsp_completions
+                else sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
+            )
 
     def do_request(self, prefix, locations):
         self.next_request = None

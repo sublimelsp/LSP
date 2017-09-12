@@ -10,6 +10,7 @@
 ## LSP Settings
 
 * `complete_all_chars` `true` *request completions for all characters, not just trigger characters*
+* `only_show_lsp_completions` `false` *disable sublime word completion and snippets from autcomplete lists*
 * `show_status_messages` `true` *show messages in the status bar for a few seconds*
 * `show_view_status` `true` *show permanent language server status in the status bar*
 * `auto_show_diagnostics_panel` `true` *open and close the diagnostics panel automatically*

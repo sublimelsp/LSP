@@ -782,31 +782,37 @@ def window_clients(window: sublime.Window) -> 'Dict[str, Client]':
 
 def initialize_on_open(view: sublime.View):
     if not view.window():
-        debug('no window for view!')
         return
 
-    project_path = get_project_path(view.window())
-    debug('checking if project path was', project_path)
-    clients_by_config = window_clients(view.window())
-    clients_to_unload = {}
-    for config_name, client in clients_by_config.items():
-        if client and client.get_project_path() != project_path:
-            debug('should unload', config_name, 'project path changed from ', client.get_project_path())
-            clients_to_unload[config_name] = client
+    window = view.window()
 
-    for config_name, client in clients_to_unload.items():
-        unload_client(client)
-        del clients_by_config[config_name]
+    if window.id() in clients_by_window:
+        unload_old_clients(window)
 
     global didopen_after_initialize
     config = config_for_scope(view)
     if config:
         if config.enabled:
-            if config.name not in window_clients(view.window()):
+            if config.name not in window_clients(window):
                 didopen_after_initialize.append(view)
                 get_window_client(view, config)
         else:
             debug(config.name, 'is not enabled')
+
+
+def unload_old_clients(window: sublime.Window):
+    project_path = get_project_path(window)
+    debug('checking for clients on on ', project_path)
+    clients_by_config = window_clients(window)
+    clients_to_unload = {}
+    for config_name, client in clients_by_config.items():
+        if client and client.get_project_path() != project_path:
+            debug('unload', config_name, 'project path changed from ', client.get_project_path())
+            clients_to_unload[config_name] = client
+
+    for config_name, client in clients_to_unload.items():
+        unload_client(client)
+        del clients_by_config[config_name]
 
 
 def notify_did_open(view: sublime.View):

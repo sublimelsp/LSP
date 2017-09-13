@@ -1929,7 +1929,7 @@ class LspCodeActionsCommand(sublime_plugin.TextCommand):
     def is_enabled(self, event=None):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
-            return client and client.has_capability('codeActionProvider')
+            return bool(client) and client.has_capability('codeActionProvider')
         return False
 
     def run(self, edit, event=None):

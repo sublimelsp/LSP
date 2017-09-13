@@ -402,18 +402,22 @@ def format_request(payload: 'Dict[str, Any]'):
 
 
 class Client(object):
-    def __init__(self, process):
+    def __init__(self, process, project_path):
         self.process = process
         self.stdout_thread = threading.Thread(target=self.read_stdout)
         self.stdout_thread.start()
         self.stderr_thread = threading.Thread(target=self.read_stderr)
         self.stderr_thread.start()
+        self.project_path = project_path
         self.request_id = 0
         self.handlers = {}  # type: Dict[int, Callable]
         self.capabilities = {}  # type: Dict[str, Any]
 
     def set_capabilities(self, capabilities):
         self.capabilities = capabilities
+
+    def get_project_path(self):
+        return self.project_path
 
     def has_capability(self, capability):
         return capability in self.capabilities
@@ -655,8 +659,9 @@ def plugin_unloaded():
 def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':
     for config in configs:
         for scope in config.scopes:
-            if view.match_selector(view.sel()[0].begin(), scope):
-                return config
+            if len(view.sel()) > 0:
+                if view.match_selector(view.sel()[0].begin(), scope):
+                    return config
 
     return None
 
@@ -776,15 +781,38 @@ def window_clients(window: sublime.Window) -> 'Dict[str, Client]':
 
 
 def initialize_on_open(view: sublime.View):
+    if not view.window():
+        return
+
+    window = view.window()
+
+    if window.id() in clients_by_window:
+        unload_old_clients(window)
+
     global didopen_after_initialize
     config = config_for_scope(view)
     if config:
         if config.enabled:
-            if config.name not in window_clients(view.window()):
+            if config.name not in window_clients(window):
                 didopen_after_initialize.append(view)
                 get_window_client(view, config)
         else:
             debug(config.name, 'is not enabled')
+
+
+def unload_old_clients(window: sublime.Window):
+    project_path = get_project_path(window)
+    debug('checking for clients on on ', project_path)
+    clients_by_config = window_clients(window)
+    clients_to_unload = {}
+    for config_name, client in clients_by_config.items():
+        if client and client.get_project_path() != project_path:
+            debug('unload', config_name, 'project path changed from ', client.get_project_path())
+            clients_to_unload[config_name] = client
+
+    for config_name, client in clients_to_unload.items():
+        unload_client(client)
+        del clients_by_config[config_name]
 
 
 def notify_did_open(view: sublime.View):
@@ -1546,7 +1574,7 @@ def start_server(server_binary_args, working_dir):
             stderr=subprocess.PIPE,
             cwd=working_dir,
             startupinfo=si)
-        return Client(process)
+        return Client(process, working_dir)
 
     except Exception as err:
         printf(err)

@@ -30,6 +30,7 @@ show_view_status = True
 auto_show_diagnostics_panel = True
 show_diagnostics_phantoms = False
 show_diagnostics_in_view_status = True
+only_show_lsp_completions = False
 diagnostics_highlight_style = "underline"
 complete_all_chars = False
 log_debug = True
@@ -355,6 +356,7 @@ def update_settings(settings_obj: sublime.Settings):
     global auto_show_diagnostics_panel
     global show_diagnostics_phantoms
     global show_diagnostics_in_view_status
+    global only_show_lsp_completions
     global diagnostics_highlight_style
     global complete_all_chars
     global log_debug
@@ -379,6 +381,7 @@ def update_settings(settings_obj: sublime.Settings):
     show_diagnostics_phantoms = read_bool_setting(settings_obj, "show_diagnostics_phantoms", False)
     show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
     diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
+    only_show_lsp_completions = read_bool_setting(settings_obj, "only_show_lsp_completions", False)
     complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
     log_debug = read_bool_setting(settings_obj, "log_debug", False)
     log_server = read_bool_setting(settings_obj, "log_server", True)
@@ -407,12 +410,13 @@ def format_request(payload: 'Dict[str, Any]'):
 
 
 class Client(object):
-    def __init__(self, process):
+    def __init__(self, process, project_path):
         self.process = process
         self.stdout_thread = threading.Thread(target=self.read_stdout)
         self.stdout_thread.start()
         self.stderr_thread = threading.Thread(target=self.read_stderr)
         self.stderr_thread.start()
+        self.project_path = project_path
         self.request_id = 0
         self.handlers = {}  # type: Dict[int, Callable]
         self.capabilities = {}  # type: Dict[str, Any]
@@ -423,6 +427,9 @@ class Client(object):
 
     def set_capabilities(self, capabilities):
         self.capabilities = capabilities
+
+    def get_project_path(self):
+        return self.project_path
 
     def has_capability(self, capability):
         return capability in self.capabilities
@@ -689,8 +696,9 @@ def plugin_unloaded():
 def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':
     for config in configs:
         for scope in config.scopes:
-            if view.match_selector(view.sel()[0].begin(), scope):
-                return config
+            if len(view.sel()) > 0:
+                if view.match_selector(view.sel()[0].begin(), scope):
+                    return config
 
     return None
 
@@ -810,15 +818,38 @@ def window_clients(window: sublime.Window) -> 'Dict[str, Client]':
 
 
 def initialize_on_open(view: sublime.View):
+    if not view.window():
+        return
+
+    window = view.window()
+
+    if window.id() in clients_by_window:
+        unload_old_clients(window)
+
     global didopen_after_initialize
     config = config_for_scope(view)
     if config:
         if config.enabled:
-            if config.name not in window_clients(view.window()):
+            if config.name not in window_clients(window):
                 didopen_after_initialize.append(view)
                 get_window_client(view, config)
         else:
             debug(config.name, 'is not enabled')
+
+
+def unload_old_clients(window: sublime.Window):
+    project_path = get_project_path(window)
+    debug('checking for clients on on ', project_path)
+    clients_by_config = window_clients(window)
+    clients_to_unload = {}
+    for config_name, client in clients_by_config.items():
+        if client and client.get_project_path() != project_path:
+            debug('unload', config_name, 'project path changed from ', client.get_project_path())
+            clients_to_unload[config_name] = client
+
+    for config_name, client in clients_to_unload.items():
+        unload_client(client)
+        del clients_by_config[config_name]
 
 
 def notify_did_open(view: sublime.View):
@@ -1322,6 +1353,20 @@ class LspClearPanelCommand(sublime_plugin.TextCommand):
         self.view.erase(edit, sublime.Region(0, self.view.size()))
 
 
+class LspUpdatePanelCommand(sublime_plugin.TextCommand):
+    """
+    A update_panel command to update the error panel with new text.
+    """
+
+    def run(self, edit, characters):
+        self.view.replace(edit, sublime.Region(0, self.view.size()), characters)
+
+        # Move cursor to the end
+        selection = self.view.sel()
+        selection.clear()
+        selection.add(sublime.Region(self.view.size(), self.view.size()))
+
+
 UNDERLINE_FLAGS = (sublime.DRAW_SQUIGGLY_UNDERLINE
                    | sublime.DRAW_NO_OUTLINE
                    | sublime.DRAW_NO_FILL
@@ -1396,15 +1441,14 @@ def update_diagnostics_in_view(view: sublime.View, diagnostics: 'List[Diagnostic
 def remove_diagnostics(view: sublime.View):
     """Removes diagnostics for a file if no views exist for it
     """
-    if is_supported_view(view):
-        window = sublime.active_window()
+    window = sublime.active_window()
 
-        file_path = view.file_name()
-        if not window.find_open_file(view.file_name()):
-            update_file_diagnostics(window, file_path, 'lsp', [])
-            update_diagnostics_panel(window)
-        else:
-            debug('file still open?')
+    file_path = view.file_name()
+    if not window.find_open_file(view.file_name()):
+        update_file_diagnostics(window, file_path, 'lsp', [])
+        update_diagnostics_panel(window)
+    else:
+        debug('file still open?')
 
 
 def handle_diagnostics(update: 'Any'):
@@ -1464,35 +1508,32 @@ def update_diagnostics_panel(window):
         is_active_panel = (active_panel == "output.diagnostics")
         panel.settings().set("result_base_dir", base_dir)
         panel.set_read_only(False)
-        panel.run_command("lsp_clear_panel")
         file_diagnostics = window_file_diagnostics[window.id()]
         if file_diagnostics:
+            to_render = []
             for file_path, source_diagnostics in file_diagnostics.items():
                 relative_file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
                 if source_diagnostics:
-                    append_diagnostics(panel, relative_file_path, source_diagnostics)
+                    to_render.append(format_diagnostics(relative_file_path, source_diagnostics))
+            panel.run_command("lsp_update_panel", {"characters": "\n".join(to_render)})
             if auto_show_diagnostics_panel and not active_panel:
                 window.run_command("show_panel",
                                    {"panel": "output.diagnostics"})
         else:
+            panel.run_command("lsp_clear_panel")
             if auto_show_diagnostics_panel and is_active_panel:
                 window.run_command("hide_panel",
                                    {"panel": "output.diagnostics"})
         panel.set_read_only(True)
 
 
-def append_diagnostics(panel, file_path, origin_diagnostics):
-    panel.run_command('append',
-                      {'characters':  " ◌ {}:\n".format(file_path),
-                       'force': True})
+def format_diagnostics(file_path, origin_diagnostics):
+    content = " ◌ {}:\n".format(file_path)
     for origin, diagnostics in origin_diagnostics.items():
         for diagnostic in diagnostics:
             item = format_diagnostic(diagnostic)
-            panel.run_command('append', {
-                'characters': item + "\n",
-                'force': True,
-                'scroll_to_end': True
-            })
+            content += item + "\n"
+    return content
 
 
 def start_client(window: sublime.Window, config: ClientConfig):
@@ -1501,7 +1542,11 @@ def start_client(window: sublime.Window, config: ClientConfig):
         if show_status_messages:
             window.status_message("Starting " + config.name + "...")
         debug("starting in", project_path)
-        client = start_server(config.binary_args, project_path)
+
+        variables = window.extract_variables()
+        expanded_args = list(sublime.expand_variables(os.path.expanduser(arg), variables) for arg in config.binary_args)
+
+        client = start_server(expanded_args, project_path)
         if not client:
             window.status_message("Could not start" + config.name + ", disabling")
             debug("Could not start", config.binary_args, ", disabling")
@@ -1517,7 +1562,13 @@ def start_client(window: sublime.Window, config: ClientConfig):
                         "completionItem": {
                             "snippetSupport": True
                         }
+                    },
+                    "synchronization": {
+                        "didSave": True
                     }
+                },
+                "workspace": {
+                    "applyEdit": True
                 }
             }
         }
@@ -1547,21 +1598,20 @@ def get_window_client(view: sublime.View, config: ClientConfig) -> Client:
 
 
 def start_server(server_binary_args, working_dir):
-    args = server_binary_args
-    debug("starting " + str(args))
+    debug("starting " + str(server_binary_args))
     si = None
     if os.name == "nt":
         si = subprocess.STARTUPINFO()  # type: ignore
         si.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW  # type: ignore
     try:
         process = subprocess.Popen(
-            args,
+            server_binary_args,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=working_dir,
             startupinfo=si)
-        return Client(process)
+        return Client(process, working_dir)
 
     except Exception as err:
         printf(err)
@@ -1757,7 +1807,8 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
             return (
                 self.completions,
-                sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
+                0 if self.state == CompletionState.IDLE and not only_show_lsp_completions
+                else sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
             )
 
     def do_request(self, prefix, locations):
@@ -2037,6 +2088,8 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
 
 class CloseListener(sublime_plugin.EventListener):
     def on_close(self, view):
+        if is_supported_syntax(view.settings().get("syntax")):
+            Events.publish("view.on_close", view)
         sublime.set_timeout_async(check_window_unloaded, 500)
 
 
@@ -2065,13 +2118,7 @@ class SaveListener(sublime_plugin.EventListener):
 
     def on_post_save_async(self, view):
         if is_supported_view(view):
-            # debug("on_post_save_async", view.file_name())
             Events.publish("view.on_post_save_async", view)
-
-    def on_close(self, view):
-        if is_supported_view(view):
-            # TODO check if more views are open for this file.
-            Events.publish("view.on_close", view)
 
 
 def is_transient_view(view):

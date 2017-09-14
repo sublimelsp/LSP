@@ -10,14 +10,15 @@
 ## LSP Settings
 
 * `complete_all_chars` `true` *request completions for all characters, not just trigger characters*
+* `only_show_lsp_completions` `false` *disable sublime word completion and snippets from autocomplete lists*
 * `show_status_messages` `true` *show messages in the status bar for a few seconds*
-* `show_view_status` `true` *show permanent language server status in the status bar* 
+* `show_view_status` `true` *show permanent language server status in the status bar*
 * `auto_show_diagnostics_panel` `true` *open and close the diagnostics panel automatically*
 * `show_diagnostics_phantoms` `false` *show diagnostics as phantoms while the file has no changes*
 * `show_diagnostics_in_view_status` `true` *when on a diagnostic with the cursor, show the text in the status bar*
 * `diagnostics_highlight_style` `"underline"` *highlight style of code diagnostics, `"underline"` or `"box"`*
 * `log_debug` `false` *show debug logging in the sublime console*
-* `log_server` `true` *show server/logMessage notifications from language servers in the console* 
+* `log_server` `true` *show server/logMessage notifications from language servers in the console*
 * `log_stderr` `false` *show language server stderr output in the console*
 
 ## Language Specific Setup
@@ -39,7 +40,7 @@ On windows you will need to override client config to launch `javascript-typescr
 See: [github](https://github.com/sourcegraph/javascript-typescript-langserver)
 
 ```
-"auto_complete_triggers": [ 
+"auto_complete_triggers": [
         {
             "characters": ".",
             "selector": "source.js"
@@ -123,7 +124,7 @@ Requires Rust Nightly.
 
 See [github:rust-lang-nursery/rls](https://github.com/rust-lang-nursery/rls) for up-to-date installation instructions.
 
-Autocomplete triggers:  
+Autocomplete triggers:
 
 ```
 "auto_complete_triggers": [ {"selector": "source.rust", "characters": ".:"} ]
@@ -136,7 +137,7 @@ Dotty, the future scala compiler [contains LSP support](http://dotty.epfl.ch/doc
 
 Get the project compiling with dotty first (see https://github.com/lampepfl/dotty-example-project#using-dotty-in-an-existing-project)
 
-At this point LSP should complain in the logs 
+At this point LSP should complain in the logs
 `java.util.concurrent.CompletionException: java.io.FileNotFoundException: /Users/tomv/Projects/tomv564/dottytest/finagle/doc/src/sphinx/code/quickstart/.dotty-ide.json`
 
 Then run `sbt configureIDE` to create the .dotty-ide.json file
@@ -153,7 +154,7 @@ You will need to build from source, see [instructions](https://clang.llvm.org/ex
 
 ### Ocaml/Reason<a name="reason"></a>
 
-You will need to install the [sublime-reason](https://github.com/reasonml-editor/sublime-reason) package. That repo also contains the other necessary installations, such as [ocaml-language-server](https://github.com/freebroccolo/ocaml-language-server).
+You will need to install [sublime-reason](https://github.com/reasonml-editor/sublime-reason) and the dependencies listed in the repo, such as [ocaml-language-server](https://github.com/freebroccolo/ocaml-language-server). If you only use OCaml, you still need those listed dependencies, but not the sublime-reason plugin itself.
 
 ### Other<a name="other"></a>
 
@@ -229,9 +230,9 @@ Any fields in a client configuration can be overridden by adding an LSP settings
 * Rename Symbol: UNBOUND
   * Recommendation: Override `F2` (next bookmark)
 * Go to definition: UNBOUND
-  * Recommendation: Override `f12` (built-in goto definition), 
-  * LSP falls back to ST3's built-in goto definition command in case LSP fails. 
-* Format Document: UNBOUND 
+  * Recommendation: Override `f12` (built-in goto definition),
+  * LSP falls back to ST3's built-in goto definition command in case LSP fails.
+* Format Document: UNBOUND
 * Document Symbols: UNBOUND
 
 **Workspace actions**

@@ -49,7 +49,14 @@
         "scopes": ["source.ocaml"],
         "syntaxes": ["Packages/OCaml/OCaml.sublime-syntax"],
         "languageId": "ocaml"
-      }
+      },
+      "golsp":
+      {
+        "command": ["go-langserver"],
+        "scopes": ["source.go"],
+        "syntaxes": ["Packages/Go/Go.sublime-syntax"],
+        "languageId": "go"
+      },
   },
   "show_status_messages": true,
   "show_view_status": true,

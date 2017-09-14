@@ -156,6 +156,25 @@ You will need to build from source, see [instructions](https://clang.llvm.org/ex
 
 You will need to install [sublime-reason](https://github.com/reasonml-editor/sublime-reason) and the dependencies listed in the repo, such as [ocaml-language-server](https://github.com/freebroccolo/ocaml-language-server). If you only use OCaml, you still need those listed dependencies, but not the sublime-reason plugin itself.
 
+### Go<a name="go"></a>
+
+`go get github.com/sourcegraph/go-langserver`
+
+See: [github:palantir/sourcegraphgo-langserver](https://github.com/sourcegraph/go-langserver)
+
+Please note that install alongside [github:DisposaBoy/GoSublime](https://github.com/DisposaBoy/GoSublime) package is not working.
+
+Client configuration:
+```
+"golsp":
+{
+  "command": ["go-langserver"],
+  "scopes": ["source.go"],
+  "syntaxes": ["Packages/Go/Go.sublime-syntax"],
+  "languageId": "go"
+},
+```
+
 ### Other<a name="other"></a>
 
 Please create issues / pull requests so we can get support for more languages.

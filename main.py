@@ -33,6 +33,7 @@ show_diagnostics_in_view_status = True
 only_show_lsp_completions = False
 diagnostics_highlight_style = "underline"
 complete_all_chars = False
+resolve_completion_for_snippets = False
 log_debug = True
 log_server = True
 log_stderr = False
@@ -355,6 +356,7 @@ def update_settings(settings_obj: sublime.Settings):
     global only_show_lsp_completions
     global diagnostics_highlight_style
     global complete_all_chars
+    global resolve_completion_for_snippets
     global log_debug
     global log_server
     global log_stderr
@@ -379,6 +381,7 @@ def update_settings(settings_obj: sublime.Settings):
     diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
     only_show_lsp_completions = read_bool_setting(settings_obj, "only_show_lsp_completions", False)
     complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
+    resolve_completion_for_snippets = read_bool_setting(settings_obj, "resolve_completion_for_snippets", False)
     log_debug = read_bool_setting(settings_obj, "log_debug", False)
     log_server = read_bool_setting(settings_obj, "log_server", True)
     log_stderr = read_bool_setting(settings_obj, "log_stderr", False)
@@ -1737,13 +1740,11 @@ class CompletionContext(object):
         self.end = None  # type: Optional[int]
         self.region = None  # type: Optional[sublime.Region]
         self.committing = False
-        debug('resolvable completion started at', self.begin)
 
     def committed_at(self, end):
         self.end = end
         self.region = sublime.Region(self.begin, self.end)
         self.committing = False
-        debug('completion inserted:', self.begin, self.end)
 
 
 current_completion = None  # type: Optional[CompletionContext]
@@ -1764,28 +1765,27 @@ class CompletionSnippetHandler(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
         global current_completion
-        if has_resolvable_completions(view):
+        if resolve_completion_for_snippets and has_resolvable_completions(view):
             current_completion = CompletionContext(view.sel()[0].begin())
 
     def on_text_command(self, view, command_name, args):
-        if current_completion:
+        if resolve_completion_for_snippets and current_completion:
             current_completion.committing = command_name in ('commit_completion', 'insert_best_completion')
 
     def on_modified(self, view):
         global current_completion
 
-        if view.file_name():
+        if resolve_completion_for_snippets and view.file_name():
             if current_completion and current_completion.committing:
                 current_completion.committed_at(view.sel()[0].end())
                 inserted = view.substr(current_completion.region)
-                debug('inserted: ', inserted)
                 item = find_completion_item(inserted)
                 if item:
-                    self.enhance_completion(item, view)
+                    self.resolve_completion(item, view)
                 else:
                     current_completion = None
 
-    def enhance_completion(self, item, view):
+    def resolve_completion(self, item, view):
         client = client_for_view(view)
         if not client:
             return
@@ -1795,19 +1795,16 @@ class CompletionSnippetHandler(sublime_plugin.EventListener):
             lambda response: self.handle_resolve_response(response, view))
 
     def handle_resolve_response(self, response, view):
-        debug('got resolved completion', response)
+        # replace inserted text if a snippet was returned.
         if current_completion and response.get('insertTextFormat') == 2:  # snippet
             insertText = response.get('insertText')
-            debug('replacing with snippet:', insertText)
             try:
                 sel = view.sel()
                 sel.clear()
                 sel.add(current_completion.region)
-                view.run_command("insert_snippet", {"contents": response.get("insertText")})
+                view.run_command("insert_snippet", {"contents": insertText})
             except Exception as e:
-                debug('error inserting snippet', e)
-        else:
-            debug('not a snippet')
+                debug('error inserting snippet', insertText, e)
 
 
 class CompletionHandler(sublime_plugin.ViewEventListener):

@@ -33,6 +33,7 @@ show_diagnostics_in_view_status = True
 only_show_lsp_completions = False
 diagnostics_highlight_style = "underline"
 complete_all_chars = False
+resolve_completion_for_snippets = False
 log_debug = True
 log_server = True
 log_stderr = False
@@ -171,6 +172,10 @@ class Request:
     @classmethod
     def documentSymbols(cls, params):
         return Request("textDocument/documentSymbol", params)
+
+    @classmethod
+    def resolveCompletionItem(cls, params):
+        return Request("completionItem/resolve", params)
 
     def __repr__(self):
         return self.method + " " + str(self.params)
@@ -351,6 +356,7 @@ def update_settings(settings_obj: sublime.Settings):
     global only_show_lsp_completions
     global diagnostics_highlight_style
     global complete_all_chars
+    global resolve_completion_for_snippets
     global log_debug
     global log_server
     global log_stderr
@@ -375,6 +381,7 @@ def update_settings(settings_obj: sublime.Settings):
     diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
     only_show_lsp_completions = read_bool_setting(settings_obj, "only_show_lsp_completions", False)
     complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
+    resolve_completion_for_snippets = read_bool_setting(settings_obj, "resolve_completion_for_snippets", False)
     log_debug = read_bool_setting(settings_obj, "log_debug", False)
     log_server = read_bool_setting(settings_obj, "log_server", True)
     log_stderr = read_bool_setting(settings_obj, "log_stderr", False)
@@ -1718,13 +1725,96 @@ class CompletionState(object):
     CANCELLING = 3
 
 
+resolvable_completion_items = []  # type: List[Any]
+
+
+def find_completion_item(label: str) -> 'Optional[Any]':
+    matches = list(filter(lambda i: i.get("label") == label, resolvable_completion_items))
+    return matches[0] if matches else None
+
+
+class CompletionContext(object):
+
+    def __init__(self, begin):
+        self.begin = begin  # type: Optional[int]
+        self.end = None  # type: Optional[int]
+        self.region = None  # type: Optional[sublime.Region]
+        self.committing = False
+
+    def committed_at(self, end):
+        self.end = end
+        self.region = sublime.Region(self.begin, self.end)
+        self.committing = False
+
+
+current_completion = None  # type: Optional[CompletionContext]
+
+
+def has_resolvable_completions(view):
+    client = client_for_view(view)
+    if client:
+        completionProvider = client.get_capability(
+            'completionProvider')
+        if completionProvider:
+            if completionProvider.get('resolveProvider', False):
+                return True
+    return False
+
+
+class CompletionSnippetHandler(sublime_plugin.EventListener):
+
+    def on_query_completions(self, view, prefix, locations):
+        global current_completion
+        if resolve_completion_for_snippets and has_resolvable_completions(view):
+            current_completion = CompletionContext(view.sel()[0].begin())
+
+    def on_text_command(self, view, command_name, args):
+        if resolve_completion_for_snippets and current_completion:
+            current_completion.committing = command_name in ('commit_completion', 'insert_best_completion')
+
+    def on_modified(self, view):
+        global current_completion
+
+        if resolve_completion_for_snippets and view.file_name():
+            if current_completion and current_completion.committing:
+                current_completion.committed_at(view.sel()[0].end())
+                inserted = view.substr(current_completion.region)
+                item = find_completion_item(inserted)
+                if item:
+                    self.resolve_completion(item, view)
+                else:
+                    current_completion = None
+
+    def resolve_completion(self, item, view):
+        client = client_for_view(view)
+        if not client:
+            return
+
+        client.send_request(
+            Request.resolveCompletionItem(item),
+            lambda response: self.handle_resolve_response(response, view))
+
+    def handle_resolve_response(self, response, view):
+        # replace inserted text if a snippet was returned.
+        if current_completion and response.get('insertTextFormat') == 2:  # snippet
+            insertText = response.get('insertText')
+            try:
+                sel = view.sel()
+                sel.clear()
+                sel.add(current_completion.region)
+                view.run_command("insert_snippet", {"contents": insertText})
+            except Exception as e:
+                debug('error inserting snippet', insertText, e)
+
+
 class CompletionHandler(sublime_plugin.ViewEventListener):
     def __init__(self, view):
         self.view = view
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
-        self.completions = []  # type: List[Tuple[str, str]]
+        self.resolve = False
+        self.resolve_details = []  # type: List[Tuple[str, str]]
         self.state = CompletionState.IDLE
         self.next_request = None
 
@@ -1743,6 +1833,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 self.enabled = True
                 self.trigger_chars = completionProvider.get(
                     'triggerCharacters') or []
+                self.has_resolve_provider = completionProvider.get('resolveProvider', False)
 
     def is_after_trigger_character(self, location):
         if location > 0:
@@ -1806,10 +1897,15 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         return "{}\t{}".format(label, detail) if detail else label, insertText
 
     def handle_response(self, response):
+        global resolvable_completion_items
         if self.state == CompletionState.REQUESTING:
             items = response["items"] if isinstance(response,
                                                     dict) else response
             self.completions = list(self.format_completion(item) for item in items)
+
+            if self.has_resolve_provider:
+                resolvable_completion_items = items
+
             self.state = CompletionState.APPLYING
             self.run_auto_complete()
         elif self.state == CompletionState.CANCELLING:

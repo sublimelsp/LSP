@@ -1518,8 +1518,8 @@ def start_client(window: sublime.Window, config: ClientConfig):
 
         client = start_server(expanded_args, project_path)
         if not client:
-            window.status_message("Could not start" + config.name + ", disabling")
-            debug("Could not start", config.binary_args, ", disabling")
+            window.status_message("Could not start " + config.name + ", disabling")
+            debug("Could not start ", config.binary_args, ", disabling")
             return
 
         initializeParams = {

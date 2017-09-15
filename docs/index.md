@@ -163,8 +163,6 @@ You will need to install [sublime-reason](https://github.com/reasonml-editor/sub
 
 See: [github:palantir/sourcegraphgo-langserver](https://github.com/sourcegraph/go-langserver)
 
-Please note that install alongside [github:DisposaBoy/GoSublime](https://github.com/DisposaBoy/GoSublime) package is not working.
-
 Client configuration:
 ```
 "golsp":

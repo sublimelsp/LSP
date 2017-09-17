@@ -644,11 +644,12 @@ def check_window_unloaded():
 
 def unload_window_clients(window_id: int):
     global clients_by_window
-    window_clients = clients_by_window[window_id]
-    del clients_by_window[window_id]
-    for config, client in window_clients.items():
-        debug("unloading client", config, client)
-        unload_client(client)
+    if window_id in clients_by_window:
+        window_clients = clients_by_window[window_id]
+        del clients_by_window[window_id]
+        for config, client in window_clients.items():
+            debug("unloading client", config, client)
+            unload_client(client)
 
 
 def unload_client(client: Client):
@@ -812,7 +813,6 @@ def initialize_on_open(view: sublime.View):
 
 def unload_old_clients(window: sublime.Window):
     project_path = get_project_path(window)
-    debug('checking for clients on on ', project_path)
     clients_by_config = window_clients(window)
     clients_to_unload = {}
     for config_name, client in clients_by_config.items():

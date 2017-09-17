@@ -987,20 +987,28 @@ def handle_initialize_result(result, client, window, config):
 
 stylesheet = '''
             <style>
+                div.error-arrow {
+                    border-top: 0.4rem solid transparent;
+                    border-left: 0.5rem solid color(var(--redish) blend(var(--background) 30%));
+                    width: 0;
+                    height: 0;
+                }
                 div.error {
                     padding: 0.4rem 0 0.4rem 0.7rem;
-                    margin: 0.2rem 0;
-                    border-radius: 2px;
+                    margin: 0 0 0.2rem;
+                    border-radius: 0 0.2rem 0.2rem 0.2rem;
                 }
+
                 div.error span.message {
                     padding-right: 0.7rem;
                 }
+
                 div.error a {
                     text-decoration: inherit;
                     padding: 0.35rem 0.7rem 0.45rem 0.8rem;
                     position: relative;
                     bottom: 0.05rem;
-                    border-radius: 0 2px 2px 0;
+                    border-radius: 0 0.2rem 0.2rem 0;
                     font-weight: bold;
                 }
                 html.dark div.error a {
@@ -1016,6 +1024,7 @@ stylesheet = '''
 def create_phantom_html(text: str) -> str:
     global stylesheet
     return """<body id=inline-error>{}
+                <div class="error-arrow"></div>
                 <div class="error">
                     <span class="message">{}</span>
                     <a href="code-actions">Code Actions</a>

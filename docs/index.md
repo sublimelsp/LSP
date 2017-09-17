@@ -263,4 +263,19 @@ Show Diagnostics Panel: `super+shift+M` / `ctr+alt+M`
 See below link, but bind to `lsp_symbol_definition` command
 https://stackoverflow.com/questions/16235706/sublime-3-set-key-map-for-function-goto-definition
 
+# Troubleshooting
+
+**LSP cannot find my language server through PATH on OS-X**
+
+This issue can be solved in two ways:
+
+* Install the [SublimeFixMacPath](https://github.com/int3h/SublimeFixMacPath) package
+* Or always launch sublime from the command line (so it inherits your shell's environment)
+
+**LSP doesn't try to start my language server**
+
+Your client configuration requires two settings to match the document your are editing:
+
+* Scope (eg. `source.php`): Verify this is correct by running "Show Scope Name" from the developer menu.
+* Syntax (eg. `Packages\PHP\PHP.sublime-syntax`): Verify by running `sublime.active_window().active_view().settings().get("syntax")` in the console.
 

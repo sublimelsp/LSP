@@ -32,6 +32,7 @@ show_diagnostics_phantoms = False
 show_diagnostics_in_view_status = True
 only_show_lsp_completions = False
 diagnostics_highlight_style = "underline"
+diagnostics_gutter_marker = "dot"
 complete_all_chars = False
 resolve_completion_for_snippets = False
 log_debug = True
@@ -355,6 +356,7 @@ def update_settings(settings_obj: sublime.Settings):
     global show_diagnostics_in_view_status
     global only_show_lsp_completions
     global diagnostics_highlight_style
+    global diagnostics_gutter_marker
     global complete_all_chars
     global resolve_completion_for_snippets
     global log_debug
@@ -379,6 +381,7 @@ def update_settings(settings_obj: sublime.Settings):
     show_diagnostics_phantoms = read_bool_setting(settings_obj, "show_diagnostics_phantoms", False)
     show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
     diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
+    diagnostics_gutter_marker = read_str_setting(settings_obj, "diagnostics_gutter_marker", "dot")
     only_show_lsp_completions = read_bool_setting(settings_obj, "only_show_lsp_completions", False)
     complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
     resolve_completion_for_snippets = read_bool_setting(settings_obj, "resolve_completion_for_snippets", False)
@@ -1395,7 +1398,7 @@ def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic
     if regions:
         scope_name = diagnostic_severity_scopes[severity]
         view.add_regions(
-            region_name, regions, scope_name, "dot",
+            region_name, regions, scope_name, diagnostics_gutter_marker,
             UNDERLINE_FLAGS if diagnostics_highlight_style == "underline" else BOX_FLAGS)
     else:
         view.erase_regions(region_name)

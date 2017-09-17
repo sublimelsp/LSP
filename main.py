@@ -1910,6 +1910,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 resolvable_completion_items = items
 
             self.state = CompletionState.APPLYING
+            self.view.run_command("hide_auto_complete")
             self.run_auto_complete()
         elif self.state == CompletionState.CANCELLING:
             self.do_request(*self.next_request)

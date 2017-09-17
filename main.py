@@ -1638,9 +1638,9 @@ class HoverHandler(sublime_plugin.ViewEventListener):
     def on_hover(self, point, hover_zone):
         if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():
             return
-        line_diagnostics = get_line_diagnostics(self.view, point)
-        if line_diagnostics:
-            self.show_diagnostics_hover(point, line_diagnostics)
+        point_diagnostics = get_point_diagnostics(self.view, point)
+        if point_diagnostics:
+            self.show_diagnostics_hover(point, point_diagnostics)
         else:
             self.request_symbol_hover(point)
 
@@ -2006,6 +2006,14 @@ def get_line_diagnostics(view, point):
     return tuple(
         diagnostic for diagnostic in diagnostics
         if diagnostic.range.start.row <= row <= diagnostic.range.end.row
+    )
+
+
+def get_point_diagnostics(view, point):
+    diagnostics = get_diagnostics_for_view(view)
+    return tuple(
+        diagnostic for diagnostic in diagnostics
+        if diagnostic.range.to_region(view).contains(point)
     )
 
 

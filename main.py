@@ -32,6 +32,7 @@ show_diagnostics_phantoms = False
 show_diagnostics_in_view_status = True
 only_show_lsp_completions = False
 diagnostics_highlight_style = "underline"
+diagnostics_gutter_marker = "dot"
 complete_all_chars = False
 resolve_completion_for_snippets = False
 log_debug = True
@@ -355,6 +356,7 @@ def update_settings(settings_obj: sublime.Settings):
     global show_diagnostics_in_view_status
     global only_show_lsp_completions
     global diagnostics_highlight_style
+    global diagnostics_gutter_marker
     global complete_all_chars
     global resolve_completion_for_snippets
     global log_debug
@@ -379,6 +381,7 @@ def update_settings(settings_obj: sublime.Settings):
     show_diagnostics_phantoms = read_bool_setting(settings_obj, "show_diagnostics_phantoms", False)
     show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
     diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
+    diagnostics_gutter_marker = read_str_setting(settings_obj, "diagnostics_gutter_marker", "dot")
     only_show_lsp_completions = read_bool_setting(settings_obj, "only_show_lsp_completions", False)
     complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
     resolve_completion_for_snippets = read_bool_setting(settings_obj, "resolve_completion_for_snippets", False)
@@ -641,11 +644,12 @@ def check_window_unloaded():
 
 def unload_window_clients(window_id: int):
     global clients_by_window
-    window_clients = clients_by_window[window_id]
-    del clients_by_window[window_id]
-    for config, client in window_clients.items():
-        debug("unloading client", config, client)
-        unload_client(client)
+    if window_id in clients_by_window:
+        window_clients = clients_by_window[window_id]
+        del clients_by_window[window_id]
+        for config, client in window_clients.items():
+            debug("unloading client", config, client)
+            unload_client(client)
 
 
 def unload_client(client: Client):
@@ -809,7 +813,6 @@ def initialize_on_open(view: sublime.View):
 
 def unload_old_clients(window: sublime.Window):
     project_path = get_project_path(window)
-    debug('checking for clients on on ', project_path)
     clients_by_config = window_clients(window)
     clients_to_unload = {}
     for config_name, client in clients_by_config.items():
@@ -1395,7 +1398,7 @@ def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic
     if regions:
         scope_name = diagnostic_severity_scopes[severity]
         view.add_regions(
-            region_name, regions, scope_name, "dot",
+            region_name, regions, scope_name, diagnostics_gutter_marker,
             UNDERLINE_FLAGS if diagnostics_highlight_style == "underline" else BOX_FLAGS)
     else:
         view.erase_regions(region_name)
@@ -1638,9 +1641,9 @@ class HoverHandler(sublime_plugin.ViewEventListener):
     def on_hover(self, point, hover_zone):
         if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():
             return
-        line_diagnostics = get_line_diagnostics(self.view, point)
-        if line_diagnostics:
-            self.show_diagnostics_hover(point, line_diagnostics)
+        point_diagnostics = get_point_diagnostics(self.view, point)
+        if point_diagnostics:
+            self.show_diagnostics_hover(point, point_diagnostics)
         else:
             self.request_symbol_hover(point)
 
@@ -2009,6 +2012,14 @@ def get_line_diagnostics(view, point):
     )
 
 
+def get_point_diagnostics(view, point):
+    diagnostics = get_diagnostics_for_view(view)
+    return tuple(
+        diagnostic for diagnostic in diagnostics
+        if diagnostic.range.to_region(view).contains(point)
+    )
+
+
 def get_diagnostics_for_view(view: sublime.View) -> 'List[Diagnostic]':
     window = view.window()
     file_path = view.file_name()
@@ -2025,7 +2036,8 @@ class LspCodeActionsCommand(sublime_plugin.TextCommand):
     def is_enabled(self, event=None):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
-            return client and client.has_capability('codeActionProvider')
+            if client and client.has_capability('codeActionProvider'):
+                return True
         return False
 
     def run(self, edit, event=None):

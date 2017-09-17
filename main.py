@@ -1,6 +1,8 @@
 import html
+import io
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -479,10 +481,8 @@ class Client(object):
 
                     payload = None
                     try:
+                        debug("got json:", content)
                         payload = json.loads(content)
-                        limit = min(len(content), 200)
-                        if payload.get("method") != "window/logMessage":
-                            debug("got json: ", content[0:limit])
                     except IOError:
                         printf("Got a non-JSON payload: ", content)
                         continue
@@ -490,7 +490,7 @@ class Client(object):
                     try:
                         if "error" in payload:
                             error = payload['error']
-                            debug("got error: ", error)
+                            debug("got error:", error)
                             sublime.status_message(error.get('message'))
                         elif "method" in payload:
                             if "id" in payload:
@@ -500,12 +500,12 @@ class Client(object):
                         elif "id" in payload:
                             self.response_handler(payload)
                         else:
-                            debug("Unknown payload type: ", payload)
+                            debug("Unknown payload type:", payload)
                     except Exception as err:
                         printf("Error handling server content:", err)
 
             except IOError:
-                printf("LSP stdout process ending due to exception: ",
+                printf("LSP stdout process ending due to exception:",
                        sys.exc_info())
                 self.process.terminate()
                 self.process = None
@@ -1927,6 +1927,9 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
     def __init__(self, view):
         self.view = view
         self.signature_help_triggers = None
+        self.active_signature = -1
+        self.signatures = []  # type: List[Dict]
+        self._visible = False
 
     @classmethod
     def is_applicable(cls, settings):
@@ -1947,57 +1950,198 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
     def on_modified_async(self):
         pos = self.view.sel()[0].begin()
-        last_char = self.view.substr(pos - 1)
+        last_non_whitespace_char = self.view.substr(pos - 1)
+        if last_non_whitespace_char.isspace():
+            # Peek behind to find the last non-whitespace character.
+            last_non_whitespace_char = self.view.substr(self.view.find_by_class(pos, False, ~0) - 1)
         # TODO: this will fire too often, narrow down using scopes or regex
         if self.signature_help_triggers is None:
             self.initialize_triggers()
 
-        if self.signature_help_triggers:
-            if last_char in self.signature_help_triggers:
-                client = client_for_view(self.view)
-                if client:
-                    purge_did_change(self.view.buffer_id())
-                    client.send_request(
-                        Request.signatureHelp(get_document_position(self.view, pos)),
-                        lambda response: self.handle_response(response, pos))
+        if not self.signature_help_triggers:
+            return
+        elif last_non_whitespace_char in self.signature_help_triggers:
+            if self._visible:
+                return
+            client = client_for_view(self.view)
+            if client:
+                purge_did_change(self.view.buffer_id())
+                client.send_request(
+                    Request.signatureHelp(get_document_position(self.view, pos)),
+                    lambda response: self.handle_response(response, pos))
+        elif last_non_whitespace_char not in self.signature_help_triggers:
+            if self._visible:
+                self.view.hide_popup()
+
+    def _build_popup_content(self):
+        # Fetch all the relevant data.
+        if self.active_signature in range(0, len(self.signatures)):
+            signature = self.signatures[self.active_signature]
+            signature_label = html.escape(signature["label"], quote=False)
+            signature_documentation = signature.get("documentation", None)  # Optional.
+            parameters = signature.get("parameters", None)
+            if parameters is None:
+                # TODO: Make issue about this for pyls.
+                parameters = signature["params"]
+            if self.active_parameter in range(0, len(parameters)):
+                parameter = parameters[self.active_parameter]
+                parameter_label = html.escape(parameter["label"], quote=False)
+                parameter_documentation = parameter.get("documentation", None)  # Optional.
             else:
-                # TODO: this hides too soon.
-                if self.view.is_popup_visible():
-                    self.view.hide_popup()
+                parameter = None
+                parameter_label = None
+                parameter_documentation = None
+        else:
+            signature = None
+            signature_label = None
+            signature_documentation = None
+            parameter = None
+            parameter_label = None
+            parameter_documentation = None
+
+        content = io.StringIO()
+
+        content.write(r'''
+<html>
+    <body id="lsp">
+        <style>
+            div.signature_block {
+                font-size: 0.95rem;
+                display: block;
+            }
+            span.number_of_signatures {
+                font-weight: bold;
+            }
+            span.active_signature {
+            }
+            span.active_parameter {
+                font-weight: bold;
+                text-decoration: underline;
+            }
+            div.signature_documentation {
+                display: block;
+                font-family: Helvetica;
+                font-size: 1.05rem;
+            }
+            div.parameter_documentation {
+                display: block;
+                font-family: Helvetica;
+                font-size: 1.05rem;
+            }
+        </style>
+''')
+
+        # Put the active signature in a signature_block class.
+        content.write('<div class="signature_block">')
+
+        # Write the active signature number and the total number of signatures.
+        if len(self.signatures) > 1 and self.active_signature in range(0, len(self.signatures)):
+            content.write('<span class="number_of_signatures">')
+            content.write(str(self.active_signature + 1))
+            content.write("/")
+            content.write(str(len(self.signatures)))
+            content.write("</span>\n")  # number_of_signatures
+
+        # Write the active signature and give special treatment to the active parameter (if found).
+        if signature_label:
+            content.write('<span class="active_signature">')
+            if parameter_label:
+                index = signature_label.find(parameter_label)
+            else:
+                index = -1
+            if index == -1:
+                content.write(signature_label)
+            else:
+                index_end = index + len(parameter_label)
+                content.write(signature_label[:index])
+                content.write('<span class="active_parameter">')
+                content.write(signature_label[index:index_end])
+                content.write("</span>")  # active_parameter
+                content.write(signature_label[index_end:])
+            content.write("</span>")  # active_signature
+
+        content.write("</div>\n")  # signature_block
+
+        # Write the documentation of the active signature.
+        self._maybe_write_documentation(content, signature_documentation, "Signature Documentation",
+                                        "signature_documentation")
+
+        # Write the documentation of the active parameter.
+        self._maybe_write_documentation(content, parameter_documentation, "Parameter Documentation",
+                                        "parameter_documentation")
+
+        # All done!
+        content.write("</body></html>")
+        return content.getvalue()
+
+    def _maybe_write_documentation(self, content, documentation, title, class_name):
+        if documentation:
+            content.write('<div class="')
+            content.write(class_name)
+            content.write('"><h3>')
+            content.write(title)
+            content.write('</h3><p>')
+            begin = 0
+            documentation = html.escape(documentation, quote=False)
+            for match in re.finditer("https?://[^\s]+", documentation):
+                end = match.start()
+                content.write(documentation[begin:end])
+                begin = match.end()
+                url = match.group(0)
+                content.write('<a href="')
+                content.write(url)
+                content.write('">')
+                content.write(url)
+                content.write("</a>")
+            content.write(documentation[begin:])
+            content.write("</p></div>\n")  # signature_documentation
 
     def handle_response(self, response, point):
-        if response is not None:
-            config = config_for_scope(self.view)
-            signatures = response.get("signatures")
-            activeSignature = response.get("activeSignature")
-            debug("got signatures, active is", len(signatures), activeSignature)
-            if len(signatures) > 0 and config:
-                signature = signatures[activeSignature]
-                debug("active signature", signature)
-                formatted = []
-                formatted.append(
-                    "```{}\n{}\n```".format(config.languageId, signature.get('label')))
-                params = signature.get('parameters')
-                if params is None:  # for pyls TODO create issue?
-                    params = signature.get('params')
-                debug("params", params)
-                for parameter in params:
-                    paramDocs = parameter.get('documentation')
-                    if paramDocs:
-                        formatted.append("**{}**\n".format(parameter.get('label')))
-                        formatted.append("* *{}*\n".format(paramDocs))
+        if not response:
+            return
+        config = config_for_scope(self.view)
+        if not config:
+            debug("no config found for view", self.view.id())
+            return
 
-                formatted.append(signature.get('documentation'))
+        # Fetch all the relevant data.
+        self.signatures = response.get("signatures", None)
+        x, y = self.view.viewport_extent()
+        debug("max width:", x, "max height:", y)
+        if self.signatures:
+            self.active_signature = response.get("activeSignature", -1)  # Optional.
+            self.active_parameter = response.get("activeParameter", -1)  # Optional.
+            self.view.show_popup(self._build_popup_content(), 0, point, int(x), int(y),
+                                 self._on_navigate, self._on_hide)
+        else:
+            self.view.show_popup('<html><body id="lsp"><div class="error">There are no signatures!</div></body></html>',
+                                 0, point, x, y, None, self._on_hide)
+        self._visible = True
 
-                mdpopups.show_popup(
-                    self.view,
-                    "\n".join(formatted),
-                    css=".mdpopups .lsp_signature { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
-                    md=True,
-                    flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
-                    location=point,
-                    wrapper_class="lsp_signature",
-                    max_width=800)
+    def _on_navigate(self, url):
+        sublime.run_command("open_url", {"url": url})
+
+    def _on_hide(self):
+        self._visible = False
+
+    def on_query_context(self, key, _, amount, __):
+        debug("SignatureHelpListener.on_query_context:", key, amount)
+        if key != "lsp.signature_help":
+            debug("key is not equal to lsp.signature_help")
+            return False  # Let someone else handle this keybinding.
+        elif not self._visible:
+            debug("popup is not visible")
+            return False  # Let someone else handle this keybinding.
+        elif self.active_signature not in range(0, len(self.signatures)):
+            debug("active_signature", self.active_signature, "not in range( 0 ,", len(self.signatures), ")")
+            return False  # Let someone else handle this keybinding.
+        else:
+            self.active_signature += amount
+            self.active_signature %= len(self.signatures)
+            debug("active_signature is now", self.active_signature)
+            debug("updating existing popup...")
+            self.view.update_popup(self._build_popup_content())
+            return True  # We handled this keybinding.
 
 
 def get_line_diagnostics(view, point):

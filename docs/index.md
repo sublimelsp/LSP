@@ -160,6 +160,8 @@ You will need to install [sublime-reason](https://github.com/reasonml-editor/sub
 
 ### Go<a name="go"></a>
 
+NOTE: This language server is missing completions and diagnostics support. You may be better served by the [GoSublime](https://github.com/DisposaBoy/GoSublime) package.
+
 `go get github.com/sourcegraph/go-langserver`
 
 See: [github:palantir/sourcegraphgo-langserver](https://github.com/sourcegraph/go-langserver)

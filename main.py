@@ -1930,9 +1930,8 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         self.view.run_command(
             "auto_complete", {
                 'disable_auto_insert': True,
-                'api_completions_only': True,
-                'next_completion_if_showing': False,
-                'auto_complete_commit_on_tab': True,
+                'api_completions_only': only_show_lsp_completions,
+                'next_completion_if_showing': False
             })
 
 

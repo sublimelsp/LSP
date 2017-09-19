@@ -1723,13 +1723,21 @@ class HoverHandler(sublime_plugin.ViewEventListener):
 
         mdpopups.show_popup(
             self.view,
-            "\n".join(formatted),
+            preserve_whitespace("\n".join(formatted)),
             css=".mdpopups .lsp_hover { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
             md=True,
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
             location=point,
             wrapper_class="lsp_hover",
             max_width=800)
+
+
+def preserve_whitespace(contents: str) -> str:
+    """Preserve empty lines and whitespace for markdown conversion."""
+    contents = contents.replace('\t', '&nbsp' * 4)
+    contents = contents.replace('  ', '\a\a')
+    contents = contents.replace('\n\n', '\n&nbsp;\n')
+    return contents
 
 
 class CompletionState(object):
@@ -2005,7 +2013,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
                 mdpopups.show_popup(
                     self.view,
-                    "\n".join(formatted),
+                    preserve_whitespace("\n".join(formatted)),
                     css=".mdpopups .lsp_signature { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
                     md=True,
                     flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,

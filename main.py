@@ -186,7 +186,8 @@ class Request:
         r["jsonrpc"] = "2.0"
         r["id"] = id
         r["method"] = self.method
-        r["params"] = self.params
+        if self.params is not None:
+            r["params"] = self.params
         return r
 
 
@@ -231,7 +232,8 @@ class Notification:
         r = OrderedDict()  # type: OrderedDict[str, Any]
         r["jsonrpc"] = "2.0"
         r["method"] = self.method
-        r["params"] = self.params
+        if self.params is not None:
+            r["params"] = self.params
         return r
 
 

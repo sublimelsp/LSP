@@ -7,6 +7,21 @@
           "default": "// Settings in here override those in \"LSP/LSP.sublime-settings\",\n\n{\n\t$0\n}\n"}
     },
     {
+        "caption": "LSP: Setup Language Server",
+        "command": "lsp_setup_language_server",
+        "args": {}
+    },
+    {
+        "caption": "LSP: Enable Language Server Globally",
+        "command": "lsp_enable_language_server_globally",
+        "args": {}
+    },
+    {
+        "caption": "LSP: Disable Language Server Globally",
+        "command": "lsp_disable_language_server_globally",
+        "args": {}
+    },
+    {
     	"caption": "LSP: Format Document",
     	"command": "lsp_format_document",
     	"args": {}

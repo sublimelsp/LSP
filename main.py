@@ -481,8 +481,10 @@ class Client(object):
 
                     payload = None
                     try:
-                        debug("got json:", content)
                         payload = json.loads(content)
+                        limit = min(len(content), 200)
+                        if payload.get("method") != "window/logMessage":
+                            debug("got json: ", content[0:limit])
                     except IOError:
                         printf("Got a non-JSON payload: ", content)
                         continue

@@ -267,17 +267,22 @@ https://stackoverflow.com/questions/16235706/sublime-3-set-key-map-for-function-
 
 # Troubleshooting
 
-**LSP cannot find my language server through PATH on OS-X**
-
-This issue can be solved in two ways:
-
-* Install the [SublimeFixMacPath](https://github.com/int3h/SublimeFixMacPath) package
-* Or always launch sublime from the command line (so it inherits your shell's environment)
+First step should be to set the `log_debug` setting to `true`, restart sublime and examine the output in the Sublime console.
+`log_stderr` can also be set to `true` to see the language server's own logging.
 
 **LSP doesn't try to start my language server**
+
+* Make sure you have a folder added in your Sublime workspace.
+* Make sure the document you are opening lives under that folder.
 
 Your client configuration requires two settings to match the document your are editing:
 
 * Scope (eg. `source.php`): Verify this is correct by running "Show Scope Name" from the developer menu.
 * Syntax (eg. `Packages\PHP\PHP.sublime-syntax`): Verify by running `sublime.active_window().active_view().settings().get("syntax")` in the console.
 
+**LSP cannot find my language server through PATH on OS-X**
+
+This issue can be solved in two ways:
+
+* Install the [SublimeFixMacPath](https://github.com/int3h/SublimeFixMacPath) package
+* Or always launch sublime from the command line (so it inherits your shell's environment)

@@ -375,7 +375,7 @@ def enable_global_config(config_name: str):
             del existing_config["enabled"]
             settings_obj.set("clients", configs_from_settings)
             sublime.save_settings("LSP.sublime-settings")
-            sublime.active_window.run_command("lsp_restart_language_server")
+            sublime.active_window().run_command("lsp_restart_language_server")
             return
 
     # add new config

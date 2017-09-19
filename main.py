@@ -1712,7 +1712,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
 
         mdpopups.show_popup(
             self.view,
-            format_popup_content("\n".join(formatted)),
+            preserve_whitespace("\n".join(formatted)),
             css=".mdpopups .lsp_hover { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
             md=True,
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
@@ -1721,7 +1721,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             max_width=800)
 
 
-def format_popup_content(contents: str) -> str:
+def preserve_whitespace(contents: str) -> str:
     """Preserve empty lines and whitespace for markdown conversion."""
     contents = contents.replace('\t', '&nbsp' * 4)
     contents = contents.replace('  ', '\a\a')
@@ -2002,7 +2002,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
                 mdpopups.show_popup(
                     self.view,
-                    format_popup_content("\n".join(formatted)),
+                    preserve_whitespace("\n".join(formatted)),
                     css=".mdpopups .lsp_signature { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
                     md=True,
                     flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,

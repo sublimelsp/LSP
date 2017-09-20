@@ -188,6 +188,8 @@ class Request:
         r["method"] = self.method
         if self.params is not None:
             r["params"] = self.params
+        else:
+            r["params"] = dict()
         return r
 
 
@@ -234,6 +236,8 @@ class Notification:
         r["method"] = self.method
         if self.params is not None:
             r["params"] = self.params
+        else:
+            r["params"] = dict()
         return r
 
 

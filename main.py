@@ -938,7 +938,7 @@ def extract_syntax_name(syntax_file: str) -> str:
 
 
 def show_enable_config(view: sublime.View, config: ClientConfig):
-    syntax = view.settings().get("syntax")
+    syntax = str(view.settings().get("syntax", ""))
     message = "LSP has found a language server for {}. Run \"Setup Language Server\" to start using it".format(
         extract_syntax_name(syntax)
     )

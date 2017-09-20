@@ -21,35 +21,6 @@ import sublime
 
 import mdpopups
 
-# Move all default configs into default_clients as suggested by @randy3k, all disabled
-
-# If a document is opened with a syntax only present in default_clients, we prompt the user if they want to enable
-# the configuration: "never", "always" or "only in this project".
-
-# in initialize_on_open, check default_clients if nothing in project/global clients for given syntax.
-
-# how to prompt?
-
-# message_dialog(string)  None    Displays a message dialog to the user.
-
-# ok_cancel_dialog(string, <ok_title>)    bool    Displays an ok / cancel question dialog to the user.
-# If ok_title is provided, this may be used as the text on the ok button. Returns True if the user presses the
-# ok button.
-
-# yes_no_cancel_dialog(string, <yes_title>, <no_title>)   int Displays a yes / no / cancel question dialog to the user.
-# If yes_title and/or no_title are provided, they will be used as the text on the corresponding buttons on
-# some platforms.
-# Returns sublime.DIALOG_YES, sublime.DIALOG_NO or sublime.DIALOG_CANCEL.
-
-# sublime-settings can be saved the same way they are loaded now, but how to save to project settings?
-
-# project_data and set_project_data
-
-# If the user chooses to enable the package, we show installation / configuration instructions
-# (the way SublimeLinter plugins do).
-
-# split up docs, open docs/config/{clientname}.MD
-
 
 PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
@@ -363,6 +334,22 @@ def read_client_config(name, client_config):
     )
 
 
+def create_global_config(config_name: str, enabled=True, start=True):
+    settings_obj = sublime.load_settings("LSP.sublime-settings")
+    configs_from_settings = settings_obj.get("clients", {})
+
+    default_configs_from_settings = settings_obj.get("default_clients", {})
+    configs_from_settings[config_name] = default_configs_from_settings[config_name]
+    if not enabled:
+        configs_from_settings[config_name]["enabled"] = False
+    settings_obj.set("clients", configs_from_settings)
+    sublime.save_settings("LSP.sublime-settings")
+    if start:
+        sublime.set_timeout_async(start_active_view, 500)
+
+    return read_client_config(config_name, configs_from_settings[config_name])
+
+
 def enable_global_config(config_name: str):
     settings_obj = sublime.load_settings("LSP.sublime-settings")
     configs_from_settings = settings_obj.get("clients", {})
@@ -377,13 +364,9 @@ def enable_global_config(config_name: str):
             sublime.save_settings("LSP.sublime-settings")
             sublime.set_timeout_async(start_active_view, 500)
             return
-
-    # add new config
-    default_configs_from_settings = settings_obj.get("default_clients", {})
-    configs_from_settings[config_name] = default_configs_from_settings[config_name]
-    settings_obj.set("clients", configs_from_settings)
-    sublime.save_settings("LSP.sublime-settings")
-    sublime.set_timeout_async(start_active_view, 500)
+    else:
+        # add new config
+        create_global_config(config_name)
 
 
 def disable_global_config(config_name: str):
@@ -460,7 +443,8 @@ def update_settings(settings_obj: sublime.Settings):
 
     global_client_configs = read_client_configs(settings_obj.get("clients", {}))
     default_client_configs = read_client_configs(settings_obj.get("default_clients", {}))
-    enabled_names = list(config.name if config.enabled else "" for config in global_client_configs)
+    client_enableds = list("=".join([config.name, str(config.enabled)]) for config in global_client_configs)
+    debug('global clients: ', client_enableds)
 
     show_status_messages = read_bool_setting(settings_obj, "show_status_messages", True)
     show_view_status = read_bool_setting(settings_obj, "show_view_status", True)
@@ -787,6 +771,24 @@ def get_default_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
     return get_scope_client_config(view, default_client_configs)
 
 
+def enable_in_project(window, config_name: str) -> None:
+    project_data = window.project_data()
+    project_settings = project_data.setdefault('settings', dict())
+    project_lsp_settings = project_settings.setdefault('LSP', dict())
+    project_config_settings = project_lsp_settings.setdefault(config_name, dict())
+    project_config_settings['enabled'] = True
+    window.set_project_data(project_data)
+
+
+def disable_in_project(window, config_name: str) -> None:
+    project_data = window.project_data()
+    project_settings = project_data.setdefault('settings', dict())
+    project_lsp_settings = project_settings.setdefault('LSP', dict())
+    project_config_settings = project_lsp_settings.setdefault(config_name, dict())
+    project_config_settings['enabled'] = False
+    window.set_project_data(project_data)
+
+
 def get_project_config(view: sublime.View) -> dict:
     view_settings = view.settings().get('LSP', dict())
     return view_settings if view_settings else dict()
@@ -935,7 +937,7 @@ def extract_syntax_name(syntax_file: str) -> str:
 
 def show_enable_config(view: sublime.View, config: ClientConfig):
     syntax = view.settings().get("syntax")
-    message = "LSP has found a language server for {}. Run Setup Language Server (SHORTCUT HERE)".format(
+    message = "LSP has found a language server for {}. Run \"Setup Language Server\" to start using it".format(
         extract_syntax_name(syntax)
     )
     view.window().status_message(message)
@@ -952,6 +954,34 @@ class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
         sublime.status_message("No config available to enable")
 
 
+class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
+    def run(self):
+        view = self.window.active_view()
+
+        # if no default_config, nothing we can do.
+        default_config = get_default_client_config(view)
+        if default_config:
+
+            # not in global config yet: add it disabled
+            global_config = get_scope_client_config(view, global_client_configs)
+            if global_config is None:
+                debug('no global config', default_config.name)
+                # ensures config is created, but then sets enabled: false.
+                create_global_config(default_config.name, enabled=False, start=False)
+                enable_in_project(self.window, default_config.name)
+                sublime.set_timeout_async(start_active_view, 500)
+
+            else:
+                debug('has global config enabled=', global_config.enabled)
+                if global_config.enabled:
+                    pass  # is there something meaningful to do here?
+                else:
+                    enable_in_project(self.window, default_config.name)
+                    sublime.set_timeout_async(start_active_view, 500)
+        else:
+            sublime.status_message("No config available to enable")
+
+
 class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
     def run(self):
         view = self.window.active_view()
@@ -963,6 +993,19 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
         sublime.status_message("No config available to disable")
 
 
+class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
+    def run(self):
+        view = self.window.active_view()
+        global_config = get_scope_client_config(view, global_client_configs)
+        if global_config:
+            debug('disabling in project:', global_config.name)
+            disable_in_project(self.window, global_config.name)
+            sublime.set_timeout_async(lambda: unload_window_clients(self.window.id()), 500)
+            return
+        else:
+            sublime.status_message("No config available to disable")
+
+
 class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
     def run(self):
         view = self.window.active_view()
@@ -970,49 +1013,32 @@ class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
         available_config = get_default_client_config(view)
         if available_config:
             instructions_path = "Packages/LSP/docs/configurations/" + available_config.languageId + ".md"
-            content = sublime.load_resource(instructions_path)
             actions = "Enable: [Globally](#enable_globally) | [This Project Only](#enable_project)"
+            try:
+                content = sublime.load_resource(instructions_path)
+            except IOError:
+                content = "### No setup instructions found for {}".format(extract_syntax_name(syntax))
+                content = content + "\n\nVisit [LSP documentation](https://lsp.readthedocs.io)\n\n"
         else:
-            content = "No language server found for {}".format(extract_syntax_name(syntax))
-            actions = "Visit [langserver.org](langserver.org)"
+            content = "### No language server found for {}".format(extract_syntax_name(syntax))
+            actions = "Visit [langserver.org](https://langserver.org)"
         mdpopups.show_popup(
             view,
             "\n".join([content, actions]),
             css=".mdpopups .lsp_hover { margin: 4px; }",
             md=True,
-            # flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
-            # location=point,
             wrapper_class="lsp_hover",
             max_width=800,
             on_navigate=self.on_hover_navigate
         )
 
     def on_hover_navigate(self, href):
-        # TODO: don't mess with the user's cursor.
-        # Instead, pass code actions requested from phantoms & hovers should call lsp_code_actions with
-        # diagnostics as args, positioning resulting UI close to the clicked link.
         if href == "#enable_globally":
             self.window.run_command("lsp_enable_language_server_globally")
-            # sublime.message_dialog('enabled globally')
         elif href == "#enable_project":
-            sublime.message_dialog('enable for project')
+            self.window.run_command("lsp_enable_language_server_in_project")
         else:
             webbrowser.open_new_tab(href)
-        # sel = self.view.sel()
-        # sel.clear()
-        # sel.add(sublime.Region(point, point))
-        # self.view.run_command("lsp_code_actions")
-
-        # msg = "Here we show installation instructions for {}.\nWhen you are done, you will choose Enable Server Globally or Enable Server for this Project".format(available_config.languageId)
-        # sublime.message_dialog(msg)
-
-        # message = "LSP has found a language server for {}. Run Configure Language Server to start using {".format(
-        #     extract_syntax_name(syntax)
-        # )
-        # sublime.status_message(message)
-        # answer = sublime.yes_no_cancel_dialog(message, "Always", "Only in this project")
-        # debug('answer was', answer)
-
 
 
 def unload_old_clients(window: sublime.Window):

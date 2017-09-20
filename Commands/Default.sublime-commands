@@ -22,6 +22,16 @@
         "args": {}
     },
     {
+        "caption": "LSP: Enable Language Server in Project",
+        "command": "lsp_enable_language_server_in_project",
+        "args": {}
+    },
+    {
+        "caption": "LSP: Disable Language Server in Project",
+        "command": "lsp_disable_language_server_in_project",
+        "args": {}
+    },
+    {
     	"caption": "LSP: Format Document",
     	"command": "lsp_format_document",
     	"args": {}

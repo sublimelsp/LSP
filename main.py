@@ -775,8 +775,8 @@ def enable_in_project(window, config_name: str) -> None:
     project_data = window.project_data()
     project_settings = project_data.setdefault('settings', dict())
     project_lsp_settings = project_settings.setdefault('LSP', dict())
-    project_config_settings = project_lsp_settings.setdefault(config_name, dict())
-    project_config_settings['enabled'] = True
+    project_client_settings = project_lsp_settings.setdefault(config_name, dict())
+    project_client_settings['enabled'] = True
     window.set_project_data(project_data)
 
 
@@ -784,14 +784,16 @@ def disable_in_project(window, config_name: str) -> None:
     project_data = window.project_data()
     project_settings = project_data.setdefault('settings', dict())
     project_lsp_settings = project_settings.setdefault('LSP', dict())
-    project_config_settings = project_lsp_settings.setdefault(config_name, dict())
-    project_config_settings['enabled'] = False
+    project_client_settings = project_lsp_settings.setdefault(config_name, dict())
+    project_client_settings['enabled'] = False
     window.set_project_data(project_data)
 
 
-def get_project_config(view: sublime.View) -> dict:
-    view_settings = view.settings().get('LSP', dict())
-    return view_settings if view_settings else dict()
+def get_project_config(window: sublime.Window) -> dict:
+    project_data = window.project_data()
+    project_settings = project_data.setdefault('settings', dict())
+    project_lsp_settings = project_settings.setdefault('LSP', dict())
+    return project_lsp_settings
 
 
 def get_window_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
@@ -808,7 +810,7 @@ def add_window_client_config(window: 'sublime.Window', config: 'ClientConfig'):
 
 
 def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -> 'ClientConfig':
-    window_config = get_project_config(view)
+    window_config = get_project_config(view.window())
 
     if client_config.name in window_config:
         overrides = window_config[client_config.name]

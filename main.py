@@ -420,6 +420,11 @@ def load_settings():
     settings_obj.add_on_change("_on_new_settings", lambda: update_settings(settings_obj))
 
 
+def unload_settings():
+    settings_obj = sublime.load_settings("LSP.sublime-settings")
+    settings_obj.clear_on_change("_on_new_settings")
+
+
 def read_bool_setting(settings_obj: sublime.Settings, key: str, default: bool) -> bool:
     val = settings_obj.get(key)
     if isinstance(val, bool):
@@ -758,6 +763,7 @@ def unload_client(client: Client):
 
 
 def plugin_unloaded():
+    unload_settings()
     for window in sublime.windows():
         for client in window_clients(window).values():
             unload_client(client)

@@ -34,6 +34,7 @@ show_diagnostics_phantoms = False
 show_diagnostics_in_view_status = True
 only_show_lsp_completions = False
 diagnostics_highlight_style = "underline"
+diagnostics_gutter_marker = "dot"
 complete_all_chars = False
 resolve_completion_for_snippets = False
 log_debug = True
@@ -187,7 +188,8 @@ class Request:
         r["jsonrpc"] = "2.0"
         r["id"] = id
         r["method"] = self.method
-        r["params"] = self.params
+        if self.params is not None:
+            r["params"] = self.params
         return r
 
 
@@ -232,7 +234,8 @@ class Notification:
         r = OrderedDict()  # type: OrderedDict[str, Any]
         r["jsonrpc"] = "2.0"
         r["method"] = self.method
-        r["params"] = self.params
+        if self.params is not None:
+            r["params"] = self.params
         return r
 
 
@@ -357,6 +360,7 @@ def update_settings(settings_obj: sublime.Settings):
     global show_diagnostics_in_view_status
     global only_show_lsp_completions
     global diagnostics_highlight_style
+    global diagnostics_gutter_marker
     global complete_all_chars
     global resolve_completion_for_snippets
     global log_debug
@@ -381,6 +385,7 @@ def update_settings(settings_obj: sublime.Settings):
     show_diagnostics_phantoms = read_bool_setting(settings_obj, "show_diagnostics_phantoms", False)
     show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
     diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
+    diagnostics_gutter_marker = read_str_setting(settings_obj, "diagnostics_gutter_marker", "dot")
     only_show_lsp_completions = read_bool_setting(settings_obj, "only_show_lsp_completions", False)
     complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
     resolve_completion_for_snippets = read_bool_setting(settings_obj, "resolve_completion_for_snippets", False)
@@ -643,11 +648,12 @@ def check_window_unloaded():
 
 def unload_window_clients(window_id: int):
     global clients_by_window
-    window_clients = clients_by_window[window_id]
-    del clients_by_window[window_id]
-    for config, client in window_clients.items():
-        debug("unloading client", config, client)
-        unload_client(client)
+    if window_id in clients_by_window:
+        window_clients = clients_by_window[window_id]
+        del clients_by_window[window_id]
+        for config, client in window_clients.items():
+            debug("unloading client", config, client)
+            unload_client(client)
 
 
 def unload_client(client: Client):
@@ -811,7 +817,6 @@ def initialize_on_open(view: sublime.View):
 
 def unload_old_clients(window: sublime.Window):
     project_path = get_project_path(window)
-    debug('checking for clients on on ', project_path)
     clients_by_config = window_clients(window)
     clients_to_unload = {}
     for config_name, client in clients_by_config.items():
@@ -986,20 +991,28 @@ def handle_initialize_result(result, client, window, config):
 
 stylesheet = '''
             <style>
+                div.error-arrow {
+                    border-top: 0.4rem solid transparent;
+                    border-left: 0.5rem solid color(var(--redish) blend(var(--background) 30%));
+                    width: 0;
+                    height: 0;
+                }
                 div.error {
                     padding: 0.4rem 0 0.4rem 0.7rem;
-                    margin: 0.2rem 0;
-                    border-radius: 2px;
+                    margin: 0 0 0.2rem;
+                    border-radius: 0 0.2rem 0.2rem 0.2rem;
                 }
+
                 div.error span.message {
                     padding-right: 0.7rem;
                 }
+
                 div.error a {
                     text-decoration: inherit;
                     padding: 0.35rem 0.7rem 0.45rem 0.8rem;
                     position: relative;
                     bottom: 0.05rem;
-                    border-radius: 0 2px 2px 0;
+                    border-radius: 0 0.2rem 0.2rem 0;
                     font-weight: bold;
                 }
                 html.dark div.error a {
@@ -1015,6 +1028,7 @@ stylesheet = '''
 def create_phantom_html(text: str) -> str:
     global stylesheet
     return """<body id=inline-error>{}
+                <div class="error-arrow"></div>
                 <div class="error">
                     <span class="message">{}</span>
                     <a href="code-actions">Code Actions</a>
@@ -1397,7 +1411,7 @@ def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic
     if regions:
         scope_name = diagnostic_severity_scopes[severity]
         view.add_regions(
-            region_name, regions, scope_name, "dot",
+            region_name, regions, scope_name, diagnostics_gutter_marker,
             UNDERLINE_FLAGS if diagnostics_highlight_style == "underline" else BOX_FLAGS)
     else:
         view.erase_regions(region_name)
@@ -1640,9 +1654,9 @@ class HoverHandler(sublime_plugin.ViewEventListener):
     def on_hover(self, point, hover_zone):
         if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():
             return
-        line_diagnostics = get_line_diagnostics(self.view, point)
-        if line_diagnostics:
-            self.show_diagnostics_hover(point, line_diagnostics)
+        point_diagnostics = get_point_diagnostics(self.view, point)
+        if point_diagnostics:
+            self.show_diagnostics_hover(point, point_diagnostics)
         else:
             self.request_symbol_hover(point)
 
@@ -1711,13 +1725,21 @@ class HoverHandler(sublime_plugin.ViewEventListener):
 
         mdpopups.show_popup(
             self.view,
-            "\n".join(formatted),
+            preserve_whitespace("\n".join(formatted)),
             css=".mdpopups .lsp_hover { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
             md=True,
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
             location=point,
             wrapper_class="lsp_hover",
             max_width=800)
+
+
+def preserve_whitespace(contents: str) -> str:
+    """Preserve empty lines and whitespace for markdown conversion."""
+    contents = contents.replace('\t', '&nbsp' * 4)
+    contents = contents.replace('  ', '\a\a')
+    contents = contents.replace('\n\n', '\n&nbsp;\n')
+    return contents
 
 
 class CompletionState(object):
@@ -1909,6 +1931,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 resolvable_completion_items = items
 
             self.state = CompletionState.APPLYING
+            self.view.run_command("hide_auto_complete")
             self.run_auto_complete()
         elif self.state == CompletionState.CANCELLING:
             self.do_request(*self.next_request)
@@ -1919,9 +1942,8 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         self.view.run_command(
             "auto_complete", {
                 'disable_auto_insert': True,
-                'api_completions_only': True,
-                'next_completion_if_showing': False,
-                'auto_complete_commit_on_tab': True,
+                'api_completions_only': only_show_lsp_completions,
+                'next_completion_if_showing': False
             })
 
 
@@ -2007,6 +2029,12 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 <html>
     <body id="lsp">
         <style>
+            body {
+                margin: 4px;
+            }
+            p {
+                0.1rem;
+            }
             div.signature_block {
                 font-size: 0.95rem;
                 display: block;
@@ -2155,6 +2183,14 @@ def get_line_diagnostics(view, point):
     )
 
 
+def get_point_diagnostics(view, point):
+    diagnostics = get_diagnostics_for_view(view)
+    return tuple(
+        diagnostic for diagnostic in diagnostics
+        if diagnostic.range.to_region(view).contains(point)
+    )
+
+
 def get_diagnostics_for_view(view: sublime.View) -> 'List[Diagnostic]':
     window = view.window()
     file_path = view.file_name()
@@ -2171,7 +2207,8 @@ class LspCodeActionsCommand(sublime_plugin.TextCommand):
     def is_enabled(self, event=None):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
-            return client and client.has_capability('codeActionProvider')
+            if client and client.has_capability('codeActionProvider'):
+                return True
         return False
 
     def run(self, edit, event=None):

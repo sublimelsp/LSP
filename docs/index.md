@@ -18,6 +18,7 @@
 * `show_diagnostics_phantoms` `false` *show diagnostics as phantoms while the file has no changes*
 * `show_diagnostics_in_view_status` `true` *when on a diagnostic with the cursor, show the text in the status bar*
 * `diagnostics_highlight_style` `"underline"` *highlight style of code diagnostics, `"underline"` or `"box"`*
+* `diagnostics_gutter_marker` `"dot"` *gutter marker for code diagnostics: "dot", "circle", "bookmark", "cross" or ""*
 * `log_debug` `false` *show debug logging in the sublime console*
 * `log_server` `true` *show server/logMessage notifications from language servers in the console*
 * `log_stderr` `false` *show language server stderr output in the console*
@@ -159,6 +160,8 @@ You will need to install [sublime-reason](https://github.com/reasonml-editor/sub
 
 ### Go<a name="go"></a>
 
+NOTE: This language server is missing completions and diagnostics support. You may be better served by the [GoSublime](https://github.com/DisposaBoy/GoSublime) package.
+
 `go get github.com/sourcegraph/go-langserver`
 
 See: [github:palantir/sourcegraphgo-langserver](https://github.com/sourcegraph/go-langserver)
@@ -262,4 +265,24 @@ Show Diagnostics Panel: `super+shift+M` / `ctr+alt+M`
 See below link, but bind to `lsp_symbol_definition` command
 https://stackoverflow.com/questions/16235706/sublime-3-set-key-map-for-function-goto-definition
 
+# Troubleshooting
 
+First step should be to set the `log_debug` setting to `true`, restart sublime and examine the output in the Sublime console.
+`log_stderr` can also be set to `true` to see the language server's own logging.
+
+**LSP doesn't try to start my language server**
+
+* Make sure you have a folder added in your Sublime workspace.
+* Make sure the document you are opening lives under that folder.
+
+Your client configuration requires two settings to match the document your are editing:
+
+* Scope (eg. `source.php`): Verify this is correct by running "Show Scope Name" from the developer menu.
+* Syntax (eg. `Packages\PHP\PHP.sublime-syntax`): Verify by running `sublime.active_window().active_view().settings().get("syntax")` in the console.
+
+**LSP cannot find my language server through PATH on OS-X**
+
+This issue can be solved in two ways:
+
+* Install the [SublimeFixMacPath](https://github.com/int3h/SublimeFixMacPath) package
+* Or always launch sublime from the command line (so it inherits your shell's environment)

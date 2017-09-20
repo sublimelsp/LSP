@@ -375,7 +375,7 @@ def enable_global_config(config_name: str):
             del existing_config["enabled"]
             settings_obj.set("clients", configs_from_settings)
             sublime.save_settings("LSP.sublime-settings")
-            sublime.active_window().run_command("lsp_restart_language_server")
+            sublime.set_timeout_async(start_active_view, 500)
             return
 
     # add new config
@@ -383,7 +383,7 @@ def enable_global_config(config_name: str):
     configs_from_settings[config_name] = default_configs_from_settings[config_name]
     settings_obj.set("clients", configs_from_settings)
     sublime.save_settings("LSP.sublime-settings")
-    sublime.active_window().run_command("lsp_restart_client")
+    sublime.set_timeout_async(start_active_view, 500)
 
 
 def disable_global_config(config_name: str):
@@ -397,7 +397,7 @@ def disable_global_config(config_name: str):
         settings_obj.set("clients", configs_from_settings)
         sublime.save_settings("LSP.sublime-settings")
         # TODO: make sure parsed settings are disabled before running this.
-        sublime.active_window().run_command("lsp_restart_client")
+        sublime.set_timeout_async(lambda: unload_window_clients(sublime.active_window().id()), 500)
         return
 
 

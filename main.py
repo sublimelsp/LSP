@@ -2033,7 +2033,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 margin: 4px;
             }
             p {
-                0.1rem;
+                margin: 0.1rem;
             }
             div.signature_block {
                 font-size: 0.95rem;

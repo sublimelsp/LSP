@@ -2,7 +2,6 @@ import html
 import io
 import json
 import os
-import re
 import subprocess
 import sys
 import threading
@@ -2110,21 +2109,9 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             content.write(class_name)
             content.write('"><h3>')
             content.write(title)
-            content.write('</h3><p>')
-            begin = 0
-            documentation = html.escape(documentation, quote=False)
-            for match in re.finditer("https?://[^\s]+", documentation):
-                end = match.start()
-                content.write(documentation[begin:end])
-                begin = match.end()
-                url = match.group(0)
-                content.write('<a href="')
-                content.write(url)
-                content.write('">')
-                content.write(url)
-                content.write("</a>")
-            content.write(documentation[begin:])
-            content.write("</p></div>\n")  # signature_documentation
+            content.write('</h3>')
+            content.write(mdpopups.md2html(self.view, documentation))  # type: ignore
+            content.write("</div>\n")
 
     def handle_response(self, response, point):
         if not response:

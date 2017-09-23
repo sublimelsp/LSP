@@ -189,6 +189,8 @@ class Request:
         r["method"] = self.method
         if self.params is not None:
             r["params"] = self.params
+        else:
+            r["params"] = dict()
         return r
 
 
@@ -235,6 +237,8 @@ class Notification:
         r["method"] = self.method
         if self.params is not None:
             r["params"] = self.params
+        else:
+            r["params"] = dict()
         return r
 
 
@@ -1735,8 +1739,9 @@ class HoverHandler(sublime_plugin.ViewEventListener):
 
 def preserve_whitespace(contents: str) -> str:
     """Preserve empty lines and whitespace for markdown conversion."""
-    contents = contents.replace('\t', '&nbsp' * 4)
-    contents = contents.replace('  ', '\a\a')
+    contents = contents.strip(' \t\r\n')
+    contents = contents.replace('\t', '&nbsp;' * 4)
+    contents = contents.replace('  ', '&nbsp;' * 2)
     contents = contents.replace('\n\n', '\n&nbsp;\n')
     return contents
 

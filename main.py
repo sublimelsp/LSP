@@ -2099,22 +2099,23 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         content.write("</div>\n")  # signature_block
 
         # Write the documentation of the active signature.
-        self._maybe_write_documentation(content, signature_documentation, "signature_documentation")
+        if signature_documentation:
+            self._write_div(content, signature_documentation, "signature_documentation")
 
         # Write the documentation of the active parameter.
-        self._maybe_write_documentation(content, parameter_documentation, "parameter_documentation")
+        if parameter_documentation:
+            self._write_div(content, parameter_documentation, "parameter_documentation")
 
         # All done!
         content.write("</body></html>")
         return content.getvalue()
 
-    def _maybe_write_documentation(self, content, documentation, class_name):
-        if documentation:
-            content.write('<div class="')
-            content.write(class_name)
-            content.write('">')
-            content.write(mdpopups.md2html(self.view, documentation))  # type: ignore
-            content.write("</div>\n")
+    def _write_div(self, content, markdown, class_name):
+        content.write('<div class="')
+        content.write(class_name)
+        content.write('">')
+        content.write(mdpopups.md2html(self.view, markdown))  # type: ignore
+        content.write("</div>\n")
 
     def handle_response(self, response, point):
 

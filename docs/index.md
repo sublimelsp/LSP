@@ -27,7 +27,7 @@
 
 For any of these components it is important that Sublime Text can find the language server executable through the path, especially when using virtual environments.
 
-For autocomplete to trigger on eg. `.` or `->`, you may need to add the listed `autocomplete_triggers` to your User or Syntax-specific settings.
+For autocomplete to trigger on eg. `.` or `->`, you may need to add the listed `auto_complete_triggers` to your User or Syntax-specific settings.
 
 The default LSP.sublime-settings contains some default LSP client configuration that may not work for you. See [Client Config](#client-config) for explanations for the available settings.
 
@@ -40,6 +40,8 @@ See: [github:sourcegraph/javascript-typescript-langserver](https://github.com/so
 On windows you will need to override client config to launch `javascript-typescript-stdio.cmd` instead.
 
 See: [github](https://github.com/sourcegraph/javascript-typescript-langserver)
+
+Autocomplete triggers: in User or Syntax-specific settings, add:
 
 ```
 "auto_complete_triggers": [
@@ -76,7 +78,7 @@ Client configuration:
 
 See: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
 
-Autocomplete triggers:
+Autocomplete triggers: in User or Syntax-specific settings, add:
 
 ```
 "auto_complete_triggers": [ {"selector": "source.python", "characters": "."} ],
@@ -126,7 +128,7 @@ Requires Rust Nightly.
 
 See [github:rust-lang-nursery/rls](https://github.com/rust-lang-nursery/rls) for up-to-date installation instructions.
 
-Autocomplete triggers:
+Autocomplete triggers: in User or Syntax-specific settings, add:
 
 ```
 "auto_complete_triggers": [ {"selector": "source.rust", "characters": ".:"} ]
@@ -149,6 +151,8 @@ Then the LSP plugin should launch as configured in LSP.sublime-settings using co
 ### C/C++ (Clangd)<a name="clang"></a>
 
 You will need to build from source, see [instructions](https://clang.llvm.org/extra/clangd.html)
+
+Autocomplete triggers: in User or Syntax-specific settings, add:
 
 ```
 "auto_complete_triggers": [ {"selector": "source.c++", "characters": ".>:" }]

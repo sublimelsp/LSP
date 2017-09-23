@@ -470,13 +470,17 @@ class Client(object):
         """
         ContentLengthHeader = b"Content-Length: "
 
-        while self.process.poll() is None:
+        while True:
             try:
 
                 in_headers = True
                 content_length = 0
                 while in_headers:
-                    header = self.process.stdout.readline().strip()
+                    header = self.process.stdout.readline()
+                    if header == '':
+                        break
+                    else:
+                        header = header.strip()
                     if (len(header) == 0):
                         in_headers = False
 
@@ -492,7 +496,7 @@ class Client(object):
                         payload = json.loads(content)
                         limit = min(len(content), 200)
                         if payload.get("method") != "window/logMessage":
-                            debug("got json: ", content[0:limit])
+                            debug("got json: ", content[0:limit], "...")
                     except IOError:
                         printf("Got a non-JSON payload: ", content)
                         continue
@@ -500,7 +504,7 @@ class Client(object):
                     try:
                         if "error" in payload:
                             error = payload['error']
-                            debug("got error: ", error)
+                            printf("Got error from server: ", error)
                             sublime.status_message(error.get('message'))
                         elif "method" in payload:
                             if "id" in payload:
@@ -527,10 +531,12 @@ class Client(object):
         """
         Reads any errors from the LSP process.
         """
-        while self.process.poll() is None:
+        while True:
             try:
                 content = self.process.stderr.readline()
-                if log_stderr and len(content) > 0:
+                if len(content) == 0:
+                    break
+                if log_stderr:
                     printf("(stderr): ", content.strip())
             except IOError:
                 printf("LSP stderr process ending due to exception: ",

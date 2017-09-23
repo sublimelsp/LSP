@@ -2056,11 +2056,13 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 display: block;
                 font-family: Helvetica;
                 font-size: 1.05rem;
+                margin: 0.5rem;
             }
             div.parameter_documentation {
                 display: block;
                 font-family: Helvetica;
                 font-size: 1.05rem;
+                margin: 0.5rem;
             }
         </style>
 ''')
@@ -2097,28 +2099,25 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         content.write("</div>\n")  # signature_block
 
         # Write the documentation of the active signature.
-        self._maybe_write_documentation(content, signature_documentation, "Signature Documentation",
-                                        "signature_documentation")
+        self._maybe_write_documentation(content, signature_documentation, "signature_documentation")
 
         # Write the documentation of the active parameter.
-        self._maybe_write_documentation(content, parameter_documentation, "Parameter Documentation",
-                                        "parameter_documentation")
+        self._maybe_write_documentation(content, parameter_documentation, "parameter_documentation")
 
         # All done!
         content.write("</body></html>")
         return content.getvalue()
 
-    def _maybe_write_documentation(self, content, documentation, title, class_name):
+    def _maybe_write_documentation(self, content, documentation, class_name):
         if documentation:
             content.write('<div class="')
             content.write(class_name)
-            content.write('"><h3>')
-            content.write(title)
-            content.write('</h3>')
+            content.write('">')
             content.write(mdpopups.md2html(self.view, documentation))  # type: ignore
             content.write("</div>\n")
 
     def handle_response(self, response, point):
+
         if not response:
             return
         config = config_for_scope(self.view)

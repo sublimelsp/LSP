@@ -1,6 +1,6 @@
 # LSP
 
-[![Build Status](https://travis-ci.org/tomv564/LSP.svg?branch=master)](https://travis-ci.org/tomv564/LSP) [![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
+[![GitHub release](https://img.shields.io/github/release/tomv564/LSP.svg)](https://github.com/tomv564/LSP/releases) [![Build Status](https://travis-ci.org/tomv564/LSP.svg?branch=master)](https://travis-ci.org/tomv564/LSP) [![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
 
 Universal Language Server support for Sublime Text 3 using the Language Server Protocol.
 
@@ -18,7 +18,7 @@ Tested against language servers for javascript/typescript, python, c/c++ (clangd
 
 ## Screenshots
 
-Rich hover support from js/ts language server 
+Rich hover support from js/ts language server
 
 ![hover screenshot](https://raw.githubusercontent.com/tomv564/LSP/master/docs/images/screenshot-hover.png)
 
@@ -36,4 +36,9 @@ To run latest master:
 
 ## Configuration
 
-Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io) or [in the docs directory](https://github.com/tomv564/LSP/blob/master/docs/index.md)  
+Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io) or [in the docs directory](https://github.com/tomv564/LSP/blob/master/docs/index.md)
+
+## Troubleshooting
+
+Enable the `log_debug` setting, restart Sublime and open the console.
+See the [Troubleshooting](https://lsp.readthedocs.io/en/latest/#troubleshooting) guide for tips and known limitations.

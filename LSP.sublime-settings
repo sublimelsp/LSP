@@ -49,7 +49,14 @@
         "scopes": ["source.ocaml"],
         "syntaxes": ["Packages/OCaml/OCaml.sublime-syntax"],
         "languageId": "ocaml"
-      }
+      },
+      "golsp":
+      {
+        "command": ["go-langserver"],
+        "scopes": ["source.go"],
+        "syntaxes": ["Packages/Go/Go.sublime-syntax"],
+        "languageId": "go"
+      },
   },
   "show_status_messages": true,
   "show_view_status": true,
@@ -58,7 +65,11 @@
   "show_diagnostics_in_view_status": true,
   // highlight style of code diagnostics: "underline" or "box"
   "diagnostics_highlight_style": "underline",
+  // gutter marker for code diagnostics: "dot", "circle", "bookmark", "cross" or ""
+  "diagnostics_gutter_marker": "dot",
   "complete_all_chars": true,
+  "only_show_lsp_completions": false,
+  "resolve_completion_for_snippets": false,
   "log_debug": false,
   "log_server": true,
   "log_stderr": false

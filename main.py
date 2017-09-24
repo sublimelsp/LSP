@@ -605,7 +605,7 @@ def get_project_path(window: sublime.Window) -> 'Optional[str]':
         if filename:
             project_path = os.path.dirname(filename)
             debug("Couldn't determine project directory since no folders are open!",
-              "Using", project_path, "as a fallback.")
+                  "Using", project_path, "as a fallback.")
             return project_path
         else:
             debug("Couldn't determine project directory since no folders are open",

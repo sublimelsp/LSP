@@ -610,6 +610,7 @@ def get_project_path(window: sublime.Window) -> 'Optional[str]':
         else:
             debug("Couldn't determine project directory since no folders are open",
                   "and the current file isn't saved on the disk.")
+            return None
 
 
 def get_common_parent(paths: 'List[str]') -> str:
@@ -1537,7 +1538,7 @@ def format_diagnostics(file_path, origin_diagnostics):
     return content
 
 
-def start_client(window: sublime.Window, config: ClientConfig) -> 'Optional[Client]':
+def start_client(window: sublime.Window, config: ClientConfig):
     project_path = get_project_path(window)
     if project_path is None:
         return None
@@ -1553,7 +1554,7 @@ def start_client(window: sublime.Window, config: ClientConfig) -> 'Optional[Clie
     if not client:
         window.status_message("Could not start " + config.name + ", disabling")
         debug("Could not start", config.binary_args, ", disabling")
-        return
+        return None
 
     initializeParams = {
         "processId": client.process.pid,

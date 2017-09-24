@@ -1904,7 +1904,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
             return (
                 self.completions,
-                0 if self.state == CompletionState.IDLE and not only_show_lsp_completions
+                0 if not only_show_lsp_completions
                 else sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
             )
 

@@ -469,13 +469,17 @@ class Client(object):
         """
         ContentLengthHeader = b"Content-Length: "
 
-        while self.process.poll() is None:
+        while True:
             try:
 
                 in_headers = True
                 content_length = 0
                 while in_headers:
-                    header = self.process.stdout.readline().strip()
+                    header = self.process.stdout.readline()
+                    if header == '':
+                        break
+                    else:
+                        header = header.strip()
                     if (len(header) == 0):
                         in_headers = False
 
@@ -491,7 +495,7 @@ class Client(object):
                         payload = json.loads(content)
                         limit = min(len(content), 200)
                         if payload.get("method") != "window/logMessage":
-                            debug("got json: ", content[0:limit])
+                            debug("got json: ", content[0:limit], "...")
                     except IOError:
                         printf("Got a non-JSON payload: ", content)
                         continue
@@ -499,7 +503,7 @@ class Client(object):
                     try:
                         if "error" in payload:
                             error = payload['error']
-                            debug("got error: ", error)
+                            printf("Got error from server: ", error)
                             sublime.status_message(error.get('message'))
                         elif "method" in payload:
                             if "id" in payload:
@@ -526,10 +530,12 @@ class Client(object):
         """
         Reads any errors from the LSP process.
         """
-        while self.process.poll() is None:
+        while True:
             try:
                 content = self.process.stderr.readline()
-                if log_stderr and len(content) > 0:
+                if len(content) == 0:
+                    break
+                if log_stderr:
                     printf("(stderr): ", content.strip())
             except IOError:
                 printf("LSP stderr process ending due to exception: ",
@@ -595,8 +601,16 @@ def get_project_path(window: sublime.Window) -> 'Optional[str]':
         folder_paths = window.folders()
         return folder_paths[0]
     else:
-        debug("Couldn't determine project directory")
-        return None
+        filename = window.active_view().file_name()
+        if filename:
+            project_path = os.path.dirname(filename)
+            debug("Couldn't determine project directory since no folders are open!",
+                  "Using", project_path, "as a fallback.")
+            return project_path
+        else:
+            debug("Couldn't determine project directory since no folders are open",
+                  "and the current file isn't saved on the disk.")
+            return None
 
 
 def get_common_parent(paths: 'List[str]') -> str:
@@ -1564,47 +1578,49 @@ def format_diagnostics(file_path, origin_diagnostics):
 
 def start_client(window: sublime.Window, config: ClientConfig):
     project_path = get_project_path(window)
-    if project_path:
-        if show_status_messages:
-            window.status_message("Starting " + config.name + "...")
-        debug("starting in", project_path)
+    if project_path is None:
+        return None
 
-        variables = window.extract_variables()
-        expanded_args = list(sublime.expand_variables(os.path.expanduser(arg), variables) for arg in config.binary_args)
+    if show_status_messages:
+        window.status_message("Starting " + config.name + "...")
+    debug("starting in", project_path)
 
-        client = start_server(expanded_args, project_path)
-        if not client:
-            window.status_message("Could not start " + config.name + ", disabling")
-            debug("Could not start", config.binary_args, ", disabling")
-            return
+    variables = window.extract_variables()
+    expanded_args = list(sublime.expand_variables(os.path.expanduser(arg), variables) for arg in config.binary_args)
 
-        initializeParams = {
-            "processId": client.process.pid,
-            "rootUri": filename_to_uri(project_path),
-            "rootPath": project_path,
-            "capabilities": {
-                "textDocument": {
-                    "completion": {
-                        "completionItem": {
-                            "snippetSupport": True
-                        }
-                    },
-                    "synchronization": {
-                        "didSave": True
+    client = start_server(expanded_args, project_path)
+    if not client:
+        window.status_message("Could not start " + config.name + ", disabling")
+        debug("Could not start", config.binary_args, ", disabling")
+        return None
+
+    initializeParams = {
+        "processId": client.process.pid,
+        "rootUri": filename_to_uri(project_path),
+        "rootPath": project_path,
+        "capabilities": {
+            "textDocument": {
+                "completion": {
+                    "completionItem": {
+                        "snippetSupport": True
                     }
                 },
-                "workspace": {
-                    "applyEdit": True
+                "synchronization": {
+                    "didSave": True
                 }
+            },
+            "workspace": {
+                "applyEdit": True
             }
         }
-        if config.init_options:
-            initializeParams['initializationOptions'] = config.init_options
+    }
+    if config.init_options:
+        initializeParams['initializationOptions'] = config.init_options
 
-        client.send_request(
-            Request.initialize(initializeParams),
-            lambda result: handle_initialize_result(result, client, window, config))
-        return client
+    client.send_request(
+        Request.initialize(initializeParams),
+        lambda result: handle_initialize_result(result, client, window, config))
+    return client
 
 
 def get_window_client(view: sublime.View, config: ClientConfig) -> Client:
@@ -1926,7 +1942,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
             return (
                 self.completions,
-                0 if self.state == CompletionState.IDLE and not only_show_lsp_completions
+                0 if not only_show_lsp_completions
                 else sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
             )
 

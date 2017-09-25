@@ -1,5 +1,4 @@
 import html
-import io
 import json
 import os
 import subprocess
@@ -1027,6 +1026,44 @@ stylesheet = '''
             </style>
         '''
 
+signature_help_prefix = '''
+<html>
+    <body id="lsp">
+        <style>
+            body {
+                margin: 4px;
+            }
+            p {
+                margin: 0.1rem;
+            }
+            div.signature_block {
+                font-size: 0.95rem;
+                display: block;
+            }
+            span.number_of_signatures {
+                font-weight: bold;
+            }
+            span.active_signature {
+            }
+            span.active_parameter {
+                font-weight: bold;
+                text-decoration: underline;
+            }
+            div.signature_documentation {
+                display: block;
+                font-family: Helvetica;
+                font-size: 1.05rem;
+                margin: 0.5rem;
+            }
+            div.parameter_documentation {
+                display: block;
+                font-family: Helvetica;
+                font-size: 1.05rem;
+                margin: 0.5rem;
+            }
+        </style>
+'''
+
 
 def create_phantom_html(text: str) -> str:
     global stylesheet
@@ -1997,9 +2034,8 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 client.send_request(
                     Request.signatureHelp(get_document_position(self.view, pos)),
                     lambda response: self.handle_response(response, pos))
-        elif last_non_whitespace_char not in self.signature_help_triggers:
-            if self._visible:
-                self.view.hide_popup()
+        elif self._visible:
+            self.view.hide_popup()
 
     def _build_popup_content(self):
         # Fetch all the relevant data.
@@ -2008,9 +2044,6 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             signature_label = html.escape(signature["label"], quote=False)
             signature_documentation = signature.get("documentation", None)  # Optional.
             parameters = signature.get("parameters", None)
-            if parameters is None:
-                # TODO: Make issue about this for pyls.
-                parameters = signature["params"]
             if self.active_parameter in range(0, len(parameters)):
                 parameter = parameters[self.active_parameter]
                 parameter_label = html.escape(parameter["label"], quote=False)
@@ -2027,95 +2060,45 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             parameter_label = None
             parameter_documentation = None
 
-        content = io.StringIO()
+        content = []
 
-        content.write(r'''
-<html>
-    <body id="lsp">
-        <style>
-            body {
-                margin: 4px;
-            }
-            p {
-                margin: 0.1rem;
-            }
-            div.signature_block {
-                font-size: 0.95rem;
-                display: block;
-            }
-            span.number_of_signatures {
-                font-weight: bold;
-            }
-            span.active_signature {
-            }
-            span.active_parameter {
-                font-weight: bold;
-                text-decoration: underline;
-            }
-            div.signature_documentation {
-                display: block;
-                font-family: Helvetica;
-                font-size: 1.05rem;
-                margin: 0.5rem;
-            }
-            div.parameter_documentation {
-                display: block;
-                font-family: Helvetica;
-                font-size: 1.05rem;
-                margin: 0.5rem;
-            }
-        </style>
-''')
+        content.append(signature_help_prefix)
 
         # Put the active signature in a signature_block class.
-        content.write('<div class="signature_block">')
+        content.append('<div class="signature_block">')
 
         # Write the active signature number and the total number of signatures.
         if len(self.signatures) > 1 and self.active_signature in range(0, len(self.signatures)):
-            content.write('<span class="number_of_signatures">')
-            content.write(str(self.active_signature + 1))
-            content.write("/")
-            content.write(str(len(self.signatures)))
-            content.write("</span>\n")  # number_of_signatures
+            content.append('<span class="number_of_signatures">{}/{}</span>\n'
+                           .format(self.active_signature + 1, len(self.signatures)))
 
         # Write the active signature and give special treatment to the active parameter (if found).
         if signature_label:
-            content.write('<span class="active_signature">')
+            content.append('<span class="active_signature">')
             if parameter_label:
-                index = signature_label.find(parameter_label)
-            else:
-                index = -1
-            if index == -1:
-                content.write(signature_label)
-            else:
-                index_end = index + len(parameter_label)
-                content.write(signature_label[:index])
-                content.write('<span class="active_parameter">')
-                content.write(signature_label[index:index_end])
-                content.write("</span>")  # active_parameter
-                content.write(signature_label[index_end:])
-            content.write("</span>")  # active_signature
+                signature_label = signature_label.replace(parameter_label,
+                                                          '<span class="active_parameter">{}</span>'
+                                                          .format(parameter_label))
+            content.append(signature_label)
+            content.append("</span>")  # active_signature
 
-        content.write("</div>\n")  # signature_block
+        content.append("</div>\n")  # signature_block
 
         # Write the documentation of the active signature.
         if signature_documentation:
-            self._write_div(content, signature_documentation, "signature_documentation")
+            self._append_markdown(content, signature_documentation, "signature_documentation")
 
         # Write the documentation of the active parameter.
         if parameter_documentation:
-            self._write_div(content, parameter_documentation, "parameter_documentation")
+            self._append_markdown(content, parameter_documentation, "parameter_documentation")
 
         # All done!
-        content.write("</body></html>")
-        return content.getvalue()
+        content.append("</body></html>")
+        return "".join(content)
 
-    def _write_div(self, content, markdown, class_name):
-        content.write('<div class="')
-        content.write(class_name)
-        content.write('">')
-        content.write(mdpopups.md2html(self.view, markdown))  # type: ignore
-        content.write("</div>\n")
+    def _append_markdown(self, content, markdown, class_name):
+        content.append('<div class="{}">{}</div>\n'
+                       .format(class_name, mdpopups.md2html(self.view, markdown)))  # type: ignore
 
     def handle_response(self, response, point):
 
@@ -2129,16 +2112,12 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         # Fetch all the relevant data.
         self.signatures = response.get("signatures", None)
         x, y = self.view.viewport_extent()
-        debug("max width:", x, "max height:", y)
         if self.signatures:
             self.active_signature = response.get("activeSignature", -1)  # Optional.
             self.active_parameter = response.get("activeParameter", -1)  # Optional.
             self.view.show_popup(self._build_popup_content(), 0, point, int(x), int(y),
                                  self._on_navigate, self._on_hide)
-        else:
-            self.view.show_popup('<html><body id="lsp"><div class="error">There are no signatures!</div></body></html>',
-                                 0, point, x, y, None, self._on_hide)
-        self._visible = True
+            self._visible = True
 
     def _on_navigate(self, url):
         sublime.run_command("open_url", {"url": url})
@@ -2146,22 +2125,17 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
     def _on_hide(self):
         self._visible = False
 
-    def on_query_context(self, key, _, amount, __):
-        debug("SignatureHelpListener.on_query_context:", key, amount)
+    def on_query_context(self, key, _, operand, __):
         if key != "lsp.signature_help":
-            debug("key is not equal to lsp.signature_help")
             return False  # Let someone else handle this keybinding.
         elif not self._visible:
-            debug("popup is not visible")
             return False  # Let someone else handle this keybinding.
         elif self.active_signature not in range(0, len(self.signatures)):
-            debug("active_signature", self.active_signature, "not in range( 0 ,", len(self.signatures), ")")
             return False  # Let someone else handle this keybinding.
         else:
-            self.active_signature += amount
+            # We use the "operand" for the number -1 or +1. See the keybindings.
+            self.active_signature += operand
             self.active_signature %= len(self.signatures)
-            debug("active_signature is now", self.active_signature)
-            debug("updating existing popup...")
             self.view.update_popup(self._build_popup_content())
             return True  # We handled this keybinding.
 

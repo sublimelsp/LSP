@@ -12,7 +12,7 @@
         "command": "lsp_symbol_references"
     },
     {
-        "keys": ["ctrl+down"],
+        "keys": ["down"],
         "command": "noop",
         "context":
         [
@@ -20,7 +20,7 @@
         ]
     },
     {
-        "keys": ["ctrl+up"],
+        "keys": ["up"],
         "command": "noop",
         "context":
         [

@@ -2041,7 +2041,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
         if not self.signature_help_triggers:
             return
-        elif last_non_whitespace_char in self.signature_help_triggers:
+        if last_non_whitespace_char in self.signature_help_triggers:
             if self._visible:
                 return
             client = client_for_view(self.view)

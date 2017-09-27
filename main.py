@@ -1790,7 +1790,7 @@ def annotate_types(view: sublime.View, current_function: bool):
     global type_phantoms
     syntax = view.settings().get('syntax')
     if "Rust" not in syntax:
-        return
+        return 1
     type_phantoms = []
     annotator = TypeAnnotator(view)
     annotator.annotate_var_decl(view)
@@ -1926,13 +1926,13 @@ class TypeAnnotator(object):
         formatted = fn_name + re.sub(" *fn *", "", formatted)
         offset = 0
         if "&mut self" in formatted:
-            formatted = "&mut self." + formatted.replace("&mut self, ", "", 1)
+            formatted = "&mut self." + formatted.replace("&mut self, ", "", 1).replace("(, ", "", 1)
             offset = len("&mut self.")
         elif "&self" in formatted:
-            formatted = "&self." + formatted.replace("&self, ", "", 1)
+            formatted = "&self." + formatted.replace("&self, ", "", 1).replace("(, ", "", 1)
             offset = len("&self.")
         elif "self" in formatted:
-            formatted = "self." + formatted.replace("self, ", "", 1)
+            formatted = "self." + formatted.replace("self", "", 1).replace("(, ", "", 1)
             offset = len("self.")
         region = Range(
             Point.from_text_point(self.view, region.begin() - offset),

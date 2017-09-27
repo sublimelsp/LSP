@@ -1453,7 +1453,7 @@ def update_diagnostics_phantoms(view: sublime.View, diagnostics: 'List[Diagnosti
     # disable the normal LSP phantoms when using a Rust document,
     # since these interfere with the enhanced Rust phantoms
     syntax = view.settings().get('syntax')
-    if "Rust" in syntax: # type: ignore
+    if "Rust" in syntax:  # type: ignore
         return
 
     buffer_id = view.buffer_id()
@@ -1822,14 +1822,14 @@ def wait_on_RLS():
         time.sleep(0.05)
 
 
-type_phantoms = [] # type: ignore
+type_phantoms = []  # type: ignore
 phantoms_to_generate = 0
 
 
 def annotate_types(view: sublime.View, current_function: bool):
     global type_phantoms, phantoms_to_generate
     syntax = view.settings().get('syntax')
-    if "Rust" not in syntax: # type: ignore
+    if "Rust" not in syntax:  # type: ignore
         return 1
     wait_on_RLS()
     phantoms_to_generate = 0

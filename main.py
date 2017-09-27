@@ -1989,6 +1989,7 @@ class TypeAnnotator(object):
             phantoms_to_generate -= 1
             return
 
+        formatted_str = re.sub("<[a-zA-Z0-9_]*>", "", formatted_str)
         formatted_str = re.sub("[^& <]*::", "", formatted_str)
 
         region = self.view.word(point)

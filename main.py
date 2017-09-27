@@ -1926,10 +1926,10 @@ class TypeAnnotator(object):
         formatted = fn_name + re.sub(" *fn *", "", formatted)
         offset = 0
         if "&mut self" in formatted:
-            formatted = "&mut self." + formatted.replace("&mut self, ", "", 1).replace("(, ", "", 1)
+            formatted = "&mut self." + formatted.replace("&mut self", "", 1).replace("(, ", "", 1)
             offset = len("&mut self.")
         elif "&self" in formatted:
-            formatted = "&self." + formatted.replace("&self, ", "", 1).replace("(, ", "", 1)
+            formatted = "&self." + formatted.replace("&self", "", 1).replace("(, ", "", 1)
             offset = len("&self.")
         elif "self" in formatted:
             formatted = "self." + formatted.replace("self", "", 1).replace("(, ", "", 1)

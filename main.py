@@ -864,7 +864,7 @@ def notify_did_open(view: sublime.View):
                 }
             }
             client.send_notification(Notification.didOpen(params))
-            sublime.set_timeout_async(lambda: sublime.set_timeout_async(lambda: annotate_visible_types(view), 4000) if (annotate_visible_types(view) == 0) else None, 1000)
+            sublime.set_timeout_async(lambda: sublime.set_timeout_async(lambda: annotate_visible_types(view), 4000) if (annotate_visible_types(view) == 0) else None, 100)
 
 
 def notify_did_close(view: sublime.View):
@@ -972,7 +972,7 @@ def annotate_visible_types(view: sublime.View):
     annotator = TypeAnnotator(view)
     visible = view.visible_region()
     lines = view.lines(visible)
-    all_vars = view.find_all('\\blet\\b *([a-zA-Z_][a-zA-Z0-9_]*)..', 0)
+    all_vars = view.find_all('\\blet\\b *mut *([a-zA-Z_][a-zA-Z0-9_]*)..', 0)
     for var in all_vars:
         if var is None or var.begin() == -1:
             continue
@@ -995,6 +995,9 @@ def annotate_visible_types(view: sublime.View):
         print("variable:", var_text, view.rowcol(var_start))
         first = True
         for var in tp_vars:
+            if var.startswith("mut "):
+                var_start += 4
+                var = var[4:]
             annotator.request_symbol_annotate(var_start)
             print("tuple var:", view.rowcol(var_start))
             if first:

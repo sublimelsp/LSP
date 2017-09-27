@@ -864,7 +864,7 @@ def notify_did_open(view: sublime.View):
                 }
             }
             client.send_notification(Notification.didOpen(params))
-            sublime.set_timeout_async(lambda: sublime.set_timeout_async(lambda: annotate_visible_types(view), 4000) if (annotate_visible_types(view) == 0) else None, 100)
+            sublime.set_timeout_async(lambda: sublime.set_timeout_async(lambda: annotate_types(view, False), 4000) if (annotate_types(view, False) == 0) else None, 100)
 
 
 def notify_did_close(view: sublime.View):
@@ -884,7 +884,7 @@ def notify_did_save(view: sublime.View):
         if client:
             params = {"textDocument": {"uri": filename_to_uri(view.file_name())}}
             client.send_notification(Notification.didSave(params))
-            sublime.set_timeout_async(lambda: annotate_visible_types(view), 1000)
+            sublime.set_timeout_async(lambda: annotate_types(view, False), 1000)
     else:
         debug('document not tracked', view.file_name())
 
@@ -962,61 +962,11 @@ def notify_did_change(view: sublime.View):
         }
         client.send_notification(Notification.didChange(params))
 
-type_phantoms = []
-def annotate_visible_types(view: sublime.View):
-    global type_phantoms
-    syntax = view.settings().get('syntax')
-    if "Rust" not in syntax:
-        return
-    type_phantoms = []
-    annotator = TypeAnnotator(view)
-    visible = view.visible_region()
-    lines = view.lines(visible)
-    all_vars = view.find_all('\\blet\\b *(mut){0,1} *([a-zA-Z_][a-zA-Z0-9_]*)..', 0)
-    for var in all_vars:
-        if var is None or var.begin() == -1:
-            continue
-        var_text = view.substr(var)
-        if ":" in var_text:
-            continue
-        var_text = var_text[:-2]
-        var_start = var.begin() + var_text.rfind(" ") + 1
-        annotator.request_symbol_annotate(var_start)
-    tuple_vars = view.find_all('\\blet\\b *\(([a-zA-Z0-9_, ]*)\)', 0)
-    for var in tuple_vars:
-        if var is None or var.begin() == -1:
-            continue
-        var_text = view.substr(var)
-        var_start = var.begin() + var_text.find('(') + 1
-        var_text = re.sub("let *\(", "", var_text)
-        var_text = var_text[:-1]
-        tp_vars = var_text.split(",")
-        first = True
-        for var in tp_vars:
-            if var.startswith("mut "):
-                var_start += 4
-                var = var[4:]
-            annotator.request_symbol_annotate(var_start)
-            if first:
-                first = False
-                var_start += 1
-            var_start += 1 + len(var)
-    iter_vars = view.find_all('\\bfor\\b *([a-zA-Z_][a-zA-Z0-9_]*) in', 0)
-    for var in iter_vars:
-        if var is None or var.begin() == -1:
-            continue
-        var_text = view.substr(var)
-        var_text = var_text[:-3]
-        var_start = var.begin() + var_text.rfind(" ") + 1
-        annotator.request_symbol_annotate(var_start)
-    sublime.set_timeout_async(lambda: show_type_phantoms(view), 1000)
-    return len(type_phantoms)
-
-def show_type_phantoms(view: sublime.View):
-    buffer_id = view.buffer_id()
-    phantom_set = sublime.PhantomSet(view, "lsp_annotations")
-    phantom_sets_by_buffer[buffer_id] = phantom_set
-    phantom_set.update(type_phantoms)
+        point = view.sel()[0].begin()
+        if view.substr(point - 1) == '(':
+            sublime.set_timeout_async(lambda: annotate_types(view, True), 350)
+        else:
+            print("no function call")
 
 document_sync_initialized = False
 
@@ -1113,6 +1063,10 @@ def create_quiet_phantom_html(text: str) -> str:
     global stylesheet
     return """<body><span style="color: #bbb">: {}</span> </body>""".format(html.escape(text, quote=False))
 
+def create_quiet_phantomfn_html(text: str) -> str:
+    global stylesheet
+    return """<body><span style="color: #bbb">{}</span> </body>""".format(html.escape(text, quote=False))
+
 
 def on_phantom_navigate(view: sublime.View, href: str, point: int):
     # TODO: don't mess with the user's cursor.
@@ -1133,14 +1087,19 @@ def create_phantom(view: sublime.View, diagnostic: Diagnostic) -> sublime.Phanto
         lambda href: on_phantom_navigate(view, href, region.begin())
     )
 
-def create_quiet_phantom(view: sublime.View, diagnostic: Diagnostic) -> sublime.Phantom:
+def create_quiet_phantom(view: sublime.View, diagnostic: Diagnostic, inline: bool) -> sublime.Phantom:
     region = diagnostic.range.to_region(view)
     # TODO: hook up hide phantom (if keeping them)
     content = create_quiet_phantom_html(diagnostic.message)
+    alignment = sublime.LAYOUT_INLINE
+    if not inline:
+        alignment = sublime.LAYOUT_BELOW
+        content = create_quiet_phantomfn_html(diagnostic.message)
+
     return sublime.Phantom(
         region,
         '' + content + '',
-        sublime.LAYOUT_INLINE,
+        alignment,
         lambda href: on_phantom_navigate(view, href, region.begin())
     )
 
@@ -1826,11 +1785,35 @@ class HoverHandler(sublime_plugin.ViewEventListener):
 max_width=800)
 
 
+type_phantoms = []
+def annotate_types(view: sublime.View, current_function: bool):
+    global type_phantoms
+    syntax = view.settings().get('syntax')
+    if "Rust" not in syntax:
+        return
+    type_phantoms = []
+    annotator = TypeAnnotator(view)
+    annotator.annotate_var_decl(view)
+    annotator.annotate_tuple_decl(view)
+    annotator.annotate_for_loops(view)
+    if current_function:
+        annotator.annotate_function(view)
+        sublime.set_timeout_async(lambda: show_type_phantoms(view), 150)
+    else:
+        sublime.set_timeout_async(lambda: show_type_phantoms(view), 1000)
+    return len(type_phantoms)
+
+def show_type_phantoms(view: sublime.View):
+    buffer_id = view.buffer_id()
+    phantom_set = sublime.PhantomSet(view, "lsp_annotations")
+    phantom_sets_by_buffer[buffer_id] = phantom_set
+    phantom_set.update(type_phantoms)
+
 class TypeAnnotator(object):
     def __init__(self, view):
         self.view = view
 
-    def request_symbol_annotate(self, point):
+    def request_symbol_annotate(self, point, function):
         if self.view.match_selector(point, NO_HOVER_SCOPES):
             return
         client = client_for_view(self.view)
@@ -1839,20 +1822,71 @@ class TypeAnnotator(object):
             if word_at_sel & SUBLIME_WORD_MASK:
                 client.send_request(
                     Request.hover(get_document_position(self.view, point)),
-                    lambda response: self.handle_response(response, point))
+                    lambda response: self.handle_response(response, point, function))
 
-    def handle_response(self, response, point):
+    def handle_response(self, response, point, function):
         debug(response)
-        if self.view.is_popup_visible():
-            return
         contents = "No description available."
         if isinstance(response, dict):
             # Flow returns None sometimes
             # See: https://github.com/flowtype/flow-language-server/issues/51
             contents = response.get('contents') or contents
-        self.show_annotation(point, contents)
+        self.add_annotation(point, contents, function)
 
-    def show_annotation(self, point, contents):
+    def annotate_var_decl(self, view: sublime.View):
+        all_vars = view.find_all('\\blet\\b *(mut){0,1} *([a-zA-Z_][a-zA-Z0-9_]*)..', 0)
+        for var in all_vars:
+            if var is None or var.begin() == -1:
+                continue
+            var_text = view.substr(var)
+            if ":" in var_text:
+                continue
+            var_text = var_text[:-2]
+            var_start = var.begin() + var_text.rfind(" ") + 1
+            self.request_symbol_annotate(var_start, False)
+
+    def annotate_tuple_decl(self, view: sublime.View):
+        tuple_vars = view.find_all('\\blet\\b *\([a-zA-Z0-9_, ]*\)..', 0)
+        for var in tuple_vars:
+            if var is None or var.begin() == -1:
+                continue
+            var_text = view.substr(var)
+            var_start = var.begin() + var_text.find('(') + 1
+            var_text = re.sub("let *\(", "", var_text)
+            if ":" in var_text:
+                continue
+            var_text = var_text[:-3]
+            tp_vars = var_text.split(",")
+            first = True
+            for var in tp_vars:
+                if var.startswith("mut "):
+                    var_start += 4
+                    var = var[4:]
+                self.request_symbol_annotate(var_start, False)
+                if first:
+                    first = False
+                    var_start += 1
+                var_start += 1 + len(var)
+
+    def annotate_for_loops(self, view: sublime.View):
+        iter_vars = view.find_all('\\bfor\\b *[a-zA-Z_][a-zA-Z0-9_]* in', 0)
+        for var in iter_vars:
+            if var is None or var.begin() == -1:
+                continue
+            var_text = view.substr(var)
+            var_text = var_text[:-3]
+            var_start = var.begin() + var_text.rfind(" ") + 1
+            self.request_symbol_annotate(var_start, False)
+
+    def annotate_function(self, view: sublime.View):
+        point = view.sel()[0].begin()
+        if view.substr(point - 1) != '(':
+            print("no function")
+            return
+        print("annotating function")
+        self.request_symbol_annotate(point - 2, True)
+
+    def add_annotation(self, point, contents, function):
         global type_phantoms
         formatted = []
         if not isinstance(contents, list):
@@ -1879,9 +1913,33 @@ class TypeAnnotator(object):
             Point.from_text_point(self.view, region.end()),
             Point.from_text_point(self.view, region.end()+1)
         )
-        # region = Range.from_region(self.view, self.view.word(point))
-        diagnostic_msg = Diagnostic(formatted, region, DiagnosticSeverity.Error, None, None)
-        type_phantoms.append(create_quiet_phantom(self.view, diagnostic_msg))
+        diagnostic_msg = Diagnostic(formatted, region, DiagnosticSeverity.Hint, None, None)
+
+        if not function:
+            type_phantoms.append(create_quiet_phantom(self.view, diagnostic_msg, True))
+        else:
+            type_phantoms.append(self.create_function_phantom(point, formatted))
+
+    def create_function_phantom(self, point, formatted):
+        region = self.view.word(point)
+        fn_name = self.view.substr(region)
+        formatted = fn_name + re.sub(" *fn *", "", formatted)
+        offset = 0
+        if "&mut self" in formatted:
+            formatted = "&mut self." + formatted.replace("&mut self, ", "", 1)
+            offset = len("&mut self.")
+        elif "&self" in formatted:
+            formatted = "&self." + formatted.replace("&self, ", "", 1)
+            offset = len("&self.")
+        elif "self" in formatted:
+            formatted = "self." + formatted.replace("self, ", "", 1)
+            offset = len("self.")
+        region = Range(
+            Point.from_text_point(self.view, region.begin() - offset),
+            Point.from_text_point(self.view, region.begin()+1 - offset)
+        )
+        diagnostic_msg = Diagnostic(formatted, region, DiagnosticSeverity.Hint, None, None)
+        return create_quiet_phantom(self.view, diagnostic_msg, False)
 
 
 def preserve_whitespace(contents: str) -> str:

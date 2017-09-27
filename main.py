@@ -1001,11 +1001,12 @@ def annotate_visible_types(view: sublime.View):
                 first = False
                 var_start += 1
             var_start += 1 + len(var)
-    iter_vars = view.find_all('\\bfor\\b *([a-zA-Z_][a-zA-Z0-9_]*)', 0)
+    iter_vars = view.find_all('\\bfor\\b *([a-zA-Z_][a-zA-Z0-9_]*) in', 0)
     for var in iter_vars:
         if var is None or var.begin() == -1:
             continue
         var_text = view.substr(var)
+        var_text = var_text[:-3]
         print("variable:", var_text)
         var_start = var.begin() + var_text.rfind(" ") + 1
         annotator.request_symbol_annotate(var_start)

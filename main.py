@@ -1836,6 +1836,7 @@ def annotate_types(view: sublime.View, current_function: bool):
     annotator.annotate_var_decl(view)
     annotator.annotate_tuple_decl(view)
     annotator.annotate_for_loops(view)
+    annotator.annotate_for_tuple_loops(view)
     if current_function:
         annotator.annotate_function(view)
     sublime.set_timeout_async(lambda: show_type_phantoms(view), 100)
@@ -1896,16 +1897,16 @@ class TypeAnnotator(object):
 
     def annotate_tuple_decl(self, view: sublime.View):
         global phantoms_to_generate
-        tuple_vars = view.find_all('\\blet\\b *\([a-zA-Z0-9_, ]*\)..', 0)
+        tuple_vars = view.find_all('\\blet\\b *\([a-zA-Z0-9_, ]*\) *[:=;]', 0)
         for var in tuple_vars:
             if var is None or var.begin() == -1:
                 continue
             var_text = view.substr(var)
-            var_start = var.begin() + var_text.find('(') + 1
-            var_text = re.sub("let *\(", "", var_text)
             if ":" in var_text:
                 continue
-            var_text = var_text[:-3]
+            var_start = var.begin() + var_text.find('(') + 1
+            var_text = re.sub("let *\(", "", var_text)
+            var_text = re.sub("\) *[:=;]", "", var_text)
             tp_vars = var_text.split(",")
             first = True
             for var in tp_vars:
@@ -1921,15 +1922,40 @@ class TypeAnnotator(object):
 
     def annotate_for_loops(self, view: sublime.View):
         global phantoms_to_generate
-        iter_vars = view.find_all('\\bfor\\b *[a-zA-Z_][a-zA-Z0-9_]* in', 0)
+        iter_vars = view.find_all('\\bfor\\b *[a-zA-Z_][a-zA-Z0-9_]* *in', 0)
         for var in iter_vars:
             if var is None or var.begin() == -1:
                 continue
             phantoms_to_generate += 1
             var_text = view.substr(var)
-            var_text = var_text[:-3]
+            var_text = var_text[:-2].rstrip()
             var_start = var.begin() + var_text.rfind(" ") + 1
             self.request_symbol_annotate(var_start, False)
+
+    def annotate_for_tuple_loops(self, view: sublime.View):
+        global phantoms_to_generate
+        iter_tuple_vars = view.find_all('\\bfor\\b *\([a-zA-Z0-9_, ]*\) *in', 0)
+        for var in iter_tuple_vars:
+            if var is None or var.begin() == -1:
+                continue
+            var_text = view.substr(var)
+            if ":" in var_text:
+                continue
+            var_start = var.begin() + var_text.find('(') + 1
+            var_text = re.sub("for *\(", "", var_text)
+            var_text = re.sub("\) *in", "", var_text)
+            tp_vars = var_text.split(",")
+            first = True
+            for var in tp_vars:
+                if var.startswith("mut "):
+                    var_start += 4
+                    var = var[4:]
+                phantoms_to_generate += 1
+                self.request_symbol_annotate(var_start, False)
+                if first:
+                    first = False
+                    var_start += 1
+                var_start += 1 + len(var)
 
     def annotate_function(self, view: sublime.View):
         global phantoms_to_generate

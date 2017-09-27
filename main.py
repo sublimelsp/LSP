@@ -5,6 +5,8 @@ import subprocess
 import sys
 import threading
 import re
+import time
+
 from collections import OrderedDict
 from urllib.parse import urljoin
 from urllib.parse import urlparse
@@ -39,6 +41,8 @@ resolve_completion_for_snippets = False
 log_debug = True
 log_server = True
 log_stderr = False
+
+waiting_for_RLS = True
 
 global_client_configs = []  # type: List[ClientConfig]
 window_client_configs = dict()  # type: Dict[int, List[ClientConfig]]
@@ -566,6 +570,7 @@ class Client(object):
             debug("Unhandled request", method)
 
     def notification_handler(self, response):
+        global waiting_for_RLS
         method = response.get("method")
         if method == "textDocument/publishDiagnostics":
             Events.publish("document.diagnostics", response.get("params"))
@@ -575,6 +580,14 @@ class Client(object):
         elif method == "window/logMessage" and log_server:
             server_log(self.process.args[0],
                        response.get("params").get("message"))
+        elif method == "rustDocument/diagnosticsBegin":
+            waiting_for_RLS = True
+            sublime.active_window().status_message("Waiting on RLS...")
+        elif method == "rustDocument/beginBuild":
+            sublime.active_window().status_message("Waiting on RLS...")
+        elif method == "rustDocument/diagnosticsEnd":
+            waiting_for_RLS = False
+            sublime.active_window().status_message("RLS up to date.")
         else:
             debug("Unhandled notification:", method)
 
@@ -864,7 +877,7 @@ def notify_did_open(view: sublime.View):
                 }
             }
             client.send_notification(Notification.didOpen(params))
-            sublime.set_timeout_async(lambda: sublime.set_timeout_async(lambda: annotate_types(view, False), 4000) if (annotate_types(view, False) == 0) else None, 100)
+            sublime.set_timeout_async(lambda: annotate_types(view, False), 100)
 
 
 def notify_did_close(view: sublime.View):
@@ -884,7 +897,7 @@ def notify_did_save(view: sublime.View):
         if client:
             params = {"textDocument": {"uri": filename_to_uri(view.file_name())}}
             client.send_notification(Notification.didSave(params))
-            sublime.set_timeout_async(lambda: annotate_types(view, False), 1000)
+            sublime.set_timeout_async(lambda: annotate_types(view, False), 100)
     else:
         debug('document not tracked', view.file_name())
 
@@ -964,7 +977,7 @@ def notify_did_change(view: sublime.View):
 
         point = view.sel()[0].begin()
         if view.substr(point - 1) == '(':
-            sublime.set_timeout_async(lambda: annotate_types(view, True), 350)
+            sublime.set_timeout_async(lambda: annotate_types(view, True), 100)
         else:
             print("no function call")
 
@@ -1784,13 +1797,29 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             wrapper_class="lsp_hover",
 max_width=800)
 
+def wait_on_RLS():
+    global waiting_for_RLS
+
+    # wait for up to 1 second for a rustDocument/diagnosticsBegin
+    # after that, assume we missed it
+    max_count = 20
+    while waiting_for_RLS == False and max_count > 0:
+        time.sleep(0.05)
+        max_count -= 1
+
+    # wait on RLS to send rustDocument/diagnosticsEnd
+    while waiting_for_RLS == True:
+        time.sleep(0.05)
 
 type_phantoms = []
+phantoms_to_generate = 0
 def annotate_types(view: sublime.View, current_function: bool):
-    global type_phantoms
+    global type_phantoms, phantoms_to_generate
     syntax = view.settings().get('syntax')
     if "Rust" not in syntax:
         return 1
+    wait_on_RLS()
+    phantoms_to_generate = 0
     type_phantoms = []
     annotator = TypeAnnotator(view)
     annotator.annotate_var_decl(view)
@@ -1798,12 +1827,14 @@ def annotate_types(view: sublime.View, current_function: bool):
     annotator.annotate_for_loops(view)
     if current_function:
         annotator.annotate_function(view)
-        sublime.set_timeout_async(lambda: show_type_phantoms(view), 150)
-    else:
-        sublime.set_timeout_async(lambda: show_type_phantoms(view), 1000)
+    sublime.set_timeout_async(lambda: show_type_phantoms(view), 100)
     return len(type_phantoms)
 
 def show_type_phantoms(view: sublime.View):
+    global phantoms_to_generate
+    while phantoms_to_generate > 0:
+        print("waiting for phantoms...")
+        time.sleep(0.05)
     buffer_id = view.buffer_id()
     phantom_set = sublime.PhantomSet(view, "lsp_annotations")
     phantom_sets_by_buffer[buffer_id] = phantom_set
@@ -1834,6 +1865,7 @@ class TypeAnnotator(object):
         self.add_annotation(point, contents, function)
 
     def annotate_var_decl(self, view: sublime.View):
+        global phantoms_to_generate
         all_vars = view.find_all('\\blet\\b *(mut){0,1} *([a-zA-Z_][a-zA-Z0-9_]*)..', 0)
         for var in all_vars:
             if var is None or var.begin() == -1:
@@ -1841,11 +1873,13 @@ class TypeAnnotator(object):
             var_text = view.substr(var)
             if ":" in var_text:
                 continue
+            phantoms_to_generate += 1
             var_text = var_text[:-2]
             var_start = var.begin() + var_text.rfind(" ") + 1
             self.request_symbol_annotate(var_start, False)
 
     def annotate_tuple_decl(self, view: sublime.View):
+        global phantoms_to_generate
         tuple_vars = view.find_all('\\blet\\b *\([a-zA-Z0-9_, ]*\)..', 0)
         for var in tuple_vars:
             if var is None or var.begin() == -1:
@@ -1862,6 +1896,7 @@ class TypeAnnotator(object):
                 if var.startswith("mut "):
                     var_start += 4
                     var = var[4:]
+                phantoms_to_generate += 1
                 self.request_symbol_annotate(var_start, False)
                 if first:
                     first = False
@@ -1869,25 +1904,33 @@ class TypeAnnotator(object):
                 var_start += 1 + len(var)
 
     def annotate_for_loops(self, view: sublime.View):
+        global phantoms_to_generate
         iter_vars = view.find_all('\\bfor\\b *[a-zA-Z_][a-zA-Z0-9_]* in', 0)
         for var in iter_vars:
             if var is None or var.begin() == -1:
                 continue
+            phantoms_to_generate += 1
             var_text = view.substr(var)
             var_text = var_text[:-3]
             var_start = var.begin() + var_text.rfind(" ") + 1
             self.request_symbol_annotate(var_start, False)
 
     def annotate_function(self, view: sublime.View):
+        global phantoms_to_generate
         point = view.sel()[0].begin()
         if view.substr(point - 1) != '(':
             print("no function")
             return
+        line = view.substr(view.line(point))
+        line = re.sub(" *\t*", "", line)
+        if line.startswith("fn"):
+            return
+        phantoms_to_generate += 1
         print("annotating function")
         self.request_symbol_annotate(point - 2, True)
 
     def add_annotation(self, point, contents, function):
-        global type_phantoms
+        global type_phantoms, phantoms_to_generate
         formatted = []
         if not isinstance(contents, list):
             contents = [contents]
@@ -1904,6 +1947,7 @@ class TypeAnnotator(object):
         formatted = "\n".join(formatted)
 
         if "No description" in formatted:
+            phantoms_to_generate -= 1
             return
 
         formatted = re.sub("[^& <]*::", "", formatted)
@@ -1919,6 +1963,7 @@ class TypeAnnotator(object):
             type_phantoms.append(create_quiet_phantom(self.view, diagnostic_msg, True))
         else:
             type_phantoms.append(self.create_function_phantom(point, formatted))
+        phantoms_to_generate -= 1
 
     def create_function_phantom(self, point, formatted):
         region = self.view.word(point)

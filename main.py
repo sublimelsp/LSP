@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import threading
+import re
 from collections import OrderedDict
 from urllib.parse import urljoin
 from urllib.parse import urlparse
@@ -863,7 +864,7 @@ def notify_did_open(view: sublime.View):
                 }
             }
             client.send_notification(Notification.didOpen(params))
-            sublime.set_timeout_async(lambda: annotate_visible_types(view), 5000)
+            sublime.set_timeout_async(lambda: sublime.set_timeout_async(lambda: annotate_visible_types(view), 4000) if (annotate_visible_types(view) == 0) else None, 1000)
 
 
 def notify_did_close(view: sublime.View):
@@ -883,7 +884,7 @@ def notify_did_save(view: sublime.View):
         if client:
             params = {"textDocument": {"uri": filename_to_uri(view.file_name())}}
             client.send_notification(Notification.didSave(params))
-            annotate_visible_types(view)
+            sublime.set_timeout_async(lambda: annotate_visible_types(view), 1000)
     else:
         debug('document not tracked', view.file_name())
 
@@ -927,7 +928,7 @@ def queue_did_change(view: sublime.View):
         }
 
     sublime.set_timeout_async(
-        lambda: purge_did_change(buffer_id, buffer_version), 2000)
+        lambda: purge_did_change(buffer_id, buffer_version), 500)
 
 
 def purge_did_change(buffer_id: int, buffer_version=None):
@@ -960,32 +961,45 @@ def notify_did_change(view: sublime.View):
             }]
         }
         client.send_notification(Notification.didChange(params))
-        annotate_visible_types(view)
 
+type_phantoms = []
 def annotate_visible_types(view: sublime.View):
-    global phantom_sets_by_buffer
     global type_phantoms
-    old_phantoms = type_phantoms
+    syntax = view.settings().get('syntax')
+    if "Rust" not in syntax:
+        return
     type_phantoms = []
-    hoverer = HoverHandler(view)
+    annotator = TypeAnnotator(view)
     visible = view.visible_region()
     lines = view.lines(visible)
-    all_vars = view.find_all('\\blet\\b *([a-zA-Z_][a-zA-Z0-9_]*)', 0)
+    all_vars = view.find_all('\\blet\\b *([a-zA-Z_][a-zA-Z0-9_]*)..', 0)
     for var in all_vars:
         if var is None or var.begin() == -1:
             continue
         var_text = view.substr(var)
+        if ":" in var_text:
+            continue
+        print("variable:", var_text)
+        var_text = var_text[:-2]
         var_start = var.begin() + var_text.rfind(" ") + 1
-        print("requesting variable:", var_text)
-        hoverer.request_symbol_hover(var_start)
+        annotator.request_symbol_annotate(var_start)
+    iter_vars = view.find_all('\\bfor\\b *([a-zA-Z_][a-zA-Z0-9_]*)', 0)
+    for var in iter_vars:
+        if var is None or var.begin() == -1:
+            continue
+        var_text = view.substr(var)
+        print("variable:", var_text)
+        var_start = var.begin() + var_text.rfind(" ") + 1
+        annotator.request_symbol_annotate(var_start)
+    sublime.set_timeout_async(lambda: show_type_phantoms(view), 1000)
+    return len(type_phantoms)
+
+def show_type_phantoms(view: sublime.View):
     print("number of phantoms:", len(type_phantoms))
     buffer_id = view.buffer_id()
-    phantom_set = phantom_sets_by_buffer.get(buffer_id)
-    if not phantom_set:
-        phantom_set = sublime.PhantomSet(view, "lsp_annotations")
-        phantom_sets_by_buffer[buffer_id] = phantom_set
-    if old_phantoms != type_phantoms:
-        phantom_set.update(type_phantoms)
+    phantom_set = sublime.PhantomSet(view, "lsp_annotations")
+    phantom_sets_by_buffer[buffer_id] = phantom_set
+    phantom_set.update(type_phantoms)
 
 document_sync_initialized = False
 
@@ -1080,9 +1094,7 @@ def create_phantom_html(text: str) -> str:
 
 def create_quiet_phantom_html(text: str) -> str:
     global stylesheet
-    return """<body>
-                    <span style="color: #aaa">: {}</span>
-                </body>""".format(html.escape(text, quote=False))
+    return """<body><span style="color: #bbb">: {}</span> </body>""".format(html.escape(text, quote=False))
 
 
 def on_phantom_navigate(view: sublime.View, href: str, point: int):
@@ -1721,7 +1733,6 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         if point_diagnostics:
             self.show_diagnostics_hover(point, point_diagnostics)
         else:
-            return
             self.request_symbol_hover(point)
 
     def request_symbol_hover(self, point):
@@ -1770,6 +1781,61 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         self.view.run_command("lsp_code_actions")
 
     def show_hover(self, point, contents):
+        formatted = []
+        if not isinstance(contents, list):
+            contents = [contents]
+
+        for item in contents:
+            value = ""
+            language = None
+            if isinstance(item, str):
+                value = item
+            else:
+                value = item.get("value")
+                language = item.get("language")
+            if language:
+                formatted.append("```{}\n{}\n```".format(language, value))
+            else:
+                formatted.append(value)
+
+        mdpopups.show_popup(
+            self.view,
+            preserve_whitespace("\n".join(formatted)),
+            css=".mdpopups .lsp_hover { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
+            md=True,
+            flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+            location=point,
+            wrapper_class="lsp_hover",
+max_width=800)
+
+
+class TypeAnnotator(object):
+    def __init__(self, view):
+        self.view = view
+
+    def request_symbol_annotate(self, point):
+        if self.view.match_selector(point, NO_HOVER_SCOPES):
+            return
+        client = client_for_view(self.view)
+        if client and client.has_capability('hoverProvider'):
+            word_at_sel = self.view.classify(point)
+            if word_at_sel & SUBLIME_WORD_MASK:
+                client.send_request(
+                    Request.hover(get_document_position(self.view, point)),
+                    lambda response: self.handle_response(response, point))
+
+    def handle_response(self, response, point):
+        debug(response)
+        if self.view.is_popup_visible():
+            return
+        contents = "No description available."
+        if isinstance(response, dict):
+            # Flow returns None sometimes
+            # See: https://github.com/flowtype/flow-language-server/issues/51
+            contents = response.get('contents') or contents
+        self.show_annotation(point, contents)
+
+    def show_annotation(self, point, contents):
         global type_phantoms
         formatted = []
         if not isinstance(contents, list):
@@ -1789,6 +1855,8 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         if "No description" in formatted:
             return
 
+        formatted = re.sub("[^& <]*::", "", formatted)
+
         region = self.view.word(point)
         region = Range(
             Point.from_text_point(self.view, region.end()),
@@ -1797,17 +1865,6 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         # region = Range.from_region(self.view, self.view.word(point))
         diagnostic_msg = Diagnostic(formatted, region, DiagnosticSeverity.Error, None, None)
         type_phantoms.append(create_quiet_phantom(self.view, diagnostic_msg))
-
-        return
-        mdpopups.show_popup(
-            self.view,
-            preserve_whitespace(formatted),
-            css=".mdpopups .lsp_hover { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
-            md=True,
-            flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
-            location=point,
-            wrapper_class="lsp_hover",
-            max_width=800)
 
 
 def preserve_whitespace(contents: str) -> str:

@@ -65,7 +65,7 @@ diagnostic_severity_names = {
 diagnostic_severity_scopes = {
     DiagnosticSeverity.Error: 'markup.deleted.lsp sublimelinter.mark.error markup.error.lsp',
     DiagnosticSeverity.Warning: 'markup.changed.lsp sublimelinter.mark.warning markup.warning.lsp',
-    DiagnosticSeverity.Information: 'markup.inserted.lsp sublimel:inter.gutter-mark markup.info.lsp',
+    DiagnosticSeverity.Information: 'markup.inserted.lsp sublimelinter.gutter-mark markup.info.lsp',
     DiagnosticSeverity.Hint: 'markup.inserted.lsp sublimelinter.gutter-mark markup.info.suggestion.lsp'
 }
 
@@ -981,6 +981,7 @@ def notify_did_change(view: sublime.View):
         else:
             print("no function call")
 
+
 document_sync_initialized = False
 
 
@@ -1072,9 +1073,11 @@ def create_phantom_html(text: str) -> str:
                 </div>
                 </body>""".format(stylesheet, html.escape(text, quote=False))
 
+
 def create_quiet_phantom_html(text: str) -> str:
     global stylesheet
     return """<body><span style="color: #bbb">: {}</span> </body>""".format(html.escape(text, quote=False))
+
 
 def create_quiet_phantomfn_html(text: str) -> str:
     global stylesheet
@@ -1099,6 +1102,7 @@ def create_phantom(view: sublime.View, diagnostic: Diagnostic) -> sublime.Phanto
         sublime.LAYOUT_BELOW,
         lambda href: on_phantom_navigate(view, href, region.begin())
     )
+
 
 def create_quiet_phantom(view: sublime.View, diagnostic: Diagnostic, inline: bool) -> sublime.Phantom:
     region = diagnostic.range.to_region(view)
@@ -1795,7 +1799,8 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
             location=point,
             wrapper_class="lsp_hover",
-max_width=800)
+            max_width=800)
+
 
 def wait_on_RLS():
     global waiting_for_RLS
@@ -1803,16 +1808,19 @@ def wait_on_RLS():
     # wait for up to 1 second for a rustDocument/diagnosticsBegin
     # after that, assume we missed it
     max_count = 20
-    while waiting_for_RLS == False and max_count > 0:
+    while waiting_for_RLS is False and max_count > 0:
         time.sleep(0.05)
         max_count -= 1
 
     # wait on RLS to send rustDocument/diagnosticsEnd
-    while waiting_for_RLS == True:
+    while waiting_for_RLS is True:
         time.sleep(0.05)
+
 
 type_phantoms = []
 phantoms_to_generate = 0
+
+
 def annotate_types(view: sublime.View, current_function: bool):
     global type_phantoms, phantoms_to_generate
     syntax = view.settings().get('syntax')
@@ -1830,6 +1838,7 @@ def annotate_types(view: sublime.View, current_function: bool):
     sublime.set_timeout_async(lambda: show_type_phantoms(view), 100)
     return len(type_phantoms)
 
+
 def show_type_phantoms(view: sublime.View):
     global phantoms_to_generate
     start = time.time()
@@ -1840,6 +1849,7 @@ def show_type_phantoms(view: sublime.View):
     phantom_set = sublime.PhantomSet(view, "lsp_annotations")
     phantom_sets_by_buffer[buffer_id] = phantom_set
     phantom_set.update(type_phantoms)
+
 
 class TypeAnnotator(object):
     def __init__(self, view):
@@ -1944,32 +1954,31 @@ class TypeAnnotator(object):
 
         for item in contents:
             value = ""
-            language = None
             if isinstance(item, str):
                 value = item
             else:
                 value = item.get("value")
             formatted.append(value)
 
-        formatted = "\n".join(formatted)
+        formatted_str = "\n".join(formatted)
 
-        if "No description" in formatted:
+        if "No description" in formatted_str:
             phantoms_to_generate -= 1
             return
 
-        formatted = re.sub("[^& <]*::", "", formatted)
+        formatted_str = re.sub("[^& <]*::", "", formatted_str)
 
         region = self.view.word(point)
         region = Range(
             Point.from_text_point(self.view, region.end()),
             Point.from_text_point(self.view, region.end()+1)
         )
-        diagnostic_msg = Diagnostic(formatted, region, DiagnosticSeverity.Hint, None, None)
+        diagnostic_msg = Diagnostic(formatted_str, region, DiagnosticSeverity.Hint, None, None)
 
         if not function:
             type_phantoms.append(create_quiet_phantom(self.view, diagnostic_msg, True))
         else:
-            type_phantoms.append(self.create_function_phantom(point, formatted))
+            type_phantoms.append(self.create_function_phantom(point, formatted_str))
         phantoms_to_generate -= 1
 
     def create_function_phantom(self, point, formatted):

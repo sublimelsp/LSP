@@ -60,7 +60,7 @@ diagnostic_severity_names = {
 diagnostic_severity_scopes = {
     DiagnosticSeverity.Error: 'markup.deleted.lsp sublimelinter.mark.error markup.error.lsp',
     DiagnosticSeverity.Warning: 'markup.changed.lsp sublimelinter.mark.warning markup.warning.lsp',
-    DiagnosticSeverity.Information: 'markup.inserted.lsp sublimelinter.gutter-mark markup.info.lsp',
+    DiagnosticSeverity.Information: 'markup.inserted.lsp sublimel:inter.gutter-mark markup.info.lsp',
     DiagnosticSeverity.Hint: 'markup.inserted.lsp sublimelinter.gutter-mark markup.info.suggestion.lsp'
 }
 
@@ -493,7 +493,7 @@ class Client(object):
                     payload = None
                     try:
                         payload = json.loads(content)
-                        limit = min(len(content), 200)
+                        limit = min(len(content), 2000)
                         if payload.get("method") != "window/logMessage":
                             debug("got json: ", content[0:limit], "...")
                     except IOError:
@@ -1051,6 +1051,12 @@ def create_phantom_html(text: str) -> str:
                 </div>
                 </body>""".format(stylesheet, html.escape(text, quote=False))
 
+def create_quiet_phantom_html(text: str) -> str:
+    global stylesheet
+    return """<body>
+                    <span style="color: #aaa">: {}</span>
+                </body>""".format(html.escape(text, quote=False))
+
 
 def on_phantom_navigate(view: sublime.View, href: str, point: int):
     # TODO: don't mess with the user's cursor.
@@ -1068,6 +1074,17 @@ def create_phantom(view: sublime.View, diagnostic: Diagnostic) -> sublime.Phanto
         region,
         '<p>' + content + '</p>',
         sublime.LAYOUT_BELOW,
+        lambda href: on_phantom_navigate(view, href, region.begin())
+    )
+
+def create_quiet_phantom(view: sublime.View, diagnostic: Diagnostic) -> sublime.Phantom:
+    region = diagnostic.range.to_region(view)
+    # TODO: hook up hide phantom (if keeping them)
+    content = create_quiet_phantom_html(diagnostic.message)
+    return sublime.Phantom(
+        region,
+        '' + content + '',
+        sublime.LAYOUT_INLINE,
         lambda href: on_phantom_navigate(view, href, region.begin())
     )
 
@@ -1399,6 +1416,7 @@ phantom_sets_by_buffer = {}  # type: Dict[int, sublime.PhantomSet]
 
 
 def update_diagnostics_phantoms(view: sublime.View, diagnostics: 'List[Diagnostic]'):
+    return
     global phantom_sets_by_buffer
 
     buffer_id = view.buffer_id()
@@ -1724,6 +1742,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         self.view.run_command("lsp_code_actions")
 
     def show_hover(self, point, contents):
+        global phantom_sets_by_buffer
         formatted = []
         if not isinstance(contents, list):
             contents = [contents]
@@ -1735,15 +1754,32 @@ class HoverHandler(sublime_plugin.ViewEventListener):
                 value = item
             else:
                 value = item.get("value")
-                language = item.get("language")
-            if language:
-                formatted.append("```{}\n{}\n```".format(language, value))
-            else:
-                formatted.append(value)
+            formatted.append(value)
 
+        formatted = "\n".join(formatted)
+
+        if "No description" in formatted:
+            return
+
+        region = self.view.word(point)
+        region = Range(
+            Point.from_text_point(self.view, region.end()),
+            Point.from_text_point(self.view, region.end()+1)
+        )
+        # region = Range.from_region(self.view, self.view.word(point))
+        diagnostic_msg = Diagnostic(formatted, region, DiagnosticSeverity.Error, None, None)
+        buffer_id = self.view.buffer_id()
+        phantoms = [create_quiet_phantom(self.view, diagnostic_msg)]
+        phantom_set = phantom_sets_by_buffer.get(buffer_id)
+        if not phantom_set:
+            phantom_set = sublime.PhantomSet(self.view, "lsp_diagnostics")
+            phantom_sets_by_buffer[buffer_id] = phantom_set
+        phantom_set.update(phantoms)
+
+        return
         mdpopups.show_popup(
             self.view,
-            preserve_whitespace("\n".join(formatted)),
+            preserve_whitespace(formatted),
             css=".mdpopups .lsp_hover { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
             md=True,
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,

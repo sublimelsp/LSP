@@ -978,8 +978,6 @@ def notify_did_change(view: sublime.View):
         point = view.sel()[0].begin()
         if view.substr(point - 1) == '(':
             sublime.set_timeout_async(lambda: annotate_types(view, True), 100)
-        else:
-            print("no function call")
 
 
 document_sync_initialized = False

@@ -1448,8 +1448,13 @@ phantom_sets_by_buffer = {}  # type: Dict[int, sublime.PhantomSet]
 
 
 def update_diagnostics_phantoms(view: sublime.View, diagnostics: 'List[Diagnostic]'):
-    return
     global phantom_sets_by_buffer
+
+    # disable the normal LSP phantoms when using a Rust document,
+    # since these interfere with the enhanced Rust phantoms
+    syntax = view.settings().get('syntax')
+    if "Rust" in syntax:
+        return
 
     buffer_id = view.buffer_id()
     if not show_diagnostics_phantoms or view.is_dirty():

@@ -979,7 +979,6 @@ def annotate_visible_types(view: sublime.View):
         var_text = view.substr(var)
         if ":" in var_text:
             continue
-        print("variable:", var_text)
         var_text = var_text[:-2]
         var_start = var.begin() + var_text.rfind(" ") + 1
         annotator.request_symbol_annotate(var_start)
@@ -992,14 +991,12 @@ def annotate_visible_types(view: sublime.View):
         var_text = re.sub("let *\(", "", var_text)
         var_text = var_text[:-1]
         tp_vars = var_text.split(",")
-        print("variable:", var_text, view.rowcol(var_start))
         first = True
         for var in tp_vars:
             if var.startswith("mut "):
                 var_start += 4
                 var = var[4:]
             annotator.request_symbol_annotate(var_start)
-            print("tuple var:", view.rowcol(var_start))
             if first:
                 first = False
                 var_start += 1
@@ -1010,14 +1007,12 @@ def annotate_visible_types(view: sublime.View):
             continue
         var_text = view.substr(var)
         var_text = var_text[:-3]
-        print("variable:", var_text)
         var_start = var.begin() + var_text.rfind(" ") + 1
         annotator.request_symbol_annotate(var_start)
     sublime.set_timeout_async(lambda: show_type_phantoms(view), 1000)
     return len(type_phantoms)
 
 def show_type_phantoms(view: sublime.View):
-    print("number of phantoms:", len(type_phantoms))
     buffer_id = view.buffer_id()
     phantom_set = sublime.PhantomSet(view, "lsp_annotations")
     phantom_sets_by_buffer[buffer_id] = phantom_set

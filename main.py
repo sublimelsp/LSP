@@ -1832,8 +1832,9 @@ def annotate_types(view: sublime.View, current_function: bool):
 
 def show_type_phantoms(view: sublime.View):
     global phantoms_to_generate
-    while phantoms_to_generate > 0:
-        print("waiting for phantoms...")
+    start = time.time()
+    # wait for up to 5 seconds for the phantoms to generate
+    while phantoms_to_generate > 0 and time.time() - start < 5:
         time.sleep(0.05)
     buffer_id = view.buffer_id()
     phantom_set = sublime.PhantomSet(view, "lsp_annotations")
@@ -1845,7 +1846,9 @@ class TypeAnnotator(object):
         self.view = view
 
     def request_symbol_annotate(self, point, function):
+        global phantoms_to_generate
         if self.view.match_selector(point, NO_HOVER_SCOPES):
+            phantoms_to_generate -= 1
             return
         client = client_for_view(self.view)
         if client and client.has_capability('hoverProvider'):
@@ -1874,6 +1877,7 @@ class TypeAnnotator(object):
             if ":" in var_text:
                 continue
             phantoms_to_generate += 1
+            print("var phantom")
             var_text = var_text[:-2]
             var_start = var.begin() + var_text.rfind(" ") + 1
             self.request_symbol_annotate(var_start, False)
@@ -1897,6 +1901,7 @@ class TypeAnnotator(object):
                     var_start += 4
                     var = var[4:]
                 phantoms_to_generate += 1
+                print("tuple phantom")
                 self.request_symbol_annotate(var_start, False)
                 if first:
                     first = False
@@ -1910,6 +1915,7 @@ class TypeAnnotator(object):
             if var is None or var.begin() == -1:
                 continue
             phantoms_to_generate += 1
+            print("forloop phantom")
             var_text = view.substr(var)
             var_text = var_text[:-3]
             var_start = var.begin() + var_text.rfind(" ") + 1
@@ -1925,6 +1931,7 @@ class TypeAnnotator(object):
         line = re.sub(" *\t*", "", line)
         if line.startswith("fn"):
             return
+        print("function phantom")
         phantoms_to_generate += 1
         print("annotating function")
         self.request_symbol_annotate(point - 2, True)

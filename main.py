@@ -1882,16 +1882,15 @@ class TypeAnnotator(object):
 
     def annotate_var_decl(self, view: sublime.View):
         global phantoms_to_generate
-        all_vars = view.find_all('\\blet\\b *(mut){0,1} *([a-zA-Z_][a-zA-Z0-9_]*)..', 0)
+        all_vars = view.find_all('...\\blet\\b *(mut){0,1} *([a-zA-Z_][a-zA-Z0-9_]*) *[:=;]', 0)
         for var in all_vars:
             if var is None or var.begin() == -1:
                 continue
             var_text = view.substr(var)
-            if ":" in var_text:
+            if ":" in var_text or var_text.startswith("if"):
                 continue
             phantoms_to_generate += 1
-            print("var phantom")
-            var_text = var_text[:-2]
+            var_text = var_text[:-1].rstrip()
             var_start = var.begin() + var_text.rfind(" ") + 1
             self.request_symbol_annotate(var_start, False)
 
@@ -1914,7 +1913,6 @@ class TypeAnnotator(object):
                     var_start += 4
                     var = var[4:]
                 phantoms_to_generate += 1
-                print("tuple phantom")
                 self.request_symbol_annotate(var_start, False)
                 if first:
                     first = False
@@ -1928,7 +1926,6 @@ class TypeAnnotator(object):
             if var is None or var.begin() == -1:
                 continue
             phantoms_to_generate += 1
-            print("forloop phantom")
             var_text = view.substr(var)
             var_text = var_text[:-3]
             var_start = var.begin() + var_text.rfind(" ") + 1
@@ -1938,15 +1935,12 @@ class TypeAnnotator(object):
         global phantoms_to_generate
         point = view.sel()[0].begin()
         if view.substr(point - 1) != '(':
-            print("no function")
             return
         line = view.substr(view.line(point))
         line = re.sub(" *\t*", "", line)
         if line.startswith("fn"):
             return
-        print("function phantom")
         phantoms_to_generate += 1
-        print("annotating function")
         self.request_symbol_annotate(point - 2, True)
 
     def add_annotation(self, point, contents, function):

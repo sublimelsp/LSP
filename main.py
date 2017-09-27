@@ -863,6 +863,7 @@ def notify_did_open(view: sublime.View):
                 }
             }
             client.send_notification(Notification.didOpen(params))
+            sublime.set_timeout_async(lambda: annotate_visible_types(view), 5000)
 
 
 def notify_did_close(view: sublime.View):
@@ -882,6 +883,7 @@ def notify_did_save(view: sublime.View):
         if client:
             params = {"textDocument": {"uri": filename_to_uri(view.file_name())}}
             client.send_notification(Notification.didSave(params))
+            annotate_visible_types(view)
     else:
         debug('document not tracked', view.file_name())
 
@@ -925,7 +927,7 @@ def queue_did_change(view: sublime.View):
         }
 
     sublime.set_timeout_async(
-        lambda: purge_did_change(buffer_id, buffer_version), 500)
+        lambda: purge_did_change(buffer_id, buffer_version), 2000)
 
 
 def purge_did_change(buffer_id: int, buffer_version=None):
@@ -958,7 +960,32 @@ def notify_did_change(view: sublime.View):
             }]
         }
         client.send_notification(Notification.didChange(params))
+        annotate_visible_types(view)
 
+def annotate_visible_types(view: sublime.View):
+    global phantom_sets_by_buffer
+    global type_phantoms
+    old_phantoms = type_phantoms
+    type_phantoms = []
+    hoverer = HoverHandler(view)
+    visible = view.visible_region()
+    lines = view.lines(visible)
+    all_vars = view.find_all('\\blet\\b *([a-zA-Z_][a-zA-Z0-9_]*)', 0)
+    for var in all_vars:
+        if var is None or var.begin() == -1:
+            continue
+        var_text = view.substr(var)
+        var_start = var.begin() + var_text.rfind(" ") + 1
+        print("requesting variable:", var_text)
+        hoverer.request_symbol_hover(var_start)
+    print("number of phantoms:", len(type_phantoms))
+    buffer_id = view.buffer_id()
+    phantom_set = phantom_sets_by_buffer.get(buffer_id)
+    if not phantom_set:
+        phantom_set = sublime.PhantomSet(view, "lsp_annotations")
+        phantom_sets_by_buffer[buffer_id] = phantom_set
+    if old_phantoms != type_phantoms:
+        phantom_set.update(type_phantoms)
 
 document_sync_initialized = False
 
@@ -1694,6 +1721,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         if point_diagnostics:
             self.show_diagnostics_hover(point, point_diagnostics)
         else:
+            return
             self.request_symbol_hover(point)
 
     def request_symbol_hover(self, point):
@@ -1742,7 +1770,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         self.view.run_command("lsp_code_actions")
 
     def show_hover(self, point, contents):
-        global phantom_sets_by_buffer
+        global type_phantoms
         formatted = []
         if not isinstance(contents, list):
             contents = [contents]
@@ -1768,13 +1796,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         )
         # region = Range.from_region(self.view, self.view.word(point))
         diagnostic_msg = Diagnostic(formatted, region, DiagnosticSeverity.Error, None, None)
-        buffer_id = self.view.buffer_id()
-        phantoms = [create_quiet_phantom(self.view, diagnostic_msg)]
-        phantom_set = phantom_sets_by_buffer.get(buffer_id)
-        if not phantom_set:
-            phantom_set = sublime.PhantomSet(self.view, "lsp_diagnostics")
-            phantom_sets_by_buffer[buffer_id] = phantom_set
-        phantom_set.update(phantoms)
+        type_phantoms.append(create_quiet_phantom(self.view, diagnostic_msg))
 
         return
         mdpopups.show_popup(

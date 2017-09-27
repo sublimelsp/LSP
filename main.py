@@ -972,7 +972,7 @@ def annotate_visible_types(view: sublime.View):
     annotator = TypeAnnotator(view)
     visible = view.visible_region()
     lines = view.lines(visible)
-    all_vars = view.find_all('\\blet\\b *mut *([a-zA-Z_][a-zA-Z0-9_]*)..', 0)
+    all_vars = view.find_all('\\blet\\b *(mut){0,1} *([a-zA-Z_][a-zA-Z0-9_]*)..', 0)
     for var in all_vars:
         if var is None or var.begin() == -1:
             continue

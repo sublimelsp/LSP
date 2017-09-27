@@ -983,6 +983,24 @@ def annotate_visible_types(view: sublime.View):
         var_text = var_text[:-2]
         var_start = var.begin() + var_text.rfind(" ") + 1
         annotator.request_symbol_annotate(var_start)
+    tuple_vars = view.find_all('\\blet\\b *\(([a-zA-Z0-9_, ]*)\)', 0)
+    for var in tuple_vars:
+        if var is None or var.begin() == -1:
+            continue
+        var_text = view.substr(var)
+        var_start = var.begin() + var_text.find('(') + 1
+        var_text = re.sub("let *\(", "", var_text)
+        var_text = var_text[:-1]
+        tp_vars = var_text.split(",")
+        print("variable:", var_text, view.rowcol(var_start))
+        first = True
+        for var in tp_vars:
+            annotator.request_symbol_annotate(var_start)
+            print("tuple var:", view.rowcol(var_start))
+            if first:
+                first = False
+                var_start += 1
+            var_start += 1 + len(var)
     iter_vars = view.find_all('\\bfor\\b *([a-zA-Z_][a-zA-Z0-9_]*)', 0)
     for var in iter_vars:
         if var is None or var.begin() == -1:

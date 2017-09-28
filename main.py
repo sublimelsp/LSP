@@ -1074,8 +1074,8 @@ def create_phantom_html(text: str) -> str:
 
 def create_quiet_phantom_html(text: str) -> str:
     global stylesheet
-    html = """<body><span style="color: #bbb">{}</span> </body>""".format(html.escape(text, quote=False))
-    return html.replace("\n", "<br>")
+    html_str = """<body><span style="color: #bbb">{}</span> </body>""".format(html.escape(text, quote=False))
+    return html_str.replace("\n", "<br>")
 
 
 def on_phantom_navigate(view: sublime.View, href: str, point: int):

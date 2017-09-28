@@ -40,7 +40,7 @@ log_debug = True
 log_server = True
 log_stderr = False
 
-settings_obj = None
+settings_obj = None  # type: Optional[sublime.Settings]
 default_client_settings = dict()  # type: Dict[str, dict]
 global_client_settings = dict()  # type: Dict[str, dict]
 
@@ -341,10 +341,11 @@ def read_client_config(name, client_config):
 
 
 def set_global_config_enabled(config_name: str, is_enabled: bool):
-    client_settings = global_client_settings.setdefault(config_name, {})
-    client_settings["enabled"] = is_enabled
-    settings_obj.set("clients", global_client_settings)
-    sublime.save_settings("LSP.sublime-settings")
+    if settings_obj:
+        client_settings = global_client_settings.setdefault(config_name, {})
+        client_settings["enabled"] = is_enabled
+        settings_obj.set("clients", global_client_settings)
+        sublime.save_settings("LSP.sublime-settings")
 
 
 def enable_global_config(config_name: str):
@@ -361,7 +362,7 @@ def read_client_configs(client_settings, default_client_settings=None) -> 'List[
         for client_name, client_config in client_settings.items():
 
             # start with default settings for this client if available
-            client_with_defaults = {}
+            client_with_defaults = {}  # type: Dict[str, dict]
             if default_client_settings and client_name in default_client_settings:
                 client_with_defaults = default_client_settings[client_name]
             client_with_defaults.update(client_config)
@@ -376,18 +377,28 @@ def read_client_configs(client_settings, default_client_settings=None) -> 'List[
 
 def load_settings():
     global settings_obj
-    settings_obj = sublime.load_settings("LSP.sublime-settings")
-    update_settings(settings_obj)
-    settings_obj.add_on_change("_on_new_settings", lambda: update_settings(settings_obj))
+    loaded_settings_obj = sublime.load_settings("LSP.sublime-settings")
+    settings_obj = loaded_settings_obj
+    update_settings(loaded_settings_obj)
+    loaded_settings_obj.add_on_change("_on_new_settings", lambda: update_settings(loaded_settings_obj))
 
 
 def unload_settings():
-    settings_obj.clear_on_change("_on_new_settings")
+    if settings_obj:
+        settings_obj.clear_on_change("_on_new_settings")
 
 
 def read_bool_setting(settings_obj: sublime.Settings, key: str, default: bool) -> bool:
     val = settings_obj.get(key)
     if isinstance(val, bool):
+        return val
+    else:
+        return default
+
+
+def read_dict_setting(settings_obj: sublime.Settings, key: str, default: dict) -> dict:
+    val = settings_obj.get(key)
+    if isinstance(val, dict):
         return val
     else:
         return default
@@ -420,8 +431,8 @@ def update_settings(settings_obj: sublime.Settings):
     global default_client_settings
     global default_client_configs
 
-    default_client_settings = settings_obj.get("default_clients", {})
-    global_client_settings = settings_obj.get("clients", {})
+    default_client_settings = read_dict_setting(settings_obj, "default_clients", {})
+    global_client_settings = read_dict_setting(settings_obj, "clients", {})
 
     default_client_configs = read_client_configs(default_client_settings)
     global_client_configs = read_client_configs(global_client_settings, default_client_settings)

@@ -1074,7 +1074,8 @@ def create_phantom_html(text: str) -> str:
 
 def create_quiet_phantom_html(text: str) -> str:
     global stylesheet
-    return """<body><span style="color: #bbb">{}</span> </body>""".format(html.escape(text, quote=False)).replace("\n", "<br>")
+    html = """<body><span style="color: #bbb">{}</span> </body>""".format(html.escape(text, quote=False))
+    return html.replace("\n", "<br>")
 
 
 def on_phantom_navigate(view: sublime.View, href: str, point: int):
@@ -2034,7 +2035,7 @@ class TypeAnnotator(object):
                 if var.startswith("mut "):
                     var_start += 4
                     var = var[4:]
-                if not ":" in var:
+                if ":" not in var:
                     phantoms_to_generate += 1
                     self.request_symbol_annotate(var_start)
                 if first:
@@ -2101,7 +2102,7 @@ class TypeAnnotator(object):
         formatted = fn_name + re.sub(" *fn *", "", formatted)
         self_decl = re.search("&{0,1}('[a-zA-Z0-9]){0,1} *(mut){0,1} *self[^:]", formatted)
         offset = 0
-        if self_decl != None:
+        if self_decl is not None:
             self_decl_str = self_decl.group(0)
             formatted = formatted.replace(self_decl_str, "", 1).replace("(, ", "(", 1)
             offset = len(self_decl_str) + 1

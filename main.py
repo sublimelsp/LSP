@@ -1074,11 +1074,6 @@ def create_phantom_html(text: str) -> str:
 
 def create_quiet_phantom_html(text: str) -> str:
     global stylesheet
-    return """<body><span style="color: #bbb">: {}</span> </body>""".format(html.escape(text, quote=False))
-
-
-def create_quiet_phantomfn_html(text: str) -> str:
-    global stylesheet
     return """<body><span style="color: #bbb">{}</span> </body>""".format(html.escape(text, quote=False))
 
 
@@ -1109,7 +1104,6 @@ def create_quiet_phantom(view: sublime.View, diagnostic: Diagnostic, inline: boo
     alignment = sublime.LAYOUT_INLINE
     if not inline:
         alignment = sublime.LAYOUT_BELOW
-        content = create_quiet_phantomfn_html(diagnostic.message)
 
     return sublime.Phantom(
         region,
@@ -1837,6 +1831,9 @@ def annotate_types(view: sublime.View, current_function: bool):
     annotator.annotate_tuple_decl(view)
     annotator.annotate_for_loops(view)
     annotator.annotate_for_tuple_loops(view)
+    annotator.annotate_match_stmt(view)
+    annotator.annotate_use_stmt(view)
+    annotator.annotate_use_multiple_stmt(view)
     if current_function:
         annotator.annotate_function(view)
     sublime.set_timeout_async(lambda: show_type_phantoms(view), 100)
@@ -1849,6 +1846,7 @@ def show_type_phantoms(view: sublime.View):
     # wait for up to 5 seconds for the phantoms to generate
     while phantoms_to_generate > 0 and time.time() - start < 5:
         time.sleep(0.05)
+    time.sleep(0.1)
     buffer_id = view.buffer_id()
     phantom_set = sublime.PhantomSet(view, "lsp_annotations")
     phantom_sets_by_buffer[buffer_id] = phantom_set
@@ -1859,7 +1857,7 @@ class TypeAnnotator(object):
     def __init__(self, view):
         self.view = view
 
-    def request_symbol_annotate(self, point, function):
+    def request_symbol_annotate(self, point, category=""):
         global phantoms_to_generate
         if self.view.match_selector(point, NO_HOVER_SCOPES):
             phantoms_to_generate -= 1
@@ -1870,16 +1868,16 @@ class TypeAnnotator(object):
             if word_at_sel & SUBLIME_WORD_MASK:
                 client.send_request(
                     Request.hover(get_document_position(self.view, point)),
-                    lambda response: self.handle_response(response, point, function))
+                    lambda response: self.handle_response(response, point, category))
 
-    def handle_response(self, response, point, function):
+    def handle_response(self, response, point, category):
         debug(response)
         contents = "No description available."
         if isinstance(response, dict):
             # Flow returns None sometimes
             # See: https://github.com/flowtype/flow-language-server/issues/51
             contents = response.get('contents') or contents
-        self.add_annotation(point, contents, function)
+        self.add_annotation(point, contents, category)
 
     def annotate_var_decl(self, view: sublime.View):
         global phantoms_to_generate
@@ -1893,7 +1891,7 @@ class TypeAnnotator(object):
             phantoms_to_generate += 1
             var_text = var_text[:-1].rstrip()
             var_start = var.begin() + var_text.rfind(" ") + 1
-            self.request_symbol_annotate(var_start, False)
+            self.request_symbol_annotate(var_start)
 
     def annotate_tuple_decl(self, view: sublime.View):
         global phantoms_to_generate
@@ -1914,7 +1912,7 @@ class TypeAnnotator(object):
                     var_start += 4
                     var = var[4:]
                 phantoms_to_generate += 1
-                self.request_symbol_annotate(var_start, False)
+                self.request_symbol_annotate(var_start)
                 if first:
                     first = False
                     var_start += 1
@@ -1930,7 +1928,7 @@ class TypeAnnotator(object):
             var_text = view.substr(var)
             var_text = var_text[:-2].rstrip()
             var_start = var.begin() + var_text.rfind(" ") + 1
-            self.request_symbol_annotate(var_start, False)
+            self.request_symbol_annotate(var_start)
 
     def annotate_for_tuple_loops(self, view: sublime.View):
         global phantoms_to_generate
@@ -1951,7 +1949,54 @@ class TypeAnnotator(object):
                     var_start += 4
                     var = var[4:]
                 phantoms_to_generate += 1
-                self.request_symbol_annotate(var_start, False)
+                self.request_symbol_annotate(var_start)
+                if first:
+                    first = False
+                    var_start += 1
+                var_start += 1 + len(var)
+
+    def annotate_match_stmt(self, view: sublime.View):
+        global phantoms_to_generate
+        match_vars = view.find_all('\\bmatch\\b *[a-zA-Z_][a-zA-Z0-9_.]* *{', 0)
+        for var in match_vars:
+            if var is None or var.begin() == -1:
+                continue
+            phantoms_to_generate += 1
+            var_text = view.substr(var)
+            var_text = var_text[:-1].rstrip()
+            offset = max(var_text.rfind(" "), var_text.rfind("."))
+            var_start = var.begin() + offset + 1
+            self.request_symbol_annotate(var_start)
+
+    def annotate_use_stmt(self, view: sublime.View):
+        global phantoms_to_generate
+        use_vars = view.find_all('\\buse\\b *[a-zA-Z0-9_:]* *;', 0)
+        for var in use_vars:
+            if var is None or var.begin() == -1:
+                continue
+            phantoms_to_generate += 1
+            var_text = view.substr(var)
+            var_text = var_text[:-1].rstrip()
+            offset = max(var_text.rfind(" "), var_text.rfind(":"))
+            var_start = var.begin() + offset + 1
+            self.request_symbol_annotate(var_start, "docs")
+
+    def annotate_use_multiple_stmt(self, view: sublime.View):
+        global phantoms_to_generate
+        use_vars = view.find_all('\\buse\\b *[a-zA-Z0-9_:]*{[a-zA-Z0-9_:, ]*} *;', 0)
+        for var in use_vars:
+            if var is None or var.begin() == -1:
+                continue
+            var_text = view.substr(var)
+            print("var:", var_text)
+            var_start = var.begin() + var_text.find('{') + 1
+            var_text = re.sub("use *[a-zA-Z0-9_:]*{", "", var_text)
+            var_text = re.sub("} *;", "", var_text)
+            tp_vars = var_text.split(",")
+            first = True
+            for var in tp_vars:
+                phantoms_to_generate += 1
+                self.request_symbol_annotate(var_start, "docs")
                 if first:
                     first = False
                     var_start += 1
@@ -1967,9 +2012,9 @@ class TypeAnnotator(object):
         if line.startswith("fn"):
             return
         phantoms_to_generate += 1
-        self.request_symbol_annotate(point - 2, True)
+        self.request_symbol_annotate(point - 2, "fn")
 
-    def add_annotation(self, point, contents, function):
+    def add_annotation(self, point, contents, category):
         global type_phantoms, phantoms_to_generate
         formatted = []
         if not isinstance(contents, list):
@@ -1978,14 +2023,17 @@ class TypeAnnotator(object):
         for item in contents:
             value = ""
             if isinstance(item, str):
-                value = item
-            else:
-                value = item.get("value")
-            formatted.append(value)
+                formatted.append(item)
+            elif category != "docs":
+                formatted.append(item.get("value"))
 
         formatted_str = "\n".join(formatted)
 
-        if "No description" in formatted_str:
+        if category == "docs":
+            # we only want the first line of the doc string
+            formatted_str = formatted_str.split("\n")[0]
+
+        if "No description" in formatted_str or len(formatted_str) == 0:
             phantoms_to_generate -= 1
             return
 
@@ -1997,9 +2045,14 @@ class TypeAnnotator(object):
             Point.from_text_point(self.view, region.end()),
             Point.from_text_point(self.view, region.end()+1)
         )
+        if category == "docs":
+            formatted_str = "/* " + formatted_str + " */"
+        elif category != "fn":
+            formatted_str = ": " + formatted_str
+
         diagnostic_msg = Diagnostic(formatted_str, region, DiagnosticSeverity.Hint, None, None)
 
-        if not function:
+        if category != "fn":
             type_phantoms.append(create_quiet_phantom(self.view, diagnostic_msg, True))
         else:
             type_phantoms.append(self.create_function_phantom(point, formatted_str))

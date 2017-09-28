@@ -41,8 +41,8 @@ log_server = True
 log_stderr = False
 
 settings_obj = None
-default_client_settings = dict()  #type: Dict[str, dict]
-global_client_settings = dict()  #type: Dict[str, dict]
+default_client_settings = dict()  # type: Dict[str, dict]
+global_client_settings = dict()  # type: Dict[str, dict]
 
 default_client_configs = []  # type: List[ClientConfig]
 global_client_configs = []  # type: List[ClientConfig]
@@ -353,8 +353,7 @@ def enable_global_config(config_name: str):
 
 
 def disable_global_config(config_name: str):
-    # TODO: make sure parsed settings are disabled before running this.
-    set_global_config_enabled(config_name, True)
+    set_global_config_enabled(config_name, False)
     sublime.set_timeout_async(lambda: unload_window_clients(sublime.active_window().id()), 500)
 
 
@@ -362,13 +361,15 @@ def read_client_configs(client_settings, default_client_settings=None) -> 'List[
     parsed_configs = []  # type: List[ClientConfig]
     if isinstance(client_settings, dict):
         for client_name, client_config in client_settings.items():
+
+            # start with default settings for this client if available
             client_with_defaults = {}
             if default_client_settings and client_name in default_client_settings:
                 client_with_defaults = default_client_settings[client_name]
             client_with_defaults.update(client_config)
+
             config = read_client_config(client_name, client_with_defaults)
             if config:
-                # debug("Config added:", client_name, '(enabled)' if config.enabled else '(disabled)')
                 parsed_configs.append(config)
         return parsed_configs
     else:
@@ -1007,6 +1008,10 @@ unsupported_syntax_template = """
 
 Visit [langserver.org](https://langserver.org) to find out if a language server exists."""
 
+
+setup_css = ".mdpopups .lsp_documentation { margin: 20px; font-family: sans-serif; font-size: 1.2rem; line-height: 2}"
+
+
 class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
     def run(self):
         view = self.window.active_view()
@@ -1025,7 +1030,7 @@ class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
         mdpopups.show_popup(
             view,
             "\n".join([title, content]),
-            css=".mdpopups .lsp_documentation { margin: 20px; font-family: sans-serif; font-size: 1.2rem; line-height: 2}",
+            css=setup_css,
             md=True,
             wrapper_class="lsp_documentation",
             max_width=800,

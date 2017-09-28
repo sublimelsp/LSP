@@ -40,8 +40,13 @@ log_debug = True
 log_server = True
 log_stderr = False
 
-global_client_configs = []  # type: List[ClientConfig]
+settings_obj = None
+default_client_settings = dict()  #type: Dict[str, dict]
+global_client_settings = dict()  #type: Dict[str, dict]
+
 default_client_configs = []  # type: List[ClientConfig]
+global_client_configs = []  # type: List[ClientConfig]
+
 window_client_configs = dict()  # type: Dict[int, List[ClientConfig]]
 
 
@@ -330,7 +335,8 @@ def read_client_config(name, client_config):
         client_config.get("syntaxes", []),
         client_config.get("languageId", ""),
         client_config.get("enabled", True),
-        client_config.get("initializationOptions", dict())
+        client_config.get("initializationOptions", dict()),
+        client_config.get("settings", dict())
     )
 
 
@@ -384,11 +390,15 @@ def disable_global_config(config_name: str):
         return
 
 
-def read_client_configs(configs_from_settings) -> 'List[ClientConfig]':
+def read_client_configs(client_settings, default_client_settings=None) -> 'List[ClientConfig]':
     parsed_configs = []  # type: List[ClientConfig]
-    if isinstance(configs_from_settings, dict):
-        for client_name, client_config in configs_from_settings.items():
-            config = read_client_config(client_name, client_config)
+    if isinstance(client_settings, dict):
+        for client_name, client_config in client_settings.items():
+            client_with_defaults = {}
+            if default_client_settings and client_name in default_client_settings:
+                client_with_defaults = default_client_settings[client_name]
+            client_with_defaults.update(client_config)
+            config = read_client_config(client_name, client_with_defaults)
             if config:
                 # debug("Config added:", client_name, '(enabled)' if config.enabled else '(disabled)')
                 parsed_configs.append(config)
@@ -398,13 +408,13 @@ def read_client_configs(configs_from_settings) -> 'List[ClientConfig]':
 
 
 def load_settings():
+    global settings_obj
     settings_obj = sublime.load_settings("LSP.sublime-settings")
     update_settings(settings_obj)
     settings_obj.add_on_change("_on_new_settings", lambda: update_settings(settings_obj))
 
 
 def unload_settings():
-    settings_obj = sublime.load_settings("LSP.sublime-settings")
     settings_obj.clear_on_change("_on_new_settings")
 
 
@@ -438,11 +448,17 @@ def update_settings(settings_obj: sublime.Settings):
     global log_debug
     global log_server
     global log_stderr
+    global global_client_settings
     global global_client_configs
+    global default_client_settings
     global default_client_configs
 
-    global_client_configs = read_client_configs(settings_obj.get("clients", {}))
-    default_client_configs = read_client_configs(settings_obj.get("default_clients", {}))
+    default_client_settings = settings_obj.get("default_clients", {})
+    global_client_settings = settings_obj.get("clients", {})
+
+    default_client_configs = read_client_configs(default_client_settings))
+    global_client_configs = read_client_configs(global_client_settings, default_client_settings)
+
     client_enableds = list("=".join([config.name, str(config.enabled)]) for config in global_client_configs)
     debug('global clients: ', client_enableds)
 
@@ -1008,29 +1024,44 @@ class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
             sublime.status_message("No config available to disable")
 
 
+supported_syntax_template = '''
+Installation steps:
+
+* Open the [LSP documentation](https://lsp.readthedocs.io)
+* Read the instructions for {}
+* Install the language server on your system
+
+Enable: [Globally](#enable_globally) | [This Project Only](#enable_project)
+'''
+
+unsupported_syntax_template = """
+*LSP has no built-in configuration for a {} language server*
+
+Visit [langserver.org](https://langserver.org) to find out if a language server exists."""
+
 class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
     def run(self):
         view = self.window.active_view()
         syntax = view.settings().get("syntax")
         available_config = get_default_client_config(view)
+
+        syntax_name = extract_syntax_name(syntax)
+        title = "# Language Server for {}\n".format(syntax_name)
+
         if available_config:
-            instructions_path = "Packages/LSP/docs/configurations/" + available_config.languageId + ".md"
-            actions = "Enable: [Globally](#enable_globally) | [This Project Only](#enable_project)"
-            try:
-                content = sublime.load_resource(instructions_path)
-            except IOError:
-                content = "### No setup instructions found for {}".format(extract_syntax_name(syntax))
-                content = content + "\n\nVisit [LSP documentation](https://lsp.readthedocs.io)\n\n"
+            content = supported_syntax_template.format(syntax_name)
         else:
-            content = "### No language server found for {}".format(extract_syntax_name(syntax))
-            actions = "Visit [langserver.org](https://langserver.org)"
+            title = "# No Language Server support"
+            content = unsupported_syntax_template.format(syntax_name)
+
         mdpopups.show_popup(
             view,
-            "\n".join([content, actions]),
-            css=".mdpopups .lsp_hover { margin: 4px; }",
+            "\n".join([title, content]),
+            css=".mdpopups .lsp_documentation { margin: 20px; font-family: sans-serif; font-size: 1.2rem; line-height: 2}",
             md=True,
-            wrapper_class="lsp_hover",
+            wrapper_class="lsp_documentation",
             max_width=800,
+            max_height=600,
             on_navigate=self.on_hover_navigate
         )
 

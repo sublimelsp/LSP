@@ -897,7 +897,7 @@ def notify_did_save(view: sublime.View):
         if client:
             params = {"textDocument": {"uri": filename_to_uri(view.file_name())}}
             client.send_notification(Notification.didSave(params))
-            sublime.set_timeout_async(lambda: annotate_types(view, False), 100)
+            sublime.set_timeout_async(lambda: annotate_types(view, False), 300)
     else:
         debug('document not tracked', view.file_name())
 
@@ -977,7 +977,7 @@ def notify_did_change(view: sublime.View):
 
         point = view.sel()[0].begin()
         if view.substr(point - 1) == '(':
-            sublime.set_timeout_async(lambda: annotate_types(view, True), 100)
+            sublime.set_timeout_async(lambda: annotate_types(view, True), 200)
 
 
 document_sync_initialized = False
@@ -1074,7 +1074,8 @@ def create_phantom_html(text: str) -> str:
 
 def create_quiet_phantom_html(text: str) -> str:
     global stylesheet
-    return """<body><span style="color: #bbb">{}</span> </body>""".format(html.escape(text, quote=False))
+    html_str = """<body><span style="color: #bbb">{}</span> </body>""".format(html.escape(text, quote=False))
+    return html_str.replace("\n", "<br>")
 
 
 def on_phantom_navigate(view: sublime.View, href: str, point: int):
@@ -1806,11 +1807,13 @@ def wait_on_RLS():
     # after that, assume we missed it
     max_count = 20
     while waiting_for_RLS is False and max_count > 0:
+        sublime.active_window().status_message("Waiting on RLS...")
         time.sleep(0.05)
         max_count -= 1
 
     # wait on RLS to send rustDocument/diagnosticsEnd
     while waiting_for_RLS is True:
+        sublime.active_window().status_message("Waiting on RLS...")
         time.sleep(0.05)
 
 
@@ -1834,6 +1837,7 @@ def annotate_types(view: sublime.View, current_function: bool):
     annotator.annotate_match_stmt(view)
     annotator.annotate_use_stmt(view)
     annotator.annotate_use_multiple_stmt(view)
+    annotator.annotate_closures(view)
     if current_function:
         annotator.annotate_function(view)
     sublime.set_timeout_async(lambda: show_type_phantoms(view), 100)
@@ -1845,6 +1849,7 @@ def show_type_phantoms(view: sublime.View):
     start = time.time()
     # wait for up to 5 seconds for the phantoms to generate
     while phantoms_to_generate > 0 and time.time() - start < 5:
+        sublime.active_window().status_message("Waiting on RLS...")
         time.sleep(0.05)
     time.sleep(0.1)
     buffer_id = view.buffer_id()
@@ -1937,8 +1942,6 @@ class TypeAnnotator(object):
             if var is None or var.begin() == -1:
                 continue
             var_text = view.substr(var)
-            if ":" in var_text:
-                continue
             var_start = var.begin() + var_text.find('(') + 1
             var_text = re.sub("for *\(", "", var_text)
             var_text = re.sub("\) *in", "", var_text)
@@ -2014,6 +2017,32 @@ class TypeAnnotator(object):
         phantoms_to_generate += 1
         self.request_symbol_annotate(point - 2, "fn")
 
+    def annotate_closures(self, view: sublime.View):
+        global phantoms_to_generate
+        all_vars = view.find_all('\|[a-zA-Z0-9_,&: ]*\|', 0)
+        for var in all_vars:
+            if var is None or var.begin() == -1:
+                continue
+            var_text = view.substr(var)
+            var_text = var_text[1:-1].rstrip()
+            var_start = var.begin() + 1
+            closure_args = var_text.split(",")
+            first = True
+            for var in closure_args:
+                if var.startswith("&"):
+                    var_start += 1
+                    var = var[1:]
+                if var.startswith("mut "):
+                    var_start += 4
+                    var = var[4:]
+                if ":" not in var:
+                    phantoms_to_generate += 1
+                    self.request_symbol_annotate(var_start)
+                if first:
+                    first = False
+                    var_start += 1
+                var_start += 1 + len(var)
+
     def add_annotation(self, point, contents, category):
         global type_phantoms, phantoms_to_generate
         formatted = []
@@ -2021,7 +2050,6 @@ class TypeAnnotator(object):
             contents = [contents]
 
         for item in contents:
-            value = ""
             if isinstance(item, str):
                 formatted.append(item)
             elif category != "docs":
@@ -2033,12 +2061,24 @@ class TypeAnnotator(object):
             # we only want the first line of the doc string
             formatted_str = formatted_str.split("\n")[0]
 
+        docs = ""
+        if category == "fn":
+            text = formatted_str.split("\n")
+            docs = text[:-1]
+            formatted_str = text[-1]
+
         if "No description" in formatted_str or len(formatted_str) == 0:
             phantoms_to_generate -= 1
             return
 
         formatted_str = re.sub("<[a-zA-Z0-9_]*>", "", formatted_str)
         formatted_str = re.sub("[^& <]*::", "", formatted_str)
+        if formatted_str.startswith("[closure@"):
+            category = "fn"
+            formatted_str = re.sub("@.*:[0-9]+", ", captures ", formatted_str)
+            if formatted_str.endswith("captures ]"):
+                formatted_str = formatted_str[:-1] + "nothing ]"
+            formatted_str = ": " + formatted_str
 
         region = self.view.word(point)
         region = Range(
@@ -2055,28 +2095,40 @@ class TypeAnnotator(object):
         if category != "fn":
             type_phantoms.append(create_quiet_phantom(self.view, diagnostic_msg, True))
         else:
-            type_phantoms.append(self.create_function_phantom(point, formatted_str))
+            type_phantoms.append(self.create_function_phantom(point, formatted_str, docs))
         phantoms_to_generate -= 1
 
-    def create_function_phantom(self, point, formatted):
+    def create_function_phantom(self, point, formatted, docs):
         region = self.view.word(point)
         fn_name = self.view.substr(region)
         formatted = fn_name + re.sub(" *fn *", "", formatted)
+        self_decl = re.search("&{0,1}('[a-zA-Z0-9]){0,1} *(mut){0,1} *self[^:]", formatted)
         offset = 0
-        if "&mut self" in formatted:
-            formatted = "&mut self." + formatted.replace("&mut self", "", 1).replace("(, ", "(", 1)
-            offset = len("&mut self.")
-        elif "&self" in formatted:
-            formatted = "&self." + formatted.replace("&self", "", 1).replace("(, ", "(", 1)
-            offset = len("&self.")
-        elif "self" in formatted:
-            formatted = "self." + formatted.replace("self", "", 1).replace("(, ", "(", 1)
-            offset = len("self.")
+        if self_decl is not None:
+            self_decl_str = self_decl.group(0)
+            formatted = formatted.replace(self_decl_str, "", 1).replace("(, ", "(", 1)
+            offset = len(self_decl_str) + 1
+            if "'" in self_decl_str:
+                self_decl_str = "(" + self_decl_str + ")"
+            formatted = self_decl_str + "." + formatted
+        location = region.begin() - offset
+        location_row = self.view.rowcol(location)[0]
+        point_row = self.view.rowcol(point)[0]
+
+        # make sure it occurs on the right line, in case of long signatures
+        if location_row < point_row:
+            location = self.view.text_point(point_row, 1)
+
         region = Range(
-            Point.from_text_point(self.view, region.begin() - offset),
-            Point.from_text_point(self.view, region.begin()+1 - offset)
+            Point.from_text_point(self.view, location),
+            Point.from_text_point(self.view, location+1)
         )
-        diagnostic_msg = Diagnostic(formatted, region, DiagnosticSeverity.Hint, None, None)
+
+        docs_str = ""
+        # if len(docs) > 0:  # disabled for now because the docs returned for functions by RLS are not right
+        #     docs_str = "\n".join(docs) + "\n"
+
+        diagnostic_msg = Diagnostic(docs_str + formatted, region, DiagnosticSeverity.Hint, None, None)
         return create_quiet_phantom(self.view, diagnostic_msg, False)
 
 

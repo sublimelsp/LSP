@@ -349,12 +349,10 @@ def set_global_config_enabled(config_name: str, is_enabled: bool):
 
 def enable_global_config(config_name: str):
     set_global_config_enabled(config_name, True)
-    sublime.set_timeout_async(start_active_view, 500)
 
 
 def disable_global_config(config_name: str):
     set_global_config_enabled(config_name, False)
-    sublime.set_timeout_async(lambda: unload_window_clients(sublime.active_window().id()), 500)
 
 
 def read_client_configs(client_settings, default_client_settings=None) -> 'List[ClientConfig]':
@@ -936,6 +934,8 @@ class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
         available_config = get_scope_client_config(view, global_client_configs) or get_default_client_config(view)
         if available_config:
             enable_global_config(available_config.name)
+            sublime.set_timeout_async(start_active_view, 500)
+            sublime.status_messsage("{} enabled, starting server...".format(global_config.name))
             return
 
         sublime.status_message("No config available to enable")
@@ -948,23 +948,9 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         # if no default_config, nothing we can do.
         default_config = get_default_client_config(view)
         if default_config:
-
-            # not in global config yet: add it disabled
-            global_config = get_scope_client_config(view, global_client_configs)
-            if global_config is None:
-                debug('no global config', default_config.name)
-                # ensures config is created, but then sets enabled: false.
-                create_global_config(default_config.name, enabled=False, start=False)
-                enable_in_project(self.window, default_config.name)
-                sublime.set_timeout_async(start_active_view, 500)
-
-            else:
-                debug('has global config enabled=', global_config.enabled)
-                if global_config.enabled:
-                    pass  # is there something meaningful to do here?
-                else:
-                    enable_in_project(self.window, default_config.name)
-                    sublime.set_timeout_async(start_active_view, 500)
+            enable_in_project(self.window, default_config.name)
+            sublime.set_timeout_async(start_active_view, 500)
+            sublime.status_messsage("{} enabled in project, starting server...".format(default_config.name))
         else:
             sublime.status_message("No config available to enable")
 
@@ -975,6 +961,8 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
         global_config = get_scope_client_config(view, global_client_configs)
         if global_config:
             disable_global_config(global_config.name)
+            sublime.status_messsage("{} disabled, shutting down server...".format(global_config.name))
+            sublime.set_timeout_async(lambda: unload_window_clients(self.window.id()), 500)
             return
 
         sublime.status_message("No config available to disable")
@@ -985,8 +973,8 @@ class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         view = self.window.active_view()
         global_config = get_scope_client_config(view, global_client_configs)
         if global_config:
-            debug('disabling in project:', global_config.name)
             disable_in_project(self.window, global_config.name)
+            sublime.status_messsage("{} disabled in project, shutting down server...".format(global_config.name))
             sublime.set_timeout_async(lambda: unload_window_clients(self.window.id()), 500)
             return
         else:
@@ -2466,8 +2454,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        # TODO: this enables all of document sync, perhaps only on_load / on_activated need
-        # to support is_supportable_syntax
+        # This enables all of document sync for any supportable syntax
+        # Global performance cost, consider a detect_lsp_support setting
         return syntax and (is_supported_syntax(syntax) or is_supportable_syntax(syntax))
 
     @classmethod

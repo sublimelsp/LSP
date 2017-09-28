@@ -340,54 +340,22 @@ def read_client_config(name, client_config):
     )
 
 
-def create_global_config(config_name: str, enabled=True, start=True):
-    settings_obj = sublime.load_settings("LSP.sublime-settings")
-    configs_from_settings = settings_obj.get("clients", {})
-
-    default_configs_from_settings = settings_obj.get("default_clients", {})
-    configs_from_settings[config_name] = default_configs_from_settings[config_name]
-    if not enabled:
-        configs_from_settings[config_name]["enabled"] = False
-    settings_obj.set("clients", configs_from_settings)
+def set_global_config_enabled(config_name: str, is_enabled: bool):
+    client_settings = global_client_settings.setdefault(config_name, {})
+    client_settings["enabled"] = is_enabled
+    settings_obj.set("clients", global_client_settings)
     sublime.save_settings("LSP.sublime-settings")
-    if start:
-        sublime.set_timeout_async(start_active_view, 500)
-
-    return read_client_config(config_name, configs_from_settings[config_name])
 
 
 def enable_global_config(config_name: str):
-    settings_obj = sublime.load_settings("LSP.sublime-settings")
-    configs_from_settings = settings_obj.get("clients", {})
-
-    # enable existing config
-    if config_name in configs_from_settings:
-        existing_config = configs_from_settings[config_name]
-        debug('enabling', existing_config)
-        if "enabled" in existing_config:
-            del existing_config["enabled"]
-            settings_obj.set("clients", configs_from_settings)
-            sublime.save_settings("LSP.sublime-settings")
-            sublime.set_timeout_async(start_active_view, 500)
-            return
-    else:
-        # add new config
-        create_global_config(config_name)
+    set_global_config_enabled(config_name, True)
+    sublime.set_timeout_async(start_active_view, 500)
 
 
 def disable_global_config(config_name: str):
-    settings_obj = sublime.load_settings("LSP.sublime-settings")
-    configs_from_settings = settings_obj.get("clients", {})
-
-    # disable existing config
-    if config_name in configs_from_settings:
-        existing_config = configs_from_settings[config_name]
-        existing_config["enabled"] = False
-        settings_obj.set("clients", configs_from_settings)
-        sublime.save_settings("LSP.sublime-settings")
-        # TODO: make sure parsed settings are disabled before running this.
-        sublime.set_timeout_async(lambda: unload_window_clients(sublime.active_window().id()), 500)
-        return
+    # TODO: make sure parsed settings are disabled before running this.
+    set_global_config_enabled(config_name, True)
+    sublime.set_timeout_async(lambda: unload_window_clients(sublime.active_window().id()), 500)
 
 
 def read_client_configs(client_settings, default_client_settings=None) -> 'List[ClientConfig]':
@@ -456,7 +424,7 @@ def update_settings(settings_obj: sublime.Settings):
     default_client_settings = settings_obj.get("default_clients", {})
     global_client_settings = settings_obj.get("clients", {})
 
-    default_client_configs = read_client_configs(default_client_settings))
+    default_client_configs = read_client_configs(default_client_settings)
     global_client_configs = read_client_configs(global_client_settings, default_client_settings)
 
     client_enableds = list("=".join([config.name, str(config.enabled)]) for config in global_client_configs)

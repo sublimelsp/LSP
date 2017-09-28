@@ -1837,6 +1837,7 @@ def annotate_types(view: sublime.View, current_function: bool):
     annotator.annotate_tuple_decl(view)
     annotator.annotate_for_loops(view)
     annotator.annotate_for_tuple_loops(view)
+    annotator.annotate_match_stmt(view)
     if current_function:
         annotator.annotate_function(view)
     sublime.set_timeout_async(lambda: show_type_phantoms(view), 100)
@@ -1956,6 +1957,19 @@ class TypeAnnotator(object):
                     first = False
                     var_start += 1
                 var_start += 1 + len(var)
+
+    def annotate_match_stmt(self, view: sublime.View):
+        global phantoms_to_generate
+        match_vars = view.find_all('\\bmatch\\b *[a-zA-Z_][a-zA-Z0-9_.]* *{', 0)
+        for var in match_vars:
+            if var is None or var.begin() == -1:
+                continue
+            phantoms_to_generate += 1
+            var_text = view.substr(var)
+            var_text = var_text[:-1].rstrip()
+            offset = max(var_text.rfind(" "), var_text.rfind("."))
+            var_start = var.begin() + offset + 1
+            self.request_symbol_annotate(var_start, False)
 
     def annotate_function(self, view: sublime.View):
         global phantoms_to_generate

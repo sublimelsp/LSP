@@ -2021,7 +2021,6 @@ class TypeAnnotator(object):
             contents = [contents]
 
         for item in contents:
-            value = ""
             if isinstance(item, str):
                 formatted.append(item)
             elif category != "docs":

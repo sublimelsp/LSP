@@ -792,6 +792,12 @@ def add_window_client_config(window: 'sublime.Window', config: 'ClientConfig'):
     window_client_configs.setdefault(window.id(), []).append(config)
 
 
+def clear_window_client_configs(window: 'sublime.Window'):
+    global window_client_configs
+    if window.id() in window_client_configs:
+        del window_client_configs[window.id()]
+
+
 def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -> 'ClientConfig':
     window_config = get_project_config(view.window())
 
@@ -935,10 +941,10 @@ class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
         if available_config:
             enable_global_config(available_config.name)
             sublime.set_timeout_async(start_active_view, 500)
-            sublime.status_messsage("{} enabled, starting server...".format(global_config.name))
+            self.window.status_message("{} enabled, starting server...".format(available_config.name))
             return
 
-        sublime.status_message("No config available to enable")
+        self.window.status_message("No config available to enable")
 
 
 class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
@@ -949,10 +955,11 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         default_config = get_default_client_config(view)
         if default_config:
             enable_in_project(self.window, default_config.name)
+            clear_window_client_configs(self.window)
             sublime.set_timeout_async(start_active_view, 500)
-            sublime.status_messsage("{} enabled in project, starting server...".format(default_config.name))
+            self.window.status_message("{} enabled in project, starting server...".format(default_config.name))
         else:
-            sublime.status_message("No config available to enable")
+            self.window.status_message("No config available to enable")
 
 
 class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
@@ -961,11 +968,11 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
         global_config = get_scope_client_config(view, global_client_configs)
         if global_config:
             disable_global_config(global_config.name)
-            sublime.status_messsage("{} disabled, shutting down server...".format(global_config.name))
             sublime.set_timeout_async(lambda: unload_window_clients(self.window.id()), 500)
+            self.window.status_message("{} disabled, shutting down server...".format(global_config.name))
             return
 
-        sublime.status_message("No config available to disable")
+        self.window.status_message("No config available to disable")
 
 
 class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
@@ -974,11 +981,12 @@ class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         global_config = get_scope_client_config(view, global_client_configs)
         if global_config:
             disable_in_project(self.window, global_config.name)
-            sublime.status_messsage("{} disabled in project, shutting down server...".format(global_config.name))
+            clear_window_client_configs(self.window)
             sublime.set_timeout_async(lambda: unload_window_clients(self.window.id()), 500)
+            self.window.status_message("{} disabled in project, shutting down server...".format(global_config.name))
             return
         else:
-            sublime.status_message("No config available to disable")
+            self.window.status_message("No config available to disable")
 
 
 supported_syntax_template = '''
@@ -1537,7 +1545,7 @@ class LspSymbolReferencesCommand(sublime_plugin.TextCommand):
 
         else:
             window.run_command("hide_panel", {"panel": "output.references"})
-            sublime.status_message("No references found")
+            window.status_message("No references found")
 
     def want_event(self):
         return True

@@ -951,6 +951,7 @@ class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
         available_config = get_scope_client_config(view, global_client_configs) or get_default_client_config(view)
         if available_config:
             enable_global_config(available_config.name)
+            clear_window_client_configs(self.window)
             sublime.set_timeout_async(start_active_view, 500)
             self.window.status_message("{} enabled, starting server...".format(available_config.name))
             return
@@ -979,6 +980,7 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
         global_config = get_scope_client_config(view, global_client_configs)
         if global_config:
             disable_global_config(global_config.name)
+            clear_window_client_configs(self.window)
             sublime.set_timeout_async(lambda: unload_window_clients(self.window.id()), 500)
             self.window.status_message("{} disabled, shutting down server...".format(global_config.name))
             return
@@ -1006,6 +1008,7 @@ Installation steps:
 * Open the [LSP documentation](https://lsp.readthedocs.io)
 * Read the instructions for {}
 * Install the language server on your system
+* Choose an option below to start the server
 
 Enable: [Globally](#enable_globally) | [This Project Only](#enable_project)
 '''
@@ -1013,7 +1016,7 @@ Enable: [Globally](#enable_globally) | [This Project Only](#enable_project)
 unsupported_syntax_template = """
 *LSP has no built-in configuration for a {} language server*
 
-Visit [langserver.org](https://langserver.org) to find out if a language server exists."""
+Visit [langserver.org](https://langserver.org) to find out if a language server exists for this language."""
 
 
 setup_css = ".mdpopups .lsp_documentation { margin: 20px; font-family: sans-serif; font-size: 1.2rem; line-height: 2}"

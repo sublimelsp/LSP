@@ -4,6 +4,9 @@ import os
 import subprocess
 import sys
 import threading
+import re
+import time
+
 from collections import OrderedDict
 from urllib.parse import urljoin
 from urllib.parse import urlparse
@@ -38,6 +41,8 @@ resolve_completion_for_snippets = False
 log_debug = True
 log_server = True
 log_stderr = False
+
+waiting_for_RLS = True
 
 global_client_configs = []  # type: List[ClientConfig]
 window_client_configs = dict()  # type: Dict[int, List[ClientConfig]]
@@ -565,6 +570,7 @@ class Client(object):
             debug("Unhandled request", method)
 
     def notification_handler(self, response):
+        global waiting_for_RLS
         method = response.get("method")
         if method == "textDocument/publishDiagnostics":
             Events.publish("document.diagnostics", response.get("params"))
@@ -574,6 +580,14 @@ class Client(object):
         elif method == "window/logMessage" and log_server:
             server_log(self.process.args[0],
                        response.get("params").get("message"))
+        elif method == "rustDocument/diagnosticsBegin":
+            waiting_for_RLS = True
+            sublime.active_window().status_message("Waiting on RLS...")
+        elif method == "rustDocument/beginBuild":
+            sublime.active_window().status_message("Waiting on RLS...")
+        elif method == "rustDocument/diagnosticsEnd":
+            waiting_for_RLS = False
+            sublime.active_window().status_message("RLS up to date.")
         else:
             debug("Unhandled notification:", method)
 
@@ -863,6 +877,7 @@ def notify_did_open(view: sublime.View):
                 }
             }
             client.send_notification(Notification.didOpen(params))
+            sublime.set_timeout_async(lambda: annotate_types(view, False), 100)
 
 
 def notify_did_close(view: sublime.View):
@@ -882,6 +897,7 @@ def notify_did_save(view: sublime.View):
         if client:
             params = {"textDocument": {"uri": filename_to_uri(view.file_name())}}
             client.send_notification(Notification.didSave(params))
+            sublime.set_timeout_async(lambda: annotate_types(view, False), 300)
     else:
         debug('document not tracked', view.file_name())
 
@@ -958,6 +974,10 @@ def notify_did_change(view: sublime.View):
             }]
         }
         client.send_notification(Notification.didChange(params))
+
+        point = view.sel()[0].begin()
+        if view.substr(point - 1) == '(':
+            sublime.set_timeout_async(lambda: annotate_types(view, True), 200)
 
 
 document_sync_initialized = False
@@ -1052,6 +1072,12 @@ def create_phantom_html(text: str) -> str:
                 </body>""".format(stylesheet, html.escape(text, quote=False))
 
 
+def create_quiet_phantom_html(text: str) -> str:
+    global stylesheet
+    html_str = """<body><span style="color: #bbb">{}</span> </body>""".format(html.escape(text, quote=False))
+    return html_str.replace("\n", "<br>")
+
+
 def on_phantom_navigate(view: sublime.View, href: str, point: int):
     # TODO: don't mess with the user's cursor.
     sel = view.sel()
@@ -1068,6 +1094,22 @@ def create_phantom(view: sublime.View, diagnostic: Diagnostic) -> sublime.Phanto
         region,
         '<p>' + content + '</p>',
         sublime.LAYOUT_BELOW,
+        lambda href: on_phantom_navigate(view, href, region.begin())
+    )
+
+
+def create_quiet_phantom(view: sublime.View, diagnostic: Diagnostic, inline: bool) -> sublime.Phantom:
+    region = diagnostic.range.to_region(view)
+    # TODO: hook up hide phantom (if keeping them)
+    content = create_quiet_phantom_html(diagnostic.message)
+    alignment = sublime.LAYOUT_INLINE
+    if not inline:
+        alignment = sublime.LAYOUT_BELOW
+
+    return sublime.Phantom(
+        region,
+        '' + content + '',
+        alignment,
         lambda href: on_phantom_navigate(view, href, region.begin())
     )
 
@@ -1400,6 +1442,12 @@ phantom_sets_by_buffer = {}  # type: Dict[int, sublime.PhantomSet]
 
 def update_diagnostics_phantoms(view: sublime.View, diagnostics: 'List[Diagnostic]'):
     global phantom_sets_by_buffer
+
+    # disable the normal LSP phantoms when using a Rust document,
+    # since these interfere with the enhanced Rust phantoms
+    syntax = view.settings().get('syntax')
+    if "Rust" in syntax:  # type: ignore
+        return
 
     buffer_id = view.buffer_id()
     if not show_diagnostics_phantoms or view.is_dirty():
@@ -1752,6 +1800,337 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             max_width=800)
 
 
+def wait_on_RLS():
+    global waiting_for_RLS
+
+    # wait for up to 1 second for a rustDocument/diagnosticsBegin
+    # after that, assume we missed it
+    max_count = 20
+    while waiting_for_RLS is False and max_count > 0:
+        sublime.active_window().status_message("Waiting on RLS...")
+        time.sleep(0.05)
+        max_count -= 1
+
+    # wait on RLS to send rustDocument/diagnosticsEnd
+    while waiting_for_RLS is True:
+        sublime.active_window().status_message("Waiting on RLS...")
+        time.sleep(0.05)
+
+
+type_phantoms = []  # type: ignore
+phantoms_to_generate = 0
+
+
+def annotate_types(view: sublime.View, current_function: bool):
+    global type_phantoms, phantoms_to_generate
+    syntax = view.settings().get('syntax')
+    if "Rust" not in syntax:  # type: ignore
+        return 1
+    wait_on_RLS()
+    phantoms_to_generate = 0
+    type_phantoms = []
+    annotator = TypeAnnotator(view)
+    annotator.annotate_var_decl(view)
+    annotator.annotate_tuple_decl(view)
+    annotator.annotate_for_loops(view)
+    annotator.annotate_for_tuple_loops(view)
+    annotator.annotate_match_stmt(view)
+    annotator.annotate_use_stmt(view)
+    annotator.annotate_use_multiple_stmt(view)
+    annotator.annotate_closures(view)
+    if current_function:
+        annotator.annotate_function(view)
+    sublime.set_timeout_async(lambda: show_type_phantoms(view), 100)
+    return len(type_phantoms)
+
+
+def show_type_phantoms(view: sublime.View):
+    global phantoms_to_generate
+    start = time.time()
+    # wait for up to 5 seconds for the phantoms to generate
+    while phantoms_to_generate > 0 and time.time() - start < 5:
+        sublime.active_window().status_message("Waiting on RLS...")
+        time.sleep(0.05)
+    time.sleep(0.1)
+    buffer_id = view.buffer_id()
+    phantom_set = sublime.PhantomSet(view, "lsp_annotations")
+    phantom_sets_by_buffer[buffer_id] = phantom_set
+    phantom_set.update(type_phantoms)
+
+
+class TypeAnnotator(object):
+    def __init__(self, view):
+        self.view = view
+
+    def request_symbol_annotate(self, point, category=""):
+        global phantoms_to_generate
+        if self.view.match_selector(point, NO_HOVER_SCOPES):
+            phantoms_to_generate -= 1
+            return
+        client = client_for_view(self.view)
+        if client and client.has_capability('hoverProvider'):
+            word_at_sel = self.view.classify(point)
+            if word_at_sel & SUBLIME_WORD_MASK:
+                client.send_request(
+                    Request.hover(get_document_position(self.view, point)),
+                    lambda response: self.handle_response(response, point, category))
+
+    def handle_response(self, response, point, category):
+        debug(response)
+        contents = "No description available."
+        if isinstance(response, dict):
+            # Flow returns None sometimes
+            # See: https://github.com/flowtype/flow-language-server/issues/51
+            contents = response.get('contents') or contents
+        self.add_annotation(point, contents, category)
+
+    def annotate_var_decl(self, view: sublime.View):
+        global phantoms_to_generate
+        all_vars = view.find_all('...\\blet\\b *(mut){0,1} *([a-zA-Z_][a-zA-Z0-9_]*) *[:=;]', 0)
+        for var in all_vars:
+            if var is None or var.begin() == -1:
+                continue
+            var_text = view.substr(var)
+            if ":" in var_text or var_text.startswith("if"):
+                continue
+            phantoms_to_generate += 1
+            var_text = var_text[:-1].rstrip()
+            var_start = var.begin() + var_text.rfind(" ") + 1
+            self.request_symbol_annotate(var_start)
+
+    def annotate_tuple_decl(self, view: sublime.View):
+        global phantoms_to_generate
+        tuple_vars = view.find_all('\\blet\\b *\([a-zA-Z0-9_, ]*\) *[:=;]', 0)
+        for var in tuple_vars:
+            if var is None or var.begin() == -1:
+                continue
+            var_text = view.substr(var)
+            if ":" in var_text:
+                continue
+            var_start = var.begin() + var_text.find('(') + 1
+            var_text = re.sub("let *\(", "", var_text)
+            var_text = re.sub("\) *[:=;]", "", var_text)
+            tp_vars = var_text.split(",")
+            first = True
+            for var in tp_vars:
+                if var.startswith("mut "):
+                    var_start += 4
+                    var = var[4:]
+                phantoms_to_generate += 1
+                self.request_symbol_annotate(var_start)
+                if first:
+                    first = False
+                    var_start += 1
+                var_start += 1 + len(var)
+
+    def annotate_for_loops(self, view: sublime.View):
+        global phantoms_to_generate
+        iter_vars = view.find_all('\\bfor\\b *[a-zA-Z_][a-zA-Z0-9_]* *in', 0)
+        for var in iter_vars:
+            if var is None or var.begin() == -1:
+                continue
+            phantoms_to_generate += 1
+            var_text = view.substr(var)
+            var_text = var_text[:-2].rstrip()
+            var_start = var.begin() + var_text.rfind(" ") + 1
+            self.request_symbol_annotate(var_start)
+
+    def annotate_for_tuple_loops(self, view: sublime.View):
+        global phantoms_to_generate
+        iter_tuple_vars = view.find_all('\\bfor\\b *\([a-zA-Z0-9_, ]*\) *in', 0)
+        for var in iter_tuple_vars:
+            if var is None or var.begin() == -1:
+                continue
+            var_text = view.substr(var)
+            var_start = var.begin() + var_text.find('(') + 1
+            var_text = re.sub("for *\(", "", var_text)
+            var_text = re.sub("\) *in", "", var_text)
+            tp_vars = var_text.split(",")
+            first = True
+            for var in tp_vars:
+                if var.startswith("mut "):
+                    var_start += 4
+                    var = var[4:]
+                phantoms_to_generate += 1
+                self.request_symbol_annotate(var_start)
+                if first:
+                    first = False
+                    var_start += 1
+                var_start += 1 + len(var)
+
+    def annotate_match_stmt(self, view: sublime.View):
+        global phantoms_to_generate
+        match_vars = view.find_all('\\bmatch\\b *[a-zA-Z_][a-zA-Z0-9_.]* *{', 0)
+        for var in match_vars:
+            if var is None or var.begin() == -1:
+                continue
+            phantoms_to_generate += 1
+            var_text = view.substr(var)
+            var_text = var_text[:-1].rstrip()
+            offset = max(var_text.rfind(" "), var_text.rfind("."))
+            var_start = var.begin() + offset + 1
+            self.request_symbol_annotate(var_start)
+
+    def annotate_use_stmt(self, view: sublime.View):
+        global phantoms_to_generate
+        use_vars = view.find_all('\\buse\\b *[a-zA-Z0-9_:]* *;', 0)
+        for var in use_vars:
+            if var is None or var.begin() == -1:
+                continue
+            phantoms_to_generate += 1
+            var_text = view.substr(var)
+            var_text = var_text[:-1].rstrip()
+            offset = max(var_text.rfind(" "), var_text.rfind(":"))
+            var_start = var.begin() + offset + 1
+            self.request_symbol_annotate(var_start, "docs")
+
+    def annotate_use_multiple_stmt(self, view: sublime.View):
+        global phantoms_to_generate
+        use_vars = view.find_all('\\buse\\b *[a-zA-Z0-9_:]*{[a-zA-Z0-9_:, ]*} *;', 0)
+        for var in use_vars:
+            if var is None or var.begin() == -1:
+                continue
+            var_text = view.substr(var)
+            print("var:", var_text)
+            var_start = var.begin() + var_text.find('{') + 1
+            var_text = re.sub("use *[a-zA-Z0-9_:]*{", "", var_text)
+            var_text = re.sub("} *;", "", var_text)
+            tp_vars = var_text.split(",")
+            first = True
+            for var in tp_vars:
+                phantoms_to_generate += 1
+                self.request_symbol_annotate(var_start, "docs")
+                if first:
+                    first = False
+                    var_start += 1
+                var_start += 1 + len(var)
+
+    def annotate_function(self, view: sublime.View):
+        global phantoms_to_generate
+        point = view.sel()[0].begin()
+        if view.substr(point - 1) != '(':
+            return
+        line = view.substr(view.line(point))
+        line = re.sub(" *\t*", "", line)
+        if line.startswith("fn"):
+            return
+        phantoms_to_generate += 1
+        self.request_symbol_annotate(point - 2, "fn")
+
+    def annotate_closures(self, view: sublime.View):
+        global phantoms_to_generate
+        all_vars = view.find_all('\|[a-zA-Z0-9_,&: ]*\|', 0)
+        for var in all_vars:
+            if var is None or var.begin() == -1:
+                continue
+            var_text = view.substr(var)
+            var_text = var_text[1:-1].rstrip()
+            var_start = var.begin() + 1
+            closure_args = var_text.split(",")
+            first = True
+            for var in closure_args:
+                if var.startswith("&"):
+                    var_start += 1
+                    var = var[1:]
+                if var.startswith("mut "):
+                    var_start += 4
+                    var = var[4:]
+                if ":" not in var:
+                    phantoms_to_generate += 1
+                    self.request_symbol_annotate(var_start)
+                if first:
+                    first = False
+                    var_start += 1
+                var_start += 1 + len(var)
+
+    def add_annotation(self, point, contents, category):
+        global type_phantoms, phantoms_to_generate
+        formatted = []
+        if not isinstance(contents, list):
+            contents = [contents]
+
+        for item in contents:
+            if isinstance(item, str):
+                formatted.append(item)
+            elif category != "docs":
+                formatted.append(item.get("value"))
+
+        formatted_str = "\n".join(formatted)
+
+        if category == "docs":
+            # we only want the first line of the doc string
+            formatted_str = formatted_str.split("\n")[0]
+
+        docs = ""
+        if category == "fn":
+            text = formatted_str.split("\n")
+            docs = text[:-1]
+            formatted_str = text[-1]
+
+        if "No description" in formatted_str or len(formatted_str) == 0:
+            phantoms_to_generate -= 1
+            return
+
+        formatted_str = re.sub("[^& <]*::", "", formatted_str)
+        if formatted_str.startswith("[closure@"):
+            category = "fn"
+            formatted_str = re.sub("@.*:[0-9]+", ", captures ", formatted_str)
+            if formatted_str.endswith("captures ]"):
+                formatted_str = formatted_str[:-1] + "nothing ]"
+            formatted_str = ": " + formatted_str
+
+        region = self.view.word(point)
+        region = Range(
+            Point.from_text_point(self.view, region.end()),
+            Point.from_text_point(self.view, region.end()+1)
+        )
+        if category == "docs":
+            formatted_str = "/* " + formatted_str + " */"
+        elif category != "fn":
+            formatted_str = ": " + formatted_str
+
+        diagnostic_msg = Diagnostic(formatted_str, region, DiagnosticSeverity.Hint, None, None)
+
+        if category != "fn":
+            type_phantoms.append(create_quiet_phantom(self.view, diagnostic_msg, True))
+        else:
+            type_phantoms.append(self.create_function_phantom(point, formatted_str, docs))
+        phantoms_to_generate -= 1
+
+    def create_function_phantom(self, point, formatted, docs):
+        region = self.view.word(point)
+        fn_name = self.view.substr(region)
+        formatted = fn_name + re.sub(" *fn *", "", formatted)
+        self_decl = re.search("&{0,1}('[a-zA-Z0-9]){0,1} *(mut){0,1} *self[^:]", formatted)
+        offset = 0
+        if self_decl is not None:
+            self_decl_str = self_decl.group(0)
+            formatted = formatted.replace(self_decl_str, "", 1).replace("(, ", "(", 1)
+            offset = len(self_decl_str) + 1
+            if "'" in self_decl_str:
+                self_decl_str = "(" + self_decl_str + ")"
+            formatted = self_decl_str + "." + formatted
+        location = region.begin() - offset
+        location_row = self.view.rowcol(location)[0]
+        point_row = self.view.rowcol(point)[0]
+
+        # make sure it occurs on the right line, in case of long signatures
+        if location_row < point_row:
+            location = self.view.text_point(point_row, 1)
+
+        region = Range(
+            Point.from_text_point(self.view, location),
+            Point.from_text_point(self.view, location+1)
+        )
+
+        docs_str = ""
+        # if len(docs) > 0:  # disabled for now because the docs returned for functions by RLS are not right
+        #     docs_str = "\n".join(docs) + "\n"
+
+        diagnostic_msg = Diagnostic(docs_str + formatted, region, DiagnosticSeverity.Hint, None, None)
+        return create_quiet_phantom(self.view, diagnostic_msg, False)
+
+
 def preserve_whitespace(contents: str) -> str:
     """Preserve empty lines and whitespace for markdown conversion."""
     contents = contents.strip(' \t\r\n')
@@ -1937,7 +2316,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             insertText = label
         if insertText[0] == '$':  # sublime needs leading '$' escaped.
             insertText = '\$' + insertText[1:]
-        return "{}\t{}".format(label, detail) if detail else label, insertText
+        return "{}\t   {}".format(label, detail) if detail else label, insertText
 
     def handle_response(self, response):
         global resolvable_completion_items

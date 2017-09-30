@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import threading
+import webbrowser
 from collections import OrderedDict
 from urllib.parse import urljoin
 from urllib.parse import urlparse
@@ -39,7 +40,13 @@ log_debug = True
 log_server = True
 log_stderr = False
 
+settings_obj = None  # type: Optional[sublime.Settings]
+default_client_settings = dict()  # type: Dict[str, dict]
+global_client_settings = dict()  # type: Dict[str, dict]
+
+default_client_configs = []  # type: List[ClientConfig]
 global_client_configs = []  # type: List[ClientConfig]
+
 window_client_configs = dict()  # type: Dict[int, List[ClientConfig]]
 
 
@@ -328,19 +335,70 @@ def read_client_config(name, client_config):
         client_config.get("syntaxes", []),
         client_config.get("languageId", ""),
         client_config.get("enabled", True),
-        client_config.get("initializationOptions", dict())
+        client_config.get("initializationOptions", dict()),
+        client_config.get("settings", dict())
     )
 
 
+def set_global_config_enabled(config_name: str, is_enabled: bool):
+    if settings_obj:
+        client_settings = global_client_settings.setdefault(config_name, {})
+        client_settings["enabled"] = is_enabled
+        settings_obj.set("clients", global_client_settings)
+        sublime.save_settings("LSP.sublime-settings")
+
+
+def enable_global_config(config_name: str):
+    set_global_config_enabled(config_name, True)
+
+
+def disable_global_config(config_name: str):
+    set_global_config_enabled(config_name, False)
+
+
+def read_client_configs(client_settings, default_client_settings=None) -> 'List[ClientConfig]':
+    parsed_configs = []  # type: List[ClientConfig]
+    if isinstance(client_settings, dict):
+        for client_name, client_config in client_settings.items():
+
+            # start with default settings for this client if available
+            client_with_defaults = {}  # type: Dict[str, dict]
+            if default_client_settings and client_name in default_client_settings:
+                client_with_defaults = default_client_settings[client_name]
+            client_with_defaults.update(client_config)
+
+            config = read_client_config(client_name, client_with_defaults)
+            if config:
+                parsed_configs.append(config)
+        return parsed_configs
+    else:
+        raise ValueError("configs")
+
+
 def load_settings():
-    settings_obj = sublime.load_settings("LSP.sublime-settings")
-    update_settings(settings_obj)
-    settings_obj.add_on_change("_on_new_settings", lambda: update_settings(settings_obj))
+    global settings_obj
+    loaded_settings_obj = sublime.load_settings("LSP.sublime-settings")
+    settings_obj = loaded_settings_obj
+    update_settings(loaded_settings_obj)
+    loaded_settings_obj.add_on_change("_on_new_settings", lambda: update_settings(loaded_settings_obj))
+
+
+def unload_settings():
+    if settings_obj:
+        settings_obj.clear_on_change("_on_new_settings")
 
 
 def read_bool_setting(settings_obj: sublime.Settings, key: str, default: bool) -> bool:
     val = settings_obj.get(key)
     if isinstance(val, bool):
+        return val
+    else:
+        return default
+
+
+def read_dict_setting(settings_obj: sublime.Settings, key: str, default: dict) -> dict:
+    val = settings_obj.get(key)
+    if isinstance(val, dict):
         return val
     else:
         return default
@@ -368,18 +426,19 @@ def update_settings(settings_obj: sublime.Settings):
     global log_debug
     global log_server
     global log_stderr
+    global global_client_settings
     global global_client_configs
+    global default_client_settings
+    global default_client_configs
 
-    global_client_configs = []
-    client_configs = settings_obj.get("clients", {})
-    if isinstance(client_configs, dict):
-        for client_name, client_config in client_configs.items():
-            config = read_client_config(client_name, client_config)
-            if config:
-                debug("Config added:", client_name, '(enabled)' if config.enabled else '(disabled)')
-                global_client_configs.append(config)
-    else:
-        raise ValueError("client_configs")
+    default_client_settings = read_dict_setting(settings_obj, "default_clients", {})
+    global_client_settings = read_dict_setting(settings_obj, "clients", {})
+
+    default_client_configs = read_client_configs(default_client_settings)
+    global_client_configs = read_client_configs(global_client_settings, default_client_settings)
+
+    client_enableds = list("=".join([config.name, str(config.enabled)]) for config in global_client_configs)
+    debug('global clients: ', client_enableds)
 
     show_status_messages = read_bool_setting(settings_obj, "show_status_messages", True)
     show_view_status = read_bool_setting(settings_obj, "show_view_status", True)
@@ -682,6 +741,7 @@ def unload_client(client: Client):
 
 
 def plugin_unloaded():
+    unload_settings()
     for window in sublime.windows():
         for client in window_clients(window).values():
             unload_client(client)
@@ -701,9 +761,33 @@ def get_global_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
     return get_scope_client_config(view, global_client_configs)
 
 
-def get_project_config(view: sublime.View) -> dict:
-    view_settings = view.settings().get('LSP', dict())
-    return view_settings if view_settings else dict()
+def get_default_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
+    return get_scope_client_config(view, default_client_configs)
+
+
+def enable_in_project(window, config_name: str) -> None:
+    project_data = window.project_data()
+    project_settings = project_data.setdefault('settings', dict())
+    project_lsp_settings = project_settings.setdefault('LSP', dict())
+    project_client_settings = project_lsp_settings.setdefault(config_name, dict())
+    project_client_settings['enabled'] = True
+    window.set_project_data(project_data)
+
+
+def disable_in_project(window, config_name: str) -> None:
+    project_data = window.project_data()
+    project_settings = project_data.setdefault('settings', dict())
+    project_lsp_settings = project_settings.setdefault('LSP', dict())
+    project_client_settings = project_lsp_settings.setdefault(config_name, dict())
+    project_client_settings['enabled'] = False
+    window.set_project_data(project_data)
+
+
+def get_project_config(window: sublime.Window) -> dict:
+    project_data = window.project_data()
+    project_settings = project_data.setdefault('settings', dict())
+    project_lsp_settings = project_settings.setdefault('LSP', dict())
+    return project_lsp_settings
 
 
 def get_window_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
@@ -719,8 +803,14 @@ def add_window_client_config(window: 'sublime.Window', config: 'ClientConfig'):
     window_client_configs.setdefault(window.id(), []).append(config)
 
 
+def clear_window_client_configs(window: 'sublime.Window'):
+    global window_client_configs
+    if window.id() in window_client_configs:
+        del window_client_configs[window.id()]
+
+
 def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -> 'ClientConfig':
-    window_config = get_project_config(view)
+    window_config = get_project_config(view.window())
 
     if client_config.name in window_config:
         overrides = window_config[client_config.name]
@@ -751,6 +841,14 @@ def config_for_scope(view: sublime.View) -> 'Optional[ClientConfig]':
             return window_client_config
 
     return window_client_config
+
+
+def is_supportable_syntax(syntax: str) -> bool:
+    # TODO: filter out configs disabled by the user.
+    for config in default_client_configs:
+        if syntax in config.syntaxes:
+            return True
+    return False
 
 
 def is_supported_syntax(syntax: str) -> bool:
@@ -829,6 +927,134 @@ def initialize_on_open(view: sublime.View):
                 get_window_client(view, config)
         else:
             debug(config.name, 'is not enabled')
+    else:
+        available_config = get_default_client_config(view)
+        if available_config:
+            show_enable_config(view, available_config)
+
+
+def extract_syntax_name(syntax_file: str) -> str:
+    return syntax_file.split('/')[-1].split('.')[0]
+
+
+def show_enable_config(view: sublime.View, config: ClientConfig):
+    syntax = str(view.settings().get("syntax", ""))
+    message = "LSP has found a language server for {}. Run \"Setup Language Server\" to start using it".format(
+        extract_syntax_name(syntax)
+    )
+    view.window().status_message(message)
+
+
+class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
+    def run(self):
+        view = self.window.active_view()
+        available_config = get_scope_client_config(view, global_client_configs) or get_default_client_config(view)
+        if available_config:
+            enable_global_config(available_config.name)
+            clear_window_client_configs(self.window)
+            sublime.set_timeout_async(start_active_view, 500)
+            self.window.status_message("{} enabled, starting server...".format(available_config.name))
+            return
+
+        self.window.status_message("No config available to enable")
+
+
+class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
+    def run(self):
+        view = self.window.active_view()
+
+        # if no default_config, nothing we can do.
+        default_config = get_default_client_config(view)
+        if default_config:
+            enable_in_project(self.window, default_config.name)
+            clear_window_client_configs(self.window)
+            sublime.set_timeout_async(start_active_view, 500)
+            self.window.status_message("{} enabled in project, starting server...".format(default_config.name))
+        else:
+            self.window.status_message("No config available to enable")
+
+
+class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
+    def run(self):
+        view = self.window.active_view()
+        global_config = get_scope_client_config(view, global_client_configs)
+        if global_config:
+            disable_global_config(global_config.name)
+            clear_window_client_configs(self.window)
+            sublime.set_timeout_async(lambda: unload_window_clients(self.window.id()), 500)
+            self.window.status_message("{} disabled, shutting down server...".format(global_config.name))
+            return
+
+        self.window.status_message("No config available to disable")
+
+
+class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
+    def run(self):
+        view = self.window.active_view()
+        global_config = get_scope_client_config(view, global_client_configs)
+        if global_config:
+            disable_in_project(self.window, global_config.name)
+            clear_window_client_configs(self.window)
+            sublime.set_timeout_async(lambda: unload_window_clients(self.window.id()), 500)
+            self.window.status_message("{} disabled in project, shutting down server...".format(global_config.name))
+            return
+        else:
+            self.window.status_message("No config available to disable")
+
+
+supported_syntax_template = '''
+Installation steps:
+
+* Open the [LSP documentation](https://lsp.readthedocs.io)
+* Read the instructions for {}
+* Install the language server on your system
+* Choose an option below to start the server
+
+Enable: [Globally](#enable_globally) | [This Project Only](#enable_project)
+'''
+
+unsupported_syntax_template = """
+*LSP has no built-in configuration for a {} language server*
+
+Visit [langserver.org](https://langserver.org) to find out if a language server exists for this language."""
+
+
+setup_css = ".mdpopups .lsp_documentation { margin: 20px; font-family: sans-serif; font-size: 1.2rem; line-height: 2}"
+
+
+class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
+    def run(self):
+        view = self.window.active_view()
+        syntax = view.settings().get("syntax")
+        available_config = get_default_client_config(view)
+
+        syntax_name = extract_syntax_name(syntax)
+        title = "# Language Server for {}\n".format(syntax_name)
+
+        if available_config:
+            content = supported_syntax_template.format(syntax_name)
+        else:
+            title = "# No Language Server support"
+            content = unsupported_syntax_template.format(syntax_name)
+
+        mdpopups.show_popup(
+            view,
+            "\n".join([title, content]),
+            css=setup_css,
+            md=True,
+            wrapper_class="lsp_documentation",
+            max_width=800,
+            max_height=600,
+            on_navigate=self.on_hover_navigate
+        )
+
+    def on_hover_navigate(self, href):
+        if href == "#enable_globally":
+            self.window.run_command("lsp_enable_language_server_globally")
+        elif href == "#enable_project":
+            self.window.run_command("lsp_enable_language_server_in_project")
+        else:
+            webbrowser.open_new_tab(href)
 
 
 def unload_old_clients(window: sublime.Window):
@@ -1360,7 +1586,7 @@ class LspSymbolReferencesCommand(sublime_plugin.TextCommand):
 
         else:
             window.run_command("hide_panel", {"panel": "output.references"})
-            sublime.status_message("No references found")
+            window.status_message("No references found")
 
     def want_event(self):
         return True
@@ -1907,7 +2133,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
     def is_after_trigger_character(self, location):
         if location > 0:
-            prev_char = self.view.substr()
+            prev_char = self.view.substr(location - 1)
             return prev_char in self.trigger_chars
 
     def on_query_completions(self, prefix, locations):
@@ -2353,7 +2579,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return syntax and is_supported_syntax(syntax)
+        # This enables all of document sync for any supportable syntax
+        # Global performance cost, consider a detect_lsp_support setting
+        return syntax and (is_supported_syntax(syntax) or is_supportable_syntax(syntax))
 
     @classmethod
     def applies_to_primary_view_only(cls):

@@ -1283,11 +1283,13 @@ span.active_parameter {{
 div.signature_documentation {{
     display: block;
     font-family: Helvetica;
+    font-size: 0.90rem;
     margin: 0.5rem;
 }}
 div.parameter_documentation {{
     display: block;
     font-family: Helvetica;
+    font-size: 0.90rem;
     margin: 0.5rem;
 }}
 {}

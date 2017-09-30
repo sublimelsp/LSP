@@ -92,6 +92,13 @@
   // gutter marker for code diagnostics: "dot", "circle", "bookmark", "cross" or ""
   "diagnostics_gutter_marker": "dot",
   "complete_all_chars": true,
+
+  // Controls whether the completion panel displays
+  // provided symbol details or kind.
+  // "false": Show completion kind
+  // "true": Show completion details
+  "show_completion_details": true,
+
   "only_show_lsp_completions": false,
   "resolve_completion_for_snippets": false,
   "log_debug": false,

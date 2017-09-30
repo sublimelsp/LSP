@@ -2311,7 +2311,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             if parameter_label:
                 signature_label = signature_label.replace(parameter_label,
                                                           '<span class="active_parameter">{}</span>'
-                                                          .format(parameter_label))
+                                                          .format(parameter_label), 1)
             content.append(signature_label)
             content.append("</span></code>")  # active_signature
 

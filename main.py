@@ -2246,14 +2246,13 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 formatted = []
                 formatted.append(
                     "```{}\n{}\n```".format(config.languageId, signature.get('label')))
-                # TODO: fallback to params for pyls, create issue?
-                params = signature.get('parameters') or signature.get('params') or {}
-                debug("params", params)
-                for parameter in params:
-                    paramDocs = parameter.get('documentation')
-                    if paramDocs:
-                        formatted.append("**{}**\n".format(parameter.get('label')))
-                        formatted.append("* *{}*\n".format(paramDocs))
+                params = signature.get('parameters')
+                if params:
+                    for parameter in params:
+                        paramDocs = parameter.get('documentation')
+                        if paramDocs:
+                            formatted.append("**{}**\n".format(parameter.get('label')))
+                            formatted.append("* *{}*\n".format(paramDocs))
 
                 formatted.append(signature.get('documentation'))
 

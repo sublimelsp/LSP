@@ -528,20 +528,18 @@ class Client(object):
         """
         ContentLengthHeader = b"Content-Length: "
 
-        while True:
+        running = True
+        while running:
+            running = self.process.poll() is None
+
             try:
-
-                in_headers = True
                 content_length = 0
-                while in_headers:
+                while True:
                     header = self.process.stdout.readline()
-                    if header == '':
-                        break
-                    else:
+                    if header:
                         header = header.strip()
-                    if (len(header) == 0):
-                        in_headers = False
-
+                    if not header:
+                        break
                     if header.startswith(ContentLengthHeader):
                         content_length = int(header[len(ContentLengthHeader):])
 
@@ -589,10 +587,13 @@ class Client(object):
         """
         Reads any errors from the LSP process.
         """
-        while True:
+        running = True
+        while running:
+            running = self.process.poll() is None
+
             try:
                 content = self.process.stderr.readline()
-                if len(content) == 0:
+                if not content:
                     break
                 if log_stderr:
                     printf("(stderr): ", content.strip())

@@ -2061,7 +2061,7 @@ class TypeAnnotator(object):
             # we only want the first line of the doc string
             formatted_str = formatted_str.split("\n")[0]
 
-        docs = ""
+        docs = []
         if category == "fn":
             text = formatted_str.split("\n")
             docs = text[:-1]

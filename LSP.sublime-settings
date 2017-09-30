@@ -7,12 +7,7 @@
       "scopes": ["source.python"],
       "syntaxes": ["Packages/Python/Python.sublime-syntax"],
       "languageId": "python",
-      "environment": {
-        "PYTHONPATH": [
-            "${sublime_libs}",
-            "${packages}",
-            "${project_path}"
-        ]
+      "env": {
       }
     },
     "jsts":

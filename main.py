@@ -337,7 +337,7 @@ def read_client_config(name, client_config):
         client_config.get("enabled", True),
         client_config.get("initializationOptions", dict()),
         client_config.get("settings", dict()),
-        client_config.get("environment", dict())
+        client_config.get("env", dict())
     )
 
 
@@ -458,7 +458,7 @@ def update_settings(settings_obj: sublime.Settings):
 
 class ClientConfig(object):
     def __init__(self, name, binary_args, scopes, syntaxes, languageId,
-                 enabled=True, init_options=dict(), settings=dict(), environ=dict()):
+                 enabled=True, init_options=dict(), settings=dict(), env=dict()):
         self.name = name
         self.binary_args = binary_args
         self.scopes = scopes
@@ -467,7 +467,7 @@ class ClientConfig(object):
         self.enabled = enabled
         self.init_options = init_options
         self.settings = settings
-        self.environ = environ
+        self.env = env
 
 
 def format_request(payload: 'Dict[str, Any]'):
@@ -1777,8 +1777,6 @@ def start_client(window: sublime.Window, config: ClientConfig):
 
     # Create a dictionary of Sublime Text variables
     variables = window.extract_variables()
-    variables["sublime_path"] = os.path.dirname(sublime.executable_path())
-    variables["sublime_libs"] = ';'.join(sys.path)
 
     # Expand language server command line environment variables
     expanded_args = list(
@@ -1787,16 +1785,16 @@ def start_client(window: sublime.Window, config: ClientConfig):
     )
 
     # Merge/expand OS environment variables
-    environ = os.environ.copy()
-    for var, value in config.environ.items():
+    env = os.environ.copy()
+    for var, value in config.env.items():
         # Merge vars (e.g.: PATH=$PATH;mypath)
         # For ease of editing, allow lists for each environment variable
         if isinstance(value, list):
-            value = ';'.join(value)
+            value = ''.join(value)
         # Expand both, ST and OS environment variables
-        environ[var] = os.path.expandvars(sublime.expand_variables(value, variables))
+        env[var] = os.path.expandvars(sublime.expand_variables(value, variables))
 
-    client = start_server(expanded_args, project_path, environ)
+    client = start_server(expanded_args, project_path, env)
     if not client:
         window.status_message("Could not start " + config.name + ", disabling")
         debug("Could not start", config.binary_args, ", disabling")
@@ -1847,7 +1845,7 @@ def get_window_client(view: sublime.View, config: ClientConfig) -> Client:
     return client
 
 
-def start_server(server_binary_args, working_dir, environ):
+def start_server(server_binary_args, working_dir, env):
     debug("starting " + str(server_binary_args))
     si = None
     if os.name == "nt":
@@ -1860,7 +1858,7 @@ def start_server(server_binary_args, working_dir, environ):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=working_dir,
-            env=environ,
+            env=env,
             startupinfo=si)
         return Client(process, working_dir)
 

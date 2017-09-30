@@ -1042,39 +1042,28 @@ stylesheet = '''
 
 signature_help_prefix = '''
 <html>
-    <body id="lsp">
+    <body class="mdpopups" id="lsp">
         <style>
-            body {
-                margin: 4px;
-            }
-            p {
-                margin: 0.1rem;
-            }
-            div.signature_block {
-                font-size: 0.95rem;
-                display: block;
-            }
-            span.number_of_signatures {
-                font-weight: bold;
-            }
-            span.active_signature {
-            }
-            span.active_parameter {
-                font-weight: bold;
-                text-decoration: underline;
-            }
-            div.signature_documentation {
-                display: block;
-                font-family: Helvetica;
-                font-size: 1.05rem;
-                margin: 0.5rem;
-            }
-            div.parameter_documentation {
-                display: block;
-                font-family: Helvetica;
-                font-size: 1.05rem;
-                margin: 0.5rem;
-            }
+span.number_of_signatures {{
+    font-weight: bold;
+}}
+span.active_signature {{
+}}
+span.active_parameter {{
+    font-weight: bold;
+    text-decoration: underline;
+}}
+div.signature_documentation {{
+    display: block;
+    font-family: Helvetica;
+    margin: 0.5rem;
+}}
+div.parameter_documentation {{
+    display: block;
+    font-family: Helvetica;
+    margin: 0.5rem;
+}}
+{}
         </style>
 '''
 
@@ -2078,10 +2067,11 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
         content = []
 
-        content.append(signature_help_prefix)
+        # Inject the CSS from mdpopups.
+        content.append(signature_help_prefix.format(mdpopups._get_theme(self.view)))  # type: ignore
 
-        # Put the active signature in a signature_block class.
-        content.append('<div class="signature_block">')
+        # Put the active signature in a highlight class.
+        content.append('<div class="highlight">')
 
         # Write the active signature number and the total number of signatures.
         if len(self.signatures) > 1 and self.active_signature in range(0, len(self.signatures)):
@@ -2090,15 +2080,15 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
         # Write the active signature and give special treatment to the active parameter (if found).
         if signature_label:
-            content.append('<span class="active_signature">')
+            content.append('<code><span class="active_signature">')
             if parameter_label:
                 signature_label = signature_label.replace(parameter_label,
                                                           '<span class="active_parameter">{}</span>'
                                                           .format(parameter_label))
             content.append(signature_label)
-            content.append("</span>")  # active_signature
+            content.append("</span></code>")  # active_signature
 
-        content.append("</div>\n")  # signature_block
+        content.append("</div>\n")  # highlight
 
         # Write the documentation of the active signature.
         if signature_documentation:

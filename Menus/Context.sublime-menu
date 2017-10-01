@@ -5,10 +5,6 @@
         "caption": "Find Symbol References"
     },
     {
-        "command": "lsp_symbol_definition",
-        "caption": "Go To Symbol Definition"
-    },
-    {
         "command": "lsp_symbol_rename",
         "caption": "Rename Symbol"
     },

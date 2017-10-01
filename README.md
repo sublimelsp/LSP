@@ -2,27 +2,23 @@
 
 [![GitHub release](https://img.shields.io/github/release/tomv564/LSP.svg)](https://github.com/tomv564/LSP/releases) [![Build Status](https://travis-ci.org/tomv564/LSP.svg?branch=master)](https://travis-ci.org/tomv564/LSP) [![license](https://img.shields.io/github/license/mashape/apistatus.svg)]() [![Join the chat at https://gitter.im/SublimeLSP/Lobby](https://badges.gitter.im/SublimeLSP/Lobby.svg)](https://gitter.im/SublimeLSP/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) 
 
-Universal Language Server support for Sublime Text 3 using the Language Server Protocol.
+Gives Sublime Text 3 rich editing features for languages with Language Server Protocol support.
 
-Features:
+Tested against language servers for javascript, typescript, python, php, java, go, c/c++ (clangd), scala (dotty), julia, rust, reason. 
 
-* Hover
-* Completions
-* Go to document symbol
-* Go to symbol definition
-* Find symbol references
-* Diagnostics
-* Code Actions
+See [langserver.org](http://langserver.org) for available implementations.
 
-Tested against language servers for javascript/typescript, python, c/c++ (clangd), scala (dotty), rust, reason. See [langserver.org](http://langserver.org) for available implementations
+## Features
 
-## Screenshots
+Completions with snippet support.
 
-Rich hover support from js/ts language server
+Navigate code with `Go to Symbol Definition` and `Find Symbol References`
+
+Inline documentation from Hover and Signature Help popups
 
 ![hover screenshot](https://raw.githubusercontent.com/tomv564/LSP/master/docs/images/screenshot-hover.png)
 
-Cycle through diagnostics shown in output panel with `F4`. Code actions supplied by tslint language server plugin, applied by `super+.`
+As-you-type diagnostics with support for code fixes (`F4` to select, `super+.` to trigger actions)
 
 ![diagnostics screenshot](https://raw.githubusercontent.com/tomv564/LSP/master/docs/images/screenshot-diagnostics-action.png)
 

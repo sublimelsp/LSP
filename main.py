@@ -695,6 +695,17 @@ def is_in_workspace(window: sublime.Window, file_path: str) -> bool:
 
 
 def plugin_loaded():
+    if sublime.platform() == "osx":
+        # See: https://github.com/SublimeTextIssues/Core/issues/1877
+        # Remove this hack once this is fixed. It's hacky because 2 seconds
+        # is an arbitrary choice, but there is no way to know exactly when the
+        # environment variables are loaded and the user's PATH is filled in.
+        sublime.set_timeout_async(_plugin_loaded_impl, 2000)
+    else:
+        _plugin_loaded_impl()
+
+
+def _plugin_loaded_impl():
     load_settings()
     Events.subscribe("view.on_load_async", initialize_on_open)
     Events.subscribe("view.on_activated_async", initialize_on_open)

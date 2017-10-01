@@ -24,13 +24,18 @@ As-you-type diagnostics with support for code fixes (`F4` to select, `super+.` t
 
 ## Installing
 
-Releases are published as **LSP** in Package Control.
+Normal installation: Install the **LSP** package through Package Control in Sublime Text.
 
 To run latest master:
 1. Clone this repository into your Packages directory
-2. Run `Package Control: Satisfy Dependencies`
+2. Run `Package Control: Satisfy Dependencies` in Sublime
 
 ## Configuration
+
+1. Install a language server for a language of your choice
+2. Verify a matching configuration exists under `clients` in `Preferences: LSP Settings` 
+3. Open a document supported by this language server. 
+4. LSP should report the language server starting in the status bar.
 
 Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io) or [in the docs directory](https://github.com/tomv564/LSP/blob/master/docs/index.md)
 

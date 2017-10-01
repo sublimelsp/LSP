@@ -1511,6 +1511,10 @@ def create_references_panel(window: sublime.Window):
                          r"^\s+\S\s+(\S.+)\s+(\d+):?(\d+)$")
     panel.assign_syntax("Packages/" + PLUGIN_NAME +
                         "/Syntaxes/References.sublime-syntax")
+    # Call create_output_panel a second time after assigning the above
+    # settings, so that it'll be picked up as a result buffer
+    # see: Packages/Default/exec.py#L228-L230
+    panel = window.create_output_panel("references")
     return panel
 
 
@@ -1720,6 +1724,10 @@ def create_diagnostics_panel(window):
     panel.settings().set("result_line_regex", r"^\s+([0-9]+):?([0-9]+).*$")
     panel.assign_syntax("Packages/" + PLUGIN_NAME +
                         "/Syntaxes/Diagnostics.sublime-syntax")
+    # Call create_output_panel a second time after assigning the above
+    # settings, so that it'll be picked up as a result buffer
+    # see: Packages/Default/exec.py#L228-L230
+    panel = window.create_output_panel("diagnostics")
     return panel
 
 

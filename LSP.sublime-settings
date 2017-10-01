@@ -1,14 +1,27 @@
 {
   "default_clients":
   {
+    // "client_name":
+    // {
+    //   Must-have settings:
+    //
+    //   "command": ["pyls"],
+    //   "scopes": ["source.python"], Use: "Show Scope Name" from Sublime's Developer menu
+    //   "syntaxes": ["Packages/Python/Python.sublime-syntax"], Run: sublime.active_window().active_view().settings().get("syntax") in console
+    //   "languageId": "python", See: https://github.com/Microsoft/language-server-protocol/issues/213
+    //
+    //   Optional settings (key-value pairs):
+    //
+    //   "settings": { }, Sent to server once using workspace/didConfigurationChange notification
+    //   "initializationOptions": { }, Sent once to server in initialize request
+    //   "env": { }, Extra variables to override/add to language server's environment.
+    // },
     "pyls":
     {
       "command": ["pyls"],
       "scopes": ["source.python"],
       "syntaxes": ["Packages/Python/Python.sublime-syntax"],
-      "languageId": "python",
-      "env": {
-      }
+      "languageId": "python"
     },
     "jsts":
     {

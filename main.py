@@ -1960,7 +1960,7 @@ class TypeAnnotator(object):
 
     def annotate_match_stmt(self, view: sublime.View):
         global phantoms_to_generate
-        match_vars = view.find_all('\\bmatch\\b *[a-zA-Z_][a-zA-Z0-9_.]* *{', 0)
+        match_vars = view.find_all('\\bmatch\\b *[*]*[a-zA-Z_][a-zA-Z0-9_.]* *{', 0)
         for var in match_vars:
             if var is None or var.begin() == -1:
                 continue
@@ -1968,8 +1968,10 @@ class TypeAnnotator(object):
             var_text = view.substr(var)
             var_text = var_text[:-1].rstrip()
             offset = max(var_text.rfind(" "), var_text.rfind("."))
+            deref = var_text.count('*')
+            offset += deref
             var_start = var.begin() + offset + 1
-            self.request_symbol_annotate(var_start)
+            self.request_symbol_annotate(var_start, "deref=" + str(deref))
 
     def annotate_use_stmt(self, view: sublime.View):
         global phantoms_to_generate
@@ -2088,6 +2090,9 @@ class TypeAnnotator(object):
             formatted_str = "/* " + formatted_str + " */"
         elif category != "fn":
             formatted_str = ": " + formatted_str
+            if category.startswith("deref="):
+                deref = int(category.split("=")[1])
+                formatted_str = formatted_str.replace("&" * deref, "", 1)
 
         diagnostic_msg = Diagnostic(formatted_str, region, DiagnosticSeverity.Hint, None, None)
 

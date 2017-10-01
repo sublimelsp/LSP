@@ -6,7 +6,9 @@
       "command": ["pyls"],
       "scopes": ["source.python"],
       "syntaxes": ["Packages/Python/Python.sublime-syntax"],
-      "languageId": "python"
+      "languageId": "python",
+      "env": {
+      }
     },
     "jsts":
     {

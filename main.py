@@ -336,7 +336,8 @@ def read_client_config(name, client_config):
         client_config.get("languageId", ""),
         client_config.get("enabled", True),
         client_config.get("initializationOptions", dict()),
-        client_config.get("settings", dict())
+        client_config.get("settings", dict()),
+        client_config.get("env", dict())
     )
 
 
@@ -457,7 +458,7 @@ def update_settings(settings_obj: sublime.Settings):
 
 class ClientConfig(object):
     def __init__(self, name, binary_args, scopes, syntaxes, languageId,
-                 enabled=True, init_options=dict(), settings=dict()):
+                 enabled=True, init_options=dict(), settings=dict(), env=dict()):
         self.name = name
         self.binary_args = binary_args
         self.scopes = scopes
@@ -466,6 +467,7 @@ class ClientConfig(object):
         self.enabled = enabled
         self.init_options = init_options
         self.settings = settings
+        self.env = env
 
 
 def format_request(payload: 'Dict[str, Any]'):
@@ -816,8 +818,6 @@ def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -
     if client_config.name in window_config:
         overrides = window_config[client_config.name]
         debug('window has override for', client_config.name, overrides)
-        merged_init_options = dict(client_config.init_options)
-        merged_init_options.update(overrides.get("initializationOptions", dict()))
         return ClientConfig(
             client_config.name,
             overrides.get("command", client_config.binary_args),
@@ -825,8 +825,10 @@ def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -
             overrides.get("syntaxes", client_config.syntaxes),
             overrides.get("languageId", client_config.languageId),
             overrides.get("enabled", client_config.enabled),
-            merged_init_options,
-            overrides.get("settings", dict()))
+            overrides.get("initializationOptions", client_config.init_options),
+            overrides.get("settings", client_config.settings),
+            overrides.get("env", client_config.env)
+        )
     else:
         return client_config
 
@@ -1774,10 +1776,22 @@ def start_client(window: sublime.Window, config: ClientConfig):
         window.status_message("Starting " + config.name + "...")
     debug("starting in", project_path)
 
+    # Create a dictionary of Sublime Text variables
     variables = window.extract_variables()
-    expanded_args = list(sublime.expand_variables(os.path.expanduser(arg), variables) for arg in config.binary_args)
 
-    client = start_server(expanded_args, project_path)
+    # Expand language server command line environment variables
+    expanded_args = list(
+        sublime.expand_variables(os.path.expanduser(arg), variables)
+        for arg in config.binary_args
+    )
+
+    # Override OS environment variables
+    env = os.environ.copy()
+    for var, value in config.env.items():
+        # Expand both ST and OS environment variables
+        env[var] = os.path.expandvars(sublime.expand_variables(value, variables))
+
+    client = start_server(expanded_args, project_path, env)
     if not client:
         window.status_message("Could not start " + config.name + ", disabling")
         debug("Could not start", config.binary_args, ", disabling")
@@ -1828,7 +1842,7 @@ def get_window_client(view: sublime.View, config: ClientConfig) -> Client:
     return client
 
 
-def start_server(server_binary_args, working_dir):
+def start_server(server_binary_args, working_dir, env):
     debug("starting " + str(server_binary_args))
     si = None
     if os.name == "nt":
@@ -1841,6 +1855,7 @@ def start_server(server_binary_args, working_dir):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=working_dir,
+            env=env,
             startupinfo=si)
         return Client(process, working_dir)
 

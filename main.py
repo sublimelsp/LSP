@@ -1784,14 +1784,10 @@ def start_client(window: sublime.Window, config: ClientConfig):
         for arg in config.binary_args
     )
 
-    # Merge/expand OS environment variables
+    # Override OS environment variables
     env = os.environ.copy()
     for var, value in config.env.items():
-        # Merge vars (e.g.: PATH=$PATH;mypath)
-        # For ease of editing, allow lists for each environment variable
-        if isinstance(value, list):
-            value = ''.join(value)
-        # Expand both, ST and OS environment variables
+        # Expand both ST and OS environment variables
         env[var] = os.path.expandvars(sublime.expand_variables(value, variables))
 
     client = start_server(expanded_args, project_path, env)

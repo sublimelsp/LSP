@@ -244,8 +244,8 @@ Any fields in a client configuration can be overridden by adding an LSP settings
 **Plugin commands**
 
 * Restart Servers: kills all language servers belonging to the active window
-  * This command only works when in a supported document.
-  * It may change in the future to be always available, or only kill the relevant language server.
+    * This command only works when in a supported document.
+    * It may change in the future to be always available, or only kill the relevant language server.
 * LSP Settings: Opens package settings.
 
 **Document actions**
@@ -253,16 +253,35 @@ Any fields in a client configuration can be overridden by adding an LSP settings
 * Show Code Actions: `super+.`
 * Symbol References: `shift+f12`
 * Rename Symbol: UNBOUND
-  * Recommendation: Override `F2` (next bookmark)
+    * Recommendation: Override `F2` (next bookmark)
 * Go to definition: UNBOUND
-  * Recommendation: Override `f12` (built-in goto definition),
-  * LSP falls back to ST3's built-in goto definition command in case LSP fails.
+    * Recommendation: Override `f12` (built-in goto definition),
+    * LSP falls back to ST3's built-in goto definition command in case LSP fails.
 * Format Document: UNBOUND
 * Document Symbols: UNBOUND
 
 **Workspace actions**
 
 Show Diagnostics Panel: `super+shift+M` / `ctr+alt+M`
+
+**Overriding keybindings**
+
+Sublime's keybindings can be edited from the `Preferences: Key Bindings` command.
+The following example overrides `f12` to use LSP's go to definition when in javascript/typescript:
+
+```
+{
+	"keys": ["f12"],
+	"command": "lsp_symbol_definition",
+	"context": [
+		{
+			"key": "selector",
+			"operator": "equal",
+			"operand": "source.ts, source.js"
+		}
+	]
+}
+```
 
 **Mouse map configuration**
 
@@ -286,7 +305,8 @@ Your client configuration requires two settings to match the document your are e
 
 **LSP cannot find my language server through PATH on OS-X**
 
-This issue can be solved in two ways:
+This issue can be solved in a few ways:
 
 * Install the [SublimeFixMacPath](https://github.com/int3h/SublimeFixMacPath) package
 * Or always launch sublime from the command line (so it inherits your shell's environment)
+* Use `launchctl setenv` to set PATH for OS-X UI applications.

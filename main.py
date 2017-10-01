@@ -1,6 +1,7 @@
 import html
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -2271,7 +2272,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         elif self._visible:
             self.view.hide_popup()
 
-    def _build_popup_content(self):
+    def _build_popup_content(self) -> str:
         # Fetch all the relevant data.
         if self.active_signature in range(0, len(self.signatures)):
             signature = self.signatures[self.active_signature]
@@ -2283,16 +2284,16 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 parameter_label = html.escape(parameter["label"], quote=False)
                 parameter_documentation = parameter.get("documentation", None)  # Optional.
             else:
-                parameter = None
-                parameter_label = None
-                parameter_documentation = None
+                parameter = {}
+                parameter_label = ""
+                parameter_documentation = ""
         else:
-            signature = None
-            signature_label = None
-            signature_documentation = None
-            parameter = None
-            parameter_label = None
-            parameter_documentation = None
+            signature = {}
+            signature_label = ""
+            signature_documentation = ""
+            parameter = {}
+            parameter_label = ""
+            parameter_documentation = ""
 
         content = []
 
@@ -2311,9 +2312,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         if signature_label:
             content.append('<code><span class="active_signature">')
             if parameter_label:
-                signature_label = signature_label.replace(parameter_label,
-                                                          '<span class="active_parameter">{}</span>'
-                                                          .format(parameter_label), 1)
+                signature_label = self._replace_active_parameter(signature_label, parameter_label)
             content.append(signature_label)
             content.append("</span></code>")  # active_signature
 
@@ -2331,9 +2330,25 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         content.append("</body></html>")
         return "".join(content)
 
-    def _append_markdown(self, content, markdown, class_name):
+    def _append_markdown(self, content: list, markdown: str, class_name: str) -> None:
         content.append('<div class="{}">{}</div>\n'
                        .format(class_name, mdpopups.md2html(self.view, markdown)))  # type: ignore
+
+    def _replace_active_parameter(self, signature: str, parameter: str) -> str:
+        if parameter[0].isalnum() and parameter[-1].isalnum():
+            pattern = r'\b{}\b'.format(parameter)
+        else:
+            # If the left or right boundary of the parameter string is not an alphanumeric character, the \b check will
+            # never match. In this case, it's probably safe to assume the parameter string itself will be a good pattern
+            # to search for.
+            pattern = parameter
+        replacement = '<span class="active_parameter">{}</span>'.format(parameter)
+        # FIXME: This is somewhat language-specific to look for an opening parenthesis. Most languages use parentheses
+        # for their parameter lists though. Do we make a bunch of if-elif cases for the exceptional languages that don't
+        # use parentheses?
+        index = signature.find('(')
+        string = signature[index + 1:]
+        return signature[:index + 1] + re.sub(pattern, replacement, string, 1)
 
     def handle_response(self, response, point):
         if not response:

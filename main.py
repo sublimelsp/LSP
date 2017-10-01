@@ -1991,7 +1991,6 @@ class TypeAnnotator(object):
             if var is None or var.begin() == -1:
                 continue
             var_text = view.substr(var)
-            print("var:", var_text)
             var_start = var.begin() + var_text.find('{') + 1
             var_text = re.sub("use *[a-zA-Z0-9_:]*{", "", var_text)
             var_text = re.sub("} *;", "", var_text)
@@ -2102,10 +2101,11 @@ class TypeAnnotator(object):
         region = self.view.word(point)
         fn_name = self.view.substr(region)
         formatted = fn_name + re.sub(" *fn *", "", formatted)
-        self_decl = re.search("&{0,1}('[a-zA-Z0-9]){0,1} *(mut){0,1} *self[^:]", formatted)
+        formatted = re.sub(", *> *", ">", formatted)
+        self_decl = re.search("&{0,1}('[a-zA-Z0-9]){0,1} *(mut){0,1} *self *[^:]", formatted)
         offset = 0
         if self_decl is not None:
-            self_decl_str = self_decl.group(0)
+            self_decl_str = self_decl.group(0)[:-1].rstrip()
             formatted = formatted.replace(self_decl_str, "", 1).replace("(, ", "(", 1)
             offset = len(self_decl_str) + 1
             if "'" in self_decl_str:

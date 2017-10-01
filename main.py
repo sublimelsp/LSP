@@ -817,8 +817,6 @@ def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -
     if client_config.name in window_config:
         overrides = window_config[client_config.name]
         debug('window has override for', client_config.name, overrides)
-        merged_init_options = dict(client_config.init_options)
-        merged_init_options.update(overrides.get("initializationOptions", dict()))
         return ClientConfig(
             client_config.name,
             overrides.get("command", client_config.binary_args),
@@ -826,8 +824,10 @@ def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -
             overrides.get("syntaxes", client_config.syntaxes),
             overrides.get("languageId", client_config.languageId),
             overrides.get("enabled", client_config.enabled),
-            merged_init_options,
-            overrides.get("settings", dict()))
+            overrides.get("initializationOptions", client_config.init_options),
+            overrides.get("settings", client_config.settings),
+            overrides.get("env", client_config.env)
+        )
     else:
         return client_config
 

@@ -109,7 +109,6 @@ symbol_kind_names = {
 
 
 class CompletionItemKind(object):
-    Unknown = 0
     Text = 1
     Method = 2
     Function = 3

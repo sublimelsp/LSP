@@ -1954,7 +1954,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             location=point,
             wrapper_class="lsp_hover",
             max_width=800,
-            on_navigate=lambda href: self.on_diagnostics_navigate(self, href, point, diagnostics))
+            on_navigate=lambda href: self.on_diagnostics_navigate(href, point, diagnostics))
 
     def on_diagnostics_navigate(self, href, point, diagnostics):
         # TODO: don't mess with the user's cursor.

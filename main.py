@@ -142,47 +142,47 @@ class Request:
         return Request("initialize", params)
 
     @classmethod
-    def hover(cls, params):
+    def hover(cls, params: dict):
         return Request("textDocument/hover", params)
 
     @classmethod
-    def complete(cls, params):
+    def complete(cls, params: dict):
         return Request("textDocument/completion", params)
 
     @classmethod
-    def signatureHelp(cls, params):
+    def signatureHelp(cls, params: dict):
         return Request("textDocument/signatureHelp", params)
 
     @classmethod
-    def references(cls, params):
+    def references(cls, params: dict):
         return Request("textDocument/references", params)
 
     @classmethod
-    def definition(cls, params):
+    def definition(cls, params: dict):
         return Request("textDocument/definition", params)
 
     @classmethod
-    def rename(cls, params):
+    def rename(cls, params: dict):
         return Request("textDocument/rename", params)
 
     @classmethod
-    def codeAction(cls, params):
+    def codeAction(cls, params: dict):
         return Request("textDocument/codeAction", params)
 
     @classmethod
-    def executeCommand(cls, params):
+    def executeCommand(cls, params: dict):
         return Request("workspace/executeCommand", params)
 
     @classmethod
-    def formatting(cls, params):
+    def formatting(cls, params: dict):
         return Request("textDocument/formatting", params)
 
     @classmethod
-    def documentSymbols(cls, params):
+    def documentSymbols(cls, params: dict):
         return Request("textDocument/documentSymbol", params)
 
     @classmethod
-    def resolveCompletionItem(cls, params):
+    def resolveCompletionItem(cls, params: dict):
         return Request("completionItem/resolve", params)
 
     def __repr__(self):
@@ -211,23 +211,23 @@ class Notification:
         return Notification("initialized", None)
 
     @classmethod
-    def didOpen(cls, params):
+    def didOpen(cls, params: dict):
         return Notification("textDocument/didOpen", params)
 
     @classmethod
-    def didChange(cls, params):
+    def didChange(cls, params: dict):
         return Notification("textDocument/didChange", params)
 
     @classmethod
-    def didSave(cls, params):
+    def didSave(cls, params: dict):
         return Notification("textDocument/didSave", params)
 
     @classmethod
-    def didClose(cls, params):
+    def didClose(cls, params: dict):
         return Notification("textDocument/didClose", params)
 
     @classmethod
-    def didChangeConfiguration(cls, params):
+    def didChangeConfiguration(cls, params: dict):
         return Notification("workspace/didChangeConfiguration", params)
 
     @classmethod
@@ -1404,9 +1404,11 @@ class LspSymbolDefinitionCommand(sublime_plugin.TextCommand):
         client = client_for_view(self.view)
         if client:
             pos = get_position(self.view, event)
-            request = Request.definition(get_document_position(self.view, pos))
-            client.send_request(
-                request, lambda response: self.handle_response(response, pos))
+            document_position = get_document_position(self.view, pos)
+            if document_position:
+                request = Request.definition(document_position)
+                client.send_request(
+                    request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response, position):
         window = sublime.active_window()
@@ -1886,17 +1888,6 @@ def start_server(server_binary_args, working_dir, env):
         printf(err)
 
 
-def get_document_range(view: sublime.View, region: sublime.Region) -> 'Optional[OrderedDict]':
-    file_name = view.file_name()
-    if file_name:
-        d = OrderedDict()  # type: OrderedDict[str, Any]
-        d['textDocument'] = {"uri": filename_to_uri(file_name)}
-        d['range'] = Range.from_region(view, region).to_lsp()
-        return d
-    else:
-        return None
-
-
 def get_document_position(view: sublime.View, point) -> 'Optional[OrderedDict]':
     file_name = view.file_name()
     if file_name:
@@ -1958,9 +1949,11 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         if client and client.has_capability('hoverProvider'):
             word_at_sel = self.view.classify(point)
             if word_at_sel & SUBLIME_WORD_MASK:
-                client.send_request(
-                    Request.hover(get_document_position(self.view, point)),
-                    lambda response: self.handle_response(response, point))
+                document_position = get_document_position(self.view, point)
+                if document_position:
+                    client.send_request(
+                        Request.hover(document_position),
+                        lambda response: self.handle_response(response, point))
 
     def handle_response(self, response, point):
         debug(response)
@@ -2192,10 +2185,12 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
         if complete_all_chars or self.is_after_trigger_character(locations[0]):
             purge_did_change(view.buffer_id())
-            client.send_request(
-                Request.complete(get_document_position(view, locations[0])),
-                self.handle_response)
-            self.state = CompletionState.REQUESTING
+            document_position = get_document_position(view, locations[0])
+            if document_position:
+                client.send_request(
+                    Request.complete(document_position),
+                    self.handle_response)
+                self.state = CompletionState.REQUESTING
 
     def format_completion(self, item) -> 'Tuple[str, str]':
         # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
@@ -2273,9 +2268,11 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 client = client_for_view(self.view)
                 if client:
                     purge_did_change(self.view.buffer_id())
-                    client.send_request(
-                        Request.signatureHelp(get_document_position(self.view, pos)),
-                        lambda response: self.handle_response(response, pos))
+                    document_position = get_document_position(self.view, pos)
+                    if document_position:
+                        client.send_request(
+                            Request.signatureHelp(document_position),
+                            lambda response: self.handle_response(response, pos))
             else:
                 # TODO: this hides too soon.
                 if self.view.is_popup_visible():

@@ -182,6 +182,10 @@ class Request:
         return Request("textDocument/documentSymbol", params)
 
     @classmethod
+    def willSaveWaitUntil(cls, params):
+        return Request("textDocument/willSaveWaitUntil", params)
+
+    @classmethod
     def resolveCompletionItem(cls, params):
         return Request("completionItem/resolve", params)
 
@@ -225,6 +229,10 @@ class Notification:
     @classmethod
     def didClose(cls, params):
         return Notification("textDocument/didClose", params)
+
+    @classmethod
+    def willSave(cls, params):
+        return Notification("textDocument/willSave", params)
 
     @classmethod
     def didChangeConfiguration(cls, params):
@@ -489,6 +497,10 @@ class Client(object):
         self.request_id = 0
         self.handlers = {}  # type: Dict[int, Callable]
         self.capabilities = {}  # type: Dict[str, Any]
+        self._lock = threading.Lock()
+        self._condition = threading.Condition(self._lock)
+        self._blocking_request_id = -1
+        self._scratch_response = None
 
     def set_capabilities(self, capabilities):
         self.capabilities = capabilities
@@ -502,12 +514,29 @@ class Client(object):
     def get_capability(self, capability):
         return self.capabilities.get(capability)
 
-    def send_request(self, request: Request, handler: 'Callable'):
+    def send_request(self, request: Request, handler: 'Callable', blocking=False):
         self.request_id += 1
-        debug('request {}: {} '.format(self.request_id, request.method))
-        if handler is not None:
-            self.handlers[self.request_id] = handler
-        self.send_payload(request.to_payload(self.request_id))
+        debug('request', self.request_id, ':', request.method, ', blocking =', blocking)
+        if blocking:
+            with self._condition:
+                self._blocking_request_id = self.request_id
+                self.send_payload(request.to_payload(self.request_id))
+                if not self._condition.wait_for(lambda: self._scratch_response is not None, 6):
+                    printf("Oops, this took too long... (timeout of 6 seconds)")
+                elif self._scratch_response == "ERROR":
+                    printf("Got an error back :(")
+                elif self._scratch_response == "EMPTY":
+                    printf("Got an empty result back.")
+                    handler(None)
+                else:
+                    printf("Got a well-behaved result back.")
+                    handler(self._scratch_response)
+                self._blocking_request_id = -1
+                self._scratch_response = None
+        else:
+            if handler is not None:
+                self.handlers[self.request_id] = handler
+            self.send_payload(request.to_payload(self.request_id))
 
     def send_notification(self, notification: Notification):
         debug('notify: ' + notification.method)
@@ -567,6 +596,10 @@ class Client(object):
                             error = payload['error']
                             printf("Got error from server: ", error)
                             sublime.status_message(error.get('message'))
+                            if self._blocking_request_id >= 0:
+                                self._scratch_response = "ERROR"
+                                with self._condition:
+                                    self._condition.notify()
                         elif "method" in payload:
                             if "id" in payload:
                                 self.request_handler(payload)
@@ -613,11 +646,16 @@ class Client(object):
     def response_handler(self, response):
         try:
             handler_id = int(response.get("id"))  # dotty sends strings back :(
-            result = response.get('result', None)
-            if (self.handlers[handler_id]):
-                self.handlers[handler_id](result)
+            if self._blocking_request_id == handler_id:
+                self._scratch_response = response.get("result", "EMPTY")
+                with self._condition:
+                    self._condition.notify()
             else:
-                debug("No handler found for id" + response.get("id"))
+                result = response.get('result', None)
+                if (self.handlers[handler_id]):
+                    self.handlers[handler_id](result)
+                else:
+                    debug("No handler found for id", handler_id)
         except Exception as e:
             debug("error handling response", handler_id)
             raise
@@ -2458,6 +2496,28 @@ class CloseListener(sublime_plugin.EventListener):
 
 
 class SaveListener(sublime_plugin.EventListener):
+
+    def on_pre_save(self, view):
+        if not is_supported_view(view):
+            return
+        client = client_for_view(view)
+        if not client:
+            return
+        params = {
+            "textDocument": {
+                "uri": filename_to_uri(view.file_name()),
+                "reason": 1
+            }
+        }
+        format_on_save = sublime.load_settings("LSP.sublime-settings").get("format_on_save", True)
+        can_do_formatting = client.has_capability("documentFormattingProvider")
+        if not can_do_formatting or not format_on_save:
+            client.send_notification(Notification.willSave(params))
+        else:
+            client.send_request(Request.willSaveWaitUntil(params),
+                                lambda response: view.run_command("lsp_apply_document_edit", {"changes": response}),
+                                blocking=True)
+
     def on_post_save_async(self, view):
         if is_supported_view(view):
             Events.publish("view.on_post_save_async", view)

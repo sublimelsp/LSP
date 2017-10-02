@@ -139,8 +139,8 @@
   // Show in-line diagnostics using phantoms for unchanged files.
   "show_diagnostics_phantoms": false,
 
-  // Show diagnostics description in status bar
-  // if the cursor hovers complained code.
+  // Show the diagnostics description of the code
+  // under the cursor in status bar if available.
   "show_diagnostics_in_view_status": true,
 
   // Highlighting style of code diagnostics.

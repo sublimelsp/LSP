@@ -522,7 +522,10 @@ class Client(object):
             self.process.stdin.write(bytes(message, 'UTF-8'))
             self.process.stdin.flush()
         except BrokenPipeError as e:
+            sublime.status_message("Failure sending LSP server message, exiting")
             printf("client unexpectedly died:", e)
+            self.process.terminate()
+            self.process = None
 
     def read_stdout(self):
         """
@@ -577,6 +580,7 @@ class Client(object):
                         printf("Error handling server content:", err)
 
             except IOError:
+                sublime.status_message("Failure reading LSP server response, exiting")
                 printf("LSP stdout process ending due to exception: ",
                        sys.exc_info())
                 self.process.terminate()
@@ -1868,6 +1872,7 @@ def start_server(server_binary_args, working_dir, env):
         return Client(process, working_dir)
 
     except Exception as err:
+        sublime.status_message("Failed to start LSP server {}".format(str(server_binary_args)))
         printf(err)
 
 

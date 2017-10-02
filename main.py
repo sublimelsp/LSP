@@ -2176,7 +2176,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         if contents[0] == '$':  # sublime needs leading '$' escaped.
             contents = '\$' + contents[1:]
         # buit the completion item {trigger, contents}
-        return "{} \t {}".format(label, detail) if detail else label, contents
+        return " \t ".join((label, detail)) if detail else label, contents
 
     def handle_response(self, response):
         global resolvable_completion_items

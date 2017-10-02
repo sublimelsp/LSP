@@ -1,6 +1,7 @@
 import html
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -1273,6 +1274,35 @@ stylesheet = '''
             </style>
         '''
 
+signature_help_prefix = '''
+<html>
+    <body class="mdpopups" id="lsp">
+        <style>
+span.number_of_signatures {{
+    font-weight: bold;
+}}
+span.active_signature {{
+}}
+span.active_parameter {{
+    font-weight: bold;
+    text-decoration: underline;
+}}
+div.signature_documentation {{
+    display: block;
+    font-family: Helvetica;
+    font-size: 0.90rem;
+    margin: 0.5rem;
+}}
+div.parameter_documentation {{
+    display: block;
+    font-family: Helvetica;
+    font-size: 0.90rem;
+    margin: 0.5rem;
+}}
+{}
+        </style>
+'''
+
 
 def create_phantom_html(text: str) -> str:
     global stylesheet
@@ -2225,6 +2255,9 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
     def __init__(self, view):
         self.view = view
         self.signature_help_triggers = None
+        self.active_signature = -1
+        self.signatures = []  # type: List[Dict]
+        self._visible = False
 
     @classmethod
     def is_applicable(cls, settings):
@@ -2245,55 +2278,143 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
     def on_modified_async(self):
         pos = self.view.sel()[0].begin()
-        last_char = self.view.substr(pos - 1)
+        last_non_whitespace_char = self.view.substr(pos - 1)
+        if last_non_whitespace_char.isspace():
+            # Peek behind to find the last non-whitespace character.
+            last_non_whitespace_char = self.view.substr(self.view.find_by_class(pos, False, ~0) - 1)
         # TODO: this will fire too often, narrow down using scopes or regex
         if self.signature_help_triggers is None:
             self.initialize_triggers()
 
-        if self.signature_help_triggers:
-            if last_char in self.signature_help_triggers:
-                client = client_for_view(self.view)
-                if client:
-                    purge_did_change(self.view.buffer_id())
-                    client.send_request(
-                        Request.signatureHelp(get_document_position(self.view, pos)),
-                        lambda response: self.handle_response(response, pos))
+        if not self.signature_help_triggers:
+            return
+        if last_non_whitespace_char in self.signature_help_triggers:
+            if self._visible:
+                return
+            client = client_for_view(self.view)
+            if client:
+                purge_did_change(self.view.buffer_id())
+                client.send_request(
+                    Request.signatureHelp(get_document_position(self.view, pos)),
+                    lambda response: self.handle_response(response, pos))
+        elif self._visible:
+            self.view.hide_popup()
+
+    def _build_popup_content(self) -> str:
+        # Fetch all the relevant data.
+        if self.active_signature in range(0, len(self.signatures)):
+            signature = self.signatures[self.active_signature]
+            signature_label = html.escape(signature["label"], quote=False)
+            signature_documentation = signature.get("documentation", None)  # Optional.
+            parameters = signature.get("parameters", None)
+            if self.active_parameter in range(0, len(parameters)):
+                parameter = parameters[self.active_parameter]
+                parameter_label = html.escape(parameter["label"], quote=False)
+                parameter_documentation = parameter.get("documentation", None)  # Optional.
             else:
-                # TODO: this hides too soon.
-                if self.view.is_popup_visible():
-                    self.view.hide_popup()
+                parameter = {}
+                parameter_label = ""
+                parameter_documentation = ""
+        else:
+            signature = {}
+            signature_label = ""
+            signature_documentation = ""
+            parameter = {}
+            parameter_label = ""
+            parameter_documentation = ""
+
+        content = []
+
+        # Inject the CSS from mdpopups.
+        content.append(signature_help_prefix.format(mdpopups._get_theme(self.view)))  # type: ignore
+
+        # Put the active signature in a highlight class.
+        content.append('<div class="highlight">')
+
+        # Write the active signature number and the total number of signatures.
+        if len(self.signatures) > 1 and self.active_signature in range(0, len(self.signatures)):
+            content.append('<span class="number_of_signatures">{}/{}</span>\n'
+                           .format(self.active_signature + 1, len(self.signatures)))
+
+        # Write the active signature and give special treatment to the active parameter (if found).
+        if signature_label:
+            content.append('<code><span class="active_signature">')
+            if parameter_label:
+                signature_label = self._replace_active_parameter(signature_label, parameter_label)
+            content.append(signature_label)
+            content.append("</span></code>")  # active_signature
+
+        content.append("</div>\n")  # highlight
+
+        # Write the documentation of the active signature.
+        if signature_documentation:
+            self._append_markdown(content, signature_documentation, "signature_documentation")
+
+        # Write the documentation of the active parameter.
+        if parameter_documentation:
+            self._append_markdown(content, parameter_documentation, "parameter_documentation")
+
+        # All done!
+        content.append("</body></html>")
+        return "".join(content)
+
+    def _append_markdown(self, content: list, markdown: str, class_name: str) -> None:
+        content.append('<div class="{}">{}</div>\n'
+                       .format(class_name, mdpopups.md2html(self.view, markdown)))  # type: ignore
+
+    def _replace_active_parameter(self, signature: str, parameter: str) -> str:
+        if parameter[0].isalnum() and parameter[-1].isalnum():
+            pattern = r'\b{}\b'.format(parameter)
+        else:
+            # If the left or right boundary of the parameter string is not an alphanumeric character, the \b check will
+            # never match. In this case, it's probably safe to assume the parameter string itself will be a good pattern
+            # to search for.
+            pattern = parameter
+        replacement = '<span class="active_parameter">{}</span>'.format(parameter)
+        # FIXME: This is somewhat language-specific to look for an opening parenthesis. Most languages use parentheses
+        # for their parameter lists though. Do we make a bunch of if-elif cases for the exceptional languages that don't
+        # use parentheses?
+        index = signature.find('(')
+        string = signature[index + 1:]
+        return signature[:index + 1] + re.sub(pattern, replacement, string, 1)
 
     def handle_response(self, response, point):
-        if response is not None:
-            config = config_for_scope(self.view)
-            signatures = response.get("signatures")
-            activeSignature = response.get("activeSignature")
-            debug("got signatures, active is", len(signatures), activeSignature)
-            if len(signatures) > 0 and config:
-                signature = signatures[activeSignature]
-                debug("active signature", signature)
-                formatted = []
-                formatted.append(
-                    "```{}\n{}\n```".format(config.languageId, signature.get('label')))
-                params = signature.get('parameters')
-                if params:
-                    for parameter in params:
-                        paramDocs = parameter.get('documentation')
-                        if paramDocs:
-                            formatted.append("**{}**\n".format(parameter.get('label')))
-                            formatted.append("* *{}*\n".format(paramDocs))
+        if not response:
+            return
+        config = config_for_scope(self.view)
+        if not config:
+            debug("no config found for view", self.view.id())
+            return
 
-                formatted.append(signature.get('documentation'))
+        # Fetch all the relevant data.
+        self.signatures = response.get("signatures", None)
+        x, y = self.view.viewport_extent()
+        if self.signatures:
+            self.active_signature = response.get("activeSignature", -1)  # Optional.
+            self.active_parameter = response.get("activeParameter", -1)  # Optional.
+            self.view.show_popup(self._build_popup_content(), 0, point, int(x), int(y),
+                                 self._on_navigate, self._on_hide)
+            self._visible = True
 
-                mdpopups.show_popup(
-                    self.view,
-                    preserve_whitespace("\n".join(formatted)),
-                    css=".mdpopups .lsp_signature { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
-                    md=True,
-                    flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
-                    location=point,
-                    wrapper_class="lsp_signature",
-                    max_width=800)
+    def _on_navigate(self, url):
+        sublime.run_command("open_url", {"url": url})
+
+    def _on_hide(self):
+        self._visible = False
+
+    def on_query_context(self, key, _, operand, __):
+        if key != "lsp.signature_help":
+            return False  # Let someone else handle this keybinding.
+        elif not self._visible:
+            return False  # Let someone else handle this keybinding.
+        elif self.active_signature not in range(0, len(self.signatures)):
+            return False  # Let someone else handle this keybinding.
+        else:
+            # We use the "operand" for the number -1 or +1. See the keybindings.
+            self.active_signature += operand
+            self.active_signature %= len(self.signatures)
+            self.view.update_popup(self._build_popup_content())
+            return True  # We handled this keybinding.
 
 
 def get_line_diagnostics(view, point):

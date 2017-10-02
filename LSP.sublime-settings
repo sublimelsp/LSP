@@ -93,11 +93,12 @@
   "diagnostics_gutter_marker": "dot",
   "complete_all_chars": true,
 
-  // Controls whether the completion panel displays
-  // provided symbol details or kind.
-  // "false": Show completion kind
-  // "true": Show completion details
-  "show_completion_details": true,
+  // Controls which hints the completion panel displays
+  // "auto": completion details if available or kind otherwise
+  // "detail": completion details if available
+  // "kind": completion kind if availble
+  // "none": completion item label only
+  "completion_hint_type": "auto",
 
   "only_show_lsp_completions": false,
   "resolve_completion_for_snippets": false,

@@ -35,7 +35,7 @@ only_show_lsp_completions = False
 diagnostics_highlight_style = "underline"
 diagnostics_gutter_marker = "dot"
 complete_all_chars = False
-show_completion_details = True
+completion_hint_type = "auto"
 resolve_completion_for_snippets = False
 log_debug = True
 log_server = True
@@ -424,7 +424,7 @@ def update_settings(settings_obj: sublime.Settings):
     global diagnostics_highlight_style
     global diagnostics_gutter_marker
     global complete_all_chars
-    global show_completion_details
+    global completion_hint_type
     global resolve_completion_for_snippets
     global log_debug
     global log_server
@@ -452,7 +452,7 @@ def update_settings(settings_obj: sublime.Settings):
     diagnostics_gutter_marker = read_str_setting(settings_obj, "diagnostics_gutter_marker", "dot")
     only_show_lsp_completions = read_bool_setting(settings_obj, "only_show_lsp_completions", False)
     complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
-    show_completion_details = read_bool_setting(settings_obj, "show_completion_details", True)
+    completion_hint_type = read_str_setting(settings_obj, "completion_hint_type", "auto")
     resolve_completion_for_snippets = read_bool_setting(settings_obj, "resolve_completion_for_snippets", False)
     log_debug = read_bool_setting(settings_obj, "log_debug", False)
     log_server = read_bool_setting(settings_obj, "log_server", True)
@@ -2157,13 +2157,26 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
     def format_completion(self, item) -> 'Tuple[str, str]':
         # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
         label = item["label"]
-        detail = item.get("detail") if show_completion_details else None
-        if not detail:
-            detail = completion_item_kind_names[item.get("kind", CompletionItemKind.Unknown)]
+        # built completion hint
+        detail = None
+        if completion_hint_type == "auto":
+            detail = item.get("detail")
+            if not detail:
+                kind = item.get("kind")
+                if kind:
+                    detail = completion_item_kind_names[kind]
+        elif completion_hint_type == "detail":
+            detail = item.get("detail")
+        elif completion_hint_type == "kind":
+            kind = item.get("kind")
+            if kind:
+                detail = completion_item_kind_names[kind]
+        # built the completion contents
         insertText = item.get("insertText") or label
         if insertText[0] == '$':  # sublime needs leading '$' escaped.
             insertText = '\$' + insertText[1:]
-        return "{} \t {}".format(label, detail), insertText
+        # buit the completion item {trigger, contents}
+        return "{} \t {}".format(label, detail) if detail else label, insertText
 
     def handle_response(self, response):
         global resolvable_completion_items

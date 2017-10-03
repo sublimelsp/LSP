@@ -158,7 +158,7 @@
   // Controls which hints the completion panel displays
   // "auto": completion details if available or kind otherwise
   // "detail": completion details if available
-  // "kind": completion kind if availble
+  // "kind": completion kind if available
   // "none": completion item label only
   "completion_hint_type": "auto",
 

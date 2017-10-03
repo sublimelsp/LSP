@@ -11,7 +11,7 @@
 
 * `complete_all_chars` `true` *request completions for all characters, not just trigger characters*
 * `only_show_lsp_completions` `false` *disable sublime word completion and snippets from autocomplete lists*
-* `show_completion_details` `true` *display completion details or kind*
+* `completion_hint_type` `"auto"` *override automatic completion hints with "detail", "kind" or "none"*
 * `resolve_completion_for_snippets` `false` *resolve completions and apply snippet if received*
 * `show_status_messages` `true` *show messages in the status bar for a few seconds*
 * `show_view_status` `true` *show permanent language server status in the status bar*

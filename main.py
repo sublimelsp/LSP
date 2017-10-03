@@ -2198,26 +2198,26 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
     def format_completion(self, item) -> 'Tuple[str, str]':
         # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
         label = item["label"]
-        # built completion hint
-        detail = None
+        # choose hint based on availability and user preference
+        hint = None
         if completion_hint_type == "auto":
-            detail = item.get("detail")
-            if not detail:
+            hint = item.get("detail")
+            if not hint:
                 kind = item.get("kind")
                 if kind:
-                    detail = completion_item_kind_names[kind]
+                    hint = completion_item_kind_names[kind]
         elif completion_hint_type == "detail":
-            detail = item.get("detail")
+            hint = item.get("detail")
         elif completion_hint_type == "kind":
             kind = item.get("kind")
             if kind:
-                detail = completion_item_kind_names[kind]
-        # built the completion contents
-        contents = item.get("insertText") or label
-        if contents[0] == '$':  # sublime needs leading '$' escaped.
-            contents = '\$' + contents[1:]
-        # buit the completion item {trigger, contents}
-        return " \t ".join((label, detail)) if detail else label, contents
+                hint = completion_item_kind_names[kind]
+        # label is an alternative for insertText if insertText not provided
+        insert_text = item.get("insertText") or label
+        if insert_text[0] == '$':  # sublime needs leading '$' escaped.
+            insert_text = '\$' + insert_text[1:]
+        # only return label with a hint if available
+        return " \t ".join((label, hint)) if hint else label, insert_text
 
     def handle_response(self, response):
         global resolvable_completion_items

@@ -143,47 +143,47 @@ class Request:
         return Request("initialize", params)
 
     @classmethod
-    def hover(cls, params):
+    def hover(cls, params: dict):
         return Request("textDocument/hover", params)
 
     @classmethod
-    def complete(cls, params):
+    def complete(cls, params: dict):
         return Request("textDocument/completion", params)
 
     @classmethod
-    def signatureHelp(cls, params):
+    def signatureHelp(cls, params: dict):
         return Request("textDocument/signatureHelp", params)
 
     @classmethod
-    def references(cls, params):
+    def references(cls, params: dict):
         return Request("textDocument/references", params)
 
     @classmethod
-    def definition(cls, params):
+    def definition(cls, params: dict):
         return Request("textDocument/definition", params)
 
     @classmethod
-    def rename(cls, params):
+    def rename(cls, params: dict):
         return Request("textDocument/rename", params)
 
     @classmethod
-    def codeAction(cls, params):
+    def codeAction(cls, params: dict):
         return Request("textDocument/codeAction", params)
 
     @classmethod
-    def executeCommand(cls, params):
+    def executeCommand(cls, params: dict):
         return Request("workspace/executeCommand", params)
 
     @classmethod
-    def formatting(cls, params):
+    def formatting(cls, params: dict):
         return Request("textDocument/formatting", params)
 
     @classmethod
-    def documentSymbols(cls, params):
+    def documentSymbols(cls, params: dict):
         return Request("textDocument/documentSymbol", params)
 
     @classmethod
-    def resolveCompletionItem(cls, params):
+    def resolveCompletionItem(cls, params: dict):
         return Request("completionItem/resolve", params)
 
     def __repr__(self):
@@ -212,23 +212,23 @@ class Notification:
         return Notification("initialized", None)
 
     @classmethod
-    def didOpen(cls, params):
+    def didOpen(cls, params: dict):
         return Notification("textDocument/didOpen", params)
 
     @classmethod
-    def didChange(cls, params):
+    def didChange(cls, params: dict):
         return Notification("textDocument/didChange", params)
 
     @classmethod
-    def didSave(cls, params):
+    def didSave(cls, params: dict):
         return Notification("textDocument/didSave", params)
 
     @classmethod
-    def didClose(cls, params):
+    def didClose(cls, params: dict):
         return Notification("textDocument/didClose", params)
 
     @classmethod
-    def didChangeConfiguration(cls, params):
+    def didChangeConfiguration(cls, params: dict):
         return Notification("workspace/didChangeConfiguration", params)
 
     @classmethod
@@ -337,7 +337,8 @@ def read_client_config(name, client_config):
         client_config.get("languageId", ""),
         client_config.get("enabled", True),
         client_config.get("initializationOptions", dict()),
-        client_config.get("settings", dict())
+        client_config.get("settings", dict()),
+        client_config.get("env", dict())
     )
 
 
@@ -460,7 +461,7 @@ def update_settings(settings_obj: sublime.Settings):
 
 class ClientConfig(object):
     def __init__(self, name, binary_args, scopes, syntaxes, languageId,
-                 enabled=True, init_options=dict(), settings=dict()):
+                 enabled=True, init_options=dict(), settings=dict(), env=dict()):
         self.name = name
         self.binary_args = binary_args
         self.scopes = scopes
@@ -469,6 +470,7 @@ class ClientConfig(object):
         self.enabled = enabled
         self.init_options = init_options
         self.settings = settings
+        self.env = env
 
 
 def format_request(payload: 'Dict[str, Any]'):
@@ -523,7 +525,10 @@ class Client(object):
             self.process.stdin.write(bytes(message, 'UTF-8'))
             self.process.stdin.flush()
         except BrokenPipeError as e:
+            sublime.status_message("Failure sending LSP server message, exiting")
             printf("client unexpectedly died:", e)
+            self.process.terminate()
+            self.process = None
 
     def read_stdout(self):
         """
@@ -531,20 +536,18 @@ class Client(object):
         """
         ContentLengthHeader = b"Content-Length: "
 
-        while True:
+        running = True
+        while running:
+            running = self.process.poll() is None
+
             try:
-
-                in_headers = True
                 content_length = 0
-                while in_headers:
+                while True:
                     header = self.process.stdout.readline()
-                    if header == '':
-                        break
-                    else:
+                    if header:
                         header = header.strip()
-                    if (len(header) == 0):
-                        in_headers = False
-
+                    if not header:
+                        break
                     if header.startswith(ContentLengthHeader):
                         content_length = int(header[len(ContentLengthHeader):])
 
@@ -580,6 +583,7 @@ class Client(object):
                         printf("Error handling server content:", err)
 
             except IOError:
+                sublime.status_message("Failure reading LSP server response, exiting")
                 printf("LSP stdout process ending due to exception: ",
                        sys.exc_info())
                 self.process.terminate()
@@ -592,10 +596,13 @@ class Client(object):
         """
         Reads any errors from the LSP process.
         """
-        while True:
+        running = True
+        while running:
+            running = self.process.poll() is None
+
             try:
                 content = self.process.stderr.readline()
-                if len(content) == 0:
+                if not content:
                     break
                 if log_stderr:
                     printf("(stderr): ", content.strip())
@@ -818,8 +825,6 @@ def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -
     if client_config.name in window_config:
         overrides = window_config[client_config.name]
         debug('window has override for', client_config.name, overrides)
-        merged_init_options = dict(client_config.init_options)
-        merged_init_options.update(overrides.get("initializationOptions", dict()))
         return ClientConfig(
             client_config.name,
             overrides.get("command", client_config.binary_args),
@@ -827,8 +832,10 @@ def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -
             overrides.get("syntaxes", client_config.syntaxes),
             overrides.get("languageId", client_config.languageId),
             overrides.get("enabled", client_config.enabled),
-            merged_init_options,
-            overrides.get("settings", dict()))
+            overrides.get("initializationOptions", client_config.init_options),
+            overrides.get("settings", client_config.settings),
+            overrides.get("env", client_config.env)
+        )
     else:
         return client_config
 
@@ -1079,40 +1086,46 @@ def notify_did_open(view: sublime.View):
     client = client_for_view(view)
     if client and config:
         view.settings().set("show_definitions", False)
-        if view.file_name() not in document_states:
-            ds = get_document_state(view.file_name())
-            if show_view_status:
-                view.set_status("lsp_clients", config.name)
-            params = {
-                "textDocument": {
-                    "uri": filename_to_uri(view.file_name()),
-                    "languageId": config.languageId,
-                    "text": view.substr(sublime.Region(0, view.size())),
-                    "version": ds.version
+        view_file = view.file_name()
+        if view_file:
+            if view_file not in document_states:
+                ds = get_document_state(view_file)
+                if show_view_status:
+                    view.set_status("lsp_clients", config.name)
+                params = {
+                    "textDocument": {
+                        "uri": filename_to_uri(view_file),
+                        "languageId": config.languageId,
+                        "text": view.substr(sublime.Region(0, view.size())),
+                        "version": ds.version
+                    }
                 }
-            }
-            client.send_notification(Notification.didOpen(params))
+                client.send_notification(Notification.didOpen(params))
 
 
 def notify_did_close(view: sublime.View):
-    if view.file_name() in document_states:
-        del document_states[view.file_name()]
-        config = config_for_scope(view)
-        clients = window_clients(sublime.active_window())
-        if config and config.name in clients:
-            client = clients[config.name]
-            params = {"textDocument": {"uri": filename_to_uri(view.file_name())}}
-            client.send_notification(Notification.didClose(params))
+    file_name = view.file_name()
+    if file_name:
+        if file_name in document_states:
+            del document_states[file_name]
+            config = config_for_scope(view)
+            clients = window_clients(sublime.active_window())
+            if config and config.name in clients:
+                client = clients[config.name]
+                params = {"textDocument": {"uri": filename_to_uri(file_name)}}
+                client.send_notification(Notification.didClose(params))
 
 
 def notify_did_save(view: sublime.View):
-    if view.file_name() in document_states:
-        client = client_for_view(view)
-        if client:
-            params = {"textDocument": {"uri": filename_to_uri(view.file_name())}}
-            client.send_notification(Notification.didSave(params))
-    else:
-        debug('document not tracked', view.file_name())
+    file_name = view.file_name()
+    if file_name:
+        if file_name in document_states:
+            client = client_for_view(view)
+            if client:
+                params = {"textDocument": {"uri": filename_to_uri(file_name)}}
+                client.send_notification(Notification.didSave(params))
+        else:
+            debug('document not tracked', file_name)
 
 
 # TODO: this should be per-window ?
@@ -1169,24 +1182,26 @@ def purge_did_change(buffer_id: int, buffer_version=None):
 
 
 def notify_did_change(view: sublime.View):
-    if view.buffer_id() in pending_buffer_changes:
-        del pending_buffer_changes[view.buffer_id()]
-    # config = config_for_scope(view)
-    client = client_for_view(view)
-    if client:
-        document_state = get_document_state(view.file_name())
-        uri = filename_to_uri(view.file_name())
-        params = {
-            "textDocument": {
-                "uri": uri,
-                # "languageId": config.languageId, clangd does not like this field, but no server uses it?
-                "version": document_state.inc_version(),
-            },
-            "contentChanges": [{
-                "text": view.substr(sublime.Region(0, view.size()))
-            }]
-        }
-        client.send_notification(Notification.didChange(params))
+    file_name = view.file_name()
+    if file_name:
+        if view.buffer_id() in pending_buffer_changes:
+            del pending_buffer_changes[view.buffer_id()]
+        # config = config_for_scope(view)
+        client = client_for_view(view)
+        if client:
+            document_state = get_document_state(file_name)
+            uri = filename_to_uri(file_name)
+            params = {
+                "textDocument": {
+                    "uri": uri,
+                    # "languageId": config.languageId, clangd does not like this field, but no server uses it?
+                    "version": document_state.inc_version(),
+                },
+                "contentChanges": [{
+                    "text": view.substr(sublime.Region(0, view.size()))
+                }]
+            }
+            client.send_notification(Notification.didChange(params))
 
 
 document_sync_initialized = False
@@ -1392,9 +1407,11 @@ class LspSymbolDefinitionCommand(sublime_plugin.TextCommand):
         client = client_for_view(self.view)
         if client:
             pos = get_position(self.view, event)
-            request = Request.definition(get_document_position(self.view, pos))
-            client.send_request(
-                request, lambda response: self.handle_response(response, pos))
+            document_position = get_document_position(self.view, pos)
+            if document_position:
+                request = Request.definition(document_position)
+                client.send_request(
+                    request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response, position):
         window = sublime.active_window()
@@ -1511,6 +1528,10 @@ def create_references_panel(window: sublime.Window):
                          r"^\s+\S\s+(\S.+)\s+(\d+):?(\d+)$")
     panel.assign_syntax("Packages/" + PLUGIN_NAME +
                         "/Syntaxes/References.sublime-syntax")
+    # Call create_output_panel a second time after assigning the above
+    # settings, so that it'll be picked up as a result buffer
+    # see: Packages/Default/exec.py#L228-L230
+    panel = window.create_output_panel("references")
     return panel
 
 
@@ -1527,12 +1548,13 @@ class LspSymbolReferencesCommand(sublime_plugin.TextCommand):
         if client:
             pos = get_position(self.view, event)
             document_position = get_document_position(self.view, pos)
-            document_position['context'] = {
-                "includeDeclaration": False
-            }
-            request = Request.references(document_position)
-            client.send_request(
-                request, lambda response: self.handle_response(response, pos))
+            if document_position:
+                document_position['context'] = {
+                    "includeDeclaration": False
+                }
+                request = Request.references(document_position)
+                client.send_request(
+                    request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response, pos):
         window = self.view.window()
@@ -1675,11 +1697,12 @@ def remove_diagnostics(view: sublime.View):
     window = sublime.active_window()
 
     file_path = view.file_name()
-    if not window.find_open_file(view.file_name()):
-        update_file_diagnostics(window, file_path, 'lsp', [])
-        update_diagnostics_panel(window)
-    else:
-        debug('file still open?')
+    if file_path:
+        if not window.find_open_file(file_path):
+            update_file_diagnostics(window, file_path, 'lsp', [])
+            update_diagnostics_panel(window)
+        else:
+            debug('file still open?')
 
 
 def handle_diagnostics(update: 'Any'):
@@ -1720,6 +1743,10 @@ def create_diagnostics_panel(window):
     panel.settings().set("result_line_regex", r"^\s+([0-9]+):?([0-9]+).*$")
     panel.assign_syntax("Packages/" + PLUGIN_NAME +
                         "/Syntaxes/Diagnostics.sublime-syntax")
+    # Call create_output_panel a second time after assigning the above
+    # settings, so that it'll be picked up as a result buffer
+    # see: Packages/Default/exec.py#L228-L230
+    panel = window.create_output_panel("diagnostics")
     return panel
 
 
@@ -1776,10 +1803,22 @@ def start_client(window: sublime.Window, config: ClientConfig):
         window.status_message("Starting " + config.name + "...")
     debug("starting in", project_path)
 
+    # Create a dictionary of Sublime Text variables
     variables = window.extract_variables()
-    expanded_args = list(sublime.expand_variables(os.path.expanduser(arg), variables) for arg in config.binary_args)
 
-    client = start_server(expanded_args, project_path)
+    # Expand language server command line environment variables
+    expanded_args = list(
+        sublime.expand_variables(os.path.expanduser(arg), variables)
+        for arg in config.binary_args
+    )
+
+    # Override OS environment variables
+    env = os.environ.copy()
+    for var, value in config.env.items():
+        # Expand both ST and OS environment variables
+        env[var] = os.path.expandvars(sublime.expand_variables(value, variables))
+
+    client = start_server(expanded_args, project_path, env)
     if not client:
         window.status_message("Could not start " + config.name + ", disabling")
         debug("Could not start", config.binary_args, ", disabling")
@@ -1830,7 +1869,7 @@ def get_window_client(view: sublime.View, config: ClientConfig) -> Client:
     return client
 
 
-def start_server(server_binary_args, working_dir):
+def start_server(server_binary_args, working_dir, env):
     debug("starting " + str(server_binary_args))
     si = None
     if os.name == "nt":
@@ -1843,27 +1882,26 @@ def start_server(server_binary_args, working_dir):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=working_dir,
+            env=env,
             startupinfo=si)
         return Client(process, working_dir)
 
     except Exception as err:
+        sublime.status_message("Failed to start LSP server {}".format(str(server_binary_args)))
         printf(err)
 
 
-def get_document_range(view: sublime.View, region: sublime.Region) -> OrderedDict:
-    d = OrderedDict()  # type: OrderedDict[str, Any]
-    d['textDocument'] = {"uri": filename_to_uri(view.file_name())}
-    d['range'] = Range.from_region(view, region).to_lsp()
-    return d
-
-
-def get_document_position(view: sublime.View, point) -> OrderedDict:
-    if not point:
-        point = view.sel()[0].begin()
-    d = OrderedDict()  # type: OrderedDict[str, Any]
-    d['textDocument'] = {"uri": filename_to_uri(view.file_name())}
-    d['position'] = Point.from_text_point(view, point).to_lsp()
-    return d
+def get_document_position(view: sublime.View, point) -> 'Optional[OrderedDict]':
+    file_name = view.file_name()
+    if file_name:
+        if not point:
+            point = view.sel()[0].begin()
+        d = OrderedDict()  # type: OrderedDict[str, Any]
+        d['textDocument'] = {"uri": filename_to_uri(file_name)}
+        d['position'] = Point.from_text_point(view, point).to_lsp()
+        return d
+    else:
+        return None
 
 
 class Events:
@@ -1914,9 +1952,11 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         if client and client.has_capability('hoverProvider'):
             word_at_sel = self.view.classify(point)
             if word_at_sel & SUBLIME_WORD_MASK:
-                client.send_request(
-                    Request.hover(get_document_position(self.view, point)),
-                    lambda response: self.handle_response(response, point))
+                document_position = get_document_position(self.view, point)
+                if document_position:
+                    client.send_request(
+                        Request.hover(document_position),
+                        lambda response: self.handle_response(response, point))
 
     def handle_response(self, response, point):
         debug(response)
@@ -1941,7 +1981,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             location=point,
             wrapper_class="lsp_hover",
             max_width=800,
-            on_navigate=lambda href: self.on_diagnostics_navigate(self, href, point, diagnostics))
+            on_navigate=lambda href: self.on_diagnostics_navigate(href, point, diagnostics))
 
     def on_diagnostics_navigate(self, href, point, diagnostics):
         # TODO: don't mess with the user's cursor.
@@ -2148,10 +2188,12 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
         if complete_all_chars or self.is_after_trigger_character(locations[0]):
             purge_did_change(view.buffer_id())
-            client.send_request(
-                Request.complete(get_document_position(view, locations[0])),
-                self.handle_response)
-            self.state = CompletionState.REQUESTING
+            document_position = get_document_position(view, locations[0])
+            if document_position:
+                client.send_request(
+                    Request.complete(document_position),
+                    self.handle_response)
+                self.state = CompletionState.REQUESTING
 
     def format_completion(self, item) -> 'Tuple[str, str]':
         # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
@@ -2238,9 +2280,11 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 client = client_for_view(self.view)
                 if client:
                     purge_did_change(self.view.buffer_id())
-                    client.send_request(
-                        Request.signatureHelp(get_document_position(self.view, pos)),
-                        lambda response: self.handle_response(response, pos))
+                    document_position = get_document_position(self.view, pos)
+                    if document_position:
+                        client.send_request(
+                            Request.signatureHelp(document_position),
+                            lambda response: self.handle_response(response, pos))
             else:
                 # TODO: this hides too soon.
                 if self.view.is_popup_visible():
@@ -2259,14 +2303,12 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 formatted.append(
                     "```{}\n{}\n```".format(config.languageId, signature.get('label')))
                 params = signature.get('parameters')
-                if params is None:  # for pyls TODO create issue?
-                    params = signature.get('params')
-                debug("params", params)
-                for parameter in params:
-                    paramDocs = parameter.get('documentation')
-                    if paramDocs:
-                        formatted.append("**{}**\n".format(parameter.get('label')))
-                        formatted.append("* *{}*\n".format(paramDocs))
+                if params:
+                    for parameter in params:
+                        paramDocs = parameter.get('documentation')
+                        if paramDocs:
+                            formatted.append("**{}**\n".format(parameter.get('label')))
+                            formatted.append("* *{}*\n".format(paramDocs))
 
                 formatted.append(signature.get('documentation'))
 
@@ -2302,11 +2344,12 @@ def get_diagnostics_for_view(view: sublime.View) -> 'List[Diagnostic]':
     window = view.window()
     file_path = view.file_name()
     origin = 'lsp'
-    if window.id() in window_file_diagnostics:
-        file_diagnostics = window_file_diagnostics[window.id()]
-        if file_path in file_diagnostics:
-            if origin in file_diagnostics[file_path]:
-                return file_diagnostics[file_path][origin]
+    if file_path:
+        if window.id() in window_file_diagnostics:
+            file_diagnostics = window_file_diagnostics[window.id()]
+            if file_path in file_diagnostics:
+                if origin in file_diagnostics[file_path]:
+                    return file_diagnostics[file_path][origin]
     return []
 
 

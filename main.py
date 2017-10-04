@@ -2,7 +2,7 @@ import html
 import json
 import os
 import subprocess
-import sys
+import traceback
 import threading
 import webbrowser
 from collections import OrderedDict
@@ -524,9 +524,9 @@ class Client(object):
             message = format_request(payload)
             self.process.stdin.write(bytes(message, 'UTF-8'))
             self.process.stdin.flush()
-        except BrokenPipeError as e:
+        except BrokenPipeError as err:
             sublime.status_message("Failure sending LSP server message, exiting")
-            printf("client unexpectedly died:", e)
+            exception_log("Failure writing payload", err)
             self.process.terminate()
             self.process = None
 
@@ -580,12 +580,11 @@ class Client(object):
                         else:
                             debug("Unknown payload type: ", payload)
                     except Exception as err:
-                        printf("Error handling server content:", err)
+                        exception_log("Error handling server payload", err)
 
-            except IOError:
+            except IOError as err:
                 sublime.status_message("Failure reading LSP server response, exiting")
-                printf("LSP stdout process ending due to exception: ",
-                       sys.exc_info())
+                exception_log("Failure reading stdout", err)
                 self.process.terminate()
                 self.process = None
                 return
@@ -606,24 +605,19 @@ class Client(object):
                     break
                 if log_stderr:
                     printf("(stderr): ", content.strip())
-            except IOError:
-                printf("LSP stderr process ending due to exception: ",
-                       sys.exc_info())
+            except IOError as err:
+                exception_log("Failure reading stderr", err)
                 return
 
         debug("LSP stderr process ended.")
 
     def response_handler(self, response):
-        try:
-            handler_id = int(response.get("id"))  # dotty sends strings back :(
-            result = response.get('result', None)
-            if (self.handlers[handler_id]):
-                self.handlers[handler_id](result)
-            else:
-                debug("No handler found for id" + response.get("id"))
-        except Exception as e:
-            debug("error handling response", handler_id)
-            raise
+        handler_id = int(response.get("id"))  # dotty sends strings back :(
+        result = response.get('result', None)
+        if (self.handlers[handler_id]):
+            self.handlers[handler_id](result)
+        else:
+            debug("No handler found for id" + response.get("id"))
 
     def request_handler(self, request):
         method = request.get("method")
@@ -651,6 +645,12 @@ def debug(*args):
     """Print args to the console if the "debug" setting is True."""
     if log_debug:
         printf(*args)
+
+
+def exception_log(message, ex):
+    print(message)
+    ex_traceback = ex.__traceback__
+    print(''.join(traceback.format_exception(ex.__class__, ex, ex_traceback)))
 
 
 def server_log(binary, *args):
@@ -746,8 +746,8 @@ def unload_client(client: Client):
     try:
         client.send_notification(Notification.exit())
         client.kill()
-    except Exception as e:
-        debug("error exiting", e)
+    except Exception as err:
+        exception_log("Error exiting server", err)
 
 
 def plugin_unloaded():
@@ -1888,7 +1888,7 @@ def start_server(server_binary_args, working_dir, env):
 
     except Exception as err:
         sublime.status_message("Failed to start LSP server {}".format(str(server_binary_args)))
-        printf(err)
+        exception_log("Failed to start server", err)
 
 
 def get_document_position(view: sublime.View, point) -> 'Optional[OrderedDict]':
@@ -2115,8 +2115,8 @@ class CompletionSnippetHandler(sublime_plugin.EventListener):
                 sel.clear()
                 sel.add(current_completion.region)
                 view.run_command("insert_snippet", {"contents": insertText})
-            except Exception as e:
-                debug('error inserting snippet', insertText, e)
+            except Exception as err:
+                exception_log("Error inserting snippet: " + insertText, err)
 
 
 class CompletionHandler(sublime_plugin.ViewEventListener):

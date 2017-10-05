@@ -1215,7 +1215,7 @@ def initialize_document_sync(text_document_sync_kind):
     # TODO: hook up events per scope/client
     Events.subscribe('view.on_load_async', notify_did_open)
     Events.subscribe('view.on_activated_async', notify_did_open)
-    Events.subscribe('view.on_modified_async', queue_did_change)
+    Events.subscribe('view.on_modified', queue_did_change)
     Events.subscribe('view.on_post_save_async', notify_did_save)
     Events.subscribe('view.on_close', notify_did_close)
 
@@ -2543,9 +2543,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
         # skip transient views: if not is_transient_view(self.view):
         Events.publish("view.on_load_async", self.view)
 
-    def on_modified_async(self):
+    def on_modified(self):
         if self.view.file_name():
-            Events.publish("view.on_modified_async", self.view)
+            Events.publish("view.on_modified", self.view)
 
     def on_activated_async(self):
         if self.view.file_name():

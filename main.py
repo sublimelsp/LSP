@@ -776,7 +776,7 @@ def get_default_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
 
 
 def enable_in_project(window, config_name: str) -> None:
-    project_data = window.project_data()
+    project_data = window.project_data() or dict()
     project_settings = project_data.setdefault('settings', dict())
     project_lsp_settings = project_settings.setdefault('LSP', dict())
     project_client_settings = project_lsp_settings.setdefault(config_name, dict())
@@ -785,7 +785,7 @@ def enable_in_project(window, config_name: str) -> None:
 
 
 def disable_in_project(window, config_name: str) -> None:
-    project_data = window.project_data()
+    project_data = window.project_data() or dict()
     project_settings = project_data.setdefault('settings', dict())
     project_lsp_settings = project_settings.setdefault('LSP', dict())
     project_client_settings = project_lsp_settings.setdefault(config_name, dict())
@@ -794,7 +794,7 @@ def disable_in_project(window, config_name: str) -> None:
 
 
 def get_project_config(window: sublime.Window) -> dict:
-    project_data = window.project_data()
+    project_data = window.project_data() or dict()
     project_settings = project_data.setdefault('settings', dict())
     project_lsp_settings = project_settings.setdefault('LSP', dict())
     return project_lsp_settings

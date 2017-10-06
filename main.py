@@ -801,8 +801,9 @@ def get_project_config(window: sublime.Window) -> dict:
 
 
 def get_window_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
-    if view.window():
-        configs_for_window = window_client_configs.get(view.window().id(), [])
+    window = view.window()
+    if window:
+        configs_for_window = window_client_configs.get(window.id(), [])
         return get_scope_client_config(view, configs_for_window)
     else:
         return None
@@ -820,24 +821,26 @@ def clear_window_client_configs(window: 'sublime.Window'):
 
 
 def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -> 'ClientConfig':
-    window_config = get_project_config(view.window())
+    window = view.window()
+    if window:
+        window_config = get_project_config(window)
 
-    if client_config.name in window_config:
-        overrides = window_config[client_config.name]
-        debug('window has override for', client_config.name, overrides)
-        return ClientConfig(
-            client_config.name,
-            overrides.get("command", client_config.binary_args),
-            overrides.get("scopes", client_config.scopes),
-            overrides.get("syntaxes", client_config.syntaxes),
-            overrides.get("languageId", client_config.languageId),
-            overrides.get("enabled", client_config.enabled),
-            overrides.get("initializationOptions", client_config.init_options),
-            overrides.get("settings", client_config.settings),
-            overrides.get("env", client_config.env)
-        )
-    else:
-        return client_config
+        if client_config.name in window_config:
+            overrides = window_config[client_config.name]
+            debug('window has override for', client_config.name, overrides)
+            return ClientConfig(
+                client_config.name,
+                overrides.get("command", client_config.binary_args),
+                overrides.get("scopes", client_config.scopes),
+                overrides.get("syntaxes", client_config.syntaxes),
+                overrides.get("languageId", client_config.languageId),
+                overrides.get("enabled", client_config.enabled),
+                overrides.get("initializationOptions", client_config.init_options),
+                overrides.get("settings", client_config.settings),
+                overrides.get("env", client_config.env)
+            )
+
+    return client_config
 
 
 def config_for_scope(view: sublime.View) -> 'Optional[ClientConfig]':
@@ -845,10 +848,16 @@ def config_for_scope(view: sublime.View) -> 'Optional[ClientConfig]':
     window_client_config = get_window_client_config(view)
     if not window_client_config:
         global_client_config = get_global_client_config(view)
-        if global_client_config and view.window():
-            window_client_config = apply_window_settings(global_client_config, view)
-            add_window_client_config(view.window(), window_client_config)
-            return window_client_config
+
+        if global_client_config:
+            window = view.window()
+            if window:
+                window_client_config = apply_window_settings(global_client_config, view)
+                add_window_client_config(window, window_client_config)
+                return window_client_config
+            else:
+                # always return a client config even if the view has no window anymore
+                return global_client_config
 
     return window_client_config
 
@@ -894,14 +903,20 @@ def uri_to_filename(uri: str) -> str:
 
 
 def client_for_view(view: sublime.View) -> 'Optional[Client]':
+    window = view.window()
+    if not window:
+        debug("no window for view", view.file_name())
+        return None
+
     config = config_for_scope(view)
     if not config:
         debug("config not available for view", view.file_name())
         return None
-    clients = window_clients(view.window())
+
+    clients = window_clients(window)
     if config.name not in clients:
         debug(config.name, "not available for view",
-              view.file_name(), "in window", view.window().id())
+              view.file_name(), "in window", window.id())
         return None
     else:
         return clients[config.name]
@@ -920,10 +935,10 @@ def window_clients(window: sublime.Window) -> 'Dict[str, Client]':
 
 
 def initialize_on_open(view: sublime.View):
-    if not view.window():
-        return
-
     window = view.window()
+
+    if not window:
+        return
 
     if window.id() in clients_by_window:
         unload_old_clients(window)
@@ -934,7 +949,7 @@ def initialize_on_open(view: sublime.View):
         if config.enabled:
             if config.name not in window_clients(window):
                 didopen_after_initialize.append(view)
-                get_window_client(view, config)
+                get_window_client(view, window, config)
         else:
             debug(config.name, 'is not enabled')
     else:
@@ -952,7 +967,9 @@ def show_enable_config(view: sublime.View, config: ClientConfig):
     message = "LSP has found a language server for {}. Run \"Setup Language Server\" to start using it".format(
         extract_syntax_name(syntax)
     )
-    view.window().status_message(message)
+    window = view.window()
+    if window:
+        window.status_message(message)
 
 
 class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
@@ -1853,10 +1870,9 @@ def start_client(window: sublime.Window, config: ClientConfig):
     return client
 
 
-def get_window_client(view: sublime.View, config: ClientConfig) -> Client:
+def get_window_client(view: sublime.View, window: sublime.Window, config: ClientConfig) -> Client:
     global clients_by_window
 
-    window = view.window()
     clients = window_clients(window)
     if config.name not in clients:
         client = start_client(window, config)
@@ -2344,7 +2360,7 @@ def get_diagnostics_for_view(view: sublime.View) -> 'List[Diagnostic]':
     window = view.window()
     file_path = view.file_name()
     origin = 'lsp'
-    if file_path:
+    if file_path and window:
         if window.id() in window_file_diagnostics:
             file_diagnostics = window_file_diagnostics[window.id()]
             if file_path in file_diagnostics:

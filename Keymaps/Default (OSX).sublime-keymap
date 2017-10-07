@@ -1,7 +1,7 @@
 [
     {
-    	"keys": ["super+."],
-    	"command": "lsp_code_actions"
+        "keys": ["super+."],
+        "command": "lsp_code_actions"
     },
     {
         "keys": ["super+shift+m"],
@@ -11,5 +11,20 @@
         "keys": ["shift+f12"],
         "command": "lsp_symbol_references"
     },
-
+    {
+        "keys": ["down"],
+        "command": "noop",
+        "context":
+        [
+            { "key": "lsp.signature_help", "operator": "equal", "operand": 1 }
+        ]
+    },
+    {
+        "keys": ["up"],
+        "command": "noop",
+        "context":
+        [
+            { "key": "lsp.signature_help", "operator": "equal", "operand": -1 }
+        ]
+    }
 ]

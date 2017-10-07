@@ -2263,9 +2263,15 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
 
 class SignatureHelpListener(sublime_plugin.ViewEventListener):
+
+    css = ".mdpopups .lsp_signature { margin: 4px; } .mdpopups p { margin: 0.1rem; }"
+    wrapper_class = "lsp_signature"
+
     def __init__(self, view):
         self.view = view
         self.signature_help_triggers = None
+        self._visible = False
+        self._config = None  # type: ClientConfig
 
     @classmethod
     def is_applicable(cls, settings):
@@ -2303,40 +2309,69 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                             lambda response: self.handle_response(response, pos))
             else:
                 # TODO: this hides too soon.
-                if self.view.is_popup_visible():
+                if self._visible:
                     self.view.hide_popup()
 
     def handle_response(self, response, point):
         if response is not None:
-            config = config_for_scope(self.view)
-            signatures = response.get("signatures")
-            activeSignature = response.get("activeSignature")
-            debug("got signatures, active is", len(signatures), activeSignature)
-            if len(signatures) > 0 and config:
-                signature = signatures[activeSignature]
-                debug("active signature", signature)
-                formatted = []
-                formatted.append(
-                    "```{}\n{}\n```".format(config.languageId, signature.get('label')))
-                params = signature.get('parameters')
-                if params:
-                    for parameter in params:
-                        paramDocs = parameter.get('documentation')
-                        if paramDocs:
-                            formatted.append("**{}**\n".format(parameter.get('label')))
-                            formatted.append("* *{}*\n".format(paramDocs))
+            self._config = config_for_scope(self.view)
+            self.signatures = response.get("signatures")
+            self.active_signature = response.get("activeSignature", -1)
+            debug("got signatures, active is", len(self.signatures), self.active_signature)
+            if len(self.signatures) > 0 and self._config:
+                mdpopups.show_popup(self.view,
+                                    self._build_popup_content(),
+                                    css=self.__class__.css,
+                                    md=True,
+                                    flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+                                    location=point,
+                                    wrapper_class=self.__class__.wrapper_class,
+                                    max_width=800,
+                                    on_hide=self._on_hide)
+                self._visible = True
 
-                formatted.append(signature.get('documentation'))
+    def on_query_context(self, key, _, operand, __):
+        if key != "lsp.signature_help":
+            return False  # Let someone else handle this keybinding.
+        elif not self._visible:
+            return False  # Let someone else handle this keybinding.
+        elif self.active_signature not in range(0, len(self.signatures)):
+            return False  # Let someone else handle this keybinding.
+        else:
+            # We use the "operand" for the number -1 or +1. See the keybindings.
+            self.active_signature += operand
+            self.active_signature %= len(self.signatures)
+            mdpopups.update_popup(self.view,
+                                  self._build_popup_content(),
+                                  css=self.__class__.css,
+                                  md=True,
+                                  wrapper_class=self.__class__.wrapper_class)
+            return True  # We handled this keybinding.
 
-                mdpopups.show_popup(
-                    self.view,
-                    preserve_whitespace("\n".join(formatted)),
-                    css=".mdpopups .lsp_signature { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
-                    md=True,
-                    flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
-                    location=point,
-                    wrapper_class="lsp_signature",
-                    max_width=800)
+    def _on_hide(self):
+        self._visible = False
+
+    def _build_popup_content(self) -> str:
+        signature = self.signatures[self.active_signature]
+        debug("active signature", signature)
+        formatted = []
+        if len(self.signatures) > 1:
+            label = "```{}\n{}/{} {}\n```".format(self._config.languageId, str(self.active_signature + 1),
+                                                  str(len(self.signatures)), signature.get('label'))
+        else:
+            label = "```{}\n{}\n```".format(self._config.languageId, signature.get('label'))
+        formatted.append(label)
+        params = signature.get('parameters')
+        if params:
+            for parameter in params:
+                paramDocs = parameter.get('documentation', None)
+                if paramDocs:
+                    formatted.append("**{}**\n".format(parameter.get('label')))
+                    formatted.append("* *{}*\n".format(paramDocs))
+        sigDocs = signature.get('documentation', None)
+        if sigDocs:
+            formatted.append(sigDocs)
+        return preserve_whitespace("\n".join(formatted))
 
 
 def get_line_diagnostics(view, point):

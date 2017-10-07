@@ -17,3 +17,14 @@ def show_popup(
     nl2br=True,
     allow_code_wrap=False
 ): ...
+
+def update_popup(
+    view: sublime.View,
+    content: str,
+    md=True,
+    css=None,
+    wrapper_class=None,
+    template_vars=None,
+    nl2br=True,
+    allow_code_wrap=False
+): ...

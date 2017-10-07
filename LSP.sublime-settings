@@ -1,76 +1,179 @@
 {
-  "clients":
-  {
-      "pyls":
-      {
-        "command": ["pyls"],
-        "scopes": ["source.python"],
-        "syntaxes": ["Packages/Python/Python.sublime-syntax"],
-        "languageId": "python"
-      },
-      "jsts":
-      {
-        "command": ["javascript-typescript-stdio"],
-        "scopes": ["source.ts", "source.tsx", "source.js", "source.jsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage", "Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
-        "languageId": "typescript"
-      },
-      "rls":
-      {
-        "command": ["rustup", "run", "nightly", "rls"],
-        "scopes": ["source.rust"],
-        "syntaxes": ["Packages/Rust/Rust.sublime-syntax"],
-        "languageId": "rust"
-      },
-      "dotty":
-      {
-        "command": ["coursier", "launch", "ch.epfl.lamp:dotty-language-server_0.2:0.2.0-RC1", "-M", "dotty.tools.languageserver.Main", "--", "-stdio"],
-        "scopes": ["source.scala"],
-        "syntaxes": ["Packages/Scala/Scala.sublime-syntax"],
-        "languageId": "scala"
-      },
-      "clangd":
-      {
-        "command": ["clangd"],
-        "scopes": ["source.c", "source.c++", "source.objc", "source.objc++"],
-        "syntaxes": ["Packages/C++/C.sublime-syntax", "Packages/C++/C++.sublime-syntax", "Packages/Objective-C/Objective-C.sublime-syntax", "Packages/Objective-C/Objective-C++.sublime-syntax"],
-        "languageId": "c-family"
-      },
-      "reason":
-      {
-        "command": ["ocaml-language-server", "--stdio"],
-        "scopes": ["source.reason"],
-        "syntaxes": ["Packages/sublime-reason/Reason.tmLanguage"],
-        "languageId": "reason"
-      },
-      "ocaml":
-      {
-        "command": ["ocaml-language-server", "--stdio"],
-        "scopes": ["source.ocaml"],
-        "syntaxes": ["Packages/OCaml/OCaml.sublime-syntax"],
-        "languageId": "ocaml"
-      },
-      "golsp":
-      {
-        "command": ["go-langserver"],
-        "scopes": ["source.go"],
-        "syntaxes": ["Packages/Go/Go.sublime-syntax"],
-        "languageId": "go"
-      },
+  // User clients configuration can be used to
+  // - override single settings of "default_clients"
+  // - create add new user specified clients
+  //
+  // "clients":
+  // {
+  //   // Each new client must have the following structure.
+  //   "client_name":
+  //   {
+  //     # Must-have settings (for new clients):
+  //
+  //     // The command line required to run the server.
+  //     "command": ["pyls"],
+  //
+  //     // Use: "Show Scope Name" from Sublime's Developer menu
+  //     "scopes": ["source.python"],
+  //
+  //     // Run: view.settings().get("syntax") in console
+  //     "syntaxes": ["Packages/Python/Python.sublime-syntax"],
+  //
+  //     // See: https://github.com/Microsoft/language-server-protocol/issues/213
+  //     "languageId": "python",
+  //
+  //     # Optional settings (key-value pairs):
+  //
+  //     // Sent to server once using workspace/didConfigurationChange notification
+  //     "settings": { },
+  //
+  //     // Sent once to server in initialize request
+  //     "initializationOptions": { },
+  //
+  //     // Extra variables to override/add to language server's environment.
+  //     "env": { },
+  //   }
+  // }
+  "clients": {
+
   },
+
+  // Default clients configuration
+  // DO NOT MODIFY THIS SETTING!
+  // Use "clients" to override settings instead!
+  "default_clients":
+  {
+    "pyls":
+    {
+      "command": ["pyls"],
+      "scopes": ["source.python"],
+      "syntaxes": ["Packages/Python/Python.sublime-syntax"],
+      "languageId": "python"
+    },
+    "jsts":
+    {
+      "command": ["javascript-typescript-stdio"],
+      "scopes": ["source.ts", "source.tsx", "source.js", "source.jsx"],
+      "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage", "Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+      "languageId": "typescript"
+    },
+    "rls":
+    {
+      "command": ["rustup", "run", "nightly", "rls"],
+      "scopes": ["source.rust"],
+      "syntaxes": ["Packages/Rust/Rust.sublime-syntax"],
+      "languageId": "rust"
+    },
+    "dotty":
+    {
+      "command": ["coursier", "launch", "ch.epfl.lamp:dotty-language-server_0.2:0.2.0-RC1", "-M", "dotty.tools.languageserver.Main", "--", "-stdio"],
+      "scopes": ["source.scala"],
+      "syntaxes": ["Packages/Scala/Scala.sublime-syntax"],
+      "languageId": "scala"
+    },
+    "clangd":
+    {
+      "command": ["clangd"],
+      "scopes": ["source.c", "source.c++", "source.objc", "source.objc++"],
+      "syntaxes": ["Packages/C++/C.sublime-syntax", "Packages/C++/C++.sublime-syntax", "Packages/Objective-C/Objective-C.sublime-syntax", "Packages/Objective-C/Objective-C++.sublime-syntax"],
+      "languageId": "c-family"
+    },
+    "reason":
+    {
+      "command": ["ocaml-language-server", "--stdio"],
+      "scopes": ["source.reason"],
+      "syntaxes": ["Packages/sublime-reason/Reason.tmLanguage"],
+      "languageId": "reason"
+    },
+    "phpls":
+    {
+        "command": ["php", "~/vendor/felixfbecker/language-server/bin/php-language-server.php"],
+        "scopes": ["source.php", "embedding.php"],
+        "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
+        "languageId": "php"
+    },
+    "eslint":
+    {
+      "command": ["node", "/Users/tomv/Projects/tomv564/vscode-eslint/eslint-server/src/server"],
+      "scopes": ["source.js"],
+      "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+      "languageId": "javascript",
+      "initializationOptions": {
+        "nodePath": "/usr/local/bin/node"
+      }
+    },
+    "ocaml":
+    {
+      "command": ["ocaml-language-server", "--stdio"],
+      "scopes": ["source.ocaml"],
+      "syntaxes": ["Packages/OCaml/OCaml.sublime-syntax"],
+      "languageId": "ocaml"
+    },
+    "golsp":
+    {
+      "command": ["go-langserver"],
+      "scopes": ["source.go"],
+      "syntaxes": ["Packages/Go/Go.sublime-syntax"],
+      "languageId": "go"
+    },
+    "jdtls":
+    {
+      "command": ["java", "-jar", "PATH_TO_JDT_SERVER/plugins/org.eclipse.equinox.launcher_1.4.0.v20161219-1356.jar", "-configuration", "PATH_TO_CONFIG_DIR"],
+      "scopes": ["source.java"],
+      "syntaxes": ["Packages/Java/Java.sublime-syntax"],
+      "languageId": "java"
+    },
+  },
+
+  // Show activity messages in the status bar for a few seconds.
+  // Example: Starting pyls ...
   "show_status_messages": true,
+
+  // Show permanent language server status in the status bar.
   "show_view_status": true,
+
+  // Open and close the diagnostics panel automatically,
+  // depending on available diagnostics.
   "auto_show_diagnostics_panel": true,
+
+  // Show in-line diagnostics using phantoms for unchanged files.
   "show_diagnostics_phantoms": false,
+
+  // Show the diagnostics description of the code
+  // under the cursor in status bar if available.
   "show_diagnostics_in_view_status": true,
-  // highlight style of code diagnostics: "underline" or "box"
+
+  // Highlighting style of code diagnostics.
+  // Valid values are "underline" or "box"
   "diagnostics_highlight_style": "underline",
-  // gutter marker for code diagnostics: "dot", "circle", "bookmark", "cross" or ""
+
+  // Gutter marker for code diagnostics.
+  // Valid values are "bookmark", "circle", "cross", "dot" or ""
   "diagnostics_gutter_marker": "dot",
+
+  // Request completions for all characters if set to true,
+  // or just after trigger characters only otherwise.
   "complete_all_chars": true,
+
+  // Controls which hints the completion panel displays
+  // "auto": completion details if available or kind otherwise
+  // "detail": completion details if available
+  // "kind": completion kind if available
+  // "none": completion item label only
+  "completion_hint_type": "auto",
+
+  // Disable Sublime Text's explicit and word completion.
   "only_show_lsp_completions": false,
+
+  // Resolve completions and apply snippet if received.
   "resolve_completion_for_snippets": false,
+
+  // Show verbose debug messages in the sublime console.
   "log_debug": false,
+
+  // Show notifications from language servers in the console.
   "log_server": true,
+
+  // Show language server stderr output in the console.
   "log_stderr": false
 }

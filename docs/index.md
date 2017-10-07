@@ -11,6 +11,7 @@
 
 * `complete_all_chars` `true` *request completions for all characters, not just trigger characters*
 * `only_show_lsp_completions` `false` *disable sublime word completion and snippets from autocomplete lists*
+* `completion_hint_type` `"auto"` *override automatic completion hints with "detail", "kind" or "none"*
 * `resolve_completion_for_snippets` `false` *resolve completions and apply snippet if received*
 * `show_status_messages` `true` *show messages in the status bar for a few seconds*
 * `show_view_status` `true` *show permanent language server status in the status bar*
@@ -27,7 +28,7 @@
 
 For any of these components it is important that Sublime Text can find the language server executable through the path, especially when using virtual environments.
 
-For autocomplete to trigger on eg. `.` or `->`, you may need to add the listed `autocomplete_triggers` to your User or Syntax-specific settings.
+For autocomplete to trigger on eg. `.` or `->`, you may need to add the listed `auto_complete_triggers` to your User or Syntax-specific settings.
 
 The default LSP.sublime-settings contains some default LSP client configuration that may not work for you. See [Client Config](#client-config) for explanations for the available settings.
 
@@ -40,6 +41,8 @@ See: [github:sourcegraph/javascript-typescript-langserver](https://github.com/so
 On windows you will need to override client config to launch `javascript-typescript-stdio.cmd` instead.
 
 See: [github](https://github.com/sourcegraph/javascript-typescript-langserver)
+
+Autocomplete triggers: in User or Syntax-specific settings, add:
 
 ```
 "auto_complete_triggers": [
@@ -76,7 +79,7 @@ Client configuration:
 
 See: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
 
-Autocomplete triggers:
+Autocomplete triggers: in User or Syntax-specific settings, add:
 
 ```
 "auto_complete_triggers": [ {"selector": "source.python", "characters": "."} ],
@@ -126,7 +129,7 @@ Requires Rust Nightly.
 
 See [github:rust-lang-nursery/rls](https://github.com/rust-lang-nursery/rls) for up-to-date installation instructions.
 
-Autocomplete triggers:
+Autocomplete triggers: in User or Syntax-specific settings, add:
 
 ```
 "auto_complete_triggers": [ {"selector": "source.rust", "characters": ".:"} ]
@@ -149,6 +152,8 @@ Then the LSP plugin should launch as configured in LSP.sublime-settings using co
 ### C/C++ (Clangd)<a name="clang"></a>
 
 You will need to build from source, see [instructions](https://clang.llvm.org/extra/clangd.html)
+
+Autocomplete triggers: in User or Syntax-specific settings, add:
 
 ```
 "auto_complete_triggers": [ {"selector": "source.c++", "characters": ".>:" }]
@@ -240,8 +245,8 @@ Any fields in a client configuration can be overridden by adding an LSP settings
 **Plugin commands**
 
 * Restart Servers: kills all language servers belonging to the active window
-  * This command only works when in a supported document.
-  * It may change in the future to be always available, or only kill the relevant language server.
+    * This command only works when in a supported document.
+    * It may change in the future to be always available, or only kill the relevant language server.
 * LSP Settings: Opens package settings.
 
 **Document actions**
@@ -249,16 +254,35 @@ Any fields in a client configuration can be overridden by adding an LSP settings
 * Show Code Actions: `super+.`
 * Symbol References: `shift+f12`
 * Rename Symbol: UNBOUND
-  * Recommendation: Override `F2` (next bookmark)
+    * Recommendation: Override `F2` (next bookmark)
 * Go to definition: UNBOUND
-  * Recommendation: Override `f12` (built-in goto definition),
-  * LSP falls back to ST3's built-in goto definition command in case LSP fails.
+    * Recommendation: Override `f12` (built-in goto definition),
+    * LSP falls back to ST3's built-in goto definition command in case LSP fails.
 * Format Document: UNBOUND
 * Document Symbols: UNBOUND
 
 **Workspace actions**
 
 Show Diagnostics Panel: `super+shift+M` / `ctr+alt+M`
+
+**Overriding keybindings**
+
+Sublime's keybindings can be edited from the `Preferences: Key Bindings` command.
+The following example overrides `f12` to use LSP's go to definition when in javascript/typescript:
+
+```
+{
+	"keys": ["f12"],
+	"command": "lsp_symbol_definition",
+	"context": [
+		{
+			"key": "selector",
+			"operator": "equal",
+			"operand": "source.ts, source.js"
+		}
+	]
+}
+```
 
 **Mouse map configuration**
 
@@ -267,17 +291,23 @@ https://stackoverflow.com/questions/16235706/sublime-3-set-key-map-for-function-
 
 # Troubleshooting
 
-**LSP cannot find my language server through PATH on OS-X**
-
-This issue can be solved in two ways:
-
-* Install the [SublimeFixMacPath](https://github.com/int3h/SublimeFixMacPath) package
-* Or always launch sublime from the command line (so it inherits your shell's environment)
+First step should be to set the `log_debug` setting to `true`, restart sublime and examine the output in the Sublime console.
+`log_stderr` can also be set to `true` to see the language server's own logging.
 
 **LSP doesn't try to start my language server**
+
+* Make sure you have a folder added in your Sublime workspace.
+* Make sure the document you are opening lives under that folder.
 
 Your client configuration requires two settings to match the document your are editing:
 
 * Scope (eg. `source.php`): Verify this is correct by running "Show Scope Name" from the developer menu.
 * Syntax (eg. `Packages\PHP\PHP.sublime-syntax`): Verify by running `sublime.active_window().active_view().settings().get("syntax")` in the console.
 
+**LSP cannot find my language server through PATH on OS-X**
+
+This issue can be solved in a few ways:
+
+* Install the [SublimeFixMacPath](https://github.com/int3h/SublimeFixMacPath) package
+* Or always launch sublime from the command line (so it inherits your shell's environment)
+* Use `launchctl setenv` to set PATH for OS-X UI applications.

@@ -2233,7 +2233,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         if insert_text[0] == '$':  # sublime needs leading '$' escaped.
             insert_text = '\$' + insert_text[1:]
         # only return label with a hint if available
-        return " \t ".join((label, hint)) if hint else label, insert_text
+        return "\t  ".join((label, hint)) if hint else label, insert_text
 
     def handle_response(self, response):
         global resolvable_completion_items

@@ -1,3 +1,5 @@
+=> 0.2.0
+
 Fixes many autocompletion issues and diagnostics display issues, disables phantoms by default.
 
 See https://github.com/tomv564/LSP/releases/tag/0.2.0 for full update details.

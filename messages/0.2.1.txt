@@ -1,3 +1,5 @@
+=> 0.2.1
+
 Now tested with Julia, Ocaml/Reason, and Go.
 Many new settings to tweak, and per-project client configuration.
 Autocomplete no longer hides built-in completions, and passes all completion requests to the language server.

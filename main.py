@@ -1983,6 +1983,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             # Flow returns None sometimes
             # See: https://github.com/flowtype/flow-language-server/issues/51
             contents = response.get('contents') or contents
+            print(contents)
         self.show_hover(point, contents)
 
     def show_diagnostics_hover(self, point, diagnostics):
@@ -2022,14 +2023,35 @@ class HoverHandler(sublime_plugin.ViewEventListener):
                 value = item.get("value")
                 language = item.get("language")
             if language:
-                formatted.append("```{}\n{}\n```".format(language, value))
+                formatted.append("```{}\n{}\n```\n".format(language, value))
             else:
-                formatted.append(value)
+                formatted.append("<div class='text'>{}</div>".format(value))
+        # print(formatted)
 
         mdpopups.show_popup(
             self.view,
             preserve_whitespace("\n".join(formatted)),
-            css=".mdpopups .lsp_hover { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
+            css='''
+                .mdpopups .lsp_hover {
+                    margin: 0.25rem;
+                }
+                .mdpopups .lsp_hover div.highlight,
+                .mdpopups .lsp_hover pre.highlight {
+                    margin: 0;
+                }
+                .mdpopups .lsp_hover .text,
+                .mdpopups .lsp_hover p {
+                    margin: 0;
+                    padding: 0;
+                }
+                .mdpopups .lsp_hover p .text {
+                    position: relative;
+                    top: -0.5rem;
+                    margin: 0 .5rem;
+                    padding: 1px;
+                    font-family: sans-serif;
+                }
+            ''',
             md=True,
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
             location=point,
@@ -2040,6 +2062,8 @@ class HoverHandler(sublime_plugin.ViewEventListener):
 def preserve_whitespace(contents: str) -> str:
     """Preserve empty lines and whitespace for markdown conversion."""
     contents = contents.strip(' \t\r\n')
+    contents = contents.replace('\r\n', '\n')
+    contents = contents.replace('\n<div', '<div')
     contents = contents.replace('\t', '&nbsp;' * 4)
     contents = contents.replace('  ', '&nbsp;' * 2)
     contents = contents.replace('\n\n', '\n&nbsp;\n')

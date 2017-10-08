@@ -179,6 +179,10 @@ class Request:
         return Request("textDocument/formatting", params)
 
     @classmethod
+    def rangeFormatting(cls, params: dict):
+        return Request("textDocument/rangeFormatting", params)
+
+    @classmethod
     def documentSymbols(cls, params: dict):
         return Request("textDocument/documentSymbol", params)
 
@@ -1398,7 +1402,7 @@ class LspFormatDocumentCommand(sublime_plugin.TextCommand):
                     "uri": filename_to_uri(self.view.file_name())
                 },
                 "options": {
-                    "tabSize": 4,
+                    "tabSize": 4,  # TODO: Fetch these from the project settings / global settings
                     "insertSpaces": True
                 }
             }
@@ -1409,6 +1413,43 @@ class LspFormatDocumentCommand(sublime_plugin.TextCommand):
     def handle_response(self, response, pos):
         self.view.run_command('lsp_apply_document_edit',
                               {'changes': response})
+
+
+class LspFormatDocumentRangeCommand(sublime_plugin.TextCommand):
+    def is_enabled(self):
+        if is_supported_view(self.view):
+            client = client_for_view(self.view)
+            if client and client.has_capability('documentRangeFormattingProvider'):
+                for region in self.view.sel():
+                    # Let's check if there is at least one non-trivial region.
+                    if region.begin() != region.end():
+                        return True
+                return False
+        return False
+
+    def run(self, _):
+        self.client = client_for_view(self.view)
+        # Ask for range formatting for each selected region.
+        for region in sorted(self.view.sel(), key=lambda reg: -reg.begin()):
+            self._send_request(region)
+
+    def _send_request(self, region: sublime.Region) -> None:
+        debug("sending format range request for", region)
+        params = {
+            "textDocument": {
+                "uri": filename_to_uri(self.view.file_name())
+            },
+            "range": Range.from_region(self.view, region).to_lsp(),
+            "options": {
+                "tabSize": 4,  # TODO: Fetch these from the project settings / global settings
+                "insertSpaces": True
+            }
+        }
+        if not self.client:
+            return
+        self.client.send_request(Request.rangeFormatting(params),
+                                 lambda response: self.view.run_command('lsp_apply_document_edit',
+                                                                        {'changes': response}))
 
 
 class LspSymbolDefinitionCommand(sublime_plugin.TextCommand):

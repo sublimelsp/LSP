@@ -1983,7 +1983,6 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             # Flow returns None sometimes
             # See: https://github.com/flowtype/flow-language-server/issues/51
             contents = response.get('contents') or contents
-            print(contents)
         self.show_hover(point, contents)
 
     def show_diagnostics_hover(self, point, diagnostics):
@@ -2026,7 +2025,6 @@ class HoverHandler(sublime_plugin.ViewEventListener):
                 formatted.append("```{}\n{}\n```\n".format(language, value))
             else:
                 formatted.append("<div class='text'>{}</div>".format(value))
-        # print(formatted)
 
         mdpopups.show_popup(
             self.view,

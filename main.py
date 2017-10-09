@@ -2271,7 +2271,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         self.view = view
         self.signature_help_triggers = None
         self._visible = False
-        self._config = None  # type: ClientConfig
+        self._language_id = ""
 
     @classmethod
     def is_applicable(cls, settings):
@@ -2296,7 +2296,9 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         # TODO: this will fire too often, narrow down using scopes or regex
         if self.signature_help_triggers is None:
             self.initialize_triggers()
-
+        config = config_for_scope(self.view)
+        if config:
+            self._language_id = config.languageId
         if self.signature_help_triggers:
             if last_char in self.signature_help_triggers:
                 client = client_for_view(self.view)
@@ -2314,11 +2316,10 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
     def handle_response(self, response, point):
         if response is not None:
-            self._config = config_for_scope(self.view)
-            self.signatures = response.get("signatures")
-            self.active_signature = response.get("activeSignature", -1)
-            debug("got signatures, active is", len(self.signatures), self.active_signature)
-            if len(self.signatures) > 0 and self._config:
+            self._signatures = response.get("signatures", [])
+            self._active_signature = response.get("activeSignature", -1)
+            debug("got signatures, active is", len(self._signatures), self._active_signature)
+            if len(self._signatures) > 0:
                 mdpopups.show_popup(self.view,
                                     self._build_popup_content(),
                                     css=self.__class__.css,
@@ -2335,12 +2336,12 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             return False  # Let someone else handle this keybinding.
         elif not self._visible:
             return False  # Let someone else handle this keybinding.
-        elif self.active_signature not in range(0, len(self.signatures)):
+        elif self._active_signature not in range(0, len(self._signatures)):
             return False  # Let someone else handle this keybinding.
         else:
             # We use the "operand" for the number -1 or +1. See the keybindings.
-            self.active_signature += operand
-            self.active_signature %= len(self.signatures)
+            self._active_signature += operand
+            self._active_signature %= len(self._signatures)
             mdpopups.update_popup(self.view,
                                   self._build_popup_content(),
                                   css=self.__class__.css,
@@ -2352,14 +2353,14 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         self._visible = False
 
     def _build_popup_content(self) -> str:
-        signature = self.signatures[self.active_signature]
+        signature = self._signatures[self._active_signature]
         debug("active signature", signature)
         formatted = []
-        if len(self.signatures) > 1:
-            label = "```{}\n{}/{} {}\n```".format(self._config.languageId, str(self.active_signature + 1),
-                                                  str(len(self.signatures)), signature.get('label'))
+        if len(self._signatures) > 1:
+            label = "```{}\n{}/{} {}\n```".format(self._language_id, str(self._active_signature + 1),
+                                                  str(len(self._signatures)), signature.get('label'))
         else:
-            label = "```{}\n{}\n```".format(self._config.languageId, signature.get('label'))
+            label = "```{}\n{}\n```".format(self._language_id, signature.get('label'))
         formatted.append(label)
         params = signature.get('parameters')
         if params:

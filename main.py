@@ -2357,8 +2357,9 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         debug("active signature", signature)
         formatted = []
         if len(self._signatures) > 1:
-            label = "```{}\n{}/{} {}\n```".format(self._language_id, str(self._active_signature + 1),
-                                                  str(len(self._signatures)), signature.get('label'))
+            label = "**{}** of **{}** overloads (use the arrow keys to navigate):\n```{}\n{}\n```\n".format(
+                str(self._active_signature + 1), str(len(self._signatures)),
+                self._language_id, signature.get('label'))
         else:
             label = "```{}\n{}\n```".format(self._language_id, signature.get('label'))
         formatted.append(label)

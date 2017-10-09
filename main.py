@@ -2024,7 +2024,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             if language:
                 formatted.append("```{}\n{}\n```\n".format(language, value))
             else:
-                formatted.append("<div class='description'>{}</div>".format(value))
+                formatted.append("<p class='description'>{}</p>".format(value))
 
         mdpopups.show_popup(
             self.view,

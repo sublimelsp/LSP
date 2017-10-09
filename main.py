@@ -2024,29 +2024,17 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             if language:
                 formatted.append("```{}\n{}\n```\n".format(language, value))
             else:
-                formatted.append("<div class='text'>{}</div>".format(value))
+                formatted.append("<div class='description'>{}</div>".format(value))
 
         mdpopups.show_popup(
             self.view,
-            preserve_whitespace("\n".join(formatted)),
+            preserve_whitespace("".join(formatted)),
             css='''
-                .mdpopups .lsp_hover {
-                    margin: 0.25rem;
+                .mdpopups .lsp_hover .highlight {
+                   border-width: 0;
                 }
-                .mdpopups .lsp_hover div.highlight,
-                .mdpopups .lsp_hover pre.highlight {
-                    margin: 0;
-                }
-                .mdpopups .lsp_hover .text,
-                .mdpopups .lsp_hover p {
-                    margin: 0;
-                    padding: 0;
-                }
-                .mdpopups .lsp_hover p .text {
-                    position: relative;
-                    top: -0.5rem;
-                    margin: 0 .5rem;
-                    padding: 1px;
+                .mdpopups .lsp_hover .description {
+                    margin: 0 0.5rem;
                     font-family: sans-serif;
                 }
             ''',
@@ -2061,7 +2049,6 @@ def preserve_whitespace(contents: str) -> str:
     """Preserve empty lines and whitespace for markdown conversion."""
     contents = contents.strip(' \t\r\n')
     contents = contents.replace('\r\n', '\n')
-    contents = contents.replace('\n<div', '<div')
     contents = contents.replace('\t', '&nbsp;' * 4)
     contents = contents.replace('  ', '&nbsp;' * 2)
     contents = contents.replace('\n\n', '\n&nbsp;\n')

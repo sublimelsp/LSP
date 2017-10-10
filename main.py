@@ -2324,7 +2324,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             self._active_signature = response.get("activeSignature", -1)
 
             if self._signatures:
-                if not 0 <= self._active_signature <= len(self._signatures) - 1:
+                if not 0 <= self._active_signature < len(self._signatures):
                     debug("activeSignature {} not a valid index for signatures length {}".format(
                         self._active_signature, len(self._signatures)))
                     self._active_signature = 0

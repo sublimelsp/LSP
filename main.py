@@ -2375,15 +2375,16 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
     def _build_popup_content(self) -> str:
         signature = self._signatures[self._active_signature]
-        debug("active signature", signature)
         formatted = []
+
         if len(self._signatures) > 1:
-            label = "**{}** of **{}** overloads (use the arrow keys to navigate):\n```{}\n{}\n```\n".format(
-                str(self._active_signature + 1), str(len(self._signatures)),
-                self._language_id, signature.get('label'))
-        else:
-            label = "```{}\n{}\n```".format(self._language_id, signature.get('label'))
+            signature_navigation = "**{}** of **{}** overloads (use the arrow keys to navigate):\n".format(
+                str(self._active_signature + 1), str(len(self._signatures)))
+            formatted.append(signature_navigation)
+
+        label = "```{}\n{}\n```".format(self._language_id, signature.get('label'))
         formatted.append(label)
+
         params = signature.get('parameters')
         if params:
             for parameter in params:

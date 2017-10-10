@@ -2023,36 +2023,23 @@ class HoverHandler(sublime_plugin.ViewEventListener):
                 language = item.get("language")
 
             if language:
-                formatted.append(
-                    mdpopups.md2html(
-                        sublime.active_window().active_view(),
-                        "```{}\n{}\n```\n".format(language, value)
-                    )
-                )
+                formatted.append("```{}\n{}\n```\n".format(language, value))
             else:
-                formatted.append(
-                    mdpopups.md2html(
-                        sublime.active_window().active_view(),
-                        "<div class='description' markdown='1'>{}</div>".format(preserve_whitespace(value))
-                    )
-                )
+                formatted.append(preserve_whitespace(value))
 
         mdpopups.show_popup(
             self.view,
-            "".join(formatted),
+            "\n".join(formatted),
             css='''
-                .lsp_hover .highlight {
-                    border-width: 0;
+                .lsp_hover {
+                    margin: 0.5rem 0.5rem 0 0.5rem;
                 }
-                .lsp_hover div.highlight,
-                .lsp_hover pre.highlight {
-                    margin-bottom: 0;
-                }
-                .lsp_hover .description {
-                    padding: 0.5rem 0.5rem 0 0.5rem;
+                .lsp_hover p {
+                    margin-bottom: 0.5rem;
+                    padding: 0 0.5rem;
                 }
             ''',
-            md=False,
+            md=True,
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
             location=point,
             wrapper_class="lsp_hover",
@@ -2065,7 +2052,6 @@ def preserve_whitespace(contents: str) -> str:
     contents = contents.replace('\r\n', '\n')
     contents = contents.replace('\t', '\u00A0' * 4)
     contents = contents.replace('  ', '\u00A0' * 2)
-    contents = contents.replace('\n\n', '\n\u00A0\n')
     return contents
 
 

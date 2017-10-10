@@ -2269,16 +2269,19 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
     def __init__(self, view):
         self.view = view
-        self.signature_help_triggers = None
+        self._initialized = False
+        self._signature_help_triggers = []  # type: List[str]
         self._visible = False
         self._language_id = ""
+        self._signatures = []  # type: List[Any]
+        self._active_signature = -1
 
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
         return syntax and is_supported_syntax(syntax)
 
-    def initialize_triggers(self):
+    def initialize(self):
         client = client_for_view(self.view)
         if client:
             signatureHelpProvider = client.get_capability(
@@ -2286,19 +2289,20 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             if signatureHelpProvider:
                 self.signature_help_triggers = signatureHelpProvider.get(
                     'triggerCharacters')
-                return
 
-        self.signature_help_triggers = []
+        config = config_for_scope(self.view)
+        if config:
+            self._language_id = config.languageId
+
+        self._initialized = True
 
     def on_modified_async(self):
         pos = self.view.sel()[0].begin()
         last_char = self.view.substr(pos - 1)
         # TODO: this will fire too often, narrow down using scopes or regex
-        if self.signature_help_triggers is None:
-            self.initialize_triggers()
-        config = config_for_scope(self.view)
-        if config:
-            self._language_id = config.languageId
+        if not self._initialized:
+            self.initialize()
+
         if self.signature_help_triggers:
             if last_char in self.signature_help_triggers:
                 client = client_for_view(self.view)

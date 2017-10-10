@@ -2322,7 +2322,17 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         if response is not None:
             self._signatures = response.get("signatures", [])
             self._active_signature = response.get("activeSignature", -1)
-            debug("got signatures, active is", len(self._signatures), self._active_signature)
+
+            if self._signatures:
+                if not 0 <= self._active_signature <= len(self._signatures) - 1:
+                    debug("activeSignature {} not a valid index for signatures length {}".format(
+                        self._active_signature, len(self._signatures)))
+                    self._active_signature = 0
+            else:
+                if self._active_signature != -1:
+                    debug("activeSignature should be -1 or null when no signatures are returned")
+                    self._active_signature = -1
+
             if len(self._signatures) > 0:
                 mdpopups.show_popup(self.view,
                                     self._build_popup_content(),

@@ -2350,17 +2350,24 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             return False  # Let someone else handle this keybinding.
         elif not self._visible:
             return False  # Let someone else handle this keybinding.
-        elif self._active_signature not in range(0, len(self._signatures)):
+        elif len(self._signatures) < 2:
             return False  # Let someone else handle this keybinding.
         else:
             # We use the "operand" for the number -1 or +1. See the keybindings.
-            self._active_signature += operand
-            self._active_signature %= len(self._signatures)
-            mdpopups.update_popup(self.view,
-                                  self._build_popup_content(),
-                                  css=self.__class__.css,
-                                  md=True,
-                                  wrapper_class=self.__class__.wrapper_class)
+            new_index = self._active_signature + operand
+
+            # clamp signature index
+            new_index = max(0, min(new_index, len(self._signatures) - 1))
+
+            # only update when changed
+            if new_index != self._active_signature:
+                self._active_signature = new_index
+                mdpopups.update_popup(self.view,
+                                      self._build_popup_content(),
+                                      css=self.__class__.css,
+                                      md=True,
+                                      wrapper_class=self.__class__.wrapper_class)
+
             return True  # We handled this keybinding.
 
     def _on_hide(self):

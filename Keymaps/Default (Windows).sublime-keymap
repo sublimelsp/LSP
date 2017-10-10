@@ -1,7 +1,7 @@
 [
     {
-    	"keys": ["ctrl+."],
-    	"command": "lsp_code_actions"
+        "keys": ["ctrl+."],
+        "command": "lsp_code_actions"
     },
     {
         "keys": ["ctrl+alt+m"],
@@ -10,5 +10,21 @@
     {
         "keys": ["shift+f12"],
         "command": "lsp_symbol_references"
+    },
+    {
+        "keys": ["down"],
+        "command": "noop",
+        "context":
+        [
+            { "key": "lsp.signature_help", "operator": "equal", "operand": 1 }
+        ]
+    },
+    {
+        "keys": ["up"],
+        "command": "noop",
+        "context":
+        [
+            { "key": "lsp.signature_help", "operator": "equal", "operand": -1 }
+        ]
     }
 ]

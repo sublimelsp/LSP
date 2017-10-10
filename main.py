@@ -1420,36 +1420,29 @@ class LspFormatDocumentRangeCommand(sublime_plugin.TextCommand):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
             if client and client.has_capability('documentRangeFormattingProvider'):
-                for region in self.view.sel():
-                    # Let's check if there is at least one non-trivial region.
+                if len(self.view.sel()) == 1:
+                    region = self.view.sel()[0]
                     if region.begin() != region.end():
                         return True
-                return False
         return False
 
     def run(self, _):
-        self.client = client_for_view(self.view)
-        # Ask for range formatting for each selected region.
-        for region in sorted(self.view.sel(), key=lambda reg: -reg.begin()):
-            self._send_request(region)
-
-    def _send_request(self, region: sublime.Region) -> None:
-        debug("sending format range request for", region)
-        params = {
-            "textDocument": {
-                "uri": filename_to_uri(self.view.file_name())
-            },
-            "range": Range.from_region(self.view, region).to_lsp(),
-            "options": {
-                "tabSize": 4,  # TODO: Fetch these from the project settings / global settings
-                "insertSpaces": True
+        client = client_for_view(self.view)
+        if client:
+            region = self.view.sel()[0]
+            params = {
+                "textDocument": {
+                    "uri": filename_to_uri(self.view.file_name())
+                },
+                "range": Range.from_region(self.view, region).to_lsp(),
+                "options": {
+                    "tabSize": 4,  # TODO: Fetch these from the project settings / global settings
+                    "insertSpaces": True
+                }
             }
-        }
-        if not self.client:
-            return
-        self.client.send_request(Request.rangeFormatting(params),
-                                 lambda response: self.view.run_command('lsp_apply_document_edit',
-                                                                        {'changes': response}))
+            client.send_request(Request.rangeFormatting(params),
+                                lambda response: self.view.run_command('lsp_apply_document_edit',
+                                                                       {'changes': response}))
 
 
 class LspSymbolDefinitionCommand(sublime_plugin.TextCommand):

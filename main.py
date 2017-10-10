@@ -2021,24 +2021,38 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             else:
                 value = item.get("value")
                 language = item.get("language")
+
             if language:
-                formatted.append("```{}\n{}\n```\n".format(language, value))
+                formatted.append(
+                    mdpopups.md2html(
+                        sublime.active_window().active_view(),
+                        "```{}\n{}\n```\n".format(language, value)
+                    )
+                )
             else:
-                formatted.append("<p class='description'>{}</p>".format(value))
+                formatted.append(
+                    mdpopups.md2html(
+                        sublime.active_window().active_view(),
+                        "<div class='description' markdown='1'>{}</div>".format(preserve_whitespace(value))
+                    )
+                )
 
         mdpopups.show_popup(
             self.view,
-            preserve_whitespace("".join(formatted)),
+            "".join(formatted),
             css='''
-                .mdpopups .lsp_hover .highlight {
-                   border-width: 0;
+                .lsp_hover .highlight {
+                    border-width: 0;
                 }
-                .mdpopups .lsp_hover .description {
-                    margin: 0 0.5rem;
-                    font-family: sans-serif;
+                .lsp_hover div.highlight,
+                .lsp_hover pre.highlight {
+                    margin-bottom: 0;
+                }
+                .lsp_hover .description {
+                    padding: 0.5rem 0.5rem 0 0.5rem;
                 }
             ''',
-            md=True,
+            md=False,
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
             location=point,
             wrapper_class="lsp_hover",

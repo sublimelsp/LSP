@@ -30,11 +30,12 @@ from .clients import (
     unload_window_clients, unload_all_clients
 )
 from .events import Events
-from .documents import purge_did_change, get_document_position, initialize_document_sync, notify_did_open
+from .documents import (
+    purge_did_change, get_document_position, initialize_document_sync, notify_did_open, get_position, is_at_word
+)
 from .diagnostics import handle_diagnostics, remove_diagnostics, get_line_diagnostics
 from .panels import create_output_panel
 
-SUBLIME_WORD_MASK = 515
 
 symbol_kind_names = {
     SymbolKind.File: "file",
@@ -157,42 +158,6 @@ def preserve_whitespace(contents: str) -> str:
     return contents
 
 
-class LspSymbolRenameCommand(sublime_plugin.TextCommand):
-    def is_enabled(self, event=None):
-        # TODO: check what kind of scope we're in.
-        if is_supported_view(self.view):
-            client = client_for_view(self.view)
-            if client and client.has_capability('renameProvider'):
-                return is_at_word(self.view, event)
-        return False
-
-    def run(self, edit, event=None):
-        pos = get_position(self.view, event)
-        params = get_document_position(self.view, pos)
-        current_name = self.view.substr(self.view.word(pos))
-        if not current_name:
-            current_name = ""
-        self.view.window().show_input_panel(
-            "New name:", current_name, lambda text: self.request_rename(params, text),
-            None, None)
-
-    def request_rename(self, params, new_name):
-        client = client_for_view(self.view)
-        if client:
-            params["newName"] = new_name
-            client.send_request(Request.rename(params), self.handle_response)
-
-    def handle_response(self, response):
-        if 'changes' in response:
-            changes = response.get('changes')
-            if len(changes) > 0:
-                self.view.window().run_command('lsp_apply_workspace_edit',
-                                               {'changes': response})
-
-    def want_event(self):
-        return True
-
-
 class LspSymbolDefinitionCommand(sublime_plugin.TextCommand):
     def is_enabled(self, event=None):
         # TODO: check what kind of scope we're in.
@@ -275,22 +240,6 @@ class LspDocumentSymbolsCommand(sublime_plugin.TextCommand):
         self.view.show_at_center(region)
         self.view.sel().clear()
         self.view.sel().add(region)
-
-
-def get_position(view: sublime.View, event=None) -> int:
-    if event:
-        return view.window_to_text((event["x"], event["y"]))
-    else:
-        return view.sel()[0].begin()
-
-
-def is_at_word(view: sublime.View, event) -> bool:
-    pos = get_position(view, event)
-    point_classification = view.classify(pos)
-    if point_classification & SUBLIME_WORD_MASK:
-        return True
-    else:
-        return False
 
 
 def ensure_references_panel(window: sublime.Window):

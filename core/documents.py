@@ -16,6 +16,8 @@ from .configurations import config_for_scope
 from .clients import client_for_view, window_clients
 from .events import Events
 
+SUBLIME_WORD_MASK = 515
+
 
 def get_document_position(view: sublime.View, point) -> 'Optional[OrderedDict]':
     file_name = view.file_name()
@@ -28,6 +30,22 @@ def get_document_position(view: sublime.View, point) -> 'Optional[OrderedDict]':
         return d
     else:
         return None
+
+
+def get_position(view: sublime.View, event=None) -> int:
+    if event:
+        return view.window_to_text((event["x"], event["y"]))
+    else:
+        return view.sel()[0].begin()
+
+
+def is_at_word(view: sublime.View, event) -> bool:
+    pos = get_position(view, event)
+    point_classification = view.classify(pos)
+    if point_classification & SUBLIME_WORD_MASK:
+        return True
+    else:
+        return False
 
 
 # TODO: this should be per-window ?

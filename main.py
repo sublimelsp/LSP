@@ -50,6 +50,21 @@ global_client_configs = []  # type: List[ClientConfig]
 
 window_client_configs = dict()  # type: Dict[int, List[ClientConfig]]
 
+popup_css = '''
+    .lsp_popup {
+        margin: 0.5rem 0.5rem 0 0.5rem;
+    }
+    .lsp_popup .highlight {
+        border-width: 0;
+        border-radius: 0;
+    }
+    .lsp_popup p {
+        margin-bottom: 0.5rem;
+        padding: 0 0.5rem;
+        font-family: system;
+    }
+'''
+
 
 class DiagnosticSeverity(object):
     Error = 1
@@ -1050,9 +1065,6 @@ unsupported_syntax_template = """
 Visit [langserver.org](https://langserver.org) to find out if a language server exists for this language."""
 
 
-setup_css = ".mdpopups .lsp_documentation { margin: 20px; font-family: sans-serif; font-size: 1.2rem; line-height: 2}"
-
-
 class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
     def run(self):
         view = self.window.active_view()
@@ -1071,7 +1083,16 @@ class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
         mdpopups.show_popup(
             view,
             "\n".join([title, content]),
-            css=setup_css,
+            css='''
+                .lsp_documentation {
+                    margin: 1rem 1rem 0.5rem 1rem;
+                    font-family: system;
+                }
+                .lsp_documentation h1,
+                .lsp_documentation p {
+                    margin: 0 0 0.5rem 0;
+                }
+            ''',
             md=True,
             wrapper_class="lsp_documentation",
             max_width=800,
@@ -2025,11 +2046,11 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         mdpopups.show_popup(
             self.view,
             "\n".join(formatted),
-            css=".mdpopups .lsp_hover { margin: 4px; }",
+            css=popup_css,
             md=True,
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
             location=point,
-            wrapper_class="lsp_hover",
+            wrapper_class="lsp_popup",
             max_width=800,
             on_navigate=lambda href: self.on_diagnostics_navigate(href, point, diagnostics))
 
@@ -2055,28 +2076,29 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             else:
                 value = item.get("value")
                 language = item.get("language")
+
             if language:
-                formatted.append("```{}\n{}\n```".format(language, value))
+                formatted.append("```{}\n{}\n```\n".format(language, value))
             else:
-                formatted.append(value)
+                formatted.append(preserve_whitespace(value))
 
         mdpopups.show_popup(
             self.view,
-            preserve_whitespace("\n".join(formatted)),
-            css=".mdpopups .lsp_hover { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
+            "\n".join(formatted),
+            css=popup_css,
             md=True,
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
             location=point,
-            wrapper_class="lsp_hover",
+            wrapper_class="lsp_popup",
             max_width=800)
 
 
 def preserve_whitespace(contents: str) -> str:
     """Preserve empty lines and whitespace for markdown conversion."""
     contents = contents.strip(' \t\r\n')
-    contents = contents.replace('\t', '&nbsp;' * 4)
-    contents = contents.replace('  ', '&nbsp;' * 2)
-    contents = contents.replace('\n\n', '\n&nbsp;\n')
+    contents = contents.replace('\r\n', '\n')
+    contents = contents.replace('\t', '\u00A0' * 4)
+    contents = contents.replace('  ', '\u00A0' * 2)
     return contents
 
 
@@ -2298,9 +2320,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
 class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
-    css = ".mdpopups .lsp_signature { margin: 4px; } .mdpopups p { margin: 0.1rem; }"
-    wrapper_class = "lsp_signature"
-
     def __init__(self, view):
         self.view = view
         self._initialized = False
@@ -2370,11 +2389,11 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             if len(self._signatures) > 0:
                 mdpopups.show_popup(self.view,
                                     self._build_popup_content(),
-                                    css=self.__class__.css,
+                                    css=popup_css,
                                     md=True,
                                     flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
                                     location=point,
-                                    wrapper_class=self.__class__.wrapper_class,
+                                    wrapper_class="lsp_popup",
                                     max_width=800,
                                     on_hide=self._on_hide)
                 self._visible = True
@@ -2398,9 +2417,9 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 self._active_signature = new_index
                 mdpopups.update_popup(self.view,
                                       self._build_popup_content(),
-                                      css=self.__class__.css,
+                                      css=popup_css,
                                       md=True,
-                                      wrapper_class=self.__class__.wrapper_class)
+                                      wrapper_class="lsp_popup")
 
             return True  # We handled this keybinding.
 
@@ -2412,11 +2431,11 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         formatted = []
 
         if len(self._signatures) > 1:
-            signature_navigation = "**{}** of **{}** overloads (use the arrow keys to navigate):\n".format(
+            signature_navigation = "**{}** of **{}** overloads (use the ↑ ↓ keys to navigate):\n".format(
                 str(self._active_signature + 1), str(len(self._signatures)))
             formatted.append(signature_navigation)
 
-        label = "```{}\n{}\n```".format(self._language_id, signature.get('label'))
+        label = "```{}\n{}\n```\n".format(self._language_id, signature.get('label'))
         formatted.append(label)
 
         params = signature.get('parameters')

@@ -61,6 +61,7 @@ popup_css = '''
     .lsp_popup p {
         margin-bottom: 0.5rem;
         padding: 0 0.5rem;
+        font-family: system;
     }
 '''
 
@@ -1085,6 +1086,7 @@ class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
             css='''
                 .lsp_documentation {
                     margin: 1rem 1rem 0.5rem 1rem;
+                    font-family: system;
                 }
                 .lsp_documentation h1,
                 .lsp_documentation p {

@@ -5,5 +5,5 @@ before_install:
     - pip install mypy
     - pip install flake8
 script:
-    - mypy main.py
+    - mypy core features
     - flake8

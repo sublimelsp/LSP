@@ -13,8 +13,7 @@ from ..core.logging import debug, exception_log
 from ..core.protocol import CompletionItemKind
 from ..core.clients import client_for_view
 from ..core.configurations import is_supported_syntax
-from ..core.documents import get_document_position
-from ..core.main import purge_did_change
+from ..core.documents import get_document_position, purge_did_change
 
 
 NO_COMPLETION_SCOPES = 'comment, string'

@@ -17,7 +17,7 @@ from .protocol import (
     Request, Notification, Point, Range, SymbolKind
 )
 from .settings import (
-    ClientConfig, settings, load_settings, unload_settings, PLUGIN_NAME
+    ClientConfig, settings, load_settings, unload_settings
 )
 from .logging import debug, exception_log, server_log
 from .rpc import Client
@@ -31,10 +31,9 @@ from .clients import (
 )
 from .events import Events
 from .documents import (
-    purge_did_change, get_document_position, initialize_document_sync, notify_did_open, get_position, is_at_word
+    purge_did_change, get_document_position, initialize_document_sync, notify_did_open, get_position
 )
 from .diagnostics import handle_diagnostics, remove_diagnostics, get_line_diagnostics
-from .panels import create_output_panel
 
 
 symbol_kind_names = {
@@ -204,85 +203,6 @@ class LspDocumentSymbolsCommand(sublime_plugin.TextCommand):
         self.view.show_at_center(region)
         self.view.sel().clear()
         self.view.sel().add(region)
-
-
-def ensure_references_panel(window: sublime.Window):
-    return window.find_output_panel("references") or create_references_panel(window)
-
-
-def create_references_panel(window: sublime.Window):
-    panel = create_output_panel(window, "references")
-    panel.settings().set("result_file_regex",
-                         r"^\s+\S\s+(\S.+)\s+(\d+):?(\d+)$")
-    panel.assign_syntax("Packages/" + PLUGIN_NAME +
-                        "/Syntaxes/References.sublime-syntax")
-    # Call create_output_panel a second time after assigning the above
-    # settings, so that it'll be picked up as a result buffer
-    # see: Packages/Default/exec.py#L228-L230
-    panel = window.create_output_panel("references")
-    return panel
-
-
-class LspSymbolReferencesCommand(sublime_plugin.TextCommand):
-    def is_enabled(self, event=None):
-        if is_supported_view(self.view):
-            client = client_for_view(self.view)
-            if client and client.has_capability('referencesProvider'):
-                return is_at_word(self.view, event)
-        return False
-
-    def run(self, edit, event=None):
-        client = client_for_view(self.view)
-        if client:
-            pos = get_position(self.view, event)
-            document_position = get_document_position(self.view, pos)
-            if document_position:
-                document_position['context'] = {
-                    "includeDeclaration": False
-                }
-                request = Request.references(document_position)
-                client.send_request(
-                    request, lambda response: self.handle_response(response, pos))
-
-    def handle_response(self, response, pos):
-        window = self.view.window()
-        word = self.view.substr(self.view.word(pos))
-        base_dir = get_project_path(window)
-        file_path = self.view.file_name()
-        relative_file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
-
-        references = list(format_reference(item, base_dir) for item in response)
-
-        if (len(references)) > 0:
-            panel = ensure_references_panel(window)
-            panel.settings().set("result_base_dir", base_dir)
-            panel.set_read_only(False)
-            panel.run_command("lsp_clear_panel")
-            panel.run_command('append', {
-                'characters': 'References to "' + word + '" at ' + relative_file_path + ':\n'
-            })
-            window.run_command("show_panel", {"panel": "output.references"})
-            for reference in references:
-                panel.run_command('append', {
-                    'characters': reference + "\n",
-                    'force': True,
-                    'scroll_to_end': True
-                })
-            panel.set_read_only(True)
-
-        else:
-            window.run_command("hide_panel", {"panel": "output.references"})
-            window.status_message("No references found")
-
-    def want_event(self):
-        return True
-
-
-def format_reference(reference, base_dir):
-    start = Point.from_lsp(reference.get('range').get('start'))
-    file_path = uri_to_filename(reference.get("uri"))
-    relative_file_path = os.path.relpath(file_path, base_dir)
-    return " ◌ {} {}:{}".format(relative_file_path, start.row + 1, start.col + 1)
 
 
 def start_client(window: sublime.Window, config: ClientConfig):

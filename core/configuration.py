@@ -1,5 +1,7 @@
 import sublime
 
+PLUGIN_NAME = 'LSP'
+
 try:
     from typing import List, Optional, Dict
     assert List and Optional and Dict
@@ -66,8 +68,41 @@ class Settings(object):
         self.log_stderr = read_bool_setting(settings_obj, "log_stderr", False)
 
 
+class ClientConfigs(object):
+
+    def __init__(self):
+        self._default_settings = dict()  # type: Dict[str, dict]
+        self._global_settings = dict()  # type: Dict[str, dict]
+        self.defaults = []  # type: List[ClientConfig]
+        self.all = []  # type: List[ClientConfig]
+
+    def update(self, settings_obj: sublime.Settings):
+        self._default_settings = read_dict_setting(settings_obj, "default_clients", {})
+        self._global_settings = read_dict_setting(settings_obj, "clients", {})
+
+        self.defaults = read_client_configs(self._default_settings)
+        self.all = read_client_configs(self._global_settings, self._default_settings)
+
+        client_enableds = list("=".join([config.name, str(config.enabled)]) for config in self.all)
+        print('global clients: ' + ", ".join(client_enableds))
+
+    def _set_enabled(self, config_name: str, is_enabled: bool):
+        if _settings_obj:
+            client_settings = self._global_settings.setdefault(config_name, {})
+            client_settings["enabled"] = is_enabled
+            _settings_obj.set("clients", self._global_settings)
+            sublime.save_settings("LSP.sublime-settings")
+
+    def enable(self, config_name: str):
+        self._set_enabled(config_name, True)
+
+    def disable(self, config_name: str):
+        self._set_enabled(config_name, False)
+
+
 _settings_obj = None  # type: Optional[sublime.Settings]
 settings = Settings()
+client_configs = ClientConfigs()
 
 
 def load_settings():
@@ -75,38 +110,15 @@ def load_settings():
     loaded_settings_obj = sublime.load_settings("LSP.sublime-settings")
     _settings_obj = loaded_settings_obj
     settings.update(loaded_settings_obj)
-    update_client_settings(loaded_settings_obj)
+    client_configs.update(loaded_settings_obj)
     loaded_settings_obj.add_on_change("_on_new_settings", lambda: settings.update(loaded_settings_obj))
-    loaded_settings_obj.add_on_change("_on_new_client_settings", lambda: update_client_settings(loaded_settings_obj))
+    loaded_settings_obj.add_on_change("_on_new_client_settings", lambda: client_configs.update(loaded_settings_obj))
 
 
 def unload_settings():
     if _settings_obj:
         _settings_obj.clear_on_change("_on_new_settings")
         _settings_obj.clear_on_change("_on_new_client_settings")
-
-
-default_client_settings = dict()  # type: Dict[str, dict]
-global_client_settings = dict()  # type: Dict[str, dict]
-
-default_client_configs = []  # type: List[ClientConfig]
-global_client_configs = []  # type: List[ClientConfig]
-
-
-def update_client_settings(settings_obj: sublime.Settings):
-    global default_client_settings
-    global global_client_settings
-    global default_client_configs
-    global global_client_configs
-
-    default_client_settings = read_dict_setting(settings_obj, "default_clients", {})
-    global_client_settings = read_dict_setting(settings_obj, "clients", {})
-
-    default_client_configs = read_client_configs(default_client_settings)
-    global_client_configs = read_client_configs(global_client_settings, default_client_settings)
-
-    client_enableds = list("=".join([config.name, str(config.enabled)]) for config in global_client_configs)
-    print('global clients: ' + ", ".join(client_enableds))
 
 
 class ClientConfig(object):
@@ -135,22 +147,6 @@ def read_client_config(name, client_config):
         client_config.get("settings", dict()),
         client_config.get("env", dict())
     )
-
-
-def set_global_config_enabled(config_name: str, is_enabled: bool):
-    if _settings_obj:
-        client_settings = global_client_settings.setdefault(config_name, {})
-        client_settings["enabled"] = is_enabled
-        _settings_obj.set("clients", global_client_settings)
-        sublime.save_settings("LSP.sublime-settings")
-
-
-def enable_global_config(config_name: str):
-    set_global_config_enabled(config_name, True)
-
-
-def disable_global_config(config_name: str):
-    set_global_config_enabled(config_name, False)
 
 
 def read_client_configs(client_settings, default_client_settings=None) -> 'List[ClientConfig]':

@@ -2,7 +2,6 @@ import html
 import json
 import os
 import subprocess
-import traceback
 import threading
 import webbrowser
 from collections import OrderedDict
@@ -23,12 +22,11 @@ from .protocol import (
     Request, Notification, Point, Range, Diagnostic, DiagnosticSeverity, SymbolKind, CompletionItemKind
 )
 from .configuration import (
-    ClientConfig, settings, load_settings, unload_settings, enable_global_config,
-    disable_global_config, global_client_configs, default_client_configs
+    ClientConfig, settings, client_configs, load_settings, unload_settings, PLUGIN_NAME
 )
+from .logging import debug, exception_log, server_log
 
 
-PLUGIN_NAME = 'LSP'
 SUBLIME_WORD_MASK = 515
 NO_HOVER_SCOPES = 'comment, constant, keyword, storage, string'
 NO_COMPLETION_SCOPES = 'comment, string'
@@ -156,14 +154,14 @@ class Client(object):
                         limit = min(len(content), 200)
                         if payload.get("method") != "window/logMessage":
                             debug("got json: ", content[0:limit], "...")
-                    except IOError:
-                        printf("Got a non-JSON payload: ", content)
+                    except IOError as err:
+                        exception_log("got a non-JSON payload: " + content, err)
                         continue
 
                     try:
                         if "error" in payload:
                             error = payload['error']
-                            printf("Got error from server: ", error)
+                            debug("Got error from server: ", error)
                             sublime.status_message(error.get('message'))
                         elif "method" in payload:
                             if "id" in payload:
@@ -199,7 +197,7 @@ class Client(object):
                 if not content:
                     break
                 if settings.log_stderr:
-                    printf("(stderr): ", content.strip())
+                    server_log("(stderr): ", content.strip())
             except IOError as err:
                 exception_log("Failure reading stderr", err)
                 return
@@ -234,27 +232,6 @@ class Client(object):
                        response.get("params").get("message"))
         else:
             debug("Unhandled notification:", method)
-
-
-def debug(*args):
-    """Print args to the console if the "debug" setting is True."""
-    if settings.log_debug:
-        printf(*args)
-
-
-def exception_log(message, ex):
-    print(message)
-    ex_traceback = ex.__traceback__
-    print(''.join(traceback.format_exception(ex.__class__, ex, ex_traceback)))
-
-
-def server_log(binary, *args):
-    printf(*args, prefix=binary)
-
-
-def printf(*args, prefix=PLUGIN_NAME):
-    """Print args to the console, prefixed by the plugin name."""
-    print(prefix + ":", *args)
 
 
 def get_project_path(window: sublime.Window) -> 'Optional[str]':
@@ -309,8 +286,11 @@ def start_active_view():
     window = sublime.active_window()
     if window:
         view = window.active_view()
+        debug('starting initial view', view.file_name())
         if view and is_supported_view(view):
             initialize_on_open(view)
+        else:
+            debug('view not supported')
 
 
 def check_window_unloaded():
@@ -363,11 +343,12 @@ def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]')
 
 
 def get_global_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
-    return get_scope_client_config(view, global_client_configs)
+    debug(client_configs.all)
+    return get_scope_client_config(view, client_configs.all)
 
 
 def get_default_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
-    return get_scope_client_config(view, default_client_configs)
+    return get_scope_client_config(view, client_configs.defaults)
 
 
 def enable_in_project(window, config_name: str) -> None:
@@ -459,14 +440,14 @@ def config_for_scope(view: sublime.View) -> 'Optional[ClientConfig]':
 
 def is_supportable_syntax(syntax: str) -> bool:
     # TODO: filter out configs disabled by the user.
-    for config in default_client_configs:
+    for config in client_configs.defaults:
         if syntax in config.syntaxes:
             return True
     return False
 
 
 def is_supported_syntax(syntax: str) -> bool:
-    for config in global_client_configs:
+    for config in client_configs.all:
         if syntax in config.syntaxes:
             return True
     return False
@@ -562,9 +543,9 @@ def show_enable_config(view: sublime.View, config: ClientConfig):
 class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
     def run(self):
         view = self.window.active_view()
-        available_config = get_scope_client_config(view, global_client_configs) or get_default_client_config(view)
+        available_config = get_scope_client_config(view, client_configs.defaults) or get_default_client_config(view)
         if available_config:
-            enable_global_config(available_config.name)
+            client_configs.enable(available_config.name)
             clear_window_client_configs(self.window)
             sublime.set_timeout_async(start_active_view, 500)
             self.window.status_message("{} enabled, starting server...".format(available_config.name))
@@ -591,9 +572,9 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
 class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
     def run(self):
         view = self.window.active_view()
-        global_config = get_scope_client_config(view, global_client_configs)
+        global_config = get_scope_client_config(view, client_configs.all)
         if global_config:
-            disable_global_config(global_config.name)
+            client_configs.disable(global_config.name)
             clear_window_client_configs(self.window)
             sublime.set_timeout_async(lambda: unload_window_clients(self.window.id()), 500)
             self.window.status_message("{} disabled, shutting down server...".format(global_config.name))
@@ -605,7 +586,7 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
 class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
     def run(self):
         view = self.window.active_view()
-        global_config = get_scope_client_config(view, global_client_configs)
+        global_config = get_scope_client_config(view, client_configs.defaults)
         if global_config:
             disable_in_project(self.window, global_config.name)
             clear_window_client_configs(self.window)

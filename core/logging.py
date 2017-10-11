@@ -1,5 +1,5 @@
 import traceback
-from .configuration import settings, PLUGIN_NAME
+from .settings import settings, PLUGIN_NAME
 
 
 def debug(*args):

@@ -8,7 +8,7 @@ try:
 except ImportError:
     pass
 
-from .configuration import settings
+from .settings import settings
 from .logging import debug, exception_log, server_log
 from .protocol import Request, Notification
 

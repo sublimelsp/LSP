@@ -2,7 +2,6 @@ import html
 import os
 import subprocess
 import webbrowser
-from collections import OrderedDict
 
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
@@ -17,22 +16,27 @@ import mdpopups
 
 from .url import filename_to_uri, uri_to_filename
 from .protocol import (
-    Request, Notification, Point, Range, Diagnostic, DiagnosticSeverity, SymbolKind, CompletionItemKind
+    Request, Notification, Point, Range, Diagnostic, DiagnosticSeverity, SymbolKind
 )
-from .configuration import (
+from .settings import (
     ClientConfig, settings, client_configs, load_settings, unload_settings, PLUGIN_NAME
 )
 from .logging import debug, exception_log, server_log
-from .client import Client
-from .workspace import get_project_path, is_in_workspace, enable_in_project, disable_in_project, get_project_config
-
+from .rpc import Client
+from .workspace import get_project_path, is_in_workspace, enable_in_project, disable_in_project
+from .configurations import (
+    config_for_scope, is_supported_view, is_supported_syntax, is_supportable_syntax, get_default_client_config,
+    clear_window_client_configs, get_scope_client_config
+)
+from .clients import (
+    client_for_view, add_window_client, window_clients, check_window_unloaded, unload_old_clients,
+    unload_window_clients, unload_all_clients
+)
+from .documents import get_document_position
 
 SUBLIME_WORD_MASK = 515
 NO_HOVER_SCOPES = 'comment, constant, keyword, storage, string'
-NO_COMPLETION_SCOPES = 'comment, string'
 
-
-window_client_configs = dict()  # type: Dict[int, List[ClientConfig]]
 
 diagnostic_severity_names = {
     DiagnosticSeverity.Error: "error",
@@ -63,9 +67,6 @@ symbol_kind_names = {
 }
 
 
-completion_item_kind_names = {v: k for k, v in CompletionItemKind.__dict__.items()}
-
-
 def plugin_loaded():
     load_settings()
     Events.subscribe("view.on_load_async", initialize_on_open)
@@ -73,6 +74,11 @@ def plugin_loaded():
     if settings.show_status_messages:
         sublime.status_message("LSP initialized")
     start_active_view()
+
+
+def plugin_unloaded():
+    unload_settings()
+    unload_all_clients()
 
 
 def start_active_view():
@@ -86,149 +92,6 @@ def start_active_view():
             debug('view not supported')
 
 
-def check_window_unloaded():
-    global clients_by_window
-    open_window_ids = list(window.id() for window in sublime.windows())
-    iterable_clients_by_window = clients_by_window.copy()
-    closed_windows = []
-    for id, window_clients in iterable_clients_by_window.items():
-        if id not in open_window_ids:
-            debug("window closed", id)
-            closed_windows.append(id)
-    for closed_window_id in closed_windows:
-        unload_window_clients(closed_window_id)
-
-
-def unload_window_clients(window_id: int):
-    global clients_by_window
-    if window_id in clients_by_window:
-        window_clients = clients_by_window[window_id]
-        del clients_by_window[window_id]
-        for config, client in window_clients.items():
-            debug("unloading client", config, client)
-            unload_client(client)
-
-
-def unload_client(client: Client):
-    debug("unloading client", client)
-    try:
-        client.send_notification(Notification.exit())
-        client.kill()
-    except Exception as err:
-        exception_log("Error exiting server", err)
-
-
-def plugin_unloaded():
-    unload_settings()
-    for window in sublime.windows():
-        for client in window_clients(window).values():
-            unload_client(client)
-
-
-def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':
-    for config in configs:
-        for scope in config.scopes:
-            if len(view.sel()) > 0:
-                if view.match_selector(view.sel()[0].begin(), scope):
-                    return config
-
-    return None
-
-
-def get_global_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
-    debug(client_configs.all)
-    return get_scope_client_config(view, client_configs.all)
-
-
-def get_default_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
-    return get_scope_client_config(view, client_configs.defaults)
-
-
-def get_window_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
-    window = view.window()
-    if window:
-        configs_for_window = window_client_configs.get(window.id(), [])
-        return get_scope_client_config(view, configs_for_window)
-    else:
-        return None
-
-
-def add_window_client_config(window: 'sublime.Window', config: 'ClientConfig'):
-    global window_client_configs
-    window_client_configs.setdefault(window.id(), []).append(config)
-
-
-def clear_window_client_configs(window: 'sublime.Window'):
-    global window_client_configs
-    if window.id() in window_client_configs:
-        del window_client_configs[window.id()]
-
-
-def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -> 'ClientConfig':
-    window = view.window()
-    if window:
-        window_config = get_project_config(window)
-
-        if client_config.name in window_config:
-            overrides = window_config[client_config.name]
-            debug('window has override for', client_config.name, overrides)
-            return ClientConfig(
-                client_config.name,
-                overrides.get("command", client_config.binary_args),
-                overrides.get("scopes", client_config.scopes),
-                overrides.get("syntaxes", client_config.syntaxes),
-                overrides.get("languageId", client_config.languageId),
-                overrides.get("enabled", client_config.enabled),
-                overrides.get("initializationOptions", client_config.init_options),
-                overrides.get("settings", client_config.settings),
-                overrides.get("env", client_config.env)
-            )
-
-    return client_config
-
-
-def config_for_scope(view: sublime.View) -> 'Optional[ClientConfig]':
-    # check window_client_config first
-    window_client_config = get_window_client_config(view)
-    if not window_client_config:
-        global_client_config = get_global_client_config(view)
-
-        if global_client_config:
-            window = view.window()
-            if window:
-                window_client_config = apply_window_settings(global_client_config, view)
-                add_window_client_config(window, window_client_config)
-                return window_client_config
-            else:
-                # always return a client config even if the view has no window anymore
-                return global_client_config
-
-    return window_client_config
-
-
-def is_supportable_syntax(syntax: str) -> bool:
-    # TODO: filter out configs disabled by the user.
-    for config in client_configs.defaults:
-        if syntax in config.syntaxes:
-            return True
-    return False
-
-
-def is_supported_syntax(syntax: str) -> bool:
-    for config in client_configs.all:
-        if syntax in config.syntaxes:
-            return True
-    return False
-
-
-def is_supported_view(view: sublime.View) -> bool:
-    # TODO: perhaps make this check for a client instead of a config
-    if config_for_scope(view):
-        return True
-    else:
-        return False
-
-
 TextDocumentSyncKindNone = 0
 TextDocumentSyncKindFull = 1
 TextDocumentSyncKindIncremental = 2
@@ -238,45 +101,13 @@ unsubscribe_initialize_on_load = None
 unsubscribe_initialize_on_activated = None
 
 
-def client_for_view(view: sublime.View) -> 'Optional[Client]':
-    window = view.window()
-    if not window:
-        debug("no window for view", view.file_name())
-        return None
-
-    config = config_for_scope(view)
-    if not config:
-        debug("config not available for view", view.file_name())
-        return None
-
-    clients = window_clients(window)
-    if config.name not in clients:
-        debug(config.name, "not available for view",
-              view.file_name(), "in window", window.id())
-        return None
-    else:
-        return clients[config.name]
-
-
-clients_by_window = {}  # type: Dict[int, Dict[str, Client]]
-
-
-def window_clients(window: sublime.Window) -> 'Dict[str, Client]':
-    global clients_by_window
-    if window.id() in clients_by_window:
-        return clients_by_window[window.id()]
-    else:
-        debug("no clients found for window", window.id())
-        return {}
-
-
 def initialize_on_open(view: sublime.View):
     window = view.window()
 
     if not window:
         return
 
-    if window.id() in clients_by_window:
+    if window_clients(window):
         unload_old_clients(window)
 
     global didopen_after_initialize
@@ -418,20 +249,6 @@ class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
             self.window.run_command("lsp_enable_language_server_in_project")
         else:
             webbrowser.open_new_tab(href)
-
-
-def unload_old_clients(window: sublime.Window):
-    project_path = get_project_path(window)
-    clients_by_config = window_clients(window)
-    clients_to_unload = {}
-    for config_name, client in clients_by_config.items():
-        if client and client.get_project_path() != project_path:
-            debug('unload', config_name, 'project path changed from ', client.get_project_path())
-            clients_to_unload[config_name] = client
-
-    for config_name, client in clients_to_unload.items():
-        unload_client(client)
-        del clients_by_config[config_name]
 
 
 def notify_did_open(view: sublime.View):
@@ -1253,14 +1070,11 @@ def start_client(window: sublime.Window, config: ClientConfig):
 
 
 def get_window_client(view: sublime.View, window: sublime.Window, config: ClientConfig) -> Client:
-    global clients_by_window
 
     clients = window_clients(window)
     if config.name not in clients:
         client = start_client(window, config)
-        clients_by_window.setdefault(window.id(), {})[config.name] = client
-        debug("client registered for window",
-              window.id(), window_clients(window))
+        add_window_client(window, config.name, client)
     else:
         client = clients[config.name]
 
@@ -1287,19 +1101,6 @@ def start_server(server_binary_args, working_dir, env):
     except Exception as err:
         sublime.status_message("Failed to start LSP server {}".format(str(server_binary_args)))
         exception_log("Failed to start server", err)
-
-
-def get_document_position(view: sublime.View, point) -> 'Optional[OrderedDict]':
-    file_name = view.file_name()
-    if file_name:
-        if not point:
-            point = view.sel()[0].begin()
-        d = OrderedDict()  # type: OrderedDict[str, Any]
-        d['textDocument'] = {"uri": filename_to_uri(file_name)}
-        d['position'] = Point.from_text_point(view, point).to_lsp()
-        return d
-    else:
-        return None
 
 
 class Events:
@@ -1426,222 +1227,6 @@ def preserve_whitespace(contents: str) -> str:
     contents = contents.replace('  ', '&nbsp;' * 2)
     contents = contents.replace('\n\n', '\n&nbsp;\n')
     return contents
-
-
-class CompletionState(object):
-    IDLE = 0
-    REQUESTING = 1
-    APPLYING = 2
-    CANCELLING = 3
-
-
-resolvable_completion_items = []  # type: List[Any]
-
-
-def find_completion_item(label: str) -> 'Optional[Any]':
-    matches = list(filter(lambda i: i.get("label") == label, resolvable_completion_items))
-    return matches[0] if matches else None
-
-
-class CompletionContext(object):
-
-    def __init__(self, begin):
-        self.begin = begin  # type: Optional[int]
-        self.end = None  # type: Optional[int]
-        self.region = None  # type: Optional[sublime.Region]
-        self.committing = False
-
-    def committed_at(self, end):
-        self.end = end
-        self.region = sublime.Region(self.begin, self.end)
-        self.committing = False
-
-
-current_completion = None  # type: Optional[CompletionContext]
-
-
-def has_resolvable_completions(view):
-    client = client_for_view(view)
-    if client:
-        completionProvider = client.get_capability(
-            'completionProvider')
-        if completionProvider:
-            if completionProvider.get('resolveProvider', False):
-                return True
-    return False
-
-
-class CompletionSnippetHandler(sublime_plugin.EventListener):
-
-    def on_query_completions(self, view, prefix, locations):
-        global current_completion
-        if settings.resolve_completion_for_snippets and has_resolvable_completions(view):
-            current_completion = CompletionContext(view.sel()[0].begin())
-
-    def on_text_command(self, view, command_name, args):
-        if settings.resolve_completion_for_snippets and current_completion:
-            current_completion.committing = command_name in ('commit_completion', 'insert_best_completion')
-
-    def on_modified(self, view):
-        global current_completion
-
-        if settings.resolve_completion_for_snippets and view.file_name():
-            if current_completion and current_completion.committing:
-                current_completion.committed_at(view.sel()[0].end())
-                inserted = view.substr(current_completion.region)
-                item = find_completion_item(inserted)
-                if item:
-                    self.resolve_completion(item, view)
-                else:
-                    current_completion = None
-
-    def resolve_completion(self, item, view):
-        client = client_for_view(view)
-        if not client:
-            return
-
-        client.send_request(
-            Request.resolveCompletionItem(item),
-            lambda response: self.handle_resolve_response(response, view))
-
-    def handle_resolve_response(self, response, view):
-        # replace inserted text if a snippet was returned.
-        if current_completion and response.get('insertTextFormat') == 2:  # snippet
-            insertText = response.get('insertText')
-            try:
-                sel = view.sel()
-                sel.clear()
-                sel.add(current_completion.region)
-                view.run_command("insert_snippet", {"contents": insertText})
-            except Exception as err:
-                exception_log("Error inserting snippet: " + insertText, err)
-
-
-class CompletionHandler(sublime_plugin.ViewEventListener):
-    def __init__(self, view):
-        self.view = view
-        self.initialized = False
-        self.enabled = False
-        self.trigger_chars = []  # type: List[str]
-        self.resolve = False
-        self.resolve_details = []  # type: List[Tuple[str, str]]
-        self.state = CompletionState.IDLE
-        self.next_request = None
-
-    @classmethod
-    def is_applicable(cls, settings):
-        syntax = settings.get('syntax')
-        return syntax and is_supported_syntax(syntax)
-
-    def initialize(self):
-        self.initialized = True
-        client = client_for_view(self.view)
-        if client:
-            completionProvider = client.get_capability(
-                'completionProvider')
-            if completionProvider:
-                self.enabled = True
-                self.trigger_chars = completionProvider.get(
-                    'triggerCharacters') or []
-                self.has_resolve_provider = completionProvider.get('resolveProvider', False)
-
-    def is_after_trigger_character(self, location):
-        if location > 0:
-            prev_char = self.view.substr(location - 1)
-            return prev_char in self.trigger_chars
-
-    def on_query_completions(self, prefix, locations):
-        if self.view.match_selector(locations[0], NO_COMPLETION_SCOPES):
-            return
-
-        if not self.initialized:
-            self.initialize()
-
-        if self.enabled:
-            if self.state == CompletionState.IDLE:
-                self.do_request(prefix, locations)
-                self.completions = []  # type: List[Tuple[str, str]]
-
-            elif self.state in (CompletionState.REQUESTING, CompletionState.CANCELLING):
-                self.next_request = (prefix, locations)
-                self.state = CompletionState.CANCELLING
-
-            elif self.state == CompletionState.APPLYING:
-                self.state = CompletionState.IDLE
-
-            return (
-                self.completions,
-                0 if not settings.only_show_lsp_completions
-                else sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
-            )
-
-    def do_request(self, prefix, locations):
-        self.next_request = None
-        view = self.view
-
-        # don't store client so we can handle restarts
-        client = client_for_view(view)
-        if not client:
-            return
-
-        if settings.complete_all_chars or self.is_after_trigger_character(locations[0]):
-            purge_did_change(view.buffer_id())
-            document_position = get_document_position(view, locations[0])
-            if document_position:
-                client.send_request(
-                    Request.complete(document_position),
-                    self.handle_response)
-                self.state = CompletionState.REQUESTING
-
-    def format_completion(self, item) -> 'Tuple[str, str]':
-        # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
-        label = item["label"]
-        # choose hint based on availability and user preference
-        hint = None
-        if settings.completion_hint_type == "auto":
-            hint = item.get("detail")
-            if not hint:
-                kind = item.get("kind")
-                if kind:
-                    hint = completion_item_kind_names[kind]
-        elif settings.completion_hint_type == "detail":
-            hint = item.get("detail")
-        elif settings.completion_hint_type == "kind":
-            kind = item.get("kind")
-            if kind:
-                hint = completion_item_kind_names[kind]
-        # label is an alternative for insertText if insertText not provided
-        insert_text = item.get("insertText") or label
-        if insert_text[0] == '$':  # sublime needs leading '$' escaped.
-            insert_text = '\$' + insert_text[1:]
-        # only return label with a hint if available
-        return "\t  ".join((label, hint)) if hint else label, insert_text
-
-    def handle_response(self, response):
-        global resolvable_completion_items
-        if self.state == CompletionState.REQUESTING:
-            items = response["items"] if isinstance(response,
-                                                    dict) else response
-            self.completions = list(self.format_completion(item) for item in items)
-
-            if self.has_resolve_provider:
-                resolvable_completion_items = items
-
-            self.state = CompletionState.APPLYING
-            self.view.run_command("hide_auto_complete")
-            self.run_auto_complete()
-        elif self.state == CompletionState.CANCELLING:
-            self.do_request(*self.next_request)
-        else:
-            debug('Got unexpected response while in state {}'.format(self.state))
-
-    def run_auto_complete(self):
-        self.view.run_command(
-            "auto_complete", {
-                'disable_auto_insert': True,
-                'api_completions_only': settings.only_show_lsp_completions,
-                'next_completion_if_showing': False
-            })
 
 
 class SignatureHelpListener(sublime_plugin.ViewEventListener):

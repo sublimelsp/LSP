@@ -1,4 +1,3 @@
-import html
 import os
 import subprocess
 import webbrowser
@@ -16,14 +15,14 @@ import mdpopups
 
 from .url import filename_to_uri, uri_to_filename
 from .protocol import (
-    Request, Notification, Point, Range, Diagnostic, DiagnosticSeverity, SymbolKind
+    Request, Notification, Point, Range, SymbolKind
 )
 from .settings import (
     ClientConfig, settings, client_configs, load_settings, unload_settings, PLUGIN_NAME
 )
 from .logging import debug, exception_log, server_log
 from .rpc import Client
-from .workspace import get_project_path, is_in_workspace, enable_in_project, disable_in_project
+from .workspace import get_project_path, enable_in_project, disable_in_project
 from .configurations import (
     config_for_scope, is_supported_view, is_supported_syntax, is_supportable_syntax, get_default_client_config,
     clear_window_client_configs, get_scope_client_config
@@ -34,25 +33,12 @@ from .clients import (
 )
 from .events import Events
 from .documents import purge_did_change, get_document_position, initialize_document_sync, notify_did_open
+from .diagnostics import handle_diagnostics, remove_diagnostics, get_line_diagnostics, get_point_diagnostics
+from .panels import create_output_panel
 
 
 SUBLIME_WORD_MASK = 515
 NO_HOVER_SCOPES = 'comment, constant, keyword, storage, string'
-
-
-diagnostic_severity_names = {
-    DiagnosticSeverity.Error: "error",
-    DiagnosticSeverity.Warning: "warning",
-    DiagnosticSeverity.Information: "info",
-    DiagnosticSeverity.Hint: "hint"
-}
-
-diagnostic_severity_scopes = {
-    DiagnosticSeverity.Error: 'markup.deleted.lsp sublimelinter.mark.error markup.error.lsp',
-    DiagnosticSeverity.Warning: 'markup.changed.lsp sublimelinter.mark.warning markup.warning.lsp',
-    DiagnosticSeverity.Information: 'markup.inserted.lsp sublimelinter.gutter-mark markup.info.lsp',
-    DiagnosticSeverity.Hint: 'markup.inserted.lsp sublimelinter.gutter-mark markup.info.suggestion.lsp'
-}
 
 
 symbol_kind_names = {
@@ -265,7 +251,7 @@ def handle_initialize_result(result, client, window, config):
 
     client.on_notification(
         "textDocument/publishDiagnostics",
-        lambda params: Events.publish("document.diagnostics", params))
+        lambda params: handle_diagnostics(params))
     client.on_notification(
         "window/showMessage",
         lambda params: sublime.active_window().message_dialog(params.get("message")))
@@ -281,7 +267,6 @@ def handle_initialize_result(result, client, window, config):
     if document_sync:
         initialize_document_sync(document_sync)
 
-    Events.subscribe('document.diagnostics', handle_diagnostics)
     Events.subscribe('view.on_close', remove_diagnostics)
 
     client.send_notification(Notification.initialized())
@@ -296,85 +281,6 @@ def handle_initialize_result(result, client, window, config):
     if settings.show_status_messages:
         window.status_message("{} initialized".format(config.name))
     didopen_after_initialize = list()
-
-
-stylesheet = '''
-            <style>
-                div.error-arrow {
-                    border-top: 0.4rem solid transparent;
-                    border-left: 0.5rem solid color(var(--redish) blend(var(--background) 30%));
-                    width: 0;
-                    height: 0;
-                }
-                div.error {
-                    padding: 0.4rem 0 0.4rem 0.7rem;
-                    margin: 0 0 0.2rem;
-                    border-radius: 0 0.2rem 0.2rem 0.2rem;
-                }
-
-                div.error span.message {
-                    padding-right: 0.7rem;
-                }
-
-                div.error a {
-                    text-decoration: inherit;
-                    padding: 0.35rem 0.7rem 0.45rem 0.8rem;
-                    position: relative;
-                    bottom: 0.05rem;
-                    border-radius: 0 0.2rem 0.2rem 0;
-                    font-weight: bold;
-                }
-                html.dark div.error a {
-                    background-color: #00000018;
-                }
-                html.light div.error a {
-                    background-color: #ffffff18;
-                }
-            </style>
-        '''
-
-
-def create_phantom_html(text: str) -> str:
-    global stylesheet
-    return """<body id=inline-error>{}
-                <div class="error-arrow"></div>
-                <div class="error">
-                    <span class="message">{}</span>
-                    <a href="code-actions">Code Actions</a>
-                </div>
-                </body>""".format(stylesheet, html.escape(text, quote=False))
-
-
-def on_phantom_navigate(view: sublime.View, href: str, point: int):
-    # TODO: don't mess with the user's cursor.
-    sel = view.sel()
-    sel.clear()
-    sel.add(sublime.Region(point))
-    view.run_command("lsp_code_actions")
-
-
-def create_phantom(view: sublime.View, diagnostic: Diagnostic) -> sublime.Phantom:
-    region = diagnostic.range.to_region(view)
-    # TODO: hook up hide phantom (if keeping them)
-    content = create_phantom_html(diagnostic.message)
-    return sublime.Phantom(
-        region,
-        '<p>' + content + '</p>',
-        sublime.LAYOUT_BELOW,
-        lambda href: on_phantom_navigate(view, href, region.begin())
-    )
-
-
-def format_severity(severity: int) -> str:
-    return diagnostic_severity_names.get(severity, "???")
-
-
-def format_diagnostic(diagnostic: Diagnostic) -> str:
-    location = "{:>8}:{:<4}".format(
-        diagnostic.range.start.row + 1, diagnostic.range.start.col + 1)
-    message = diagnostic.message.replace("\n", " ").replace("\r", "")
-    return " {}\t{:<12}\t{:<10}\t{}".format(
-        location, diagnostic.source, format_severity(diagnostic.severity), message)
 
 
 class LspSymbolRenameCommand(sublime_plugin.TextCommand):
@@ -573,30 +479,6 @@ def is_at_word(view: sublime.View, event) -> bool:
         return False
 
 
-OUTPUT_PANEL_SETTINGS = {
-    "auto_indent": False,
-    "draw_indent_guides": False,
-    "draw_white_space": "None",
-    "gutter": False,
-    'is_widget': True,
-    "line_numbers": False,
-    "margin": 3,
-    "match_brackets": False,
-    "scroll_past_end": False,
-    "tab_size": 4,
-    "translate_tabs_to_spaces": False,
-    "word_wrap": False
-}
-
-
-def create_output_panel(window: sublime.Window, name: str) -> sublime.View:
-    panel = window.create_output_panel(name)
-    settings = panel.settings()
-    for key, value in OUTPUT_PANEL_SETTINGS.items():
-        settings.set(key, value)
-    return panel
-
-
 def ensure_references_panel(window: sublime.Window):
     return window.find_output_panel("references") or create_references_panel(window)
 
@@ -697,180 +579,6 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
         selection = self.view.sel()
         selection.clear()
         selection.add(sublime.Region(self.view.size(), self.view.size()))
-
-
-UNDERLINE_FLAGS = (sublime.DRAW_SQUIGGLY_UNDERLINE
-                   | sublime.DRAW_NO_OUTLINE
-                   | sublime.DRAW_NO_FILL
-                   | sublime.DRAW_EMPTY_AS_OVERWRITE)
-
-BOX_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_EMPTY_AS_OVERWRITE
-
-window_file_diagnostics = dict(
-)  # type: Dict[int, Dict[str, Dict[str, List[Diagnostic]]]]
-
-
-def update_file_diagnostics(window: sublime.Window, file_path: str, source: str,
-                            diagnostics: 'List[Diagnostic]'):
-    if diagnostics:
-        window_file_diagnostics.setdefault(window.id(), dict()).setdefault(
-            file_path, dict())[source] = diagnostics
-    else:
-        if window.id() in window_file_diagnostics:
-            file_diagnostics = window_file_diagnostics[window.id()]
-            if file_path in file_diagnostics:
-                if source in file_diagnostics[file_path]:
-                    del file_diagnostics[file_path][source]
-                if not file_diagnostics[file_path]:
-                    del file_diagnostics[file_path]
-
-
-phantom_sets_by_buffer = {}  # type: Dict[int, sublime.PhantomSet]
-
-
-def update_diagnostics_phantoms(view: sublime.View, diagnostics: 'List[Diagnostic]'):
-    global phantom_sets_by_buffer
-
-    buffer_id = view.buffer_id()
-    if not settings.show_diagnostics_phantoms or view.is_dirty():
-        phantoms = None
-    else:
-        phantoms = list(
-            create_phantom(view, diagnostic) for diagnostic in diagnostics)
-    if phantoms:
-        phantom_set = phantom_sets_by_buffer.get(buffer_id)
-        if not phantom_set:
-            phantom_set = sublime.PhantomSet(view, "lsp_diagnostics")
-            phantom_sets_by_buffer[buffer_id] = phantom_set
-        phantom_set.update(phantoms)
-    else:
-        phantom_sets_by_buffer.pop(buffer_id, None)
-
-
-def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic]', severity: int):
-    region_name = "lsp_" + format_severity(severity)
-    if settings.show_diagnostics_phantoms and not view.is_dirty():
-        regions = None
-    else:
-        regions = list(diagnostic.range.to_region(view) for diagnostic in diagnostics
-                       if diagnostic.severity == severity)
-    if regions:
-        scope_name = diagnostic_severity_scopes[severity]
-        view.add_regions(
-            region_name, regions, scope_name, settings.diagnostics_gutter_marker,
-            UNDERLINE_FLAGS if settings.diagnostics_highlight_style == "underline" else BOX_FLAGS)
-    else:
-        view.erase_regions(region_name)
-
-
-def update_diagnostics_in_view(view: sublime.View, diagnostics: 'List[Diagnostic]'):
-    if view and view.is_valid():
-        update_diagnostics_phantoms(view, diagnostics)
-        for severity in range(DiagnosticSeverity.Error, DiagnosticSeverity.Information):
-            update_diagnostics_regions(view, diagnostics, severity)
-
-
-def remove_diagnostics(view: sublime.View):
-    """Removes diagnostics for a file if no views exist for it
-    """
-    window = sublime.active_window()
-
-    file_path = view.file_name()
-    if file_path:
-        if not window.find_open_file(file_path):
-            update_file_diagnostics(window, file_path, 'lsp', [])
-            update_diagnostics_panel(window)
-        else:
-            debug('file still open?')
-
-
-def handle_diagnostics(update: 'Any'):
-    file_path = uri_to_filename(update.get('uri'))
-    window = sublime.active_window()
-
-    if not is_in_workspace(window, file_path):
-        debug("Skipping diagnostics for file", file_path,
-              " it is not in the workspace")
-        return
-
-    diagnostics = list(
-        Diagnostic.from_lsp(item) for item in update.get('diagnostics', []))
-
-    view = window.find_open_file(file_path)
-
-    # diagnostics = update.get('diagnostics')
-
-    update_diagnostics_in_view(view, diagnostics)
-
-    # update panel if available
-
-    origin = 'lsp'  # TODO: use actual client name to be able to update diagnostics per client
-
-    update_file_diagnostics(window, file_path, origin, diagnostics)
-    update_diagnostics_panel(window)
-
-
-class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
-    def run(self):
-        ensure_diagnostics_panel(self.window)
-        self.window.run_command("show_panel", {"panel": "output.diagnostics"})
-
-
-def create_diagnostics_panel(window):
-    panel = create_output_panel(window, "diagnostics")
-    panel.settings().set("result_file_regex", r"^\s*\S\s+(\S.*):$")
-    panel.settings().set("result_line_regex", r"^\s+([0-9]+):?([0-9]+).*$")
-    panel.assign_syntax("Packages/" + PLUGIN_NAME +
-                        "/Syntaxes/Diagnostics.sublime-syntax")
-    # Call create_output_panel a second time after assigning the above
-    # settings, so that it'll be picked up as a result buffer
-    # see: Packages/Default/exec.py#L228-L230
-    panel = window.create_output_panel("diagnostics")
-    return panel
-
-
-def ensure_diagnostics_panel(window):
-    return window.find_output_panel("diagnostics") or create_diagnostics_panel(window)
-
-
-def update_diagnostics_panel(window):
-    assert window, "missing window!"
-    base_dir = get_project_path(window)
-
-    panel = ensure_diagnostics_panel(window)
-    assert panel, "must have a panel now!"
-
-    if window.id() in window_file_diagnostics:
-        active_panel = window.active_panel()
-        is_active_panel = (active_panel == "output.diagnostics")
-        panel.settings().set("result_base_dir", base_dir)
-        panel.set_read_only(False)
-        file_diagnostics = window_file_diagnostics[window.id()]
-        if file_diagnostics:
-            to_render = []
-            for file_path, source_diagnostics in file_diagnostics.items():
-                relative_file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
-                if source_diagnostics:
-                    to_render.append(format_diagnostics(relative_file_path, source_diagnostics))
-            panel.run_command("lsp_update_panel", {"characters": "\n".join(to_render)})
-            if settings.auto_show_diagnostics_panel and not active_panel:
-                window.run_command("show_panel",
-                                   {"panel": "output.diagnostics"})
-        else:
-            panel.run_command("lsp_clear_panel")
-            if settings.auto_show_diagnostics_panel and is_active_panel:
-                window.run_command("hide_panel",
-                                   {"panel": "output.diagnostics"})
-        panel.set_read_only(True)
-
-
-def format_diagnostics(file_path, origin_diagnostics):
-    content = " ◌ {}:\n".format(file_path)
-    for origin, diagnostics in origin_diagnostics.items():
-        for diagnostic in diagnostics:
-            item = format_diagnostic(diagnostic)
-            content += item + "\n"
-    return content
 
 
 def start_client(window: sublime.Window, config: ClientConfig):
@@ -1203,36 +911,6 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         if sigDocs:
             formatted.append(sigDocs)
         return preserve_whitespace("\n".join(formatted))
-
-
-def get_line_diagnostics(view, point):
-    row, _ = view.rowcol(point)
-    diagnostics = get_diagnostics_for_view(view)
-    return tuple(
-        diagnostic for diagnostic in diagnostics
-        if diagnostic.range.start.row <= row <= diagnostic.range.end.row
-    )
-
-
-def get_point_diagnostics(view, point):
-    diagnostics = get_diagnostics_for_view(view)
-    return tuple(
-        diagnostic for diagnostic in diagnostics
-        if diagnostic.range.to_region(view).contains(point)
-    )
-
-
-def get_diagnostics_for_view(view: sublime.View) -> 'List[Diagnostic]':
-    window = view.window()
-    file_path = view.file_name()
-    origin = 'lsp'
-    if file_path and window:
-        if window.id() in window_file_diagnostics:
-            file_diagnostics = window_file_diagnostics[window.id()]
-            if file_path in file_diagnostics:
-                if origin in file_diagnostics[file_path]:
-                    return file_diagnostics[file_path][origin]
-    return []
 
 
 class LspCodeActionsCommand(sublime_plugin.TextCommand):

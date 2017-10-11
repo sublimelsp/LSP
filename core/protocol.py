@@ -104,6 +104,10 @@ class Request:
         return Request("textDocument/formatting", params)
 
     @classmethod
+    def rangeFormatting(cls, params: dict):
+        return Request("textDocument/rangeFormatting", params)
+
+    @classmethod
     def documentSymbols(cls, params: dict):
         return Request("textDocument/documentSymbol", params)
 

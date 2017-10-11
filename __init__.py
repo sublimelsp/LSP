@@ -7,3 +7,4 @@ from .features.formatting import *
 from .features.definition import *
 from .features.hover import *
 from .features.references import *
+from .features.signature_help import *

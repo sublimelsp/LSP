@@ -259,6 +259,7 @@ Any fields in a client configuration can be overridden by adding an LSP settings
     * Recommendation: Override `f12` (built-in goto definition),
     * LSP falls back to ST3's built-in goto definition command in case LSP fails.
 * Format Document: UNBOUND
+* Format Selection: UNBOUND
 * Document Symbols: UNBOUND
 
 **Workspace actions**

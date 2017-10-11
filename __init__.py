@@ -9,3 +9,4 @@ from .features.hover import *
 from .features.references import *
 from .features.signature_help import *
 from .features.code_actions import *
+from .features.symbols import *

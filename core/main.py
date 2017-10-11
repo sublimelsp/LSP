@@ -12,7 +12,7 @@ import sublime
 
 from .url import filename_to_uri, uri_to_filename
 from .protocol import (
-    Request, Notification, Range, SymbolKind
+    Request, Notification, Range
 )
 from .settings import (
     ClientConfig, settings, load_settings, unload_settings
@@ -24,7 +24,7 @@ from .configurations import (
     config_for_scope, is_supported_view, is_supported_syntax, is_supportable_syntax
 )
 from .clients import (
-    client_for_view, add_window_client, window_clients, check_window_unloaded, unload_old_clients,
+    add_window_client, window_clients, check_window_unloaded, unload_old_clients,
     unload_window_clients, unload_all_clients
 )
 from .events import Events
@@ -32,20 +32,6 @@ from .documents import (
     initialize_document_sync, notify_did_open
 )
 from .diagnostics import handle_diagnostics, remove_diagnostics
-
-
-symbol_kind_names = {
-    SymbolKind.File: "file",
-    SymbolKind.Module: "module",
-    SymbolKind.Namespace: "namespace",
-    SymbolKind.Package: "package",
-    SymbolKind.Class: "class",
-    SymbolKind.Method: "method",
-    SymbolKind.Function: "function",
-    SymbolKind.Field: "field",
-    SymbolKind.Variable: "variable",
-    SymbolKind.Constant: "constant"
-}
 
 
 def plugin_loaded():
@@ -144,63 +130,6 @@ def handle_initialize_result(result, client, window, config):
     if settings.show_status_messages:
         window.status_message("{} initialized".format(config.name))
     didopen_after_initialize = list()
-
-
-def preserve_whitespace(contents: str) -> str:
-    """Preserve empty lines and whitespace for markdown conversion."""
-    contents = contents.strip(' \t\r\n')
-    contents = contents.replace('\t', '&nbsp;' * 4)
-    contents = contents.replace('  ', '&nbsp;' * 2)
-    contents = contents.replace('\n\n', '\n&nbsp;\n')
-    return contents
-
-
-def format_symbol_kind(kind):
-    return symbol_kind_names.get(kind, str(kind))
-
-
-def format_symbol(item):
-    """
-    items may be a list of strings, or a list of string lists.
-    In the latter case, each entry in the quick panel will show multiple rows
-    """
-    # file_path = uri_to_filename(location.get("uri"))
-    # kind = format_symbol_kind(item.get("kind"))
-    # return [item.get("name"), kind]
-    return [item.get("name")]
-
-
-class LspDocumentSymbolsCommand(sublime_plugin.TextCommand):
-    def is_enabled(self):
-        if is_supported_view(self.view):
-            client = client_for_view(self.view)
-            if client and client.has_capability('documentSymbolProvider'):
-                return True
-        return False
-
-    def run(self, edit):
-        client = client_for_view(self.view)
-        if client:
-            params = {
-                "textDocument": {
-                    "uri": filename_to_uri(self.view.file_name())
-                }
-            }
-            request = Request.documentSymbols(params)
-            client.send_request(request, self.handle_response)
-
-    def handle_response(self, response):
-        symbols = list(format_symbol(item) for item in response)
-        self.symbols = response
-        self.view.window().show_quick_panel(symbols, self.on_symbol_selected)
-
-    def on_symbol_selected(self, symbol_index):
-        selected_symbol = self.symbols[symbol_index]
-        range = selected_symbol['location']['range']
-        region = Range.from_lsp(range).to_region(self.view)
-        self.view.show_at_center(region)
-        self.view.sel().clear()
-        self.view.sel().add(region)
 
 
 def start_client(window: sublime.Window, config: ClientConfig):

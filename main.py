@@ -2429,7 +2429,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         formatted = []
 
         if len(self._signatures) > 1:
-            signature_navigation = "**{}** of **{}** overloads (use the arrow keys to navigate):\n".format(
+            signature_navigation = "**{}** of **{}** overloads (use the ↑ ↓ keys to navigate):\n".format(
                 str(self._active_signature + 1), str(len(self._signatures)))
             formatted.append(signature_navigation)
 

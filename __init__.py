@@ -4,3 +4,4 @@ from .features.completion import *
 from .features.diagnostics import *
 from .features.configuration import *
 from .features.formatting import *
+from .features.hover import *

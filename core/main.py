@@ -558,29 +558,6 @@ def format_reference(reference, base_dir):
     return " ◌ {} {}:{}".format(relative_file_path, start.row + 1, start.col + 1)
 
 
-class LspClearPanelCommand(sublime_plugin.TextCommand):
-    """
-    A clear_panel command to clear the error panel.
-    """
-
-    def run(self, edit):
-        self.view.erase(edit, sublime.Region(0, self.view.size()))
-
-
-class LspUpdatePanelCommand(sublime_plugin.TextCommand):
-    """
-    A update_panel command to update the error panel with new text.
-    """
-
-    def run(self, edit, characters):
-        self.view.replace(edit, sublime.Region(0, self.view.size()), characters)
-
-        # Move cursor to the end
-        selection = self.view.sel()
-        selection.clear()
-        selection.add(sublime.Region(self.view.size(), self.view.size()))
-
-
 def start_client(window: sublime.Window, config: ClientConfig):
     project_path = get_project_path(window)
     if project_path is None:
@@ -1054,33 +1031,6 @@ class SaveListener(sublime_plugin.EventListener):
 def is_transient_view(view):
     window = view.window()
     return view == window.transient_view_in_group(window.active_group())
-
-
-class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
-    def __init__(self, view):
-        self.view = view
-        self.has_status = False
-
-    @classmethod
-    def is_applicable(cls, view_settings):
-        syntax = view_settings.get('syntax')
-        return settings.show_diagnostics_in_view_status and syntax and is_supported_syntax(syntax)
-
-    def on_selection_modified_async(self):
-        pos = self.view.sel()[0].begin()
-        line_diagnostics = get_line_diagnostics(self.view, pos)
-        if len(line_diagnostics) > 0:
-            self.show_diagnostics_status(line_diagnostics)
-        elif self.has_status:
-            self.clear_diagnostics_status()
-
-    def show_diagnostics_status(self, line_diagnostics):
-        self.has_status = True
-        self.view.set_status('lsp_diagnostics', line_diagnostics[0].message)
-
-    def clear_diagnostics_status(self):
-        self.view.set_status('lsp_diagnostics', "")
-        self.has_status = False
 
 
 class DocumentSyncListener(sublime_plugin.ViewEventListener):

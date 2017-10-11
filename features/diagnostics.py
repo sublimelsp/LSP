@@ -12,7 +12,8 @@ except ImportError:
 from ..core.settings import settings, PLUGIN_NAME
 from ..core.protocol import Diagnostic, DiagnosticSeverity
 from ..core.events import Events
-from ..core.diagnostics import DiagnosticsUpdate, get_window_diagnostics
+from ..core.configurations import is_supported_syntax
+from ..core.diagnostics import DiagnosticsUpdate, get_window_diagnostics, get_line_diagnostics
 from ..core.workspace import get_project_path
 from ..core.panels import create_output_panel
 
@@ -170,6 +171,33 @@ def handle_diagnostics(update: DiagnosticsUpdate):
     view = window.find_open_file(update.file_path)
     update_diagnostics_in_view(view, update.diagnostics)
     update_diagnostics_panel(window)
+
+
+class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
+    def __init__(self, view):
+        self.view = view
+        self.has_status = False
+
+    @classmethod
+    def is_applicable(cls, view_settings):
+        syntax = view_settings.get('syntax')
+        return settings.show_diagnostics_in_view_status and syntax and is_supported_syntax(syntax)
+
+    def on_selection_modified_async(self):
+        pos = self.view.sel()[0].begin()
+        line_diagnostics = get_line_diagnostics(self.view, pos)
+        if len(line_diagnostics) > 0:
+            self.show_diagnostics_status(line_diagnostics)
+        elif self.has_status:
+            self.clear_diagnostics_status()
+
+    def show_diagnostics_status(self, line_diagnostics):
+        self.has_status = True
+        self.view.set_status('lsp_diagnostics', line_diagnostics[0].message)
+
+    def clear_diagnostics_status(self):
+        self.view.set_status('lsp_diagnostics', "")
+        self.has_status = False
 
 
 class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):

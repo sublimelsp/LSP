@@ -2034,6 +2034,10 @@ class HoverHandler(sublime_plugin.ViewEventListener):
                 .lsp_hover {
                     margin: 0.5rem 0.5rem 0 0.5rem;
                 }
+                .lsp_hover .highlight {
+                    border-width: 0;
+                    border-radius: 0;
+                }
                 .lsp_hover p {
                     margin-bottom: 0.5rem;
                     padding: 0 0.5rem;

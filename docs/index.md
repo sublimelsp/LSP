@@ -159,6 +159,38 @@ Autocomplete triggers: in User or Syntax-specific settings, add:
 "auto_complete_triggers": [ {"selector": "source.c++", "characters": ".>:" }]
 ```
 
+For any project of non-trivial size, you probably have a build system in place
+to compile your source files. The compilation command passed to your compiler
+might include things like:
+
+* Include directories,
+* Define directives,
+* Compiler-specific flags.
+
+Like any language server, clangd works on a per-file (or per-buffer) basis. But
+unlike most other language servers, it must also be aware of the exact compile
+flags that you pass to your compiler. For this reason, people have come up with
+the idea of a [*compilation database*](https://clang.llvm.org/docs/JSONCompilationDatabase.html).
+At this time, this is just a simple JSON file that describes for each
+*translation unit* (i.e. a `.cpp`, `.c`, `.m` or `.mm` file) the exact
+compilation flags that you pass to your compiler.
+
+It's pretty much standardized that this file should be called
+`compile_commands.json`. **clangd searches for this file up in parent
+directories from the currently active document**. If you don't have such a file
+present, most likely clangd will spit out nonsense errors and diagnostics about
+your code.
+
+As it turns out, CMake can generate this file *for you* if you pass it the
+cache variable `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` when invoking CMake. It will
+be present in your build directory, and you can copy that file to the root of
+your project. Make sure to ignore this file in your version control system.
+
+Since header files are (usually) not passed to a compiler, they don't have
+compile commands. So even with a compilation database in place, clangd will
+*still* spit out nonsense in header files. You can try to remedy this by
+enhancing your compilation database with your header files using [this project called compdb](https://github.com/Sarcasm/compdb).
+
 ### Ocaml/Reason<a name="reason"></a>
 
 You will need to install [sublime-reason](https://github.com/reasonml-editor/sublime-reason) and the dependencies listed in the repo, such as [ocaml-language-server](https://github.com/freebroccolo/ocaml-language-server). If you only use OCaml, you still need those listed dependencies, but not the sublime-reason plugin itself.

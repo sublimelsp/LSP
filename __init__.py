@@ -1,6 +1,7 @@
 from .plugin.core import main
 from .plugin.core.panels import *
 from .plugin.core.documents import *
+from .plugin.core.edit import *
 from .plugin.completion import *
 from .plugin.diagnostics import *
 from .plugin.configuration import *

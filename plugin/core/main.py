@@ -35,7 +35,7 @@ from .diagnostics import handle_diagnostics, remove_diagnostics
 from .edit import apply_workspace_edit
 
 
-def plugin_loaded():
+def startup():
     load_settings()
     Events.subscribe("view.on_load_async", initialize_on_open)
     Events.subscribe("view.on_activated_async", initialize_on_open)
@@ -44,7 +44,7 @@ def plugin_loaded():
     start_active_view()
 
 
-def plugin_unloaded():
+def shutdown():
     unload_settings()
     unload_all_clients()
 

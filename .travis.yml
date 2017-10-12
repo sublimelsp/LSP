@@ -6,4 +6,4 @@ before_install:
     - pip install flake8
 script:
     - mypy -p plugin
-    - flake8 --exclude=./__init__.py
+    - flake8 --exclude=./boot.py

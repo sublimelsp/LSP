@@ -11,3 +11,4 @@ from .plugin.references import *
 from .plugin.signature_help import *
 from .plugin.code_actions import *
 from .plugin.symbols import *
+from .plugin.rename import *

@@ -5,5 +5,5 @@ before_install:
     - pip install mypy
     - pip install flake8
 script:
-    - mypy main.py
-    - flake8
+    - mypy -p plugin
+    - flake8 --exclude=./boot.py

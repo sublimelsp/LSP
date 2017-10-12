@@ -1,10 +1,10 @@
 import sublime_plugin
 
-from ..core.protocol import SymbolKind
-from ..core.configurations import is_supported_view
-from ..core.clients import client_for_view
-from ..core.protocol import Request, Range
-from ..core.url import filename_to_uri
+from .core.protocol import SymbolKind
+from .core.configurations import is_supported_view
+from .core.clients import client_for_view
+from .core.protocol import Request, Range
+from .core.url import filename_to_uri
 
 
 symbol_kind_names = {

@@ -9,13 +9,13 @@ try:
 except ImportError:
     pass
 
-from ..core.settings import settings, PLUGIN_NAME
-from ..core.protocol import Diagnostic, DiagnosticSeverity
-from ..core.events import Events
-from ..core.configurations import is_supported_syntax
-from ..core.diagnostics import DiagnosticsUpdate, get_window_diagnostics, get_line_diagnostics
-from ..core.workspace import get_project_path
-from ..core.panels import create_output_panel
+from .core.settings import settings, PLUGIN_NAME
+from .core.protocol import Diagnostic, DiagnosticSeverity
+from .core.events import Events
+from .core.configurations import is_supported_syntax
+from .core.diagnostics import DiagnosticsUpdate, get_window_diagnostics, get_line_diagnostics
+from .core.workspace import get_project_path
+from .core.panels import create_output_panel
 
 diagnostic_severity_names = {
     DiagnosticSeverity.Error: "error",

@@ -4,6 +4,8 @@ from .settings import settings, PLUGIN_NAME
 
 def debug(*args):
     """Print args to the console if the "debug" setting is True."""
+    PLUGIN_NAME.capitalize()
+
     if settings.log_debug:
         printf(*args)
 

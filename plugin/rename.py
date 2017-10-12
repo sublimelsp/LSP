@@ -1,9 +1,9 @@
 import sublime_plugin
 
-from ..core.configurations import is_supported_view
-from ..core.clients import client_for_view
-from ..core.protocol import Request
-from ..core.documents import get_document_position, get_position, is_at_word
+from .core.configurations import is_supported_view
+from .core.clients import client_for_view
+from .core.protocol import Request
+from .core.documents import get_document_position, get_position, is_at_word
 
 
 class LspSymbolRenameCommand(sublime_plugin.TextCommand):

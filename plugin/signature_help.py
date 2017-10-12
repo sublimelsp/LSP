@@ -9,11 +9,11 @@ except ImportError:
     pass
 
 
-from ..core.clients import client_for_view
-from ..core.documents import get_document_position, purge_did_change
-from ..core.configurations import is_supported_syntax, config_for_scope
-from ..core.protocol import Request
-from ..core.logging import debug
+from .core.clients import client_for_view
+from .core.documents import get_document_position, purge_did_change
+from .core.configurations import is_supported_syntax, config_for_scope
+from .core.protocol import Request
+from .core.logging import debug
 
 
 class SignatureHelpListener(sublime_plugin.ViewEventListener):

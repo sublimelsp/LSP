@@ -2,12 +2,12 @@ import mdpopups
 import sublime
 import sublime_plugin
 
-from ..core.configurations import is_supported_syntax
-from ..core.diagnostics import get_point_diagnostics
-from ..core.clients import client_for_view
-from ..core.protocol import Request
-from ..core.documents import get_document_position
-from ..core.logging import debug
+from .core.configurations import is_supported_syntax
+from .core.diagnostics import get_point_diagnostics
+from .core.clients import client_for_view
+from .core.protocol import Request
+from .core.documents import get_document_position
+from .core.logging import debug
 
 
 SUBLIME_WORD_MASK = 515

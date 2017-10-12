@@ -1,9 +1,9 @@
 import sublime_plugin
 
-from ..core.protocol import Request, Range
-from ..core.url import filename_to_uri
-from ..core.clients import client_for_view
-from ..core.configurations import is_supported_view
+from .core.protocol import Request, Range
+from .core.url import filename_to_uri
+from .core.clients import client_for_view
+from .core.configurations import is_supported_view
 
 
 class LspFormatDocumentCommand(sublime_plugin.TextCommand):

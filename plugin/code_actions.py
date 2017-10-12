@@ -8,12 +8,12 @@ except ImportError:
     pass
 
 
-from ..core.clients import client_for_view
-from ..core.configurations import is_supported_view
-from ..core.protocol import Request, Range, Point
-from ..core.documents import get_position
-from ..core.diagnostics import get_line_diagnostics
-from ..core.url import filename_to_uri
+from .core.clients import client_for_view
+from .core.configurations import is_supported_view
+from .core.protocol import Request, Range, Point
+from .core.documents import get_position
+from .core.diagnostics import get_line_diagnostics
+from .core.url import filename_to_uri
 
 
 class LspCodeActionsCommand(sublime_plugin.TextCommand):

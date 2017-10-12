@@ -1,4 +1,4 @@
-from .plugin.core import main
+from .plugin.core.main import startup, shutdown, LspStartClientCommand, LspRestartClientCommand
 
 # TODO: narrow down imports
 from .plugin.core.panels import *
@@ -18,8 +18,8 @@ from .plugin.rename import *
 
 
 def plugin_loaded():
-    main.startup()
+    startup()
 
 
 def plugin_unloaded():
-    main.shutdown()
+    shutdown()

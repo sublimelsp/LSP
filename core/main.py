@@ -21,10 +21,10 @@ from .logging import debug, exception_log, server_log
 from .rpc import Client
 from .workspace import get_project_path
 from .configurations import (
-    config_for_scope, is_supported_view, is_supported_syntax, is_supportable_syntax
+    config_for_scope, is_supported_view
 )
 from .clients import (
-    add_window_client, window_clients, check_window_unloaded, unload_old_clients,
+    add_window_client, window_clients, unload_old_clients,
     unload_window_clients, unload_all_clients
 )
 from .events import Events
@@ -83,7 +83,7 @@ def initialize_on_open(view: sublime.View):
         if config.enabled:
             if config.name not in window_clients(window):
                 didopen_after_initialize.append(view)
-                get_window_client(view, window, config)
+                start_window_client(view, window, config)
         else:
             debug(config.name, 'is not enabled')
 
@@ -125,8 +125,12 @@ def handle_initialize_result(result, client, window, config):
         }
         client.send_notification(Notification.didChangeConfiguration(configParams))
 
+    # now the client should be available outside the initialization sequence
+    add_window_client(window, config.name, client)
+
     for view in didopen_after_initialize:
         notify_did_open(view)
+
     if settings.show_status_messages:
         window.status_message("{} initialized".format(config.name))
     didopen_after_initialize = list()
@@ -191,12 +195,11 @@ def start_client(window: sublime.Window, config: ClientConfig):
     return client
 
 
-def get_window_client(view: sublime.View, window: sublime.Window, config: ClientConfig) -> Client:
+def start_window_client(view: sublime.View, window: sublime.Window, config: ClientConfig) -> Client:
 
     clients = window_clients(window)
     if config.name not in clients:
         client = start_client(window, config)
-        add_window_client(window, config.name, client)
     else:
         client = clients[config.name]
 
@@ -295,49 +298,3 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
                 self.view.replace(edit, region, newText)
             else:
                 self.view.erase(edit, region)
-
-
-class CloseListener(sublime_plugin.EventListener):
-    def on_close(self, view):
-        if is_supported_syntax(view.settings().get("syntax")):
-            Events.publish("view.on_close", view)
-        sublime.set_timeout_async(check_window_unloaded, 500)
-
-
-class SaveListener(sublime_plugin.EventListener):
-    def on_post_save_async(self, view):
-        if is_supported_view(view):
-            Events.publish("view.on_post_save_async", view)
-
-
-def is_transient_view(view):
-    window = view.window()
-    return view == window.transient_view_in_group(window.active_group())
-
-
-class DocumentSyncListener(sublime_plugin.ViewEventListener):
-    def __init__(self, view):
-        self.view = view
-
-    @classmethod
-    def is_applicable(cls, settings):
-        syntax = settings.get('syntax')
-        # This enables all of document sync for any supportable syntax
-        # Global performance cost, consider a detect_lsp_support setting
-        return syntax and (is_supported_syntax(syntax) or is_supportable_syntax(syntax))
-
-    @classmethod
-    def applies_to_primary_view_only(cls):
-        return False
-
-    def on_load_async(self):
-        # skip transient views: if not is_transient_view(self.view):
-        Events.publish("view.on_load_async", self.view)
-
-    def on_modified(self):
-        if self.view.file_name():
-            Events.publish("view.on_modified", self.view)
-
-    def on_activated_async(self):
-        if self.view.file_name():
-            Events.publish("view.on_activated_async", self.view)

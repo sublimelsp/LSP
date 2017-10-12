@@ -25,15 +25,14 @@ def window_clients(window: sublime.Window) -> 'Dict[str, Client]':
     if window.id() in clients_by_window:
         return clients_by_window[window.id()]
     else:
-        debug("no clients found for window", window.id())
+        # debug("no clients found for window", window.id())
         return {}
 
 
 def add_window_client(window: sublime.Window, config_name: str, client: 'Client'):
     global clients_by_window
     clients_by_window.setdefault(window.id(), {})[config_name] = client
-    debug("client registered for window",
-          window.id(), window_clients(window))
+    debug("{} client registered for window {}".format(config_name, window.id()))
 
 
 def client_for_view(view: sublime.View) -> 'Optional[Client]':

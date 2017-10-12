@@ -84,7 +84,7 @@ class ClientConfigs(object):
         self.all = read_client_configs(self._global_settings, self._default_settings)
 
         client_enableds = list("=".join([config.name, str(config.enabled)]) for config in self.all)
-        print('global clients: ' + ", ".join(client_enableds))
+        print(PLUGIN_NAME + ': global clients: ' + ", ".join(client_enableds))
 
     def _set_enabled(self, config_name: str, is_enabled: bool):
         if _settings_obj:

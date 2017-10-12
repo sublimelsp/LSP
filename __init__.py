@@ -1,5 +1,6 @@
-from .core.main import *
+from .core import main
 from .core.panels import *
+from .core.documents import *
 from .features.completion import *
 from .features.diagnostics import *
 from .features.configuration import *

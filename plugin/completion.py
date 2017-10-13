@@ -115,6 +115,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
+        self.completions = []  # type: List[Tuple[str, str]]
         self.resolve = False
         self.resolve_details = []  # type: List[Tuple[str, str]]
         self.state = CompletionState.IDLE
@@ -152,7 +153,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         if self.enabled:
             if self.state == CompletionState.IDLE:
                 self.do_request(prefix, locations)
-                self.completions = []  # type: List[Tuple[str, str]]
 
             elif self.state in (CompletionState.REQUESTING, CompletionState.CANCELLING):
                 self.next_request = (prefix, locations)
@@ -160,6 +160,9 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
             elif self.state == CompletionState.APPLYING:
                 self.state = CompletionState.IDLE
+
+            if self.state != CompletionState.IDLE:
+                self.view.run_command('hide_auto_complete')
 
             return (
                 self.completions,
@@ -182,7 +185,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             if document_position:
                 client.send_request(
                     Request.complete(document_position),
-                    self.handle_response)
+                    lambda response: self.handle_response(response, prefix))
                 self.state = CompletionState.REQUESTING
 
     def format_completion(self, item) -> 'Tuple[str, str]':
@@ -209,28 +212,40 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         # only return label with a hint if available
         return "\t  ".join((label, hint)) if hint else label, insert_text
 
-    def handle_response(self, response):
+    def handle_response(self, response, prefix):
         global resolvable_completion_items
         if self.state == CompletionState.REQUESTING:
-            items = response["items"] if isinstance(response,
-                                                    dict) else response
+            # check if cursor is still behind prefix
+            cursor = self.view.sel()[0].begin()
+            region = sublime.Region(cursor - len(prefix), cursor)
+            if self.view.substr(region).isspace():
+                self.state = CompletionState.IDLE
+                return
+
+            # validate response and abort if empty
+            items = response['items'] if isinstance(response, dict) else response
+            if not items:
+                self.state = CompletionState.IDLE
+                return
+
+            # format completion and abort if the only one is matching the prefix
             self.completions = list(self.format_completion(item) for item in items)
+            if len(self.completions) == 1 and prefix == self.completions[0][1]:
+                self.state = CompletionState.IDLE
+                return
 
             if self.has_resolve_provider:
                 resolvable_completion_items = items
 
+            # show auto completion panel
             self.state = CompletionState.APPLYING
-            self.view.run_command("hide_auto_complete")
-            self.run_auto_complete()
-        elif self.state == CompletionState.CANCELLING:
-            self.do_request(*self.next_request)
-        else:
-            debug('Got unexpected response while in state {}'.format(self.state))
-
-    def run_auto_complete(self):
-        self.view.run_command(
-            "auto_complete", {
+            self.view.run_command('hide_auto_complete')
+            self.view.run_command('auto_complete', {
                 'disable_auto_insert': True,
                 'api_completions_only': settings.only_show_lsp_completions,
                 'next_completion_if_showing': False
             })
+        elif self.state == CompletionState.CANCELLING:
+            self.do_request(*self.next_request)
+        else:
+            debug('Got unexpected response while in state {}'.format(self.state))

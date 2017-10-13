@@ -29,7 +29,6 @@ def window_clients(window: sublime.Window) -> 'Dict[str, Client]':
 
 
 def add_window_client(window: sublime.Window, config_name: str, client: 'Client'):
-    global clients_by_window
     clients_by_window.setdefault(window.id(), {})[config_name] = client
     debug("{} client registered for window {}".format(config_name, window.id()))
 
@@ -55,42 +54,36 @@ def client_for_view(view: sublime.View) -> 'Optional[Client]':
 
 
 def unload_all_clients():
-    for window in sublime.windows():
-        for client in window_clients(window).values():
+    for clients_by_config in clients_by_window.values():
+        for client in clients_by_config.values():
             client.shutdown()
+    clients_by_window.clear()
 
 
 def check_window_unloaded():
-    global clients_by_window
-    open_window_ids = list(window.id() for window in sublime.windows())
-    iterable_clients_by_window = clients_by_window.copy()
-    closed_windows = []
-    for id, window_clients in iterable_clients_by_window.items():
-        if id not in open_window_ids:
-            debug("window closed", id)
-            closed_windows.append(id)
+    open_window_ids = set(window.id() for window in sublime.windows())
+    closed_windows = set(id for id in clients_by_window if id not in open_window_ids)
     for closed_window_id in closed_windows:
+        debug("window closed", closed_window_id)
         unload_window_clients(closed_window_id)
 
 
 def unload_window_clients(window_id: int):
-    global clients_by_window
-    if window_id in clients_by_window:
-        window_clients = clients_by_window[window_id]
-        del clients_by_window[window_id]
-        for config, client in window_clients.items():
+    clients_by_config = clients_by_window.pop(window_id)
+    if clients_by_config:
+        for client in clients_by_config.values():
             client.shutdown()
+        clients_by_config.clear()
 
 
 def unload_old_clients(window: sublime.Window):
     project_path = get_project_path(window)
     clients_by_config = window_clients(window)
-    clients_to_unload = {}
+    clients_to_unload = []
     for config_name, client in clients_by_config.items():
         if client and client.get_project_path() != project_path:
             debug('unload', config_name, 'project path changed from ', client.get_project_path())
-            clients_to_unload[config_name] = client
+            clients_to_unload.append(config_name)
 
-    for config_name, client in clients_to_unload.items():
-        client.shutdown()
-        del clients_by_config[config_name]
+    for config_name in clients_to_unload:
+        clients_by_config.pop(config_name).shutdown()

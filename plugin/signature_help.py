@@ -41,7 +41,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             signatureHelpProvider = client.get_capability(
                 'signatureHelpProvider')
             if signatureHelpProvider:
-                self.signature_help_triggers = signatureHelpProvider.get(
+                self._signature_help_triggers = signatureHelpProvider.get(
                     'triggerCharacters')
 
         config = config_for_scope(self.view)
@@ -57,8 +57,8 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         if not self._initialized:
             self.initialize()
 
-        if self.signature_help_triggers:
-            if last_char in self.signature_help_triggers:
+        if self._signature_help_triggers:
+            if last_char in self._signature_help_triggers:
                 client = client_for_view(self.view)
                 if client:
                     purge_did_change(self.view.buffer_id())

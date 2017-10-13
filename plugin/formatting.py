@@ -23,7 +23,7 @@ class LspFormatDocumentCommand(sublime_plugin.TextCommand):
                     "uri": filename_to_uri(self.view.file_name())
                 },
                 "options": {
-                    "tabSize": 4,  # TODO: Fetch these from the project settings / global settings
+                    "tabSize": self.view.settings().get("tab_size", 4),
                     "insertSpaces": True
                 }
             }
@@ -57,7 +57,7 @@ class LspFormatDocumentRangeCommand(sublime_plugin.TextCommand):
                 },
                 "range": Range.from_region(self.view, region).to_lsp(),
                 "options": {
-                    "tabSize": 4,  # TODO: Fetch these from the project settings / global settings
+                    "tabSize": self.view.settings().get("tab_size", 4),
                     "insertSpaces": True
                 }
             }

@@ -1,8 +1,7 @@
 import sublime
 
-from .logging import debug, exception_log
+from .logging import debug
 from .configurations import config_for_scope
-from .protocol import Notification
 from .workspace import get_project_path
 
 # typing only
@@ -58,7 +57,7 @@ def client_for_view(view: sublime.View) -> 'Optional[Client]':
 def unload_all_clients():
     for window in sublime.windows():
         for client in window_clients(window).values():
-            unload_client(client)
+            client.shutdown()
 
 
 def check_window_unloaded():
@@ -80,8 +79,7 @@ def unload_window_clients(window_id: int):
         window_clients = clients_by_window[window_id]
         del clients_by_window[window_id]
         for config, client in window_clients.items():
-            debug("unloading client", config, client)
-            unload_client(client)
+            client.shutdown()
 
 
 def unload_old_clients(window: sublime.Window):
@@ -94,14 +92,5 @@ def unload_old_clients(window: sublime.Window):
             clients_to_unload[config_name] = client
 
     for config_name, client in clients_to_unload.items():
-        unload_client(client)
+        client.shutdown()
         del clients_by_config[config_name]
-
-
-def unload_client(client: Client):
-    debug("unloading client", client)
-    try:
-        client.send_notification(Notification.exit())
-        client.kill()
-    except Exception as err:
-        exception_log("Error exiting server", err)

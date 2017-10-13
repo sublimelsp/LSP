@@ -68,6 +68,10 @@ class Request:
         return Request("initialize", params)
 
     @classmethod
+    def shutdown(cls):
+        return Request("shutdown", None)
+
+    @classmethod
     def hover(cls, params: dict):
         return Request("textDocument/hover", params)
 

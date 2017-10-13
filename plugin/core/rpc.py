@@ -47,6 +47,25 @@ class Client(object):
     def get_capability(self, capability):
         return self.capabilities.get(capability)
 
+    def shutdown(self):
+        try:
+            debug("unloading client", self)
+            self.send_request(Request.shutdown(), self.exit)
+            self.process.wait(timeout=5000)
+        except OSError as err:
+            exception_log("Error shutting down server", err)
+        finally:
+            self.terminate()
+
+    def exit(self, response):
+        self.send_notification(Notification.exit())
+
+    def terminate(self):
+        if self.process:
+            self.process.terminate()
+            self.process.wait()
+            self.process = None
+
     def send_request(self, request: Request, handler: 'Callable'):
         self.request_id += 1
         debug('request {}: {} '.format(self.request_id, request.method))
@@ -58,9 +77,6 @@ class Client(object):
         debug('notify: ' + notification.method)
         self.send_payload(notification.to_payload())
 
-    def kill(self):
-        self.process.kill()
-
     def send_payload(self, payload):
         try:
             message = format_request(payload)
@@ -69,8 +85,7 @@ class Client(object):
         except BrokenPipeError as err:
             sublime.status_message("Failure sending LSP server message, exiting")
             exception_log("Failure writing payload", err)
-            self.process.terminate()
-            self.process = None
+            self.terminate()
 
     def read_stdout(self):
         """
@@ -127,8 +142,7 @@ class Client(object):
             except IOError as err:
                 sublime.status_message("Failure reading LSP server response, exiting")
                 exception_log("Failure reading stdout", err)
-                self.process.terminate()
-                self.process = None
+                self.terminate()
                 return
 
         debug("LSP stdout process ended.")

@@ -2073,7 +2073,7 @@ class TypeAnnotator(object):
             return
 
         formatted_str = re.sub("<[a-zA-Z0-9_]*>", "", formatted_str)
-        formatted_str = re.sub("[^& <]*::", "", formatted_str)
+        formatted_str = re.sub("[^(& <]*::", "", formatted_str)
         if formatted_str.startswith("[closure@"):
             category = "fn"
             formatted_str = re.sub("@.*:[0-9]+", ", captures ", formatted_str)

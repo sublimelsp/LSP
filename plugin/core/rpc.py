@@ -34,6 +34,10 @@ class Client(object):
         self._request_handlers = {}  # type: Dict[str, Callable]
         self._notification_handlers = {}  # type: Dict[str, Callable]
         self.capabilities = {}  # type: Dict[str, Any]
+        self._lock = threading.Lock()
+        self._condition = threading.Condition(self._lock)
+        self._blocking_request_id = -1
+        self._scratch_response = None
 
     def set_capabilities(self, capabilities):
         self.capabilities = capabilities
@@ -47,12 +51,31 @@ class Client(object):
     def get_capability(self, capability):
         return self.capabilities.get(capability)
 
-    def send_request(self, request: Request, handler: 'Callable'):
+    def send_request(self, request: Request, handler: 'Callable', blocking=False):
         self.request_id += 1
-        debug('request {}: {} '.format(self.request_id, request.method))
-        if handler is not None:
-            self._response_handlers[self.request_id] = handler
-        self.send_payload(request.to_payload(self.request_id))
+        debug('request', self.request_id, ':', request.method, ', blocking =', blocking)
+        if blocking:
+            with self._condition:
+                try:
+                    self._blocking_request_id = self.request_id
+                    self.send_payload(request.to_payload(self.request_id))
+                    if not self._condition.wait_for(lambda: self._scratch_response is not None, 6):
+                        debug("blocking request timed out")
+                    elif self._scratch_response == "ERROR":
+                        pass  # Errors are handled in the stdout thread.
+                    elif self._scratch_response == "EMPTY":
+                        handler(None)
+                    else:
+                        handler(self._scratch_response)
+                except Exception as e:
+                    raise e
+                finally:
+                    self._blocking_request_id = -1
+                    self._scratch_response = None
+        else:
+            if handler is not None:
+                self._response_handlers[self.request_id] = handler
+            self.send_payload(request.to_payload(self.request_id))
 
     def send_notification(self, notification: Notification):
         debug('notify: ' + notification.method)
@@ -112,6 +135,10 @@ class Client(object):
                             error = payload['error']
                             debug("Got error from server: ", error)
                             sublime.status_message(error.get('message'))
+                            if self._blocking_request_id >= 0:
+                                self._scratch_response = "ERROR"
+                                with self._condition:
+                                    self._condition.notify()
                         elif "method" in payload:
                             if "id" in payload:
                                 self.request_handler(payload)
@@ -155,11 +182,16 @@ class Client(object):
 
     def response_handler(self, response):
         handler_id = int(response.get("id"))  # dotty sends strings back :(
-        result = response.get('result', None)
-        if (self._response_handlers[handler_id]):
-            self._response_handlers[handler_id](result)
+        if self._blocking_request_id == handler_id:
+            self._scratch_response = response.get("result", "EMPTY")
+            with self._condition:
+                self._condition.notify()
         else:
-            debug("No handler found for id" + response.get("id"))
+            result = response.get('result', None)
+            if (self._response_handlers[handler_id]):
+                self._response_handlers[handler_id](result)
+            else:
+                debug("No handler found for id" + response.get("id"))
 
     def on_request(self, request_method: str, handler: 'Callable'):
         self._request_handlers[request_method] = handler

@@ -28,8 +28,9 @@ class LspFormatDocumentCommand(sublime_plugin.TextCommand):
                 }
             }
             request = Request.formatting(params)
-            client.send_request(
-                request, lambda response: self.handle_response(response, pos))
+            client.send_request(request,
+                                lambda response: self.handle_response(response, pos),
+                                blocking=True)
 
     def handle_response(self, response, pos):
         self.view.run_command('lsp_apply_document_edit',
@@ -63,4 +64,5 @@ class LspFormatDocumentRangeCommand(sublime_plugin.TextCommand):
             }
             client.send_request(Request.rangeFormatting(params),
                                 lambda response: self.view.run_command('lsp_apply_document_edit',
-                                                                       {'changes': response}))
+                                                                       {'changes': response}),
+                                blocking=True)

@@ -62,9 +62,14 @@ class Client(object):
 
     def terminate(self):
         if self.process:
-            self.process.terminate()
-            self.process.wait()
-            self.process = None
+            try:
+                self.process.terminate()
+                self.process.wait()
+            except ProcessLookupError:
+                # process already exited
+                pass
+            finally:
+                self.process = None
 
     def send_request(self, request: Request, handler: 'Callable'):
         self.request_id += 1

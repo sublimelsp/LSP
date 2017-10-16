@@ -106,4 +106,3 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             location=point,
             wrapper_class=popup_class,
             max_width=800)
-

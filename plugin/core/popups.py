@@ -13,4 +13,7 @@ popup_css = '''
         padding: 0 0.5rem;
         font-family: system;
     }
+    .lsp_popup li {
+        font-family: system;
+    }
 '''

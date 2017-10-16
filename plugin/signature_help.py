@@ -14,12 +14,10 @@ from .core.documents import get_document_position, purge_did_change
 from .core.configurations import is_supported_syntax, config_for_scope
 from .core.protocol import Request
 from .core.logging import debug
+from .core.popups import preserve_whitespace, popup_css, popup_class
 
 
 class SignatureHelpListener(sublime_plugin.ViewEventListener):
-
-    css = ".mdpopups .lsp_signature { margin: 4px; } .mdpopups p { margin: 0.1rem; }"
-    wrapper_class = "lsp_signature"
 
     def __init__(self, view):
         self.view = view
@@ -90,11 +88,11 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             if len(self._signatures) > 0:
                 mdpopups.show_popup(self.view,
                                     self._build_popup_content(),
-                                    css=self.__class__.css,
+                                    css=popup_css,
                                     md=True,
                                     flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
                                     location=point,
-                                    wrapper_class=self.__class__.wrapper_class,
+                                    wrapper_class=popup_class,
                                     max_width=800,
                                     on_hide=self._on_hide)
                 self._visible = True
@@ -118,9 +116,9 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 self._active_signature = new_index
                 mdpopups.update_popup(self.view,
                                       self._build_popup_content(),
-                                      css=self.__class__.css,
+                                      css=popup_css,
                                       md=True,
-                                      wrapper_class=self.__class__.wrapper_class)
+                                      wrapper_class=popup_class)
 
             return True  # We handled this keybinding.
 
@@ -132,11 +130,11 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         formatted = []
 
         if len(self._signatures) > 1:
-            signature_navigation = "**{}** of **{}** overloads (use the arrow keys to navigate):\n".format(
+            signature_navigation = "**{}** of **{}** overloads (use the ↑ ↓ keys to navigate):\n".format(
                 str(self._active_signature + 1), str(len(self._signatures)))
             formatted.append(signature_navigation)
 
-        label = "```{}\n{}\n```".format(self._language_id, signature.get('label'))
+        label = "```{}\n{}\n```\n".format(self._language_id, signature.get('label'))
         formatted.append(label)
 
         params = signature.get('parameters')
@@ -150,12 +148,3 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         if sigDocs:
             formatted.append(sigDocs)
         return preserve_whitespace("\n".join(formatted))
-
-
-def preserve_whitespace(contents: str) -> str:
-    """Preserve empty lines and whitespace for markdown conversion."""
-    contents = contents.strip(' \t\r\n')
-    contents = contents.replace('\t', '&nbsp;' * 4)
-    contents = contents.replace('  ', '&nbsp;' * 2)
-    contents = contents.replace('\n\n', '\n&nbsp;\n')
-    return contents

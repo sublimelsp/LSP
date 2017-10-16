@@ -14,7 +14,7 @@ from .core.documents import get_document_position, purge_did_change
 from .core.configurations import is_supported_syntax, config_for_scope
 from .core.protocol import Request
 from .core.logging import debug
-from .core.popups import preserve_whitespace, popup_css, popup_class
+from .core.popups import popup_css, popup_class
 
 
 class SignatureHelpListener(sublime_plugin.ViewEventListener):
@@ -147,4 +147,4 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         sigDocs = signature.get('documentation', None)
         if sigDocs:
             formatted.append(sigDocs)
-        return preserve_whitespace("\n".join(formatted))
+        return "\n".join(formatted)

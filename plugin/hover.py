@@ -8,7 +8,7 @@ from .core.clients import client_for_view
 from .core.protocol import Request
 from .core.documents import get_document_position
 from .core.logging import debug
-from .core.popups import preserve_whitespace, popup_css, popup_class
+from .core.popups import popup_css, popup_class
 
 SUBLIME_WORD_MASK = 515
 NO_HOVER_SCOPES = 'comment, constant, keyword, storage, string'
@@ -95,7 +95,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             if language:
                 formatted.append("```{}\n{}\n```\n".format(language, value))
             else:
-                formatted.append(preserve_whitespace(value))
+                formatted.append(value)
 
         mdpopups.show_popup(
             self.view,

@@ -17,7 +17,7 @@ popup_css = '''
 
 
 def preserve_whitespace(contents: str) -> str:
-    """Preserve empty lines and whitespace for markdown conversion."""
+    """Preserve indentation in (non-markdown) ascii docstrings (e.g. pyls)"""
     contents = contents.replace('\t', '\u00A0' * 4)
     contents = contents.replace('  ', '\u00A0' * 2)
     return contents

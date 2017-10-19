@@ -7,8 +7,7 @@ from .core.diagnostics import get_point_diagnostics
 from .core.clients import client_for_view
 from .core.protocol import Request
 from .core.documents import get_document_position
-from .core.logging import debug
-
+from .core.popups import popup_css, popup_class
 
 SUBLIME_WORD_MASK = 515
 NO_HOVER_SCOPES = 'comment, constant, keyword, storage, string'
@@ -46,7 +45,6 @@ class HoverHandler(sublime_plugin.ViewEventListener):
                         lambda response: self.handle_response(response, point))
 
     def handle_response(self, response, point):
-        debug(response)
         if self.view.is_popup_visible():
             return
         contents = "No description available."
@@ -62,11 +60,11 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         mdpopups.show_popup(
             self.view,
             "\n".join(formatted),
-            css=".mdpopups .lsp_hover { margin: 4px; }",
+            css=popup_css,
             md=True,
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
             location=point,
-            wrapper_class="lsp_hover",
+            wrapper_class=popup_class,
             max_width=800,
             on_navigate=lambda href: self.on_diagnostics_navigate(href, point, diagnostics))
 
@@ -93,25 +91,16 @@ class HoverHandler(sublime_plugin.ViewEventListener):
                 value = item.get("value")
                 language = item.get("language")
             if language:
-                formatted.append("```{}\n{}\n```".format(language, value))
+                formatted.append("```{}\n{}\n```\n".format(language, value))
             else:
                 formatted.append(value)
 
         mdpopups.show_popup(
             self.view,
-            preserve_whitespace("\n".join(formatted)),
-            css=".mdpopups .lsp_hover { margin: 4px; } .mdpopups p { margin: 0.1rem; }",
+            "\n".join(formatted),
+            css=popup_css,
             md=True,
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
             location=point,
-            wrapper_class="lsp_hover",
+            wrapper_class=popup_class,
             max_width=800)
-
-
-def preserve_whitespace(contents: str) -> str:
-    """Preserve empty lines and whitespace for markdown conversion."""
-    contents = contents.strip(' \t\r\n')
-    contents = contents.replace('\t', '&nbsp;' * 4)
-    contents = contents.replace('  ', '&nbsp;' * 2)
-    contents = contents.replace('\n\n', '\n&nbsp;\n')
-    return contents

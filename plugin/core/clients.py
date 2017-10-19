@@ -2,7 +2,7 @@ import sublime
 
 from .logging import debug, exception_log
 from .configurations import config_for_scope
-from .protocol import Notification
+from .protocol import Notification, Request
 from .workspace import get_project_path
 
 # typing only
@@ -33,6 +33,10 @@ def add_window_client(window: sublime.Window, config_name: str, client: 'Client'
     global clients_by_window
     clients_by_window.setdefault(window.id(), {})[config_name] = client
     debug("{} client registered for window {}".format(config_name, window.id()))
+
+
+def remove_window_client(window: sublime.Window, config_name: str):
+    del clients_by_window[window.id()][config_name]
 
 
 def client_for_view(view: sublime.View) -> 'Optional[Client]':
@@ -90,7 +94,7 @@ def unload_old_clients(window: sublime.Window):
     clients_to_unload = {}
     for config_name, client in clients_by_config.items():
         if client and client.get_project_path() != project_path:
-            debug('unload', config_name, 'project path changed from ', client.get_project_path())
+            debug('unload', config_name, 'project path changed from', client.get_project_path(), 'to', project_path)
             clients_to_unload[config_name] = client
 
     for config_name, client in clients_to_unload.items():
@@ -98,10 +102,12 @@ def unload_old_clients(window: sublime.Window):
         del clients_by_config[config_name]
 
 
-def unload_client(client: Client):
-    debug("unloading client", client)
+def on_shutdown(client: Client, response):
     try:
         client.send_notification(Notification.exit())
-        client.kill()
     except Exception as err:
         exception_log("Error exiting server", err)
+
+
+def unload_client(client: Client):
+    client.send_request(Request.shutdown(), lambda response: on_shutdown(client, response))

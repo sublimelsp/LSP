@@ -116,9 +116,6 @@ unsupported_syntax_template = """
 Visit [langserver.org](https://langserver.org) to find out if a language server exists for this language."""
 
 
-setup_css = ".mdpopups .lsp_documentation { margin: 20px; font-family: sans-serif; font-size: 1.2rem; line-height: 2}"
-
-
 class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
     def run(self):
         view = self.window.active_view()
@@ -137,7 +134,16 @@ class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
         mdpopups.show_popup(
             view,
             "\n".join([title, content]),
-            css=setup_css,
+            css='''
+                .lsp_documentation {
+                    margin: 1rem 1rem 0.5rem 1rem;
+                    font-family: system;
+                }
+                .lsp_documentation h1,
+                .lsp_documentation p {
+                    margin: 0 0 0.5rem 0;
+                }
+            ''',
             md=True,
             wrapper_class="lsp_documentation",
             max_width=800,

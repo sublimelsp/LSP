@@ -104,7 +104,7 @@ def handle_initialize_result(result, client, window, config):
         lambda params: handle_diagnostics(params))
     client.on_notification(
         "window/showMessage",
-        lambda params: sublime.active_window().message_dialog(params.get("message")))
+        lambda params: sublime.message_dialog(params.get("message")))
     if settings.log_server:
         client.on_notification(
             "window/logMessage",

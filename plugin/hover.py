@@ -1,6 +1,7 @@
 import mdpopups
 import sublime
 import sublime_plugin
+import webbrowser
 
 from .core.configurations import is_supported_syntax
 from .core.diagnostics import get_point_diagnostics
@@ -103,4 +104,8 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
             location=point,
             wrapper_class=popup_class,
-            max_width=800)
+            max_width=800,
+            on_navigate=lambda href: self.on_hover_navigate(href))
+
+    def on_hover_navigate(self, href):
+        webbrowser.open_new_tab(href)

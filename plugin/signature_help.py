@@ -1,6 +1,7 @@
 import mdpopups
 import sublime
 import sublime_plugin
+import webbrowser
 
 try:
     from typing import Any, List
@@ -94,7 +95,8 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                                     location=point,
                                     wrapper_class=popup_class,
                                     max_width=800,
-                                    on_hide=self._on_hide)
+                                    on_hide=self._on_hide,
+                                    on_navigate=lambda href: self._on_hover_navigate(href))
                 self._visible = True
 
     def on_query_context(self, key, _, operand, __):
@@ -124,6 +126,9 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
     def _on_hide(self):
         self._visible = False
+
+    def _on_hover_navigate(self, href):
+        webbrowser.open_new_tab(href)
 
     def _build_popup_content(self) -> str:
         signature = self._signatures[self._active_signature]

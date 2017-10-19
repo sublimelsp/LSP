@@ -2,7 +2,7 @@ import sublime
 
 from .logging import debug, exception_log
 from .configurations import config_for_scope
-from .protocol import Notification
+from .protocol import Notification, Request
 from .workspace import get_project_path
 
 # typing only
@@ -102,10 +102,12 @@ def unload_old_clients(window: sublime.Window):
         del clients_by_config[config_name]
 
 
-def unload_client(client: Client):
-    debug("unloading client", client)
+def on_shutdown(client: Client, response):
     try:
         client.send_notification(Notification.exit())
-        client.kill()
     except Exception as err:
         exception_log("Error exiting server", err)
+
+
+def unload_client(client: Client):
+    client.send_request(Request.shutdown(), lambda response: on_shutdown(client, response))

@@ -7,7 +7,6 @@ from .core.diagnostics import get_point_diagnostics
 from .core.clients import client_for_view
 from .core.protocol import Request
 from .core.documents import get_document_position
-from .core.logging import debug
 from .core.popups import popup_css, popup_class
 
 SUBLIME_WORD_MASK = 515

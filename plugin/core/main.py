@@ -41,7 +41,7 @@ def startup():
     Events.subscribe("view.on_activated_async", initialize_on_open)
     if settings.show_status_messages:
         sublime.status_message("LSP initialized")
-    start_active_view()
+    start_active_views()
 
 
 def shutdown():
@@ -49,15 +49,26 @@ def shutdown():
     unload_all_clients()
 
 
-def start_active_view():
+def start_active_views():
     window = sublime.active_window()
     if window:
-        view = window.active_view()
-        debug('starting initial view', view.file_name())
-        if view and is_supported_view(view):
-            initialize_on_open(view)
-        else:
-            debug('view not supported')
+        views = list()  # type: List[sublime.View]
+        num_groups = window.num_groups()
+        for group in range(0, num_groups):
+            view = window.active_view_in_group(group)
+            if is_supported_view(view):
+                if window.active_group() == group:
+                    views.insert(0, view)
+                else:
+                    views.append(view)
+
+        if len(views) > 0:
+            first_view = views.pop(0)
+            debug('starting active=', first_view.file_name(), 'other=', len(views))
+            initialize_on_open(first_view)
+            if len(views) > 0:
+                for view in views:
+                    didopen_after_initialize.append(view)
 
 
 TextDocumentSyncKindNone = 0
@@ -243,4 +254,4 @@ class LspStartClientCommand(sublime_plugin.TextCommand):
         return is_supported_view(self.view)
 
     def run(self, edit):
-        start_active_view()
+        start_active_views()

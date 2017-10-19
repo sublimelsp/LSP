@@ -46,7 +46,6 @@ class HoverHandler(sublime_plugin.ViewEventListener):
                         lambda response: self.handle_response(response, point))
 
     def handle_response(self, response, point):
-        debug(response)
         if self.view.is_popup_visible():
             return
         contents = "No description available."

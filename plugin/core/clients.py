@@ -35,6 +35,10 @@ def add_window_client(window: sublime.Window, config_name: str, client: 'Client'
     debug("{} client registered for window {}".format(config_name, window.id()))
 
 
+def remove_window_client(window: sublime.Window, config_name: str):
+    del clients_by_window[window.id()][config_name]
+
+
 def client_for_view(view: sublime.View) -> 'Optional[Client]':
     window = view.window()
     if not window:
@@ -90,7 +94,7 @@ def unload_old_clients(window: sublime.Window):
     clients_to_unload = {}
     for config_name, client in clients_by_config.items():
         if client and client.get_project_path() != project_path:
-            debug('unload', config_name, 'project path changed from ', client.get_project_path())
+            debug('unload', config_name, 'project path changed from', client.get_project_path(), 'to', project_path)
             clients_to_unload[config_name] = client
 
     for config_name, client in clients_to_unload.items():

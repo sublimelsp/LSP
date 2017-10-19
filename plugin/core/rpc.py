@@ -49,13 +49,13 @@ class Client(object):
 
     def send_request(self, request: Request, handler: 'Callable'):
         self.request_id += 1
-        debug('request {}: {} '.format(self.request_id, request.method))
+        debug(' --> ' + request.method)
         if handler is not None:
             self._response_handlers[self.request_id] = handler
         self.send_payload(request.to_payload(self.request_id))
 
     def send_notification(self, notification: Notification):
-        debug('notify: ' + notification.method)
+        debug(' --> ' + notification.method)
         self.send_payload(notification.to_payload())
 
     def kill(self):
@@ -100,9 +100,8 @@ class Client(object):
                     payload = None
                     try:
                         payload = json.loads(content)
-                        limit = min(len(content), 200)
-                        if payload.get("method") != "window/logMessage":
-                            debug("got json: ", content[0:limit], "...")
+                        # limit = min(len(content), 200)
+                        # debug("got json: ", content[0:limit], "...")
                     except IOError as err:
                         exception_log("got a non-JSON payload: " + content, err)
                         continue
@@ -156,6 +155,8 @@ class Client(object):
     def response_handler(self, response):
         handler_id = int(response.get("id"))  # dotty sends strings back :(
         result = response.get('result', None)
+        if settings.log_payloads and result:
+            debug('     ' + str(result))
         if (self._response_handlers[handler_id]):
             self._response_handlers[handler_id](result)
         else:
@@ -169,20 +170,28 @@ class Client(object):
 
     def request_handler(self, request):
         method = request.get("method")
+        debug('<--  ' + method)
+        params = request.get("params")
+        if settings.log_payloads and params:
+            debug('     ' + str(params))
         if method in self._request_handlers:
             try:
-                self._request_handlers[method](request.get("params"))
+                self._request_handlers[method](params)
             except Exception as err:
                 exception_log("Error handling request " + method, err)
         else:
             debug("Unhandled request", method)
 
-    def notification_handler(self, response):
-        method = response.get("method")
+    def notification_handler(self, notification):
+        method = notification.get("method")
+        debug('<--  ' + method)
+        params = notification.get("params")
+        if settings.log_payloads and params:
+            debug('     ' + str(params))
         if method in self._notification_handlers:
             try:
-                self._notification_handlers[method](response.get("params"))
+                self._notification_handlers[method](params)
             except Exception as err:
-                exception_log("Error handling request " + method, err)
+                exception_log("Error handling notification " + method, err)
         else:
             debug("Unhandled notification:", method)

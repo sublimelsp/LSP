@@ -58,13 +58,13 @@ class CompletionItemKind(object):
 
 
 class Request:
-    def __init__(self, method, params):
+    def __init__(self, method: str, params: 'Optional[dict]') -> None:
         self.method = method
         self.params = params
         self.jsonrpc = "2.0"
 
     @classmethod
-    def initialize(cls, params):
+    def initialize(cls, params: dict):
         return Request("initialize", params)
 
     @classmethod
@@ -114,6 +114,10 @@ class Request:
     @classmethod
     def resolveCompletionItem(cls, params: dict):
         return Request("completionItem/resolve", params)
+
+    @classmethod
+    def shutdown(cls):
+        return Request("shutdown", None)
 
     def __repr__(self):
         return self.method + " " + str(self.params)

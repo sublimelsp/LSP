@@ -118,7 +118,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         self.resolve = False
         self.resolve_details = []  # type: List[Tuple[str, str]]
         self.state = CompletionState.IDLE
+        self.completions = []  # type: List[Any]
         self.next_request = None
+        self.last_prefix = ""
+        self.last_location = 0
 
     @classmethod
     def is_applicable(cls, settings):
@@ -145,6 +148,18 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             prev_char = self.view.substr(location - 1)
             return prev_char in self.trigger_chars
 
+    def is_same_completion(self, prefix, locations):
+        # completion requests from the same location with the same prefix are cached.
+        current_start = locations[0] - len(prefix)
+        last_start = self.last_location - len(self.last_prefix)
+        return prefix.startswith(self.last_prefix) and current_start == last_start
+
+    def on_modified(self):
+        # hide completion when backspacing past last completion.
+        if self.view.sel()[0].begin() < self.last_location:
+            self.last_location = 0
+            self.view.run_command("hide_auto_complete")
+
     def on_query_completions(self, prefix, locations):
         if self.view.match_selector(locations[0], NO_COMPLETION_SCOPES):
             return
@@ -153,9 +168,13 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             self.initialize()
 
         if self.enabled:
+            reuse_completion = self.is_same_completion(prefix, locations)
             if self.state == CompletionState.IDLE:
-                self.do_request(prefix, locations)
-                self.completions = []  # type: List[Tuple[str, str]]
+                if not reuse_completion:
+                    self.last_prefix = prefix
+                    self.last_location = locations[0]
+                    self.do_request(prefix, locations)
+                    self.completions = []
 
             elif self.state in (CompletionState.REQUESTING, CompletionState.CANCELLING):
                 self.next_request = (prefix, locations)
@@ -214,6 +233,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
     def handle_response(self, response):
         global resolvable_completion_items
+
         if self.state == CompletionState.REQUESTING:
             items = response["items"] if isinstance(response,
                                                     dict) else response
@@ -221,6 +241,11 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
             if self.has_resolve_provider:
                 resolvable_completion_items = items
+
+            # if insert_best_completion was just ran, undo it before presenting new completions.
+            prev_char = self.view.substr(self.view.sel()[0].begin() - 1)
+            if prev_char.isspace():
+                self.view.run_command("undo")
 
             self.state = CompletionState.APPLYING
             self.view.run_command("hide_auto_complete")

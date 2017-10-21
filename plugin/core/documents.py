@@ -50,7 +50,7 @@ def is_at_word(view: sublime.View, event) -> bool:
 
 
 # TODO: this should be per-window ?
-document_states = {}  # type: Dict[str, DocumentState]
+document_states = {}  # type: Dict[int, Dict[str, DocumentState]]
 
 
 class DocumentState:
@@ -64,10 +64,28 @@ class DocumentState:
         return self.version
 
 
-def get_document_state(path: str) -> DocumentState:
-    if path not in document_states:
-        document_states[path] = DocumentState(path)
-    return document_states[path]
+def get_document_state(window: sublime.Window, path: str) -> DocumentState:
+    window_document_states = document_states.setdefault(window.id(), {})
+    if path not in window_document_states:
+        window_document_states[path] = DocumentState(path)
+    return window_document_states[path]
+
+
+def has_document_state(window: sublime.Window, path: str):
+    window_id = window.id()
+    if window_id not in document_states:
+        return False
+    return path in document_states[window_id]
+
+
+def clear_document_state(window: sublime.Window, path: str):
+    window_id = window.id()
+    if window_id in document_states:
+        del document_states[window_id][path]
+
+
+def clear_document_states(window: sublime.Window):
+    del document_states[window.id()]
 
 
 pending_buffer_changes = dict()  # type: Dict[int, Dict]
@@ -107,10 +125,11 @@ def notify_did_open(view: sublime.View):
     client = client_for_view(view)
     if client and config:
         view.settings().set("show_definitions", False)
+        window = view.window()
         view_file = view.file_name()
-        if view_file:
-            if view_file not in document_states:
-                ds = get_document_state(view_file)
+        if window and view_file:
+            if not has_document_state(window, view_file):
+                ds = get_document_state(window, view_file)
                 if settings.show_view_status:
                     view.set_status("lsp_clients", config.name)
                 params = {
@@ -126,9 +145,10 @@ def notify_did_open(view: sublime.View):
 
 def notify_did_close(view: sublime.View):
     file_name = view.file_name()
-    if file_name:
-        if file_name in document_states:
-            del document_states[file_name]
+    window = view.window()
+    if window and file_name:
+        if has_document_state(window, file_name):
+            clear_document_state(window, file_name)
             config = config_for_scope(view)
             clients = window_clients(sublime.active_window())
             if config and config.name in clients:
@@ -151,13 +171,14 @@ def notify_did_save(view: sublime.View):
 
 def notify_did_change(view: sublime.View):
     file_name = view.file_name()
-    if file_name:
+    window = view.window()
+    if window and file_name:
         if view.buffer_id() in pending_buffer_changes:
             del pending_buffer_changes[view.buffer_id()]
         # config = config_for_scope(view)
         client = client_for_view(view)
         if client:
-            document_state = get_document_state(file_name)
+            document_state = get_document_state(window, file_name)
             uri = filename_to_uri(file_name)
             params = {
                 "textDocument": {

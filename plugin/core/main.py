@@ -2,8 +2,8 @@ import os
 import subprocess
 
 try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional
-    assert Any and List and Dict and Tuple and Callable and Optional
+    from typing import Any, List, Dict, Tuple, Callable, Optional, Set
+    assert Any and List and Dict and Tuple and Callable and Optional and Set
 except ImportError:
     pass
 
@@ -29,7 +29,7 @@ from .clients import (
 )
 from .events import Events
 from .documents import (
-    initialize_document_sync, notify_did_open
+    initialize_document_sync, notify_did_open, clear_document_states
 )
 from .diagnostics import handle_diagnostics, remove_diagnostics
 from .edit import apply_workspace_edit
@@ -78,6 +78,24 @@ TextDocumentSyncKindIncremental = 2
 didopen_after_initialize = list()
 unsubscribe_initialize_on_load = None
 unsubscribe_initialize_on_activated = None
+
+
+starting_configs_by_window = {}  # type: Dict[int, Set[str]]
+
+
+def is_starting_config(window: sublime.Window, config_name: str):
+    if window.id() in starting_configs_by_window:
+        return config_name in starting_configs_by_window[window.id()]
+    else:
+        return False
+
+
+def set_starting_config(window: sublime.Window, config_name: str):
+    starting_configs_by_window.setdefault(window.id(), set()).add(config_name)
+
+
+def clear_starting_config(window: sublime.Window, config_name: str):
+    starting_configs_by_window[window.id()].remove(config_name)
 
 
 def initialize_on_open(view: sublime.View):
@@ -139,6 +157,7 @@ def handle_initialize_result(result, client, window, config):
 
     # now the client should be available outside the initialization sequence
     add_window_client(window, config.name, client)
+    clear_starting_config(window, config.name)
 
     for view in didopen_after_initialize:
         notify_did_open(view)
@@ -207,15 +226,14 @@ def start_client(window: sublime.Window, config: ClientConfig):
     return client
 
 
-def start_window_client(view: sublime.View, window: sublime.Window, config: ClientConfig) -> Client:
-
-    clients = window_clients(window)
-    if config.name not in clients:
+def start_window_client(view: sublime.View, window: sublime.Window, config: ClientConfig):
+    if not is_starting_config(window, config.name):
+        set_starting_config(window, config.name)
         client = start_client(window, config)
+        if client is None:  # clear starting state for config if not starting.
+            clear_starting_config(window, config.name)
     else:
-        client = clients[config.name]
-
-    return client
+        debug('Already starting on this window:', config.name)
 
 
 def start_server(server_binary_args, working_dir, env):
@@ -246,7 +264,9 @@ class LspRestartClientCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
         window = self.view.window()
+        clear_document_states(window)
         unload_window_clients(window.id())
+        start_active_views()
 
 
 class LspStartClientCommand(sublime_plugin.TextCommand):

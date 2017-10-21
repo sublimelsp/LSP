@@ -203,6 +203,9 @@
   // Resolve completions and apply snippet if received.
   "resolve_completion_for_snippets": false,
 
+  // If supported by the server, format (part of) the document while you type.
+  "format_on_type": false,
+
   // Show verbose debug messages in the sublime console.
   "log_debug": false,
 

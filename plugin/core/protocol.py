@@ -125,6 +125,10 @@ class Request:
         return Request("textDocument/rangeFormatting", params)
 
     @classmethod
+    def onTypeFormatting(cls, params: dict) -> 'Request':
+        return Request("textDocument/onTypeFormatting", params)
+
+    @classmethod
     def documentSymbols(cls, params: dict) -> 'Request':
         return Request("textDocument/documentSymbol", params)
 

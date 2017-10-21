@@ -13,6 +13,7 @@
 * `only_show_lsp_completions` `false` *disable sublime word completion and snippets from autocomplete lists*
 * `completion_hint_type` `"auto"` *override automatic completion hints with "detail", "kind" or "none"*
 * `resolve_completion_for_snippets` `false` *resolve completions and apply snippet if received*
+* `format_on_type`: *If supported by the server, format (part of) the document while you type*
 * `show_status_messages` `true` *show messages in the status bar for a few seconds*
 * `show_view_status` `true` *show permanent language server status in the status bar*
 * `auto_show_diagnostics_panel` `true` *open the diagnostics panel automatically if there are diagnostics*

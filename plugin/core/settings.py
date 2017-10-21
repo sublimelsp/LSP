@@ -63,6 +63,7 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings):
     settings.completion_hint_type = read_str_setting(settings_obj, "completion_hint_type", "auto")
     settings.complete_using_text_edit = read_bool_setting(settings_obj, "complete_using_text_edit", False)
     settings.resolve_completion_for_snippets = read_bool_setting(settings_obj, "resolve_completion_for_snippets", False)
+    settings.format_on_type = read_bool_setting(settings_obj, "format_on_type", False)
     settings.log_debug = read_bool_setting(settings_obj, "log_debug", False)
     settings.log_server = read_bool_setting(settings_obj, "log_server", True)
     settings.log_stderr = read_bool_setting(settings_obj, "log_stderr", False)

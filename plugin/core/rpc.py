@@ -145,7 +145,11 @@ class Client(object):
                 if not content:
                     break
                 if settings.log_stderr:
-                    server_log("(stderr): ", content.strip())
+                    try:
+                        decoded = content.decode("UTF-8")
+                    except UnicodeDecodeError:
+                        decoded = content
+                    server_log(decoded.strip())
             except IOError as err:
                 exception_log("Failure reading stderr", err)
                 return

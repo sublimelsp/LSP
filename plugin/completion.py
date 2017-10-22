@@ -162,7 +162,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
     def on_query_completions(self, prefix, locations):
         if self.view.match_selector(locations[0], NO_COMPLETION_SCOPES):
-            return
+            return (
+                [],
+                sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
+            )
 
         if not self.initialized:
             self.initialize()

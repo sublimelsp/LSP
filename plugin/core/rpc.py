@@ -31,6 +31,7 @@ class Client(object):
         self.project_path = project_path
         self.request_id = 0
         self._response_handlers = {}  # type: Dict[int, Callable]
+        self._error_handlers = {}  # type: Dict[int, Callable]
         self._request_handlers = {}  # type: Dict[str, Callable]
         self._notification_handlers = {}  # type: Dict[str, Callable]
         self.capabilities = {}  # type: Dict[str, Any]
@@ -47,11 +48,13 @@ class Client(object):
     def get_capability(self, capability):
         return self.capabilities.get(capability)
 
-    def send_request(self, request: Request, handler: 'Callable'):
+    def send_request(self, request: Request, handler: 'Callable', error_handler: 'Callable'):
         self.request_id += 1
         debug(' --> ' + request.method)
         if handler is not None:
             self._response_handlers[self.request_id] = handler
+        if error_handler is not None:
+            self._error_handlers[self.request_id] = error_handler
         self.send_payload(request.to_payload(self.request_id))
 
     def send_notification(self, notification: Notification):
@@ -107,17 +110,13 @@ class Client(object):
                         continue
 
                     try:
-                        if "error" in payload:
-                            error = payload['error']
-                            debug("Got error from server: ", error)
-                            sublime.status_message(error.get('message'))
-                        elif "method" in payload:
+                        if "id" in payload:
+                            self.response_handler(payload)
+                        if "method" in payload:
                             if "id" in payload:
                                 self.request_handler(payload)
                             else:
                                 self.notification_handler(payload)
-                        elif "id" in payload:
-                            self.response_handler(payload)
                         else:
                             debug("Unknown payload type: ", payload)
                     except Exception as err:
@@ -158,13 +157,23 @@ class Client(object):
 
     def response_handler(self, response):
         handler_id = int(response.get("id"))  # dotty sends strings back :(
+        error = response.get('error', None)
         result = response.get('result', None)
-        if settings.log_payloads and result:
-            debug('     ' + str(result))
-        if (self._response_handlers[handler_id]):
-            self._response_handlers[handler_id](result)
-        else:
-            debug("No handler found for id" + response.get("id"))
+        if result:
+            if settings.log_payloads:
+                debug('     ' + str(result))
+
+            if handler_id in self._response_handlers:
+                self._response_handlers[handler_id](result)
+            else:
+                debug("No handler found for id" + response.get("id"))
+        elif error:
+            if settings.log_payloads:
+                debug('     ' + str(error))
+            if handler_id in self._error_handlers:
+                self._error_handlers[handler_id](error)
+            else:
+                sublime.status_message(error.get('message'))
 
     def on_request(self, request_method: str, handler: 'Callable'):
         self._request_handlers[request_method] = handler

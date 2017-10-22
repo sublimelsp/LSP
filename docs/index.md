@@ -191,6 +191,11 @@ compile commands. So even with a compilation database in place, clangd will
 *still* spit out nonsense in header files. You can try to remedy this by
 enhancing your compilation database with your header files using [this project called compdb](https://github.com/Sarcasm/compdb).
 
+To generate headers with compdb, read [this closed issue](https://github.com/Sarcasm/compdb/issues/2).
+
+You can also read about attempts to address this [on the CMake issue tracker](https://gitlab.kitware.com/cmake/cmake/issues/16285), along with the problem
+of treating header files as translation units.
+
 ### Ocaml/Reason<a name="reason"></a>
 
 You will need to install [sublime-reason](https://github.com/reasonml-editor/sublime-reason) and the dependencies listed in the repo, such as [ocaml-language-server](https://github.com/freebroccolo/ocaml-language-server). If you only use OCaml, you still need those listed dependencies, but not the sublime-reason plugin itself.

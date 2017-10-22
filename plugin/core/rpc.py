@@ -48,7 +48,7 @@ class Client(object):
     def get_capability(self, capability):
         return self.capabilities.get(capability)
 
-    def send_request(self, request: Request, handler: 'Callable', error_handler: 'Callable'):
+    def send_request(self, request: Request, handler: 'Callable', error_handler: 'Optional[Callable]' = None):
         self.request_id += 1
         debug(' --> ' + request.method)
         if handler is not None:
@@ -110,13 +110,13 @@ class Client(object):
                         continue
 
                     try:
-                        if "id" in payload:
-                            self.response_handler(payload)
                         if "method" in payload:
                             if "id" in payload:
                                 self.request_handler(payload)
                             else:
                                 self.notification_handler(payload)
+                        elif "id" in payload:
+                            self.response_handler(payload)
                         else:
                             debug("Unknown payload type: ", payload)
                     except Exception as err:

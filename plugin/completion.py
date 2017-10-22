@@ -119,7 +119,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         self.resolve_details = []  # type: List[Tuple[str, str]]
         self.state = CompletionState.IDLE
         self.completions = []  # type: List[Any]
-        self.next_request = None
+        self.next_request = None  # type: Optional[Tuple[str, List[int]]]
         self.last_prefix = ""
         self.last_location = 0
 
@@ -189,7 +189,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 else sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
             )
 
-    def do_request(self, prefix, locations):
+    def do_request(self, prefix: str, locations: 'List[int]'):
         self.next_request = None
         view = self.view
 
@@ -204,10 +204,11 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             if document_position:
                 client.send_request(
                     Request.complete(document_position),
-                    self.handle_response)
+                    self.handle_response,
+                    self.handle_error)
                 self.state = CompletionState.REQUESTING
 
-    def format_completion(self, item) -> 'Tuple[str, str]':
+    def format_completion(self, item: dict) -> 'Tuple[str, str]':
         # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
         label = item["label"]
         # choose hint based on availability and user preference
@@ -231,7 +232,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         # only return label with a hint if available
         return "\t  ".join((label, hint)) if hint else label, insert_text
 
-    def handle_response(self, response):
+    def handle_response(self, response: dict):
         global resolvable_completion_items
 
         if self.state == CompletionState.REQUESTING:
@@ -251,9 +252,15 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             self.view.run_command("hide_auto_complete")
             self.run_auto_complete()
         elif self.state == CompletionState.CANCELLING:
-            self.do_request(*self.next_request)
+            if self.next_request:
+                prefix, locations = self.next_request
+                self.do_request(prefix, locations)
         else:
             debug('Got unexpected response while in state {}'.format(self.state))
+
+    def handle_error(self, error: dict):
+        sublime.status_message('Completion error: ' + str(error.get('message')))
+        self.state = CompletionState.IDLE
 
     def run_auto_complete(self):
         self.view.run_command(

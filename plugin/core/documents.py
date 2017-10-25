@@ -85,7 +85,8 @@ def clear_document_state(window: sublime.Window, path: str):
 
 
 def clear_document_states(window: sublime.Window):
-    del document_states[window.id()]
+    if window.id() in document_states:
+        del document_states[window.id()]
 
 
 pending_buffer_changes = dict()  # type: Dict[int, Dict]

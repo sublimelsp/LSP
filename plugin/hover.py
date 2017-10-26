@@ -11,7 +11,7 @@ from .core.documents import get_document_position
 from .core.popups import popup_css, popup_class
 
 SUBLIME_WORD_MASK = 515
-NO_HOVER_SCOPES = 'comment, constant, keyword, storage, string'
+NO_HOVER_SCOPES = 'comment, string'
 
 
 class HoverHandler(sublime_plugin.ViewEventListener):

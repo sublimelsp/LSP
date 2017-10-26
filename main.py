@@ -1913,6 +1913,9 @@ class TypeAnnotator(object):
             tp_vars = var_text.split(",")
             first = True
             for var in tp_vars:
+                if var.startswith(" "):
+                    var_start += 1
+                    var = var[1:]
                 if var.startswith("mut "):
                     var_start += 4
                     var = var[4:]

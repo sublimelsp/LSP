@@ -160,8 +160,9 @@ def notify_did_close(view: sublime.View):
 
 def notify_did_save(view: sublime.View):
     file_name = view.file_name()
-    if file_name:
-        if file_name in document_states:
+    window = view.window()
+    if window and file_name:
+        if has_document_state(window, file_name):
             client = client_for_view(view)
             if client:
                 params = {"textDocument": {"uri": filename_to_uri(file_name)}}

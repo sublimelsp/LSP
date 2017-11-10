@@ -182,9 +182,9 @@ class Client(object):
         self._notification_handlers[notification_method] = handler
 
     def request_handler(self, request):
+        params = request.get("params")
         method = request.get("method")
         debug('<--  ' + method)
-        params = request.get("params")
         if settings.log_payloads and params:
             debug('     ' + str(params))
         if method in self._request_handlers:
@@ -197,10 +197,11 @@ class Client(object):
 
     def notification_handler(self, notification):
         method = notification.get("method")
-        debug('<--  ' + method)
         params = notification.get("params")
-        if settings.log_payloads and params:
-            debug('     ' + str(params))
+        if method != "window/logMessage":
+            debug('<--  ' + method)
+            if settings.log_payloads and params:
+                debug('     ' + str(params))
         if method in self._notification_handlers:
             try:
                 self._notification_handlers[method](params)

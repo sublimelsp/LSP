@@ -98,8 +98,8 @@ def unload_old_clients(window: sublime.Window):
             clients_to_unload[config_name] = client
 
     for config_name, client in clients_to_unload.items():
-        unload_client(client)
         del clients_by_config[config_name]
+        unload_client(client)
 
 
 def on_shutdown(client: Client, response):

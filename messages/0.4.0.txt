@@ -1,0 +1,17 @@
+=> 0.4.0
+
+This release contains a major refactoring for future maintainability, it has had some weeks to stabilize but please create issues if you notice any regressions!
+
+Major new features:
+* Format Range (selection)
+* Function overload support in Signature Help
+* Hover styling simplifications and improvements
+
+Bug fixes around:
+* Shutting down / restarting language servers
+* Completions
+* and much more!
+
+Contributors: @deathaxe, @rwols, @dten, @braver, @nh2
+
+See https://github.com/tomv564/LSP/releases/tag/0.4.0 for full update details.

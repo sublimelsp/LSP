@@ -14,8 +14,9 @@ def apply_workspace_edit(window, params):
 class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
     def run(self, changes):
         debug('workspace edit', changes)
-        if changes.get('changes'):
-            for uri, file_changes in changes.get('changes').items():
+        workspace_changes = changes.get('changes')
+        if workspace_changes:
+            for uri, file_changes in workspace_changes.items():
                 path = uri_to_filename(uri)
                 view = self.window.open_file(path)
                 if view:
@@ -27,13 +28,18 @@ class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
                         )
                     else:
                         view.run_command('lsp_apply_document_edit',
-                                         {'changes': file_changes})
+                                         {'changes': file_changes,
+                                          'show_status': False})
                 else:
                     debug('view not found to apply', path, file_changes)
+            message = 'Applied changes to {} documents'.format(len(workspace_changes))
+            self.window.status_message(message)
+        else:
+            self.window.status_message('No changes to apply to workspace')
 
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
-    def run(self, edit, changes):
+    def run(self, edit, changes, show_status=True):
         regions = list(self.create_region(change) for change in changes)
         replacements = list(change.get('newText') for change in changes)
 
@@ -48,6 +54,11 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
             index += 1
 
         self.view.erase_regions('lsp_edit')
+        if show_status:
+            window = self.view.window()
+            if window:
+                message = 'Applied {} change(s) to {}'.format(len(changes), self.view.file_path())
+                window.status_message(message)
 
     def create_region(self, change):
         return Range.from_lsp(change['range']).to_region(self.view)

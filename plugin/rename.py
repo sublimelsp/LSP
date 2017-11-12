@@ -36,7 +36,7 @@ class LspSymbolRenameCommand(sublime_plugin.TextCommand):
             changes = response.get('changes')
             if len(changes) > 0:
                 self.view.window().run_command('lsp_apply_workspace_edit',
-                                               {'changes': response})
+                                               {'changes': changes})
 
     def want_event(self):
         return True

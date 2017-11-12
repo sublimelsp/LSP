@@ -1,9 +1,11 @@
+import os
 import sublime
 import sublime_plugin
 
 from .url import uri_to_filename
 from .protocol import Range
 from .logging import debug
+from .workspace import get_project_path
 
 
 def apply_workspace_edit(window, params):
@@ -12,11 +14,10 @@ def apply_workspace_edit(window, params):
 
 
 class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
-    def run(self, changes):
-        debug('workspace edit', changes)
-        workspace_changes = changes.get('changes')
-        if workspace_changes:
-            for uri, file_changes in workspace_changes.items():
+    def run(self, changes=None):
+        # debug('workspace edit', changes)
+        if changes:
+            for uri, file_changes in changes.items():
                 path = uri_to_filename(uri)
                 view = self.window.open_file(path)
                 if view:
@@ -32,14 +33,14 @@ class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
                                           'show_status': False})
                 else:
                     debug('view not found to apply', path, file_changes)
-            message = 'Applied changes to {} documents'.format(len(workspace_changes))
+            message = 'Applied changes to {} documents'.format(len(changes))
             self.window.status_message(message)
         else:
             self.window.status_message('No changes to apply to workspace')
 
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
-    def run(self, edit, changes, show_status=True):
+    def run(self, edit, changes=None, show_status=True):
         regions = list(self.create_region(change) for change in changes)
         replacements = list(change.get('newText') for change in changes)
 
@@ -57,7 +58,10 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         if show_status:
             window = self.view.window()
             if window:
-                message = 'Applied {} change(s) to {}'.format(len(changes), self.view.file_path())
+                base_dir = get_project_path(window)
+                file_path = self.view.file_name()
+                relative_file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
+                message = 'Applied {} change(s) to {}'.format(len(changes), relative_file_path)
                 window.status_message(message)
 
     def create_region(self, change):

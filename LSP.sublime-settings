@@ -123,6 +123,14 @@
       "syntaxes": ["Packages/Java/Java.sublime-syntax"],
       "languageId": "java"
     },
+    "julials":
+    {
+      "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"],
+      "languageId": "julia",
+      "scopes": ["source.julia"],
+      "syntaxes": ["Packages/Julia/Julia.sublime-syntax"],
+      "settings": {"runlinter": true}
+    }
   },
 
   // Show activity messages in the status bar for a few seconds.

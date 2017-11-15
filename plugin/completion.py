@@ -249,11 +249,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             if self.has_resolve_provider:
                 resolvable_completion_items = items
 
-            # if insert_best_completion was just ran, undo it before presenting new completions.
-            prev_char = self.view.substr(self.view.sel()[0].begin() - 1)
-            if prev_char.isspace():
-                self.view.run_command("undo")
-
             self.state = CompletionState.APPLYING
             self.view.run_command("hide_auto_complete")
             self.run_auto_complete()

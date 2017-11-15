@@ -109,6 +109,15 @@ class CompletionSnippetHandler(sublime_plugin.EventListener):
                 exception_log("Error inserting snippet: " + insertText, err)
 
 
+last_text_command = None
+
+
+class CompletionHelper(sublime_plugin.EventListener):
+    def on_text_command(self, view, command_name, args):
+        global last_text_command
+        last_text_command = command_name
+
+
 class CompletionHandler(sublime_plugin.ViewEventListener):
     def __init__(self, view):
         self.view = view
@@ -252,7 +261,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             # if insert_best_completion was just ran, undo it before presenting new completions.
             prev_char = self.view.substr(self.view.sel()[0].begin() - 1)
             if prev_char.isspace():
-                self.view.run_command("undo")
+                if last_text_command == "insert_best_completion":
+                    self.view.run_command("undo")
+                else:
+                    return
 
             self.state = CompletionState.APPLYING
             self.view.run_command("hide_auto_complete")

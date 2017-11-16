@@ -239,7 +239,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 hint = completion_item_kind_names[kind]
         # label is an alternative for insertText if insertText not provided
         insert_text = item.get("insertText") or label
-        if insert_text[0] == '$':  # sublime needs leading '$' escaped.
+        if len(insert_text) > 0 and insert_text[0] == '$':  # sublime needs leading '$' escaped.
             insert_text = '\$' + insert_text[1:]
         # only return label with a hint if available
         return "\t  ".join((label, hint)) if hint else label, insert_text

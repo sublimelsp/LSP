@@ -185,12 +185,14 @@ class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
         return settings.show_diagnostics_in_view_status and syntax and is_supported_syntax(syntax)
 
     def on_selection_modified_async(self):
-        pos = self.view.sel()[0].begin()
-        line_diagnostics = get_line_diagnostics(self.view, pos)
-        if len(line_diagnostics) > 0:
-            self.show_diagnostics_status(line_diagnostics)
-        elif self.has_status:
-            self.clear_diagnostics_status()
+        selections = self.view.sel()
+        if len(selections) > 0:
+            pos = selections[0].begin()
+            line_diagnostics = get_line_diagnostics(self.view, pos)
+            if len(line_diagnostics) > 0:
+                self.show_diagnostics_status(line_diagnostics)
+            elif self.has_status:
+                self.clear_diagnostics_status()
 
     def show_diagnostics_status(self, line_diagnostics):
         self.has_status = True

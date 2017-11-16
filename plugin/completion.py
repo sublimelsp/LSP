@@ -263,8 +263,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             if prev_char.isspace():
                 if last_text_command == "insert_best_completion":
                     self.view.run_command("undo")
-                else:
-                    return
 
             self.state = CompletionState.APPLYING
             self.view.run_command("hide_auto_complete")

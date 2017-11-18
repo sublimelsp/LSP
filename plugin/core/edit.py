@@ -9,8 +9,8 @@ from .workspace import get_project_path
 
 
 def apply_workspace_edit(window, params):
-    edit = params.get('edit')
-    window.run_command('lsp_apply_workspace_edit', {'changes': edit})
+    edit = params.get('edit', dict())
+    window.run_command('lsp_apply_workspace_edit', {'changes': edit.get('changes')})
 
 
 class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):

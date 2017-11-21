@@ -23,6 +23,7 @@
 * `log_debug` `false` *show debug logging in the sublime console*
 * `log_server` `true` *show server/logMessage notifications from language servers in the console*
 * `log_stderr` `false` *show language server stderr output in the console*
+* `log_payloads` `false` *show full JSON-RPC responses in the console*
 
 ## Language Specific Setup
 

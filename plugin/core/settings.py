@@ -50,7 +50,7 @@ class Settings(object):
         self.log_debug = True
         self.log_server = True
         self.log_stderr = False
-        self.log_payloads = True
+        self.log_payloads = False
 
     def update(self, settings_obj: sublime.Settings):
         self.show_status_messages = read_bool_setting(settings_obj, "show_status_messages", True)
@@ -67,6 +67,7 @@ class Settings(object):
         self.log_debug = read_bool_setting(settings_obj, "log_debug", False)
         self.log_server = read_bool_setting(settings_obj, "log_server", True)
         self.log_stderr = read_bool_setting(settings_obj, "log_stderr", False)
+        self.log_payloads = read_bool_setting(settings_obj, "log_payloads", False)
 
 
 class ClientConfigs(object):

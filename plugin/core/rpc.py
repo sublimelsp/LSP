@@ -159,7 +159,7 @@ class Client(object):
         handler_id = int(response.get("id"))  # dotty sends strings back :(
         error = response.get('error', None)
         result = response.get('result', None)
-        if result:
+        if result is not None:
             if settings.log_payloads:
                 debug('     ' + str(result))
 
@@ -174,6 +174,8 @@ class Client(object):
                 self._error_handlers[handler_id](error)
             else:
                 sublime.status_message(error.get('message'))
+        else:
+            debug('incomplete response payload', response)
 
     def on_request(self, request_method: str, handler: 'Callable'):
         self._request_handlers[request_method] = handler

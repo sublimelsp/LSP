@@ -5,7 +5,9 @@
             "python-markdown",
             "mdpopups",
             "python-jinja2",
-            "markupsafe"
+            "markupsafe",
+            "pymdownx",
+            "pyyaml"
         ]
     }
 }

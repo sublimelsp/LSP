@@ -5,7 +5,7 @@
 
 ## Sublime Settings
 
-* `mdpopups.use_sublime_highlighter` `true` *correct syntax highlighting in hover popups*
+*TODO: document any settings LSP depends on here*
 
 ## LSP Settings
 

@@ -14,8 +14,14 @@ from .protocol import Notification, Point
 from .settings import settings
 from .url import filename_to_uri
 from .configurations import config_for_scope, is_supported_view, is_supported_syntax, is_supportable_syntax
-from .clients import client_for_view, window_clients, check_window_unloaded
+from .clients import client_for_view, clients_by_window
 from .events import Events
+
+try:
+    global clients_by_window
+    assert clients_by_window
+except AssertionError:
+    pass
 
 SUBLIME_WORD_MASK = 515
 
@@ -144,20 +150,6 @@ def notify_did_open(view: sublime.View):
                 client.send_notification(Notification.didOpen(params))
 
 
-def notify_did_close(view: sublime.View):
-    file_name = view.file_name()
-    window = view.window()
-    if window and file_name:
-        if has_document_state(window, file_name):
-            clear_document_state(window, file_name)
-            config = config_for_scope(view)
-            clients = window_clients(sublime.active_window())
-            if config and config.name in clients:
-                client = clients[config.name]
-                params = {"textDocument": {"uri": filename_to_uri(file_name)}}
-                client.send_notification(Notification.didClose(params))
-
-
 def notify_did_save(view: sublime.View):
     file_name = view.file_name()
     window = view.window()
@@ -198,13 +190,6 @@ def notify_did_change(view: sublime.View):
 document_sync_initialized = False
 
 
-class CloseListener(sublime_plugin.EventListener):
-    def on_close(self, view):
-        if is_supported_syntax(view.settings().get("syntax")):
-            Events.publish("view.on_close", view)
-        sublime.set_timeout_async(check_window_unloaded, 500)
-
-
 class SaveListener(sublime_plugin.EventListener):
     def on_post_save_async(self, view):
         if is_supported_view(view):
@@ -217,8 +202,6 @@ def is_transient_view(view):
 
 
 class DocumentSyncListener(sublime_plugin.ViewEventListener):
-    def __init__(self, view):
-        self.view = view
 
     @classmethod
     def is_applicable(cls, settings):
@@ -230,6 +213,28 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
     @classmethod
     def applies_to_primary_view_only(cls):
         return False
+
+    def __del__(self):
+        file_name = self.view.file_name()
+        if not file_name:
+            return
+        global document_states
+        for _, filenames2documentstates in document_states.items():
+            state = filenames2documentstates.get(file_name, None)
+            if state is not None:
+                del filenames2documentstates[file_name]
+                break
+        config = config_for_scope(self.view)
+        if not config:
+            return
+        global clients_by_window
+        for _, configs2clients in clients_by_window.items():
+            client = configs2clients.get(config.name, None)
+            if client is not None:
+                params = {"textDocument": {"uri": filename_to_uri(file_name)}}
+                client.send_notification(Notification.didClose(params))
+                # Assuming one client...
+                return
 
     def on_load_async(self):
         # skip transient views: if not is_transient_view(self.view):
@@ -254,4 +259,3 @@ def initialize_document_sync(text_document_sync_kind):
     Events.subscribe('view.on_activated_async', notify_did_open)
     Events.subscribe('view.on_modified', queue_did_change)
     Events.subscribe('view.on_post_save_async', notify_did_save)
-    Events.subscribe('view.on_close', notify_did_close)

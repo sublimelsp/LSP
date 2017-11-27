@@ -146,7 +146,7 @@ def notify_did_open(view: sublime.View):
 
 def notify_did_close(view: sublime.View):
     file_name = view.file_name()
-    window = view.window()
+    window = sublime.active_window()
     if window and file_name:
         if has_document_state(window, file_name):
             clear_document_state(window, file_name)

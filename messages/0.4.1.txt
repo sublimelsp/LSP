@@ -1,0 +1,8 @@
+=> 0.4.1
+
+Major bug fixes:
+* didClose not sent (thanks @rwols)
+* completions stuck when empty list received (thanks @golddranks)
+* ImportError: mdpopups dependencies not installed correctly (thanks @jrappen)
+
+See https://github.com/tomv564/LSP/releases/tag/0.4.1 for full update details.

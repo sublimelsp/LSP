@@ -199,7 +199,7 @@ class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
         self.view.set_status('lsp_diagnostics', line_diagnostics[0].message)
 
     def clear_diagnostics_status(self):
-        self.view.set_status('lsp_diagnostics', "")
+        self.view.erase_status('lsp_diagnostics')
         self.has_status = False
 
 

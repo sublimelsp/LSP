@@ -45,18 +45,22 @@ class HoverHandler(sublime_plugin.ViewEventListener):
                         lambda response: self.handle_response(response, point))
 
     def handle_response(self, response, point):
-        all_content = [self.hover_content(point, response)]
+        all_content = ""
 
         point_diagnostics = get_point_diagnostics(self.view, point)
         if point_diagnostics:
-            all_content.extend(self.diagnostics_content(point_diagnostics))
+            all_content += self.diagnostics_content(point_diagnostics)
+
+        all_content += self.hover_content(point, response)
 
         self.show_hover(point, all_content)
 
     def diagnostics_content(self, diagnostics):
-        formatted = list("{}: {}".format(diagnostic.source, diagnostic.message) for diagnostic in diagnostics)
-        formatted.append("[{}]({})".format('Code Actions', 'code-actions'))
-        return formatted
+        formatted = ["<div class='errors'>"]
+        formatted.extend("<pre>{}</pre>".format(diagnostic.message) for diagnostic in diagnostics)
+        formatted.append("<a href='{}'>{}</a>".format('code-actions', 'Code Actions'))
+        formatted.append("</div>")
+        return "".join(formatted)
 
     def hover_content(self, point, response):
         contents = ["No description available."]
@@ -84,14 +88,14 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             else:
                 formatted.append(value)
 
-        return "\n".join(formatted)
+        return mdpopups.md2html(self.view, "".join(formatted))
 
     def show_hover(self, point, contents):
         mdpopups.show_popup(
             self.view,
-            "\n".join(contents),
+            contents,
             css=popup_css,
-            md=True,
+            md=False,
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
             location=point,
             wrapper_class=popup_class,

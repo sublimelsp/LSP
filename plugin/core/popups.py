@@ -24,5 +24,3 @@ popup_css = '''
         padding: 0.5rem;
     }
 '''
-
-        # background-color: color(var(--background) blend(red 50%));;

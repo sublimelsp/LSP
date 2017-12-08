@@ -48,11 +48,17 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         self.view.add_regions('lsp_edit', regions, "source.python")
 
         index = 0
-        # use regions from view as they are correctly updated after edits.
+        last_region_count = len(regions)
         for newText in replacements:
-            region = self.view.get_regions('lsp_edit')[index]
+            # refresh updated regions after each edit.
+            updated_regions = self.view.get_regions('lsp_edit')
+            region = updated_regions[index]  #
             self.apply_change(region, newText, edit)
-            index += 1
+            if len(self.view.get_regions('lsp_edit')) == last_region_count:
+                index += 1  # no regions lost, move to next region.
+            else:
+                # current region was removed, don't advance index.
+                last_region_count = len(self.view.get_regions('lsp_edit'))
 
         self.view.erase_regions('lsp_edit')
         if show_status:

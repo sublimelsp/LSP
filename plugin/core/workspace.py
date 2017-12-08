@@ -17,16 +17,21 @@ def get_project_path(window: sublime.Window) -> 'Optional[str]':
         folder_paths = window.folders()
         return folder_paths[0]
     else:
-        filename = window.active_view().file_name()
-        if filename:
-            project_path = os.path.dirname(filename)
-            debug("Couldn't determine project directory since no folders are open!",
-                  "Using", project_path, "as a fallback.")
-            return project_path
+        view = window.active_view()
+        if view:
+            filename = view.file_name()
+            if filename:
+                project_path = os.path.dirname(filename)
+                debug("Couldn't determine project directory since no folders are open!",
+                      "Using", project_path, "as a fallback.")
+                return project_path
+            else:
+                debug("Couldn't determine project directory since no folders are open",
+                      "and the current file isn't saved on the disk.")
+                return None
         else:
-            debug("Couldn't determine project directory since no folders are open",
-                  "and the current file isn't saved on the disk.")
-            return None
+            debug("No view is active in current window")
+            return None  # https://github.com/tomv564/LSP/issues/219
 
 
 def get_common_parent(paths: 'List[str]') -> str:

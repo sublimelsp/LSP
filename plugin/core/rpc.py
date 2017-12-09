@@ -157,9 +157,8 @@ class Client(object):
 
     def response_handler(self, response):
         handler_id = int(response.get("id"))  # dotty sends strings back :(
-        error = response.get('error', None)
-        result = response.get('result', None)
-        if result is not None:
+        if 'result' in response and 'error' not in response:
+            result = response['result']
             if settings.log_payloads:
                 debug('     ' + str(result))
 
@@ -167,7 +166,8 @@ class Client(object):
                 self._response_handlers[handler_id](result)
             else:
                 debug("No handler found for id" + response.get("id"))
-        elif error:
+        elif 'error' in response and 'result' not in response:
+            error = response.get('result')
             if settings.log_payloads:
                 debug('     ' + str(error))
             if handler_id in self._error_handlers:
@@ -175,7 +175,7 @@ class Client(object):
             else:
                 sublime.status_message(error.get('message'))
         else:
-            debug('incomplete response payload', response)
+            debug('invalid response payload', response)
 
     def on_request(self, request_method: str, handler: 'Callable'):
         self._request_handlers[request_method] = handler

@@ -26,11 +26,10 @@ class HoverHandler(sublime_plugin.ViewEventListener):
     def on_hover(self, point, hover_zone):
         if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():
             return
+        self.request_symbol_hover(point)
         point_diagnostics = get_point_diagnostics(self.view, point)
         if point_diagnostics:
-            self.show_diagnostics_hover(point, point_diagnostics)
-        else:
-            self.request_symbol_hover(point)
+            self.show_hover(point, self.diagnostics_content(point_diagnostics))
 
     def request_symbol_hover(self, point):
         if self.view.match_selector(point, NO_HOVER_SCOPES):
@@ -46,43 +45,36 @@ class HoverHandler(sublime_plugin.ViewEventListener):
                         lambda response: self.handle_response(response, point))
 
     def handle_response(self, response, point):
-        if self.view.is_popup_visible():
-            return
-        contents = "No description available."
+        all_content = ""
+
+        point_diagnostics = get_point_diagnostics(self.view, point)
+        if point_diagnostics:
+            all_content += self.diagnostics_content(point_diagnostics)
+
+        all_content += self.hover_content(point, response)
+
+        self.show_hover(point, all_content)
+
+    def diagnostics_content(self, diagnostics):
+        formatted = ["<div class='errors'>"]
+        formatted.extend("<pre>{}</pre>".format(diagnostic.message) for diagnostic in diagnostics)
+        formatted.append("<a href='{}'>{}</a>".format('code-actions', 'Code Actions'))
+        formatted.append("</div>")
+        return "".join(formatted)
+
+    def hover_content(self, point, response):
+        contents = ["No description available."]
         if isinstance(response, dict):
             # Flow returns None sometimes
             # See: https://github.com/flowtype/flow-language-server/issues/51
-            contents = response.get('contents') or contents
-        self.show_hover(point, contents)
+            response_content = response.get('contents')
+            if response_content:
+                if isinstance(response_content, list):
+                    contents = response_content
+                else:
+                    contents = [response_content]
 
-    def show_diagnostics_hover(self, point, diagnostics):
-        formatted = list("{}: {}".format(diagnostic.source, diagnostic.message) for diagnostic in diagnostics)
-        formatted.append("[{}]({})".format('Code Actions', 'code-actions'))
-        mdpopups.show_popup(
-            self.view,
-            "\n".join(formatted),
-            css=popup_css,
-            md=True,
-            flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
-            location=point,
-            wrapper_class=popup_class,
-            max_width=800,
-            on_navigate=lambda href: self.on_diagnostics_navigate(href, point, diagnostics))
-
-    def on_diagnostics_navigate(self, href, point, diagnostics):
-        # TODO: don't mess with the user's cursor.
-        # Instead, pass code actions requested from phantoms & hovers should call lsp_code_actions with
-        # diagnostics as args, positioning resulting UI close to the clicked link.
-        sel = self.view.sel()
-        sel.clear()
-        sel.add(sublime.Region(point, point))
-        self.view.run_command("lsp_code_actions")
-
-    def show_hover(self, point, contents):
         formatted = []
-        if not isinstance(contents, list):
-            contents = [contents]
-
         for item in contents:
             value = ""
             language = None
@@ -96,16 +88,25 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             else:
                 formatted.append(value)
 
+        return mdpopups.md2html(self.view, "\n".join(formatted))
+
+    def show_hover(self, point, contents):
         mdpopups.show_popup(
             self.view,
-            "\n".join(formatted),
+            contents,
             css=popup_css,
-            md=True,
+            md=False,
             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
             location=point,
             wrapper_class=popup_class,
             max_width=800,
-            on_navigate=lambda href: self.on_hover_navigate(href))
+            on_navigate=lambda href: self.on_hover_navigate(href, point))
 
-    def on_hover_navigate(self, href):
-        webbrowser.open_new_tab(href)
+    def on_hover_navigate(self, href, point):
+        if href == 'code-actions':
+            sel = self.view.sel()
+            sel.clear()
+            sel.add(sublime.Region(point, point))
+            self.view.run_command("lsp_code_actions")
+        else:
+            webbrowser.open_new_tab(href)

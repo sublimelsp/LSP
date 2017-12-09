@@ -16,4 +16,11 @@ popup_css = '''
     .lsp_popup li {
         font-family: system;
     }
+    .lsp_popup .errors {
+        border-width: 0;
+        background-color: color(var(--redish) alpha(0.25));
+        color: --whitish;
+        margin-bottom: 0.5rem;
+        padding: 0.5rem;
+    }
 '''

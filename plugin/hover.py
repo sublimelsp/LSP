@@ -88,7 +88,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             else:
                 formatted.append(value)
 
-        return mdpopups.md2html(self.view, "".join(formatted))
+        return mdpopups.md2html(self.view, "\n".join(formatted))
 
     def show_hover(self, point, contents):
         mdpopups.show_popup(

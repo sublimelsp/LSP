@@ -43,7 +43,7 @@ class Client(object):
         return self.project_path
 
     def has_capability(self, capability):
-        return capability in self.capabilities
+        return capability in self.capabilities and self.capabilities[capability] is not False
 
     def get_capability(self, capability):
         return self.capabilities.get(capability)

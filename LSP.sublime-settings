@@ -130,6 +130,30 @@
       "scopes": ["source.julia"],
       "syntaxes": ["Packages/Julia/Julia.sublime-syntax"],
       "settings": {"runlinter": true}
+    },
+    "polymer-ide":
+    {
+      "command": ["polymer-editor-service"],
+      "scopes": [
+        "text.html.basic",
+        "text.html",
+        "source.html",
+        "source.js",
+        "source.css"
+      ],
+      "syntaxes": [
+        "Packages/HTML/HTML.sublime-syntax",
+        "Packages/CSS/CSS.sublime-syntax",
+        "Packages/JavaScript/JavaScript.sublime-syntax",
+        "Packages/JavaScript/JSON.sublime-syntax"
+      ],
+      "languageId": "polymer",
+      "settings": {
+        "polymer-ide": {
+          "analyzeWholePackage": false,
+          "fixOnSave": false
+        }
+      }
     }
   },
 

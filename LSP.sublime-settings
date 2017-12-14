@@ -155,6 +155,18 @@
   // Valid values are "underline" or "box"
   "diagnostics_highlight_style": "underline",
 
+  // Highlighting style of "highlights": accentuating nearby text entities that
+  // are related to the one under your cursor.
+  // Valid values are "underline", "stippled" or "squiggly".
+  "document_highlight_style": "underline",
+
+  "document_highlight_scopes": {
+    "unknown": "text",
+    "text": "text",
+    "read": "markup.inserted",
+    "write": "markup.changed"
+  },
+
   // Gutter marker for code diagnostics.
   // Valid values are "bookmark", "circle", "cross", "dot" or ""
   "diagnostics_gutter_marker": "dot",

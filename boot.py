@@ -8,6 +8,7 @@ from .plugin.completion import *
 from .plugin.diagnostics import *
 from .plugin.configuration import *
 from .plugin.formatting import *
+from .plugin.highlights import *
 from .plugin.definition import *
 from .plugin.hover import *
 from .plugin.references import *

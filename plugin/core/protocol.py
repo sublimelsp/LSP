@@ -57,6 +57,14 @@ class CompletionItemKind(object):
     Reference = 18
 
 
+class DocumentHighlightKind(object):
+    Unknown = 0
+    Text = 1
+    Read = 2
+    Write = 3
+    Count = 4
+
+
 class Request:
     def __init__(self, method: str, params: 'Optional[dict]') -> None:
         self.method = method
@@ -110,6 +118,10 @@ class Request:
     @classmethod
     def documentSymbols(cls, params: dict):
         return Request("textDocument/documentSymbol", params)
+
+    @classmethod
+    def documentHighlight(cls, params: dict):
+        return Request("textDocument/documentHighlight", params)
 
     @classmethod
     def resolveCompletionItem(cls, params: dict):

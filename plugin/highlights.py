@@ -7,6 +7,11 @@ from .core.documents import get_document_position
 from .core.settings import settings
 
 import sublime  # only for typing
+try:
+    from typing import List, Dict
+    assert List and Dict
+except ImportError:
+    pass
 
 
 _kind2name = {
@@ -84,10 +89,10 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
         elif settings.document_highlight_style == "squiggly":
             flags |= sublime.DRAW_SQUIGGLY_UNDERLINE
         self._clear_regions()
-        for kind, regions in kind2regions.items():
+        for kind_str, regions in kind2regions.items():
             if regions:
-                scope = settings.document_highlight_scopes.get(kind, None)
-                self.view.add_regions("LspDocumentHighlightListener_{}".format(kind),
+                scope = settings.document_highlight_scopes.get(kind_str, None)
+                self.view.add_regions("LspDocumentHighlightListener_{}".format(kind_str),
                                       regions, scope=scope, flags=flags)
 
     def _initialize(self) -> None:

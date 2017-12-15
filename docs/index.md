@@ -220,6 +220,25 @@ Client configuration:
 },
 ```
 
+
+### Polymer<a name="polymer"></a>
+
+    npm i -g polymer-editor-server
+
+> Note: requires an up to date version of NodeJS. v6 is the minimum supported
+  version as of 2017.
+
+Features:
+
+ * typeahead completions for elements, attributes, and css custom properties
+ * typeahead completions for elements, attributes, and css custom properties
+ * documentation on hover for elements and attributes
+ * jump to definition for elements, attributes, and css custom properties
+ * linting, configured through `polymer.json` at your workspace root.
+
+More info: https://github.com/Polymer/polymer-editor-service
+
+
 ### Other<a name="other"></a>
 
 Please create issues / pull requests so we can get support for more languages.

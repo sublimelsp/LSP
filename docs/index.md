@@ -223,7 +223,7 @@ Client configuration:
 
 ### Polymer<a name="polymer"></a>
 
-    npm i -g polymer-editor-server
+    npm install -g polymer-editor-service
 
 > Note: requires an up to date version of NodeJS. v6 is the minimum supported
   version as of 2017.

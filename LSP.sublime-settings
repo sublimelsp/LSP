@@ -147,7 +147,7 @@
         "Packages/JavaScript/JavaScript.sublime-syntax",
         "Packages/JavaScript/JSON.sublime-syntax"
       ],
-      "languageId": "polymer",
+      "languageId": "javascript",
       "settings": {
         "polymer-ide": {
           "analyzeWholePackage": false,

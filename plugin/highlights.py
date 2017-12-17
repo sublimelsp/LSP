@@ -53,7 +53,7 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
 
     def _clear_regions(self) -> None:
         for kind in settings.document_highlight_scopes.keys():
-            self.view.erase_regions("LspDocumentHighlightListener_{}".format(kind))
+            self.view.erase_regions("lsp_highlight_{}".format(kind))
 
     def _on_document_highlight(self) -> None:
         self._clear_regions()
@@ -92,7 +92,7 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
         for kind_str, regions in kind2regions.items():
             if regions:
                 scope = settings.document_highlight_scopes.get(kind_str, None)
-                self.view.add_regions("LspDocumentHighlightListener_{}".format(kind_str),
+                self.view.add_regions("lsp_highlight_{}".format(kind_str),
                                       regions, scope=scope, flags=flags)
 
     def _initialize(self) -> None:

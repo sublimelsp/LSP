@@ -83,10 +83,9 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
         for kind in range(0, 4):
             kind2regions[_kind2name[kind]] = []
         for highlight in response:
-            if highlight:
-                r = Range.from_lsp(highlight["range"]).to_region(self.view)
-                kind = highlight.get("kind", DocumentHighlightKind.Unknown)
-                kind2regions[_kind2name[kind]].append(r)
+            r = Range.from_lsp(highlight["range"]).to_region(self.view)
+            kind = highlight.get("kind", DocumentHighlightKind.Unknown)
+            kind2regions[_kind2name[kind]].append(r)
         flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
         if settings.document_highlight_style == "underline":
             flags |= sublime.DRAW_SOLID_UNDERLINE

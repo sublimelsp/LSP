@@ -62,7 +62,6 @@ class DocumentHighlightKind(object):
     Text = 1
     Read = 2
     Write = 3
-    Count = 4
 
 
 class Request:

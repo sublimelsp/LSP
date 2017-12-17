@@ -67,13 +67,8 @@ class Settings(object):
         self.show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
         self.diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
         self.document_highlight_style = read_str_setting(settings_obj, "document_highlight_style", "stippled")
-        self.document_highlight_scopes = read_dict_setting(
-            settings_obj, "document_highlight_scopes", {
-                "unknown": "text",
-                "text": "text",
-                "read": "markup.inserted",
-                "write": "markup.changed"
-            })
+        self.document_highlight_scopes = read_dict_setting(settings_obj, "document_highlight_scopes",
+                                                           self.document_highlight_scopes)
         self.diagnostics_gutter_marker = read_str_setting(settings_obj, "diagnostics_gutter_marker", "dot")
         self.only_show_lsp_completions = read_bool_setting(settings_obj, "only_show_lsp_completions", False)
         self.complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)

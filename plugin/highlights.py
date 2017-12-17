@@ -42,6 +42,12 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
             self._clear_regions()
             self._queue()
 
+    def _initialize(self) -> None:
+        self._initialized = True
+        client = client_for_view(self.view)
+        if client:
+            self._enabled = client.get_capability("documentHighlightProvider")
+
     def _queue(self) -> None:
         self._version += 1
         current_version = self._version
@@ -94,9 +100,3 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
                 scope = settings.document_highlight_scopes.get(kind_str, None)
                 self.view.add_regions("lsp_highlight_{}".format(kind_str),
                                       regions, scope=scope, flags=flags)
-
-    def _initialize(self) -> None:
-        self._initialized = True
-        client = client_for_view(self.view)
-        if client:
-            self._enabled = client.get_capability("documentHighlightProvider")

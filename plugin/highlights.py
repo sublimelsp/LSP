@@ -33,7 +33,7 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
         super().__init__(view)
         self._initialized = False
         self._enabled = False
-        self._version = 0
+        self._stored_point = -1
 
     def on_selection_modified_async(self) -> None:
         if not self._initialized:
@@ -49,12 +49,12 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
             self._enabled = client.get_capability("documentHighlightProvider")
 
     def _queue(self) -> None:
-        self._version += 1
-        current_version = self._version
-        sublime.set_timeout_async(lambda: self._purge(current_version), 500)
+        self._stored_point = self.view.sel()[0].begin()
+        current_point = self._stored_point
+        sublime.set_timeout_async(lambda: self._purge(current_point), 500)
 
-    def _purge(self, this_version: int) -> None:
-        if this_version == self._version:
+    def _purge(self, current_point: int) -> None:
+        if current_point == self._stored_point:
             self._on_document_highlight()
 
     def _clear_regions(self) -> None:

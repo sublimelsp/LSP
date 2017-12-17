@@ -74,7 +74,7 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
         if not response:
             return
         kind2regions = {}  # type: Dict[str, List[sublime.Region]]
-        for kind in range(0, DocumentHighlightKind.Count):
+        for kind in range(0, 4):
             kind2regions[_kind2name[kind]] = []
         for highlight in response:
             if highlight:

@@ -139,7 +139,8 @@
         "text.html",
         "source.html",
         "source.js",
-        "source.css"
+        "source.css",
+        "source.json"
       ],
       "syntaxes": [
         "Packages/HTML/HTML.sublime-syntax",

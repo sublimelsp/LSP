@@ -61,7 +61,7 @@
     {
       "command": ["rustup", "run", "nightly", "rls"],
       "scopes": ["source.rust"],
-      "syntaxes": ["Packages/Rust/Rust.sublime-syntax"],
+      "syntaxes": ["Packages/Rust/Rust.sublime-syntax", "Packages/Rust Enhanced/RustEnhanced.sublime-syntax"],
       "languageId": "rust"
     },
     "dotty":

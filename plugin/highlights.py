@@ -13,6 +13,8 @@ try:
 except ImportError:
     pass
 
+SUBLIME_WORD_MASK = 515
+NO_HIGHLIGHT_SCOPES = 'comment, string'
 
 _kind2name = {
     DocumentHighlightKind.Unknown: "unknown",
@@ -66,15 +68,16 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
         if len(self.view.sel()) != 1:
             return
         point = self.view.sel()[0].begin()
-        if self.view.match_selector(point, "comment"):
-            # We're inside a comment, go home.
-            return
-        client = client_for_view(self.view)
-        if client:
-            params = get_document_position(self.view, point)
-            if params:
-                request = Request.documentHighlight(params)
-                client.send_request(request, self._handle_response)
+        word_at_sel = self.view.classify(point)
+        if word_at_sel & SUBLIME_WORD_MASK:
+            if self.view.match_selector(point, NO_HIGHLIGHT_SCOPES):
+                return
+            client = client_for_view(self.view)
+            if client:
+                params = get_document_position(self.view, point)
+                if params:
+                    request = Request.documentHighlight(params)
+                    client.send_request(request, self._handle_response)
 
     def _handle_response(self, response: list) -> None:
         if not response:

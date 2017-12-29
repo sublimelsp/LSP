@@ -17,7 +17,9 @@ symbol_kind_names = {
     SymbolKind.Function: "function",
     SymbolKind.Field: "field",
     SymbolKind.Variable: "variable",
-    SymbolKind.Constant: "constant"
+    SymbolKind.Constant: "constant",
+    SymbolKind.Interface: "interface",
+    SymbolKind.Property: "property"
 }
 
 
@@ -30,7 +32,8 @@ def format_symbol(item):
     items may be a list of strings, or a list of string lists.
     In the latter case, each entry in the quick panel will show multiple rows
     """
-    return [item.get("name")]
+    prefix = item["containerName"] + "." if "containerName" in item else ""
+    return [prefix + item.get("name"), format_symbol_kind(item.get("kind"))]
 
 
 class LspDocumentSymbolsCommand(sublime_plugin.TextCommand):

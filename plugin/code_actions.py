@@ -10,7 +10,7 @@ except ImportError:
 
 from .core.clients import client_for_view
 from .core.configurations import is_supported_view
-from .core.protocol import Request, Range, Point
+from .core.protocol import Request, Range
 from .core.documents import get_position
 from .core.diagnostics import get_point_diagnostics
 from .core.url import filename_to_uri
@@ -38,12 +38,7 @@ class LspCodeActionsCommand(sublime_plugin.TextCommand):
                     "diagnostics": list(diagnostic.to_lsp() for diagnostic in point_diagnostics)
                 }
             }
-            if len(point_diagnostics) > 0:
-                # TODO: merge ranges.
-                params["range"] = point_diagnostics[0].range.to_lsp()
-            else:
-                params["range"] = Range(Point(row, col), Point(row, col)).to_lsp()
-
+            params["range"] = Range.from_region(self.view, self.view.sel()[0]).to_lsp()
             if event:  # if right-clicked, set cursor to menu position
                 sel = self.view.sel()
                 sel.clear()

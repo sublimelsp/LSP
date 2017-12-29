@@ -43,6 +43,7 @@ class Settings(object):
         self.show_diagnostics_in_view_status = True
         self.only_show_lsp_completions = False
         self.diagnostics_highlight_style = "underline"
+        self.signature_help_style = "sublime"
         self.document_highlight_style = "stippled"
         self.document_highlight_scopes = {
             "unknown": "text",
@@ -66,6 +67,7 @@ class Settings(object):
         self.show_diagnostics_phantoms = read_bool_setting(settings_obj, "show_diagnostics_phantoms", False)
         self.show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
         self.diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
+        self.signature_help_style = read_str_setting(settings_obj, "signature_help_style", "sublime")
         self.document_highlight_style = read_str_setting(settings_obj, "document_highlight_style", "stippled")
         self.document_highlight_scopes = read_dict_setting(settings_obj, "document_highlight_scopes",
                                                            self.document_highlight_scopes)

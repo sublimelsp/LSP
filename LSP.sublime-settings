@@ -180,6 +180,13 @@
   // Valid values are "underline" or "box"
   "diagnostics_highlight_style": "underline",
 
+  // Signature help style.
+  // Valid values are "sublime" or "vscode".
+  //
+  // - "sublime": Uses mdpopups faithfully.
+  // - "vscode": Tries to imitate VSCode.
+  "signature_help_style": "vscode",
+
   // Highlighting style of "highlights": accentuating nearby text entities that
   // are related to the one under your cursor.
   // Valid values are "underline", "stippled" or "squiggly".

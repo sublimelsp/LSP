@@ -118,6 +118,14 @@ def initialize_on_open(view: sublime.View):
             debug(config.name, 'is not enabled')
 
 
+client_initialization_listeners = {}  # type: Dict[str, Callable]
+
+
+def register_client_initialization_listener(client_name: str, handler: 'Callable') -> None:
+    debug('received client callback for', client_name)
+    client_initialization_listeners[client_name] = handler
+
+
 def handle_initialize_result(result, client, window, config):
     global didopen_after_initialize
     capabilities = result.get("capabilities")
@@ -138,6 +146,9 @@ def handle_initialize_result(result, client, window, config):
         client.on_notification(
             "window/logMessage",
             lambda params: server_log(params.get("message")))
+
+    if config.name in client_registration_listeners:
+        client_registration_listeners[config.name](client)
 
     # TODO: These handlers is already filtered by syntax but does not need to
     # be enabled 2x per client

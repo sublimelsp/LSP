@@ -147,8 +147,8 @@ def handle_initialize_result(result, client, window, config):
             "window/logMessage",
             lambda params: server_log(params.get("message")))
 
-    if config.name in client_registration_listeners:
-        client_registration_listeners[config.name](client)
+    if config.name in client_initialization_listeners:
+        client_initialization_listeners[config.name](client)
 
     # TODO: These handlers is already filtered by syntax but does not need to
     # be enabled 2x per client

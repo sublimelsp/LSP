@@ -35,6 +35,7 @@ class Client(object):
         self._request_handlers = {}  # type: Dict[str, Callable]
         self._notification_handlers = {}  # type: Dict[str, Callable]
         self.capabilities = {}  # type: Dict[str, Any]
+        self._crash_handler = None  # type: Optional[Callable]
 
     def set_capabilities(self, capabilities):
         self.capabilities = capabilities
@@ -63,17 +64,30 @@ class Client(object):
 
     def kill(self):
         self.process.kill()
+        self.process = None
+
+    def set_crash_handler(self, handler: 'Callable'):
+        self._crash_handler = handler
+
+    def handle_server_crash(self):
+        if self.process:
+            try:
+                self.process.terminate()
+            except ProcessLookupError:
+                pass  # process can be terminated already
+            self.process = None
+            self._crash_handler()
 
     def send_payload(self, payload):
-        try:
-            message = format_request(payload)
-            self.process.stdin.write(bytes(message, 'UTF-8'))
-            self.process.stdin.flush()
-        except BrokenPipeError as err:
-            sublime.status_message("Failure sending LSP server message, exiting")
-            exception_log("Failure writing payload", err)
-            self.process.terminate()
-            self.process = None
+        if self.process:
+            try:
+                message = format_request(payload)
+                self.process.stdin.write(bytes(message, 'UTF-8'))
+                self.process.stdin.flush()
+            except BrokenPipeError as err:
+                sublime.status_message("Failure sending LSP server message, exiting")
+                exception_log("Failure writing payload", err)
+                self.handle_server_crash()
 
     def read_stdout(self):
         """
@@ -87,7 +101,7 @@ class Client(object):
 
             try:
                 content_length = 0
-                while True:
+                while self.process:
                     header = self.process.stdout.readline()
                     if header:
                         header = header.strip()
@@ -125,8 +139,7 @@ class Client(object):
             except IOError as err:
                 sublime.status_message("Failure reading LSP server response, exiting")
                 exception_log("Failure reading stdout", err)
-                self.process.terminate()
-                self.process = None
+                self.handle_server_crash()
                 return
 
         debug("LSP stdout process ended.")

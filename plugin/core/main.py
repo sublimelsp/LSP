@@ -208,6 +208,8 @@ def start_client(window: sublime.Window, config: ClientConfig):
         debug("Could not start", config.binary_args, ", disabling")
         return None
 
+    client.set_crash_handler(lambda: handle_server_crash(window, config))
+
     initializeParams = {
         "processId": client.process.pid,
         "rootUri": filename_to_uri(project_path),
@@ -269,15 +271,26 @@ def start_server(server_binary_args, working_dir, env):
         exception_log("Failed to start server", err)
 
 
+def handle_server_crash(window: sublime.Window, config: ClientConfig):
+    msg = "Language server {} has crashed, do you want to restart it?".format(config.name)
+    result = sublime.ok_cancel_dialog(msg, ok_title="Restart")
+    if result == sublime.DIALOG_YES:
+        restart_window_clients(window)
+
+
+def restart_window_clients(window: sublime.Window):
+    clear_document_states(window)
+    unload_window_clients(window.id())
+    start_active_views()
+
+
 class LspRestartClientCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
         return is_supported_view(self.view)
 
     def run(self, edit):
         window = self.view.window()
-        clear_document_states(window)
-        unload_window_clients(window.id())
-        start_active_views()
+        restart_window_clients(window)
 
 
 class LspStartClientCommand(sublime_plugin.TextCommand):

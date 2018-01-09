@@ -142,7 +142,11 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 str(self._active_signature + 1), str(len(self._signatures)))
             formatted.append(signature_navigation)
 
-        label = "```{}\n{}\n```\n".format(self._language_id, signature.get('label'))
+        signature_label = signature.get('label')
+        if len(signature_label) > 400:
+            label = "```{} ...```".format(signature_label[0:400])  # long code blocks = hangs
+        else:
+            label = "```{}\n{}\n```\n".format(self._language_id, signature_label)
         formatted.append(label)
 
         params = signature.get('parameters')

@@ -139,6 +139,8 @@ Autocomplete triggers: in User or Syntax-specific settings, add:
 
 ### Scala<a name="scala"></a>
 
+SBT 1.x supports limited language server functionality, setup is described here: [sbt server with Sublime Text 3](http://eed3si9n.com/sbt-server-with-sublime-text3).
+
 Dotty, the future scala compiler [contains LSP support](http://dotty.epfl.ch/docs/usage/ide-support.html). It is developed against VS Code, so ignore instructions related to VS Code.
 
 Get the project compiling with dotty first (see https://github.com/lampepfl/dotty-example-project#using-dotty-in-an-existing-project)

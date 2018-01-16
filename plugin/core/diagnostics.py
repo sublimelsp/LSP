@@ -3,7 +3,6 @@ import sublime
 from .logging import debug
 from .url import uri_to_filename
 from .protocol import Diagnostic
-from .workspace import is_in_workspace
 from .events import Events
 
 assert Diagnostic
@@ -44,11 +43,6 @@ class DiagnosticsUpdate(object):
 def handle_diagnostics(update: 'Any'):
     file_path = uri_to_filename(update.get('uri'))
     window = sublime.active_window()
-
-    if not is_in_workspace(window, file_path):
-        debug("Skipping diagnostics for file", file_path,
-              " it is not in the workspace")
-        return
 
     diagnostics = list(
         Diagnostic.from_lsp(item) for item in update.get('diagnostics', []))

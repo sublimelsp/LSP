@@ -168,6 +168,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         if self.view.sel()[0].begin() < self.last_location:
             self.last_location = 0
             self.view.run_command("hide_auto_complete")
+        # cancel current completion if the previous input is an space
+        prev_char = self.view.substr(self.view.sel()[0].begin() - 1)
+        if self.state == CompletionState.REQUESTING and prev_char.isspace():
+            self.state = CompletionState.CANCELLING
 
     def on_query_completions(self, prefix, locations):
         if self.view.match_selector(locations[0], NO_COMPLETION_SCOPES):

@@ -43,3 +43,5 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io) o
 
 Enable the `log_debug` setting, restart Sublime and open the console.
 See the [Troubleshooting](https://lsp.readthedocs.io/en/latest/#troubleshooting) guide for tips and known limitations.
+
+Have you added multiple folders to your Sublime workspace? LSP may not handle your second folder as expected, see [this issue](https://github.com/tomv564/LSP/issues/33) for more details.

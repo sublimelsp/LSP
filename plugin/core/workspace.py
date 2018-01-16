@@ -34,6 +34,25 @@ def get_project_path(window: sublime.Window) -> 'Optional[str]':
             return None  # https://github.com/tomv564/LSP/issues/219
 
 
+def get_project_folders(window: sublime.Window) -> 'List[str]':
+    """
+    Returns a list of all the open folders in a window
+    """
+    if len(window.folders):
+        return window.folders()
+    else:
+        filename = window.active_view().file_name()
+        if filename:
+            project_path = os.path.dirname(filename)
+            debug("Couldn't determine project directory since no folders are open!",
+                  "Using", project_path, "as a fallback.")
+            return project_path
+        else:
+            debug("Couldn't determine project directory since no folders are open",
+                  "and the current file isn't saved on the disk.")
+            return None
+
+
 def get_common_parent(paths: 'List[str]') -> str:
     """
     Get the common parent directory of multiple paths.
@@ -45,12 +64,12 @@ def get_common_parent(paths: 'List[str]') -> str:
 
 
 def is_in_workspace(window: sublime.Window, file_path: str) -> bool:
-    workspace_path = get_project_path(window)
-    if workspace_path is None:
-        return False
+    workspace_paths = get_project_folders(window)
+    for workspace_path in workspace_paths:
+        common_dir = get_common_parent([workspace_path, file_path])
+        return workspace_path == common_dir
 
-    common_dir = get_common_parent([workspace_path, file_path])
-    return workspace_path == common_dir
+    return False
 
 
 def enable_in_project(window, config_name: str) -> None:

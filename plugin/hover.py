@@ -52,8 +52,17 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             all_content += self.diagnostics_content(point_diagnostics)
 
         all_content += self.hover_content(point, response)
+        all_content += self.symbol_actions_content()
 
         self.show_hover(point, all_content)
+
+    def symbol_actions_content(self):
+        actions = []
+        # TODO: filter by client capabilities
+        actions.append("<a href='{}'>{}</a>".format('definition', 'Definition'))
+        actions.append("<a href='{}'>{}</a>".format('references', 'References'))
+        actions.append("<a href='{}'>{}</a>".format('rename', 'Rename'))
+        return "<p>" + " | ".join(actions) + "</p>"
 
     def diagnostics_content(self, diagnostics):
         formatted = ["<div class='errors'>"]
@@ -103,10 +112,19 @@ class HoverHandler(sublime_plugin.ViewEventListener):
             on_navigate=lambda href: self.on_hover_navigate(href, point))
 
     def on_hover_navigate(self, href, point):
-        if href == 'code-actions':
-            sel = self.view.sel()
-            sel.clear()
-            sel.add(sublime.Region(point, point))
-            self.view.run_command("lsp_code_actions")
+        if href == 'definition':
+            self.run_command_from_point(point, "lsp_symbol_definition")
+        elif href == 'references':
+            self.run_command_from_point(point, "lsp_symbol_references")
+        elif href == 'rename':
+            self.run_command_from_point(point, "lsp_symbol_rename")
+        elif href == 'code-actions':
+            self.run_command_from_point(point, "lsp_code_actions")
         else:
             webbrowser.open_new_tab(href)
+
+    def run_command_from_point(self, point, command_name):
+        sel = self.view.sel()
+        sel.clear()
+        sel.add(sublime.Region(point, point))
+        self.view.run_command(command_name)

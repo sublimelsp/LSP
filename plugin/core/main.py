@@ -136,6 +136,10 @@ def handle_initialize_result(result, client, window, config):
         "workspace/applyEdit",
         lambda params: apply_workspace_edit(sublime.active_window(), params))
 
+    client.on_request(
+        "window/showMessageRequest",
+        lambda params: handle_message_request(params))
+
     client.on_notification(
         "textDocument/publishDiagnostics",
         lambda params: handle_diagnostics(params))
@@ -282,6 +286,14 @@ def restart_window_clients(window: sublime.Window):
     clear_document_states(window)
     unload_window_clients(window.id())
     start_active_views()
+
+
+def handle_message_request(params: dict):
+    message = params.get("message", "(missing message)")
+    actions = params.get("actions", [])
+    addendum = "TODO: showMessageRequest with actions:"
+    titles = list(action.get("title") for action in actions)
+    sublime.message_dialog("\n".join([message, addendum] + titles))
 
 
 class LspRestartClientCommand(sublime_plugin.TextCommand):

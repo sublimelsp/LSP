@@ -32,8 +32,9 @@ def format_symbol(item):
     items may be a list of strings, or a list of string lists.
     In the latter case, each entry in the quick panel will show multiple rows
     """
-    prefix = item["containerName"] + "." if "containerName" in item else ""
-    return [prefix + item.get("name"), format_symbol_kind(item.get("kind"))]
+    prefix = item.get("containerName", "")
+    label = prefix + "." + item.get("name") if prefix else item.get("name")
+    return [label, format_symbol_kind(item.get("kind"))]
 
 
 class LspDocumentSymbolsCommand(sublime_plugin.TextCommand):

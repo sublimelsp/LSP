@@ -55,17 +55,19 @@ class LspSymbolReferencesCommand(sublime_plugin.TextCommand):
         word = self.view.substr(self.view.word(pos))
         base_dir = get_project_path(window)
         file_path = self.view.file_name()
-        relative_file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
 
         references = list(format_reference(item, base_dir) for item in response)
 
         if (len(references)) > 0:
+            display_path = file_path
+            if base_dir and os.path.commonprefix([file_path, base_dir]):
+                display_path = os.path.relpath(file_path, base_dir)
             panel = ensure_references_panel(window)
             panel.settings().set("result_base_dir", base_dir)
             panel.set_read_only(False)
             panel.run_command("lsp_clear_panel")
             panel.run_command('append', {
-                'characters': 'References to "' + word + '" at ' + relative_file_path + ':\n'
+                'characters': 'References to "' + word + '" at ' + display_path + ':\n'
             })
             window.run_command("show_panel", {"panel": "output.references"})
             for reference in references:

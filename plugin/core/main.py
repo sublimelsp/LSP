@@ -18,7 +18,7 @@ from .settings import (
     ClientConfig, settings, load_settings, unload_settings
 )
 from .logging import debug, exception_log, server_log
-from .rpc import Client
+from .rpc import Client, attach_tcp_client
 from .workspace import get_project_path
 from .configurations import (
     config_for_scope, is_supported_view
@@ -206,7 +206,11 @@ def start_client(window: sublime.Window, config: ClientConfig):
         # Expand both ST and OS environment variables
         env[var] = os.path.expandvars(sublime.expand_variables(value, variables))
 
-    client = start_server(expanded_args, project_path, env)
+    if config.tcp_port is not None:
+        client = attach_tcp_client(config.tcp_port, None, project_path)
+    else:
+        client = start_server(expanded_args, project_path, env)
+
     if not client:
         window.status_message("Could not start " + config.name + ", disabling")
         debug("Could not start", config.binary_args, ", disabling")
@@ -215,7 +219,7 @@ def start_client(window: sublime.Window, config: ClientConfig):
     client.set_crash_handler(lambda: handle_server_crash(window, config))
 
     initializeParams = {
-        "processId": client.process.pid,
+        "processId": client.process.pid if client.process else None,
         "rootUri": filename_to_uri(project_path),
         "rootPath": project_path,
         "capabilities": {

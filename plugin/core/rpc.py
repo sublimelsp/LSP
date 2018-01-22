@@ -2,6 +2,7 @@ import json
 import sublime
 import threading
 import socket
+from abc import ABCMeta, abstractmethod
 
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
@@ -12,6 +13,9 @@ except ImportError:
 from .settings import settings
 from .logging import debug, exception_log, server_log
 from .protocol import Request, Notification
+
+
+ContentLengthHeader = b"Content-Length: "
 
 
 def format_request(payload: 'Dict[str, Any]'):
@@ -26,15 +30,64 @@ def attach_tcp_client(tcp_port, process, project_path):
     host = "localhost"
     debug('connecting to {}:{}'.format(host, tcp_port))
     sock = socket.create_connection((host, tcp_port), timeout=5000)
-    return TCPClient(sock, process, project_path)
+    transport = TCPTransport(sock)
+    return TransportClient(process, transport, project_path)
 
 
-class TCPClient(object):
-    def __init__(self, sock, process, project_path):
-        self.process = process
-        self.sock = sock
+class Transport(object,  metaclass=ABCMeta):
+    @abstractmethod
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def start(self, on_receive, on_closed):
+        pass
+
+    @abstractmethod
+    def send(self, message):
+        pass
+
+
+class TCPTransport(Transport):
+    def __init__(self, socket):
+        self.socket = socket
+
+    def start(self, on_receive, on_closed):
+        self.on_receive = on_receive
         self.read_thread = threading.Thread(target=self.read_socket)
         self.read_thread.start()
+
+    def read_socket(self):
+        while self.socket:
+            content_length = 0
+            data = self.socket.recv(4096)
+            # debug("got data:" + data.decode("UTF-8"))
+            headers, content = data.split(b"\r\n\r\n")
+            header_lines = headers.split(b"\r\n")
+            for header in header_lines:
+                if header.startswith(ContentLengthHeader):
+                    header_value = header[len(ContentLengthHeader):]
+                    content_length = int(header_value)
+
+            if content_length > 0:
+                content = content.decode("UTF-8")
+
+                while len(content) < content_length:
+                    data = self.socket.recv(4096)
+                    content = content + data.decode("UTF-8")
+
+                self.on_receive(content)
+
+    def send(self, message):
+        if self.socket:
+            self.socket.sendall(bytes(message, 'UTF-8'))
+
+
+class TransportClient(object):
+    def __init__(self, process, transport, project_path):
+        self.process = process
+        self.transport = transport
+        self.transport.start(self.receive_payload, self.on_transport_closed)
         self.project_path = project_path
         self.request_id = 0
         self._response_handlers = {}  # type: Dict[int, Callable]
@@ -86,73 +139,51 @@ class TCPClient(object):
             self._crash_handler()
 
     def send_payload(self, payload):
-        if self.sock:
-            try:
-                message = format_request(payload)
-                self.sock.sendall(bytes(message, 'UTF-8'))
-                # self.process.stdin.write(bytes(message, 'UTF-8'))
-                # self.process.stdin.flush()
-            except BrokenPipeError as err:
-                sublime.status_message("Failure sending LSP server message, exiting")
-                exception_log("Failure writing payload", err)
-                self.handle_server_crash()
+        if self.transport:
+            # try:
+            message = format_request(payload)
+            self.transport.send(message)
+            # except Error as err:
+            #     sublime.status_message("Failure sending LSP server message, exiting")
+            #     exception_log("Failure writing payload", err)
+            #     self.handle_server_crash()
 
-    def read_socket(self):
-        """
-        Reads JSON responses from process and dispatch them to response_handler
-        """
-        ContentLengthHeader = b"Content-Length: "
-
+    def receive_payload(self, message):
         running = True
-        while running:
-
+        if running:
             try:
-                content_length = 0
-                while self.sock:
-                    data = self.sock.recv(4096)
-                    # debug("got data:" + data.decode("UTF-8"))
-                    headers, content = data.split(b"\r\n\r\n")
-                    header_lines = headers.split(b"\r\n")
-                    for header in header_lines:
-                        if header.startswith(ContentLengthHeader):
-                            header_value = header[len(ContentLengthHeader):]
-                            content_length = int(header_value)
+                payload = None
+                try:
+                    payload = json.loads(message)
+                    # limit = min(len(message), 200)
+                    # debug("got json: ", message[0:limit], "...")
+                except IOError as err:
+                    exception_log("got a non-JSON payload: " + message, err)
+                    return
 
-                    content = content.decode("UTF-8")
-
-                    while len(content) < content_length:
-                        data = self.sock.recv(4096)
-                        content = content + data.decode("UTF-8")
-
-                    payload = None
-                    try:
-                        payload = json.loads(content)
-                        # limit = min(len(content), 200)
-                        # debug("got json: ", content[0:limit], "...")
-                    except IOError as err:
-                        exception_log("got a non-JSON payload: " + content, err)
-                        continue
-
-                    try:
-                        if "method" in payload:
-                            if "id" in payload:
-                                self.request_handler(payload)
-                            else:
-                                self.notification_handler(payload)
-                        elif "id" in payload:
-                            self.response_handler(payload)
+                try:
+                    if "method" in payload:
+                        if "id" in payload:
+                            self.request_handler(payload)
                         else:
-                            debug("Unknown payload type: ", payload)
-                    except Exception as err:
-                        exception_log("Error handling server payload", err)
+                            self.notification_handler(payload)
+                    elif "id" in payload:
+                        self.response_handler(payload)
+                    else:
+                        debug("Unknown payload type: ", payload)
+                except Exception as err:
+                    exception_log("Error handling server payload", err)
 
             except IOError as err:
                 sublime.status_message("Failure reading LSP server response, exiting")
                 exception_log("Failure reading stdout", err)
                 self.handle_server_crash()
                 return
+        else:
+            debug("LSP stdout process ended.")
 
-        debug("LSP stdout process ended.")
+    def on_transport_closed(self):
+        debug('transport closed')
 
     def response_handler(self, response):
         handler_id = int(response.get("id"))  # dotty sends strings back :(

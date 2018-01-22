@@ -51,16 +51,13 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
     def on_modified_async(self):
         pos = self.view.sel()[0].begin()
-        last_interesting_char = self.view.substr(pos - 1)
         # TODO: this will fire too often, narrow down using scopes or regex
         if not self._initialized:
             self.initialize()
 
         if self._signature_help_triggers:
-            if last_interesting_char.isspace() and ' ' not in self._signature_help_triggers:
-                # Peek behind to find the last non-whitespace character.
-                last_interesting_char = self.view.substr(self.view.find_by_class(pos, False, ~0) - 1)
-            if last_interesting_char in self._signature_help_triggers:
+            last_char = self.view.substr(pos - 1)
+            if last_char in self._signature_help_triggers:
                 client = client_for_view(self.view)
                 if client:
                     purge_did_change(self.view.buffer_id())
@@ -69,9 +66,12 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                         client.send_request(
                             Request.signatureHelp(document_position),
                             lambda response: self.handle_response(response, pos))
-            else:
-                # TODO: this hides too soon.
-                if self._visible:
+
+            elif self._visible:
+                if last_char.isspace():
+                    # Peek behind to find the last non-whitespace character.
+                    last_char = self.view.substr(self.view.find_by_class(pos, False, ~0) - 1)
+                if last_char not in self._signature_help_triggers:
                     self.view.hide_popup()
 
     def handle_response(self, response, point):
@@ -90,16 +90,23 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                     self._active_signature = -1
 
             if len(self._signatures) > 0:
-                mdpopups.show_popup(self.view,
-                                    self._build_popup_content(),
-                                    css=popup_css,
-                                    md=True,
-                                    flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
-                                    location=point,
-                                    wrapper_class=popup_class,
-                                    max_width=800,
-                                    on_hide=self._on_hide,
-                                    on_navigate=lambda href: self._on_hover_navigate(href))
+                if self._visible:
+                    mdpopups.update_popup(self.view,
+                                          self._build_popup_content(),
+                                          css=popup_css,
+                                          md=True,
+                                          wrapper_class=popup_class)
+                else:
+                    mdpopups.show_popup(self.view,
+                                        self._build_popup_content(),
+                                        css=popup_css,
+                                        md=True,
+                                        flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+                                        location=point,
+                                        wrapper_class=popup_class,
+                                        max_width=800,
+                                        on_hide=self._on_hide,
+                                        on_navigate=lambda href: self._on_hover_navigate(href))
                 self._visible = True
 
     def on_query_context(self, key, _, operand, __):

@@ -71,8 +71,11 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                             lambda response: self.handle_response(response, pos))
             else:
                 # TODO: this hides too soon.
-                if self._visible:
+                if len(self._signatures) > 0:
                     self.view.hide_popup()
+                    # This makes sure that we don't trigger accidentally in on_query_context while another type of
+                    # popup is visible (e.g. one triggered by a mouse hover).
+                    self._signatures = []
 
     def handle_response(self, response, point):
         if response is not None:
@@ -98,14 +101,12 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                                     location=point,
                                     wrapper_class=popup_class,
                                     max_width=800,
-                                    on_hide=self._on_hide,
                                     on_navigate=lambda href: self._on_hover_navigate(href))
-                self._visible = True
 
     def on_query_context(self, key, _, operand, __):
         if key != "lsp.signature_help":
             return False  # Let someone else handle this keybinding.
-        elif not self._visible:
+        elif not self.view.is_popup_visible():
             return False  # Let someone else handle this keybinding.
         elif len(self._signatures) < 2:
             return False  # Let someone else handle this keybinding.
@@ -126,9 +127,6 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                                       wrapper_class=popup_class)
 
             return True  # We handled this keybinding.
-
-    def _on_hide(self):
-        self._visible = False
 
     def _on_hover_navigate(self, href):
         webbrowser.open_new_tab(href)

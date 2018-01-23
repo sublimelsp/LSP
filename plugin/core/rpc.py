@@ -48,6 +48,10 @@ class Transport(object,  metaclass=ABCMeta):
         pass
 
 
+STATE_HEADERS = 0
+STATE_CONTENT = 1
+
+
 class TCPTransport(Transport):
     def __init__(self, socket):
         self.socket = socket
@@ -58,25 +62,48 @@ class TCPTransport(Transport):
         self.read_thread.start()
 
     def read_socket(self):
+        remaining_data = b""
+        is_incomplete = False
+        read_state = STATE_HEADERS
+        content_length = 0
         while self.socket:
-            content_length = 0
-            data = self.socket.recv(4096)
-            # debug("got data:" + data.decode("UTF-8"))
-            headers, content = data.split(b"\r\n\r\n")
-            header_lines = headers.split(b"\r\n")
-            for header in header_lines:
-                if header.startswith(ContentLengthHeader):
-                    header_value = header[len(ContentLengthHeader):]
-                    content_length = int(header_value)
+            is_incomplete = False
+            received_data = self.socket.recv(4096)
+            # debug("got data:" + received_data.decode("UTF-8"))
+            # if len(remaining_data) > 0:
+            #     debug("continuing with", remaining_data)
+            data = remaining_data + received_data
+            remaining_data = b""
 
-            if content_length > 0:
-                content = content.decode("UTF-8")
+            while len(data) > 0 and not is_incomplete:
+                # read headers until double newline or incomplete
+                if read_state == STATE_HEADERS:
+                    headers, _sep, rest = data.partition(b"\r\n\r\n")
+                    if len(_sep) < 1:
+                        # debug("HEADER INCOMPLETE")
+                        is_incomplete = True
+                        remaining_data = data
+                    else:
+                        for header in headers.split(b"\r\n"):
+                            # debug("HEADER", header)
+                            if header.startswith(ContentLengthHeader):
+                                header_value = header[len(ContentLengthHeader):]
+                                content_length = int(header_value)
+                                read_state = STATE_CONTENT
+                        data = rest
 
-                while len(content) < content_length:
-                    data = self.socket.recv(4096)
-                    content = content + data.decode("UTF-8")
-
-                self.on_receive(content)
+                if read_state == STATE_CONTENT:
+                    # read content bytes
+                    if len(data) >= content_length:
+                        content = data[:content_length]
+                        # debug("CONTENT", content)
+                        self.on_receive(content.decode("UTF-8"))
+                        data = data[content_length:]
+                        read_state = STATE_HEADERS
+                    else:
+                        # debug("CONTENT INCOMPLETE, remaining =", len(data), "=>", data)
+                        is_incomplete = True
+                        remaining_data = data
 
     def send(self, message):
         if self.socket:

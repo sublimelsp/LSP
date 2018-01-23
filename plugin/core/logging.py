@@ -14,8 +14,8 @@ def exception_log(message, ex):
     print(''.join(traceback.format_exception(ex.__class__, ex, ex_traceback)))
 
 
-def server_log(binary, *args):
-    printf(*args, prefix=binary)
+def server_log(*args):
+    printf(*args, prefix="server")
 
 
 def printf(*args, prefix=PLUGIN_NAME):

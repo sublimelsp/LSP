@@ -84,7 +84,7 @@ class Client(object):
                 message = format_request(payload)
                 self.process.stdin.write(bytes(message, 'UTF-8'))
                 self.process.stdin.flush()
-            except BrokenPipeError as err:
+            except (BrokenPipeError, OSError) as err:
                 sublime.status_message("Failure sending LSP server message, exiting")
                 exception_log("Failure writing payload", err)
                 self.handle_server_crash()

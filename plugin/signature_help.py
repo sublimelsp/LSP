@@ -159,14 +159,16 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
     def _on_hover_navigate(self, href):
         webbrowser.open_new_tab(href)
 
+    def _build_informational_header(self) -> str:
+        return "**{}** of **{}** overloads (use the ↑ ↓ keys to navigate):\n".format(
+            str(self._active_signature + 1), str(len(self._signatures)))
+
     def _build_popup_content_style_sublime(self) -> str:
         signature = self._signatures[self._active_signature]
         formatted = []
 
         if len(self._signatures) > 1:
-            signature_navigation = "**{}** of **{}** overloads (use the ↑ ↓ keys to navigate):\n".format(
-                str(self._active_signature + 1), str(len(self._signatures)))
-            formatted.append(signature_navigation)
+            formatted.append(self._build_informational_header())
 
         signature_label = signature.get('label')
         if len(signature_label) > 400:
@@ -208,9 +210,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         formatted = []
 
         if len(self._signatures) > 1:
-            signature_navigation = "**{}** of **{}** overloads (use the ↑ ↓ keys to navigate):\n".format(
-                str(self._active_signature + 1), str(len(self._signatures)))
-            formatted.append(signature_navigation)
+            formatted.append(self._build_informational_header())
 
         # Write the active signature and give special treatment to the active parameter (if found).
         # Note that this <div> class and the extra <pre> are copied from mdpopups' HTML output. When mdpopups changes

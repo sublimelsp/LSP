@@ -240,7 +240,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         replacement = '<span style="font-weight: bold; text-decoration: underline">{}</span>'.format(parameter)
         # FIXME: This is somewhat language-specific to look for an opening parenthesis. Most languages use parentheses
         # for their parameter lists though.
-        index = signature.find('(')
+        start_of_param_list_pos = signature.find('(')
         # Note that this works even when we don't find an opening parenthesis, because .find returns -1 in that case.
-        string = signature[index + 1:]
-        return signature[:index + 1] + re.sub(pattern, replacement, string, 1)
+        start_of_param_list = signature[start_of_param_list_pos + 1:]
+        return signature[:start_of_param_list_pos + 1] + re.sub(pattern, replacement, start_of_param_list, 1)

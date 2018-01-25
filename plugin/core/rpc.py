@@ -2,6 +2,7 @@ import json
 import sublime
 import threading
 import socket
+import time
 from abc import ABCMeta, abstractmethod
 
 try:
@@ -16,6 +17,7 @@ from .protocol import Request, Notification
 
 
 ContentLengthHeader = b"Content-Length: "
+TCP_CONNECT_TIMEOUT = 5
 
 
 def format_request(payload: 'Dict[str, Any]'):
@@ -29,9 +31,16 @@ def format_request(payload: 'Dict[str, Any]'):
 def attach_tcp_client(tcp_port, process, project_path):
     host = "localhost"
     debug('connecting to {}:{}'.format(host, tcp_port))
-    sock = socket.create_connection((host, tcp_port), timeout=5000)
-    transport = TCPTransport(sock)
-    return TransportClient(process, transport, project_path)
+    start_time = time.time()
+    while time.time() - start_time < TCP_CONNECT_TIMEOUT:
+        try:
+            sock = socket.create_connection((host, tcp_port), timeout=5000)
+            transport = TCPTransport(sock)
+            return TransportClient(process, transport, project_path)
+        except Exception as e:
+            pass
+
+    raise Exception("Timeout connecting to socket")
 
 
 class Transport(object,  metaclass=ABCMeta):

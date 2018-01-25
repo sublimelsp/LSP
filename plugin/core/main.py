@@ -206,15 +206,17 @@ def start_client(window: sublime.Window, config: ClientConfig):
         # Expand both ST and OS environment variables
         env[var] = os.path.expandvars(sublime.expand_variables(value, variables))
 
-    if config.tcp_port is not None:
-        client = attach_tcp_client(config.tcp_port, None, project_path)
-    else:
-        client = start_server(expanded_args, project_path, env)
-
-    if not client:
+    # TODO: don't start process if tcp already up or command empty?
+    process = start_server(expanded_args, project_path, env)
+    if not process:
         window.status_message("Could not start " + config.name + ", disabling")
         debug("Could not start", config.binary_args, ", disabling")
         return None
+
+    if config.tcp_port is not None:
+        client = attach_tcp_client(config.tcp_port, process, project_path)
+    else:
+        client = Client(process, project_path)
 
     client.set_crash_handler(lambda: handle_server_crash(window, config))
 
@@ -264,7 +266,7 @@ def start_server(server_binary_args, working_dir, env):
         si = subprocess.STARTUPINFO()  # type: ignore
         si.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW  # type: ignore
     try:
-        process = subprocess.Popen(
+        return subprocess.Popen(
             server_binary_args,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -272,7 +274,6 @@ def start_server(server_binary_args, working_dir, env):
             cwd=working_dir,
             env=env,
             startupinfo=si)
-        return Client(process, working_dir)
 
     except Exception as err:
         sublime.status_message("Failed to start LSP server {}".format(str(server_binary_args)))

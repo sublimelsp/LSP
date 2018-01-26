@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 
 try:
@@ -193,6 +194,8 @@ def start_client(window: sublime.Window, config: ClientConfig):
 
     # Create a dictionary of Sublime Text variables
     variables = window.extract_variables()
+    variables["sublime_path"] = os.path.dirname(sublime.executable_path())
+    variables["sublime_libs"] = os.pathsep.join(sys.path)
 
     # Expand language server command line environment variables
     expanded_args = list(
@@ -203,6 +206,10 @@ def start_client(window: sublime.Window, config: ClientConfig):
     # Override OS environment variables
     env = os.environ.copy()
     for var, value in config.env.items():
+        # Merge vars, e.g. PATH=$PATH;mypath (Windows), PATH=$PATH:mypath (Linux/OSX)
+        # For ease of editing, allow lists for each environment variable
+        if isinstance(value, list):
+            value = os.pathsep.join(value)
         # Expand both ST and OS environment variables
         env[var] = os.path.expandvars(sublime.expand_variables(value, variables))
 
@@ -254,7 +261,7 @@ def start_window_client(view: sublime.View, window: sublime.Window, config: Clie
 
 
 def start_server(server_binary_args, working_dir, env):
-    debug("starting " + str(server_binary_args))
+    debug("starting %s, working_dir: %s, env: %s" % (server_binary_args, working_dir, env))
     si = None
     if os.name == "nt":
         si = subprocess.STARTUPINFO()  # type: ignore

@@ -18,7 +18,7 @@ from .settings import (
     ClientConfig, settings, load_settings, unload_settings
 )
 from .logging import debug, exception_log, server_log
-from .rpc import Client, attach_tcp_client
+from .rpc import attach_tcp_client, attach_stdio_client
 from .workspace import get_project_path
 from .configurations import (
     config_for_scope, is_supported_view
@@ -216,7 +216,11 @@ def start_client(window: sublime.Window, config: ClientConfig):
     if config.tcp_port is not None:
         client = attach_tcp_client(config.tcp_port, process, project_path)
     else:
-        client = Client(process, project_path)
+        client = attach_stdio_client(process, project_path)
+
+    if not client:
+        window.status_message("Could not connect to " + config.name + ", disabling")
+        return None
 
     client.set_crash_handler(lambda: handle_server_crash(window, config))
 

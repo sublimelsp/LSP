@@ -139,12 +139,6 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                               css=popup_css,
                               md=True,
                               wrapper_class=popup_class)
-        self._visible = True
-
-    def _hide_popup(self) -> None:
-        if self._visible:
-            self.view.hide_popup()
-            self._visible = False
 
     def _build_popup_content(self) -> str:
         if settings.highlight_active_signature_parameter:

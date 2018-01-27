@@ -185,10 +185,8 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
     def _build_popup_content_style_vscode(self) -> str:
         # Fetch all the relevant data.
-        signature = {}  # type: Dict[str, Any]
         signature_label = ""
         signature_documentation = ""
-        parameter = {}  # type: Dict[str, Any]
         parameter_label = ""
         parameter_documentation = ""
         if self._active_signature in range(0, len(self._signatures)):

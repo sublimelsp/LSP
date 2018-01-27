@@ -147,7 +147,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             self._visible = False
 
     def _build_popup_content(self) -> str:
-        if settings.signature_help_style == "vscode":
+        if settings.highlight_active_signature_parameter:
             return self._build_popup_content_style_vscode()
         else:
             # Default to "sublime".

@@ -223,12 +223,12 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
     def _replace_active_parameter(self, signature: str, parameter: str) -> str:
         if parameter[0].isalnum() and parameter[-1].isalnum():
-            pattern = r'\b{}\b'.format(parameter)
+            pattern = r'\b{}\b'.format(re.escape(parameter))
         else:
             # If the left or right boundary of the parameter string is not an alphanumeric character, the \b check will
             # never match. In this case, it's probably safe to assume the parameter string itself will be a good pattern
             # to search for.
-            pattern = parameter
+            pattern = re.escape(parameter)
         replacement = '<span style="font-weight: bold; text-decoration: underline">{}</span>'.format(parameter)
         # FIXME: This is somewhat language-specific to look for an opening parenthesis. Most languages use parentheses
         # for their parameter lists though.

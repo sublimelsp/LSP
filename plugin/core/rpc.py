@@ -29,14 +29,19 @@ def format_request(payload: 'Dict[str, Any]'):
 
 
 def attach_tcp_client(tcp_port, process, project_path):
+    if settings.log_stderr:
+        attach_logger(process, process.stdout)
+
     host = "localhost"
     start_time = time.time()
     debug('connecting to {}:{}'.format(host, tcp_port))
+
     while time.time() - start_time < TCP_CONNECT_TIMEOUT:
         try:
             sock = socket.create_connection((host, tcp_port))
             # sock.settimeout(5)
             transport = TCPTransport(sock)
+
             return Client(process, transport, project_path)
         except ConnectionRefusedError as e:
             pass
@@ -47,7 +52,38 @@ def attach_tcp_client(tcp_port, process, project_path):
 
 def attach_stdio_client(process, project_path):
     transport = StdioTransport(process)
+    if settings.log_stderr:
+        attach_logger(process, process.stderr)
     return Client(process, transport, project_path)
+
+
+def attach_logger(process, stream):
+    threading.Thread(target=lambda: log_stream(process, stream)).start()
+
+
+def log_stream(process, stream):
+        """
+        Reads any errors from the LSP process.
+        """
+        running = True
+        while running:
+            running = process.poll() is None
+
+            try:
+                content = process.stderr.readline()
+                if not content:
+                    break
+                if settings.log_stderr:
+                    try:
+                        decoded = content.decode("UTF-8")
+                    except UnicodeDecodeError:
+                        decoded = content
+                    server_log(decoded.strip())
+            except IOError as err:
+                exception_log("Failure reading stderr", err)
+                return
+
+        debug("LSP stderr process ended.")
 
 
 class Transport(object,  metaclass=ABCMeta):
@@ -159,8 +195,6 @@ class StdioTransport(Transport):
         self.on_closed = on_closed
         self.stdout_thread = threading.Thread(target=self.read_stdout)
         self.stdout_thread.start()
-        # self.stderr_thread = threading.Thread(target=self.read_stderr)
-        # self.stderr_thread.start()
 
     def close(self):
         self.process = None
@@ -198,30 +232,6 @@ class StdioTransport(Transport):
                 break
 
         debug("LSP stdout process ended.")
-
-    # def read_stderr(self):
-    #     """
-    #     Reads any errors from the LSP process.
-    #     """
-    #     running = True
-    #     while running:
-    #         running = self.process.poll() is None
-
-    #         try:
-    #             content = self.process.stderr.readline()
-    #             if not content:
-    #                 break
-    #             if settings.log_stderr:
-    #                 try:
-    #                     decoded = content.decode("UTF-8")
-    #                 except UnicodeDecodeError:
-    #                     decoded = content
-    #                 server_log(decoded.strip())
-    #         except IOError as err:
-    #             exception_log("Failure reading stderr", err)
-    #             return
-
-    #     debug("LSP stderr process ended.")
 
     def send(self, message):
         if self.process:

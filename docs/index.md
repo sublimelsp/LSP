@@ -19,6 +19,7 @@
 * `show_diagnostics_phantoms` `false` *show diagnostics as phantoms while the file has no changes*
 * `show_diagnostics_in_view_status` `true` *when on a diagnostic with the cursor, show the text in the status bar*
 * `diagnostics_highlight_style` `"underline"` *highlight style of code diagnostics, `"underline"` or `"box"`*
+* `highlight_active_signature_parameter`: *highlight the active parameter of the currently active signature*
 * `diagnostics_gutter_marker` `"dot"` *gutter marker for code diagnostics: "dot", "circle", "bookmark", "cross" or ""*
 * `log_debug` `false` *show debug logging in the sublime console*
 * `log_server` `true` *show server/logMessage notifications from language servers in the console*

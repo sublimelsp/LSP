@@ -39,7 +39,6 @@ def attach_tcp_client(tcp_port, process, project_path):
     while time.time() - start_time < TCP_CONNECT_TIMEOUT:
         try:
             sock = socket.create_connection((host, tcp_port))
-            # sock.settimeout(5)
             transport = TCPTransport(sock)
 
             return Client(process, transport, project_path)
@@ -255,6 +254,7 @@ class Client(object):
         self._request_handlers = {}  # type: Dict[str, Callable]
         self._notification_handlers = {}  # type: Dict[str, Callable]
         self.capabilities = {}  # type: Dict[str, Any]
+        self.exiting = False
         self._crash_handler = None  # type: Optional[Callable]
 
     def set_capabilities(self, capabilities):
@@ -282,6 +282,10 @@ class Client(object):
         debug(' --> ' + notification.method)
         self.send_payload(notification.to_payload())
 
+    def exit(self):
+        self.exiting = True
+        self.send_notification(Notification.exit())
+
     def kill(self):
         self.process.kill()
         self.process = None
@@ -289,7 +293,7 @@ class Client(object):
     def set_crash_handler(self, handler: 'Callable'):
         self._crash_handler = handler
 
-    def handle_server_crash(self):
+    def handle_transport_failure(self):
         if self.process:
             try:
                 self.process.terminate()
@@ -307,7 +311,7 @@ class Client(object):
             except Exception as err:
                 sublime.status_message("Failure sending LSP server message, exiting")
                 exception_log("Failure writing payload", err)
-                self.handle_server_crash()
+                self.handle_transport_failure()
 
     def receive_payload(self, message):
         payload = None
@@ -334,8 +338,9 @@ class Client(object):
 
     def on_transport_closed(self):
         sublime.status_message("Communication to server closed, exiting")
-        # TODO: how to know difference between normal exit and server crash?
-        self.handle_server_crash()
+        # Differentiate between normal exit and server crash?
+        if not self.exiting:
+            self.handle_transport_failure()
 
     def response_handler(self, response):
         handler_id = int(response.get("id"))  # dotty sends strings back :(

@@ -24,8 +24,9 @@ from .configurations import (
     config_for_scope, is_supported_view
 )
 from .clients import (
-    add_window_client, window_clients, unload_old_clients,
-    unload_window_clients, unload_all_clients
+    can_start_config, set_config_starting, set_config_ready, clear_config_state,
+    window_configs, is_ready_window_config,
+    unload_old_clients, unload_window_clients, unload_all_clients
 )
 from .events import Events
 from .documents import (
@@ -80,38 +81,22 @@ unsubscribe_initialize_on_load = None
 unsubscribe_initialize_on_activated = None
 
 
-starting_configs_by_window = {}  # type: Dict[int, Set[str]]
-
-
-def is_starting_config(window: sublime.Window, config_name: str):
-    if window.id() in starting_configs_by_window:
-        return config_name in starting_configs_by_window[window.id()]
-    else:
-        return False
-
-
-def set_starting_config(window: sublime.Window, config_name: str):
-    starting_configs_by_window.setdefault(window.id(), set()).add(config_name)
-
-
-def clear_starting_config(window: sublime.Window, config_name: str):
-    starting_configs_by_window[window.id()].remove(config_name)
-
-
 def initialize_on_open(view: sublime.View):
     window = view.window()
 
     if not window:
         return
 
-    if window_clients(window):
+    debug("initialize on open", window.id())
+
+    if window_configs(window):
         unload_old_clients(window)
 
     global didopen_after_initialize
     config = config_for_scope(view)
     if config:
         if config.enabled:
-            if config.name not in window_clients(window):
+            if not is_ready_window_config(window, config.name):
                 didopen_after_initialize.append(view)
                 start_window_client(view, window, config)
         else:
@@ -171,8 +156,7 @@ def handle_initialize_result(result, client, window, config):
         client.send_notification(Notification.didChangeConfiguration(configParams))
 
     # now the client should be available outside the initialization sequence
-    add_window_client(window, config.name, client)
-    clear_starting_config(window, config.name)
+    set_config_ready(window, config.name, client)
 
     for view in didopen_after_initialize:
         notify_did_open(view)
@@ -254,11 +238,11 @@ def start_client(window: sublime.Window, config: ClientConfig):
 
 
 def start_window_client(view: sublime.View, window: sublime.Window, config: ClientConfig):
-    if not is_starting_config(window, config.name):
-        set_starting_config(window, config.name)
+    if can_start_config(window, config.name):
+        set_config_starting(window, config.name)
         client = start_client(window, config)
         if client is None:  # clear starting state for config if not starting.
-            clear_starting_config(window, config.name)
+            clear_config_state(window, config.name)
     else:
         debug('Already starting on this window:', config.name)
 

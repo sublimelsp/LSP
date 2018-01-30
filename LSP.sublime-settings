@@ -156,7 +156,7 @@
         }
       }
     },
-    "rls":
+    "rlang":
     {
       "command": ["R", "--quiet", "--slave", "-e", "languageserver::run()"],
       "languageId": "r",

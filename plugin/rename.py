@@ -1,12 +1,12 @@
 import sublime_plugin
 
-from .core.configurations import is_supported_view
+from .core.configurations import is_supported_view, LspContextMenu
 from .core.clients import client_for_view
 from .core.protocol import Request
 from .core.documents import get_document_position, get_position, is_at_word
 
 
-class LspSymbolRenameCommand(sublime_plugin.TextCommand):
+class LspSymbolRenameCommand(LspContextMenu):
     def is_enabled(self, event=None):
         # TODO: check what kind of scope we're in.
         if is_supported_view(self.view):

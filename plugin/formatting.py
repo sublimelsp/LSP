@@ -3,10 +3,10 @@ import sublime_plugin
 from .core.protocol import Request, Range
 from .core.url import filename_to_uri
 from .core.clients import client_for_view
-from .core.configurations import is_supported_view
+from .core.configurations import is_supported_view, LspContextMenu
 
 
-class LspFormatDocumentCommand(sublime_plugin.TextCommand):
+class LspFormatDocumentCommand(LspContextMenu):
     def is_enabled(self):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
@@ -36,7 +36,7 @@ class LspFormatDocumentCommand(sublime_plugin.TextCommand):
                               {'changes': response})
 
 
-class LspFormatDocumentRangeCommand(sublime_plugin.TextCommand):
+class LspFormatDocumentRangeCommand(LspContextMenu):
     def is_enabled(self):
         if is_supported_view(self.view):
             client = client_for_view(self.view)

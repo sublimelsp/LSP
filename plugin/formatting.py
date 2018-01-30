@@ -1,4 +1,3 @@
-import sublime_plugin
 
 from .core.protocol import Request, Range
 from .core.url import filename_to_uri

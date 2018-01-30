@@ -1,6 +1,5 @@
 import os
 import sublime
-import sublime_plugin
 
 from .core.panels import create_output_panel
 from .core.settings import PLUGIN_NAME

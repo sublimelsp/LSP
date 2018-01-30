@@ -1,5 +1,4 @@
 import sublime
-import sublime_plugin
 
 try:
     from typing import Any, List

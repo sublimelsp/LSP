@@ -1,4 +1,3 @@
-import sublime_plugin
 
 from .core.protocol import SymbolKind
 from .core.configurations import is_supported_view, LspContextMenu

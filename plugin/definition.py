@@ -1,5 +1,4 @@
 import sublime
-import sublime_plugin
 
 from .core.configurations import is_supported_view, LspContextMenu
 from .core.clients import client_for_view

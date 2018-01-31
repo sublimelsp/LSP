@@ -5,7 +5,7 @@ from .core.panels import create_output_panel
 from .core.settings import PLUGIN_NAME
 from .core.clients import client_for_view
 from .core.documents import is_at_word, get_position, get_document_position
-from .core.configurations import is_supported_view, LspTextCommand
+from .core.clients import LspTextCommand
 from .core.workspace import get_project_path
 from .core.protocol import Request, Point
 from .core.url import uri_to_filename
@@ -29,12 +29,8 @@ def create_references_panel(window: sublime.Window):
 
 
 class LspSymbolReferencesCommand(LspTextCommand):
-    def is_enabled(self, event=None):
-        if is_supported_view(self.view):
-            client = client_for_view(self.view)
-            if client and client.has_capability('referencesProvider'):
-                return is_at_word(self.view, event)
-        return False
+    def __init__(self, view):
+        super(LspSymbolReferencesCommand, self).__init__(view, 'referencesProvider', lambda: is_at_word(view, None))
 
     def run(self, edit, event=None):
         client = client_for_view(self.view)

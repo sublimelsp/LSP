@@ -1,5 +1,4 @@
 import sublime
-import sublime_plugin
 
 from .settings import ClientConfig, client_configs
 from .logging import debug
@@ -15,14 +14,6 @@ except ImportError:
 
 
 window_client_configs = dict()  # type: Dict[int, List[ClientConfig]]
-
-
-class LspTextCommand(sublime_plugin.TextCommand):
-    def __init__(self, view):
-        super(LspTextCommand, self).__init__(view)
-
-    def is_visible(self):
-        return is_supported_view(self.view)
 
 
 def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':

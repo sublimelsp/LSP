@@ -1,18 +1,14 @@
 
-from .core.configurations import is_supported_view, LspTextCommand
+from .core.clients import LspTextCommand
 from .core.clients import client_for_view
 from .core.protocol import Request
 from .core.documents import get_document_position, get_position, is_at_word
 
 
 class LspSymbolRenameCommand(LspTextCommand):
-    def is_enabled(self, event=None):
+    def __init__(self, view):
         # TODO: check what kind of scope we're in.
-        if is_supported_view(self.view):
-            client = client_for_view(self.view)
-            if client and client.has_capability('renameProvider'):
-                return is_at_word(self.view, event)
-        return False
+        super(LspSymbolRenameCommand, self).__init__(view, 'renameProvider', lambda: is_at_word(view, None))
 
     def run(self, edit, event=None):
         pos = get_position(self.view, event)

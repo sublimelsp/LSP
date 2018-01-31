@@ -1,7 +1,9 @@
 import sublime
 
+from sublime_plugin import TextCommand
+
 from .logging import debug, exception_log
-from .configurations import config_for_scope
+from .configurations import config_for_scope, is_supported_view
 from .protocol import Notification, Request
 from .workspace import get_project_path
 
@@ -19,6 +21,23 @@ except ImportError:
 
 
 clients_by_window = {}  # type: Dict[int, Dict[str, Client]]
+
+
+class LspTextCommand(TextCommand):
+    # Passing capability='' due Sublime Text bug: https://github.com/SublimeTextIssues/Core/issues/2175
+    def __init__(self, view, capability='', last_check=lambda: True):
+        super(LspTextCommand, self).__init__(view)
+        self.capability = capability
+        self.last_check = last_check
+
+    def is_visible(self):
+        return is_supported_view(self.view)
+
+    def is_enabled(self):
+        client = client_for_view(self.view)
+        if client and client.has_capability(self.capability):
+            return self.last_check()
+        return False
 
 
 def window_clients(window: sublime.Window) -> 'Dict[str, Client]':

@@ -2,16 +2,12 @@
 from .core.protocol import Request, Range
 from .core.url import filename_to_uri
 from .core.clients import client_for_view
-from .core.configurations import is_supported_view, LspTextCommand
+from .core.clients import LspTextCommand
 
 
 class LspFormatDocumentCommand(LspTextCommand):
-    def is_enabled(self):
-        if is_supported_view(self.view):
-            client = client_for_view(self.view)
-            if client and client.has_capability('documentFormattingProvider'):
-                return True
-        return False
+    def __init__(self, view):
+        super(LspFormatDocumentCommand, self).__init__(view, 'documentFormattingProvider')
 
     def run(self, edit):
         client = client_for_view(self.view)
@@ -36,15 +32,14 @@ class LspFormatDocumentCommand(LspTextCommand):
 
 
 class LspFormatDocumentRangeCommand(LspTextCommand):
-    def is_enabled(self):
-        if is_supported_view(self.view):
-            client = client_for_view(self.view)
-            if client and client.has_capability('documentRangeFormattingProvider'):
-                if len(self.view.sel()) == 1:
-                    region = self.view.sel()[0]
-                    if region.begin() != region.end():
-                        return True
-        return False
+    def __init__(self, view):
+        def last_check():
+            if len(self.view.sel()) == 1:
+                region = self.view.sel()[0]
+                if region.begin() != region.end():
+                    return True
+            return False
+        super(LspFormatDocumentRangeCommand, self).__init__(view, 'documentRangeFormattingProvider', last_check)
 
     def run(self, _):
         client = client_for_view(self.view)

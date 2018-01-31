@@ -1,6 +1,6 @@
 
 from .core.protocol import SymbolKind
-from .core.configurations import is_supported_view, LspContextMenu
+from .core.configurations import is_supported_view, LspTextCommand
 from .core.clients import client_for_view
 from .core.protocol import Request, Range
 from .core.url import filename_to_uri
@@ -36,7 +36,7 @@ def format_symbol(item):
     return [label, format_symbol_kind(item.get("kind"))]
 
 
-class LspDocumentSymbolsCommand(LspContextMenu):
+class LspDocumentSymbolsCommand(LspTextCommand):
     def is_enabled(self):
         if is_supported_view(self.view):
             client = client_for_view(self.view)

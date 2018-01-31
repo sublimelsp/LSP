@@ -2,10 +2,10 @@
 from .core.protocol import Request, Range
 from .core.url import filename_to_uri
 from .core.clients import client_for_view
-from .core.configurations import is_supported_view, LspContextMenu
+from .core.configurations import is_supported_view, LspTextCommand
 
 
-class LspFormatDocumentCommand(LspContextMenu):
+class LspFormatDocumentCommand(LspTextCommand):
     def is_enabled(self):
         if is_supported_view(self.view):
             client = client_for_view(self.view)
@@ -35,7 +35,7 @@ class LspFormatDocumentCommand(LspContextMenu):
                               {'changes': response})
 
 
-class LspFormatDocumentRangeCommand(LspContextMenu):
+class LspFormatDocumentRangeCommand(LspTextCommand):
     def is_enabled(self):
         if is_supported_view(self.view):
             client = client_for_view(self.view)

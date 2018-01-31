@@ -8,14 +8,14 @@ except ImportError:
 
 
 from .core.clients import client_for_view
-from .core.configurations import is_supported_view, LspContextMenu
+from .core.configurations import is_supported_view, LspTextCommand
 from .core.protocol import Request, Range
 from .core.documents import get_position
 from .core.diagnostics import get_point_diagnostics
 from .core.url import filename_to_uri
 
 
-class LspCodeActionsCommand(LspContextMenu):
+class LspCodeActionsCommand(LspTextCommand):
     def is_enabled(self, event=None):
         if is_supported_view(self.view):
             client = client_for_view(self.view)

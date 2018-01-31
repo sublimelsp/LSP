@@ -17,9 +17,9 @@ except ImportError:
 window_client_configs = dict()  # type: Dict[int, List[ClientConfig]]
 
 
-class LspContextMenu(sublime_plugin.TextCommand):
+class LspTextCommand(sublime_plugin.TextCommand):
     def __init__(self, view):
-        super(LspContextMenu, self).__init__(view)
+        super(LspTextCommand, self).__init__(view)
 
     def is_visible(self):
         return is_supported_view(self.view)

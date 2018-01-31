@@ -1,6 +1,6 @@
 import sublime
 
-from .core.configurations import is_supported_view, LspContextMenu
+from .core.configurations import is_supported_view, LspTextCommand
 from .core.clients import client_for_view
 from .core.protocol import Request, Point
 from .core.documents import get_document_position, get_position, is_at_word
@@ -8,7 +8,7 @@ from .core.url import uri_to_filename
 from .core.logging import debug
 
 
-class LspSymbolDefinitionCommand(LspContextMenu):
+class LspSymbolDefinitionCommand(LspTextCommand):
     def is_enabled(self, event=None):
         # TODO: check what kind of scope we're in.
         if is_supported_view(self.view):

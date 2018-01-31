@@ -170,10 +170,24 @@ def unload_old_clients(window: sublime.Window):
         unload_client(client, window.id(), config_name)
 
 
+clients_unloaded_handler = None  # type: Optional[Callable]
+
+
+def register_clients_unloaded_handler(handler: 'Callable'):
+    global clients_unloaded_handler
+    clients_unloaded_handler = handler
+
+
 def on_shutdown(client: Client, window_id: int, config_name: str, response):
     try:
         client.exit()
         del clients_by_window[window_id][config_name]
+
+        if not clients_by_window[window_id]:
+            debug("all clients unloaded")
+            if clients_unloaded_handler:
+                clients_unloaded_handler(window_id)
+
     except Exception as err:
         exception_log("Error exiting server", err)
 

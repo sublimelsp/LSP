@@ -26,7 +26,7 @@ from .configurations import (
 from .clients import (
     can_start_config, set_config_starting, set_config_ready, clear_config_state,
     window_configs, is_ready_window_config,
-    unload_old_clients, unload_window_clients, unload_all_clients
+    unload_old_clients, unload_window_clients, unload_all_clients, register_clients_unloaded_handler
 )
 from .events import Events
 from .documents import (
@@ -40,6 +40,7 @@ def startup():
     load_settings()
     Events.subscribe("view.on_load_async", initialize_on_open)
     Events.subscribe("view.on_activated_async", initialize_on_open)
+    register_clients_unloaded_handler(handle_clients_unloaded)
     if settings.show_status_messages:
         sublime.status_message("LSP initialized")
     start_active_views()
@@ -87,7 +88,7 @@ def initialize_on_open(view: sublime.View):
     if not window:
         return
 
-    debug("initialize on open", window.id())
+    debug("initialize on open", window.id(), view.file_name())
 
     if window_configs(window):
         unload_old_clients(window)
@@ -275,10 +276,20 @@ def handle_server_crash(window: sublime.Window, config: ClientConfig):
         restart_window_clients(window)
 
 
+restarting_window_ids = set()  # type: Set[int]
+
+
 def restart_window_clients(window: sublime.Window):
     clear_document_states(window)
+    restarting_window_ids.add(window.id())
     unload_window_clients(window.id())
-    start_active_views()
+
+
+def handle_clients_unloaded(window_id):
+    debug('clients for window {} unloaded'.format(window_id))
+    if window_id in restarting_window_ids:
+        restarting_window_ids.remove(window_id)
+        start_active_views()
 
 
 def handle_message_request(params: dict):

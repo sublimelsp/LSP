@@ -70,14 +70,14 @@ def start_active_views():
             initialize_on_open(first_view)
             if len(views) > 0:
                 for view in views:
-                    didopen_after_initialize.append(view)
+                    open_after_initialize_by_window[window.id()].append(view)
 
 
 TextDocumentSyncKindNone = 0
 TextDocumentSyncKindFull = 1
 TextDocumentSyncKindIncremental = 2
 
-didopen_after_initialize = list()
+open_after_initialize_by_window = dict()  # type: Dict[int, List[sublime.View]]
 unsubscribe_initialize_on_load = None
 unsubscribe_initialize_on_activated = None
 
@@ -94,11 +94,12 @@ def initialize_on_open(view: sublime.View):
         unload_old_clients(window)
 
     global didopen_after_initialize
+    open_after_initialize_by_window[window.id()] = []
     config = config_for_scope(view)
     if config:
         if config.enabled:
             if not is_ready_window_config(window, config.name):
-                didopen_after_initialize.append(view)
+                open_after_initialize_by_window[window.id()].append(view)
                 start_window_client(view, window, config)
         else:
             debug(config.name, 'is not enabled')
@@ -113,7 +114,6 @@ def register_client_initialization_listener(client_name: str, handler: 'Callable
 
 
 def handle_initialize_result(result, client, window, config):
-    global didopen_after_initialize
     capabilities = result.get("capabilities")
     client.set_capabilities(capabilities)
 
@@ -159,12 +159,12 @@ def handle_initialize_result(result, client, window, config):
     # now the client should be available outside the initialization sequence
     set_config_ready(window, config.name, client)
 
-    for view in didopen_after_initialize:
+    for view in open_after_initialize_by_window[window.id()]:
         notify_did_open(view)
 
     if settings.show_status_messages:
         window.status_message("{} initialized".format(config.name))
-    didopen_after_initialize = list()
+    del open_after_initialize_by_window[window.id()]
 
 
 def start_client(window: sublime.Window, config: ClientConfig):

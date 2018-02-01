@@ -1,5 +1,7 @@
 import sublime
 
+from sublime_plugin import TextCommand
+
 try:
     from typing import Any, List
     assert Any and List
@@ -15,7 +17,7 @@ from .core.diagnostics import get_point_diagnostics
 from .core.url import filename_to_uri
 
 
-class LspCodeActionsCommand(LspTextCommand):
+class LspCodeActionsCommand(LspTextCommand, TextCommand):
     def __init__(self, view):
         super(LspCodeActionsCommand, self).__init__(view, 'codeActionProvider')
 

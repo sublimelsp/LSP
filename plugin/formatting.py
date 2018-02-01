@@ -1,11 +1,13 @@
 
+from sublime_plugin import TextCommand
+
 from .core.protocol import Request, Range
 from .core.url import filename_to_uri
 from .core.clients import client_for_view
 from .core.clients import LspTextCommand
 
 
-class LspFormatDocumentCommand(LspTextCommand):
+class LspFormatDocumentCommand(LspTextCommand, TextCommand):
     def __init__(self, view):
         super(LspFormatDocumentCommand, self).__init__(view, 'documentFormattingProvider')
 
@@ -31,7 +33,7 @@ class LspFormatDocumentCommand(LspTextCommand):
                               {'changes': response})
 
 
-class LspFormatDocumentRangeCommand(LspTextCommand):
+class LspFormatDocumentRangeCommand(LspTextCommand, TextCommand):
     def __init__(self, view):
         def last_check():
             if len(self.view.sel()) == 1:

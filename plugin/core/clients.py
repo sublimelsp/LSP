@@ -23,9 +23,8 @@ except ImportError:
 clients_by_window = {}  # type: Dict[int, Dict[str, Client]]
 
 
-class LspTextCommand(TextCommand):
-    # Passing capability='' due Sublime Text bug: https://github.com/SublimeTextIssues/Core/issues/2175
-    def __init__(self, view, capability='', last_check=lambda: True):
+class LspTextCommand(object):
+    def __init__(self, view, capability, last_check=lambda: True):
         super(LspTextCommand, self).__init__(view)
         self.capability = capability
         self.last_check = last_check

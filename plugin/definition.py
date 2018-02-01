@@ -1,5 +1,7 @@
 import sublime
 
+from sublime_plugin import TextCommand
+
 from .core.clients import LspTextCommand
 from .core.clients import client_for_view
 from .core.protocol import Request, Point
@@ -8,7 +10,7 @@ from .core.url import uri_to_filename
 from .core.logging import debug
 
 
-class LspSymbolDefinitionCommand(LspTextCommand):
+class LspSymbolDefinitionCommand(LspTextCommand, TextCommand):
     def __init__(self, view):
         super(LspSymbolDefinitionCommand, self).__init__(view, 'definitionProvider')
 

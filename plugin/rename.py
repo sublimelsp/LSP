@@ -1,11 +1,13 @@
 
+from sublime_plugin import TextCommand
+
 from .core.clients import LspTextCommand
 from .core.clients import client_for_view
 from .core.protocol import Request
 from .core.documents import get_document_position, get_position, is_at_word
 
 
-class LspSymbolRenameCommand(LspTextCommand):
+class LspSymbolRenameCommand(LspTextCommand, TextCommand):
     def __init__(self, view):
         # TODO: check what kind of scope we're in.
         super(LspSymbolRenameCommand, self).__init__(view, 'renameProvider', lambda: is_at_word(view, None))

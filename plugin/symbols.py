@@ -1,4 +1,6 @@
 
+from sublime_plugin import TextCommand
+
 from .core.protocol import SymbolKind
 from .core.clients import LspTextCommand
 from .core.clients import client_for_view
@@ -36,7 +38,7 @@ def format_symbol(item):
     return [label, format_symbol_kind(item.get("kind"))]
 
 
-class LspDocumentSymbolsCommand(LspTextCommand):
+class LspDocumentSymbolsCommand(LspTextCommand, TextCommand):
     def __init__(self, view):
         super(LspDocumentSymbolsCommand, self).__init__(view, 'documentSymbolProvider')
 

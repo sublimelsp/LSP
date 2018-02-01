@@ -123,7 +123,6 @@ class TCPTransport(Transport):
         read_state = STATE_HEADERS
         content_length = 0
         while self.socket:
-            debug('socket recv')
             is_incomplete = False
             try:
                 received_data = self.socket.recv(4096)
@@ -137,24 +136,17 @@ class TCPTransport(Transport):
                 self.close()
                 break
 
-            debug("got data:" + received_data.decode("UTF-8"))
-            if len(remaining_data) > 0:
-                debug("continuing with", remaining_data)
             data = remaining_data + received_data
             remaining_data = b""
 
             while len(data) > 0 and not is_incomplete:
-                debug('looping through data', data.decode("UTF-8"))
-                # read headers until double newline or incomplete
                 if read_state == STATE_HEADERS:
                     headers, _sep, rest = data.partition(b"\r\n\r\n")
                     if len(_sep) < 1:
-                        debug("HEADER INCOMPLETE")
                         is_incomplete = True
                         remaining_data = data
                     else:
                         for header in headers.split(b"\r\n"):
-                            debug("HEADER", header)
                             if header.startswith(ContentLengthHeader):
                                 header_value = header[len(ContentLengthHeader):]
                                 content_length = int(header_value)
@@ -165,12 +157,10 @@ class TCPTransport(Transport):
                     # read content bytes
                     if len(data) >= content_length:
                         content = data[:content_length]
-                        debug("CONTENT", content)
                         self.on_receive(content.decode("UTF-8"))
                         data = data[content_length:]
                         read_state = STATE_HEADERS
                     else:
-                        debug("CONTENT INCOMPLETE, remaining =", len(data), "=>", data)
                         is_incomplete = True
                         remaining_data = data
 

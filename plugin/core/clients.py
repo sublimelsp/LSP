@@ -1,7 +1,5 @@
 import sublime
 
-from sublime_plugin import TextCommand
-
 from .logging import debug, exception_log
 from .configurations import config_for_scope, is_supported_view
 from .protocol import Notification, Request

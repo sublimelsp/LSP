@@ -8,7 +8,7 @@ from .core.documents import get_document_position, get_position, is_at_word
 class LspSymbolRenameCommand(LspTextCommand):
     def __init__(self, view):
         # TODO: check what kind of scope we're in.
-        super(LspSymbolRenameCommand, self).__init__(view, 'renameProvider', lambda: is_at_word(view, None))
+        super().__init__(view, 'renameProvider', lambda: is_at_word(view, None))
 
     def run(self, edit, event=None):
         pos = get_position(self.view, event)

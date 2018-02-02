@@ -7,7 +7,7 @@ from .core.clients import LspTextCommand
 
 class LspFormatDocumentCommand(LspTextCommand):
     def __init__(self, view):
-        super(LspFormatDocumentCommand, self).__init__(view, 'documentFormattingProvider')
+        super().__init__(view, 'documentFormattingProvider')
 
     def run(self, edit):
         client = client_for_view(self.view)
@@ -39,7 +39,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
                 if region.begin() != region.end():
                     return True
             return False
-        super(LspFormatDocumentRangeCommand, self).__init__(view, 'documentRangeFormattingProvider', last_check)
+        super().__init__(view, 'documentRangeFormattingProvider', last_check)
 
     def run(self, _):
         client = client_for_view(self.view)

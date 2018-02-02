@@ -17,7 +17,7 @@ from .core.url import filename_to_uri
 
 class LspCodeActionsCommand(LspTextCommand):
     def __init__(self, view):
-        super(LspCodeActionsCommand, self).__init__(view, 'codeActionProvider')
+        super().__init__(view, 'codeActionProvider')
 
     def run(self, edit, event=None):
         client = client_for_view(self.view)

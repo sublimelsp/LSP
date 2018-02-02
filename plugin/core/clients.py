@@ -38,7 +38,7 @@ class ConfigState(object):
 
 class LspTextCommand(TextCommand):
     def __init__(self, view, capability='', last_check=lambda: True):
-        super(LspTextCommand, self).__init__(view)
+        super().__init__(view)
         self.capability = capability
         self.last_check = last_check
 

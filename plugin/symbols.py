@@ -38,7 +38,7 @@ def format_symbol(item):
 
 class LspDocumentSymbolsCommand(LspTextCommand):
     def __init__(self, view):
-        super(LspDocumentSymbolsCommand, self).__init__(view, 'documentSymbolProvider')
+        super().__init__(view, 'documentSymbolProvider')
 
     def run(self, edit):
         client = client_for_view(self.view)

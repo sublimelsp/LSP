@@ -10,7 +10,7 @@ from .core.logging import debug
 
 class LspSymbolDefinitionCommand(LspTextCommand):
     def __init__(self, view):
-        super(LspSymbolDefinitionCommand, self).__init__(view, 'definitionProvider')
+        super().__init__(view, 'definitionProvider')
 
     def run(self, edit, event=None):
         client = client_for_view(self.view)

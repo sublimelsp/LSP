@@ -1,5 +1,7 @@
 import sublime
 
+from sublime_plugin import TextCommand
+
 from .logging import debug, exception_log
 from .configurations import config_for_scope, is_supported_view
 from .protocol import Notification, Request
@@ -21,8 +23,8 @@ except ImportError:
 clients_by_window = {}  # type: Dict[int, Dict[str, Client]]
 
 
-class LspTextCommand(object):
-    def __init__(self, view, capability, last_check=lambda: True):
+class LspTextCommand(TextCommand):
+    def __init__(self, view, capability='', last_check=lambda: True):
         super(LspTextCommand, self).__init__(view)
         self.capability = capability
         self.last_check = last_check

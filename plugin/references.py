@@ -1,8 +1,6 @@
 import os
 import sublime
 
-from sublime_plugin import TextCommand
-
 from .core.panels import create_output_panel
 from .core.settings import PLUGIN_NAME
 from .core.clients import client_for_view
@@ -30,7 +28,7 @@ def create_references_panel(window: sublime.Window):
     return panel
 
 
-class LspSymbolReferencesCommand(LspTextCommand, TextCommand):
+class LspSymbolReferencesCommand(LspTextCommand):
     def __init__(self, view):
         super(LspSymbolReferencesCommand, self).__init__(view, 'referencesProvider', lambda: is_at_word(view, None))
 

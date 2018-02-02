@@ -1,6 +1,9 @@
 import json
 import sublime
 import threading
+import socket
+import time
+from abc import ABCMeta, abstractmethod
 
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
@@ -13,6 +16,10 @@ from .logging import debug, exception_log, server_log
 from .protocol import Request, Notification
 
 
+ContentLengthHeader = b"Content-Length: "
+TCP_CONNECT_TIMEOUT = 5
+
+
 def format_request(payload: 'Dict[str, Any]'):
     """Converts the request into json and adds the Content-Length header"""
     content = json.dumps(payload, sort_keys=False)
@@ -21,13 +28,215 @@ def format_request(payload: 'Dict[str, Any]'):
     return result
 
 
-class Client(object):
-    def __init__(self, process, project_path):
+def attach_tcp_client(tcp_port, process, project_path):
+    if settings.log_stderr:
+        attach_logger(process, process.stdout)
+
+    host = "localhost"
+    start_time = time.time()
+    debug('connecting to {}:{}'.format(host, tcp_port))
+
+    while time.time() - start_time < TCP_CONNECT_TIMEOUT:
+        try:
+            sock = socket.create_connection((host, tcp_port))
+            transport = TCPTransport(sock)
+
+            return Client(process, transport, project_path)
+        except ConnectionRefusedError as e:
+            pass
+
+    process.kill()
+    raise Exception("Timeout connecting to socket")
+
+
+def attach_stdio_client(process, project_path):
+    transport = StdioTransport(process)
+    if settings.log_stderr:
+        attach_logger(process, process.stderr)
+    return Client(process, transport, project_path)
+
+
+def attach_logger(process, stream):
+    threading.Thread(target=lambda: log_stream(process, stream)).start()
+
+
+def log_stream(process, stream):
+        """
+        Reads any errors from the LSP process.
+        """
+        running = True
+        while running:
+            running = process.poll() is None
+
+            try:
+                content = process.stderr.readline()
+                if not content:
+                    break
+                if settings.log_stderr:
+                    try:
+                        decoded = content.decode("UTF-8")
+                    except UnicodeDecodeError:
+                        decoded = content
+                    server_log(decoded.strip())
+            except IOError as err:
+                exception_log("Failure reading stderr", err)
+                return
+
+        debug("LSP stderr process ended.")
+
+
+class Transport(object,  metaclass=ABCMeta):
+    @abstractmethod
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def start(self, on_receive, on_closed):
+        pass
+
+    @abstractmethod
+    def send(self, message):
+        pass
+
+
+STATE_HEADERS = 0
+STATE_CONTENT = 1
+
+
+class TCPTransport(Transport):
+    def __init__(self, socket):
+        self.socket = socket
+
+    def start(self, on_receive, on_closed):
+        self.on_receive = on_receive
+        self.on_closed = on_closed
+        self.read_thread = threading.Thread(target=self.read_socket)
+        self.read_thread.start()
+
+    def close(self):
+        self.socket = None
+        self.on_closed()
+
+    def read_socket(self):
+        remaining_data = b""
+        is_incomplete = False
+        read_state = STATE_HEADERS
+        content_length = 0
+        while self.socket:
+            is_incomplete = False
+            try:
+                received_data = self.socket.recv(4096)
+            except Exception as err:
+                exception_log("Failure reading from socket", err)
+                self.close()
+                break
+
+            if not received_data:
+                debug("no data received, closing")
+                self.close()
+                break
+
+            data = remaining_data + received_data
+            remaining_data = b""
+
+            while len(data) > 0 and not is_incomplete:
+                if read_state == STATE_HEADERS:
+                    headers, _sep, rest = data.partition(b"\r\n\r\n")
+                    if len(_sep) < 1:
+                        is_incomplete = True
+                        remaining_data = data
+                    else:
+                        for header in headers.split(b"\r\n"):
+                            if header.startswith(ContentLengthHeader):
+                                header_value = header[len(ContentLengthHeader):]
+                                content_length = int(header_value)
+                                read_state = STATE_CONTENT
+                        data = rest
+
+                if read_state == STATE_CONTENT:
+                    # read content bytes
+                    if len(data) >= content_length:
+                        content = data[:content_length]
+                        self.on_receive(content.decode("UTF-8"))
+                        data = data[content_length:]
+                        read_state = STATE_HEADERS
+                    else:
+                        is_incomplete = True
+                        remaining_data = data
+
+    def send(self, message):
+        try:
+            if self.socket:
+                debug('socket send')
+                self.socket.sendall(bytes(message, 'UTF-8'))
+        except Exception as err:
+            exception_log("Failure writing to socket", err)
+            self.socket = None
+            self.on_closed()
+
+
+class StdioTransport(Transport):
+    def __init__(self, process):
         self.process = process
+
+    def start(self, on_receive, on_closed):
+        self.on_receive = on_receive
+        self.on_closed = on_closed
         self.stdout_thread = threading.Thread(target=self.read_stdout)
         self.stdout_thread.start()
-        self.stderr_thread = threading.Thread(target=self.read_stderr)
-        self.stderr_thread.start()
+
+    def close(self):
+        self.process = None
+        self.on_closed()
+
+    def read_stdout(self):
+        """
+        Reads JSON responses from process and dispatch them to response_handler
+        """
+        ContentLengthHeader = b"Content-Length: "
+
+        running = True
+        while running:
+            running = self.process.poll() is None
+
+            try:
+                content_length = 0
+                while self.process:
+                    header = self.process.stdout.readline()
+                    if header:
+                        header = header.strip()
+                    if not header:
+                        break
+                    if header.startswith(ContentLengthHeader):
+                        content_length = int(header[len(ContentLengthHeader):])
+
+                if (content_length > 0):
+                    content = self.process.stdout.read(content_length)
+
+                    self.on_receive(content.decode("UTF-8"))
+
+            except IOError as err:
+                self.close()
+                exception_log("Failure reading stdout", err)
+                break
+
+        debug("LSP stdout process ended.")
+
+    def send(self, message):
+        if self.process:
+            try:
+                self.process.stdin.write(bytes(message, 'UTF-8'))
+                self.process.stdin.flush()
+            except (BrokenPipeError, OSError) as err:
+                exception_log("Failure writing to stdout", err)
+                self.close()
+
+
+class Client(object):
+    def __init__(self, process, transport, project_path):
+        self.process = process
+        self.transport = transport
+        self.transport.start(self.receive_payload, self.on_transport_closed)
         self.project_path = project_path
         self.request_id = 0
         self._response_handlers = {}  # type: Dict[int, Callable]
@@ -35,6 +244,7 @@ class Client(object):
         self._request_handlers = {}  # type: Dict[str, Callable]
         self._notification_handlers = {}  # type: Dict[str, Callable]
         self.capabilities = {}  # type: Dict[str, Any]
+        self.exiting = False
         self._crash_handler = None  # type: Optional[Callable]
 
     def set_capabilities(self, capabilities):
@@ -62,6 +272,10 @@ class Client(object):
         debug(' --> ' + notification.method)
         self.send_payload(notification.to_payload())
 
+    def exit(self):
+        self.exiting = True
+        self.send_notification(Notification.exit())
+
     def kill(self):
         self.process.kill()
         self.process = None
@@ -69,104 +283,54 @@ class Client(object):
     def set_crash_handler(self, handler: 'Callable'):
         self._crash_handler = handler
 
-    def handle_server_crash(self):
+    def handle_transport_failure(self):
         if self.process:
             try:
                 self.process.terminate()
             except ProcessLookupError:
                 pass  # process can be terminated already
             self.process = None
-            self._crash_handler()
+            if self._crash_handler is not None:
+                self._crash_handler()
 
     def send_payload(self, payload):
-        if self.process:
+        if self.transport:
             try:
                 message = format_request(payload)
-                self.process.stdin.write(bytes(message, 'UTF-8'))
-                self.process.stdin.flush()
-            except (BrokenPipeError, OSError) as err:
+                self.transport.send(message)
+            except Exception as err:
                 sublime.status_message("Failure sending LSP server message, exiting")
                 exception_log("Failure writing payload", err)
-                self.handle_server_crash()
+                self.handle_transport_failure()
 
-    def read_stdout(self):
-        """
-        Reads JSON responses from process and dispatch them to response_handler
-        """
-        ContentLengthHeader = b"Content-Length: "
+    def receive_payload(self, message):
+        payload = None
+        try:
+            payload = json.loads(message)
+            # limit = min(len(message), 200)
+            # debug("got json: ", message[0:limit], "...")
+        except IOError as err:
+            exception_log("got a non-JSON payload: " + message, err)
+            return
 
-        running = True
-        while running:
-            running = self.process.poll() is None
+        try:
+            if "method" in payload:
+                if "id" in payload:
+                    self.request_handler(payload)
+                else:
+                    self.notification_handler(payload)
+            elif "id" in payload:
+                self.response_handler(payload)
+            else:
+                debug("Unknown payload type: ", payload)
+        except Exception as err:
+            exception_log("Error handling server payload", err)
 
-            try:
-                content_length = 0
-                while self.process:
-                    header = self.process.stdout.readline()
-                    if header:
-                        header = header.strip()
-                    if not header:
-                        break
-                    if header.startswith(ContentLengthHeader):
-                        content_length = int(header[len(ContentLengthHeader):])
-
-                if (content_length > 0):
-                    content = self.process.stdout.read(content_length).decode(
-                        "UTF-8")
-
-                    payload = None
-                    try:
-                        payload = json.loads(content)
-                        # limit = min(len(content), 200)
-                        # debug("got json: ", content[0:limit], "...")
-                    except IOError as err:
-                        exception_log("got a non-JSON payload: " + content, err)
-                        continue
-
-                    try:
-                        if "method" in payload:
-                            if "id" in payload:
-                                self.request_handler(payload)
-                            else:
-                                self.notification_handler(payload)
-                        elif "id" in payload:
-                            self.response_handler(payload)
-                        else:
-                            debug("Unknown payload type: ", payload)
-                    except Exception as err:
-                        exception_log("Error handling server payload", err)
-
-            except IOError as err:
-                sublime.status_message("Failure reading LSP server response, exiting")
-                exception_log("Failure reading stdout", err)
-                self.handle_server_crash()
-                return
-
-        debug("LSP stdout process ended.")
-
-    def read_stderr(self):
-        """
-        Reads any errors from the LSP process.
-        """
-        running = True
-        while running:
-            running = self.process.poll() is None
-
-            try:
-                content = self.process.stderr.readline()
-                if not content:
-                    break
-                if settings.log_stderr:
-                    try:
-                        decoded = content.decode("UTF-8")
-                    except UnicodeDecodeError:
-                        decoded = content
-                    server_log(decoded.strip())
-            except IOError as err:
-                exception_log("Failure reading stderr", err)
-                return
-
-        debug("LSP stderr process ended.")
+    def on_transport_closed(self):
+        sublime.status_message("Communication to server closed, exiting")
+        # Differentiate between normal exit and server crash?
+        if not self.exiting:
+            self.handle_transport_failure()
 
     def response_handler(self, response):
         handler_id = int(response.get("id"))  # dotty sends strings back :(

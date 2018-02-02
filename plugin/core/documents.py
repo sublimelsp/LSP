@@ -14,7 +14,7 @@ from .protocol import Notification, Point
 from .settings import settings
 from .url import filename_to_uri
 from .configurations import config_for_scope, is_supported_view, is_supported_syntax, is_supportable_syntax
-from .clients import client_for_view, window_clients, check_window_unloaded
+from .clients import client_for_view, client_for_closed_view, check_window_unloaded
 from .events import Events
 
 SUBLIME_WORD_MASK = 515
@@ -150,10 +150,8 @@ def notify_did_close(view: sublime.View):
     if window and file_name:
         if has_document_state(window, file_name):
             clear_document_state(window, file_name)
-            config = config_for_scope(view)
-            clients = window_clients(sublime.active_window())
-            if config and config.name in clients:
-                client = clients[config.name]
+            client = client_for_closed_view(view)
+            if client:
                 params = {"textDocument": {"uri": filename_to_uri(file_name)}}
                 client.send_notification(Notification.didClose(params))
 

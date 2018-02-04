@@ -51,6 +51,7 @@ class LspTextCommand(TextCommand):
             return True
         return False
 
+
 def window_configs(window: sublime.Window) -> 'Dict[str, ConfigState]':
     if window.id() in clients_by_window:
         return clients_by_window[window.id()]

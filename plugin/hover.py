@@ -31,7 +31,7 @@ class HoverHandler(sublime_plugin.ViewEventListener):
 
 class LspHoverCommand(LspTextCommand):
     def __init__(self, view):
-        super().__init__(view, 'definitionProvider')
+        super().__init__(view, 'hoverProvider')
 
     def is_enabled(self):
         # TODO: check what kind of scope we're in.
@@ -48,15 +48,13 @@ class LspHoverCommand(LspTextCommand):
     def request_symbol_hover(self, point):
         if self.view.match_selector(point, NO_HOVER_SCOPES):
             return
-        client = client_for_view(self.view)
-        if client and client.has_capability('hoverProvider'):
-            word_at_sel = self.view.classify(point)
-            if word_at_sel & SUBLIME_WORD_MASK:
-                document_position = get_document_position(self.view, point)
-                if document_position:
-                    client.send_request(
-                        Request.hover(document_position),
-                        lambda response: self.handle_response(response, point))
+        word_at_sel = self.view.classify(point)
+        if word_at_sel & SUBLIME_WORD_MASK:
+            document_position = get_document_position(self.view, point)
+            if document_position:
+                self.client_for_view.send_request(
+                    Request.hover(document_position),
+                    lambda response: self.handle_response(response, point))
 
     def handle_response(self, response, point):
         all_content = ""

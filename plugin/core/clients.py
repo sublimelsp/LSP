@@ -47,6 +47,7 @@ class LspTextCommand(TextCommand):
     def has_client_with_capability(self):
         client = client_for_view(self.view)
         if client and client.has_capability(self.capability):
+            self.client_for_view = client
             return True
         return False
 

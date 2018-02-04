@@ -167,7 +167,7 @@ Events.subscribe("document.diagnostics",
 
 
 def handle_diagnostics(update: DiagnosticsUpdate):
-    window = sublime.active_window()
+    window = update.window
     view = window.find_open_file(update.file_path)
     if view:
         update_diagnostics_in_view(view, update.diagnostics)

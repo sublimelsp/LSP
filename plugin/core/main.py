@@ -32,7 +32,7 @@ from .events import Events
 from .documents import (
     initialize_document_sync, notify_did_open, clear_document_states
 )
-from .diagnostics import handle_diagnostics, remove_diagnostics
+from .diagnostics import handle_client_diagnostics, remove_diagnostics
 from .edit import apply_workspace_edit
 
 
@@ -120,7 +120,7 @@ def handle_initialize_result(result, client, window, config):
     # handle server requests and notifications
     client.on_request(
         "workspace/applyEdit",
-        lambda params: apply_workspace_edit(sublime.active_window(), params))
+        lambda params: apply_workspace_edit(window, params))
 
     client.on_request(
         "window/showMessageRequest",
@@ -128,10 +128,12 @@ def handle_initialize_result(result, client, window, config):
 
     client.on_notification(
         "textDocument/publishDiagnostics",
-        lambda params: handle_diagnostics(params))
+        lambda params: handle_client_diagnostics(window, config.name, params))
+
     client.on_notification(
         "window/showMessage",
         lambda params: sublime.message_dialog(params.get("message")))
+
     if settings.log_server:
         client.on_notification(
             "window/logMessage",
@@ -147,7 +149,7 @@ def handle_initialize_result(result, client, window, config):
     if document_sync:
         initialize_document_sync(document_sync)
 
-    Events.subscribe('view.on_close', remove_diagnostics)
+    Events.subscribe('view.on_close', lambda view: remove_diagnostics(view, config.name))
 
     client.send_notification(Notification.initialized())
     if config.settings:

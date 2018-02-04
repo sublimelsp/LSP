@@ -40,6 +40,9 @@ class LspDocumentSymbolsCommand(LspTextCommand):
     def __init__(self, view):
         super().__init__(view, 'documentSymbolProvider')
 
+    def is_enabled(self):
+        self.has_client_with_capability()
+
     def run(self, edit):
         client = client_for_view(self.view)
         if client:

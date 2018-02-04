@@ -30,7 +30,12 @@ def create_references_panel(window: sublime.Window):
 
 class LspSymbolReferencesCommand(LspTextCommand):
     def __init__(self, view):
-        super().__init__(view, 'referencesProvider', lambda: is_at_word(view, None))
+        super().__init__(view, 'referencesProvider')
+
+    def is_enabled(self):
+        if self.has_client_with_capability():
+            return is_at_word(self.view, None)
+        return False
 
     def run(self, edit, event=None):
         client = client_for_view(self.view)

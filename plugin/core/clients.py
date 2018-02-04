@@ -37,20 +37,18 @@ class ConfigState(object):
 
 
 class LspTextCommand(TextCommand):
-    def __init__(self, view, capability='', last_check=lambda: True):
+    def __init__(self, view, capability=''):
         super().__init__(view)
         self.capability = capability
-        self.last_check = last_check
 
     def is_visible(self):
         return is_supported_view(self.view)
 
-    def is_enabled(self):
+    def has_client_with_capability(self):
         client = client_for_view(self.view)
         if client and client.has_capability(self.capability):
-            return self.last_check()
+            return True
         return False
-
 
 def window_configs(window: sublime.Window) -> 'Dict[str, ConfigState]':
     if window.id() in clients_by_window:

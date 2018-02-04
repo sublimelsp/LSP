@@ -3,9 +3,9 @@ import sublime
 import sublime_plugin
 import webbrowser
 
-from .core.configurations import is_supported_syntax, is_supported_view
+from .core.configurations import is_supported_syntax
 from .core.diagnostics import get_point_diagnostics
-from .core.clients import client_for_view
+from .core.clients import LspTextCommand
 from .core.protocol import Request
 from .core.documents import get_document_position
 from .core.popups import popup_css, popup_class
@@ -29,14 +29,13 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         self.view.run_command("lsp_hover", {"point": point})
 
 
-class LspHoverCommand(sublime_plugin.TextCommand):
+class LspHoverCommand(LspTextCommand):
+    def __init__(self, view):
+        super().__init__(view, 'definitionProvider')
+
     def is_enabled(self):
         # TODO: check what kind of scope we're in.
-        if is_supported_view(self.view):
-            client = client_for_view(self.view)
-            if client:
-                return client.has_capability('hoverProvider')
-        return False
+        return self.has_client_with_capability()
 
     def run(self, edit, point=None):
         if point is None:

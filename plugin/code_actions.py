@@ -17,10 +17,10 @@ from .core.url import filename_to_uri
 
 class LspCodeActionsCommand(LspTextCommand):
     def __init__(self, view):
-        super().__init__(view, 'codeActionProvider')
+        super().__init__(view)
 
     def is_enabled(self):
-        return self.has_client_with_capability()
+        return self.has_client_with_capability('codeActionProvider')
 
     def run(self, edit, event=None):
         client = client_for_view(self.view)

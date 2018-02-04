@@ -37,14 +37,13 @@ class ConfigState(object):
 
 
 class LspTextCommand(TextCommand):
-    def __init__(self, view, capability=''):
+    def __init__(self, view):
         super().__init__(view)
-        self.capability = capability
 
     def is_visible(self):
         return is_supported_view(self.view)
 
-    def has_client_with_capability(self):
+    def has_client_with_capability(self, capability):
         client = client_for_view(self.view)
         if client and client.has_capability(self.capability):
             self.client_for_view = client

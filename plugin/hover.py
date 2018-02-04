@@ -31,11 +31,11 @@ class HoverHandler(sublime_plugin.ViewEventListener):
 
 class LspHoverCommand(LspTextCommand):
     def __init__(self, view):
-        super().__init__(view, 'hoverProvider')
+        super().__init__(view)
 
     def is_enabled(self):
         # TODO: check what kind of scope we're in.
-        return self.has_client_with_capability()
+        return self.has_client_with_capability('hoverProvider')
 
     def run(self, edit, point=None):
         if point is None:

@@ -34,7 +34,8 @@ class LspHoverCommand(sublime_plugin.TextCommand):
         # TODO: check what kind of scope we're in.
         if is_supported_view(self.view):
             client = client_for_view(self.view)
-            return client.has_capability('hoverProvider')
+            if client:
+                return client.has_capability('hoverProvider')
         return False
 
     def run(self, edit, point=None):

@@ -34,26 +34,30 @@ def update_file_diagnostics(window: sublime.Window, file_path: str, source: str,
 
 
 class DiagnosticsUpdate(object):
-
-    def __init__(self, file_path: str, diagnostics: 'List[Diagnostic]') -> 'None':
+    def __init__(self, window: sublime.Window, client_name: str,
+                 file_path: str, diagnostics: 'List[Diagnostic]') -> 'None':
+        self.window = window
+        self.client_name = client_name
         self.file_path = file_path
         self.diagnostics = diagnostics
 
 
-def handle_diagnostics(update: 'Any'):
-    file_path = uri_to_filename(update.get('uri'))
-    window = sublime.active_window()
+def handle_client_diagnostics(window: sublime.Window, client_name: str, update: dict):
+    maybe_file_uri = update.get('uri')
+    if maybe_file_uri is not None:
+        file_path = uri_to_filename(maybe_file_uri)
 
-    diagnostics = list(
-        Diagnostic.from_lsp(item) for item in update.get('diagnostics', []))
+        diagnostics = list(
+            Diagnostic.from_lsp(item) for item in update.get('diagnostics', []))
 
-    origin = 'lsp'  # TODO: use actual client name to be able to update diagnostics per client
-    update_file_diagnostics(window, file_path, origin, diagnostics)
-    Events.publish("document.diagnostics", DiagnosticsUpdate(file_path, diagnostics))
-    # TODO: expose updates to features
+        update_file_diagnostics(window, file_path, client_name, diagnostics)
+        Events.publish("document.diagnostics", DiagnosticsUpdate(window, client_name, file_path, diagnostics))
+    else:
+        debug('missing uri in diagnostics update')
+# TODO: expose updates to features
 
 
-def remove_diagnostics(view: sublime.View):
+def remove_diagnostics(view: sublime.View, client_name: str):
     """Removes diagnostics for a file if no views exist for it
     """
     window = sublime.active_window()
@@ -61,8 +65,8 @@ def remove_diagnostics(view: sublime.View):
     file_path = view.file_name()
     if file_path:
         if not window.find_open_file(file_path):
-            update_file_diagnostics(window, file_path, 'lsp', [])
-            Events.publish("document.diagnostics", DiagnosticsUpdate(file_path, []))
+            update_file_diagnostics(window, file_path, client_name, [])
+            Events.publish("document.diagnostics", DiagnosticsUpdate(window, client_name, file_path, []))
         else:
             debug('file still open?')
 

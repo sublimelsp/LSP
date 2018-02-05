@@ -12,7 +12,7 @@ class LspSymbolRenameCommand(LspTextCommand):
     def is_enabled(self, event=None):
         # TODO: check what kind of scope we're in.
         if self.has_client_with_capability('renameProvider'):
-            return is_at_word(self.view, None)
+            return is_at_word(self.view, event)
         return False
 
     def run(self, edit, event=None):

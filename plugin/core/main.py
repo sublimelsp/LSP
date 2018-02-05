@@ -303,7 +303,7 @@ def handle_message_request(params: dict):
 
 
 class LspRestartClientCommand(sublime_plugin.TextCommand):
-    def is_enabled(self):
+    def is_enabled(self, event=None):
         return is_supported_view(self.view)
 
     def run(self, edit):
@@ -312,7 +312,7 @@ class LspRestartClientCommand(sublime_plugin.TextCommand):
 
 
 class LspStartClientCommand(sublime_plugin.TextCommand):
-    def is_enabled(self):
+    def is_enabled(self, event=None):
         return is_supported_view(self.view)
 
     def run(self, edit):

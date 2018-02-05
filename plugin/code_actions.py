@@ -1,5 +1,4 @@
 import sublime
-import sublime_plugin
 
 try:
     from typing import Any, List
@@ -9,20 +8,19 @@ except ImportError:
 
 
 from .core.clients import client_for_view
-from .core.configurations import is_supported_view
+from .core.clients import LspTextCommand
 from .core.protocol import Request, Range
 from .core.documents import get_position
 from .core.diagnostics import get_point_diagnostics
 from .core.url import filename_to_uri
 
 
-class LspCodeActionsCommand(sublime_plugin.TextCommand):
+class LspCodeActionsCommand(LspTextCommand):
+    def __init__(self, view):
+        super().__init__(view)
+
     def is_enabled(self, event=None):
-        if is_supported_view(self.view):
-            client = client_for_view(self.view)
-            if client and client.has_capability('codeActionProvider'):
-                return True
-        return False
+        return self.has_client_with_capability('codeActionProvider')
 
     def run(self, edit, event=None):
         client = client_for_view(self.view)

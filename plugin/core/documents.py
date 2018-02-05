@@ -9,9 +9,8 @@ try:
 except ImportError:
     pass
 
-from .logging import debug
 from .protocol import Notification, Point
-from .settings import settings
+from .settings import settings, log
 from .url import filename_to_uri
 from .configurations import config_for_scope, is_supported_view, is_supported_syntax, is_supportable_syntax
 from .clients import client_for_view, client_for_closed_view, check_window_unloaded
@@ -166,7 +165,7 @@ def notify_did_save(view: sublime.View):
                 params = {"textDocument": {"uri": filename_to_uri(file_name)}}
                 client.send_notification(Notification.didSave(params))
         else:
-            debug('document not tracked', file_name)
+            log(2, 'document not tracked %s', file_name)
 
 
 def notify_did_change(view: sublime.View):

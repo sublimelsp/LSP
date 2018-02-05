@@ -1,6 +1,6 @@
 import sublime
 
-from .logging import debug
+from .settings import log
 from .url import uri_to_filename
 from .protocol import Diagnostic
 from .events import Events
@@ -53,7 +53,7 @@ def handle_client_diagnostics(window: sublime.Window, client_name: str, update: 
         update_file_diagnostics(window, file_path, client_name, diagnostics)
         Events.publish("document.diagnostics", DiagnosticsUpdate(window, client_name, file_path, diagnostics))
     else:
-        debug('missing uri in diagnostics update')
+        log(2, 'missing uri in diagnostics update')
 # TODO: expose updates to features
 
 
@@ -68,7 +68,7 @@ def remove_diagnostics(view: sublime.View, client_name: str):
             update_file_diagnostics(window, file_path, client_name, [])
             Events.publish("document.diagnostics", DiagnosticsUpdate(window, client_name, file_path, []))
         else:
-            debug('file still open?')
+            log(2, 'file still open?')
 
 
 def get_line_diagnostics(view, point):

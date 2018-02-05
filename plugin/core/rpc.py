@@ -11,8 +11,7 @@ try:
 except ImportError:
     pass
 
-from .settings import settings
-from .logging import debug, exception_log, server_log
+from .settings import settings, log
 from .protocol import Request, Notification
 
 
@@ -34,7 +33,7 @@ def attach_tcp_client(tcp_port, process, project_path):
 
     host = "localhost"
     start_time = time.time()
-    debug('connecting to {}:{}'.format(host, tcp_port))
+    log(2, 'connecting to %s:%s', host, tcp_port)
 
     while time.time() - start_time < TCP_CONNECT_TIMEOUT:
         try:
@@ -77,12 +76,12 @@ def log_stream(process, stream):
                         decoded = content.decode("UTF-8")
                     except UnicodeDecodeError:
                         decoded = content
-                    server_log(decoded.strip())
+                    log(1, "server: %s", decoded.strip())
             except IOError as err:
-                exception_log("Failure reading stderr", err)
+                log.exception("Failure reading stderr")
                 return
 
-        debug("LSP stderr process ended.")
+        log(2, "LSP stderr process ended.")
 
 
 class Transport(object,  metaclass=ABCMeta):
@@ -127,12 +126,12 @@ class TCPTransport(Transport):
             try:
                 received_data = self.socket.recv(4096)
             except Exception as err:
-                exception_log("Failure reading from socket", err)
+                log.exception("Failure reading from socket")
                 self.close()
                 break
 
             if not received_data:
-                debug("no data received, closing")
+                log(2, "no data received, closing")
                 self.close()
                 break
 
@@ -167,10 +166,10 @@ class TCPTransport(Transport):
     def send(self, message):
         try:
             if self.socket:
-                debug('socket send')
+                log(2, 'socket send')
                 self.socket.sendall(bytes(message, 'UTF-8'))
         except Exception as err:
-            exception_log("Failure writing to socket", err)
+            log.exception("Failure writing to socket")
             self.socket = None
             self.on_closed()
 
@@ -217,10 +216,10 @@ class StdioTransport(Transport):
 
             except IOError as err:
                 self.close()
-                exception_log("Failure reading stdout", err)
+                log.exception("Failure reading stdout")
                 break
 
-        debug("LSP stdout process ended.")
+        log(2, "LSP stdout process ended.")
 
     def send(self, message):
         if self.process:
@@ -228,7 +227,7 @@ class StdioTransport(Transport):
                 self.process.stdin.write(bytes(message, 'UTF-8'))
                 self.process.stdin.flush()
             except (BrokenPipeError, OSError) as err:
-                exception_log("Failure writing to stdout", err)
+                log.exception("Failure writing to stdout")
                 self.close()
 
 
@@ -261,7 +260,7 @@ class Client(object):
 
     def send_request(self, request: Request, handler: 'Callable', error_handler: 'Optional[Callable]' = None):
         self.request_id += 1
-        debug(' --> ' + request.method)
+        log(2, ' --> %s', request.method)
         if handler is not None:
             self._response_handlers[self.request_id] = handler
         if error_handler is not None:
@@ -269,7 +268,7 @@ class Client(object):
         self.send_payload(request.to_payload(self.request_id))
 
     def send_notification(self, notification: Notification):
-        debug(' --> ' + notification.method)
+        log(2, ' --> %s', notification.method)
         self.send_payload(notification.to_payload())
 
     def exit(self):
@@ -300,7 +299,7 @@ class Client(object):
                 self.transport.send(message)
             except Exception as err:
                 sublime.status_message("Failure sending LSP server message, exiting")
-                exception_log("Failure writing payload", err)
+                log.exception("Failure writing payload")
                 self.handle_transport_failure()
 
     def receive_payload(self, message):
@@ -308,9 +307,9 @@ class Client(object):
         try:
             payload = json.loads(message)
             # limit = min(len(message), 200)
-            # debug("got json: ", message[0:limit], "...")
+            # log(2, "got json: %s ...", message[0:limit])
         except IOError as err:
-            exception_log("got a non-JSON payload: " + message, err)
+            log.exception("got a non-JSON payload: %s", message)
             return
 
         try:
@@ -322,9 +321,9 @@ class Client(object):
             elif "id" in payload:
                 self.response_handler(payload)
             else:
-                debug("Unknown payload type: ", payload)
+                log(2, "Unknown payload type: %s", payload)
         except Exception as err:
-            exception_log("Error handling server payload", err)
+            log.exception("Error handling server payload")
 
     def on_transport_closed(self):
         sublime.status_message("Communication to server closed, exiting")
@@ -337,21 +336,21 @@ class Client(object):
         if 'result' in response and 'error' not in response:
             result = response['result']
             if settings.log_payloads:
-                debug('     ' + str(result))
+                log(2, '     %s', str(result))
             if handler_id in self._response_handlers:
                 self._response_handlers[handler_id](result)
             else:
-                debug("No handler found for id" + response.get("id"))
+                log(2, "No handler found for id %s", response.get("id"))
         elif 'error' in response and 'result' not in response:
             error = response['error']
             if settings.log_payloads:
-                debug('     ' + str(error))
+                log(2, '     %s', str(error))
             if handler_id in self._error_handlers:
                 self._error_handlers[handler_id](error)
             else:
                 sublime.status_message(error.get('message'))
         else:
-            debug('invalid response payload', response)
+            log(2, 'invalid response payload %s', response)
 
     def on_request(self, request_method: str, handler: 'Callable'):
         self._request_handlers[request_method] = handler
@@ -362,28 +361,28 @@ class Client(object):
     def request_handler(self, request):
         params = request.get("params")
         method = request.get("method")
-        debug('<--  ' + method)
+        log(2, '<--  %s', method)
         if settings.log_payloads and params:
-            debug('     ' + str(params))
+            log(2, '     %s', str(params))
         if method in self._request_handlers:
             try:
                 self._request_handlers[method](params)
             except Exception as err:
-                exception_log("Error handling request " + method, err)
+                log.exception("Error handling request %s", method)
         else:
-            debug("Unhandled request", method)
+            log(2, "Unhandled request %s", method)
 
     def notification_handler(self, notification):
         method = notification.get("method")
         params = notification.get("params")
         if method != "window/logMessage":
-            debug('<--  ' + method)
+            log(2, '<--  %s', method)
             if settings.log_payloads and params:
-                debug('     ' + str(params))
+                log(2, '     %s', str(params))
         if method in self._notification_handlers:
             try:
                 self._notification_handlers[method](params)
             except Exception as err:
-                exception_log("Error handling notification " + method, err)
+                log.exception("Error handling notification %s", method)
         else:
-            debug("Unhandled notification:", method)
+            log(2, "Unhandled notification: %s", method)

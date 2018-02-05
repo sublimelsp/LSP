@@ -9,7 +9,7 @@ class LspFormatDocumentCommand(LspTextCommand):
     def __init__(self, view):
         super().__init__(view)
 
-    def is_enabled(self):
+    def is_enabled(self, event=None):
         return self.has_client_with_capability('documentFormattingProvider')
 
     def run(self, edit):
@@ -38,7 +38,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
     def __init__(self, view):
         super().__init__(view)
 
-    def is_enabled(self):
+    def is_enabled(self, event=None):
         if self.has_client_with_capability('documentRangeFormattingProvider'):
             if len(self.view.sel()) == 1:
                 region = self.view.sel()[0]

@@ -32,7 +32,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
     def __init__(self, view):
         super().__init__(view)
 
-    def is_enabled(self):
+    def is_enabled(self, event=None):
         if self.has_client_with_capability('referencesProvider'):
             return is_at_word(self.view, None)
         return False

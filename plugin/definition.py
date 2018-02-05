@@ -12,7 +12,7 @@ class LspSymbolDefinitionCommand(LspTextCommand):
     def __init__(self, view):
         super().__init__(view)
 
-    def is_enabled(self):
+    def is_enabled(self, event=None):
         return self.has_client_with_capability('definitionProvider')
 
     def run(self, edit, event=None):

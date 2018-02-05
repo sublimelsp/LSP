@@ -40,12 +40,12 @@ class LspTextCommand(TextCommand):
     def __init__(self, view):
         super().__init__(view)
 
-    def is_visible(self):
+    def is_visible(self, event=None):
         return is_supported_view(self.view)
 
     def has_client_with_capability(self, capability):
         client = client_for_view(self.view)
-        if client and client.has_capability(self.capability):
+        if client and client.has_capability(capability):
             self.client_for_view = client
             return True
         return False

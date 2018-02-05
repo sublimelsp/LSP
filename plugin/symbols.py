@@ -1,7 +1,6 @@
-import sublime_plugin
 
 from .core.protocol import SymbolKind
-from .core.configurations import is_supported_view
+from .core.clients import LspTextCommand
 from .core.clients import client_for_view
 from .core.protocol import Request, Range
 from .core.url import filename_to_uri
@@ -37,13 +36,12 @@ def format_symbol(item):
     return [label, format_symbol_kind(item.get("kind"))]
 
 
-class LspDocumentSymbolsCommand(sublime_plugin.TextCommand):
-    def is_enabled(self):
-        if is_supported_view(self.view):
-            client = client_for_view(self.view)
-            if client and client.has_capability('documentSymbolProvider'):
-                return True
-        return False
+class LspDocumentSymbolsCommand(LspTextCommand):
+    def __init__(self, view):
+        super().__init__(view)
+
+    def is_enabled(self, event=None):
+        return self.has_client_with_capability('documentSymbolProvider')
 
     def run(self, edit):
         client = client_for_view(self.view)

@@ -1,7 +1,8 @@
 import sublime
+import sublime_plugin
 
 from .logging import debug, exception_log
-from .configurations import config_for_scope
+from .configurations import config_for_scope, is_supported_view
 from .protocol import Request
 from .workspace import get_project_path
 
@@ -18,6 +19,9 @@ except ImportError:
     pass
 
 
+clients_by_window = {}  # type: Dict[int, Dict[str, ConfigState]]
+
+
 class ClientStates(object):
     STARTING = 0
     READY = 1
@@ -31,7 +35,18 @@ class ConfigState(object):
         self.client = client
 
 
-clients_by_window = {}  # type: Dict[int, Dict[str, ConfigState]]
+class LspTextCommand(sublime_plugin.TextCommand):
+    def __init__(self, view):
+        super().__init__(view)
+
+    def is_visible(self, event=None):
+        return is_supported_view(self.view)
+
+    def has_client_with_capability(self, capability):
+        client = client_for_view(self.view)
+        if client and client.has_capability(capability):
+            return True
+        return False
 
 
 def window_configs(window: sublime.Window) -> 'Dict[str, ConfigState]':

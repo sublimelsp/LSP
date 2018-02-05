@@ -1,18 +1,16 @@
-import sublime_plugin
 
 from .core.protocol import Request, Range
 from .core.url import filename_to_uri
 from .core.clients import client_for_view
-from .core.configurations import is_supported_view
+from .core.clients import LspTextCommand
 
 
-class LspFormatDocumentCommand(sublime_plugin.TextCommand):
-    def is_enabled(self):
-        if is_supported_view(self.view):
-            client = client_for_view(self.view)
-            if client and client.has_capability('documentFormattingProvider'):
-                return True
-        return False
+class LspFormatDocumentCommand(LspTextCommand):
+    def __init__(self, view):
+        super().__init__(view)
+
+    def is_enabled(self, event=None):
+        return self.has_client_with_capability('documentFormattingProvider')
 
     def run(self, edit):
         client = client_for_view(self.view)
@@ -36,15 +34,16 @@ class LspFormatDocumentCommand(sublime_plugin.TextCommand):
                               {'changes': response})
 
 
-class LspFormatDocumentRangeCommand(sublime_plugin.TextCommand):
-    def is_enabled(self):
-        if is_supported_view(self.view):
-            client = client_for_view(self.view)
-            if client and client.has_capability('documentRangeFormattingProvider'):
-                if len(self.view.sel()) == 1:
-                    region = self.view.sel()[0]
-                    if region.begin() != region.end():
-                        return True
+class LspFormatDocumentRangeCommand(LspTextCommand):
+    def __init__(self, view):
+        super().__init__(view)
+
+    def is_enabled(self, event=None):
+        if self.has_client_with_capability('documentRangeFormattingProvider'):
+            if len(self.view.sel()) == 1:
+                region = self.view.sel()[0]
+                if region.begin() != region.end():
+                    return True
         return False
 
     def run(self, _):

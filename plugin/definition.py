@@ -1,7 +1,6 @@
 import sublime
-import sublime_plugin
 
-from .core.configurations import is_supported_view
+from .core.clients import LspTextCommand
 from .core.clients import client_for_view
 from .core.protocol import Request, Point
 from .core.documents import get_document_position, get_position, is_at_word
@@ -9,14 +8,13 @@ from .core.url import uri_to_filename
 from .core.logging import debug
 
 
-class LspSymbolDefinitionCommand(sublime_plugin.TextCommand):
+class LspSymbolDefinitionCommand(LspTextCommand):
+    def __init__(self, view):
+        super().__init__(view)
+
     def is_enabled(self, event=None):
-        # TODO: check what kind of scope we're in.
-        if is_supported_view(self.view):
-            client = client_for_view(self.view)
-            if client and client.has_capability('definitionProvider'):
-                return is_at_word(self.view, event)
-        return False
+        if self.has_client_with_capability('definitionProvider'):
+            return is_at_word(self.view, event)
 
     def run(self, edit, event=None):
         client = client_for_view(self.view)

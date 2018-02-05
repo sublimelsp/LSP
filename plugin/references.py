@@ -1,12 +1,11 @@
 import os
 import sublime
-import sublime_plugin
 
 from .core.panels import create_output_panel
 from .core.settings import PLUGIN_NAME
 from .core.clients import client_for_view
 from .core.documents import is_at_word, get_position, get_document_position
-from .core.configurations import is_supported_view
+from .core.clients import LspTextCommand
 from .core.workspace import get_project_path
 from .core.protocol import Request, Point
 from .core.url import uri_to_filename
@@ -29,12 +28,13 @@ def create_references_panel(window: sublime.Window):
     return panel
 
 
-class LspSymbolReferencesCommand(sublime_plugin.TextCommand):
+class LspSymbolReferencesCommand(LspTextCommand):
+    def __init__(self, view):
+        super().__init__(view)
+
     def is_enabled(self, event=None):
-        if is_supported_view(self.view):
-            client = client_for_view(self.view)
-            if client and client.has_capability('referencesProvider'):
-                return is_at_word(self.view, event)
+        if self.has_client_with_capability('referencesProvider'):
+            return is_at_word(self.view, event)
         return False
 
     def run(self, edit, event=None):

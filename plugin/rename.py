@@ -1,18 +1,18 @@
-import sublime_plugin
 
-from .core.configurations import is_supported_view
+from .core.clients import LspTextCommand
 from .core.clients import client_for_view
 from .core.protocol import Request
 from .core.documents import get_document_position, get_position, is_at_word
 
 
-class LspSymbolRenameCommand(sublime_plugin.TextCommand):
+class LspSymbolRenameCommand(LspTextCommand):
+    def __init__(self, view):
+        super().__init__(view)
+
     def is_enabled(self, event=None):
         # TODO: check what kind of scope we're in.
-        if is_supported_view(self.view):
-            client = client_for_view(self.view)
-            if client and client.has_capability('renameProvider'):
-                return is_at_word(self.view, event)
+        if self.has_client_with_capability('renameProvider'):
+            return is_at_word(self.view, event)
         return False
 
     def run(self, edit, event=None):

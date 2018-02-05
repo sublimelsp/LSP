@@ -3,9 +3,9 @@ import sublime
 import sublime_plugin
 import webbrowser
 
-from .core.configurations import is_supported_syntax, is_supported_view
+from .core.configurations import is_supported_syntax
 from .core.diagnostics import get_point_diagnostics
-from .core.clients import client_for_view
+from .core.clients import LspTextCommand, client_for_view
 from .core.protocol import Request
 from .core.documents import get_document_position
 from .core.popups import popup_css, popup_class
@@ -29,35 +29,31 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         self.view.run_command("lsp_hover", {"point": point})
 
 
-class LspHoverCommand(sublime_plugin.TextCommand):
-    def is_enabled(self):
-        # TODO: check what kind of scope we're in.
-        if is_supported_view(self.view):
-            client = client_for_view(self.view)
-            if client:
-                return client.has_capability('hoverProvider')
-        return False
+class LspHoverCommand(LspTextCommand):
+    def __init__(self, view):
+        super().__init__(view)
+
+    def is_likely_at_symbol(self, point):
+        word_at_sel = self.view.classify(point)
+        return word_at_sel & SUBLIME_WORD_MASK and not self.view.match_selector(point, NO_HOVER_SCOPES)
 
     def run(self, edit, point=None):
         if point is None:
             point = self.view.sel()[0].begin()
-        self.request_symbol_hover(point)
+        if self.is_likely_at_symbol(point):
+            self.request_symbol_hover(point)
         point_diagnostics = get_point_diagnostics(self.view, point)
         if point_diagnostics:
             self.show_hover(point, self.diagnostics_content(point_diagnostics))
 
     def request_symbol_hover(self, point):
-        if self.view.match_selector(point, NO_HOVER_SCOPES):
-            return
         client = client_for_view(self.view)
         if client and client.has_capability('hoverProvider'):
-            word_at_sel = self.view.classify(point)
-            if word_at_sel & SUBLIME_WORD_MASK:
-                document_position = get_document_position(self.view, point)
-                if document_position:
-                    client.send_request(
-                        Request.hover(document_position),
-                        lambda response: self.handle_response(response, point))
+            document_position = get_document_position(self.view, point)
+            if document_position:
+                client.send_request(
+                    Request.hover(document_position),
+                    lambda response: self.handle_response(response, point))
 
     def handle_response(self, response, point):
         all_content = ""

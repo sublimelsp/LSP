@@ -1,3 +1,4 @@
+import os
 import sublime
 
 from debug_tools import getLogger
@@ -86,10 +87,25 @@ class Settings(object):
         self.log_stderr = read_bool_setting(settings_obj, "log_stderr", False)
         self.log_payloads = read_bool_setting(settings_obj, "log_payloads", False)
         self.setLevel(self.log_debug, 2)
+        self.setLogFile(read_str_setting(settings_obj, "log_file", ""))
 
     @staticmethod
-    def setLevel(enalbed, level):
-        log.debug_level = log.debug_level | level if enalbed else log.debug_level & ~level
+    def setLevel(enabled, level):
+        log.debug_level = log.debug_level | level if enabled else log.debug_level & ~level
+
+    @staticmethod
+    def setLogFile(file_path):
+        file_path = file_path.strip()
+
+        if file_path:
+            if os.path.isabs(file_path):
+                log.setup(file_path)
+            else:
+                new_path = os.path.join(sublime.packages_path(), "User", file_path)
+                log.setup(new_path)
+        else:
+            log.setup(file_path)
+
 
 class ClientConfigs(object):
 

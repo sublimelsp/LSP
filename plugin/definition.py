@@ -15,6 +15,7 @@ class LspSymbolDefinitionCommand(LspTextCommand):
     def is_enabled(self, event=None):
         if self.has_client_with_capability('definitionProvider'):
             return is_at_word(self.view, event)
+        return False
 
     def run(self, edit, event=None):
         client = client_for_view(self.view)

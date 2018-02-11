@@ -89,6 +89,8 @@ Autocomplete triggers: in User or Syntax-specific settings, add:
 
 ### PHP<a name="php"></a>
 
+UPDATE: Some new options for PHP language servers are discussed in [this issue](https://github.com/tomv564/LSP/issues/259)
+
 1. modify `~/.composer/composer.json` to set
 ```
 "minimum-stability": "dev",

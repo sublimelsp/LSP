@@ -16,9 +16,8 @@ from .core.clients import client_for_view
 from .core.documents import get_document_position, purge_did_change
 from .core.configurations import is_supported_syntax, config_for_scope
 from .core.protocol import Request
-from .core.logging import debug
 from .core.popups import popup_css, popup_class
-from .core.settings import settings
+from .core.settings import settings, log
 
 
 class SignatureHelpListener(sublime_plugin.ViewEventListener):
@@ -85,12 +84,12 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
             if self._signatures:
                 if not 0 <= self._active_signature < len(self._signatures):
-                    debug("activeSignature {} not a valid index for signatures length {}".format(
-                        self._active_signature, len(self._signatures)))
+                    log(2, "activeSignature %s not a valid index for signatures length %s",
+                        self._active_signature, len(self._signatures))
                     self._active_signature = 0
             else:
                 if self._active_signature != -1:
-                    debug("activeSignature should be -1 or null when no signatures are returned")
+                    log(2, "activeSignature should be -1 or null when no signatures are returned")
                     self._active_signature = -1
 
             if len(self._signatures) > 0:

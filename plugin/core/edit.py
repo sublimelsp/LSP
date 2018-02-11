@@ -4,7 +4,7 @@ import sublime_plugin
 
 from .url import uri_to_filename
 from .protocol import Range
-from .logging import debug
+from .settings import log
 from .workspace import get_project_path
 
 
@@ -15,7 +15,7 @@ def apply_workspace_edit(window, params):
 
 class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
     def run(self, changes=None):
-        # debug('workspace edit', changes)
+        # log(2, 'workspace edit %s', changes)
         if changes:
             for uri, file_changes in changes.items():
                 path = uri_to_filename(uri)
@@ -32,7 +32,7 @@ class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
                                          {'changes': file_changes,
                                           'show_status': False})
                 else:
-                    debug('view not found to apply', path, file_changes)
+                    log(2, 'view not found to apply %s %s', path, file_changes)
             message = 'Applied changes to {} documents'.format(len(changes))
             self.window.status_message(message)
         else:

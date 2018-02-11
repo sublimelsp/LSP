@@ -5,7 +5,7 @@ from .core.clients import client_for_view
 from .core.protocol import Request, Point
 from .core.documents import get_document_position, get_position, is_at_word
 from .core.url import uri_to_filename
-from .core.logging import debug
+from .core.settings import log
 
 
 class LspSymbolDefinitionCommand(LspTextCommand):
@@ -34,7 +34,7 @@ class LspSymbolDefinitionCommand(LspTextCommand):
             file_path = uri_to_filename(location.get("uri"))
             start = Point.from_lsp(location['range']['start'])
             file_location = "{}:{}:{}".format(file_path, start.row + 1, start.col + 1)
-            debug("opening location", location)
+            log(2, "opening location %s", location)
             window.open_file(file_location, sublime.ENCODED_POSITION)
             # TODO: can add region here.
         else:

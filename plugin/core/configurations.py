@@ -1,7 +1,6 @@
 import sublime
 
-from .settings import ClientConfig, client_configs
-from .logging import debug
+from .settings import ClientConfig, client_configs, log
 from .workspace import get_project_config
 
 assert ClientConfig
@@ -80,7 +79,7 @@ def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -
 
         if client_config.name in window_config:
             overrides = window_config[client_config.name]
-            debug('window has override for', client_config.name, overrides)
+            log(2, 'window has override for %s %s', client_config.name, overrides)
             return ClientConfig(
                 client_config.name,
                 overrides.get("command", client_config.binary_args),

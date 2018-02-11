@@ -15,9 +15,8 @@ from .protocol import (
     Request, Notification
 )
 from .settings import (
-    ClientConfig, settings, load_settings, unload_settings
+    ClientConfig, settings, load_settings, unload_settings, log
 )
-from .logging import debug, exception_log, server_log
 from .rpc import attach_tcp_client, attach_stdio_client
 from .workspace import get_project_path
 from .configurations import (
@@ -66,7 +65,7 @@ def start_active_views():
 
         if len(views) > 0:
             first_view = views.pop(0)
-            debug('starting active=', first_view.file_name(), 'other=', len(views))
+            log(2, 'starting active=%s, other=%s', first_view.file_name(), len(views))
             initialize_on_open(first_view)
             if len(views) > 0:
                 for view in views:
@@ -88,7 +87,7 @@ def initialize_on_open(view: sublime.View):
     if not window:
         return
 
-    debug("initialize on open", window.id(), view.file_name())
+    log(2, "initialize on open %s %s", window.id(), view.file_name())
 
     if window_configs(window):
         unload_old_clients(window)
@@ -102,14 +101,14 @@ def initialize_on_open(view: sublime.View):
                 open_after_initialize_by_window[window.id()].append(view)
                 start_window_client(view, window, config)
         else:
-            debug(config.name, 'is not enabled')
+            log(2, '%s is not enabled', config.name)
 
 
 client_initialization_listeners = {}  # type: Dict[str, Callable]
 
 
 def register_client_initialization_listener(client_name: str, handler: 'Callable') -> None:
-    debug('received client callback for', client_name)
+    log(2, 'received client callback for %s', client_name)
     client_initialization_listeners[client_name] = handler
 
 
@@ -137,7 +136,7 @@ def handle_initialize_result(result, client, window, config):
     if settings.log_server:
         client.on_notification(
             "window/logMessage",
-            lambda params: server_log(params.get("message")))
+            lambda params: log(1, "server: %s", params.get("message")))
 
     if config.name in client_initialization_listeners:
         client_initialization_listeners[config.name](client)
@@ -176,7 +175,7 @@ def start_client(window: sublime.Window, config: ClientConfig):
 
     if settings.show_status_messages:
         window.status_message("Starting " + config.name + "...")
-    debug("starting in", project_path)
+    log(2, "starting in %s", project_path)
 
     # Create a dictionary of Sublime Text variables
     variables = window.extract_variables()
@@ -197,7 +196,7 @@ def start_client(window: sublime.Window, config: ClientConfig):
     process = start_server(expanded_args, project_path, env)
     if not process:
         window.status_message("Could not start " + config.name + ", disabling")
-        debug("Could not start", config.binary_args, ", disabling")
+        log(2, "Could not start %s, disabling", config.binary_args,)
         return None
 
     if config.tcp_port is not None:
@@ -247,11 +246,11 @@ def start_window_client(view: sublime.View, window: sublime.Window, config: Clie
         if client is None:  # clear starting state for config if not starting.
             clear_config_state(window, config.name)
     else:
-        debug('Already starting on this window:', config.name)
+        log(2, 'Already starting on this window: %s', config.name)
 
 
 def start_server(server_binary_args, working_dir, env):
-    debug("starting " + str(server_binary_args))
+    log(2, "starting %s, working_dir: %s", server_binary_args, working_dir)
     si = None
     if os.name == "nt":
         si = subprocess.STARTUPINFO()  # type: ignore
@@ -266,9 +265,9 @@ def start_server(server_binary_args, working_dir, env):
             env=env,
             startupinfo=si)
 
-    except Exception as err:
+    except Exception:
         sublime.status_message("Failed to start LSP server {}".format(str(server_binary_args)))
-        exception_log("Failed to start server", err)
+        log.exception("Failed to start server")
 
 
 def handle_server_crash(window: sublime.Window, config: ClientConfig):
@@ -288,7 +287,7 @@ def restart_window_clients(window: sublime.Window):
 
 
 def handle_clients_unloaded(window_id):
-    debug('clients for window {} unloaded'.format(window_id))
+    log(2, 'clients for window %s unloaded', window_id)
     if window_id in restarting_window_ids:
         restarting_window_ids.remove(window_id)
         start_active_views()

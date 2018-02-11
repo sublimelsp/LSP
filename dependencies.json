@@ -1,4 +1,9 @@
 {
+    "windows": {
+        ">3000": [
+            "python-pywin32"
+        ]
+    },
     "*": {
         ">=3124": [
             "pygments",
@@ -7,7 +12,10 @@
             "python-jinja2",
             "markupsafe",
             "pymdownx",
-            "pyyaml"
+            "pyyaml",
+            "PortalockerFiles",
+            "ConcurrentLogHandler",
+            "DebugTools"
         ]
     }
 }

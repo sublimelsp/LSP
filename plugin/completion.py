@@ -8,8 +8,7 @@ except ImportError:
     pass
 
 from .core.protocol import Request
-from .core.settings import settings
-from .core.logging import debug, exception_log
+from .core.settings import settings, log
 from .core.protocol import CompletionItemKind
 from .core.clients import client_for_view
 from .core.configurations import is_supported_syntax
@@ -105,8 +104,8 @@ class CompletionSnippetHandler(sublime_plugin.EventListener):
                 sel.clear()
                 sel.add(current_completion.region)
                 view.run_command("insert_snippet", {"contents": insertText})
-            except Exception as err:
-                exception_log("Error inserting snippet: " + insertText, err)
+            except Exception:
+                log.exception("Error inserting snippet: %s", insertText)
 
 
 last_text_command = None
@@ -276,7 +275,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 prefix, locations = self.next_request
                 self.do_request(prefix, locations)
         else:
-            debug('Got unexpected response while in state {}'.format(self.state))
+            log(2, 'Got unexpected response while in state %s', self.state)
 
     def handle_error(self, error: dict):
         sublime.status_message('Completion error: ' + str(error.get('message')))

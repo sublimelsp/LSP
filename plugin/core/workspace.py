@@ -6,7 +6,7 @@ try:
 except ImportError:
     pass
 
-from .logging import debug
+from .settings import log
 
 
 def get_project_path(window: sublime.Window) -> 'Optional[str]':
@@ -22,15 +22,15 @@ def get_project_path(window: sublime.Window) -> 'Optional[str]':
             filename = view.file_name()
             if filename:
                 project_path = os.path.dirname(filename)
-                debug("Couldn't determine project directory since no folders are open!",
-                      "Using", project_path, "as a fallback.")
+                log(2, "Couldn't determine project directory since no folders are open!"
+                    "Using %s as a fallback.", project_path)
                 return project_path
             else:
-                debug("Couldn't determine project directory since no folders are open",
-                      "and the current file isn't saved on the disk.")
+                log(2, "Couldn't determine project directory since no folders are open "
+                    "and the current file isn't saved on the disk.")
                 return None
         else:
-            debug("No view is active in current window")
+            log(2, "No view is active in current window")
             return None  # https://github.com/tomv564/LSP/issues/219
 
 

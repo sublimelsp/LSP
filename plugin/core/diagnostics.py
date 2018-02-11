@@ -93,13 +93,13 @@ def get_window_diagnostics(window: sublime.Window) -> 'Optional[Dict[str, Dict[s
 
 
 def get_diagnostics_for_view(view: sublime.View) -> 'List[Diagnostic]':
+    view_diagnostics = []
     window = view.window()
     file_path = view.file_name()
-    origin = 'lsp'
     if file_path and window:
         if window.id() in window_file_diagnostics:
             file_diagnostics = window_file_diagnostics[window.id()]
             if file_path in file_diagnostics:
-                if origin in file_diagnostics[file_path]:
-                    return file_diagnostics[file_path][origin]
-    return []
+                for origin in file_diagnostics[file_path]:
+                    view_diagnostics.extend(file_diagnostics[file_path][origin])
+    return view_diagnostics

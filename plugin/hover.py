@@ -6,7 +6,7 @@ import webbrowser
 from .core.configurations import is_supported_syntax
 from .core.diagnostics import get_point_diagnostics
 from .core.clients import LspTextCommand, client_for_view
-from .core.protocol import Request
+from .core.protocol import Request, DiagnosticSeverity
 from .core.documents import get_document_position
 from .core.popups import popup_css, popup_class
 
@@ -76,10 +76,29 @@ class LspHoverCommand(LspTextCommand):
         return "<p>" + " | ".join(actions) + "</p>"
 
     def diagnostics_content(self, diagnostics):
-        formatted = ["<div class='errors'>"]
-        formatted.extend("<pre>{}</pre>".format(diagnostic.message) for diagnostic in diagnostics)
-        formatted.append("<a href='{}'>{}</a>".format('code-actions', 'Code Actions'))
-        formatted.append("</div>")
+        formatted_errors = list(
+            "<pre>{}</pre>".format(diagnostic.message)
+            for diagnostic in diagnostics
+            if diagnostic.severity == DiagnosticSeverity.Error)
+        if len(formatted_errors) > 0:
+            formatted = ["<div class='errors'>"]
+            formatted.extend(formatted_errors)
+            formatted.append("<a href='{}'>{}</a>".format('code-actions',
+                                                          'Code Actions'))
+            formatted.append("</div>")
+
+        formatted_warnings = list(
+            "<pre>{}</pre>".format(diagnostic.message)
+            for diagnostic in diagnostics
+            if diagnostic.severity == DiagnosticSeverity.Warning)
+
+        if len(formatted_warnings) > 0:
+            formatted = ["<div class='warnings'>"]
+            formatted.extend(formatted_warnings)
+            formatted.append("<a href='{}'>{}</a>".format('code-actions',
+                                                          'Code Actions'))
+            formatted.append("</div>")
+
         return "".join(formatted)
 
     def hover_content(self, point, response):

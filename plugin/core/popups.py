@@ -23,4 +23,12 @@ popup_css = '''
         margin-bottom: 0.5rem;
         padding: 0.5rem;
     }
+    .lsp_popup .warnings {
+        border-width: 0;
+        background-color: color(var(--yellowish) alpha(0.25));
+        color: --whitish;
+        margin-bottom: 0.5rem;
+        padding: 0.5rem;
+    }
+
 '''

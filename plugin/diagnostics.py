@@ -24,12 +24,20 @@ diagnostic_severity_names = {
     DiagnosticSeverity.Hint: "hint"
 }
 
-diagnostic_severity_scopes = {
-    DiagnosticSeverity.Error: 'markup.deleted.lsp sublimelinter.mark.error markup.error.lsp',
-    DiagnosticSeverity.Warning: 'markup.changed.lsp sublimelinter.mark.warning markup.warning.lsp',
-    DiagnosticSeverity.Information: 'markup.inserted.lsp sublimelinter.gutter-mark markup.info.lsp',
-    DiagnosticSeverity.Hint: 'markup.inserted.lsp sublimelinter.gutter-mark markup.info.suggestion.lsp'
-}
+if int(sublime.version()) > 3150:
+    diagnostic_severity_scopes = {
+        DiagnosticSeverity.Error: 'region.redish',
+        DiagnosticSeverity.Warning: 'region.orangish',
+        DiagnosticSeverity.Information: 'region.bluish',
+        DiagnosticSeverity.Hint: 'region.greenish'
+    }
+else:
+    diagnostic_severity_scopes = {
+        DiagnosticSeverity.Error: 'markup.deleted.lsp sublimelinter.mark.error markup.error.lsp',
+        DiagnosticSeverity.Warning: 'markup.changed.lsp sublimelinter.mark.warning markup.warning.lsp',
+        DiagnosticSeverity.Information: 'markup.inserted.lsp sublimelinter.gutter-mark markup.info.lsp',
+        DiagnosticSeverity.Hint: 'markup.inserted.lsp sublimelinter.gutter-mark markup.info.suggestion.lsp'
+    }
 
 stylesheet = '''
             <style>

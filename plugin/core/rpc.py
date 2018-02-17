@@ -315,11 +315,11 @@ class Client(object):
 
         try:
             if "method" in payload:
-                if "id" in payload:
+                if "id" in payload and payload["id"] is not None:
                     self.request_handler(payload)
                 else:
                     self.notification_handler(payload)
-            elif "id" in payload:
+            elif "id" in payload and payload["id"] is not None:
                 self.response_handler(payload)
             else:
                 debug("Unknown payload type: ", payload)

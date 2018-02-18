@@ -12,7 +12,7 @@ import sublime
 
 from .url import filename_to_uri
 from .protocol import (
-    Request, Notification
+    Request, Notification, SymbolKind, CompletionItemKind
 )
 from .settings import (
     ClientConfig, settings, load_settings, unload_settings
@@ -229,8 +229,26 @@ def start_client(window: sublime.Window, config: ClientConfig):
                         "documentationFormat": ["plaintext"]
                     },
                     "completionItemKind": {
-                        "valueSet": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-                                     16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+                        "valueSet": [
+                            CompletionItemKind.Text,
+                            CompletionItemKind.Method,
+                            CompletionItemKind.Function,
+                            CompletionItemKind.Constructor,
+                            CompletionItemKind.Field,
+                            CompletionItemKind.Variable,
+                            CompletionItemKind.Class,
+                            CompletionItemKind.Interface,
+                            CompletionItemKind.Module,
+                            CompletionItemKind.Property,
+                            CompletionItemKind.Unit,
+                            CompletionItemKind.Value,
+                            CompletionItemKind.Enum,
+                            CompletionItemKind.Keyword,
+                            CompletionItemKind.Snippet,
+                            CompletionItemKind.Color,
+                            CompletionItemKind.File,
+                            CompletionItemKind.Reference
+                            ]
                     }
                 },
                 "signatureHelp": {
@@ -242,7 +260,26 @@ def start_client(window: sublime.Window, config: ClientConfig):
                 "documentHighlight": {},
                 "documentSymbol": {
                     "symbolKind": {
-                        "valueSet": [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14]
+                        "valueSet": [
+                            SymbolKind.File,
+                            SymbolKind.Module,
+                            SymbolKind.Namespace,
+                            SymbolKind.Package,
+                            SymbolKind.Class,
+                            SymbolKind.Method,
+                            SymbolKind.Property,
+                            SymbolKind.Field,
+                            #SymbolKind.Constructor,
+                            #SymbolKind.Enum,
+                            SymbolKind.Interface,
+                            SymbolKind.Function,
+                            SymbolKind.Variable,
+                            SymbolKind.Constant
+                            #SymbolKind.String,
+                            #SymbolKind.Number,
+                            #SymbolKind.Boolean,
+                            #SymbolKind.Array
+                            ]
                     }
                 },
                 "formatting": {},

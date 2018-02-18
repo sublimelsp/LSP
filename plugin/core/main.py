@@ -12,7 +12,7 @@ import sublime
 
 from .url import filename_to_uri
 from .protocol import (
-    Request, Notification
+    Request, Notification, SymbolKind, CompletionItemKind
 )
 from .settings import (
     ClientConfig, settings, load_settings, unload_settings
@@ -217,17 +217,80 @@ def start_client(window: sublime.Window, config: ClientConfig):
         "rootPath": project_path,
         "capabilities": {
             "textDocument": {
-                "completion": {
-                    "completionItem": {
-                        "snippetSupport": True
-                    }
-                },
                 "synchronization": {
                     "didSave": True
-                }
+                },
+                "hover": {
+                    "contentFormat": ["plaintext"]
+                },
+                "completion": {
+                    "completionItem": {
+                        "snippetSupport": True,
+                        "documentationFormat": ["plaintext"]
+                    },
+                    "completionItemKind": {
+                        "valueSet": [
+                            CompletionItemKind.Text,
+                            CompletionItemKind.Method,
+                            CompletionItemKind.Function,
+                            CompletionItemKind.Constructor,
+                            CompletionItemKind.Field,
+                            CompletionItemKind.Variable,
+                            CompletionItemKind.Class,
+                            CompletionItemKind.Interface,
+                            CompletionItemKind.Module,
+                            CompletionItemKind.Property,
+                            CompletionItemKind.Unit,
+                            CompletionItemKind.Value,
+                            CompletionItemKind.Enum,
+                            CompletionItemKind.Keyword,
+                            CompletionItemKind.Snippet,
+                            CompletionItemKind.Color,
+                            CompletionItemKind.File,
+                            CompletionItemKind.Reference
+                            ]
+                    }
+                },
+                "signatureHelp": {
+                    "signatureInformation": {
+                        "documentationFormat": ["plaintext"]
+                    }
+                },
+                "references": {},
+                "documentHighlight": {},
+                "documentSymbol": {
+                    "symbolKind": {
+                        "valueSet": [
+                            SymbolKind.File,
+                            SymbolKind.Module,
+                            SymbolKind.Namespace,
+                            SymbolKind.Package,
+                            SymbolKind.Class,
+                            SymbolKind.Method,
+                            SymbolKind.Property,
+                            SymbolKind.Field,
+                            #SymbolKind.Constructor,
+                            #SymbolKind.Enum,
+                            SymbolKind.Interface,
+                            SymbolKind.Function,
+                            SymbolKind.Variable,
+                            SymbolKind.Constant
+                            #SymbolKind.String,
+                            #SymbolKind.Number,
+                            #SymbolKind.Boolean,
+                            #SymbolKind.Array
+                            ]
+                    }
+                },
+                "formatting": {},
+                "rangeFormatting": {},
+                "definition": {},
+                "codeAction": {},
+                "rename": {}
             },
             "workspace": {
-                "applyEdit": True
+                "applyEdit": True,
+                "didChangeConfiguration": {}
             }
         }
     }

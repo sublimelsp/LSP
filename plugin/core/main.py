@@ -253,7 +253,7 @@ def start_client(window: sublime.Window, config: ClientConfig):
                 },
                 "signatureHelp": {
                     "signatureInformation": {
-                        "documentationFormat": ["plaintext"]
+                        "documentationFormat": ["markdown", "plaintext"]
                     }
                 },
                 "references": {},

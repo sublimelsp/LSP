@@ -253,7 +253,7 @@ def start_client(window: sublime.Window, config: ClientConfig):
                 },
                 "signatureHelp": {
                     "signatureInformation": {
-                        "documentationFormat": ["plaintext"]
+                        "documentationFormat": ["markdown", "plaintext"]
                     }
                 },
                 "references": {},
@@ -269,16 +269,16 @@ def start_client(window: sublime.Window, config: ClientConfig):
                             SymbolKind.Method,
                             SymbolKind.Property,
                             SymbolKind.Field,
-                            #SymbolKind.Constructor,
-                            #SymbolKind.Enum,
+                            # SymbolKind.Constructor,
+                            # SymbolKind.Enum,
                             SymbolKind.Interface,
                             SymbolKind.Function,
                             SymbolKind.Variable,
                             SymbolKind.Constant
-                            #SymbolKind.String,
-                            #SymbolKind.Number,
-                            #SymbolKind.Boolean,
-                            #SymbolKind.Array
+                            # SymbolKind.String,
+                            # SymbolKind.Number,
+                            # SymbolKind.Boolean,
+                            # SymbolKind.Array
                             ]
                     }
                 },

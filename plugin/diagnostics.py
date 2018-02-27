@@ -206,8 +206,13 @@ class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
 class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
     def run(self):
         ensure_diagnostics_panel(self.window)
-        self.window.run_command("show_panel", {"panel": "output.diagnostics"})
+        active_panel = self.window.active_panel()
+        is_active_panel = (active_panel == "output.diagnostics")
 
+        if is_active_panel:
+            self.window.run_command("hide_panel", {"panel": "output.diagnostics"})
+        else:
+            self.window.run_command("show_panel", {"panel": "output.diagnostics"})
 
 def create_diagnostics_panel(window):
     panel = create_output_panel(window, "diagnostics")

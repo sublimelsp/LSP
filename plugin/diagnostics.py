@@ -214,6 +214,7 @@ class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
         else:
             self.window.run_command("show_panel", {"panel": "output.diagnostics"})
 
+
 def create_diagnostics_panel(window):
     panel = create_output_panel(window, "diagnostics")
     panel.settings().set("result_file_regex", r"^\s*\S\s+(\S.*):$")

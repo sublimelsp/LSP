@@ -221,7 +221,7 @@ def start_client(window: sublime.Window, config: ClientConfig):
                     "didSave": True
                 },
                 "hover": {
-                    "contentFormat": ["plaintext"]
+                    "contentFormat": ["markdown", "plaintext"]
                 },
                 "completion": {
                     "completionItem": {

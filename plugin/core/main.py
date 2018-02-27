@@ -212,7 +212,7 @@ def start_client(window: sublime.Window, config: ClientConfig):
     client.set_crash_handler(lambda: handle_server_crash(window, config))
 
     initializeParams = {
-        "processId": client.process.pid if client.process else None,
+        "processId": os.getpid(),
         "rootUri": filename_to_uri(project_path),
         "rootPath": project_path,
         "capabilities": {

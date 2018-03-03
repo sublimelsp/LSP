@@ -200,7 +200,8 @@
 
   // Highlighting style of "highlights": accentuating nearby text entities that
   // are related to the one under your cursor.
-  // Valid values are "underline", "stippled" or "squiggly".
+  // Valid values are "underline", "stippled", "squiggly" or "".
+  // When set to the empty string (""), no document highlighting is requested.
   "document_highlight_style": "underline",
 
   "document_highlight_scopes": {

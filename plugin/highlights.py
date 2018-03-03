@@ -42,7 +42,8 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
             self._initialize()
         if self._enabled:
             self._clear_regions()
-            self._queue()
+            if settings.document_highlight_style:
+                self._queue()
 
     def _initialize(self) -> None:
         self._initialized = True

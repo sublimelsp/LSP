@@ -16,7 +16,7 @@ from .core.configurations import is_supported_syntax
 from .core.diagnostics import DiagnosticsUpdate, get_window_diagnostics, get_line_diagnostics
 from .core.workspace import get_project_path
 from .core.panels import create_output_panel
-from .core.queue import debounce
+from .core.queue import cleanup, debounce
 
 diagnostic_severity_names = {
     DiagnosticSeverity.Error: "error",
@@ -262,6 +262,7 @@ def update_diagnostics_panel(window: sublime.Window):
                     show_panel()
         else:
             panel.run_command("lsp_clear_panel")
+            cleanup("show:{}".format(window.id()))
             if settings.auto_show_diagnostics_panel and is_active_panel:
                 window.run_command("hide_panel",
                                    {"panel": "output.diagnostics"})

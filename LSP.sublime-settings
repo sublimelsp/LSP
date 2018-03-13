@@ -183,6 +183,9 @@
   // depending on available diagnostics.
   "auto_show_diagnostics_panel": true,
 
+  // Delay to show diagnostics panel after, in fractional seconds.
+  "auto_show_delay": 0,
+
   // Show in-line diagnostics using phantoms for unchanged files.
   "show_diagnostics_phantoms": false,
 

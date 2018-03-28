@@ -5,7 +5,7 @@ import webbrowser
 
 from .core.settings import ClientConfig, client_configs
 from .core.configurations import (
-    get_scope_client_config, config_for_scope, get_default_client_config, clear_window_client_configs
+    get_scope_client_config, config_for_scope, get_global_client_config, clear_window_client_configs
 )
 from .core.clients import unload_window_clients
 from .core.events import Events
@@ -15,7 +15,7 @@ from .core.workspace import enable_in_project, disable_in_project
 def detect_supportable_view(view: sublime.View):
     config = config_for_scope(view)
     if not config:
-        available_config = get_default_client_config(view)
+        available_config = get_global_client_config(view)
         if available_config:
             show_enable_config(view, available_config)
 
@@ -45,7 +45,7 @@ def start_view(view: sublime.View):
 class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
     def run(self):
         view = self.window.active_view()
-        available_config = get_scope_client_config(view, client_configs.defaults) or get_default_client_config(view)
+        available_config = get_scope_client_config(view, client_configs.defaults) or get_global_client_config(view)
         if available_config:
             client_configs.enable(available_config.name)
             clear_window_client_configs(self.window)
@@ -61,7 +61,7 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         view = self.window.active_view()
 
         # if no default_config, nothing we can do.
-        default_config = get_default_client_config(view)
+        default_config = get_global_client_config(view)
         if default_config:
             enable_in_project(self.window, default_config.name)
             clear_window_client_configs(self.window)
@@ -120,7 +120,7 @@ class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
     def run(self):
         view = self.window.active_view()
         syntax = view.settings().get("syntax")
-        available_config = get_default_client_config(view)
+        available_config = get_global_client_config(view)
 
         syntax_name = extract_syntax_name(syntax)
         title = "# Language Server for {}\n".format(syntax_name)

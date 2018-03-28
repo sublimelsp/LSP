@@ -83,6 +83,41 @@ class Settings(object):
         self.log_payloads = read_bool_setting(settings_obj, "log_payloads", False)
 
 
+class ClientConfig(object):
+    def __init__(self, name, binary_args, tcp_port, scopes, syntaxes, languageId,
+                 enabled=True, init_options=dict(), settings=dict(), env=dict()):
+        self.name = name
+        self.binary_args = binary_args
+        self.tcp_port = tcp_port
+        self.scopes = scopes
+        self.syntaxes = syntaxes
+        self.languageId = languageId
+        self.enabled = enabled
+        self.init_options = init_options
+        self.settings = settings
+        self.env = env
+
+    def apply_settings(self, settings: dict) -> None:
+        if "command" in settings:
+            self.binary_args = settings.get("command", [])
+        if "tcp_port" in settings:
+            self.tcp_port = settings.get("tcp_port", None)
+        if "scopes" in settings:
+            self.scopes = settings.get("scopes", [])
+        if "syntaxes" in settings:
+            self.syntaxes = settings.get("syntaxes", [])
+        if "languageId" in settings:
+            self.languageId = settings.get("languageId", "")
+        if "enabled" in settings:
+            self.enabled = settings.get("enabled", True)
+        if "initializationOptions" in settings:
+            self.init_options = settings.get("initializationOptions", dict())
+        if "settings" in settings:
+            self.settings = settings.get("settings", dict())
+        if "env" in settings:
+            self.env = settings.get("env", dict())
+
+
 class ClientConfigs(object):
 
     def __init__(self):
@@ -90,6 +125,7 @@ class ClientConfigs(object):
         self._global_settings = dict()  # type: Dict[str, dict]
         self.defaults = []  # type: List[ClientConfig]
         self.all = []  # type: List[ClientConfig]
+        self._external_configs = []  # type: List[ClientConfig]
 
     def update(self, settings_obj: sublime.Settings):
         self._default_settings = read_dict_setting(settings_obj, "default_clients", {})
@@ -97,9 +133,17 @@ class ClientConfigs(object):
 
         self.defaults = read_client_configs(self._default_settings)
         self.all = read_client_configs(self._global_settings, self._default_settings)
+        for config in self._external_configs:
+            if config.name in self._global_settings:
+                config.apply_settings(self._global_settings[config.name])
+        self.all.extend(self._external_configs)
 
         client_enableds = list("=".join([config.name, str(config.enabled)]) for config in self.all)
         print(PLUGIN_NAME + ': global clients: ' + ", ".join(client_enableds))
+
+    def add_external_config(self, config: ClientConfig):
+        self._external_configs.append(config)
+        self.all.append(config)
 
     def _set_enabled(self, config_name: str, is_enabled: bool):
         if _settings_obj:
@@ -134,21 +178,6 @@ def unload_settings():
     if _settings_obj:
         _settings_obj.clear_on_change("_on_new_settings")
         _settings_obj.clear_on_change("_on_new_client_settings")
-
-
-class ClientConfig(object):
-    def __init__(self, name, binary_args, tcp_port, scopes, syntaxes, languageId,
-                 enabled=True, init_options=dict(), settings=dict(), env=dict()):
-        self.name = name
-        self.binary_args = binary_args
-        self.tcp_port = tcp_port
-        self.scopes = scopes
-        self.syntaxes = syntaxes
-        self.languageId = languageId
-        self.enabled = enabled
-        self.init_options = init_options
-        self.settings = settings
-        self.env = env
 
 
 def read_client_config(name, client_config):

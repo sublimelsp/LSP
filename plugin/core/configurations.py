@@ -26,6 +26,11 @@ def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]')
     return None
 
 
+def register_client_config(config: ClientConfig) -> None:
+    window_client_configs.clear()
+    client_configs.add_external_config(config)
+
+
 def get_global_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
     return get_scope_client_config(view, client_configs.all)
 

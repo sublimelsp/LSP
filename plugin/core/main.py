@@ -21,7 +21,7 @@ from .logging import debug, exception_log, server_log
 from .rpc import attach_tcp_client, attach_stdio_client
 from .workspace import get_project_path
 from .configurations import (
-    config_for_scope, is_supported_view
+    config_for_scope, is_supported_view, register_client_config
 )
 from .clients import (
     can_start_config, set_config_starting, set_config_ready, clear_config_state,
@@ -106,6 +106,15 @@ def initialize_on_open(view: sublime.View):
 
 
 client_initialization_listeners = {}  # type: Dict[str, Callable]
+
+
+language_handlers = []
+
+
+def register_language_handler(handler):
+    debug("received handler", handler.name)
+    register_client_config(handler.config)
+    language_handlers.append(handler)
 
 
 def register_client_initialization_listener(client_name: str, handler: 'Callable') -> None:

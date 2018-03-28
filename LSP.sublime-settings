@@ -50,13 +50,6 @@
       "syntaxes": ["Packages/Python/Python.sublime-syntax"],
       "languageId": "python"
     },
-    "jsts":
-    {
-      "command": ["javascript-typescript-stdio"],
-      "scopes": ["source.ts", "source.tsx", "source.js", "source.jsx"],
-      "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage", "Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
-      "languageId": "typescript"
-    },
     "rls":
     {
       "command": ["rustup", "run", "nightly", "rls"],

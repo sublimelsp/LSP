@@ -17,6 +17,7 @@ from .protocol import (
 from .settings import (
     ClientConfig, settings, load_settings, unload_settings
 )
+from .handlers import LanguageHandler, get_language_handlers
 from .logging import debug, exception_log, server_log
 from .rpc import attach_tcp_client, attach_stdio_client
 from .workspace import get_project_path
@@ -38,6 +39,7 @@ from .edit import apply_workspace_edit
 
 def startup():
     load_settings()
+    load_handlers()
     Events.subscribe("view.on_load_async", initialize_on_open)
     Events.subscribe("view.on_activated_async", initialize_on_open)
     register_clients_unloaded_handler(handle_clients_unloaded)
@@ -108,18 +110,16 @@ def initialize_on_open(view: sublime.View):
 client_initialization_listeners = {}  # type: Dict[str, Callable]
 
 
-language_handlers = []
+def load_handlers():
+    for handler in get_language_handlers():
+        register_language_handler(handler)
 
 
-def register_language_handler(handler):
+def register_language_handler(handler: LanguageHandler) -> None:
     debug("received handler", handler.name)
     register_client_config(handler.config)
-    language_handlers.append(handler)
-
-
-def register_client_initialization_listener(client_name: str, handler: 'Callable') -> None:
-    debug('received client callback for', client_name)
-    client_initialization_listeners[client_name] = handler
+    if handler.on_initialized:
+        client_initialization_listeners[handler.name] = handler.on_initialized
 
 
 def handle_initialize_result(result, client, window, config):

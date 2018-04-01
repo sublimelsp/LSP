@@ -17,7 +17,7 @@ from .protocol import (
 from .settings import (
     ClientConfig, settings, load_settings, unload_settings
 )
-from .handlers import LanguageHandler, get_language_handlers
+from .handlers import LanguageHandler
 from .logging import debug, exception_log, server_log
 from .rpc import attach_tcp_client, attach_stdio_client
 from .workspace import get_project_path
@@ -108,10 +108,11 @@ def initialize_on_open(view: sublime.View):
 
 
 client_initialization_listeners = {}  # type: Dict[str, Callable]
+config_enabled_listeners = {}  # type: Dict[str, Callable]
 
 
 def load_handlers():
-    for handler in get_language_handlers():
+    for handler in LanguageHandler.instantiate_all():
         register_language_handler(handler)
 
 
@@ -120,6 +121,8 @@ def register_language_handler(handler: LanguageHandler) -> None:
     register_client_config(handler.config)
     if handler.on_initialized:
         client_initialization_listeners[handler.name] = handler.on_initialized
+    if handler.on_enabled:
+        config_enabled_listeners[handler.name] = handler.on_enabled
 
 
 def handle_initialize_result(result, client, window, config):

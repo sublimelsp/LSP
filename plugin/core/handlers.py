@@ -2,13 +2,16 @@ import abc
 from .settings import ClientConfig
 # from .rpc import Client
 try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional, Set, Type
-    assert Any and List and Dict and Tuple and Callable and Optional and Set
+    from typing import List, Callable, Optional, Type
+    assert List and Callable and Optional and Type
 except ImportError:
     pass
 
 
 class LanguageHandler(metaclass=abc.ABCMeta):
+    on_enable = None  # type: Optional[Callable]
+    on_initialized = None  # type: Optional[Callable]
+
     @abc.abstractproperty
     def name(self) -> str:
         raise NotImplementedError
@@ -17,12 +20,6 @@ class LanguageHandler(metaclass=abc.ABCMeta):
     def config(self) -> ClientConfig:
         raise NotImplementedError
 
-    # def on_enable(self) -> None:
-    #     pass
-
-    # def on_initialized(self, client: Client) -> None:
-    #     pass
-
     @classmethod
     def instantiate_all(cls) -> 'List[LanguageHandler]':
         return list(
@@ -30,5 +27,5 @@ class LanguageHandler(metaclass=abc.ABCMeta):
             if issubclass(c, LanguageHandler))
 
 
-def instantiate(c: Type[LanguageHandler]) -> LanguageHandler:
+def instantiate(c: 'Type[LanguageHandler]') -> LanguageHandler:
     return c()

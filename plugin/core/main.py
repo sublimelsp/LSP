@@ -108,7 +108,7 @@ def initialize_on_open(view: sublime.View):
 
 
 client_initialization_listeners = {}  # type: Dict[str, Callable]
-config_enabled_listeners = {}  # type: Dict[str, Callable]
+config_enable_listeners = {}  # type: Dict[str, Callable]
 
 
 def load_handlers():
@@ -121,8 +121,8 @@ def register_language_handler(handler: LanguageHandler) -> None:
     register_client_config(handler.config)
     if handler.on_initialized:
         client_initialization_listeners[handler.name] = handler.on_initialized
-    if handler.on_enabled:
-        config_enabled_listeners[handler.name] = handler.on_enabled
+    if handler.on_enable:
+        config_enable_listeners[handler.name] = handler.on_enable
 
 
 def handle_initialize_result(result, client, window, config):

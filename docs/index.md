@@ -227,6 +227,23 @@ Client configuration:
 },
 ```
 
+### CSS<a name="css"></a>
+
+Using the VS Code CSS language server:
+
+`npm install -g vscode-css-languageserver`
+
+Then add to your LSP settings (replace PATH_TO_NODE_MODULES):
+
+```
+"vscode-css":
+  {
+    "command": ["node", "PATH_TO_NODE_MODULES/vscode-css-languageserver/out/cssServerMain.js", "--stdio"],
+    "scopes": ["source.css"],
+    "syntaxes": ["Packages/CSS/CSS.sublime-syntax"],
+    "languageId": "css"
+  },
+```
 
 ### Polymer<a name="polymer"></a>
 

@@ -1,0 +1,18 @@
+=> 0.5.0
+
+Features:
+* TCP client support
+* Better logging and recovery for server crashes and failures
+* Shortcuts to actions in the hover popup
+* Argument highlighting in signature help
+* Diagnostics panel command is now a show/hide toggle
+* Highlight warnings as yellow in diagnostics hover
+
+Major bug fixes:
+* Fixes error when opening files on other drive
+* Fixes diagnostics showing up in incorrect window
+* Communicate client features to server
+
+A thanks to contributors to this release: @randy3k, @urschrei, @evandrocoan, @LoneBoco and @predagnikolic
+
+See https://github.com/tomv564/LSP/releases/tag/0.5.0 for full update details.

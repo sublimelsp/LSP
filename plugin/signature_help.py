@@ -62,20 +62,23 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         if self._signature_help_triggers:
             last_char = self.view.substr(pos - 1)
             if last_char in self._signature_help_triggers:
-                client = client_for_view(self.view)
-                if client:
-                    purge_did_change(self.view.buffer_id())
-                    document_position = get_document_position(self.view, pos)
-                    if document_position:
-                        client.send_request(
-                            Request.signatureHelp(document_position),
-                            lambda response: self.handle_response(response, pos))
+                self.request_signature_help(pos)
             elif self._visible:
                 if last_char.isspace():
                     # Peek behind to find the last non-whitespace character.
                     last_char = self.view.substr(self.view.find_by_class(pos, False, ~0) - 1)
                 if last_char not in self._signature_help_triggers:
                     self.view.hide_popup()
+
+    def request_signature_help(self, point):
+        client = client_for_view(self.view)
+        if client:
+            purge_did_change(self.view.buffer_id())
+            document_position = get_document_position(self.view, point)
+            if document_position:
+                client.send_request(
+                    Request.signatureHelp(document_position),
+                    lambda response: self.handle_response(response, point))
 
     def handle_response(self, response, point):
         if response is not None:
@@ -103,7 +106,11 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         if key != "lsp.signature_help":
             return False  # Let someone else handle this keybinding.
         elif not self._visible:
-            return False  # Let someone else handle this keybinding.
+            if operand == 0:
+                self.request_signature_help(self.view.sel()[0].begin())
+                return True
+            else:
+                return False  # Let someone else handle this keybinding.
         elif len(self._signatures) < 2:
             return False  # Let someone else handle this keybinding.
         else:

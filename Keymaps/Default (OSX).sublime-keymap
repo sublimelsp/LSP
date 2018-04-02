@@ -12,6 +12,14 @@
         "command": "lsp_symbol_references"
     },
     {
+        "keys": ["ctrl+alt+space"],
+        "command": "noop",
+        "context":
+        [
+            { "key": "lsp.signature_help", "operator": "equal", "operand": 0}
+        ]
+    },
+    {
         "keys": ["down"],
         "command": "noop",
         "context":

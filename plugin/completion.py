@@ -248,12 +248,15 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         # only return label with a hint if available
         return "\t  ".join((label, hint)) if hint else label, insert_text
 
-    def handle_response(self, response: dict):
+    def handle_response(self, response: 'Optional[Dict]'):
         global resolvable_completion_items
 
         if self.state == CompletionState.REQUESTING:
-            items = response["items"] if isinstance(response,
-                                                    dict) else response
+            items = []  # type: List[Dict]
+            if isinstance(response, dict):
+                items = response["items"]
+            elif isinstance(response, list):
+                items = response
             if len(items) > 1 and items[0].get("sortText") is not None:
                 # If the first item has a sortText value, assume all of them have a sortText value.
                 items = sorted(items, key=lambda item: item["sortText"])

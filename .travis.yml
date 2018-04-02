@@ -2,7 +2,7 @@ language: python
 python:
     - "3.3"  # sublime text 3
 before_install:
-    - pip install mypy
+    - pip install "mypy<0.55"
     - pip install flake8
 script:
     - mypy -p plugin

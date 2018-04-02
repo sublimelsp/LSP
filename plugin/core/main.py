@@ -107,8 +107,8 @@ def initialize_on_open(view: sublime.View):
             debug(config.name, 'is not enabled')
 
 
+client_start_listeners = {}  # type: Dict[str, Callable]
 client_initialization_listeners = {}  # type: Dict[str, Callable]
-config_enable_listeners = {}  # type: Dict[str, Callable]
 
 
 def load_handlers():
@@ -119,10 +119,10 @@ def load_handlers():
 def register_language_handler(handler: LanguageHandler) -> None:
     debug("received handler", handler.name)
     register_client_config(handler.config)
+    if handler.on_start:
+        client_start_listeners[handler.name] = handler.on_start
     if handler.on_initialized:
         client_initialization_listeners[handler.name] = handler.on_initialized
-    if handler.on_enable:
-        config_enable_listeners[handler.name] = handler.on_enable
 
 
 def handle_initialize_result(result, client, window, config):
@@ -185,6 +185,11 @@ def start_client(window: sublime.Window, config: ClientConfig):
     project_path = get_project_path(window)
     if project_path is None:
         return None
+
+    if config.name in client_start_listeners:
+        handler_startup_hook = client_start_listeners[config.name]
+        if not handler_startup_hook(window):
+            return
 
     if settings.show_status_messages:
         window.status_message("Starting " + config.name + "...")

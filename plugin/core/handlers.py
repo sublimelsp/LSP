@@ -9,7 +9,7 @@ except ImportError:
 
 
 class LanguageHandler(metaclass=abc.ABCMeta):
-    on_enable = None  # type: Optional[Callable]
+    on_start = None  # type: Optional[Callable]
     on_initialized = None  # type: Optional[Callable]
 
     @abc.abstractproperty

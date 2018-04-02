@@ -117,7 +117,7 @@ def load_handlers():
 
 
 def register_language_handler(handler: LanguageHandler) -> None:
-    debug("received handler", handler.name)
+    debug("received config {} from {}".format(handler.name, handler.__class__.__name__))
     register_client_config(handler.config)
     if handler.on_start:
         client_start_listeners[handler.name] = handler.on_start

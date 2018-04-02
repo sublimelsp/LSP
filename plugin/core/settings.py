@@ -138,10 +138,10 @@ class ClientConfigs(object):
                 config.apply_settings(self._global_settings[config.name])
         self.all.extend(self._external_configs)
 
-        client_enableds = list("=".join([config.name, str(config.enabled)]) for config in self.all)
-        print(PLUGIN_NAME + ': global clients: ' + ", ".join(client_enableds))
-
     def add_external_config(self, config: ClientConfig):
+        print('adding ', config.name)
+        if config.name in self._global_settings:
+            config.apply_settings(self._global_settings[config.name])
         self._external_configs.append(config)
         self.all.append(config)
 
@@ -207,7 +207,7 @@ def read_client_configs(client_settings, default_client_settings=None) -> 'List[
             client_with_defaults.update(client_config)
 
             config = read_client_config(client_name, client_with_defaults)
-            if config:
+            if config and config.scopes:  # don't return configs only containing "enabled" here.
                 parsed_configs.append(config)
         return parsed_configs
     else:

@@ -76,13 +76,14 @@ BOX_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_EMPTY_AS_OVERWRITE
 
 def create_phantom_html(text: str) -> str:
     global stylesheet
+    formatted = "<br>".join(html.escape(line, quote=False) for line in text.splitlines())
     return """<body id=inline-error>{}
                 <div class="error-arrow"></div>
                 <div class="error">
                     <span class="message">{}</span>
                     <a href="code-actions">Code Actions</a>
                 </div>
-                </body>""".format(stylesheet, html.escape(text, quote=False))
+                </body>""".format(stylesheet, formatted)
 
 
 def on_phantom_navigate(view: sublime.View, href: str, point: int):
@@ -112,9 +113,12 @@ def format_severity(severity: int) -> str:
 def format_diagnostic(diagnostic: Diagnostic) -> str:
     location = "{:>8}:{:<4}".format(
         diagnostic.range.start.row + 1, diagnostic.range.start.col + 1)
-    message = diagnostic.message.replace("\n", " ").replace("\r", "")
-    return " {}\t{:<12}\t{:<10}\t{}".format(
-        location, diagnostic.source, format_severity(diagnostic.severity), message)
+    lines = diagnostic.message.splitlines()
+    formatted = " {}\t{:<12}\t{:<10}\t{}".format(
+        location, diagnostic.source, format_severity(diagnostic.severity), lines[0])
+    for line in lines[1:]:
+        formatted = formatted + "\n {:<12}\t{:<12}\t{:<10}\t{}".format("", "", "", line)
+    return formatted
 
 
 phantom_sets_by_buffer = {}  # type: Dict[int, sublime.PhantomSet]

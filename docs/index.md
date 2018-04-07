@@ -76,6 +76,29 @@ Client configuration:
       }
 ```
 
+### Vue (Javascript)<a name="vue"></a>
+
+See: [npm package](https://www.npmjs.com/package/vue-language-server)
+
+Client configuration:
+```
+"vue-ls":{
+  "command": [
+    "node",
+    "/ABSOLUTE/PATH/TO/SERVER/.npm-global/bin/vls"
+  ],
+  "enabled": true,
+  "languageId": "vue",
+  "scopes": [
+    "text.html.vue"
+  ],
+  "syntaxes": [
+    "Packages/Vue Syntax Highlight/vue.tmLanguage"
+  ]
+}
+```
+
+Be sure to install "Vue Syntax Highlight" from Package Control.
 
 ### Python<a name="python"></a>
 

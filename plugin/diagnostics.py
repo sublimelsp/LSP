@@ -288,7 +288,7 @@ def update_diagnostics_panel(window: sublime.Window):
                                    {"panel": "output.diagnostics"})
         else:
             panel.run_command("lsp_clear_panel")
-            if settings.auto_show_diagnostics_panel and is_active_panel:
+            if is_active_panel:
                 window.run_command("hide_panel",
                                    {"panel": "output.diagnostics"})
         panel.set_read_only(True)

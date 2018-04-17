@@ -57,13 +57,6 @@
       "syntaxes": ["Packages/Rust/Rust.sublime-syntax", "Packages/Rust Enhanced/RustEnhanced.sublime-syntax"],
       "languageId": "rust"
     },
-    "dotty":
-    {
-      "command": ["coursier", "launch", "ch.epfl.lamp:dotty-language-server_0.2:0.2.0-RC1", "-M", "dotty.tools.languageserver.Main", "--", "-stdio"],
-      "scopes": ["source.scala"],
-      "syntaxes": ["Packages/Scala/Scala.sublime-syntax"],
-      "languageId": "scala"
-    },
     "clangd":
     {
       "command": ["clangd"],

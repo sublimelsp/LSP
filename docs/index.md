@@ -15,7 +15,7 @@
 * `resolve_completion_for_snippets` `false` *resolve completions and apply snippet if received*
 * `show_status_messages` `true` *show messages in the status bar for a few seconds*
 * `show_view_status` `true` *show permanent language server status in the status bar*
-* `auto_show_diagnostics_panel` `true` *open and close the diagnostics panel automatically*
+* `auto_show_diagnostics_panel` `false` *open the diagnostics panel automatically if there are diagnostics*
 * `show_diagnostics_phantoms` `false` *show diagnostics as phantoms while the file has no changes*
 * `show_diagnostics_in_view_status` `true` *when on a diagnostic with the cursor, show the text in the status bar*
 * `diagnostics_highlight_style` `"underline"` *highlight style of code diagnostics, `"underline"` or `"box"`*

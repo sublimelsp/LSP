@@ -167,7 +167,7 @@
 
   // Open and close the diagnostics panel automatically,
   // depending on available diagnostics.
-  "auto_show_diagnostics_panel": true,
+  "auto_show_diagnostics_panel": false,
 
   // Show in-line diagnostics using phantoms for unchanged files.
   "show_diagnostics_phantoms": false,

@@ -184,10 +184,10 @@ def update_diagnostics_in_status_bar(window: sublime.Window):
                         if diagnostic.severity == DiagnosticSeverity.Warning:
                             warnings += 1
 
-    message = 'E: {} W: {}'.format(errors, warnings)
+    count = 'E: {} W: {}'.format(errors, warnings)
     view = window.active_view()
-    if view:
-        view.set_status('lsp_errors_warning_count', message)
+    if view and settings.show_diagnostics_count_in_view_status:
+        view.set_status('lsp_errors_warning_count', count)
 
 
 def update_count_in_status_bar(view):

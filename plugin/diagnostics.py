@@ -166,34 +166,37 @@ def update_diagnostics_in_view(view: sublime.View, diagnostics: 'List[Diagnostic
             update_diagnostics_regions(view, diagnostics, severity)
 
 
-def update_diagnostics_in_status_bar(view: sublime.View):
-    if view and view.is_valid():
-        errors = 0
-        warnings = 0
+def update_diagnostics_in_status_bar(window: sublime.Window):
+    errors = 0
+    warnings = 0
 
-        window = view.window()
-        diagnostics_by_file = get_window_diagnostics(window)
+    diagnostics_by_file = get_window_diagnostics(window)
 
-        if diagnostics_by_file:
-            for file_path, source_diagnostics in diagnostics_by_file.items():
+    if diagnostics_by_file:
+        for file_path, source_diagnostics in diagnostics_by_file.items():
 
-                if source_diagnostics:
-                    for origin, diagnostics in source_diagnostics.items():
-                        for diagnostic in diagnostics:
+            if source_diagnostics:
+                for origin, diagnostics in source_diagnostics.items():
+                    for diagnostic in diagnostics:
 
-                            if diagnostic.severity == DiagnosticSeverity.Error:
-                                errors += 1
-                            if diagnostic.severity == DiagnosticSeverity.Warning:
-                                warnings += 1
+                        if diagnostic.severity == DiagnosticSeverity.Error:
+                            errors += 1
+                        if diagnostic.severity == DiagnosticSeverity.Warning:
+                            warnings += 1
 
-        message = 'E: {} W: {}'.format(errors, warnings)
+    message = 'E: {} W: {}'.format(errors, warnings)
+    view = window.active_view()
+    if view:
         view.set_status('lsp_errors_warning_count', message)
+
+
+def update_count_in_status_bar(view):
+    update_diagnostics_in_status_bar(view.window())
 
 
 Events.subscribe("document.diagnostics",
                  lambda update: handle_diagnostics(update))
-Events.subscribe("view.on_load_async", update_diagnostics_in_status_bar)
-Events.subscribe("view.on_activated_async", update_diagnostics_in_status_bar)
+Events.subscribe("view.on_activated_async", update_count_in_status_bar)
 
 
 def handle_diagnostics(update: DiagnosticsUpdate):
@@ -201,8 +204,8 @@ def handle_diagnostics(update: DiagnosticsUpdate):
     view = window.find_open_file(update.file_path)
     if view:
         update_diagnostics_in_view(view, update.diagnostics)
-        update_diagnostics_in_status_bar(view)
     update_diagnostics_panel(window)
+    update_diagnostics_in_status_bar(window)
 
 
 class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):

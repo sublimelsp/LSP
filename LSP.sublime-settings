@@ -168,6 +168,14 @@
   // under the cursor in status bar if available.
   "show_diagnostics_in_view_status": true,
 
+  // Show the diagnostics with level less than or equal to
+  // the given value.
+  // error: 1
+  // warning: 2
+  // info: 3
+  // hint: 4
+  "show_diagnostics_severity_level": 3,
+
   // Highlighting style of code diagnostics.
   // Valid values are "underline" or "box"
   "diagnostics_highlight_style": "underline",

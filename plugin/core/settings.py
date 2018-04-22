@@ -17,6 +17,14 @@ def read_bool_setting(settings_obj: sublime.Settings, key: str, default: bool) -
         return default
 
 
+def read_int_setting(settings_obj: sublime.Settings, key: str, default: int) -> int:
+    val = settings_obj.get(key)
+    if isinstance(val, int):
+        return val
+    else:
+        return default
+
+
 def read_dict_setting(settings_obj: sublime.Settings, key: str, default: dict) -> dict:
     val = settings_obj.get(key)
     if isinstance(val, dict):
@@ -41,6 +49,7 @@ class Settings(object):
         self.auto_show_diagnostics_panel = True
         self.show_diagnostics_phantoms = False
         self.show_diagnostics_in_view_status = True
+        self.show_diagnostics_severity_level = 3
         self.only_show_lsp_completions = False
         self.diagnostics_highlight_style = "underline"
         self.highlight_active_signature_parameter = True
@@ -66,6 +75,7 @@ class Settings(object):
         self.auto_show_diagnostics_panel = read_bool_setting(settings_obj, "auto_show_diagnostics_panel", True)
         self.show_diagnostics_phantoms = read_bool_setting(settings_obj, "show_diagnostics_phantoms", False)
         self.show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
+        self.show_diagnostics_severity_level = read_int_setting(settings_obj, "show_diagnostics_severity_level", 3)
         self.diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
         self.highlight_active_signature_parameter = read_bool_setting(settings_obj,
                                                                       "highlight_active_signature_parameter", True)

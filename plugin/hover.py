@@ -80,8 +80,9 @@ class LspHoverCommand(LspTextCommand):
             "<pre>{}</pre>".format(diagnostic.message)
             for diagnostic in diagnostics
             if diagnostic.severity == DiagnosticSeverity.Error)
+        formatted = []
         if len(formatted_errors) > 0:
-            formatted = ["<div class='errors'>"]
+            formatted.append("<div class='errors'>")
             formatted.extend(formatted_errors)
             formatted.append("<a href='{}'>{}</a>".format('code-actions',
                                                           'Code Actions'))
@@ -93,7 +94,7 @@ class LspHoverCommand(LspTextCommand):
             if diagnostic.severity == DiagnosticSeverity.Warning)
 
         if len(formatted_warnings) > 0:
-            formatted = ["<div class='warnings'>"]
+            formatted.append("<div class='warnings'>")
             formatted.extend(formatted_warnings)
             formatted.append("<a href='{}'>{}</a>".format('code-actions',
                                                           'Code Actions'))

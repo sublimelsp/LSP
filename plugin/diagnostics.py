@@ -162,7 +162,9 @@ def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic
 def update_diagnostics_in_view(view: sublime.View, diagnostics: 'List[Diagnostic]'):
     if view and view.is_valid():
         update_diagnostics_phantoms(view, diagnostics)
-        for severity in range(DiagnosticSeverity.Error, DiagnosticSeverity.Information):
+        for severity in range(
+                DiagnosticSeverity.Error,
+                DiagnosticSeverity.Error + settings.show_diagnostics_severity_level):
             update_diagnostics_regions(view, diagnostics, severity)
 
 

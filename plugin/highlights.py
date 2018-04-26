@@ -1,7 +1,7 @@
 import sublime_plugin
 
 from .core.configurations import is_supported_syntax
-from .core.protocol import Request, Range, DocumentHighlightKind
+from .core.protocol import Range, DocumentHighlightKind
 from .core.clients import client_for_view
 from .core.documents import get_document_position
 from .core.settings import settings
@@ -77,7 +77,7 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
             if client:
                 params = get_document_position(self.view, point)
                 if params:
-                    request = Request.documentHighlight(params)
+                    request = client.request_class.documentHighlight(params)
                     client.send_request(request, self._handle_response)
 
     def _handle_response(self, response: list) -> None:

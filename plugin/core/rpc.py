@@ -246,6 +246,8 @@ class Client(object):
         self.capabilities = {}  # type: Dict[str, Any]
         self.exiting = False
         self._crash_handler = None  # type: Optional[Callable]
+        self.notification_class = Notification
+        self.request_class = Request
 
     def set_capabilities(self, capabilities):
         self.capabilities = capabilities

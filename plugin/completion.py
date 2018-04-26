@@ -7,7 +7,6 @@ try:
 except ImportError:
     pass
 
-from .core.protocol import Request
 from .core.settings import settings
 from .core.logging import debug, exception_log
 from .core.protocol import CompletionItemKind
@@ -93,7 +92,7 @@ class CompletionSnippetHandler(sublime_plugin.EventListener):
             return
 
         client.send_request(
-            Request.resolveCompletionItem(item),
+            client.request_class.resolveCompletionItem(item),
             lambda response: self.handle_resolve_response(response, view))
 
     def handle_resolve_response(self, response, view):
@@ -219,7 +218,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             document_position = get_document_position(view, locations[0])
             if document_position:
                 client.send_request(
-                    Request.complete(document_position),
+                    client.request_class.complete(document_position),
                     self.handle_response,
                     self.handle_error)
                 self.state = CompletionState.REQUESTING

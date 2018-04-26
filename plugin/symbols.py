@@ -2,7 +2,7 @@
 from .core.protocol import SymbolKind
 from .core.clients import LspTextCommand
 from .core.clients import client_for_view
-from .core.protocol import Request, Range
+from .core.protocol import Range
 from .core.url import filename_to_uri
 
 
@@ -51,7 +51,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                     "uri": filename_to_uri(self.view.file_name())
                 }
             }
-            request = Request.documentSymbols(params)
+            request = client.request_class.documentSymbols(params)
             client.send_request(request, self.handle_response)
 
     def handle_response(self, response):

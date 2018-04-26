@@ -2,7 +2,7 @@ import sublime
 
 from .core.clients import LspTextCommand
 from .core.clients import client_for_view
-from .core.protocol import Request, Point
+from .core.protocol import Point
 from .core.documents import get_document_position, get_position, is_at_word
 from .core.url import uri_to_filename
 from .core.logging import debug
@@ -23,7 +23,7 @@ class LspSymbolDefinitionCommand(LspTextCommand):
             pos = get_position(self.view, event)
             document_position = get_document_position(self.view, pos)
             if document_position:
-                request = Request.definition(document_position)
+                request = client.request_class.definition(document_position)
                 client.send_request(
                     request, lambda response: self.handle_response(response, pos))
 

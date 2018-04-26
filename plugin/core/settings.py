@@ -66,7 +66,8 @@ class Settings(object):
         self.show_view_status = read_bool_setting(settings_obj, "show_view_status", True)
         self.auto_show_diagnostics_panel = read_bool_setting(settings_obj, "auto_show_diagnostics_panel", False)
         self.show_diagnostics_phantoms = read_bool_setting(settings_obj, "show_diagnostics_phantoms", False)
-        self.show_diagnostics_count_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_count_in_view_status", True)
+        self.show_diagnostics_count_in_view_status = read_bool_setting(settings_obj,
+                                                                       "show_diagnostics_count_in_view_status", True)
         self.show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
         self.diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
         self.highlight_active_signature_parameter = read_bool_setting(settings_obj,

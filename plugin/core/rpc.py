@@ -341,7 +341,7 @@ class Client(object):
             if handler_id in self._response_handlers:
                 self._response_handlers[handler_id](result)
             else:
-                debug("No handler found for id" + response.get("id"))
+                debug("No handler found for id" + str(response.get("id")))
         elif 'error' in response and 'result' not in response:
             error = response['error']
             if settings.log_payloads:

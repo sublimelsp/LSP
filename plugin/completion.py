@@ -257,9 +257,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 items = response["items"]
             elif isinstance(response, list):
                 items = response
-            if len(items) > 1 and items[0].get("sortText") is not None:
-                # If the first item has a sortText value, assume all of them have a sortText value.
-                items = sorted(items, key=lambda item: item["sortText"])
+            items = sorted(items, key=lambda item: item.get("sortText", item["label"]))
             self.completions = list(self.format_completion(item) for item in items)
 
             if self.has_resolve_provider:

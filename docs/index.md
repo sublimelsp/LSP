@@ -93,7 +93,10 @@ Client configuration:
     "text.html.vue"
   ],
   "syntaxes": [
+    // For ST3 builds < 3153
     "Packages/Vue Syntax Highlight/vue.tmLanguage"
+    // For ST3 builds >= 3153
+    // "Packages/Vue Syntax Highlight/Vue Component.sublime-syntax"
   ]
 }
 ```

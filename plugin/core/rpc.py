@@ -61,28 +61,27 @@ def attach_logger(process, stream):
 
 
 def log_stream(process, stream):
-        """
-        Reads any errors from the LSP process.
-        """
-        running = True
-        while running:
-            running = process.poll() is None
+    """
+    Reads any errors from the LSP process.
+    """
+    running = True
+    while running:
+        running = process.poll() is None
 
+        try:
+            content = stream.readline()
+            if not content:
+                break
             try:
-                content = process.stderr.readline()
-                if not content:
-                    break
-                if settings.log_stderr:
-                    try:
-                        decoded = content.decode("UTF-8")
-                    except UnicodeDecodeError:
-                        decoded = content
-                    server_log(decoded.strip())
-            except IOError as err:
-                exception_log("Failure reading stderr", err)
-                return
+                decoded = content.decode("UTF-8")
+            except UnicodeDecodeError:
+                decoded = content
+            server_log(decoded.strip())
+        except IOError as err:
+            exception_log("Failure reading stream", err)
+            return
 
-        debug("LSP stderr process ended.")
+    debug("LSP stream logger stopped.")
 
 
 class Transport(object,  metaclass=ABCMeta):

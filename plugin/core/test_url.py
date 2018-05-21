@@ -1,4 +1,5 @@
 from .url import (filename_to_uri, uri_to_filename)
+import sys
 import unittest
 
 

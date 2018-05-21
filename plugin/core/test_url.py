@@ -1,6 +1,7 @@
 from .url import (filename_to_uri, uri_to_filename)
 import sys
 import unittest
+import sys
 
 
 class WindowsTests(unittest.TestCase):
@@ -11,4 +12,5 @@ class WindowsTests(unittest.TestCase):
 
     @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
     def test_converts_uri_to_path(self):
+        self.assertEqual("C:\\dir ectory\\file.txt", uri_to_filename("file:///c:/dir ectory/file.txt"))
         self.assertEqual("C:\\dir ectory\\file.txt", uri_to_filename("file:///c:/dir ectory/file.txt"))

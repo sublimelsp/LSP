@@ -41,6 +41,11 @@ class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
     def run(self, edit, changes=None, show_status=True):
+
+        # Sort changes due to issues with self.view.get_regions
+        # See https://github.com/tomv564/LSP/issues/325
+        changes = self.changes_sorted(changes)
+
         regions = list(self.create_region(change) for change in changes)
         replacements = list(change.get('newText') for change in changes)
 
@@ -69,6 +74,29 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
                 relative_file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
                 message = 'Applied {} change(s) to {}'.format(len(changes), relative_file_path)
                 window.status_message(message)
+
+    def changes_sorted(self, changes: [dict]):
+        # changes looks like this:
+        # [
+        #   {
+        #       'newText': str,
+        #       'range': {
+        #            'start': {'line': int, 'character': int},
+        #            'end': {'line': int, 'character': int}
+        #       }
+        #   }
+        # ]
+
+        # Maps a change to the tuple (range.start.line, range.start.character)
+        def get_start_position(change):
+            range = change.get('range')
+            start = range.get('start')
+            line = start.get('line')
+            character = start.get('character')
+            return (line, character)  # Return tuple so comparing/sorting tuples in the form of (1, 2)
+
+        # Sort by start position
+        return sorted(changes, key=get_start_position)
 
     def create_region(self, change):
         return Range.from_lsp(change['range']).to_region(self.view)

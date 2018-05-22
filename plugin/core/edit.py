@@ -89,8 +89,8 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
 
         # Maps a change to the tuple (range.start.line, range.start.character)
         def get_start_position(change):
-            range = change.get('range')
-            start = range.get('start')
+            r = change.get('range')
+            start = r.get('start')
             line = start.get('line')
             character = start.get('character')
             return (line, character)  # Return tuple so comparing/sorting tuples in the form of (1, 2)

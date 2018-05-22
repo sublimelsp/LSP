@@ -75,7 +75,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
                 message = 'Applied {} change(s) to {}'.format(len(changes), relative_file_path)
                 window.status_message(message)
 
-    def changes_sorted(self, changes: [dict]):
+    def changes_sorted(self, changes):
         # changes looks like this:
         # [
         #   {

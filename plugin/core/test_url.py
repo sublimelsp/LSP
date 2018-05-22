@@ -13,4 +13,14 @@ class WindowsTests(unittest.TestCase):
     @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
     def test_converts_uri_to_path(self):
         self.assertEqual("C:\\dir ectory\\file.txt", uri_to_filename("file:///c:/dir ectory/file.txt"))
-        self.assertEqual("C:\\dir ectory\\file.txt", uri_to_filename("file:///c:/dir ectory/file.txt"))
+
+
+class NixTests(unittest.TestCase):
+
+    @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
+    def test_converts_path_to_uri(self):
+        self.assertEqual("file:///dir%20ectory/file.txt", filename_to_uri("/dir ectory/file.txt"))
+
+    @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
+    def test_converts_uri_to_path(self):
+        self.assertEqual("/dir ectory/file.txt", uri_to_filename("file:///dir ectory/file.txt"))

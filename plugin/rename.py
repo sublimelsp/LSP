@@ -1,4 +1,3 @@
-
 from .core.clients import LspTextCommand
 from .core.clients import client_for_view
 from .core.protocol import Request
@@ -32,11 +31,14 @@ class LspSymbolRenameCommand(LspTextCommand):
             client.send_request(Request.rename(params), self.handle_response)
 
     def handle_response(self, response):
-        if 'changes' in response:
-            changes = response.get('changes')
-            if len(changes) > 0:
-                self.view.window().run_command('lsp_apply_workspace_edit',
-                                               {'changes': changes})
+        if response:
+            if 'changes' in response:
+                changes = response.get('changes')
+                if len(changes) > 0:
+                    self.view.window().run_command('lsp_apply_workspace_edit',
+                                                   {'changes': changes})
+        else:
+            self.view.window().status_message('No rename edits returned')
 
     def want_event(self):
         return True

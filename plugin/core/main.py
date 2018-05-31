@@ -35,6 +35,7 @@ from .documents import (
 )
 from .diagnostics import handle_client_diagnostics, remove_diagnostics
 from .edit import apply_workspace_edit
+from .queue import unload as unload_queue
 
 
 def startup():
@@ -49,6 +50,7 @@ def startup():
 
 
 def shutdown():
+    unload_queue()
     unload_settings()
     unload_all_clients()
 

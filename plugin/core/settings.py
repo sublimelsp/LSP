@@ -40,6 +40,15 @@ def read_str_setting(settings_obj: sublime.Settings, key: str, default: str) -> 
     else:
         return default
 
+def read_float_setting(settings_obj: sublime.Settings, key: str, default: float) -> float:
+    val = settings_obj.get(key)
+    if isinstance(val, float):
+        return val
+    elif isinstance(val, int):
+        return float(val)
+    else:
+        return default
+
 
 class Settings(object):
 
@@ -47,6 +56,7 @@ class Settings(object):
         self.show_status_messages = True
         self.show_view_status = True
         self.auto_show_diagnostics_panel = True
+        self.auto_show_delay = 0.0
         self.show_diagnostics_phantoms = False
         self.show_diagnostics_in_view_status = True
         self.show_diagnostics_severity_level = 3
@@ -73,6 +83,7 @@ class Settings(object):
         self.show_status_messages = read_bool_setting(settings_obj, "show_status_messages", True)
         self.show_view_status = read_bool_setting(settings_obj, "show_view_status", True)
         self.auto_show_diagnostics_panel = read_bool_setting(settings_obj, "auto_show_diagnostics_panel", True)
+        self.auto_show_delay = read_float_setting(settings_obj, "auto_show_delay", 0.0)
         self.show_diagnostics_phantoms = read_bool_setting(settings_obj, "show_diagnostics_phantoms", False)
         self.show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
         self.show_diagnostics_severity_level = read_int_setting(settings_obj, "show_diagnostics_severity_level", 3)

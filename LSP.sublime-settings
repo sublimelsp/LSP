@@ -164,6 +164,9 @@
   // Show in-line diagnostics using phantoms for unchanged files.
   "show_diagnostics_phantoms": false,
 
+  // Show errors and warnings count in the status bar 
+  "show_diagnostics_count_in_view_status": false,
+
   // Show the diagnostics description of the code
   // under the cursor in status bar if available.
   "show_diagnostics_in_view_status": true,

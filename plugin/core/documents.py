@@ -10,7 +10,7 @@ except ImportError:
     pass
 
 from .logging import debug
-from .protocol import Notification, Point
+from .protocol import Point
 from .settings import settings
 from .url import filename_to_uri
 from .configurations import config_for_scope, is_supported_view, is_supported_syntax, is_supportable_syntax
@@ -141,7 +141,7 @@ def notify_did_open(view: sublime.View):
                         "version": ds.version
                     }
                 }
-                client.send_notification(Notification.didOpen(params))
+                client.send_notification(client.notification_class.didOpen(params))
 
 
 def notify_did_close(view: sublime.View):
@@ -153,7 +153,7 @@ def notify_did_close(view: sublime.View):
             client = client_for_closed_view(view)
             if client:
                 params = {"textDocument": {"uri": filename_to_uri(file_name)}}
-                client.send_notification(Notification.didClose(params))
+                client.send_notification(client.notification_class.didClose(params))
 
 
 def notify_did_save(view: sublime.View):
@@ -164,7 +164,7 @@ def notify_did_save(view: sublime.View):
             client = client_for_view(view)
             if client:
                 params = {"textDocument": {"uri": filename_to_uri(file_name)}}
-                client.send_notification(Notification.didSave(params))
+                client.send_notification(client.notification_class.didSave(params))
         else:
             debug('document not tracked', file_name)
 
@@ -190,7 +190,7 @@ def notify_did_change(view: sublime.View):
                     "text": view.substr(sublime.Region(0, view.size()))
                 }]
             }
-            client.send_notification(Notification.didChange(params))
+            client.send_notification(client.notification_class.didChange(params))
 
 
 document_sync_initialized = False

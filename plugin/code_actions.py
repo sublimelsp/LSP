@@ -9,7 +9,7 @@ except ImportError:
 
 from .core.clients import client_for_view
 from .core.clients import LspTextCommand
-from .core.protocol import Request, Range
+from .core.protocol import Range
 from .core.documents import get_position
 from .core.diagnostics import get_point_diagnostics
 from .core.url import filename_to_uri
@@ -42,7 +42,7 @@ class LspCodeActionsCommand(LspTextCommand):
                 sel.clear()
                 sel.add(sublime.Region(pos))
 
-            client.send_request(Request.codeAction(params), self.handle_codeaction_response)
+            client.send_request(client.request_class.codeAction(params), self.handle_codeaction_response)
 
     def handle_codeaction_response(self, response):
         titles = []
@@ -60,7 +60,7 @@ class LspCodeActionsCommand(LspTextCommand):
             client = client_for_view(self.view)
             if client:
                 client.send_request(
-                    Request.executeCommand(self.commands[index]),
+                    client.request_class.executeCommand(self.commands[index]),
                     self.handle_command_response)
 
     def handle_command_response(self, response):

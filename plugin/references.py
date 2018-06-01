@@ -7,7 +7,7 @@ from .core.clients import client_for_view
 from .core.documents import is_at_word, get_position, get_document_position
 from .core.clients import LspTextCommand
 from .core.workspace import get_project_path
-from .core.protocol import Request, Point
+from .core.protocol import Point
 from .core.url import uri_to_filename
 
 
@@ -46,7 +46,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 document_position['context'] = {
                     "includeDeclaration": False
                 }
-                request = Request.references(document_position)
+                request = client.request_class.references(document_position)
                 client.send_request(
                     request, lambda response: self.handle_response(response, pos))
 

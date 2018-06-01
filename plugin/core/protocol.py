@@ -72,63 +72,63 @@ class Request:
 
     @classmethod
     def initialize(cls, params: dict):
-        return Request("initialize", params)
+        return cls("initialize", params)
 
     @classmethod
     def hover(cls, params: dict):
-        return Request("textDocument/hover", params)
+        return cls("textDocument/hover", params)
 
     @classmethod
     def complete(cls, params: dict):
-        return Request("textDocument/completion", params)
+        return cls("textDocument/completion", params)
 
     @classmethod
     def signatureHelp(cls, params: dict):
-        return Request("textDocument/signatureHelp", params)
+        return cls("textDocument/signatureHelp", params)
 
     @classmethod
     def references(cls, params: dict):
-        return Request("textDocument/references", params)
+        return cls("textDocument/references", params)
 
     @classmethod
     def definition(cls, params: dict):
-        return Request("textDocument/definition", params)
+        return cls("textDocument/definition", params)
 
     @classmethod
     def rename(cls, params: dict):
-        return Request("textDocument/rename", params)
+        return cls("textDocument/rename", params)
 
     @classmethod
     def codeAction(cls, params: dict):
-        return Request("textDocument/codeAction", params)
+        return cls("textDocument/codeAction", params)
 
     @classmethod
     def executeCommand(cls, params: dict):
-        return Request("workspace/executeCommand", params)
+        return cls("workspace/executeCommand", params)
 
     @classmethod
     def formatting(cls, params: dict):
-        return Request("textDocument/formatting", params)
+        return cls("textDocument/formatting", params)
 
     @classmethod
     def rangeFormatting(cls, params: dict):
-        return Request("textDocument/rangeFormatting", params)
+        return cls("textDocument/rangeFormatting", params)
 
     @classmethod
     def documentSymbols(cls, params: dict):
-        return Request("textDocument/documentSymbol", params)
+        return cls("textDocument/documentSymbol", params)
 
     @classmethod
     def documentHighlight(cls, params: dict):
-        return Request("textDocument/documentHighlight", params)
+        return cls("textDocument/documentHighlight", params)
 
     @classmethod
     def resolveCompletionItem(cls, params: dict):
-        return Request("completionItem/resolve", params)
+        return cls("completionItem/resolve", params)
 
     @classmethod
     def shutdown(cls):
-        return Request("shutdown", None)
+        return cls("shutdown", None)
 
     def __repr__(self):
         return self.method + " " + str(self.params)
@@ -153,31 +153,31 @@ class Notification:
 
     @classmethod
     def initialized(cls):
-        return Notification("initialized", None)
+        return cls("initialized", None)
 
     @classmethod
     def didOpen(cls, params: dict):
-        return Notification("textDocument/didOpen", params)
+        return cls("textDocument/didOpen", params)
 
     @classmethod
     def didChange(cls, params: dict):
-        return Notification("textDocument/didChange", params)
+        return cls("textDocument/didChange", params)
 
     @classmethod
     def didSave(cls, params: dict):
-        return Notification("textDocument/didSave", params)
+        return cls("textDocument/didSave", params)
 
     @classmethod
     def didClose(cls, params: dict):
-        return Notification("textDocument/didClose", params)
+        return cls("textDocument/didClose", params)
 
     @classmethod
     def didChangeConfiguration(cls, params: dict):
-        return Notification("workspace/didChangeConfiguration", params)
+        return cls("workspace/didChangeConfiguration", params)
 
     @classmethod
     def exit(cls):
-        return Notification("exit", None)
+        return cls("exit", None)
 
     def __repr__(self):
         return self.method + " " + str(self.params)

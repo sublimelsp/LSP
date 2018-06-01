@@ -1,5 +1,5 @@
 
-from .core.protocol import Request, Range
+from .core.protocol import Range
 from .core.url import filename_to_uri
 from .core.clients import client_for_view
 from .core.clients import LspTextCommand
@@ -25,7 +25,7 @@ class LspFormatDocumentCommand(LspTextCommand):
                     "insertSpaces": True
                 }
             }
-            request = Request.formatting(params)
+            request = client.request_class.formatting(params)
             client.send_request(
                 request, lambda response: self.handle_response(response, pos))
 
@@ -60,6 +60,6 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
                     "insertSpaces": True
                 }
             }
-            client.send_request(Request.rangeFormatting(params),
+            client.send_request(client.request_class.rangeFormatting(params),
                                 lambda response: self.view.run_command('lsp_apply_document_edit',
                                                                        {'changes': response}))

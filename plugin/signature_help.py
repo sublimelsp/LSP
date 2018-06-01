@@ -15,7 +15,6 @@ except ImportError:
 from .core.clients import client_for_view
 from .core.documents import get_document_position, purge_did_change
 from .core.configurations import is_supported_syntax, config_for_scope
-from .core.protocol import Request
 from .core.logging import debug
 from .core.popups import popup_css, popup_class
 from .core.settings import settings
@@ -77,7 +76,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             document_position = get_document_position(self.view, point)
             if document_position:
                 client.send_request(
-                    Request.signatureHelp(document_position),
+                    client.request_class.signatureHelp(document_position),
                     lambda response: self.handle_response(response, point))
 
     def handle_response(self, response, point):

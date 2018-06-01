@@ -3,7 +3,6 @@ import sublime_plugin
 
 from .logging import debug, exception_log
 from .configurations import config_for_scope, is_supported_view
-from .protocol import Request
 from .workspace import get_project_path
 
 # typing only
@@ -208,4 +207,6 @@ def on_shutdown(client: Client, window_id: int, config_name: str, response):
 
 
 def unload_client(client: Client, window_id: int, config_name: str):
-    client.send_request(Request.shutdown(), lambda response: on_shutdown(client, window_id, config_name, response))
+    client.send_request(
+        client.request_class.shutdown(),
+        lambda response: on_shutdown(client, window_id, config_name, response))

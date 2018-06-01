@@ -1,6 +1,5 @@
 from .core.clients import LspTextCommand
 from .core.clients import client_for_view
-from .core.protocol import Request
 from .core.documents import get_document_position, get_position, is_at_word
 
 
@@ -28,7 +27,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         client = client_for_view(self.view)
         if client:
             params["newName"] = new_name
-            client.send_request(Request.rename(params), self.handle_response)
+            client.send_request(client.request_class.rename(params), self.handle_response)
 
     def handle_response(self, response):
         if response:

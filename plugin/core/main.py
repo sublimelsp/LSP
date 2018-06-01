@@ -12,7 +12,7 @@ import sublime
 
 from .url import filename_to_uri
 from .protocol import (
-    Request, Notification, SymbolKind, CompletionItemKind
+    SymbolKind, CompletionItemKind
 )
 from .settings import (
     ClientConfig, settings, load_settings, unload_settings
@@ -163,12 +163,12 @@ def handle_initialize_result(result, client, window, config):
 
     Events.subscribe('view.on_close', lambda view: remove_diagnostics(view, config.name))
 
-    client.send_notification(Notification.initialized())
+    client.send_notification(client.notification_class.initialized())
     if config.settings:
         configParams = {
             'settings': config.settings
         }
-        client.send_notification(Notification.didChangeConfiguration(configParams))
+        client.send_notification(client.notification_class.didChangeConfiguration(configParams))
 
     # now the client should be available outside the initialization sequence
     set_config_ready(window, config.name, client)
@@ -315,7 +315,7 @@ def start_client(window: sublime.Window, config: ClientConfig):
         initializeParams['initializationOptions'] = config.init_options
 
     client.send_request(
-        Request.initialize(initializeParams),
+        client.request_class.initialize(initializeParams),
         lambda result: handle_initialize_result(result, client, window, config))
     return client
 

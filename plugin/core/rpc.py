@@ -1,5 +1,4 @@
 import json
-# import sublime
 import threading
 import socket
 import time
@@ -14,19 +13,11 @@ except ImportError:
 # from .settings import settings
 from .logging import debug, exception_log, server_log
 from .protocol import Request, Notification
+from .types import Settings
 
 
 ContentLengthHeader = b"Content-Length: "
 TCP_CONNECT_TIMEOUT = 5
-
-
-class Settings(object):
-    def __init__(self):
-        self.log_stderr = True
-        self.log_payloads = True
-
-
-settings = Settings()
 
 
 def format_request(payload: 'Dict[str, Any]'):
@@ -37,7 +28,7 @@ def format_request(payload: 'Dict[str, Any]'):
     return result
 
 
-def attach_tcp_client(tcp_port, process, project_path):
+def attach_tcp_client(tcp_port, process, project_path, settings: Settings):
     if settings.log_stderr:
         attach_logger(process, process.stdout)
 
@@ -58,7 +49,7 @@ def attach_tcp_client(tcp_port, process, project_path):
     raise Exception("Timeout connecting to socket")
 
 
-def attach_stdio_client(process, project_path):
+def attach_stdio_client(process, project_path, settings: Settings):
     transport = StdioTransport(process)
 
     # TODO: process owner can take care of this outside client?

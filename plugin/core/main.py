@@ -218,9 +218,9 @@ def start_client(window: sublime.Window, config: ClientConfig):
         return None
 
     if config.tcp_port is not None:
-        client = attach_tcp_client(config.tcp_port, process, project_path)
+        client = attach_tcp_client(config.tcp_port, process, project_path, settings)
     else:
-        client = attach_stdio_client(process, project_path)
+        client = attach_stdio_client(process, project_path, settings)
 
     if not client:
         window.status_message("Could not connect to " + config.name + ", disabling")

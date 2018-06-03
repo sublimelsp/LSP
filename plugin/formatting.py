@@ -1,8 +1,9 @@
 
-from .core.protocol import Request, Range
+from .core.protocol import Request
 from .core.url import filename_to_uri
 from .core.clients import client_for_view
 from .core.clients import LspTextCommand
+from .core.views import region_to_range
 
 
 class LspFormatDocumentCommand(LspTextCommand):
@@ -54,7 +55,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
                 "textDocument": {
                     "uri": filename_to_uri(self.view.file_name())
                 },
-                "range": Range.from_region(self.view, region).to_lsp(),
+                "range": region_to_range(self.view, region).to_lsp(),
                 "options": {
                     "tabSize": self.view.settings().get("tab_size", 4),
                     "insertSpaces": True

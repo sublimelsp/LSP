@@ -5,6 +5,7 @@ from .core.protocol import Request, Range, DocumentHighlightKind
 from .core.clients import client_for_view
 from .core.documents import get_document_position
 from .core.settings import settings
+from .core.views import range_to_region
 
 import sublime  # only for typing
 try:
@@ -87,7 +88,7 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
         for kind in range(0, 4):
             kind2regions[_kind2name[kind]] = []
         for highlight in response:
-            r = Range.from_lsp(highlight["range"]).to_region(self.view)
+            r = range_to_region(Range.from_lsp(highlight["range"]), self.view)
             kind = highlight.get("kind", DocumentHighlightKind.Unknown)
             kind2regions[_kind2name[kind]].append(r)
         flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE

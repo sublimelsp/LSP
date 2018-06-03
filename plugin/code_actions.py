@@ -9,10 +9,11 @@ except ImportError:
 
 from .core.clients import client_for_view
 from .core.clients import LspTextCommand
-from .core.protocol import Request, Range
+from .core.protocol import Request
 from .core.documents import get_position
 from .core.diagnostics import get_point_diagnostics
 from .core.url import filename_to_uri
+from .core.views import region_to_range
 
 
 class LspCodeActionsCommand(LspTextCommand):
@@ -36,7 +37,7 @@ class LspCodeActionsCommand(LspTextCommand):
                     "diagnostics": list(diagnostic.to_lsp() for diagnostic in point_diagnostics)
                 }
             }
-            params["range"] = Range.from_region(self.view, self.view.sel()[0]).to_lsp()
+            params["range"] = region_to_range(self.view, self.view.sel()[0]).to_lsp()
             if event:  # if right-clicked, set cursor to menu position
                 sel = self.view.sel()
                 sel.clear()

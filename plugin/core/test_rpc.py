@@ -2,6 +2,7 @@ from .rpc import (format_request, Client, Transport)
 from .protocol import (Request)
 import unittest
 
+
 class TestSettings(object):
 
     def __init__(self):
@@ -53,8 +54,3 @@ class ClientTest(unittest.TestCase):
         # responded = False
         client.send_request(req, lambda resp: responses.append(resp))
         self.assertGreater(len(responses), 0)
-
-
-
-
-    # def test_can_

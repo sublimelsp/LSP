@@ -6,6 +6,7 @@ from .url import uri_to_filename
 from .protocol import Range
 from .logging import debug
 from .workspace import get_project_path
+from .views import range_to_region
 
 
 def apply_workspace_edit(window, params):
@@ -99,7 +100,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         return sorted(changes, key=get_start_position)
 
     def create_region(self, change):
-        return Range.from_lsp(change['range']).to_region(self.view)
+        return range_to_region(Range.from_lsp(change['range']), self.view)
 
     def apply_change(self, region, newText, edit):
         if region.empty():

@@ -4,6 +4,10 @@ python:
 before_install:
     - pip install "mypy==0.570"
     - pip install flake8
+    - pip install python-coveralls
 script:
     - mypy -p plugin
     - flake8 --exclude=./boot.py
+    - coverage run --source=. -m unittest discover
+after_success:
+    - coveralls

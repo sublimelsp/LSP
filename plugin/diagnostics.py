@@ -16,6 +16,7 @@ from .core.configurations import is_supported_syntax
 from .core.diagnostics import DiagnosticsUpdate, get_window_diagnostics, get_line_diagnostics
 from .core.workspace import get_project_path
 from .core.panels import create_output_panel
+from .core.views import range_to_region
 
 diagnostic_severity_names = {
     DiagnosticSeverity.Error: "error",
@@ -95,7 +96,7 @@ def on_phantom_navigate(view: sublime.View, href: str, point: int):
 
 
 def create_phantom(view: sublime.View, diagnostic: Diagnostic) -> sublime.Phantom:
-    region = diagnostic.range.to_region(view)
+    region = range_to_region(diagnostic.range, view)
     # TODO: hook up hide phantom (if keeping them)
     content = create_phantom_html(diagnostic.message)
     return sublime.Phantom(
@@ -148,7 +149,7 @@ def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic
     if settings.show_diagnostics_phantoms and not view.is_dirty():
         regions = None
     else:
-        regions = list(diagnostic.range.to_region(view) for diagnostic in diagnostics
+        regions = list(range_to_region(diagnostic.range, view) for diagnostic in diagnostics
                        if diagnostic.severity == severity)
     if regions:
         scope_name = diagnostic_severity_scopes[severity]

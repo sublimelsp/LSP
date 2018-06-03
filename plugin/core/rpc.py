@@ -20,6 +20,15 @@ ContentLengthHeader = b"Content-Length: "
 TCP_CONNECT_TIMEOUT = 5
 
 
+class Settings(object):
+    def __init__(self):
+        self.log_stderr = True
+        self.log_payloads = True
+
+
+settings = Settings()
+
+
 def format_request(payload: 'Dict[str, Any]'):
     """Converts the request into json and adds the Content-Length header"""
     content = json.dumps(payload, sort_keys=False)
@@ -41,7 +50,7 @@ def attach_tcp_client(tcp_port, process, project_path):
             sock = socket.create_connection((host, tcp_port))
             transport = TCPTransport(sock)
 
-            return Client(process, transport, project_path)
+            return Client(process, transport, project_path, settings)
         except ConnectionRefusedError as e:
             pass
 
@@ -55,7 +64,7 @@ def attach_stdio_client(process, project_path):
     # TODO: process owner can take care of this outside client?
     if settings.log_stderr:
         attach_logger(process, process.stderr)
-    return Client(process, transport, project_path)
+    return Client(process, transport, project_path, settings)
 
 
 def attach_logger(process, stream):
@@ -354,7 +363,8 @@ class Client(object):
             if handler_id in self._error_handlers:
                 self._error_handlers[handler_id](error)
             else:
-                sublime.status_message(error.get('message'))
+                debug(error.get('message'))
+                # sublime.status_message(error.get('message'))
         else:
             debug('invalid response payload', response)
 

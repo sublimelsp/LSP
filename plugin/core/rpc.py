@@ -10,7 +10,6 @@ try:
 except ImportError:
     pass
 
-# from .settings import settings
 from .logging import debug, exception_log, server_log
 from .protocol import Request, Notification
 from .types import Settings
@@ -103,9 +102,6 @@ class Transport(object,  metaclass=ABCMeta):
 STATE_HEADERS = 0
 STATE_CONTENT = 1
 
-
-# TODO: proper state pattern.
-# TODO: extract transports
 
 class TCPTransport(Transport):
     def __init__(self, socket):

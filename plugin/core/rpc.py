@@ -246,6 +246,7 @@ class Client(object):
         self.capabilities = {}  # type: Dict[str, Any]
         self.exiting = False
         self._crash_handler = None  # type: Optional[Callable]
+        self._error_display_handler = lambda msg: debug(msg)
         self.settings = settings
 
     def set_capabilities(self, capabilities):
@@ -284,6 +285,9 @@ class Client(object):
     def set_crash_handler(self, handler: 'Callable'):
         self._crash_handler = handler
 
+    def set_error_display_handler(self, handler: 'Callable'):
+        self._error_display_handler = handler
+
     def handle_transport_failure(self):
         if self.process:
             try:
@@ -300,7 +304,7 @@ class Client(object):
                 message = format_request(payload)
                 self.transport.send(message)
             except Exception as err:
-                # sublime.status_message("Failure sending LSP server message, exiting")
+                self._error_display_handler("Failure sending LSP server message, exiting")
                 exception_log("Failure writing payload", err)
                 self.handle_transport_failure()
 
@@ -328,7 +332,7 @@ class Client(object):
             exception_log("Error handling server payload", err)
 
     def on_transport_closed(self):
-        # sublime.status_message("Communication to server closed, exiting")
+        self._error_display_handler("Communication to server closed, exiting")
         # Differentiate between normal exit and server crash?
         if not self.exiting:
             self.handle_transport_failure()
@@ -350,8 +354,7 @@ class Client(object):
             if handler_id in self._error_handlers:
                 self._error_handlers[handler_id](error)
             else:
-                debug(error.get('message'))
-                # sublime.status_message(error.get('message'))
+                self._error_display_handler(error.get("message"))
         else:
             debug('invalid response payload', response)
 

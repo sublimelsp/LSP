@@ -227,6 +227,7 @@ def start_client(window: sublime.Window, config: ClientConfig):
         return None
 
     client.set_crash_handler(lambda: handle_server_crash(window, config))
+    client.set_error_display_handler(lambda msg: sublime.status_message(msg))
 
     initializeParams = {
         "processId": os.getpid(),

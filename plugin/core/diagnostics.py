@@ -4,6 +4,7 @@ from .logging import debug
 from .url import uri_to_filename
 from .protocol import Diagnostic
 from .events import Events
+from .views import range_to_region
 
 assert Diagnostic
 
@@ -84,7 +85,7 @@ def get_point_diagnostics(view, point):
     diagnostics = get_diagnostics_for_view(view)
     return tuple(
         diagnostic for diagnostic in diagnostics
-        if diagnostic.range.to_region(view).contains(point)
+        if range_to_region(diagnostic.range, view).contains(point)
     )
 
 

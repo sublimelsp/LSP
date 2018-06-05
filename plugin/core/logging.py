@@ -1,10 +1,16 @@
 import traceback
-from .settings import settings, PLUGIN_NAME
+
+log_debug = False
+
+
+def set_debug_logging(logging_enabled):
+    global log_debug
+    log_debug = logging_enabled
 
 
 def debug(*args):
     """Print args to the console if the "debug" setting is True."""
-    if settings.log_debug:
+    if log_debug:
         printf(*args)
 
 
@@ -18,6 +24,6 @@ def server_log(*args):
     printf(*args, prefix="server")
 
 
-def printf(*args, prefix=PLUGIN_NAME):
+def printf(*args, prefix='LSP'):
     """Print args to the console, prefixed by the plugin name."""
     print(prefix + ":", *args)

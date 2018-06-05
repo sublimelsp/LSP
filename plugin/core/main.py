@@ -18,7 +18,7 @@ from .settings import (
     ClientConfig, settings, load_settings, unload_settings
 )
 from .handlers import LanguageHandler
-from .logging import debug, exception_log, server_log
+from .logging import debug, exception_log, server_log, set_debug_logging
 from .rpc import attach_tcp_client, attach_stdio_client
 from .workspace import get_project_path
 from .configurations import (
@@ -39,6 +39,7 @@ from .edit import apply_workspace_edit
 
 def startup():
     load_settings()
+    set_debug_logging(settings.log_debug)
     load_handlers()
     Events.subscribe("view.on_load_async", initialize_on_open)
     Events.subscribe("view.on_activated_async", initialize_on_open)
@@ -218,15 +219,16 @@ def start_client(window: sublime.Window, config: ClientConfig):
         return None
 
     if config.tcp_port is not None:
-        client = attach_tcp_client(config.tcp_port, process, project_path)
+        client = attach_tcp_client(config.tcp_port, process, project_path, settings)
     else:
-        client = attach_stdio_client(process, project_path)
+        client = attach_stdio_client(process, project_path, settings)
 
     if not client:
         window.status_message("Could not connect to " + config.name + ", disabling")
         return None
 
     client.set_crash_handler(lambda: handle_server_crash(window, config))
+    client.set_error_display_handler(lambda msg: sublime.status_message(msg))
 
     initializeParams = {
         "processId": os.getpid(),

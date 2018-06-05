@@ -10,12 +10,13 @@ except ImportError:
     pass
 
 from .logging import debug
-from .protocol import Notification, Point
+from .protocol import Notification
 from .settings import settings
 from .url import filename_to_uri
 from .configurations import config_for_scope, is_supported_view, is_supported_syntax, is_supportable_syntax
 from .clients import client_for_view, client_for_closed_view, check_window_unloaded
 from .events import Events
+from .views import offset_to_point
 
 SUBLIME_WORD_MASK = 515
 
@@ -27,7 +28,7 @@ def get_document_position(view: sublime.View, point) -> 'Optional[OrderedDict]':
             point = view.sel()[0].begin()
         d = OrderedDict()  # type: OrderedDict[str, Any]
         d['textDocument'] = {"uri": filename_to_uri(file_name)}
-        d['position'] = Point.from_text_point(view, point).to_lsp()
+        d['position'] = offset_to_point(view, point).to_lsp()
         return d
     else:
         return None

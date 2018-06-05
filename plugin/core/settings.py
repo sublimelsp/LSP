@@ -1,4 +1,5 @@
 import sublime
+from .types import Settings
 
 PLUGIN_NAME = 'LSP'
 
@@ -41,59 +42,30 @@ def read_str_setting(settings_obj: sublime.Settings, key: str, default: str) -> 
         return default
 
 
-class Settings(object):
-
-    def __init__(self):
-        self.show_status_messages = True
-        self.show_view_status = True
-        self.auto_show_diagnostics_panel = True
-        self.show_diagnostics_phantoms = False
-        self.show_diagnostics_count_in_view_status = False
-        self.show_diagnostics_in_view_status = True
-        self.show_diagnostics_severity_level = 3
-        self.only_show_lsp_completions = False
-        self.diagnostics_highlight_style = "underline"
-        self.highlight_active_signature_parameter = True
-        self.document_highlight_style = "stippled"
-        self.document_highlight_scopes = {
-            "unknown": "text",
-            "text": "text",
-            "read": "markup.inserted",
-            "write": "markup.changed"
-        }
-        self.diagnostics_gutter_marker = "dot"
-        self.complete_all_chars = False
-        self.completion_hint_type = "auto"
-        self.resolve_completion_for_snippets = False
-        self.log_debug = True
-        self.log_server = True
-        self.log_stderr = False
-        self.log_payloads = False
-
-    def update(self, settings_obj: sublime.Settings):
-        self.show_status_messages = read_bool_setting(settings_obj, "show_status_messages", True)
-        self.show_view_status = read_bool_setting(settings_obj, "show_view_status", True)
-        self.auto_show_diagnostics_panel = read_bool_setting(settings_obj, "auto_show_diagnostics_panel", True)
-        self.show_diagnostics_phantoms = read_bool_setting(settings_obj, "show_diagnostics_phantoms", False)
-        self.show_diagnostics_count_in_view_status = read_bool_setting(settings_obj,
+def update_settings(settings: Settings, settings_obj: sublime.Settings):
+    settings.show_status_messages = read_bool_setting(settings_obj, "show_status_messages", True)
+    settings.show_view_status = read_bool_setting(settings_obj, "show_view_status", True)
+    settings.auto_show_diagnostics_panel = read_bool_setting(settings_obj, "auto_show_diagnostics_panel", True)
+    settings.show_diagnostics_phantoms = read_bool_setting(settings_obj, "show_diagnostics_phantoms", False)
+    settings.show_diagnostics_count_in_view_status = read_bool_setting(settings_obj,
                                                                        "show_diagnostics_count_in_view_status", False)
-        self.show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
-        self.show_diagnostics_severity_level = read_int_setting(settings_obj, "show_diagnostics_severity_level", 3)
-        self.diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
-        self.highlight_active_signature_parameter = read_bool_setting(settings_obj,
+    settings.show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
+    settings.show_diagnostics_severity_level = read_int_setting(settings_obj, "show_diagnostics_severity_level", 3)
+    settings.diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
+    settings.highlight_active_signature_parameter = read_bool_setting(settings_obj,
                                                                       "highlight_active_signature_parameter", True)
-        self.document_highlight_style = read_str_setting(settings_obj, "document_highlight_style", "stippled")
-        self.document_highlight_scopes = read_dict_setting(settings_obj, "document_highlight_scopes",
-                                                           self.document_highlight_scopes)
-        self.diagnostics_gutter_marker = read_str_setting(settings_obj, "diagnostics_gutter_marker", "dot")
-        self.only_show_lsp_completions = read_bool_setting(settings_obj, "only_show_lsp_completions", False)
-        self.complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
-        self.completion_hint_type = read_str_setting(settings_obj, "completion_hint_type", "auto")
-        self.resolve_completion_for_snippets = read_bool_setting(settings_obj, "resolve_completion_for_snippets", False)
-        self.log_debug = read_bool_setting(settings_obj, "log_debug", False)
-        self.log_server = read_bool_setting(settings_obj, "log_server", True)
-        self.log_stderr = read_bool_setting(settings_obj, "log_stderr", False)
-        self.log_payloads = read_bool_setting(settings_obj, "log_payloads", False)
+    settings.document_highlight_style = read_str_setting(settings_obj, "document_highlight_style", "stippled")
+    settings.document_highlight_scopes = read_dict_setting(settings_obj, "document_highlight_scopes",
+                                                           settings.document_highlight_scopes)
+    settings.diagnostics_gutter_marker = read_str_setting(settings_obj, "diagnostics_gutter_marker", "dot")
+    settings.only_show_lsp_completions = read_bool_setting(settings_obj, "only_show_lsp_completions", False)
+    settings.complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
+    settings.completion_hint_type = read_str_setting(settings_obj, "completion_hint_type", "auto")
+    settings.resolve_completion_for_snippets = read_bool_setting(settings_obj, "resolve_completion_for_snippets", False)
+    settings.log_debug = read_bool_setting(settings_obj, "log_debug", False)
+    settings.log_server = read_bool_setting(settings_obj, "log_server", True)
+    settings.log_stderr = read_bool_setting(settings_obj, "log_stderr", False)
+    settings.log_payloads = read_bool_setting(settings_obj, "log_payloads", False)
 
 
 class ClientConfig(object):
@@ -181,9 +153,9 @@ def load_settings():
     global _settings_obj
     loaded_settings_obj = sublime.load_settings("LSP.sublime-settings")
     _settings_obj = loaded_settings_obj
-    settings.update(loaded_settings_obj)
+    update_settings(settings, loaded_settings_obj)
     client_configs.update(loaded_settings_obj)
-    loaded_settings_obj.add_on_change("_on_new_settings", lambda: settings.update(loaded_settings_obj))
+    loaded_settings_obj.add_on_change("_on_new_settings", lambda: update_settings(settings, loaded_settings_obj))
     loaded_settings_obj.add_on_change("_on_new_client_settings", lambda: client_configs.update(loaded_settings_obj))
 
 

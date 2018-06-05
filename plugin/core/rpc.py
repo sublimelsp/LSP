@@ -1,5 +1,4 @@
 import json
-import sublime
 import threading
 import socket
 import time
@@ -11,9 +10,9 @@ try:
 except ImportError:
     pass
 
-from .settings import settings
 from .logging import debug, exception_log, server_log
 from .protocol import Request, Notification
+from .types import Settings
 
 
 ContentLengthHeader = b"Content-Length: "
@@ -28,7 +27,7 @@ def format_request(payload: 'Dict[str, Any]'):
     return result
 
 
-def attach_tcp_client(tcp_port, process, project_path):
+def attach_tcp_client(tcp_port, process, project_path, settings: Settings):
     if settings.log_stderr:
         attach_logger(process, process.stdout)
 
@@ -41,7 +40,7 @@ def attach_tcp_client(tcp_port, process, project_path):
             sock = socket.create_connection((host, tcp_port))
             transport = TCPTransport(sock)
 
-            return Client(process, transport, project_path)
+            return Client(process, transport, project_path, settings)
         except ConnectionRefusedError as e:
             pass
 
@@ -49,11 +48,13 @@ def attach_tcp_client(tcp_port, process, project_path):
     raise Exception("Timeout connecting to socket")
 
 
-def attach_stdio_client(process, project_path):
+def attach_stdio_client(process, project_path, settings: Settings):
     transport = StdioTransport(process)
+
+    # TODO: process owner can take care of this outside client?
     if settings.log_stderr:
         attach_logger(process, process.stderr)
-    return Client(process, transport, project_path)
+    return Client(process, transport, project_path, settings)
 
 
 def attach_logger(process, stream):
@@ -232,7 +233,7 @@ class StdioTransport(Transport):
 
 
 class Client(object):
-    def __init__(self, process, transport, project_path):
+    def __init__(self, process, transport, project_path, settings):
         self.process = process
         self.transport = transport
         self.transport.start(self.receive_payload, self.on_transport_closed)
@@ -245,6 +246,8 @@ class Client(object):
         self.capabilities = {}  # type: Dict[str, Any]
         self.exiting = False
         self._crash_handler = None  # type: Optional[Callable]
+        self._error_display_handler = lambda msg: debug(msg)
+        self.settings = settings
 
     def set_capabilities(self, capabilities):
         self.capabilities = capabilities
@@ -282,6 +285,9 @@ class Client(object):
     def set_crash_handler(self, handler: 'Callable'):
         self._crash_handler = handler
 
+    def set_error_display_handler(self, handler: 'Callable'):
+        self._error_display_handler = handler
+
     def handle_transport_failure(self):
         if self.process:
             try:
@@ -298,7 +304,7 @@ class Client(object):
                 message = format_request(payload)
                 self.transport.send(message)
             except Exception as err:
-                sublime.status_message("Failure sending LSP server message, exiting")
+                self._error_display_handler("Failure sending LSP server message, exiting")
                 exception_log("Failure writing payload", err)
                 self.handle_transport_failure()
 
@@ -326,7 +332,7 @@ class Client(object):
             exception_log("Error handling server payload", err)
 
     def on_transport_closed(self):
-        sublime.status_message("Communication to server closed, exiting")
+        self._error_display_handler("Communication to server closed, exiting")
         # Differentiate between normal exit and server crash?
         if not self.exiting:
             self.handle_transport_failure()
@@ -335,20 +341,20 @@ class Client(object):
         handler_id = int(response.get("id"))  # dotty sends strings back :(
         if 'result' in response and 'error' not in response:
             result = response['result']
-            if settings.log_payloads:
+            if self.settings.log_payloads:
                 debug('     ' + str(result))
             if handler_id in self._response_handlers:
                 self._response_handlers[handler_id](result)
             else:
-                debug("No handler found for id" + str(response.get("id")))
+                debug("No handler found for id " + str(response.get("id")))
         elif 'error' in response and 'result' not in response:
             error = response['error']
-            if settings.log_payloads:
+            if self.settings.log_payloads:
                 debug('     ' + str(error))
             if handler_id in self._error_handlers:
                 self._error_handlers[handler_id](error)
             else:
-                sublime.status_message(error.get('message'))
+                self._error_display_handler(error.get("message"))
         else:
             debug('invalid response payload', response)
 
@@ -362,7 +368,7 @@ class Client(object):
         params = request.get("params")
         method = request.get("method")
         debug('<--  ' + method)
-        if settings.log_payloads and params:
+        if self.settings.log_payloads and params:
             debug('     ' + str(params))
         if method in self._request_handlers:
             try:
@@ -377,7 +383,7 @@ class Client(object):
         params = notification.get("params")
         if method != "window/logMessage":
             debug('<--  ' + method)
-            if settings.log_payloads and params:
+            if self.settings.log_payloads and params:
                 debug('     ' + str(params))
         if method in self._notification_handlers:
             try:

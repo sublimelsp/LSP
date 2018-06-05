@@ -1,4 +1,3 @@
-import sublime
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
     assert Any and List and Dict and Tuple and Callable and Optional
@@ -211,13 +210,6 @@ class Point(object):
         r['character'] = self.col
         return r
 
-    @classmethod
-    def from_text_point(self, view: sublime.View, point: int) -> 'Point':
-        return Point(*view.rowcol(point))
-
-    def to_text_point(self, view) -> int:
-        return view.text_point(self.row, self.col)
-
 
 class Range(object):
     def __init__(self, start: Point, end: Point) -> None:
@@ -236,16 +228,6 @@ class Range(object):
         r['start'] = self.start.to_lsp()
         r['end'] = self.end.to_lsp()
         return r
-
-    @classmethod
-    def from_region(self, view: sublime.View, region: sublime.Region) -> 'Range':
-        return Range(
-            Point.from_text_point(view, region.begin()),
-            Point.from_text_point(view, region.end())
-        )
-
-    def to_region(self, view: sublime.View) -> sublime.Region:
-        return sublime.Region(self.start.to_text_point(view), self.end.to_text_point(view))
 
 
 class Diagnostic(object):

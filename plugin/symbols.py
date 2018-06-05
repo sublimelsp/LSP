@@ -4,7 +4,7 @@ from .core.clients import LspTextCommand
 from .core.clients import client_for_view
 from .core.protocol import Request, Range
 from .core.url import filename_to_uri
-
+from .core.views import range_to_region
 
 symbol_kind_names = {
     SymbolKind.File: "file",
@@ -62,7 +62,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
     def on_symbol_selected(self, symbol_index):
         selected_symbol = self.symbols[symbol_index]
         range = selected_symbol['location']['range']
-        region = Range.from_lsp(range).to_region(self.view)
+        region = range_to_region(Range.from_lsp(range), self.view)
         self.view.show_at_center(region)
         self.view.sel().clear()
         self.view.sel().add(region)

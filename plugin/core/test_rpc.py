@@ -1,4 +1,5 @@
-from .rpc import (format_request, Client, Transport)
+from .rpc import (format_request, Client)
+from .transports import Transport
 from .protocol import (Request)
 import unittest
 

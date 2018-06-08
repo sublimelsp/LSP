@@ -244,8 +244,7 @@ def start_client(window: sublime.Window, config: ClientConfig):
                 },
                 "completion": {
                     "completionItem": {
-                        "snippetSupport": True,
-                        "documentationFormat": ["plaintext"]
+                        "snippetSupport": True
                     },
                     "completionItemKind": {
                         "valueSet": [

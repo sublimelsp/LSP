@@ -25,6 +25,10 @@ def return_result(message):
     #     return '{"id": ' + str(request_id) + ', "result": {}}'
 
 
+def return_error(message):
+    return '{"id": 1, "error": {"message": "oops"}}'
+
+
 def notify_pong(message):
     notification = {
         "method": "pong"
@@ -119,3 +123,19 @@ class ClientTest(unittest.TestCase):
 
         transport.receive('{ "id": 1, "method": "ping"}')
         self.assertEqual(len(pings), 1)
+
+    def test_response_error(self):
+        transport = TestTransport(return_error)
+        settings = TestSettings()
+        client = Client(
+             None, transport, "", settings
+            )
+        self.assertIsNotNone(client)
+        self.assertTrue(transport.has_started)
+        req = Request.initialize(dict())
+        errors = []
+        client.set_error_display_handler(lambda err: errors.append(err))
+        responses = []
+        client.send_request(req, lambda resp: responses.append(resp))
+        self.assertEqual(len(responses), 0)
+        self.assertGreater(len(errors), 0)

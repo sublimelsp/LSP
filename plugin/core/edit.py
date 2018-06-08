@@ -11,33 +11,47 @@ from .views import range_to_region
 
 def apply_workspace_edit(window, params):
     edit = params.get('edit', dict())
-    window.run_command('lsp_apply_workspace_edit', {'changes': edit.get('changes')})
+    window.run_command('lsp_apply_workspace_edit', {'changes': edit.get('changes'),
+                                                    'documentChanges': edit.get('documentChanges')})
 
 
 class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
-    def run(self, changes=None):
+    def run(self, changes=None, documentChanges=None):
         # debug('workspace edit', changes)
+        documentsChanged = 0
         if changes:
             for uri, file_changes in changes.items():
                 path = uri_to_filename(uri)
-                view = self.window.open_file(path)
-                if view:
-                    if view.is_loading():
-                        # TODO: wait for event instead.
-                        sublime.set_timeout_async(
-                            lambda: view.run_command('lsp_apply_document_edit', {'changes': file_changes}),
-                            500
-                        )
-                    else:
-                        view.run_command('lsp_apply_document_edit',
-                                         {'changes': file_changes,
-                                          'show_status': False})
-                else:
-                    debug('view not found to apply', path, file_changes)
-            message = 'Applied changes to {} documents'.format(len(changes))
+                self.open_and_apply_edits(path, file_changes)
+                documentsChanged += 1
+        elif documentChanges:
+            for document in documentChanges:
+                uri = document.get('textDocument').get('uri')
+                path = uri_to_filename(uri)
+                self.open_and_apply_edits(path, document.get('edits'))
+                documentsChanged += 1
+
+        if documentsChanged > 0:
+            message = 'Applied changes to {} documents'.format(documentsChanged)
             self.window.status_message(message)
         else:
             self.window.status_message('No changes to apply to workspace')
+
+    def open_and_apply_edits(self, path, file_changes):
+        view = self.window.open_file(path)
+        if view:
+            if view.is_loading():
+                # TODO: wait for event instead.
+                sublime.set_timeout_async(
+                    lambda: view.run_command('lsp_apply_document_edit', {'changes': file_changes}),
+                    500
+                )
+            else:
+                view.run_command('lsp_apply_document_edit',
+                                 {'changes': file_changes,
+                                  'show_status': False})
+        else:
+            debug('view not found to apply', path, file_changes)
 
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):

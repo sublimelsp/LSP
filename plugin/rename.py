@@ -32,11 +32,9 @@ class LspSymbolRenameCommand(LspTextCommand):
 
     def handle_response(self, response):
         if response:
-            if 'changes' in response:
-                changes = response.get('changes')
-                if len(changes) > 0:
-                    self.view.window().run_command('lsp_apply_workspace_edit',
-                                                   {'changes': changes})
+            self.view.window().run_command('lsp_apply_workspace_edit',
+                                           {'changes': response.get('changes'),
+                                            'documentChanges': response.get('documentChanges')})
         else:
             self.view.window().status_message('No rename edits returned')
 

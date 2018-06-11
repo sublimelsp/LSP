@@ -30,7 +30,8 @@ class ClientStates(object):
 
 class ConfigState(object):
 
-    def __init__(self, state=ClientStates.STARTING, client=None):
+    def __init__(self, project_path, state=ClientStates.STARTING, client=None):
+        self.project_path = project_path
         self.state = state
         self.client = client
 
@@ -75,8 +76,8 @@ def can_start_config(window: sublime.Window, config_name: str):
     return config_name not in window_configs(window)
 
 
-def set_config_starting(window: sublime.Window, config_name: str):
-    clients_by_window.setdefault(window.id(), {})[config_name] = ConfigState()
+def set_config_starting(window: sublime.Window, project_path: str, config_name: str):
+    clients_by_window.setdefault(window.id(), {})[config_name] = ConfigState(project_path)
 
 
 def clear_config_state(window: sublime.Window, config_name: str):
@@ -84,8 +85,8 @@ def clear_config_state(window: sublime.Window, config_name: str):
     del configs[config_name]
 
 
-def set_config_ready(window: sublime.Window, config_name: str, client: 'Client'):
-    window_configs(window)[config_name] = ConfigState(ClientStates.READY, client)
+def set_config_ready(window: sublime.Window, project_path: str, config_name: str, client: 'Client'):
+    window_configs(window)[config_name] = ConfigState(project_path, ClientStates.READY, client)
     debug("{} client registered for window {}".format(config_name, window.id()))
 
 
@@ -175,9 +176,9 @@ def unload_old_clients(window: sublime.Window):
     configs = window_configs(window)
     clients_to_unload = {}
     for config_name, state in configs.items():
-        if state.client and state.state == ClientStates.READY and state.client.get_project_path() != project_path:
+        if state.client and state.state == ClientStates.READY and state.project_path != project_path:
             debug('unload', config_name, 'project path changed from',
-                  state.client.get_project_path(), 'to', project_path)
+                  state.project_path, 'to', project_path)
             clients_to_unload[config_name] = state.client
 
     for config_name, client in clients_to_unload.items():

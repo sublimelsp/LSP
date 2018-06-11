@@ -26,7 +26,7 @@ def format_request(payload: 'Dict[str, Any]'):
     return result
 
 
-def attach_tcp_client(tcp_port, process, project_path, settings: Settings):
+def attach_tcp_client(tcp_port, process, settings: Settings):
     if settings.log_stderr:
         attach_logger(process, process.stdout)
 
@@ -39,7 +39,7 @@ def attach_tcp_client(tcp_port, process, project_path, settings: Settings):
             sock = socket.create_connection((host, tcp_port))
             transport = TCPTransport(sock)
 
-            return Client(process, transport, project_path, settings)
+            return Client(process, transport, settings)
         except ConnectionRefusedError as e:
             pass
 
@@ -47,13 +47,13 @@ def attach_tcp_client(tcp_port, process, project_path, settings: Settings):
     raise Exception("Timeout connecting to socket")
 
 
-def attach_stdio_client(process, project_path, settings: Settings):
+def attach_stdio_client(process, settings: Settings):
     transport = StdioTransport(process)
 
     # TODO: process owner can take care of this outside client?
     if settings.log_stderr:
         attach_logger(process, process.stderr)
-    return Client(process, transport, project_path, settings)
+    return Client(process, transport, settings)
 
 
 def attach_logger(process, stream):
@@ -85,11 +85,10 @@ def log_stream(process, stream):
 
 
 class Client(object):
-    def __init__(self, process, transport, project_path, settings):
+    def __init__(self, process, transport, settings):
         self.process = process
         self.transport = transport
         self.transport.start(self.receive_payload, self.on_transport_closed)
-        self.project_path = project_path
         self.request_id = 0
         self._response_handlers = {}  # type: Dict[int, Callable]
         self._error_handlers = {}  # type: Dict[int, Callable]
@@ -103,9 +102,6 @@ class Client(object):
 
     def set_capabilities(self, capabilities):
         self.capabilities = capabilities
-
-    def get_project_path(self):
-        return self.project_path
 
     def has_capability(self, capability):
         return capability in self.capabilities and self.capabilities[capability] is not False

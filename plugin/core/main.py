@@ -126,7 +126,7 @@ def register_language_handler(handler: LanguageHandler) -> None:
         client_initialization_listeners[handler.name] = handler.on_initialized
 
 
-def handle_initialize_result(result, client, window, config):
+def handle_initialize_result(result, client, window, project_path, config):
     capabilities = result.get("capabilities")
     client.set_capabilities(capabilities)
 
@@ -172,7 +172,7 @@ def handle_initialize_result(result, client, window, config):
         client.send_notification(Notification.didChangeConfiguration(configParams))
 
     # now the client should be available outside the initialization sequence
-    set_config_ready(window, config.name, client)
+    set_config_ready(window, project_path, config.name, client)
 
     for view in open_after_initialize_by_window[window.id()]:
         notify_did_open(view)
@@ -182,10 +182,7 @@ def handle_initialize_result(result, client, window, config):
     del open_after_initialize_by_window[window.id()]
 
 
-def start_client(window: sublime.Window, config: ClientConfig):
-    project_path = get_project_path(window)
-    if project_path is None:
-        return None
+def start_client(window: sublime.Window, project_path: str, config: ClientConfig):
 
     if config.name in client_start_listeners:
         handler_startup_hook = client_start_listeners[config.name]
@@ -219,9 +216,9 @@ def start_client(window: sublime.Window, config: ClientConfig):
         return None
 
     if config.tcp_port is not None:
-        client = attach_tcp_client(config.tcp_port, process, project_path, settings)
+        client = attach_tcp_client(config.tcp_port, process, settings)
     else:
-        client = attach_stdio_client(process, project_path, settings)
+        client = attach_stdio_client(process, settings)
 
     if not client:
         window.status_message("Could not connect to " + config.name + ", disabling")
@@ -317,14 +314,19 @@ def start_client(window: sublime.Window, config: ClientConfig):
 
     client.send_request(
         Request.initialize(initializeParams),
-        lambda result: handle_initialize_result(result, client, window, config))
+        lambda result: handle_initialize_result(result, client, window, project_path, config))
     return client
 
 
 def start_window_client(view: sublime.View, window: sublime.Window, config: ClientConfig):
+    project_path = get_project_path(window)
+    if project_path is None:
+        debug('Cannot start without a project folder')
+        return
+
     if can_start_config(window, config.name):
-        set_config_starting(window, config.name)
-        client = start_client(window, config)
+        set_config_starting(window, project_path, config.name)
+        client = start_client(window, project_path, config)
         if client is None:  # clear starting state for config if not starting.
             clear_config_state(window, config.name)
     else:

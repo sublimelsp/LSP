@@ -315,6 +315,7 @@ These can be customized as follows by adding an override in the User LSP.sublime
 * `languageId` - used both by the language servers and to select a syntax highlighter for sublime popups.
 * `enabled` - disable a language server globally, or per-project
 * `settings` - per-project settings (equivalent to VS Code's Workspace Settings)
+* `env` - dict of environment variables to be injected into the language server's process (eg. PYTHONPATH)
 * `initializationOptions` - options to send to the server at startup (rarely used)
 
 ## Per-project overrides

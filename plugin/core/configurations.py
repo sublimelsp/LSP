@@ -1,3 +1,4 @@
+import re
 import sublime
 
 from .settings import ClientConfig, client_configs
@@ -113,14 +114,14 @@ def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -
 def is_supportable_syntax(syntax: str) -> bool:
     # TODO: filter out configs disabled by the user.
     for config in client_configs.defaults:
-        if syntax in config.syntaxes:
+        if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in config.syntaxes), syntax, re.IGNORECASE):
             return True
     return False
 
 
 def is_supported_syntax(syntax: str) -> bool:
     for config in client_configs.all:
-        if syntax in config.syntaxes:
+        if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in config.syntaxes), syntax, re.IGNORECASE):
             return True
     return False
 

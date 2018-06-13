@@ -17,13 +17,17 @@ window_client_configs = dict()  # type: Dict[int, List[ClientConfig]]
 
 
 def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':
+    scope_score = 0
+    scope_client_config = None
     for config in configs:
         for scope in config.scopes:
-            if len(view.sel()) > 0:
-                if view.match_selector(view.sel()[0].begin(), scope):
-                    return config
-
-    return None
+            sel = view.sel()
+            if len(sel) > 0:
+                score = view.score_selector(sel[0].begin(), scope)
+                if score > scope_score:
+                    scope_score = score
+                    scope_client_config = config
+    return scope_client_config
 
 
 def register_client_config(config: ClientConfig) -> None:

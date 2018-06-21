@@ -8,6 +8,6 @@ before_install:
 script:
     - mypy -p plugin
     - flake8 --exclude=./boot.py
-    - coverage run --source=. -m unittest discover
+    - coverage run -m unittest discover
 after_success:
     - coveralls

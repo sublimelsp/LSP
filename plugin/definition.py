@@ -31,12 +31,14 @@ class LspSymbolDefinitionCommand(LspTextCommand):
         window = sublime.active_window()
         if response:
             location = response if isinstance(response, dict) else response[0]
-            file_path = uri_to_filename(location.get("uri"))
-            start = Point.from_lsp(location['range']['start'])
-            file_location = "{}:{}:{}".format(file_path, start.row + 1, start.col + 1)
-            debug("opening location", location)
-            window.open_file(file_location, sublime.ENCODED_POSITION)
-            # TODO: can add region here.
+            uri = location.get("uri")
+            if uri:
+                file_path = uri_to_filename(uri)
+                start = Point.from_lsp(location['range']['start'])
+                file_location = "{}:{}:{}".format(file_path, start.row + 1, start.col + 1)
+                debug("opening location", location)
+                window.open_file(file_location, sublime.ENCODED_POSITION)
+                # TODO: can add region here.
         else:
             window.run_command("goto_definition")
 

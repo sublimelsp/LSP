@@ -79,7 +79,7 @@ class LspHoverCommand(LspTextCommand):
 
     def diagnostics_content(self, diagnostics):
         formatted_errors = list(
-            "<pre>{}</pre>".format(diagnostic.message)
+            "<pre>{}</pre>".format("[{}] {}".format(diagnostic.source, diagnostic.message) if diagnostic.source else "{}".format(diagnostic.message))
             for diagnostic in diagnostics
             if diagnostic.severity == DiagnosticSeverity.Error)
         formatted = []
@@ -91,7 +91,7 @@ class LspHoverCommand(LspTextCommand):
             formatted.append("</div>")
 
         formatted_warnings = list(
-            "<pre>{}</pre>".format(diagnostic.message)
+            "<pre>{}</pre>".format("[{}] {}".format(diagnostic.source, diagnostic.message) if diagnostic.source else "{}".format(diagnostic.message))
             for diagnostic in diagnostics
             if diagnostic.severity == DiagnosticSeverity.Warning)
 

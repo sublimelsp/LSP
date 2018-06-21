@@ -17,6 +17,10 @@ window_client_configs = dict()  # type: Dict[int, List[ClientConfig]]
 
 
 def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':
+    # When there are multiple server configurations, all of which are for
+    # similar scopes (e.g. 'source.json', 'source.json.sublime.settings') the
+    # configuration with the most specific scope (highest ranked selector)
+    # in the current position is preferred.
     scope_score = 0
     scope_client_config = None
     for config in configs:

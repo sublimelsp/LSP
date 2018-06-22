@@ -1,5 +1,4 @@
 import os
-import subprocess
 
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional, Set
@@ -18,7 +17,7 @@ from .settings import (
     ClientConfig, settings, load_settings, unload_settings
 )
 from .handlers import LanguageHandler
-from .logging import debug, exception_log, server_log, set_debug_logging
+from .logging import debug, server_log, set_debug_logging
 from .rpc import attach_tcp_client, attach_stdio_client
 from .workspace import get_project_path
 from .configurations import (
@@ -35,6 +34,7 @@ from .documents import (
 )
 from .diagnostics import handle_client_diagnostics, remove_diagnostics
 from .edit import apply_workspace_edit
+from .process import start_server
 
 
 def startup():
@@ -331,27 +331,6 @@ def start_window_client(view: sublime.View, window: sublime.Window, config: Clie
             clear_config_state(window, config.name)
     else:
         debug('Already starting on this window:', config.name)
-
-
-def start_server(server_binary_args, working_dir, env):
-    debug("starting " + str(server_binary_args))
-    si = None
-    if os.name == "nt":
-        si = subprocess.STARTUPINFO()  # type: ignore
-        si.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW  # type: ignore
-    try:
-        return subprocess.Popen(
-            server_binary_args,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            cwd=working_dir,
-            env=env,
-            startupinfo=si)
-
-    except Exception as err:
-        sublime.status_message("Failed to start LSP server {}".format(str(server_binary_args)))
-        exception_log("Failed to start server", err)
 
 
 def handle_server_crash(window: sublime.Window, config: ClientConfig):

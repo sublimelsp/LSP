@@ -5,6 +5,7 @@ from .logging import debug, exception_log
 from .configurations import config_for_scope, is_supported_view
 from .protocol import Request
 from .workspace import get_project_path
+from .types import ClientStates, ConfigState
 
 # typing only
 from .rpc import Client
@@ -20,20 +21,6 @@ except ImportError:
 
 
 clients_by_window = {}  # type: Dict[int, Dict[str, ConfigState]]
-
-
-class ClientStates(object):
-    STARTING = 0
-    READY = 1
-    STOPPING = 2
-
-
-class ConfigState(object):
-
-    def __init__(self, project_path, state=ClientStates.STARTING, client=None):
-        self.project_path = project_path
-        self.state = state
-        self.client = client
 
 
 class LspTextCommand(sublime_plugin.TextCommand):
@@ -74,6 +61,10 @@ def is_ready_window_config(window: sublime.Window, config_name: str):
 
 def can_start_config(window: sublime.Window, config_name: str):
     return config_name not in window_configs(window)
+
+
+def start_session(config: ClientConfig, project_path: str):
+    return None
 
 
 def set_config_starting(window: sublime.Window, project_path: str, config_name: str):

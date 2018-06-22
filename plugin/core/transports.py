@@ -1,8 +1,11 @@
 from abc import ABCMeta, abstractmethod
 import threading
+import time
+import socket
 from .logging import exception_log, debug
 
 ContentLengthHeader = b"Content-Length: "
+TCP_CONNECT_TIMEOUT = 5
 
 
 class Transport(object,  metaclass=ABCMeta):
@@ -21,6 +24,22 @@ class Transport(object,  metaclass=ABCMeta):
 
 STATE_HEADERS = 0
 STATE_CONTENT = 1
+
+
+def start_tcp_transport(port):
+    host = "localhost"
+    start_time = time.time()
+    debug('connecting to {}:{}'.format(host, port))
+
+    while time.time() - start_time < TCP_CONNECT_TIMEOUT:
+        try:
+            sock = socket.create_connection((host, port))
+            return TCPTransport(sock)
+        except ConnectionRefusedError as e:
+            pass
+
+    # process.kill()
+    raise Exception("Timeout connecting to socket")
 
 
 class TCPTransport(Transport):

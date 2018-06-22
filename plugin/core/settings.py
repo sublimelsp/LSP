@@ -1,5 +1,5 @@
 import sublime
-from .types import Settings
+from .types import Settings, ClientConfig
 
 PLUGIN_NAME = 'LSP'
 
@@ -66,41 +66,6 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings):
     settings.log_server = read_bool_setting(settings_obj, "log_server", True)
     settings.log_stderr = read_bool_setting(settings_obj, "log_stderr", False)
     settings.log_payloads = read_bool_setting(settings_obj, "log_payloads", False)
-
-
-class ClientConfig(object):
-    def __init__(self, name, binary_args, tcp_port, scopes, syntaxes, languageId,
-                 enabled=True, init_options=dict(), settings=dict(), env=dict()):
-        self.name = name
-        self.binary_args = binary_args
-        self.tcp_port = tcp_port
-        self.scopes = scopes
-        self.syntaxes = syntaxes
-        self.languageId = languageId
-        self.enabled = enabled
-        self.init_options = init_options
-        self.settings = settings
-        self.env = env
-
-    def apply_settings(self, settings: dict) -> None:
-        if "command" in settings:
-            self.binary_args = settings.get("command", [])
-        if "tcp_port" in settings:
-            self.tcp_port = settings.get("tcp_port", None)
-        if "scopes" in settings:
-            self.scopes = settings.get("scopes", [])
-        if "syntaxes" in settings:
-            self.syntaxes = settings.get("syntaxes", [])
-        if "languageId" in settings:
-            self.languageId = settings.get("languageId", "")
-        if "enabled" in settings:
-            self.enabled = settings.get("enabled", True)
-        if "initializationOptions" in settings:
-            self.init_options = settings.get("initializationOptions", dict())
-        if "settings" in settings:
-            self.settings = settings.get("settings", dict())
-        if "env" in settings:
-            self.env = settings.get("env", dict())
 
 
 class ClientConfigs(object):

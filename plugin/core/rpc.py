@@ -1,8 +1,8 @@
 import json
-import threading
 import socket
 import time
 from .transports import TCPTransport, StdioTransport
+from .process import attach_logger
 
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
@@ -10,7 +10,7 @@ try:
 except ImportError:
     pass
 
-from .logging import debug, exception_log, server_log
+from .logging import debug, exception_log
 from .protocol import Request, Notification
 from .types import Settings
 
@@ -65,34 +65,6 @@ def try_terminate_process(process):
         process.terminate()
     except ProcessLookupError:
         pass  # process can be terminated already
-
-
-def attach_logger(process, stream):
-    threading.Thread(target=lambda: log_stream(process, stream)).start()
-
-
-def log_stream(process, stream):
-    """
-    Reads any errors from the LSP process.
-    """
-    running = True
-    while running:
-        running = process.poll() is None
-
-        try:
-            content = stream.readline()
-            if not content:
-                break
-            try:
-                decoded = content.decode("UTF-8")
-            except UnicodeDecodeError:
-                decoded = content
-            server_log(decoded.strip())
-        except IOError as err:
-            exception_log("Failure reading stream", err)
-            return
-
-    debug("LSP stream logger stopped.")
 
 
 class Client(object):

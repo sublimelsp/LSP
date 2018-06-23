@@ -39,7 +39,9 @@ def attach_tcp_client(tcp_port, process, settings: Settings):
             sock = socket.create_connection((host, tcp_port))
             transport = TCPTransport(sock)
 
-            return Client(process, transport, settings)
+            client = Client(transport, settings)
+            client.set_transport_failure_handler(lambda: try_terminate_process(process))
+            return client
         except ConnectionRefusedError as e:
             pass
 
@@ -53,7 +55,16 @@ def attach_stdio_client(process, settings: Settings):
     # TODO: process owner can take care of this outside client?
     if settings.log_stderr:
         attach_logger(process, process.stderr)
-    return Client(process, transport, settings)
+    client = Client(transport, settings)
+    client.set_transport_failure_handler(lambda: try_terminate_process(process))
+    return client
+
+
+def try_terminate_process(process):
+    try:
+        process.terminate()
+    except ProcessLookupError:
+        pass  # process can be terminated already
 
 
 def attach_logger(process, stream):
@@ -85,8 +96,7 @@ def log_stream(process, stream):
 
 
 class Client(object):
-    def __init__(self, process, transport, settings):
-        self.process = process
+    def __init__(self, transport, settings):
         self.transport = transport
         self.transport.start(self.receive_payload, self.on_transport_closed)
         self.request_id = 0
@@ -97,6 +107,7 @@ class Client(object):
         self.capabilities = {}  # type: Dict[str, Any]
         self.exiting = False
         self._crash_handler = None  # type: Optional[Callable]
+        self._transport_fail_handler = None  # type: Optional[Callable]
         self._error_display_handler = lambda msg: debug(msg)
         self.settings = settings
 
@@ -126,25 +137,20 @@ class Client(object):
         self.exiting = True
         self.send_notification(Notification.exit())
 
-    def kill(self):
-        self.process.kill()
-        self.process = None
-
     def set_crash_handler(self, handler: 'Callable'):
         self._crash_handler = handler
 
     def set_error_display_handler(self, handler: 'Callable'):
         self._error_display_handler = handler
 
+    def set_transport_failure_handler(self, handler: 'Callable'):
+        self._transport_fail_handler = handler
+
     def handle_transport_failure(self):
-        if self.process:
-            try:
-                self.process.terminate()
-            except ProcessLookupError:
-                pass  # process can be terminated already
-            self.process = None
-            if self._crash_handler is not None:
-                self._crash_handler()
+        if self._transport_fail_handler is not None:
+            self._transport_fail_handler()
+        if self._crash_handler is not None:
+            self._crash_handler()
 
     def send_payload(self, payload):
         if self.transport:

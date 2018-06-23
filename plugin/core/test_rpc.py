@@ -69,7 +69,7 @@ class ClientTest(unittest.TestCase):
     def test_can_create_client(self):
         transport = TestTransport()
         client = Client(
-             None, transport, dict()
+             transport, dict()
             )
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
@@ -78,7 +78,7 @@ class ClientTest(unittest.TestCase):
         transport = TestTransport(return_result)
         settings = TestSettings()
         client = Client(
-             None, transport, settings
+             transport, settings
             )
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
@@ -91,7 +91,7 @@ class ClientTest(unittest.TestCase):
         transport = TestTransport(notify_pong)
         settings = TestSettings()
         client = Client(
-             None, transport, settings
+             transport, settings
             )
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
@@ -111,7 +111,7 @@ class ClientTest(unittest.TestCase):
         transport = TestTransport()
         settings = TestSettings()
         client = Client(
-             None, transport, settings
+             transport, settings
             )
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
@@ -128,7 +128,7 @@ class ClientTest(unittest.TestCase):
         transport = TestTransport(return_error)
         settings = TestSettings()
         client = Client(
-             None, transport, settings
+             transport, settings
             )
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)

@@ -1,38 +1,36 @@
 [
-    {
-        "keys": ["ctrl+."],
-        "command": "lsp_code_actions"
-    },
-    {
-        "keys": ["ctrl+alt+m"],
-        "command": "lsp_show_diagnostics_panel"
-    },
-    {
-        "keys": ["shift+f12"],
-        "command": "lsp_symbol_references"
-    },
-    {
-        "keys": ["ctrl+alt+space"],
-        "command": "noop",
-        "context":
-        [
-            { "key": "lsp.signature_help", "operator": "equal", "operand": 0}
-        ]
-    },
-    {
-        "keys": ["down"],
-        "command": "noop",
-        "context":
-        [
-            { "key": "lsp.signature_help", "operator": "equal", "operand": 1 }
-        ]
-    },
-    {
-        "keys": ["up"],
-        "command": "noop",
-        "context":
-        [
-            { "key": "lsp.signature_help", "operator": "equal", "operand": -1 }
-        ]
-    }
+    // Show Code Actions
+    { "keys": ["ctrl+."], "command": "lsp_code_actions" },
+
+    // Show/Hide Diagnostics Panel
+    { "keys": ["ctrl+alt+m"], "command": "lsp_show_diagnostics_panel" },
+
+    // Go To Next/Previous Diagnostics - THIS OVERRIDES DEFAULT SUBLIME KEYBINDINGS
+    // { "keys": ["f4"], "command": "next_result" },
+    // { "keys": ["shift+f4"], "command": "prev_result" },
+
+    // Trigger Signature Help
+    { "keys": ["ctrl+alt+space"], "command": "noop", "context": [{ "key": "lsp.signature_help", "operator": "equal", "operand": 0}] },
+
+    // Move Up/Down in Signature Help
+    { "keys": ["up"], "command": "noop", "context": [{ "key": "lsp.signature_help", "operator": "equal", "operand": -1 }] },
+    { "keys": ["down"], "command": "noop", "context": [{ "key": "lsp.signature_help", "operator": "equal", "operand": 1 }] },
+
+     // Find Symbol References
+    { "keys": ["shift+f12"], "command": "lsp_symbol_references" },
+
+    // Go To Definition
+    // {"keys": ["UNBOUND"], "command": "lsp_symbol_definition"},
+
+    // Rename Symbol
+    // { "keys": ["UNBOUND"], "command": "lsp_symbol_rename" },
+
+    // Format Document
+    // {"keys": ["UNBOUND"], "command": "lsp_format_document"},
+
+    // Format Selection
+    // {"keys": ["UNBOUND"], "command": "lsp_format_document_range"},
+    
+    // Document Symbols
+    // {"keys": ["UNBOUND"], "command": "lsp_document_symbols"},
 ]

@@ -29,6 +29,10 @@ def return_error(message):
     return '{"id": 1, "error": {"message": "oops"}}'
 
 
+def raise_error(message):
+    raise Exception(message)
+
+
 def notify_pong(message):
     notification = {
         "method": "pong"
@@ -129,3 +133,36 @@ class ClientTest(unittest.TestCase):
         client.send_request(req, lambda resp: responses.append(resp))
         self.assertEqual(len(responses), 0)
         self.assertGreater(len(errors), 0)
+
+    def test_forwards_transport_error(self):
+        transport = TestTransport(raise_error)
+        settings = TestSettings()
+        client = Client(transport, settings)
+        errors = []
+        client.set_transport_failure_handler(lambda: errors.append(""))
+        self.assertTrue(transport.has_started)
+        responses = []
+        req = Request.initialize(dict())
+        client.send_request(req, lambda resp: responses.append(resp))
+        self.assertEqual(len(responses), 0)
+        self.assertGreater(len(errors), 0)
+
+    def test_handles_transport_closed_unexpectedly(self):
+        transport = TestTransport(raise_error)
+        settings = TestSettings()
+        client = Client(transport, settings)
+        errors = []
+        client.set_transport_failure_handler(lambda: errors.append(""))
+        self.assertTrue(transport.has_started)
+        transport.close()
+        self.assertGreater(len(errors), 0)
+
+    def test_survives_handler_error(self):
+        transport = TestTransport(return_result)
+        settings = TestSettings()
+        client = Client(transport, settings)
+        self.assertIsNotNone(client)
+        self.assertTrue(transport.has_started)
+        req = Request.initialize(dict())
+        client.send_request(req, lambda resp: raise_error('handler failed'))
+        # exception would fail test if not handled in client

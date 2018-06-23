@@ -67,10 +67,8 @@ stylesheet = '''
             </style>
         '''
 
-UNDERLINE_FLAGS = (sublime.DRAW_SQUIGGLY_UNDERLINE
-                   | sublime.DRAW_NO_OUTLINE
-                   | sublime.DRAW_NO_FILL
-                   | sublime.DRAW_EMPTY_AS_OVERWRITE)
+UNDERLINE_FLAGS = (sublime.DRAW_SQUIGGLY_UNDERLINE | sublime.DRAW_NO_OUTLINE | sublime.DRAW_NO_FILL |
+                   sublime.DRAW_EMPTY_AS_OVERWRITE)
 
 BOX_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_EMPTY_AS_OVERWRITE
 

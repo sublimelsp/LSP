@@ -24,7 +24,7 @@ class TCPOnlyBootstrapper(ClientBootstrapper):
     def when_ready(self, receive_client):
         transport = start_tcp_transport(self._port)
         if transport:
-            receive_client(Client(None, transport, self._settings))
+            receive_client(Client(transport, self._settings))
 
 
 class ProcessManager(object):
@@ -49,7 +49,7 @@ class StdioServerBootstrapper(ClientBootstrapper):
         self._process_manager.start(lambda process: self._receive_process(process))
 
     def _receive_process(self, process):
-        self._client_receiver(Client(process, StdioTransport(process), self._settings))
+        self._client_receiver(Client(StdioTransport(process), self._settings))
 
 
 class TCPServerBootstrapper(ClientBootstrapper):
@@ -67,7 +67,7 @@ class TCPServerBootstrapper(ClientBootstrapper):
     def _receive_process(self, process):
         self._process = process
         transport = start_tcp_transport(self._port)
-        self._client_receiver(Client(self._process, transport, self._settings))
+        self._client_receiver(Client(transport, self._settings))
 
 
 def create_session(config: ClientConfig, project_path: str, env: dict, settings, bootstrap_client=None) -> 'Session':
@@ -76,9 +76,13 @@ def create_session(config: ClientConfig, project_path: str, env: dict, settings,
             # session = Session(project_path, ClientProvider(TcpTransportProvider(
             # ProcessProvider(config, project_path), config.tcp_port)))
             session = Session(project_path,
-                              TCPServerBootstrapper(ProcessManager(config, project_path, env), config.tcp_port, settings))
+                              TCPServerBootstrapper(ProcessManager(config, project_path, env),
+                                                    config.tcp_port,
+                                                    settings))
         else:
-            session = Session(project_path, StdioServerBootstrapper(ProcessManager(config, project_path, env), settings))
+            session = Session(project_path,
+                              StdioServerBootstrapper(ProcessManager(config, project_path, env),
+                                                      settings))
     else:
         if config.tcp_port:
             session = Session(project_path, TCPOnlyBootstrapper(config.tcp_port, settings))

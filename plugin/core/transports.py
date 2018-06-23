@@ -8,7 +8,7 @@ ContentLengthHeader = b"Content-Length: "
 TCP_CONNECT_TIMEOUT = 5
 
 
-class Transport(object,  metaclass=ABCMeta):
+class Transport(object, metaclass=ABCMeta):
     @abstractmethod
     def __init__(self):
         pass

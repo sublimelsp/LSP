@@ -263,7 +263,7 @@ def start_client(window: sublime.Window, project_path: str, config: ClientConfig
                             CompletionItemKind.Color,
                             CompletionItemKind.File,
                             CompletionItemKind.Reference
-                            ]
+                        ]
                     }
                 },
                 "signatureHelp": {
@@ -294,7 +294,7 @@ def start_client(window: sublime.Window, project_path: str, config: ClientConfig
                             # SymbolKind.Number,
                             # SymbolKind.Boolean,
                             # SymbolKind.Array
-                            ]
+                        ]
                     }
                 },
                 "formatting": {},

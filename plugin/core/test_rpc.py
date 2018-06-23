@@ -68,18 +68,14 @@ class ClientTest(unittest.TestCase):
 
     def test_can_create_client(self):
         transport = TestTransport()
-        client = Client(
-             transport, dict()
-            )
+        client = Client(transport, dict())
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
 
     def test_client_request_response(self):
         transport = TestTransport(return_result)
         settings = TestSettings()
-        client = Client(
-             transport, settings
-            )
+        client = Client(transport, settings)
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
         req = Request.initialize(dict())
@@ -90,9 +86,7 @@ class ClientTest(unittest.TestCase):
     def test_client_notification(self):
         transport = TestTransport(notify_pong)
         settings = TestSettings()
-        client = Client(
-             transport, settings
-            )
+        client = Client(transport, settings)
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
         pongs = []
@@ -110,9 +104,7 @@ class ClientTest(unittest.TestCase):
 
         transport = TestTransport()
         settings = TestSettings()
-        client = Client(
-             transport, settings
-            )
+        client = Client(transport, settings)
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
         pings = []
@@ -127,9 +119,7 @@ class ClientTest(unittest.TestCase):
     def test_response_error(self):
         transport = TestTransport(return_error)
         settings = TestSettings()
-        client = Client(
-             transport, settings
-            )
+        client = Client(transport, settings)
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
         req = Request.initialize(dict())

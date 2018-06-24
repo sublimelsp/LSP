@@ -17,22 +17,27 @@ except ImportError:
 window_client_configs = dict()  # type: Dict[int, List[ClientConfig]]
 
 
-def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':
+def _get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]') -> 'Tuple[Optional[ClientConfig], int]':
     # When there are multiple server configurations, all of which are for
     # similar scopes (e.g. 'source.json', 'source.json.sublime.settings') the
     # configuration with the most specific scope (highest ranked selector)
     # in the current position is preferred.
-    scope_score = 0
     scope_client_config = None
-    for config in configs:
-        for scope in config.scopes:
-            sel = view.sel()
-            if len(sel) > 0:
-                score = view.score_selector(sel[0].begin(), scope)
+    scope_score = 0
+    sel = view.sel()
+    if len(sel) > 0:
+        pos = sel[0].begin()
+        for config in configs:
+            for scope in config.scopes:
+                score = view.score_selector(pos, scope)
                 if score > scope_score:
                     scope_score = score
                     scope_client_config = config
-    return scope_client_config
+    return scope_client_config, scope_score
+
+
+def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':
+    return _get_scope_client_config(view, configs)[0]
 
 
 def register_client_config(config: ClientConfig) -> None:
@@ -59,12 +64,15 @@ def get_window_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
 
 def config_for_scope(view: sublime.View) -> 'Optional[ClientConfig]':
     # check window_client_config first
-    window_client_config = get_window_client_config(view)
-    if not window_client_config:
-        global_client_config = get_global_client_config(view)
-
+    window = view.window()
+    if window:
+        configs_for_window = window_client_configs.get(window.id(), [])
+        window_client_config, window_score = _get_scope_client_config(view, configs_for_window)
+    else:
+        window_client_config, window_score = None, 0
+    global_client_config, global_score = _get_scope_client_config(view, client_configs.all)
+    if not window_client_config or global_score > window_score:
         if global_client_config:
-            window = view.window()
             if window:
                 window_client_config = apply_window_settings(global_client_config, view)
                 add_window_client_config(window, window_client_config)

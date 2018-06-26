@@ -11,7 +11,7 @@ from .core.protocol import Request
 from .core.settings import settings
 from .core.logging import debug, exception_log
 from .core.protocol import CompletionItemKind, Range
-from .core.clients import client_for_view
+from .core.clients import session_for_view, client_for_view
 from .core.configurations import is_supported_syntax
 from .core.documents import get_document_position, purge_did_change
 
@@ -53,9 +53,9 @@ current_completion = None  # type: Optional[CompletionContext]
 
 
 def has_resolvable_completions(view):
-    client = client_for_view(view)
-    if client:
-        completionProvider = client.get_capability(
+    session = session_for_view(view)
+    if session:
+        completionProvider = session.get_capability(
             'completionProvider')
         if completionProvider:
             if completionProvider.get('resolveProvider', False):
@@ -88,11 +88,13 @@ class CompletionSnippetHandler(sublime_plugin.EventListener):
                     current_completion = None
 
     def resolve_completion(self, item, view):
-        client = client_for_view(view)
-        if not client:
+        session = session_for_view(view)
+        if not session:
+            return
+        if not session.client:
             return
 
-        client.send_request(
+        session.client.send_request(
             Request.resolveCompletionItem(item),
             lambda response: self.handle_resolve_response(response, view))
 
@@ -142,9 +144,9 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
     def initialize(self):
         self.initialized = True
-        client = client_for_view(self.view)
-        if client:
-            completionProvider = client.get_capability(
+        session = session_for_view(self.view)
+        if session:
+            completionProvider = session.get_capability(
                 'completionProvider')
             if completionProvider:
                 self.enabled = True

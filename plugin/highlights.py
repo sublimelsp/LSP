@@ -2,7 +2,7 @@ import sublime_plugin
 
 from .core.configurations import is_supported_syntax
 from .core.protocol import Request, Range, DocumentHighlightKind
-from .core.clients import client_for_view
+from .core.clients import session_for_view, client_for_view
 from .core.documents import get_document_position
 from .core.settings import settings
 from .core.views import range_to_region
@@ -48,9 +48,9 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
 
     def _initialize(self) -> None:
         self._initialized = True
-        client = client_for_view(self.view)
-        if client:
-            self._enabled = client.get_capability("documentHighlightProvider")
+        session = session_for_view(self.view)
+        if session:
+            self._enabled = session.get_capability("documentHighlightProvider")
 
     def _queue(self) -> None:
         self._stored_point = self.view.sel()[0].begin()

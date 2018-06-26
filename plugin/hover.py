@@ -5,7 +5,7 @@ import webbrowser
 
 from .core.configurations import is_supported_syntax
 from .core.diagnostics import get_point_diagnostics
-from .core.clients import LspTextCommand, client_for_view
+from .core.clients import LspTextCommand, session_for_view
 from .core.protocol import Request, DiagnosticSeverity
 from .core.documents import get_document_position
 from .core.popups import popup_css, popup_class
@@ -47,13 +47,15 @@ class LspHoverCommand(LspTextCommand):
             self.show_hover(point, self.diagnostics_content(point_diagnostics))
 
     def request_symbol_hover(self, point):
-        client = client_for_view(self.view)
-        if client and client.has_capability('hoverProvider'):
-            document_position = get_document_position(self.view, point)
-            if document_position:
-                client.send_request(
-                    Request.hover(document_position),
-                    lambda response: self.handle_response(response, point))
+        session = session_for_view(self.view)
+        if session:
+            if session.has_capability('hoverProvider'):
+                document_position = get_document_position(self.view, point)
+                if document_position:
+                    if session.client:
+                        session.client.send_request(
+                            Request.hover(document_position),
+                            lambda response: self.handle_response(response, point))
 
     def handle_response(self, response, point):
         all_content = ""

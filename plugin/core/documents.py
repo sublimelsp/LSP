@@ -247,6 +247,7 @@ def initialize_document_sync(text_document_sync_kind):
     global document_sync_initialized
     if document_sync_initialized:
         return
+
     document_sync_initialized = True
     # TODO: hook up events per scope/client
     Events.subscribe('view.on_load_async', notify_did_open)

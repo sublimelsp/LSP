@@ -12,7 +12,7 @@ except ImportError:
     pass
 
 
-from .core.clients import client_for_view
+from .core.clients import session_for_view, client_for_view
 from .core.documents import get_document_position, purge_did_change
 from .core.configurations import is_supported_syntax, config_for_scope
 from .core.protocol import Request
@@ -39,9 +39,9 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         return syntax and is_supported_syntax(syntax)
 
     def initialize(self):
-        client = client_for_view(self.view)
-        if client:
-            signatureHelpProvider = client.get_capability(
+        session = session_for_view(self.view)
+        if session:
+            signatureHelpProvider = session.get_capability(
                 'signatureHelpProvider')
             if signatureHelpProvider:
                 self._signature_help_triggers = signatureHelpProvider.get(

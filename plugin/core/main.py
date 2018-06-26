@@ -9,10 +9,7 @@ except ImportError:
 import sublime_plugin
 import sublime
 
-from .url import filename_to_uri
-from .protocol import (
-    Request, Notification, SymbolKind, CompletionItemKind
-)
+from .protocol import Notification
 from .settings import (
     ClientConfig, settings, load_settings, unload_settings
 )
@@ -24,7 +21,8 @@ from .configurations import (
     config_for_scope, is_supported_view, register_client_config
 )
 from .clients import (
-    can_start_config, set_config_starting, set_config_ready, clear_config_state,
+    start_window_config,
+    can_start_config,
     window_configs, is_ready_window_config,
     unload_old_clients, unload_window_clients, unload_all_clients, register_clients_unloaded_handler
 )
@@ -126,9 +124,10 @@ def register_language_handler(handler: LanguageHandler) -> None:
         client_initialization_listeners[handler.name] = handler.on_initialized
 
 
-def handle_initialize_result(result, client, window, project_path, config):
-    capabilities = result.get("capabilities")
-    client.set_capabilities(capabilities)
+def handle_session_started(session, window, project_path, config):
+    client = session.client
+    client.set_crash_handler(lambda: handle_server_crash(window, config))
+    client.set_error_display_handler(lambda msg: sublime.status_message(msg))
 
     # handle server requests and notifications
     client.on_request(
@@ -158,7 +157,7 @@ def handle_initialize_result(result, client, window, project_path, config):
     # TODO: These handlers is already filtered by syntax but does not need to
     # be enabled 2x per client
     # Move filtering?
-    document_sync = capabilities.get("textDocumentSync")
+    document_sync = session.capabilities.get("textDocumentSync")
     if document_sync:
         initialize_document_sync(document_sync)
 
@@ -170,9 +169,6 @@ def handle_initialize_result(result, client, window, project_path, config):
             'settings': config.settings
         }
         client.send_notification(Notification.didChangeConfiguration(configParams))
-
-    # now the client should be available outside the initialization sequence
-    set_config_ready(window, project_path, config.name, client)
 
     for view in open_after_initialize_by_window[window.id()]:
         notify_did_open(view)
@@ -224,97 +220,6 @@ def start_client(window: sublime.Window, project_path: str, config: ClientConfig
         window.status_message("Could not connect to " + config.name + ", disabling")
         return None
 
-    client.set_crash_handler(lambda: handle_server_crash(window, config))
-    client.set_error_display_handler(lambda msg: sublime.status_message(msg))
-
-    initializeParams = {
-        "processId": os.getpid(),
-        "rootUri": filename_to_uri(project_path),
-        "rootPath": project_path,
-        "capabilities": {
-            "textDocument": {
-                "synchronization": {
-                    "didSave": True
-                },
-                "hover": {
-                    "contentFormat": ["markdown", "plaintext"]
-                },
-                "completion": {
-                    "completionItem": {
-                        "snippetSupport": True
-                    },
-                    "completionItemKind": {
-                        "valueSet": [
-                            CompletionItemKind.Text,
-                            CompletionItemKind.Method,
-                            CompletionItemKind.Function,
-                            CompletionItemKind.Constructor,
-                            CompletionItemKind.Field,
-                            CompletionItemKind.Variable,
-                            CompletionItemKind.Class,
-                            CompletionItemKind.Interface,
-                            CompletionItemKind.Module,
-                            CompletionItemKind.Property,
-                            CompletionItemKind.Unit,
-                            CompletionItemKind.Value,
-                            CompletionItemKind.Enum,
-                            CompletionItemKind.Keyword,
-                            CompletionItemKind.Snippet,
-                            CompletionItemKind.Color,
-                            CompletionItemKind.File,
-                            CompletionItemKind.Reference
-                        ]
-                    }
-                },
-                "signatureHelp": {
-                    "signatureInformation": {
-                        "documentationFormat": ["markdown", "plaintext"]
-                    }
-                },
-                "references": {},
-                "documentHighlight": {},
-                "documentSymbol": {
-                    "symbolKind": {
-                        "valueSet": [
-                            SymbolKind.File,
-                            SymbolKind.Module,
-                            SymbolKind.Namespace,
-                            SymbolKind.Package,
-                            SymbolKind.Class,
-                            SymbolKind.Method,
-                            SymbolKind.Property,
-                            SymbolKind.Field,
-                            # SymbolKind.Constructor,
-                            # SymbolKind.Enum,
-                            SymbolKind.Interface,
-                            SymbolKind.Function,
-                            SymbolKind.Variable,
-                            SymbolKind.Constant
-                            # SymbolKind.String,
-                            # SymbolKind.Number,
-                            # SymbolKind.Boolean,
-                            # SymbolKind.Array
-                        ]
-                    }
-                },
-                "formatting": {},
-                "rangeFormatting": {},
-                "definition": {},
-                "codeAction": {},
-                "rename": {}
-            },
-            "workspace": {
-                "applyEdit": True,
-                "didChangeConfiguration": {}
-            }
-        }
-    }
-    if config.init_options:
-        initializeParams['initializationOptions'] = config.init_options
-
-    client.send_request(
-        Request.initialize(initializeParams),
-        lambda result: handle_initialize_result(result, client, window, project_path, config))
     return client
 
 
@@ -325,10 +230,16 @@ def start_window_client(view: sublime.View, window: sublime.Window, config: Clie
         return
 
     if can_start_config(window, config.name):
-        set_config_starting(window, project_path, config.name)
-        client = start_client(window, project_path, config)
-        if client is None:  # clear starting state for config if not starting.
-            clear_config_state(window, config.name)
+        if config.name in client_start_listeners:
+            handler_startup_hook = client_start_listeners[config.name]
+            if not handler_startup_hook(window):
+                return
+
+        if settings.show_status_messages:
+            window.status_message("Starting " + config.name + "...")
+        debug("starting in", project_path)
+        start_window_config(window, project_path, config,
+                            lambda session: handle_session_started(session, window, project_path, config))
     else:
         debug('Already starting on this window:', config.name)
 

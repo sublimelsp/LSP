@@ -3,6 +3,14 @@ from .protocol import Request, Notification
 from .transports import start_tcp_transport, StdioTransport
 from .rpc import Client
 from .process import start_server
+from .url import filename_to_uri
+import os
+from .protocol import CompletionItemKind, SymbolKind
+try:
+    from typing import Callable, Dict, Any
+    assert Callable and Dict and Any
+except ImportError:
+    pass
 
 
 class ClientBootstrapper(object):
@@ -35,7 +43,9 @@ class ProcessManager(object):
 
     def start(self, receive_process):
         # see start_server from main.py - move this to process.py
-        receive_process(start_server(self._config, self._project_path, self._env))
+        process = start_server(self._config.binary_args, self._project_path, self._env)
+        if process:
+            receive_process(process)
 
 
 class StdioServerBootstrapper(ClientBootstrapper):
@@ -70,27 +80,43 @@ class TCPServerBootstrapper(ClientBootstrapper):
         self._client_receiver(Client(transport, self._settings))
 
 
-def create_session(config: ClientConfig, project_path: str, env: dict, settings, bootstrap_client=None) -> 'Session':
+def create_session(config: ClientConfig, project_path: str, env: dict, settings,
+                   on_created=None, on_failed=None, bootstrap_client=None) -> 'Session':
     if config.binary_args:
         if config.tcp_port:
             # session = Session(project_path, ClientProvider(TcpTransportProvider(
             # ProcessProvider(config, project_path), config.tcp_port)))
-            session = Session(project_path,
+            session = Session(config, project_path,
                               TCPServerBootstrapper(ProcessManager(config, project_path, env),
                                                     config.tcp_port,
-                                                    settings))
+                                                    settings), on_created, on_failed)
         else:
-            session = Session(project_path,
+            session = Session(config, project_path,
                               StdioServerBootstrapper(ProcessManager(config, project_path, env),
-                                                      settings))
+                                                      settings), on_created, on_failed)
     else:
         if config.tcp_port:
-            session = Session(project_path, TCPOnlyBootstrapper(config.tcp_port, settings))
+            session = Session(config, project_path, TCPOnlyBootstrapper(config.tcp_port, settings),
+                              on_created, on_failed)
 
         if bootstrap_client:
-            session = Session(project_path, TestClientBootstrapper(bootstrap_client))
+            session = Session(config, project_path, TestClientBootstrapper(bootstrap_client),
+                              on_created, on_failed)
         else:
-            session = Session(project_path, ClientBootstrapper())
+            raise Exception("No way to start session")
+
+    # TODO: missing error notifications
+
+    # if not process:
+    #     window.status_message("Could not start " + config.name + ", disabling")
+    #     debug("Could not start", config.binary_args, ", disabling")
+    #     return None
+
+    # if not client:
+    #     window.status_message("Could not connect to " + config.name + ", disabling")
+    #     return None
+
+    # Finally, also remove this session if startup fails
 
     return session
 
@@ -103,23 +129,128 @@ class TestClientBootstrapper(ClientBootstrapper):
         receive_client(self._make_client())
 
 
+def get_initialize_params(project_path: str, config: ClientConfig):
+    initializeParams = {
+        "processId": os.getpid(),
+        "rootUri": filename_to_uri(project_path),
+        "rootPath": project_path,
+        "capabilities": {
+            "textDocument": {
+                "synchronization": {
+                    "didSave": True
+                },
+                "hover": {
+                    "contentFormat": ["markdown", "plaintext"]
+                },
+                "completion": {
+                    "completionItem": {
+                        "snippetSupport": True
+                    },
+                    "completionItemKind": {
+                        "valueSet": [
+                            CompletionItemKind.Text,
+                            CompletionItemKind.Method,
+                            CompletionItemKind.Function,
+                            CompletionItemKind.Constructor,
+                            CompletionItemKind.Field,
+                            CompletionItemKind.Variable,
+                            CompletionItemKind.Class,
+                            CompletionItemKind.Interface,
+                            CompletionItemKind.Module,
+                            CompletionItemKind.Property,
+                            CompletionItemKind.Unit,
+                            CompletionItemKind.Value,
+                            CompletionItemKind.Enum,
+                            CompletionItemKind.Keyword,
+                            CompletionItemKind.Snippet,
+                            CompletionItemKind.Color,
+                            CompletionItemKind.File,
+                            CompletionItemKind.Reference
+                        ]
+                    }
+                },
+                "signatureHelp": {
+                    "signatureInformation": {
+                        "documentationFormat": ["markdown", "plaintext"]
+                    }
+                },
+                "references": {},
+                "documentHighlight": {},
+                "documentSymbol": {
+                    "symbolKind": {
+                        "valueSet": [
+                            SymbolKind.File,
+                            SymbolKind.Module,
+                            SymbolKind.Namespace,
+                            SymbolKind.Package,
+                            SymbolKind.Class,
+                            SymbolKind.Method,
+                            SymbolKind.Property,
+                            SymbolKind.Field,
+                            # SymbolKind.Constructor,
+                            # SymbolKind.Enum,
+                            SymbolKind.Interface,
+                            SymbolKind.Function,
+                            SymbolKind.Variable,
+                            SymbolKind.Constant
+                            # SymbolKind.String,
+                            # SymbolKind.Number,
+                            # SymbolKind.Boolean,
+                            # SymbolKind.Array
+                        ]
+                    }
+                },
+                "formatting": {},
+                "rangeFormatting": {},
+                "definition": {},
+                "codeAction": {},
+                "rename": {}
+            },
+            "workspace": {
+                "applyEdit": True,
+                "didChangeConfiguration": {}
+            }
+        }
+    }
+    if config.init_options:
+        initializeParams['initializationOptions'] = config.init_options
+
+    return initializeParams
+
+
 class Session(object):
-    def __init__(self, project_path, bootstrapper: ClientBootstrapper) -> None:
+    def __init__(self, config: ClientConfig, project_path, bootstrapper: ClientBootstrapper,
+                 on_created, on_failed) -> None:
+        self.config = config
         self.project_path = project_path
         self.state = ClientStates.STARTING
-        self.capabilities = None
+        self._on_created = on_created
+        self._on_failed = on_failed
+        self.capabilities = dict()  # type: Dict[str, Any]
         self._bootstrapper = bootstrapper
         self._bootstrapper.when_ready(lambda client: self._receive_client(client))
 
+    def set_capabilities(self, capabilities):
+        self.capabilities = capabilities
+
+    def has_capability(self, capability):
+        return capability in self.capabilities and self.capabilities[capability] is not False
+
+    def get_capability(self, capability):
+        return self.capabilities.get(capability)
+
     def _receive_client(self, client):
         self.client = client
+        params = get_initialize_params(self.project_path, self.config)
         self.client.send_request(
-            Request.initialize(dict()),
+            Request.initialize(params),
             lambda result: self._handle_initialize_result(result))
 
     def _handle_initialize_result(self, result):
         self.state = ClientStates.READY
-        self.capabilities = result.get('capabilities', None)
+        self.capabilities = result.get('capabilities', dict())
+        if self._on_created:
+            self._on_created(self)
 
     def end(self):
         self.state = ClientStates.STOPPING

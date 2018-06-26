@@ -76,21 +76,11 @@ class Client(object):
         self._error_handlers = {}  # type: Dict[int, Callable]
         self._request_handlers = {}  # type: Dict[str, Callable]
         self._notification_handlers = {}  # type: Dict[str, Callable]
-        self.capabilities = {}  # type: Dict[str, Any]
         self.exiting = False
         self._crash_handler = None  # type: Optional[Callable]
         self._transport_fail_handler = None  # type: Optional[Callable]
         self._error_display_handler = lambda msg: debug(msg)
         self.settings = settings
-
-    def set_capabilities(self, capabilities):
-        self.capabilities = capabilities
-
-    def has_capability(self, capability):
-        return capability in self.capabilities and self.capabilities[capability] is not False
-
-    def get_capability(self, capability):
-        return self.capabilities.get(capability)
 
     def send_request(self, request: Request, handler: 'Callable', error_handler: 'Optional[Callable]' = None):
         self.request_id += 1

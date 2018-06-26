@@ -1,26 +1,29 @@
 import sublime
 import sublime_plugin
+import os
 
 from .logging import debug, exception_log
 from .configurations import config_for_scope, is_supported_view
 from .protocol import Request
 from .workspace import get_project_path
-from .types import ClientStates, ConfigState
+from .types import ClientStates
+from .sessions import create_session, Session
 
 # typing only
 from .rpc import Client
-from .settings import ClientConfig
+from .settings import ClientConfig, settings
 assert Client and ClientConfig
 
 
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional, Set
     assert Any and List and Dict and Tuple and Callable and Optional and Set
+    assert Session
 except ImportError:
     pass
 
 
-clients_by_window = {}  # type: Dict[int, Dict[str, ConfigState]]
+clients_by_window = {}  # type: Dict[int, Dict[str, Session]]
 
 
 class LspTextCommand(sublime_plugin.TextCommand):
@@ -31,13 +34,13 @@ class LspTextCommand(sublime_plugin.TextCommand):
         return is_supported_view(self.view)
 
     def has_client_with_capability(self, capability):
-        client = client_for_view(self.view)
-        if client and client.has_capability(capability):
+        session = session_for_view(self.view)
+        if session and session.has_capability(capability):
             return True
         return False
 
 
-def window_configs(window: sublime.Window) -> 'Dict[str, ConfigState]':
+def window_configs(window: sublime.Window) -> 'Dict[str, Session]':
     if window.id() in clients_by_window:
         return clients_by_window[window.id()]
     else:
@@ -63,12 +66,34 @@ def can_start_config(window: sublime.Window, config_name: str):
     return config_name not in window_configs(window)
 
 
-def start_session(config: ClientConfig, project_path: str):
-    return None
+def get_window_env(window: sublime.Window, config: ClientConfig):
+
+    # Create a dictionary of Sublime Text variables
+    variables = window.extract_variables()
+
+    # Expand language server command line environment variables
+    expanded_args = list(
+        sublime.expand_variables(os.path.expanduser(arg), variables)
+        for arg in config.binary_args
+    )
+
+    # Override OS environment variables
+    env = os.environ.copy()
+    for var, value in config.env.items():
+        # Expand both ST and OS environment variables
+        env[var] = os.path.expandvars(sublime.expand_variables(value, variables))
+
+    return expanded_args, env
 
 
-def set_config_starting(window: sublime.Window, project_path: str, config_name: str):
-    clients_by_window.setdefault(window.id(), {})[config_name] = ConfigState(project_path)
+def start_window_config(window: sublime.Window, project_path: str, config: ClientConfig, callback: 'Callable'):
+    args, env = get_window_env(window, config)
+    config.binary_args = args
+    session = create_session(config, project_path, env, settings, on_created=callback)
+    clients_by_window.setdefault(window.id(), {})[config.name] = session
+
+    # if client is None:  # clear starting state for config if not starting.
+    #     clear_config_state(window, config.name)
 
 
 def clear_config_state(window: sublime.Window, config_name: str):
@@ -76,9 +101,9 @@ def clear_config_state(window: sublime.Window, config_name: str):
     del configs[config_name]
 
 
-def set_config_ready(window: sublime.Window, project_path: str, config_name: str, client: 'Client'):
-    window_configs(window)[config_name] = ConfigState(project_path, ClientStates.READY, client)
-    debug("{} client registered for window {}".format(config_name, window.id()))
+# def set_config_ready(window: sublime.Window, project_path: str, config_name: str, client: 'Client'):
+#     window_configs(window)[config_name] = ConfigState(project_path, ClientStates.READY, client)
+#     debug("{} client registered for window {}".format(config_name, window.id()))
 
 
 def set_config_stopping(window: sublime.Window, config_name: str):
@@ -93,7 +118,11 @@ def client_for_view(view: sublime.View) -> 'Optional[Client]':
     return _client_for_view_and_window(view, view.window())
 
 
-def _client_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Window]') -> 'Optional[Client]':
+def session_for_view(view: sublime.View) -> 'Optional[Session]':
+    return _session_for_view_and_window(view, view.window())
+
+
+def _session_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Window]') -> 'Optional[Session]':
     if not window:
         debug("no window for view", view.file_name())
         return None
@@ -109,13 +138,26 @@ def _client_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Wi
               view.file_name(), "in window", window.id())
         return None
     else:
-        config_state = window_config_states[config.name]
-        if config_state.client:
-            return config_state.client
+        session = window_config_states[config.name]
+        if session.state == ClientStates.READY:
+            return session
         else:
-            debug(config.name, "in state", config_state.state, " for view",
-                  view.file_name(), "in window", window.id())
             return None
+
+
+def _client_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Window]') -> 'Optional[Client]':
+    session = _session_for_view_and_window(view, window)
+
+    if session:
+        if session.client:
+            return session.client
+        else:
+            debug(session.config.name, "in state", session.state, " for view",
+                  view.file_name())
+            return None
+    else:
+        debug('no session found')
+        return None
 
 
 # Shutdown

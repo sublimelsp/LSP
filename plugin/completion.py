@@ -240,7 +240,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         elif settings.completion_hint_type == "kind":
             kind = item.get("kind")
             if kind:
-                hint = completion_item_kind_names[kind]
+                hint = completion_item_kind_names.get(kind)
         # label is an alternative for insertText if neither textEdit nor insertText is provided
         insert_text = self.text_edit_text(item) or item.get("insertText") or label
         if len(insert_text) > 0 and insert_text[0] == '$':  # sublime needs leading '$' escaped.

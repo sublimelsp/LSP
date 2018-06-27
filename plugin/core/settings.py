@@ -69,30 +69,36 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings):
 
 
 class ClientConfig(object):
-    def __init__(self, name, binary_args, tcp_port, scopes, syntaxes, languageId,
+    def __init__(self, name, binary_args, tcp_port, languages,
                  enabled=True, init_options=dict(), settings=dict(), env=dict()):
         self.name = name
         self.binary_args = binary_args
         self.tcp_port = tcp_port
-        self.scopes = scopes
-        self.syntaxes = syntaxes
-        self.languageId = languageId
+        self.languages = languages
         self.enabled = enabled
         self.init_options = init_options
         self.settings = settings
         self.env = env
+
+    @property
+    def syntaxes(self):
+        for language_id, language in self.languages.items():
+            for syntax in language.get('syntaxes', []):
+                yield syntax
+
+    @property
+    def scopes(self):
+        for language_id, language in self.languages.items():
+            for scope in language.get('scopes', []):
+                yield scope
 
     def apply_settings(self, settings: dict) -> None:
         if "command" in settings:
             self.binary_args = settings.get("command", [])
         if "tcp_port" in settings:
             self.tcp_port = settings.get("tcp_port", None)
-        if "scopes" in settings:
-            self.scopes = settings.get("scopes", [])
-        if "syntaxes" in settings:
-            self.syntaxes = settings.get("syntaxes", [])
-        if "languageId" in settings:
-            self.languageId = settings.get("languageId", "")
+        if "languages" in settings:
+            self.languages = settings.get("languages", "")
         if "enabled" in settings:
             self.enabled = settings.get("enabled", True)
         if "initializationOptions" in settings:
@@ -106,7 +112,18 @@ class ClientConfig(object):
         return self.settings
 
     def get_language_id(self, view):
-        return self.languageId
+        scope_language_id = None
+        scope_score = 0
+        sel = view.sel()
+        if len(sel) > 0:
+            pos = sel[0].begin()
+            for language_id, language in self.languages.items():
+                for scope in language.get('scopes', []):
+                    score = view.score_selector(pos, scope)
+                    if score > scope_score:
+                        scope_language_id = language_id
+                        scope_score = score
+        return scope_language_id
 
 
 class ClientConfigs(object):
@@ -176,9 +193,7 @@ def read_client_config(name, client_config):
         name,
         client_config.get("command", []),
         client_config.get("tcp_port", None),
-        client_config.get("scopes", []),
-        client_config.get("syntaxes", []),
-        client_config.get("languageId", ""),
+        client_config.get("languages", dict()),
         client_config.get("enabled", True),
         client_config.get("initializationOptions", dict()),
         client_config.get("settings", dict()),
@@ -198,7 +213,7 @@ def read_client_configs(client_settings, default_client_settings=None) -> 'List[
             client_with_defaults.update(client_config)
 
             config = read_client_config(client_name, client_with_defaults)
-            if config and config.scopes:  # don't return configs only containing "enabled" here.
+            if config and config.languages:  # don't return configs only containing "enabled" here.
                 parsed_configs.append(config)
         return parsed_configs
     else:

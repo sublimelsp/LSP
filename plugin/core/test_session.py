@@ -29,8 +29,7 @@ class TestClient():
         pass
 
 
-def attach_test_client():
-    return TestClient()
+test_config = ClientConfig("test", [], None, ["source.test"], ["Test.sublime-syntax"], "test")
 
 
 class SessionTest(unittest.TestCase):
@@ -46,10 +45,9 @@ class SessionTest(unittest.TestCase):
         # self.assertIsNone(session.capabilities) -- empty dict
 
     def test_can_get_started_session(self):
-        config = ClientConfig("test", [], None, ["source.test"], ["Test.sublime-syntax"], "test")
         project_path = "/"
         created_callback = unittest.mock.Mock()
-        session = create_session(config, project_path, dict(), Settings(),
+        session = create_session(test_config, project_path, dict(), Settings(),
                                  bootstrap_client=TestClient(),
                                  on_created=created_callback)
 
@@ -65,7 +63,7 @@ class SessionTest(unittest.TestCase):
         project_path = "/"
         created_callback = unittest.mock.Mock()
         ended_callback = unittest.mock.Mock()
-        session = create_session(config, project_path, dict(), Settings(),
+        session = create_session(test_config, project_path, dict(), Settings(),
                                  bootstrap_client=TestClient(),
                                  on_created=created_callback,
                                  on_ended=ended_callback)

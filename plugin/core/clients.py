@@ -2,9 +2,8 @@ import sublime
 import sublime_plugin
 import os
 
-from .logging import debug, exception_log
+from .logging import debug
 from .configurations import config_for_scope, is_supported_view
-from .protocol import Request
 from .workspace import get_project_path
 from .types import ClientStates
 from .sessions import create_session, Session
@@ -86,24 +85,24 @@ def get_window_env(window: sublime.Window, config: ClientConfig):
     return expanded_args, env
 
 
-def start_window_config(window: sublime.Window, project_path: str, config: ClientConfig, callback: 'Callable'):
+def start_window_config(window: sublime.Window, project_path: str, config: ClientConfig,
+                        on_created: 'Callable'):
     args, env = get_window_env(window, config)
     config.binary_args = args
-    session = create_session(config, project_path, env, settings, on_created=callback)
+    session = create_session(config, project_path, env, settings,
+                             on_created=on_created,
+                             on_ended=lambda: on_session_ended(window, config.name))
     clients_by_window.setdefault(window.id(), {})[config.name] = session
-
-    # if client is None:  # clear starting state for config if not starting.
-    #     clear_config_state(window, config.name)
+    debug("{} client registered for window {}".format(config.name, window.id()))
 
 
-def clear_config_state(window: sublime.Window, config_name: str):
+def on_session_ended(window: sublime.Window, config_name: str):
     configs = window_configs(window)
     del configs[config_name]
-
-
-# def set_config_ready(window: sublime.Window, project_path: str, config_name: str, client: 'Client'):
-#     window_configs(window)[config_name] = ConfigState(project_path, ClientStates.READY, client)
-#     debug("{} client registered for window {}".format(config_name, window.id()))
+    if not configs:
+        debug("all clients unloaded")
+        if clients_unloaded_handler:
+            clients_unloaded_handler(window.id())
 
 
 def set_config_stopping(window: sublime.Window, config_name: str):
@@ -168,14 +167,14 @@ def remove_window_client(window: sublime.Window, config_name: str):
 
 def unload_all_clients():
     for window in sublime.windows():
-        for config_name, config_state in window_configs(window).items():
-            if config_state.client:
-                if config_state.state == ClientStates.STARTING:
-                    unload_client(config_state.client, window.id(), config_name)
+        for config_name, session in window_configs(window).items():
+            if session.client:
+                if session.state == ClientStates.STARTING:
+                    session.end()
                 else:
-                    debug('ignoring unload of config in state', config_state.state)
+                    debug('ignoring unload of session in state', session.state)
             else:
-                debug('ignoring unload of config without client')
+                debug('ignoring session of config without client')
 
 
 closing_window_ids = set()  # type: Set[int]
@@ -191,32 +190,27 @@ def check_window_unloaded():
                 closing_window_ids.add(id)
                 debug("window closed", id)
     for closed_window_id in closing_window_ids:
-        unload_window_clients(closed_window_id)
+        unload_window_sessions(closed_window_id)
     closing_window_ids.clear()
 
 
-def unload_window_clients(window_id: int):
+def unload_window_sessions(window_id: int):
     if window_id in clients_by_window:
         window_configs = clients_by_window[window_id]
-        for config_name, state in window_configs.items():
+        for config_name, session in window_configs.items():
             window_configs[config_name].state = ClientStates.STOPPING
-            debug("unloading client", config_name, state.client)
-            unload_client(state.client, window_id, config_name)
+            debug("unloading session", config_name)
+            session.end()
 
 
 def unload_old_clients(window: sublime.Window):
     project_path = get_project_path(window)
     configs = window_configs(window)
-    clients_to_unload = {}
-    for config_name, state in configs.items():
-        if state.client and state.state == ClientStates.READY and state.project_path != project_path:
+    for config_name, session in configs.items():
+        if session.client and session.state == ClientStates.READY and session.project_path != project_path:
             debug('unload', config_name, 'project path changed from',
-                  state.project_path, 'to', project_path)
-            clients_to_unload[config_name] = state.client
-
-    for config_name, client in clients_to_unload.items():
-        set_config_stopping(window, config_name)
-        unload_client(client, window.id(), config_name)
+                  session.project_path, 'to', project_path)
+            session.end()
 
 
 clients_unloaded_handler = None  # type: Optional[Callable]
@@ -225,21 +219,3 @@ clients_unloaded_handler = None  # type: Optional[Callable]
 def register_clients_unloaded_handler(handler: 'Callable'):
     global clients_unloaded_handler
     clients_unloaded_handler = handler
-
-
-def on_shutdown(client: Client, window_id: int, config_name: str, response):
-    try:
-        client.exit()
-        del clients_by_window[window_id][config_name]
-
-        if not clients_by_window[window_id]:
-            debug("all clients unloaded")
-            if clients_unloaded_handler:
-                clients_unloaded_handler(window_id)
-
-    except Exception as err:
-        exception_log("Error exiting server", err)
-
-
-def unload_client(client: Client, window_id: int, config_name: str):
-    client.send_request(Request.shutdown(), lambda response: on_shutdown(client, window_id, config_name, response))

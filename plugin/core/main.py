@@ -24,7 +24,7 @@ from .clients import (
     start_window_config,
     can_start_config,
     window_configs, is_ready_window_config,
-    unload_old_clients, unload_window_clients, unload_all_clients, register_clients_unloaded_handler
+    unload_old_clients, unload_window_sessions, unload_all_clients, register_clients_unloaded_handler
 )
 from .events import Events
 from .documents import (
@@ -257,7 +257,7 @@ restarting_window_ids = set()  # type: Set[int]
 def restart_window_clients(window: sublime.Window):
     clear_document_states(window)
     restarting_window_ids.add(window.id())
-    unload_window_clients(window.id())
+    unload_window_sessions(window.id())
 
 
 def handle_clients_unloaded(window_id):

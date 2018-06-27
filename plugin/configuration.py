@@ -7,7 +7,7 @@ from .core.settings import ClientConfig, client_configs
 from .core.configurations import (
     get_scope_client_config, config_for_scope, get_global_client_config, clear_window_client_configs
 )
-from .core.clients import unload_window_clients
+from .core.clients import unload_window_sessions
 from .core.events import Events
 from .core.workspace import enable_in_project, disable_in_project
 
@@ -78,7 +78,7 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
         if global_config:
             client_configs.disable(global_config.name)
             clear_window_client_configs(self.window)
-            sublime.set_timeout_async(lambda: unload_window_clients(self.window.id()), 500)
+            sublime.set_timeout_async(lambda: unload_window_sessions(self.window.id()), 500)
             self.window.status_message("{} disabled, shutting down server...".format(global_config.name))
             return
 
@@ -92,7 +92,7 @@ class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         if global_config:
             disable_in_project(self.window, global_config.name)
             clear_window_client_configs(self.window)
-            sublime.set_timeout_async(lambda: unload_window_clients(self.window.id()), 500)
+            sublime.set_timeout_async(lambda: unload_window_sessions(self.window.id()), 500)
             self.window.status_message("{} disabled in project, shutting down server...".format(global_config.name))
             return
         else:

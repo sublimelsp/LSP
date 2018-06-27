@@ -4,6 +4,7 @@ from .transports import start_tcp_transport, StdioTransport
 from .rpc import Client
 from .process import start_server
 from .url import filename_to_uri
+# from .logging import debug
 import os
 from .protocol import CompletionItemKind, SymbolKind
 try:
@@ -13,120 +14,40 @@ except ImportError:
     pass
 
 
-class ClientBootstrapper(object):
-    def __init__(self):
-        self._callback = None
-        pass
-
-    def when_ready(self, receive_client):
-        self._callback = receive_client
-
-# todo: make some provider-like pattern so these can be composable?
-
-
-class TCPOnlyBootstrapper(ClientBootstrapper):
-    def __init__(self, port, settings):
-        self._port = port
-        self._settings = settings
-
-    def when_ready(self, receive_client):
-        transport = start_tcp_transport(self._port)
-        if transport:
-            receive_client(Client(transport, self._settings))
-
-
-class ProcessManager(object):
-    def __init__(self, config: ClientConfig, project_path, env) -> None:
-        self._config = config
-        self._project_path = project_path
-        self._env = env
-
-    def start(self, receive_process):
-        # see start_server from main.py - move this to process.py
-        process = start_server(self._config.binary_args, self._project_path, self._env)
-        if process:
-            receive_process(process)
-
-
-class StdioServerBootstrapper(ClientBootstrapper):
-    def __init__(self, process_manager, settings):
-        self._process_manager = process_manager
-        self._client_receiver = None
-        self._settings = settings
-
-    def when_ready(self, receive_client):
-        self._client_receiver = receive_client
-        self._process_manager.start(lambda process: self._receive_process(process))
-
-    def _receive_process(self, process):
-        self._client_receiver(Client(StdioTransport(process), self._settings))
-
-
-class TCPServerBootstrapper(ClientBootstrapper):
-    def __init__(self, process_manager, port, settings):
-        self._process_manager = process_manager
-        self._port = port
-        self._client_receiver = None
-        self._process = None
-        self._settings = settings
-
-    def when_ready(self, receive_client):
-        self._client_reciever = receive_client
-        self._process_manager.start(lambda process: self._receive_process(process))
-
-    def _receive_process(self, process):
-        self._process = process
-        transport = start_tcp_transport(self._port)
-        self._client_receiver(Client(transport, self._settings))
-
-
 def create_session(config: ClientConfig, project_path: str, env: dict, settings,
-                   on_created=None, on_failed=None, bootstrap_client=None) -> 'Session':
+                   on_created=None, on_ended=None, bootstrap_client=None) -> 'Session':
+
     if config.binary_args:
-        if config.tcp_port:
-            # session = Session(project_path, ClientProvider(TcpTransportProvider(
-            # ProcessProvider(config, project_path), config.tcp_port)))
-            session = Session(config, project_path,
-                              TCPServerBootstrapper(ProcessManager(config, project_path, env),
-                                                    config.tcp_port,
-                                                    settings), on_created, on_failed)
-        else:
-            session = Session(config, project_path,
-                              StdioServerBootstrapper(ProcessManager(config, project_path, env),
-                                                      settings), on_created, on_failed)
+
+        process = start_server(config.binary_args, project_path, env)
+        if process:
+            if config.tcp_port:
+                transport = start_tcp_transport(config.tcp_port)
+                if transport:
+                    session = Session(config, project_path, Client(transport, settings), on_created, on_ended)
+                else:
+                    # try to terminate the process
+                    try:
+                        process.terminate()
+                    except Exception as e:
+                        pass
+            else:
+                transport = StdioTransport(process)
+                session = Session(config, project_path, Client(transport, settings), on_created, on_ended)
     else:
         if config.tcp_port:
-            session = Session(config, project_path, TCPOnlyBootstrapper(config.tcp_port, settings),
-                              on_created, on_failed)
+            transport = start_tcp_transport(config.tcp_port)
+
+            session = Session(config, project_path, Client(transport, settings),
+                              on_created, on_ended)
 
         if bootstrap_client:
-            session = Session(config, project_path, TestClientBootstrapper(bootstrap_client),
-                              on_created, on_failed)
+            session = Session(config, project_path, bootstrap_client,
+                              on_created, on_ended)
         else:
             raise Exception("No way to start session")
 
-    # TODO: missing error notifications
-
-    # if not process:
-    #     window.status_message("Could not start " + config.name + ", disabling")
-    #     debug("Could not start", config.binary_args, ", disabling")
-    #     return None
-
-    # if not client:
-    #     window.status_message("Could not connect to " + config.name + ", disabling")
-    #     return None
-
-    # Finally, also remove this session if startup fails
-
     return session
-
-
-class TestClientBootstrapper(ClientBootstrapper):
-    def __init__(self, bootstrap_client):
-        self._make_client = bootstrap_client
-
-    def when_ready(self, receive_client):
-        receive_client(self._make_client())
 
 
 def get_initialize_params(project_path: str, config: ClientConfig):
@@ -219,16 +140,16 @@ def get_initialize_params(project_path: str, config: ClientConfig):
 
 
 class Session(object):
-    def __init__(self, config: ClientConfig, project_path, bootstrapper: ClientBootstrapper,
-                 on_created, on_failed) -> None:
+    def __init__(self, config: ClientConfig, project_path, client: Client,
+                 on_created, on_ended) -> None:
         self.config = config
         self.project_path = project_path
         self.state = ClientStates.STARTING
         self._on_created = on_created
-        self._on_failed = on_failed
+        self._on_ended = on_ended
         self.capabilities = dict()  # type: Dict[str, Any]
-        self._bootstrapper = bootstrapper
-        self._bootstrapper.when_ready(lambda client: self._receive_client(client))
+        self.client = client
+        self.initialize()
 
     def set_capabilities(self, capabilities):
         self.capabilities = capabilities
@@ -239,8 +160,7 @@ class Session(object):
     def get_capability(self, capability):
         return self.capabilities.get(capability)
 
-    def _receive_client(self, client):
-        self.client = client
+    def initialize(self):
         params = get_initialize_params(self.project_path, self.config)
         self.client.send_request(
             Request.initialize(params),
@@ -262,3 +182,5 @@ class Session(object):
         self.client.send_notification(Notification.exit())
         self.client = None
         self.capabilities = None
+        if self._on_ended:
+            self._on_ended()

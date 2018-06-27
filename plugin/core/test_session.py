@@ -48,7 +48,7 @@ class SessionTest(unittest.TestCase):
         config = ClientConfig("test", [], None, ["source.test"], ["Test.sublime-syntax"], "test")
         project_path = "/"
         session = create_session(config, project_path, dict(), Settings(),
-                                 bootstrap_client=lambda: attach_test_client())
+                                 bootstrap_client=TestClient())
 
         self.assertEqual(session.state, ClientStates.READY)
         self.assertIsNotNone(session.client)
@@ -59,7 +59,7 @@ class SessionTest(unittest.TestCase):
         config = ClientConfig("test", [], None, ["source.test"], ["Test.sublime-syntax"], "test")
         project_path = "/"
         session = create_session(config, project_path, dict(), Settings(),
-                                 bootstrap_client=lambda: attach_test_client())
+                                 bootstrap_client=TestClient())
 
         self.assertEqual(session.state, ClientStates.READY)
         self.assertIsNotNone(session.client)

@@ -6,6 +6,7 @@ from .sessions import create_session
 from .protocol import Request, Notification
 
 import unittest
+import unittest.mock
 # import json
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
@@ -17,7 +18,7 @@ except ImportError:
 class TestClient():
     def __init__(self):
         self.responses = {
-            'initialize': {"capabilities": dict()}
+            'initialize': {"capabilities": dict(testing=True)}
         }  # type: dict
 
     def send_request(self, request: Request, on_success: 'Callable', on_error: 'Callable'=None):
@@ -47,26 +48,38 @@ class SessionTest(unittest.TestCase):
     def test_can_get_started_session(self):
         config = ClientConfig("test", [], None, ["source.test"], ["Test.sublime-syntax"], "test")
         project_path = "/"
+        created_callback = unittest.mock.Mock()
         session = create_session(config, project_path, dict(), Settings(),
-                                 bootstrap_client=TestClient())
+                                 bootstrap_client=TestClient(),
+                                 on_created=created_callback)
 
         self.assertEqual(session.state, ClientStates.READY)
         self.assertIsNotNone(session.client)
         self.assertEqual(session.project_path, project_path)
-        # self.assertIsNotNone(session.capabilities)
+        self.assertTrue(session.has_capability("testing"))
+        self.assertTrue(session.get_capability("testing"))
+        created_callback.assert_called_once()
 
     def test_can_shutdown_session(self):
         config = ClientConfig("test", [], None, ["source.test"], ["Test.sublime-syntax"], "test")
         project_path = "/"
+        created_callback = unittest.mock.Mock()
+        ended_callback = unittest.mock.Mock()
         session = create_session(config, project_path, dict(), Settings(),
-                                 bootstrap_client=TestClient())
+                                 bootstrap_client=TestClient(),
+                                 on_created=created_callback,
+                                 on_ended=ended_callback)
 
         self.assertEqual(session.state, ClientStates.READY)
         self.assertIsNotNone(session.client)
         self.assertEqual(session.project_path, project_path)
-        # self.assertIsNotNone(session.capabilities)
+        self.assertTrue(session.has_capability("testing"))
+        created_callback.assert_called_once()
 
         session.end()
         self.assertEqual(session.state, ClientStates.STOPPING)
         self.assertEqual(session.project_path, project_path)
         self.assertIsNone(session.client)
+        self.assertFalse(session.has_capability("testing"))
+        self.assertIsNone(session.get_capability("testing"))
+        ended_callback.assert_called_once()

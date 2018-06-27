@@ -151,9 +151,6 @@ class Session(object):
         self.client = client
         self.initialize()
 
-    def set_capabilities(self, capabilities):
-        self.capabilities = capabilities
-
     def has_capability(self, capability):
         return capability in self.capabilities and self.capabilities[capability] is not False
 
@@ -181,6 +178,6 @@ class Session(object):
     def _handle_shutdown_result(self, result):
         self.client.send_notification(Notification.exit())
         self.client = None
-        self.capabilities = None
+        self.capabilities = dict()
         if self._on_ended:
             self._on_ended()

@@ -71,9 +71,12 @@ Client configuration:
       "flow":
       {
         "command": ["flow-language-server", "--stdio"],
-        "scopes": ["source.js"],
-        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
-        "languageId": "javascript"
+        "languages": {
+          "javascript": {
+            "scopes": ["source.js"],
+            "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+          }
+        }
       }
 ```
 
@@ -89,16 +92,19 @@ Client configuration:
     "/ABSOLUTE/PATH/TO/SERVER/.npm-global/bin/vls"
   ],
   "enabled": true,
-  "languageId": "vue",
-  "scopes": [
-    "text.html.vue"
-  ],
-  "syntaxes": [
-    // For ST3 builds < 3153
-    "Packages/Vue Syntax Highlight/vue.tmLanguage"
-    // For ST3 builds >= 3153
-    // "Packages/Vue Syntax Highlight/Vue Component.sublime-syntax"
-  ]
+  "languages": {
+    "vue": {
+      "scopes": [
+        "text.html.vue"
+      ],
+      "syntaxes": [
+        // For ST3 builds < 3153
+        "Packages/Vue Syntax Highlight/vue.tmLanguage"
+        // For ST3 builds >= 3153
+        // "Packages/Vue Syntax Highlight/Vue Component.sublime-syntax"
+      ]
+    }
+  }
 }
 ```
 
@@ -133,9 +139,12 @@ UPDATE: Some new options for PHP language servers are discussed in [this issue](
   "clients": {
     "phpls": {
       "command": ["php", "/PATH-TO-HOME-DIR/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"],
-      "scopes": ["source.php"],
-      "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
-      "languageId": "php"
+      "languages": {
+        "php": {
+          "scopes": ["source.php"],
+          "syntaxes": ["Packages/PHP/PHP.sublime-syntax"]
+        }
+      }
     }
   }
 }
@@ -248,9 +257,12 @@ Client configuration:
 "golsp":
 {
   "command": ["go-langserver"],
-  "scopes": ["source.go"],
-  "syntaxes": ["Packages/Go/Go.sublime-syntax"],
-  "languageId": "go"
+  "languages": {
+    "go": {
+      "scopes": ["source.go"],
+      "syntaxes": ["Packages/Go/Go.sublime-syntax"]
+    }
+  }
 },
 ```
 
@@ -266,9 +278,12 @@ Then add to your LSP settings (replace PATH_TO_NODE_MODULES):
 "vscode-css":
   {
     "command": ["node", "PATH_TO_NODE_MODULES/vscode-css-languageserver-bin/cssServerMain.js", "--stdio"],
-    "scopes": ["source.css"],
-    "syntaxes": ["Packages/CSS/CSS.sublime-syntax"],
-    "languageId": "css"
+    "languages": {
+      "css": {
+        "scopes": ["source.css"],
+        "syntaxes": ["Packages/CSS/CSS.sublime-syntax"]
+      }
+    }
   },
 ```
 
@@ -301,18 +316,21 @@ LSP ships with default client configuration for a few language servers. Here is 
 ```json
 "jsts": {
     "command": ["javascript-typescript-stdio"],
-    "scopes": ["source.ts", "source.tsx"],
-    "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"],
-    "languageId": "typescript"
+    "languages": {
+      "typescript": {
+        "scopes": ["source.ts", "source.tsx"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"]
+      }
+    }
 }
 ```
 
 These can be customized as follows by adding an override in the User LSP.sublime-settings
 
 * `command` - specify a full paths, add arguments
-* `scopes` - add language flavours, eg. `source.js`, `source.jsx`.
-* `syntaxes` - syntaxes that enable LSP features on a document, eg. `Packages/Babel/JavaScript (Babel).tmLanguage`
-* `languageId` - used both by the language servers and to select a syntax highlighter for sublime popups.
+* `languages` - used both by the language servers and to select a syntax highlighter for sublime popups.
+* `languages.<language>.scopes` - add language flavours, eg. `source.js`, `source.jsx`.
+* `languages.<language>.syntaxes` - syntaxes that enable LSP features on a document, eg. `Packages/Babel/JavaScript (Babel).tmLanguage`
 * `enabled` - disable a language server globally, or per-project
 * `settings` - per-project settings (equivalent to VS Code's Workspace Settings)
 * `env` - dict of environment variables to be injected into the language server's process (eg. PYTHONPATH)

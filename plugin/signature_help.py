@@ -49,7 +49,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
         config = config_for_scope(self.view)
         if config:
-            self._language_id = config.languageId
+            self._language_id = config.get_language_id(self.view)
 
         self._initialized = True
 

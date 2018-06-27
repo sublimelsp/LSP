@@ -137,7 +137,7 @@ def notify_did_open(view: sublime.View):
                 params = {
                     "textDocument": {
                         "uri": filename_to_uri(view_file),
-                        "languageId": config.languageId,
+                        "languageId": config.get_language_id(view),
                         "text": view.substr(sublime.Region(0, view.size())),
                         "version": ds.version
                     }
@@ -184,7 +184,7 @@ def notify_did_change(view: sublime.View):
             params = {
                 "textDocument": {
                     "uri": uri,
-                    # "languageId": config.languageId, clangd does not like this field, but no server uses it?
+                    # "languageId": config.get_language_id(view), clangd does not like this field, but no server uses it?
                     "version": document_state.inc_version(),
                 },
                 "contentChanges": [{

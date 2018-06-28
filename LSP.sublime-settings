@@ -147,7 +147,47 @@
         "Packages/R/R.sublime-syntax",
         "Packages/R-Box/syntax/R Extended.sublime-syntax"
       ]
-    }
+    },
+    "ruby":
+		{
+			"command":
+			[
+				"solargraph",
+				"socket"
+			],
+			"languageId": "ruby",
+			"scopes":
+			[
+				"source.ruby",
+				"source.ruby.rails"
+			],
+			"syntaxes":
+			[
+				"Packages/Ruby/Ruby.sublime-syntax",
+				"Packages/Rails/Ruby on Rails.sublime-syntax"
+			],
+			"tcp_port": 7658
+		},
+    "javascript-typescript":
+		{
+			"command":
+			[
+				"javascript-typescript-langserver"
+			],
+			"languageId": "javascript-typescript",
+			"scopes":
+			[
+				"source.js",
+				"source.ts"
+			],
+			"syntaxes":
+			[
+				"Packages/Babel/JavaScript (Babel).sublime-syntax",
+				"Packages/JavaScript/JavaScript.sublime-syntax",
+				"Packages/TypeScript/TypeScript.sublime-syntax"
+			],
+			"tcp_port": 2089
+		},
   },
 
   // Show activity messages in the status bar for a few seconds.

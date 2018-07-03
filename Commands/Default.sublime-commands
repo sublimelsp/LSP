@@ -55,5 +55,9 @@
         "caption": "LSP: Show Diagnostics",
         "command": "lsp_show_diagnostics_panel",
         "args": {}
+    },
+    {
+        "caption": "LSP: Rename Symbol",
+        "command": "lsp_symbol_rename"
     }
 ]

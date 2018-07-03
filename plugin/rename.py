@@ -1,7 +1,33 @@
+import sublime_plugin
 from .core.clients import LspTextCommand
 from .core.clients import client_for_view
 from .core.protocol import Request
 from .core.documents import get_document_position, get_position, is_at_word
+
+
+class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
+    def __init__(self, view):
+        self.view = view
+
+    def name(self):
+        return "new_name"
+
+    def placeholder(self):
+        return self.get_current_symbol_name()
+
+    def initial_text(self):
+        return self.get_current_symbol_name()
+
+    def validate(self, name):
+        return len(name) > 0
+
+    def get_current_symbol_name(self):
+        pos = get_position(self.view)
+        current_name = self.view.substr(self.view.word(pos))
+        # Is this check necessary?
+        if not current_name:
+            current_name = ""
+        return current_name
 
 
 class LspSymbolRenameCommand(LspTextCommand):
@@ -14,15 +40,14 @@ class LspSymbolRenameCommand(LspTextCommand):
             return is_at_word(self.view, event)
         return False
 
-    def run(self, edit, event=None):
+    def input(self, args):
+        return RenameSymbolInputHandler(self.view)
+
+    def run(self, edit, new_name, event=None):
         pos = get_position(self.view, event)
         params = get_document_position(self.view, pos)
-        current_name = self.view.substr(self.view.word(pos))
-        if not current_name:
-            current_name = ""
-        self.view.window().show_input_panel(
-            "New name:", current_name, lambda text: self.request_rename(params, text),
-            None, None)
+
+        self.request_rename(params, new_name)
 
     def request_rename(self, params, new_name):
         client = client_for_view(self.view)

@@ -41,7 +41,10 @@ class LspSymbolRenameCommand(LspTextCommand):
         return False
 
     def input(self, args):
-        return RenameSymbolInputHandler(self.view)
+        if "new_name" not in args:
+            return RenameSymbolInputHandler(self.view)
+        else:
+            return None
 
     def run(self, edit, new_name, event=None):
         pos = get_position(self.view, event)

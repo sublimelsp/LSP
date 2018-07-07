@@ -39,27 +39,44 @@ The default LSP.sublime-settings contains some default LSP client configuration 
 
 ### Javascript/Typescript<a name="jsts"></a>
 
-`npm install -g javascript-typescript-langserver`
-
-See: [github:sourcegraph/javascript-typescript-langserver](https://github.com/sourcegraph/javascript-typescript-langserver)
-
-On windows you will need to override client config to launch `javascript-typescript-stdio.cmd` instead.
-
-See: [github](https://github.com/sourcegraph/javascript-typescript-langserver)
-
 Autocomplete triggers: in User or Syntax-specific settings, add:
 
 ```
 "auto_complete_triggers": [
-        {
-            "characters": ".",
-            "selector": "source.js"
-        },
-        {
-            "characters": ".",
-            "selector": "source.ts"
-        }
+    {
+        "characters": ".",
+        "selector": "source.js"
+    },
+    {
+        "characters": ".",
+        "selector": "source.ts"
+    }
 ]
+```
+
+You need to have [tomv564/lsp-tsserver](https://github.com/tomv564/lsp-tsserver) installed globally for the completions to work.
+
+`npm install -g lsp-tsserver`
+
+Client configuration:
+
+```
+{
+    "js": {
+        "command": ["lsp-tsserver"],
+        "enabled": true,
+        "languageId": "javascript",
+        "scopes": ["source.js"],
+        "syntaxes": ["Packages/JavaScript/JavaScript.sublime-syntax"]
+    },
+    "jsts": {
+        "command": ["lsp-tsserver"],
+        "enabled": true,
+        "languageId": "typescript"
+        "scopes": ["source.ts", "source.tsx"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"],
+    }
+}
 ```
 
 ### Flow (Javascript)<a name="flow"></a>
@@ -300,7 +317,7 @@ LSP ships with default client configuration for a few language servers. Here is 
 
 ```json
 "jsts": {
-    "command": ["javascript-typescript-stdio"],
+    "command": ["lsp-tsserver"],
     "scopes": ["source.ts", "source.tsx"],
     "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"],
     "languageId": "typescript"

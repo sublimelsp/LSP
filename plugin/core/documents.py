@@ -263,4 +263,3 @@ class GlobalDocumentHandler(object):
 
     def notify_did_open(self, view: sublime.View):
         notify_did_open(view)
-

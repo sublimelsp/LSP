@@ -59,7 +59,6 @@ class SessionTest(unittest.TestCase):
         created_callback.assert_called_once()
 
     def test_can_shutdown_session(self):
-        config = ClientConfig("test", [], None, ["source.test"], ["Test.sublime-syntax"], "test")
         project_path = "/"
         created_callback = unittest.mock.Mock()
         ended_callback = unittest.mock.Mock()

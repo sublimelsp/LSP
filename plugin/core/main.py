@@ -1,4 +1,3 @@
-import os
 
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional, Set
@@ -9,30 +8,23 @@ except ImportError:
 import sublime_plugin
 import sublime
 
-from .protocol import Notification
 from .settings import (
     ClientConfig, settings, load_settings, unload_settings
 )
 from .handlers import LanguageHandler
-from .logging import debug, server_log, set_debug_logging
-from .rpc import attach_tcp_client, attach_stdio_client
-from .workspace import get_project_path
+from .logging import debug, set_debug_logging
 from .configurations import (
-    config_for_scope, is_supported_view, register_client_config, ConfigManager
+    is_supported_view, register_client_config, ConfigManager
 )
 from .clients import (
     start_window_config,
-    can_start_config,
-    window_configs, is_ready_window_config,
-    unload_old_clients, unload_window_sessions, unload_all_clients, register_clients_unloaded_handler
+    unload_window_sessions, unload_all_clients, register_clients_unloaded_handler
 )
 from .events import Events
 from .documents import (
-    initialize_document_sync, notify_did_open, clear_document_states, GlobalDocumentHandler
+    clear_document_states, GlobalDocumentHandler
 )
-from .diagnostics import handle_client_diagnostics, remove_diagnostics, GlobalDiagnostics
-from .edit import apply_workspace_edit
-from .process import start_server
+from .diagnostics import GlobalDiagnostics
 from .windows import WindowRegistry
 
 

@@ -72,6 +72,16 @@ def remove_diagnostics(view: sublime.View, client_name: str):
             debug('file still open?')
 
 
+class GlobalDiagnostics(object):
+    def update(self, window: sublime.Window, client_name: str, update: dict):
+        handle_client_diagnostics(window, client_name, update)
+
+    def remove(self, view: sublime.View, client_name: str):
+        """Removes diagnostics for a file if no views exist for it
+        """
+        remove_diagnostics(view, client_name)
+
+
 def get_line_diagnostics(view, point):
     row, _ = view.rowcol(point)
     diagnostics = get_diagnostics_for_view(view)

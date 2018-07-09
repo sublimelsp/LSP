@@ -132,3 +132,12 @@ def is_supported_view(view: sublime.View) -> bool:
         return True
     else:
         return False
+
+
+class ConfigManager(object):
+    def is_supported(self, view: sublime.View) -> bool:
+        # todo: calls config_for_scope immediately.
+        return is_supported_view(view)
+
+    def scope_config(self, view: sublime.View) -> 'Optional[ClientConfig]':
+        return config_for_scope(view)

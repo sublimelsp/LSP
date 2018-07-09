@@ -255,3 +255,12 @@ def initialize_document_sync(text_document_sync_kind):
     Events.subscribe('view.on_modified', queue_did_change)
     Events.subscribe('view.on_post_save_async', notify_did_save)
     Events.subscribe('view.on_close', notify_did_close)
+
+
+class GlobalDocumentHandler(object):
+    def initialize(self, text_document_sync_kind):
+        initialize_document_sync(text_document_sync_kind)
+
+    def notify_did_open(self, view: sublime.View):
+        notify_did_open(view)
+

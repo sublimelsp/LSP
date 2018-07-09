@@ -25,3 +25,7 @@ class WindowStateTests(unittest.TestCase):
         self.assertIsNone(state.get_session('asdf'))
         state.add_session('asdf', Session(test_config, "", TestClient()))
         self.assertIsNotNone(state.get_session('asdf'))
+
+    # def test_can_(self):
+    #     state = WindowState()
+    #     state.request_session

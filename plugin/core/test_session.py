@@ -28,6 +28,9 @@ class TestClient():
     def send_notification(self, notification: Notification):
         pass
 
+    def on_notification(self, name, handler: 'Callable'):
+        pass
+
 
 test_config = ClientConfig("test", [], None, ["source.test"], ["Test.sublime-syntax"], "test")
 

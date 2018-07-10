@@ -124,7 +124,6 @@ class WindowManager(object):
                 debug(config.name, 'is not enabled')
 
     def _start_client(self, view: ViewLike, config: ClientConfig):
-        # TODO: CONTINUE FROM HERE
         project_path = get_project_path(self._window)
         if project_path is None:
             debug('Cannot start without a project folder')
@@ -140,8 +139,9 @@ class WindowManager(object):
             # if settings.show_status_messages:
             #     self._window.status_message("Starting " + config.name + "...")
             debug("starting in", project_path)
-            self._start_session(self._window, project_path, config,
-                                lambda session: self._handle_session_started(session, project_path, config))
+            session = self._start_session(self._window, project_path, config,
+                                          lambda session: self._handle_session_started(session, project_path, config))
+            self._sessions[config.name] = session
         else:
             debug('Already starting on this window:', config.name)
 

@@ -94,6 +94,7 @@ def start_window_config(window: sublime.Window, project_path: str, config: Clien
                              on_ended=lambda: on_session_ended(window, config.name))
     clients_by_window.setdefault(window.id(), {})[config.name] = session
     debug("{} client registered for window {}".format(config.name, window.id()))
+    return session
 
 
 def on_session_ended(window: sublime.Window, config_name: str):

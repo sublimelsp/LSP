@@ -212,7 +212,12 @@ class SaveListener(sublime_plugin.EventListener):
 
 def is_transient_view(view):
     window = view.window()
-    return view == window.transient_view_in_group(window.active_group())
+    if window:
+        if window.get_view_index(view)[1] == -1:
+            return True  # Quick panel transient views
+        return view == window.transient_view_in_group(window.active_group())
+    else:
+        return True
 
 
 class DocumentSyncListener(sublime_plugin.ViewEventListener):
@@ -231,15 +236,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
         return False
 
     def on_load_async(self):
-        # skip transient views: if not is_transient_view(self.view):
-        Events.publish("view.on_load_async", self.view)
+        # skip transient views:
+        if not is_transient_view(self.view):
+            Events.publish("view.on_load_async", self.view)
 
     def on_modified(self):
         if self.view.file_name():
             Events.publish("view.on_modified", self.view)
 
     def on_activated_async(self):
-        if self.view.file_name():
+        if self.view.file_name() and not is_transient_view(self.view):
             Events.publish("view.on_activated_async", self.view)
 
 

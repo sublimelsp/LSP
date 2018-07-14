@@ -6,16 +6,7 @@ except ImportError:
     pass
 
 from .logging import debug
-
-
-class WindowLike(object):
-    def id(self):
-        return 0
-
-
-class ViewLike(object):
-    def __init__(self):
-        pass
+from .types import WindowLike
 
 
 def get_project_path(window: WindowLike) -> 'Optional[str]':

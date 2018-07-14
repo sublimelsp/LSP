@@ -4,12 +4,14 @@ import sublime
 from .settings import ClientConfig, client_configs
 from .logging import debug
 from .workspace import get_project_config
+from .windows import ViewLike
 
 assert ClientConfig
 
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
     assert Any and List and Dict and Tuple and Callable and Optional
+    assert ViewLike
 except ImportError:
     pass
 
@@ -135,9 +137,9 @@ def is_supported_view(view: sublime.View) -> bool:
 
 
 class ConfigManager(object):
-    def is_supported(self, view: sublime.View) -> bool:
+    def is_supported(self, view: 'Any') -> bool:
         # todo: calls config_for_scope immediately.
         return is_supported_view(view)
 
-    def scope_config(self, view: sublime.View) -> 'Optional[ClientConfig]':
+    def scope_config(self, view: 'Any') -> 'Optional[ClientConfig]':
         return config_for_scope(view)

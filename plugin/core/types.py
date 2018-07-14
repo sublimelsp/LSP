@@ -1,3 +1,12 @@
+try:
+    from typing_extensions import Protocol
+    from typing import Optional, List, Callable, Dict
+    assert Optional and List and Callable and Dict
+except ImportError:
+    pass
+    Protocol = object  # type: ignore
+
+
 class Settings(object):
 
     def __init__(self):
@@ -76,3 +85,34 @@ class ClientConfig(object):
             self.settings = settings.get("settings", dict())
         if "env" in settings:
             self.env = settings.get("env", dict())
+
+
+class ViewLike(Protocol):
+    def __init__(self):
+        pass
+
+    def file_name(self) -> 'Optional[str]':
+        ...
+
+
+class WindowLike(Protocol):
+    def id(self) -> int:
+        ...
+
+    def folders(self) -> 'List[str]':
+        ...
+
+    def num_groups(self) -> int:
+        ...
+
+    def active_group(self) -> int:
+        ...
+
+    def active_view_in_group(self, group) -> ViewLike:
+        ...
+
+    def project_data(self) -> 'Optional[dict]':
+        ...
+
+    def active_view(self) -> 'Optional[ViewLike]':
+        ...

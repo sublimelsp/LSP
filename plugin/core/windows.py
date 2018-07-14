@@ -1,47 +1,44 @@
 from .sessions import Session
 from .logging import debug
-from .types import ClientStates, ClientConfig
+from .types import ClientStates, ClientConfig, WindowLike, ViewLike
 from .protocol import Notification
 from .workspace import get_project_path
+try:
+    from typing_extensions import Protocol
+    from typing import Optional, List, Callable, Dict
+    assert Optional and List and Callable and Dict
+except ImportError:
+    pass
+    Protocol = object  # type: ignore
 
 
-class WindowLike(object):
-    def id(self):
-        return 0
-
-
-class ViewLike(object):
-    def __init__(self):
-        pass
-
-
-class ConfigRegistry(object):
+class ConfigRegistry(Protocol):
+    # todo: calls config_for_scope immediately.
     def is_supported(self, view: ViewLike) -> bool:
-        # todo: calls config_for_scope immediately.
-        pass
+        ...
 
     def scope_config(self, view: ViewLike) -> 'Optional[ClientConfig]':
-        pass
+        ...
 
 
-class DiagnosticsHandler(object):
-    def update(window: WindowLike, client_name: str, update: dict):
-        pass
+class DiagnosticsHandler(Protocol):
+    def update(self, window: WindowLike, client_name: str, update: dict) -> None:
+        ...
 
-    def remove(view: ViewLike, client_name: str):
-        pass
+    def remove(self, view: ViewLike, client_name: str) -> None:
+        ...
 
 
-class DocumentHandler(object):
-    def initialize(text_document_sync_kind):
-        pass
+class DocumentHandler(Protocol):
+    def initialize(self, text_document_sync_kind) -> None:
+        ...
 
-    def notify_did_open(view: ViewLike):
-        pass
+    def notify_did_open(self, view: ViewLike) -> None:
+        ...
 
 
 def get_active_views(window: WindowLike):
-    views = list()  # type: List[sublime.View]
+    views = list()  # type: List[ViewLike]
     num_groups = window.num_groups()
     for group in range(0, num_groups):
         view = window.active_view_in_group(group)
@@ -55,7 +52,7 @@ def get_active_views(window: WindowLike):
 
 class WindowManager(object):
     def __init__(self, window: WindowLike, configs: ConfigRegistry, documents: DocumentHandler,
-                 diagnostics: DiagnosticsHandler, session_starter: 'Callable'):
+                 diagnostics: DiagnosticsHandler, session_starter: 'Callable') -> None:
 
         # to move here:
         # configurations.py: window_client_configs and all references
@@ -91,7 +88,7 @@ class WindowManager(object):
 
     def start_active_views(self):
         active_views = get_active_views(self._window)
-        startable_views = list(filter(self._configs.is_supported, active_views))
+        startable_views = list(filter(self._configs.is_supported, active_views))  # type: List[ViewLike]
 
         if len(startable_views) > 0:
             first_view = startable_views.pop(0)
@@ -201,7 +198,7 @@ class WindowManager(object):
 
 class WindowRegistry(object):
     def __init__(self, configs: ConfigRegistry, documents: DocumentHandler, diagnostics: DiagnosticsHandler,
-                 session_starter: 'Callable'):
+                 session_starter: 'Callable') -> None:
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs
         self._diagnostics = diagnostics

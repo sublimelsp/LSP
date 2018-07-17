@@ -1,3 +1,4 @@
+from .events import Events
 from .logging import debug
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike
 from .protocol import Notification
@@ -157,11 +158,6 @@ class WindowManager(object):
         #     "window/showMessage",
         #     lambda params: sublime.message_dialog(params.get("message")))
 
-        # if settings.log_server:
-        #     client.on_notification(
-        #         "window/logMessage",
-        #         lambda params: server_log(params.get("message")))
-
         # if config.name in client_initialization_listeners:
         #     client_initialization_listeners[config.name](client)
 
@@ -172,7 +168,7 @@ class WindowManager(object):
         if document_sync:
             self._documents.initialize(document_sync)
 
-        # Events.subscribe('view.on_close', lambda view: self._diagnostics.remove(view, config.name))
+        Events.subscribe('view.on_close', lambda view: self._diagnostics.remove(view, config.name))
 
         client.send_notification(Notification.initialized())
         if config.settings:

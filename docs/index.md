@@ -173,6 +173,41 @@ UPDATE: Some new options for PHP language servers are discussed in [this issue](
 See: [github:felixfbecker/php-language-server](https://github.com/felixfbecker/php-language-server)
 
 
+### Ruby / Ruby on Rails<a name="ruby"></a>
+
+Requires the solargraph gem:
+    
+    gem install solargraph
+
+See [github.com:castwide/solargraph](https://github.com/castwide/solargraph) for up-to-date installation instructions.
+
+Client configuration:
+
+```
+"ruby": {
+	"command":
+	[
+		"solargraph",
+		"socket"
+	],
+	"enabled": true,
+	"languageId": "ruby",
+	"scopes":
+	[
+		"source.ruby",
+		"source.ruby.rails"
+	],
+	"syntaxes":
+	[
+		"Packages/Ruby/Ruby.sublime-syntax",
+		"Packages/Rails/Ruby on Rails.sublime-syntax",
+		"Packages/Rails/HTML (Rails).sublime-syntax"
+	],
+	"tcp_port": 7658
+},
+```
+
+
 ### Rust<a name="rust"></a>
 
 Requires Rust Nightly.

@@ -1,12 +1,12 @@
-from .sessions import Session
 from .logging import debug
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike
 from .protocol import Notification
+from .sessions import Session
 from .workspace import get_project_path
 try:
     from typing_extensions import Protocol
     from typing import Optional, List, Callable, Dict
-    assert Optional and List and Callable and Dict
+    assert Optional and List and Callable and Dict and Session
 except ImportError:
     pass
     Protocol = object  # type: ignore
@@ -68,12 +68,6 @@ class WindowManager(object):
     def get_session(self, config_name: str) -> 'Optional[Session]':
         return self._sessions.get(config_name)
 
-    def add_session(self, config_name: str, session: Session) -> None:
-        if config_name not in self._sessions:
-            self._sessions[config_name] = session
-        else:
-            raise Exception("session already added")
-
     def _is_session_ready(self, config_name: str):
         if config_name not in self._sessions:
             return False
@@ -133,8 +127,7 @@ class WindowManager(object):
                 # if not handler_startup_hook(window):
                 #     return
 
-            # if settings.show_status_messages:
-            #     self._window.status_message("Starting " + config.name + "...")
+            self._window.status_message("Starting " + config.name + "...")
             debug("starting in", project_path)
             session = self._start_session(self._window, project_path, config,
                                           lambda session: self._handle_session_started(session, project_path, config))
@@ -145,7 +138,7 @@ class WindowManager(object):
     def _handle_session_started(self, session, project_path, config):
         client = session.client
         # client.set_crash_handler(lambda: handle_server_crash(self._window, config))
-        # client.set_error_display_handler(lambda msg: sublime.status_message(msg))
+        client.set_error_display_handler(lambda msg: self._window.status_message(msg))
 
         # # handle server requests and notifications
         # client.on_request(
@@ -191,8 +184,7 @@ class WindowManager(object):
         for view in self._open_after_initialize:
             self._documents.notify_did_open(view)
 
-        # if settings.show_status_messages:
-        #     window.status_message("{} initialized".format(config.name))
+        self._window.status_message("{} initialized".format(config.name))
         self._open_after_initialize.clear()
 
 

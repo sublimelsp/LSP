@@ -49,6 +49,9 @@ class TestWindow(object):
             else:
                 return TestView(None)
 
+    def status_message(self, msg: str) -> None:
+        pass
+
 
 class TestConfigs(object):
     def is_supported(self, view):
@@ -98,16 +101,6 @@ class WindowRegistryTests(unittest.TestCase):
 
 
 class WindowManagerTests(unittest.TestCase):
-
-    # def test_has_no_sessions(self):
-    #     wm = WindowManager(TestWindow(), TestConfigs(), docs, None, test_start_session)
-    #     self.assertIsNone(wm.get_session('asdf'))
-
-    # def test_can_add_session(self):
-    #     wm = WindowManager(TestWindow(), TestConfigs(), docs, None, test_start_session)
-    #     self.assertIsNone(wm.get_session('asdf'))
-    #     wm.add_session('asdf', Session(test_config, "", TestClient()))
-    #     self.assertIsNotNone(wm.get_session('asdf'))
 
     def test_can_start_active_views(self):
         docs = TestDocuments()

@@ -43,7 +43,6 @@ def read_str_setting(settings_obj: sublime.Settings, key: str, default: str) -> 
 
 
 def update_settings(settings: Settings, settings_obj: sublime.Settings):
-    settings.show_status_messages = read_bool_setting(settings_obj, "show_status_messages", True)
     settings.show_view_status = read_bool_setting(settings_obj, "show_view_status", True)
     settings.auto_show_diagnostics_panel = read_bool_setting(settings_obj, "auto_show_diagnostics_panel", True)
     settings.show_diagnostics_phantoms = read_bool_setting(settings_obj, "show_diagnostics_phantoms", False)

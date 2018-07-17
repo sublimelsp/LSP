@@ -16,19 +16,22 @@ except ImportError:
 
 
 class TestClient():
-    def __init__(self):
+    def __init__(self) -> None:
         self.responses = {
             'initialize': {"capabilities": dict(testing=True)}
         }  # type: dict
 
-    def send_request(self, request: Request, on_success: 'Callable', on_error: 'Callable'=None):
+    def send_request(self, request: Request, on_success: 'Callable', on_error: 'Callable'=None) -> None:
         response = self.responses.get(request.method)
         on_success(response)
 
-    def send_notification(self, notification: Notification):
+    def send_notification(self, notification: Notification) -> None:
         pass
 
-    def on_notification(self, name, handler: 'Callable'):
+    def on_notification(self, name, handler: 'Callable') -> None:
+        pass
+
+    def set_error_display_handler(self, handler: 'Callable') -> None:
         pass
 
 

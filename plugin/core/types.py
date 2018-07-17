@@ -116,3 +116,6 @@ class WindowLike(Protocol):
 
     def active_view(self) -> 'Optional[ViewLike]':
         ...
+
+    def status_message(self, msg: str) -> None:
+        ...

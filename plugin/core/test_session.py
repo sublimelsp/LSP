@@ -31,6 +31,9 @@ class TestClient():
     def on_notification(self, name, handler: 'Callable') -> None:
         pass
 
+    def on_request(self, name, handler: 'Callable') -> None:
+        pass
+
     def set_error_display_handler(self, handler: 'Callable') -> None:
         pass
 

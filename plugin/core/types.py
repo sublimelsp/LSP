@@ -119,3 +119,15 @@ class WindowLike(Protocol):
 
     def status_message(self, msg: str) -> None:
         ...
+
+
+class SublimeGlobal(Protocol):
+
+    def message_dialog(self, msg: str) -> None:
+        ...
+
+    def ok_cancel_dialog(self, msg: str, ok_title: str) -> bool:
+        ...
+
+    def yes_no_cancel_dialog(self, msg, yes_title: str, no_title: str) -> int:
+        ...

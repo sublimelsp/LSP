@@ -28,10 +28,21 @@ from .diagnostics import GlobalDiagnostics
 from .windows import WindowRegistry
 
 
+class SublimeUI(object):
+    def message_dialog(self, msg: str) -> None:
+        sublime.message_dialog(msg)
+
+    def ok_cancel_dialog(self, msg: str, ok_title: str) -> bool:
+        return sublime.ok_cancel_dialog(msg, ok_title)
+
+    def yes_no_cancel_dialog(self, msg, yes_title: str, no_title: str) -> int:
+        return sublime.yes_no_cancel_dialog(msg, yes_title, no_title)
+
+
 configs = ConfigManager()
 diagnostics = GlobalDiagnostics()
 documents = GlobalDocumentHandler()
-windows = WindowRegistry(configs, documents, diagnostics, start_window_config)
+windows = WindowRegistry(configs, documents, diagnostics, start_window_config, SublimeUI())
 
 
 def startup():
@@ -111,14 +122,6 @@ def handle_clients_unloaded(window_id):
     if window_id in restarting_window_ids:
         restarting_window_ids.remove(window_id)
         start_active_window()
-
-
-def handle_message_request(params: dict):
-    message = params.get("message", "(missing message)")
-    actions = params.get("actions", [])
-    addendum = "TODO: showMessageRequest with actions:"
-    titles = list(action.get("title") for action in actions)
-    sublime.message_dialog("\n".join([message, addendum] + titles))
 
 
 class LspRestartClientCommand(sublime_plugin.TextCommand):

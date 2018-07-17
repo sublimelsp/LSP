@@ -1,6 +1,6 @@
 from .events import Events
 from .logging import debug
-from .types import ClientStates, ClientConfig, WindowLike, ViewLike
+from .types import ClientStates, ClientConfig, WindowLike, ViewLike, SublimeGlobal
 from .protocol import Notification
 from .sessions import Session
 from .workspace import get_project_path
@@ -53,7 +53,7 @@ def get_active_views(window: WindowLike):
 
 class WindowManager(object):
     def __init__(self, window: WindowLike, configs: ConfigRegistry, documents: DocumentHandler,
-                 diagnostics: DiagnosticsHandler, session_starter: 'Callable') -> None:
+                 diagnostics: DiagnosticsHandler, session_starter: 'Callable', sublime: SublimeGlobal) -> None:
 
         # to move here:
         # configurations.py: window_client_configs and all references
@@ -65,6 +65,7 @@ class WindowManager(object):
         self._sessions = dict()  # type: Dict[str, Session]
         self._start_session = session_starter
         self._open_after_initialize = []  # type: List[ViewLike]
+        self._sublime = sublime
 
     def get_session(self, config_name: str) -> 'Optional[Session]':
         return self._sessions.get(config_name)
@@ -136,6 +137,13 @@ class WindowManager(object):
         else:
             debug('Already starting on this window:', config.name)
 
+    def _handle_message_request(self, params: dict):
+        message = params.get("message", "(missing message)")
+        actions = params.get("actions", [])
+        addendum = "TODO: showMessageRequest with actions:"
+        titles = list(action.get("title") for action in actions)
+        self._sublime.message_dialog("\n".join([message, addendum] + titles))
+
     def _handle_session_started(self, session, project_path, config):
         client = session.client
         # client.set_crash_handler(lambda: handle_server_crash(self._window, config))
@@ -146,17 +154,17 @@ class WindowManager(object):
         #     "workspace/applyEdit",
         #     lambda params: apply_workspace_edit(self._window, params))
 
-        # client.on_request(
-        #     "window/showMessageRequest",
-        #     lambda params: handle_message_request(params))
+        client.on_request(
+            "window/showMessageRequest",
+            lambda params: self._handle_message_request(params))
 
         client.on_notification(
             "textDocument/publishDiagnostics",
             lambda params: self._diagnostics.update(self._window, config.name, params))
 
-        # client.on_notification(
-        #     "window/showMessage",
-        #     lambda params: sublime.message_dialog(params.get("message")))
+        client.on_notification(
+            "window/showMessage",
+            lambda params: self._sublime.message_dialog(params.get("message")))
 
         # if config.name in client_initialization_listeners:
         #     client_initialization_listeners[config.name](client)
@@ -186,16 +194,18 @@ class WindowManager(object):
 
 class WindowRegistry(object):
     def __init__(self, configs: ConfigRegistry, documents: DocumentHandler, diagnostics: DiagnosticsHandler,
-                 session_starter: 'Callable') -> None:
+                 session_starter: 'Callable', sublime: SublimeGlobal) -> None:
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs
         self._diagnostics = diagnostics
         self._documents = documents
         self._session_starter = session_starter
+        self._sublime = sublime
 
     def lookup(self, window: WindowLike) -> WindowManager:
         state = self._windows.get(window.id())
         if state is None:
-            state = WindowManager(window, self._configs, self._documents, self._diagnostics, self._session_starter)
+            state = WindowManager(window, self._configs, self._documents, self._diagnostics, self._session_starter,
+                                  self._sublime)
             self._windows[window.id()] = state
         return state

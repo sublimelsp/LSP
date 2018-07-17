@@ -11,6 +11,20 @@ except ImportError:
     pass
 
 
+class TestSublimeGlobal(object):
+    def __init__(self):
+        pass
+
+    def message_dialog(self, msg: str) -> None:
+        pass
+
+    def ok_cancel_dialog(self, msg: str, ok_title: str) -> bool:
+        return True
+
+    def yes_no_cancel_dialog(self, msg, yes_title: str, no_title: str) -> int:
+        return 1
+
+
 class TestView(object):
     def __init__(self, file_name):
         self._file_name = file_name
@@ -94,7 +108,8 @@ def test_start_session(window, project_path, config, on_created: 'Callable'):
 class WindowRegistryTests(unittest.TestCase):
 
     def test_can_get_window_state(self):
-        windows = WindowRegistry(TestConfigs(), TestDocuments(), TestDiagnostics(), test_start_session)
+        windows = WindowRegistry(TestConfigs(), TestDocuments(), TestDiagnostics(), test_start_session,
+                                 TestSublimeGlobal())
         test_window = TestWindow()
         wm = windows.lookup(test_window)
         self.assertIsNotNone(wm)
@@ -105,7 +120,7 @@ class WindowManagerTests(unittest.TestCase):
     def test_can_start_active_views(self):
         docs = TestDocuments()
         wm = WindowManager(TestWindow([[TestView(__file__)]]), TestConfigs(), docs,
-                           TestDiagnostics(), test_start_session)
+                           TestDiagnostics(), test_start_session, TestSublimeGlobal())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -117,7 +132,7 @@ class WindowManagerTests(unittest.TestCase):
     def test_can_open_supported_view(self):
         docs = TestDocuments()
         window = TestWindow([[]])
-        wm = WindowManager(window, TestConfigs(), docs, TestDiagnostics(), test_start_session)
+        wm = WindowManager(window, TestConfigs(), docs, TestDiagnostics(), test_start_session, TestSublimeGlobal())
 
         wm.start_active_views()
         self.assertIsNone(wm.get_session(test_config.name))

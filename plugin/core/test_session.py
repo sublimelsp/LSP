@@ -37,6 +37,9 @@ class TestClient():
     def set_error_display_handler(self, handler: 'Callable') -> None:
         pass
 
+    def set_crash_handler(self, handler: 'Callable') -> None:
+        pass
+
 
 test_config = ClientConfig("test", [], None, ["source.test"], ["Test.sublime-syntax"], "test")
 

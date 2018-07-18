@@ -9,7 +9,7 @@ import sublime_plugin
 import sublime
 
 from .settings import (
-    ClientConfig, settings, load_settings, unload_settings
+    settings, load_settings, unload_settings
 )
 from .handlers import LanguageHandler
 from .logging import debug, set_debug_logging
@@ -17,18 +17,21 @@ from .configurations import (
     is_supported_view, register_client_config, ConfigManager
 )
 from .clients import (
-    start_window_config,
-    unload_window_sessions, unload_all_clients, register_clients_unloaded_handler
+    start_window_config, unload_all_clients
 )
 from .events import Events
 from .documents import (
-    clear_document_states, GlobalDocumentHandler
+    GlobalDocumentHandler
 )
 from .diagnostics import GlobalDiagnostics
 from .windows import WindowRegistry
 
 
 class SublimeUI(object):
+    DIALOG_CANCEL = sublime.DIALOG_CANCEL
+    DIALOG_YES = sublime.DIALOG_YES
+    DIALOG_NO = sublime.DIALOG_NO
+
     def message_dialog(self, msg: str) -> None:
         sublime.message_dialog(msg)
 
@@ -51,7 +54,6 @@ def startup():
     load_handlers()
     Events.subscribe("view.on_load_async", on_view_activated)
     Events.subscribe("view.on_activated_async", on_view_activated)
-    register_clients_unloaded_handler(handle_clients_unloaded)
     if settings.show_status_messages:
         sublime.status_message("LSP initialized")
     start_active_window()
@@ -101,36 +103,14 @@ def register_language_handler(handler: LanguageHandler) -> None:
         client_initialization_listeners[handler.name] = handler.on_initialized
 
 
-def handle_server_crash(window: sublime.Window, config: ClientConfig):
-    msg = "Language server {} has crashed, do you want to restart it?".format(config.name)
-    result = sublime.ok_cancel_dialog(msg, ok_title="Restart")
-    if result == sublime.DIALOG_YES:
-        restart_window_clients(window)
-
-
-restarting_window_ids = set()  # type: Set[int]
-
-
-def restart_window_clients(window: sublime.Window):
-    clear_document_states(window)
-    restarting_window_ids.add(window.id())
-    unload_window_sessions(window.id())
-
-
-def handle_clients_unloaded(window_id):
-    debug('clients for window {} unloaded'.format(window_id))
-    if window_id in restarting_window_ids:
-        restarting_window_ids.remove(window_id)
-        start_active_window()
-
-
 class LspRestartClientCommand(sublime_plugin.TextCommand):
     def is_enabled(self):
         return is_supported_view(self.view)
 
     def run(self, edit):
         window = self.view.window()
-        restart_window_clients(window)
+        if window:
+            windows.lookup(window).restart_sessions()
 
 
 class LspStartClientCommand(sublime_plugin.TextCommand):

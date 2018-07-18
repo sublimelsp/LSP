@@ -265,3 +265,6 @@ class GlobalDocumentHandler(object):
 
     def notify_did_open(self, view: 'Any'):
         notify_did_open(view)
+
+    def reset(self, window: 'Any'):
+        clear_document_states(window)

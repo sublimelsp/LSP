@@ -122,6 +122,9 @@ class WindowLike(Protocol):
 
 
 class SublimeGlobal(Protocol):
+    DIALOG_CANCEL = 0  # type: int
+    DIALOG_YES = 1  # type: int
+    DIALOG_NO = 2  # type: int
 
     def message_dialog(self, msg: str) -> None:
         ...

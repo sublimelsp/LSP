@@ -66,6 +66,7 @@ class WindowManager(object):
         self._start_session = session_starter
         self._open_after_initialize = []  # type: List[ViewLike]
         self._sublime = sublime
+        self._restarting = False
 
     def get_session(self, config_name: str) -> 'Optional[Session]':
         return self._sessions.get(config_name)
@@ -132,7 +133,8 @@ class WindowManager(object):
             self._window.status_message("Starting " + config.name + "...")
             debug("starting in", project_path)
             session = self._start_session(self._window, project_path, config,
-                                          lambda session: self._handle_session_started(session, project_path, config))
+                                          lambda session: self._handle_session_started(session, project_path, config),
+                                          lambda config_name: self._handle_session_ended(config_name))
             self._sessions[config.name] = session
         else:
             debug('Already starting on this window:', config.name)
@@ -144,9 +146,15 @@ class WindowManager(object):
         titles = list(action.get("title") for action in actions)
         self._sublime.message_dialog("\n".join([message, addendum] + titles))
 
+    def restart_sessions(self):
+        self._documents.reset(self._window)
+        for config_name, session in self._sessions.items():
+            debug("unloading session", config_name)
+            session.end()
+
     def _handle_session_started(self, session, project_path, config):
         client = session.client
-        # client.set_crash_handler(lambda: handle_server_crash(self._window, config))
+        client.set_crash_handler(lambda: self._handle_server_crash(config))
         client.set_error_display_handler(lambda msg: self._window.status_message(msg))
 
         # # handle server requests and notifications
@@ -190,6 +198,24 @@ class WindowManager(object):
 
         self._window.status_message("{} initialized".format(config.name))
         self._open_after_initialize.clear()
+
+    def _handle_all_sessions_ended(self):
+        debug('clients for window {} unloaded'.format(self._window.id()))
+        if self._restarting:
+            self.start_active_views()
+
+    def _handle_session_ended(self, config_name):
+        del self._sessions[config_name]
+        if not self._sessions:
+            debug("all clients unloaded")
+            self._handle_all_sessions_ended()
+
+    def _handle_server_crash(self, config: ClientConfig):
+        msg = "Language server {} has crashed, do you want to restart it?".format(config.name)
+        result = self._sublime.ok_cancel_dialog(msg, ok_title="Restart")
+        if result == self._sublime.DIALOG_YES:
+            self._restarting = False
+            self.restart_sessions()
 
 
 class WindowRegistry(object):

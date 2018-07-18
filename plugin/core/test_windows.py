@@ -12,6 +12,10 @@ except ImportError:
 
 
 class TestSublimeGlobal(object):
+    DIALOG_CANCEL = 0
+    DIALOG_YES = 1
+    DIALOG_NO = 2
+
     def __init__(self):
         pass
 
@@ -22,7 +26,7 @@ class TestSublimeGlobal(object):
         return True
 
     def yes_no_cancel_dialog(self, msg, yes_title: str, no_title: str) -> int:
-        return 1
+        return self.DIALOG_YES
 
 
 class TestView(object):
@@ -99,10 +103,11 @@ class TestDiagnostics(object):
         pass
 
 
-def test_start_session(window, project_path, config, on_created: 'Callable'):
+def test_start_session(window, project_path, config, on_created: 'Callable', on_ended: 'Callable'):
     return create_session(test_config, project_path, dict(), TestSettings(),
                           bootstrap_client=TestClient(),
-                          on_created=on_created)
+                          on_created=on_created,
+                          on_ended=on_ended)
 
 
 class WindowRegistryTests(unittest.TestCase):

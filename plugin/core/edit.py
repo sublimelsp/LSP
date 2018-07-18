@@ -9,12 +9,6 @@ from .workspace import get_project_path
 from .views import range_to_region
 
 
-def apply_workspace_edit(window, params):
-    edit = params.get('edit', dict())
-    window.run_command('lsp_apply_workspace_edit', {'changes': edit.get('changes'),
-                                                    'documentChanges': edit.get('documentChanges')})
-
-
 class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
     def run(self, changes=None, documentChanges=None):
         # debug('workspace edit', changes)

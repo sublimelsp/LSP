@@ -152,15 +152,20 @@ class WindowManager(object):
             debug("unloading session", config_name)
             session.end()
 
+    def _apply_workspace_edit(self, params):
+        edit = params.get('edit', dict())
+        self._window.run_command('lsp_apply_workspace_edit', {'changes': edit.get('changes'),
+                                                              'documentChanges': edit.get('documentChanges')})
+
     def _handle_session_started(self, session, project_path, config):
         client = session.client
         client.set_crash_handler(lambda: self._handle_server_crash(config))
         client.set_error_display_handler(lambda msg: self._window.status_message(msg))
 
-        # # handle server requests and notifications
-        # client.on_request(
-        #     "workspace/applyEdit",
-        #     lambda params: apply_workspace_edit(self._window, params))
+        # handle server requests and notifications
+        client.on_request(
+            "workspace/applyEdit",
+            lambda params: self._apply_workspace_edit(params))
 
         client.on_request(
             "window/showMessageRequest",

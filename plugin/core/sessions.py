@@ -180,4 +180,4 @@ class Session(object):
         self.client = None
         self.capabilities = dict()
         if self._on_ended:
-            self._on_ended()
+            self._on_ended(self.config.name)

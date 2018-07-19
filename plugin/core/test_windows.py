@@ -2,6 +2,7 @@ from .windows import WindowManager, WindowRegistry, WindowLike, ViewLike
 from .sessions import create_session
 from .test_session import TestClient, test_config
 from .test_rpc import TestSettings
+# from .logging import set_debug_logging, debug
 import os
 import unittest
 try:
@@ -91,6 +92,9 @@ class TestDocuments(object):
         if file_name:
             self._documents.append(file_name)
 
+    def reset(self, window):
+        self._documents = []
+
 
 class TestDiagnostics(object):
     def __init__(self):
@@ -146,4 +150,44 @@ class WindowManagerTests(unittest.TestCase):
         # session must be started (todo: verify session is ready)
         wm.activate_view(TestView(__file__))
         self.assertIsNotNone(wm.get_session(test_config.name))
+        self.assertListEqual(docs._documents, [__file__])
+
+    def test_can_restart_sessions(self):
+        docs = TestDocuments()
+        wm = WindowManager(TestWindow([[TestView(__file__)]]), TestConfigs(), docs,
+                           TestDiagnostics(), test_start_session, TestSublimeGlobal())
+        wm.start_active_views()
+
+        # session must be started (todo: verify session is ready)
+        self.assertIsNotNone(wm.get_session(test_config.name))
+
+        # our starting document must be loaded
+        self.assertListEqual(docs._documents, [__file__])
+
+        wm.restart_sessions()
+
+        # session must be started (todo: verify session is ready)
+        self.assertIsNotNone(wm.get_session(test_config.name))
+
+        # our starting document must be loaded
+        self.assertListEqual(docs._documents, [__file__])
+
+    def test_offers_restart_on_crash(self):
+        docs = TestDocuments()
+        wm = WindowManager(TestWindow([[TestView(__file__)]]), TestConfigs(), docs,
+                           TestDiagnostics(), test_start_session, TestSublimeGlobal())
+        wm.start_active_views()
+
+        # session must be started (todo: verify session is ready)
+        self.assertIsNotNone(wm.get_session(test_config.name))
+
+        # our starting document must be loaded
+        self.assertListEqual(docs._documents, [__file__])
+
+        wm._handle_server_crash(test_config)
+
+        # session must be started (todo: verify session is ready)
+        self.assertIsNotNone(wm.get_session(test_config.name))
+
+        # our starting document must be loaded
         self.assertListEqual(docs._documents, [__file__])

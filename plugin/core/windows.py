@@ -135,6 +135,7 @@ class WindowManager(object):
             session = self._start_session(self._window, project_path, config,
                                           lambda session: self._handle_session_started(session, project_path, config),
                                           lambda config_name: self._handle_session_ended(config_name))
+            debug('got session', config.name, session)
             self._sessions[config.name] = session
         else:
             debug('Already starting on this window:', config.name)
@@ -147,10 +148,11 @@ class WindowManager(object):
         self._sublime.message_dialog("\n".join([message, addendum] + titles))
 
     def restart_sessions(self):
+        self._restarting = True
         self._documents.reset(self._window)
-        for config_name, session in self._sessions.items():
+        for config_name in list(self._sessions):
             debug("unloading session", config_name)
-            session.end()
+            self._sessions[config_name].end()
 
     def _apply_workspace_edit(self, params):
         edit = params.get('edit', dict())
@@ -207,19 +209,19 @@ class WindowManager(object):
     def _handle_all_sessions_ended(self):
         debug('clients for window {} unloaded'.format(self._window.id()))
         if self._restarting:
+            debug('restarting')
             self.start_active_views()
 
     def _handle_session_ended(self, config_name):
         del self._sessions[config_name]
+        debug("session", config_name, "ended")
         if not self._sessions:
-            debug("all clients unloaded")
             self._handle_all_sessions_ended()
 
     def _handle_server_crash(self, config: ClientConfig):
         msg = "Language server {} has crashed, do you want to restart it?".format(config.name)
         result = self._sublime.ok_cancel_dialog(msg, ok_title="Restart")
         if result == self._sublime.DIALOG_YES:
-            self._restarting = False
             self.restart_sessions()
 
 

@@ -6,8 +6,8 @@ from .test_rpc import TestSettings
 import os
 import unittest
 try:
-    from typing import Callable, List, Optional
-    assert Callable and List and Optional
+    from typing import Callable, List, Optional, Set
+    assert Callable and List and Optional and Set
 except ImportError:
     pass
 
@@ -36,6 +36,18 @@ class TestView(object):
 
     def file_name(self):
         return self._file_name
+
+
+class TestHandlerDispatcher(object):
+    def __init__(self, can_start: bool = True) -> None:
+        self._can_start = can_start
+        self._initialized = set()  # type: Set[str]
+
+    def on_start(self, config_name: str) -> bool:
+        return self._can_start
+
+    def on_initialized(self, config_name: str, client):
+        self._initialized.add(config_name)
 
 
 class TestWindow(object):
@@ -118,7 +130,7 @@ class WindowRegistryTests(unittest.TestCase):
 
     def test_can_get_window_state(self):
         windows = WindowRegistry(TestConfigs(), TestDocuments(), TestDiagnostics(), test_start_session,
-                                 TestSublimeGlobal())
+                                 TestSublimeGlobal(), TestHandlerDispatcher())
         test_window = TestWindow()
         wm = windows.lookup(test_window)
         self.assertIsNotNone(wm)
@@ -129,7 +141,7 @@ class WindowManagerTests(unittest.TestCase):
     def test_can_start_active_views(self):
         docs = TestDocuments()
         wm = WindowManager(TestWindow([[TestView(__file__)]]), TestConfigs(), docs,
-                           TestDiagnostics(), test_start_session, TestSublimeGlobal())
+                           TestDiagnostics(), test_start_session, TestSublimeGlobal(), TestHandlerDispatcher())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -141,7 +153,8 @@ class WindowManagerTests(unittest.TestCase):
     def test_can_open_supported_view(self):
         docs = TestDocuments()
         window = TestWindow([[]])
-        wm = WindowManager(window, TestConfigs(), docs, TestDiagnostics(), test_start_session, TestSublimeGlobal())
+        wm = WindowManager(window, TestConfigs(), docs, TestDiagnostics(), test_start_session, TestSublimeGlobal(),
+                           TestHandlerDispatcher())
 
         wm.start_active_views()
         self.assertIsNone(wm.get_session(test_config.name))
@@ -155,7 +168,7 @@ class WindowManagerTests(unittest.TestCase):
     def test_can_restart_sessions(self):
         docs = TestDocuments()
         wm = WindowManager(TestWindow([[TestView(__file__)]]), TestConfigs(), docs,
-                           TestDiagnostics(), test_start_session, TestSublimeGlobal())
+                           TestDiagnostics(), test_start_session, TestSublimeGlobal(), TestHandlerDispatcher())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -175,7 +188,8 @@ class WindowManagerTests(unittest.TestCase):
     def test_offers_restart_on_crash(self):
         docs = TestDocuments()
         wm = WindowManager(TestWindow([[TestView(__file__)]]), TestConfigs(), docs,
-                           TestDiagnostics(), test_start_session, TestSublimeGlobal())
+                           TestDiagnostics(), test_start_session, TestSublimeGlobal(),
+                           TestHandlerDispatcher())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -191,3 +205,20 @@ class WindowManagerTests(unittest.TestCase):
 
         # our starting document must be loaded
         self.assertListEqual(docs._documents, [__file__])
+
+    def test_invokes_language_handler(self):
+        docs = TestDocuments()
+        dispatcher = TestHandlerDispatcher()
+        wm = WindowManager(TestWindow([[TestView(__file__)]]), TestConfigs(), docs,
+                           TestDiagnostics(), test_start_session, TestSublimeGlobal(),
+                           dispatcher)
+        wm.start_active_views()
+
+        # session must be started (todo: verify session is ready)
+        self.assertIsNotNone(wm.get_session(test_config.name))
+
+        # our starting document must be loaded
+        self.assertListEqual(docs._documents, [__file__])
+
+        # client_start_listeners, client_initialization_listeners,
+        self.assertTrue(test_config.name in dispatcher._initialized)

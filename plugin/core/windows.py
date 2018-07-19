@@ -53,7 +53,8 @@ def get_active_views(window: WindowLike):
 
 class WindowManager(object):
     def __init__(self, window: WindowLike, configs: ConfigRegistry, documents: DocumentHandler,
-                 diagnostics: DiagnosticsHandler, session_starter: 'Callable', sublime: SublimeGlobal) -> None:
+                 diagnostics: DiagnosticsHandler, session_starter: 'Callable', sublime: SublimeGlobal,
+                 handler_dispatcher) -> None:
 
         # to move here:
         # configurations.py: window_client_configs and all references
@@ -66,6 +67,7 @@ class WindowManager(object):
         self._start_session = session_starter
         self._open_after_initialize = []  # type: List[ViewLike]
         self._sublime = sublime
+        self._handlers = handler_dispatcher
         self._restarting = False
 
     def get_session(self, config_name: str) -> 'Optional[Session]':
@@ -114,6 +116,8 @@ class WindowManager(object):
                     # TODO: this assumes the 2nd, 3rd, 4th view all have the same config
                     self._open_after_initialize.append(view)
                     self._start_client(view, config)
+                else:
+                    debug('session already ready', config.name)
             else:
                 debug(config.name, 'is not enabled')
 
@@ -124,18 +128,14 @@ class WindowManager(object):
             return
 
         if self._can_start_config(config.name):
-            # TODO: re-enable
-            # if config.name in client_start_listeners:
-                # handler_startup_hook = client_start_listeners[config.name]
-                # if not handler_startup_hook(window):
-                #     return
+            if not self._handlers.on_start(config.name):
+                return
 
             self._window.status_message("Starting " + config.name + "...")
             debug("starting in", project_path)
             session = self._start_session(self._window, project_path, config,
                                           lambda session: self._handle_session_started(session, project_path, config),
                                           lambda config_name: self._handle_session_ended(config_name))
-            debug('got session', config.name, session)
             self._sessions[config.name] = session
         else:
             debug('Already starting on this window:', config.name)
@@ -181,8 +181,7 @@ class WindowManager(object):
             "window/showMessage",
             lambda params: self._sublime.message_dialog(params.get("message")))
 
-        # if config.name in client_initialization_listeners:
-        #     client_initialization_listeners[config.name](client)
+        self._handlers.on_initialized(config.name, client)
 
         # TODO: These handlers is already filtered by syntax but does not need to
         # be enabled 2x per client
@@ -227,18 +226,19 @@ class WindowManager(object):
 
 class WindowRegistry(object):
     def __init__(self, configs: ConfigRegistry, documents: DocumentHandler, diagnostics: DiagnosticsHandler,
-                 session_starter: 'Callable', sublime: SublimeGlobal) -> None:
+                 session_starter: 'Callable', sublime: SublimeGlobal, handler_dispatcher) -> None:
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs
         self._diagnostics = diagnostics
         self._documents = documents
         self._session_starter = session_starter
         self._sublime = sublime
+        self._handler_dispatcher = handler_dispatcher
 
     def lookup(self, window: WindowLike) -> WindowManager:
         state = self._windows.get(window.id())
         if state is None:
             state = WindowManager(window, self._configs, self._documents, self._diagnostics, self._session_starter,
-                                  self._sublime)
+                                  self._sublime, self._handler_dispatcher)
             self._windows[window.id()] = state
         return state

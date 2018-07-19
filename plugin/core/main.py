@@ -42,10 +42,28 @@ class SublimeUI(object):
         return sublime.yes_no_cancel_dialog(msg, yes_title, no_title)
 
 
+client_start_listeners = {}  # type: Dict[str, Callable]
+client_initialization_listeners = {}  # type: Dict[str, Callable]
+
+
+class LanguageHandlerDispatcher(object):
+
+    def on_start(self, config_name: str) -> bool:
+        if config_name in client_start_listeners:
+            return client_start_listeners[config_name]()
+        else:
+            return True
+
+    def on_initialized(self, config_name: str, client):
+        if config_name in client_initialization_listeners:
+            client_initialization_listeners[config_name](client)
+
+
 configs = ConfigManager()
 diagnostics = GlobalDiagnostics()
 documents = GlobalDocumentHandler()
-windows = WindowRegistry(configs, documents, diagnostics, start_window_config, SublimeUI())
+handlers_dispatcher = LanguageHandlerDispatcher()
+windows = WindowRegistry(configs, documents, diagnostics, start_window_config, SublimeUI(), handlers_dispatcher)
 
 
 def startup():
@@ -80,13 +98,8 @@ TextDocumentSyncKindNone = 0
 TextDocumentSyncKindFull = 1
 TextDocumentSyncKindIncremental = 2
 
-# open_after_initialize_by_window = dict()  # type: Dict[int, List[sublime.View]]
 unsubscribe_initialize_on_load = None
 unsubscribe_initialize_on_activated = None
-
-
-client_start_listeners = {}  # type: Dict[str, Callable]
-client_initialization_listeners = {}  # type: Dict[str, Callable]
 
 
 def load_handlers():

@@ -77,9 +77,15 @@ class LspHoverCommand(LspTextCommand):
         actions.append("<a href='{}'>{}</a>".format('rename', 'Rename'))
         return "<p>" + " | ".join(actions) + "</p>"
 
+    def format_diagnostic(self, diagnostic):
+        if diagnostic.source:
+            return "<pre>[{}] {}</pre>".format(diagnostic.source, diagnostic.message)
+        else:
+            return "<pre>{}</pre>".format(diagnostic.message)
+
     def diagnostics_content(self, diagnostics):
         formatted_errors = list(
-            "<pre>{}</pre>".format("[{}] {}".format(diagnostic.source, diagnostic.message) if diagnostic.source else "{}".format(diagnostic.message))
+            self.format_diagnostic(diagnostic)
             for diagnostic in diagnostics
             if diagnostic.severity == DiagnosticSeverity.Error)
         formatted = []
@@ -91,7 +97,7 @@ class LspHoverCommand(LspTextCommand):
             formatted.append("</div>")
 
         formatted_warnings = list(
-            "<pre>{}</pre>".format("[{}] {}".format(diagnostic.source, diagnostic.message) if diagnostic.source else "{}".format(diagnostic.message))
+            self.format_diagnostic(diagnostic)
             for diagnostic in diagnostics
             if diagnostic.severity == DiagnosticSeverity.Warning)
 

@@ -5,12 +5,14 @@ from .url import uri_to_filename
 from .protocol import Diagnostic
 from .events import Events
 from .views import range_to_region
+from .windows import WindowLike, ViewLike
 
 assert Diagnostic
 
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
     assert Any and List and Dict and Tuple and Callable and Optional
+    assert ViewLike and WindowLike
 except ImportError:
     pass
 
@@ -70,6 +72,16 @@ def remove_diagnostics(view: sublime.View, client_name: str):
             Events.publish("document.diagnostics", DiagnosticsUpdate(window, client_name, file_path, []))
         else:
             debug('file still open?')
+
+
+class GlobalDiagnostics(object):
+    def update(self, window: 'Any', client_name: str, update: dict):
+        handle_client_diagnostics(window, client_name, update)
+
+    def remove(self, view: 'Any', client_name: str):
+        """Removes diagnostics for a file if no views exist for it
+        """
+        remove_diagnostics(view, client_name)
 
 
 def get_line_diagnostics(view, point):

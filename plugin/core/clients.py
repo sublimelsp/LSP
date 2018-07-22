@@ -86,23 +86,22 @@ def get_window_env(window: sublime.Window, config: ClientConfig):
 
 
 def start_window_config(window: sublime.Window, project_path: str, config: ClientConfig,
-                        on_created: 'Callable'):
+                        on_created: 'Callable', on_ended: 'Callable'):
     args, env = get_window_env(window, config)
     config.binary_args = args
     session = create_session(config, project_path, env, settings,
                              on_created=on_created,
-                             on_ended=lambda: on_session_ended(window, config.name))
+                             on_ended=lambda: on_session_ended(window, config.name, on_ended))
     clients_by_window.setdefault(window.id(), {})[config.name] = session
     debug("{} client registered for window {}".format(config.name, window.id()))
+    return session
 
 
-def on_session_ended(window: sublime.Window, config_name: str):
+def on_session_ended(window: sublime.Window, config_name: str, on_ended_handler: 'Callable'):
+    on_ended_handler(config_name)
+    # todo: this needs to be cleaned up from window-specific logic
     configs = window_configs(window)
     del configs[config_name]
-    if not configs:
-        debug("all clients unloaded")
-        if clients_unloaded_handler:
-            clients_unloaded_handler(window.id())
 
 
 def set_config_stopping(window: sublime.Window, config_name: str):
@@ -211,11 +210,3 @@ def unload_old_clients(window: sublime.Window):
             debug('unload', config_name, 'project path changed from',
                   session.project_path, 'to', project_path)
             session.end()
-
-
-clients_unloaded_handler = None  # type: Optional[Callable]
-
-
-def register_clients_unloaded_handler(handler: 'Callable'):
-    global clients_unloaded_handler
-    clients_unloaded_handler = handler

@@ -2,13 +2,6 @@ import sublime
 import sublime_plugin
 
 from collections import OrderedDict
-
-try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional
-    assert Any and List and Dict and Tuple and Callable and Optional
-except ImportError:
-    pass
-
 from .logging import debug
 from .protocol import Notification
 from .settings import settings
@@ -17,6 +10,15 @@ from .configurations import config_for_scope, is_supported_view, is_supported_sy
 from .clients import client_for_view, client_for_closed_view, check_window_unloaded
 from .events import Events
 from .views import offset_to_point
+from .windows import ViewLike
+
+try:
+    from typing import Any, List, Dict, Tuple, Callable, Optional
+    assert Any and List and Dict and Tuple and Callable and Optional
+    assert ViewLike
+except ImportError:
+    pass
+
 
 SUBLIME_WORD_MASK = 515
 
@@ -261,3 +263,14 @@ def initialize_document_sync(text_document_sync_kind):
     Events.subscribe('view.on_modified', queue_did_change)
     Events.subscribe('view.on_post_save_async', notify_did_save)
     Events.subscribe('view.on_close', notify_did_close)
+
+
+class GlobalDocumentHandler(object):
+    def initialize(self, text_document_sync_kind):
+        initialize_document_sync(text_document_sync_kind)
+
+    def notify_did_open(self, view: 'Any'):
+        notify_did_open(view)
+
+    def reset(self, window: 'Any'):
+        clear_document_states(window)

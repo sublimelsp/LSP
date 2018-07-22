@@ -16,21 +16,32 @@ except ImportError:
 
 
 class TestClient():
-    def __init__(self):
+    def __init__(self) -> None:
         self.responses = {
             'initialize': {"capabilities": dict(testing=True)}
         }  # type: dict
 
-    def send_request(self, request: Request, on_success: 'Callable', on_error: 'Callable'=None):
+    def send_request(self, request: Request, on_success: 'Callable', on_error: 'Callable'=None) -> None:
         response = self.responses.get(request.method)
         on_success(response)
 
-    def send_notification(self, notification: Notification):
+    def send_notification(self, notification: Notification) -> None:
+        pass
+
+    def on_notification(self, name, handler: 'Callable') -> None:
+        pass
+
+    def on_request(self, name, handler: 'Callable') -> None:
+        pass
+
+    def set_error_display_handler(self, handler: 'Callable') -> None:
+        pass
+
+    def set_crash_handler(self, handler: 'Callable') -> None:
         pass
 
 
-def attach_test_client():
-    return TestClient()
+test_config = ClientConfig("test", [], None, ["source.test"], ["Test.sublime-syntax"], "test")
 
 
 class SessionTest(unittest.TestCase):
@@ -46,10 +57,9 @@ class SessionTest(unittest.TestCase):
         # self.assertIsNone(session.capabilities) -- empty dict
 
     def test_can_get_started_session(self):
-        config = ClientConfig("test", [], None, ["source.test"], ["Test.sublime-syntax"], "test")
         project_path = "/"
         created_callback = unittest.mock.Mock()
-        session = create_session(config, project_path, dict(), Settings(),
+        session = create_session(test_config, project_path, dict(), Settings(),
                                  bootstrap_client=TestClient(),
                                  on_created=created_callback)
 
@@ -61,11 +71,10 @@ class SessionTest(unittest.TestCase):
         created_callback.assert_called_once()
 
     def test_can_shutdown_session(self):
-        config = ClientConfig("test", [], None, ["source.test"], ["Test.sublime-syntax"], "test")
         project_path = "/"
         created_callback = unittest.mock.Mock()
         ended_callback = unittest.mock.Mock()
-        session = create_session(config, project_path, dict(), Settings(),
+        session = create_session(test_config, project_path, dict(), Settings(),
                                  bootstrap_client=TestClient(),
                                  on_created=created_callback,
                                  on_ended=ended_callback)

@@ -1,5 +1,4 @@
 import os
-import sublime
 try:
     from typing import List, Optional
     assert List and Optional
@@ -7,9 +6,10 @@ except ImportError:
     pass
 
 from .logging import debug
+from .types import WindowLike
 
 
-def get_project_path(window: sublime.Window) -> 'Optional[str]':
+def get_project_path(window: WindowLike) -> 'Optional[str]':
     """
     Returns the common root of all open folders in the window
     """
@@ -44,7 +44,7 @@ def get_common_parent(paths: 'List[str]') -> str:
     return os.path.commonprefix([path + '/' for path in paths]).rstrip('/')
 
 
-def is_in_workspace(window: sublime.Window, file_path: str) -> bool:
+def is_in_workspace(window: WindowLike, file_path: str) -> bool:
     workspace_path = get_project_path(window)
     if workspace_path is None:
         return False
@@ -71,7 +71,7 @@ def disable_in_project(window, config_name: str) -> None:
     window.set_project_data(project_data)
 
 
-def get_project_config(window: sublime.Window) -> dict:
+def get_project_config(window: WindowLike) -> dict:
     project_data = window.project_data() or dict()
     project_settings = project_data.setdefault('settings', dict())
     project_lsp_settings = project_settings.setdefault('LSP', dict())

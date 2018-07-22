@@ -10,7 +10,7 @@ try:
 except ImportError:
     pass
 
-from .logging import debug, exception_log
+from .logging import debug, exception_log, server_log
 from .protocol import Request, Notification
 from .types import Settings
 
@@ -197,7 +197,10 @@ class Client(object):
     def notification_handler(self, notification):
         method = notification.get("method")
         params = notification.get("params")
-        if method != "window/logMessage":
+        if method == "window/logMessage":
+            debug('<--  ' + method)
+            server_log(params.get("message"))
+        else:
             debug('<--  ' + method)
             if self.settings.log_payloads and params:
                 debug('     ' + str(params))

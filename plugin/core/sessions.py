@@ -141,7 +141,7 @@ def get_initialize_params(project_path: str, config: ClientConfig):
 
 class Session(object):
     def __init__(self, config: ClientConfig, project_path, client: Client,
-                 on_created, on_ended) -> None:
+                 on_created=None, on_ended=None) -> None:
         self.config = config
         self.project_path = project_path
         self.state = ClientStates.STARTING
@@ -180,4 +180,4 @@ class Session(object):
         self.client = None
         self.capabilities = dict()
         if self._on_ended:
-            self._on_ended()
+            self._on_ended(self.config.name)

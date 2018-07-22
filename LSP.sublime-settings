@@ -150,10 +150,6 @@
     }
   },
 
-  // Show activity messages in the status bar for a few seconds.
-  // Example: Starting pyls ...
-  "show_status_messages": true,
-
   // Show permanent language server status in the status bar.
   "show_view_status": true,
 
@@ -164,7 +160,7 @@
   // Show in-line diagnostics using phantoms for unchanged files.
   "show_diagnostics_phantoms": false,
 
-  // Show errors and warnings count in the status bar 
+  // Show errors and warnings count in the status bar
   "show_diagnostics_count_in_view_status": false,
 
   // Show the diagnostics description of the code

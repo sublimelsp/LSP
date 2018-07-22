@@ -68,7 +68,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
             updated_regions = self.view.get_regions('lsp_edit')
             region = updated_regions[index]  #
             self.apply_change(region, newText, edit)
-            if len(self.view.get_regions('lsp_edit')) == last_region_count:
+            if len(self.view.get_regions('lsp_edit')) == last_region_count and last_region_count > 1:
                 index += 1  # no regions lost, move to next region.
             else:
                 # current region was removed, don't advance index.

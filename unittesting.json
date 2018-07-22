@@ -1,3 +1,4 @@
 {
-	"reload_package_on_testing": false
+	"reload_package_on_testing": false,
+	"deferred": true
 }

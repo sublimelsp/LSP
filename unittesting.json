@@ -1,4 +1,5 @@
 {
+    "tests_dir": "tests",
 	"reload_package_on_testing": false,
 	"deferred": true
 }

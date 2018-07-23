@@ -2,6 +2,12 @@ import os
 import sublime
 import sublime_plugin
 
+try:
+    from typing import List, Dict, Optional
+    assert List and Dict and Optional
+except ImportError:
+    pass
+
 from .url import uri_to_filename
 from .protocol import Range
 from .logging import debug
@@ -49,42 +55,45 @@ class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
 
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
-    def run(self, edit, changes=None, show_status=True):
+    def run(self, edit, changes: 'Optional[List[dict]]' = None, show_status=True):
 
         # Sort changes due to issues with self.view.get_regions
         # See https://github.com/tomv564/LSP/issues/325
-        changes = self.changes_sorted(changes)
+        if changes is not None:
+            changes = self.changes_sorted(changes)
 
-        regions = list(self.create_region(change) for change in changes)
-        replacements = list(change.get('newText') for change in changes)
+            regions = list(self.create_region(change) for change in changes)
+            replacements = list(change.get('newText') for change in changes)
 
-        # TODO why source.python here?
-        self.view.add_regions('lsp_edit', regions, "source.python")
+            # TODO why source.python here?
+            self.view.add_regions('lsp_edit', regions, "source.python")
 
-        index = 0
-        last_region_count = len(regions)
-        for newText in replacements:
-            # refresh updated regions after each edit.
-            updated_regions = self.view.get_regions('lsp_edit')
-            region = updated_regions[index]  #
-            self.apply_change(region, newText, edit)
-            if len(self.view.get_regions('lsp_edit')) == last_region_count and last_region_count > 1:
-                index += 1  # no regions lost, move to next region.
-            else:
-                # current region was removed, don't advance index.
-                last_region_count = len(self.view.get_regions('lsp_edit'))
+            index = 0
+            last_region_count = len(regions)
+            for newText in replacements:
+                # refresh updated regions after each edit.
+                updated_regions = self.view.get_regions('lsp_edit')
+                region = updated_regions[index]  #
+                self.apply_change(region, newText, edit)
+                if len(self.view.get_regions('lsp_edit')) == last_region_count and last_region_count > 1:
+                    index += 1  # no regions lost, move to next region.
+                else:
+                    # current region was removed, don't advance index.
+                    last_region_count = len(self.view.get_regions('lsp_edit'))
 
-        self.view.erase_regions('lsp_edit')
-        if show_status:
-            window = self.view.window()
-            if window:
-                base_dir = get_project_path(window)
-                file_path = self.view.file_name()
-                relative_file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
-                message = 'Applied {} change(s) to {}'.format(len(changes), relative_file_path)
-                window.status_message(message)
+            self.view.erase_regions('lsp_edit')
+            if show_status:
+                window = self.view.window()
+                if window:
+                    base_dir = get_project_path(window)
+                    file_path = self.view.file_name()
+                    relative_file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
+                    message = 'Applied {} change(s) to {}'.format(len(changes), relative_file_path)
+                    window.status_message(message)
+        else:
+            debug('Request to apply edit with changes=None')
 
-    def changes_sorted(self, changes):
+    def changes_sorted(self, changes: 'List[dict]') -> 'List[Dict]':
         # changes looks like this:
         # [
         #   {

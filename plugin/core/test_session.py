@@ -18,7 +18,8 @@ except ImportError:
 class TestClient():
     def __init__(self) -> None:
         self.responses = {
-            'initialize': {"capabilities": dict(testing=True)}
+            'initialize': {"capabilities": dict(testing=True, hoverProvider=True)},
+            'textDocument/hover': {"contents": "greeting"}
         }  # type: dict
 
     def send_request(self, request: Request, on_success: 'Callable', on_error: 'Callable'=None) -> None:

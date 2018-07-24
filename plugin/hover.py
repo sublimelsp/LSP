@@ -2,6 +2,11 @@ import mdpopups
 import sublime
 import sublime_plugin
 import webbrowser
+try:
+    from typing import List
+    assert List
+except ImportError:
+    pass
 
 from .core.configurations import is_supported_syntax
 from .core.diagnostics import get_point_diagnostics
@@ -27,6 +32,9 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():
             return
         self.view.run_command("lsp_hover", {"point": point})
+
+
+_test_contents = []  # type: List[str]
 
 
 class LspHoverCommand(LspTextCommand):
@@ -67,6 +75,8 @@ class LspHoverCommand(LspTextCommand):
         all_content += self.hover_content(point, response)
         all_content += self.symbol_actions_content()
 
+        _test_contents.clear()
+        _test_contents.append(all_content)  # for testing only
         self.show_hover(point, all_content)
 
     def symbol_actions_content(self):

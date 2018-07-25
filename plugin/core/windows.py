@@ -6,8 +6,8 @@ from .sessions import Session
 from .workspace import get_project_path
 try:
     from typing_extensions import Protocol
-    from typing import Optional, List, Callable, Dict
-    assert Optional and List and Callable and Dict and Session
+    from typing import Optional, List, Callable, Dict, Any
+    assert Optional and List and Callable and Dict and Session and Any
 except ImportError:
     pass
     Protocol = object  # type: ignore
@@ -234,7 +234,7 @@ class WindowManager(object):
 
 
 class WindowRegistry(object):
-    def __init__(self, configs: ConfigRegistry, documents: 'Any', diagnostics: DiagnosticsHandler,
+    def __init__(self, configs: GlobalConfigs, documents: 'Any', diagnostics: DiagnosticsHandler,
                  session_starter: 'Callable', sublime: SublimeGlobal, handler_dispatcher) -> None:
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs

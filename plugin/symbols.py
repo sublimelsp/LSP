@@ -1,7 +1,6 @@
 
 from .core.protocol import SymbolKind
-from .core.clients import LspTextCommand
-from .core.registry import client_for_view
+from .core.registry import client_for_view, LspTextCommand
 from .core.protocol import Request, Range
 from .core.url import filename_to_uri
 from .core.views import range_to_region

@@ -6,6 +6,10 @@ except ImportError:
 
 from collections import OrderedDict
 
+TextDocumentSyncKindNone = 0
+TextDocumentSyncKindFull = 1
+TextDocumentSyncKindIncremental = 2
+
 
 class DiagnosticSeverity(object):
     Error = 1

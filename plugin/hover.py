@@ -10,8 +10,7 @@ except ImportError:
 
 from .core.configurations import is_supported_syntax
 from .core.diagnostics import get_point_diagnostics
-from .core.clients import LspTextCommand
-from .core.registry import session_for_view
+from .core.registry import session_for_view, LspTextCommand
 from .core.protocol import Request, DiagnosticSeverity
 from .core.documents import get_document_position
 from .core.popups import popup_css, popup_class

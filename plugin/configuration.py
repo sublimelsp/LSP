@@ -3,15 +3,15 @@ import sublime
 import sublime_plugin
 import webbrowser
 
-from .core.settings import ClientConfig, client_configs
+from .core.settings import ClientConfig  # , client_configs
 from .core.configurations import (
-    get_scope_client_config,
-    get_global_client_config  #, clear_window_client_configs
+    # get_scope_client_config,
+    get_global_client_config  # , clear_window_client_configs
 )
 from .core.registry import config_for_scope
-from .core.clients import unload_window_sessions
+# from .core.clients import unload_window_sessions
 from .core.events import Events
-from .core.workspace import enable_in_project, disable_in_project
+# from .core.workspace import enable_in_project, disable_in_project
 
 
 def detect_supportable_view(view: sublime.View):

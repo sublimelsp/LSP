@@ -7,17 +7,25 @@ from .documents import (
 from .diagnostics import GlobalDiagnostics
 from .windows import WindowRegistry
 from .configurations import (
-	ConfigManager, register_client_config
+    ConfigManager, register_client_config
 )
-from .settings import (
-    settings
-)
+# from .settings import (
+#     settings
+# )
 from .clients import (
     start_window_config
 )
-from .types import ClientStates
+from .types import ClientStates, ClientConfig
 from .handlers import LanguageHandler
 from .logging import debug
+from .sessions import Session
+from .clients import Client
+
+try:
+    from typing import Optional, List, Callable, Dict, Any
+    assert Optional and List and Callable and Dict and Any and ClientConfig and Client and Session
+except ImportError:
+    pass
 
 
 client_start_listeners = {}  # type: Dict[str, Callable]
@@ -35,6 +43,7 @@ class LanguageHandlerDispatcher(object):
     def on_initialized(self, config_name: str, client):
         if config_name in client_initialization_listeners:
             client_initialization_listeners[config_name](client)
+
 
 def load_handlers():
     for handler in LanguageHandler.instantiate_all():
@@ -63,17 +72,16 @@ def _session_for_view_and_window(view: sublime.View, window: 'Optional[sublime.W
         debug("no window for view", view.file_name())
         return None
 
-
     config = config_for_scope(view)
     if not config:
         debug("config not available for view", view.file_name())
         return None
 
     session = windows.lookup(window).get_session(config.name)
-    if session.state == ClientStates.READY:
-    	return session
-    else:
-    	return None
+    if session:
+        if session.state == ClientStates.READY:
+            return session
+    return None
 
     # window_config_states = window_configs(window)
     # if config.name not in window_config_states:
@@ -103,7 +111,6 @@ def _client_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Wi
         return None
 
 
-
 class SublimeUI(object):
     DIALOG_CANCEL = sublime.DIALOG_CANCEL
     DIALOG_YES = sublime.DIALOG_YES
@@ -125,17 +132,34 @@ documents = DocumentHandlerFactory()
 handlers_dispatcher = LanguageHandlerDispatcher()
 windows = WindowRegistry(configs, documents, diagnostics, start_window_config, SublimeUI(), handlers_dispatcher)
 
+
 def config_for_scope(view: 'Any') -> 'Optional[ClientConfig]':
     window = view.window()
     if window:
         # todo: don't expose _configs
         return windows.lookup(window)._configs.scope_config(view)
+    return None
+
 
 def is_supported_view(view: sublime.View) -> bool:
     # TODO: perhaps make this check for a client instead of a config
     if config_for_scope(view):
         return True
     else:
+        return False
+
+
+class LspTextCommand(sublime_plugin.TextCommand):
+    def __init__(self, view):
+        super().__init__(view)
+
+    def is_visible(self, event=None):
+        return is_supported_view(self.view)
+
+    def has_client_with_capability(self, capability):
+        session = session_for_view(self.view)
+        if session and session.has_capability(capability):
+            return True
         return False
 
 
@@ -147,13 +171,3 @@ class LspRestartClientCommand(sublime_plugin.TextCommand):
         window = self.view.window()
         if window:
             windows.lookup(window).restart_sessions()
-
-
-class LspStartClientCommand(sublime_plugin.TextCommand):
-    def is_enabled(self):
-        return is_supported_view(self.view)
-
-    def run(self, edit):
-        start_active_window()
-
-

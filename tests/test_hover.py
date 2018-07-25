@@ -1,12 +1,12 @@
 from unittesting import DeferrableTestCase
 import sublime
 from os.path import dirname
-from LSP.plugin.hover import LspHoverCommand, _test_contents
-from LSP.plugin.core.clients import session_for_view, clients_by_window
+from LSP.plugin.hover import _test_contents
 from LSP.plugin.core.types import ClientConfig, ClientStates
 from LSP.plugin.core.test_session import TestClient
 from LSP.plugin.core.sessions import Session
-from LSP.plugin.core.configurations import register_client_config, config_for_scope
+from LSP.plugin.core.registry import windows  # , session_for_view
+from LSP.plugin.core.configurations import register_client_config
 
 test_file_path = dirname(__file__) + "/testfile.txt"
 
@@ -29,21 +29,19 @@ class LspHoverCommandTests(DeferrableTestCase):
         yield 100  # wait for file to be open
         self.view.run_command('insert', {"characters": ORIGINAL_CONTENT})
 
-        handler = LspHoverCommand(self.view)
-        self.assertTrue(handler.is_likely_at_symbol(3))
+        wm = windows.lookup(self.view.window())
+
         text_config = ClientConfig("test", [], None, ["text.plain"], ["Plain text"], "test")
         register_client_config(text_config)
-        config = config_for_scope(self.view)
-        self.assertIsNotNone(config)
+        wm._configs._configs.append(text_config)
 
         session = Session(text_config, dirname(__file__), TestClient())
         session.state = ClientStates.READY
+        wm._sessions[text_config.name] = session
 
-        clients_by_window.setdefault(self.view.window().id(), {})[config.name] = session
-
-        session = session_for_view(self.view)
-        self.assertIsNotNone(session)
-        self.assertTrue(session.has_capability('hoverProvider'))
+        # session = session_for_view(self.view)
+        # self.assertIsNotNone(session)
+        # self.assertTrue(session.has_capability('hoverProvider'))
 
         self.view.run_command('lsp_hover', {'point': 3})
 

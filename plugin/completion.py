@@ -8,12 +8,13 @@ except ImportError:
     pass
 
 from .core.protocol import Request
+from .core.events import Events
 from .core.settings import settings
 from .core.logging import debug, exception_log
 from .core.protocol import CompletionItemKind, Range
-from .core.clients import session_for_view, client_for_view
+from .core.registry import session_for_view, client_for_view
 from .core.configurations import is_supported_syntax
-from .core.documents import get_document_position, purge_did_change
+from .core.documents import get_document_position
 
 
 NO_COMPLETION_SCOPES = 'comment, string'
@@ -217,7 +218,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             return
 
         if settings.complete_all_chars or self.is_after_trigger_character(locations[0]):
-            purge_did_change(view.buffer_id())
+            Events.publish("view.on_purge_changes", self.view)
             document_position = get_document_position(view, locations[0])
             if document_position:
                 client.send_request(
@@ -294,6 +295,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             if self.next_request:
                 prefix, locations = self.next_request
                 self.do_request(prefix, locations)
+                self.state = CompletionState.IDLE
         else:
             debug('Got unexpected response while in state {}'.format(self.state))
 

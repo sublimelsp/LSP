@@ -7,7 +7,7 @@ except ImportError:
     pass
 
 
-from .core.clients import client_for_view
+from .core.registry import client_for_view
 from .core.clients import LspTextCommand
 from .core.protocol import Request
 from .core.documents import get_position

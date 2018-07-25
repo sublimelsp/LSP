@@ -22,6 +22,11 @@ class ConfigRegistry(Protocol):
         ...
 
 
+class GlobalConfigs(Protocol):
+    def for_window(self, window: WindowLike) -> ConfigRegistry:
+        ...
+
+
 class DiagnosticsHandler(Protocol):
     def update(self, window: WindowLike, client_name: str, update: dict) -> None:
         ...
@@ -188,9 +193,9 @@ class WindowManager(object):
         # Move filtering?
         document_sync = session.capabilities.get("textDocumentSync")
         if document_sync:
-            self._documents.initialize(document_sync)
+            self._documents.initialize(Events, session)
 
-        Events.subscribe('view.on_close', lambda view: self._diagnostics.remove(view, config.name))
+        Events.subscribe('view.on_close', lambda view: self._handle_view_closed(view, session))
 
         client.send_notification(Notification.initialized())
         if config.settings:
@@ -204,6 +209,10 @@ class WindowManager(object):
 
         self._window.status_message("{} initialized".format(config.name))
         self._open_after_initialize.clear()
+
+    def _handle_view_closed(self, view, session):
+        self._diagnostics.remove(view, session.config.name)
+        # todo: sublime.set_timeout_async(check_window_unloaded, 500)
 
     def _handle_all_sessions_ended(self):
         debug('clients for window {} unloaded'.format(self._window.id()))
@@ -225,7 +234,7 @@ class WindowManager(object):
 
 
 class WindowRegistry(object):
-    def __init__(self, configs: ConfigRegistry, documents: DocumentHandler, diagnostics: DiagnosticsHandler,
+    def __init__(self, configs: ConfigRegistry, documents: 'Any', diagnostics: DiagnosticsHandler,
                  session_starter: 'Callable', sublime: SublimeGlobal, handler_dispatcher) -> None:
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs
@@ -238,7 +247,9 @@ class WindowRegistry(object):
     def lookup(self, window: WindowLike) -> WindowManager:
         state = self._windows.get(window.id())
         if state is None:
-            state = WindowManager(window, self._configs, self._documents, self._diagnostics, self._session_starter,
+            window_configs = self._configs.for_window(window)
+            window_documents = self._documents.for_window()
+            state = WindowManager(window, window_configs, window_documents, self._diagnostics, self._session_starter,
                                   self._sublime, self._handler_dispatcher)
             self._windows[window.id()] = state
         return state

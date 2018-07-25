@@ -1,7 +1,7 @@
 
 from .core.protocol import Request
 from .core.url import filename_to_uri
-from .core.clients import client_for_view
+from .core.registry import client_for_view
 from .core.clients import LspTextCommand
 from .core.views import region_to_range
 

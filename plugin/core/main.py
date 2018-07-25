@@ -5,19 +5,18 @@ try:
 except ImportError:
     pass
 
-import sublime_plugin
 import sublime
 
 from .settings import (
     settings, load_settings, unload_settings
 )
-from .handlers import LanguageHandler
-from .logging import debug, set_debug_logging
+from .logging import set_debug_logging
 from .clients import (
-    start_window_config, unload_all_clients
+    unload_all_clients
 )
 from .events import Events
 from .registry import windows, load_handlers
+
 
 def startup():
     load_settings()
@@ -45,12 +44,3 @@ def on_view_activated(view: sublime.View):
     window = view.window()
     if window:
         windows.lookup(window).activate_view(view)
-
-
-TextDocumentSyncKindNone = 0
-TextDocumentSyncKindFull = 1
-TextDocumentSyncKindIncremental = 2
-
-unsubscribe_initialize_on_load = None
-unsubscribe_initialize_on_activated = None
-

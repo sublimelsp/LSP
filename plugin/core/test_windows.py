@@ -84,6 +84,11 @@ class TestWindow(object):
         pass
 
 
+class TestGlobalConfigs(object):
+    def for_window(self, window):
+        return TestConfigs()
+
+
 class TestConfigs(object):
     def is_supported(self, view):
         return view.file_name() is not None
@@ -108,6 +113,11 @@ class TestDocuments(object):
         self._documents = []
 
 
+class TestDocumentHandlerFactory(object):
+    def for_window(self):
+        return TestDocuments()
+
+
 class TestDiagnostics(object):
     def __init__(self):
         pass
@@ -129,7 +139,8 @@ def test_start_session(window, project_path, config, on_created: 'Callable', on_
 class WindowRegistryTests(unittest.TestCase):
 
     def test_can_get_window_state(self):
-        windows = WindowRegistry(TestConfigs(), TestDocuments(), TestDiagnostics(), test_start_session,
+        windows = WindowRegistry(TestGlobalConfigs(), TestDocumentHandlerFactory(),
+                                 TestDiagnostics(), test_start_session,
                                  TestSublimeGlobal(), TestHandlerDispatcher())
         test_window = TestWindow()
         wm = windows.lookup(test_window)

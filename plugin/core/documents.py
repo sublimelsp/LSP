@@ -268,7 +268,7 @@ class SessionDocumentHandler(object):
             self._document_states[path] = DocumentState(path)
         return self._document_states[path]
 
-    def has_document_state(self, path: str) -> DocumentState:
+    def has_document_state(self, path: str) -> bool:
         return path in self._document_states
 
     def notify_did_open(self, view: sublime.View):

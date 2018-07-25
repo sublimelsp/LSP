@@ -14,6 +14,7 @@ except ImportError:
 from .core.configurations import is_supported_syntax
 from .core.registry import config_for_scope, session_for_view, client_for_view
 from .core.documents import get_document_position
+from .core.events import Events
 from .core.protocol import Request
 from .core.logging import debug
 from .core.popups import popup_css, popup_class

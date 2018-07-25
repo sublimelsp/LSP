@@ -3,9 +3,8 @@ import sublime
 
 from .core.panels import create_output_panel
 from .core.settings import PLUGIN_NAME
-from .core.registry import client_for_view
+from .core.registry import client_for_view, LspTextCommand
 from .core.documents import is_at_word, get_position, get_document_position
-from .core.clients import LspTextCommand
 from .core.workspace import get_project_path
 from .core.protocol import Request, Point
 from .core.url import uri_to_filename

@@ -129,7 +129,6 @@ def is_supported_syntax(syntax: str) -> bool:
     return False
 
 
-
 class ConfigManager(object):
 
     def for_window(self, window: 'Any') -> 'WindowConfigManager':
@@ -143,7 +142,7 @@ class ConfigManager(object):
 
 
 class WindowConfigManager(object):
-    def __init__(self, configs: 'List[ClientConfig]'):
+    def __init__(self, configs: 'List[ClientConfig]') -> None:
         self._configs = configs
 
     def is_supported(self, view: 'Any') -> bool:

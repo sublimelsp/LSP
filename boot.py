@@ -1,4 +1,4 @@
-from .plugin.core.main import startup, shutdown, LspStartClientCommand, LspRestartClientCommand
+from .plugin.core.main import startup, shutdown
 
 # TODO: narrow down imports
 from .plugin.core.panels import *

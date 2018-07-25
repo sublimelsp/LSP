@@ -2,7 +2,7 @@ import sublime_plugin
 
 from .core.configurations import is_supported_syntax
 from .core.protocol import Request, Range, DocumentHighlightKind
-from .core.clients import session_for_view, client_for_view
+from .core.registry import session_for_view, client_for_view
 from .core.documents import get_document_position
 from .core.settings import settings
 from .core.views import range_to_region

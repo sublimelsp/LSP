@@ -11,10 +11,9 @@ try:
 except ImportError:
     pass
 
-
-from .core.clients import session_for_view, client_for_view
-from .core.documents import get_document_position, purge_did_change
-from .core.configurations import is_supported_syntax, config_for_scope
+from .core.configurations import is_supported_syntax
+from .core.registry import config_for_scope, session_for_view, client_for_view
+from .core.documents import get_document_position
 from .core.protocol import Request
 from .core.logging import debug
 from .core.popups import popup_css, popup_class
@@ -73,7 +72,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
     def request_signature_help(self, point):
         client = client_for_view(self.view)
         if client:
-            purge_did_change(self.view.buffer_id())
+            Events.publish("view.on_purge_changes", self.view)
             document_position = get_document_position(self.view, point)
             if document_position:
                 client.send_request(

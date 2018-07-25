@@ -16,7 +16,7 @@ except ImportError:
     pass
 
 
-window_client_configs = dict()  # type: Dict[int, List[ClientConfig]]
+# window_client_configs = dict()  # type: Dict[int, List[ClientConfig]]
 
 
 def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':
@@ -38,7 +38,8 @@ def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]')
 
 
 def register_client_config(config: ClientConfig) -> None:
-    window_client_configs.clear()
+    # todo: how to propagate global config changes to all window-specific configs.
+    # window_client_configs.clear()
     client_configs.add_external_config(config)
 
 
@@ -50,65 +51,65 @@ def get_default_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
     return get_scope_client_config(view, client_configs.defaults)
 
 
-def get_window_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
-    window = view.window()
-    if window:
-        configs_for_window = window_client_configs.get(window.id(), [])
-        return get_scope_client_config(view, configs_for_window)
-    else:
-        return None
+# def get_window_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
+#     window = view.window()
+#     if window:
+#         configs_for_window = window_client_configs.get(window.id(), [])
+#         return get_scope_client_config(view, configs_for_window)
+#     else:
+#         return None
 
 
-def config_for_scope(view: sublime.View) -> 'Optional[ClientConfig]':
-    # check window_client_config first
-    window_client_config = get_window_client_config(view)
-    if not window_client_config:
-        global_client_config = get_global_client_config(view)
+# def config_for_scope(view: sublime.View) -> 'Optional[ClientConfig]':
+#     # check window_client_config first
+#     window_client_config = get_window_client_config(view)
+#     if not window_client_config:
+#         global_client_config = get_global_client_config(view)
 
-        if global_client_config:
-            window = view.window()
-            if window:
-                window_client_config = apply_window_settings(global_client_config, view)
-                add_window_client_config(window, window_client_config)
-                return window_client_config
-            else:
-                # always return a client config even if the view has no window anymore
-                return global_client_config
+#         if global_client_config:
+#             window = view.window()
+#             if window:
+#                 window_client_config = apply_window_settings(global_client_config, window)
+#                 add_window_client_config(window, window_client_config)
+#                 return window_client_config
+#             else:
+#                 # always return a client config even if the view has no window anymore
+#                 return global_client_config
 
-    return window_client_config
-
-
-def add_window_client_config(window: 'sublime.Window', config: 'ClientConfig'):
-    global window_client_configs
-    window_client_configs.setdefault(window.id(), []).append(config)
+#     return window_client_config
 
 
-def clear_window_client_configs(window: 'sublime.Window'):
-    global window_client_configs
-    if window.id() in window_client_configs:
-        del window_client_configs[window.id()]
+# def add_window_client_config(window: 'sublime.Window', config: 'ClientConfig'):
+#     window_client_configs.setdefault(window.id(), []).append(config)
 
 
-def apply_window_settings(client_config: 'ClientConfig', view: 'sublime.View') -> 'ClientConfig':
-    window = view.window()
-    if window:
-        window_config = get_project_config(window)
+# def clear_window_client_configs(window: 'sublime.Window'):
+#     if window.id() in window_client_configs:
+#         del window_client_configs[window.id()]
 
-        if client_config.name in window_config:
-            overrides = window_config[client_config.name]
-            debug('window has override for', client_config.name, overrides)
-            return ClientConfig(
-                client_config.name,
-                overrides.get("command", client_config.binary_args),
-                overrides.get("tcp_port", client_config.tcp_port),
-                overrides.get("scopes", client_config.scopes),
-                overrides.get("syntaxes", client_config.syntaxes),
-                overrides.get("languageId", client_config.languageId),
-                overrides.get("enabled", client_config.enabled),
-                overrides.get("initializationOptions", client_config.init_options),
-                overrides.get("settings", client_config.settings),
-                overrides.get("env", client_config.env)
-            )
+
+def create_window_configs(window: 'sublime.Window') -> 'List[ClientConfig]':
+    return list(map(lambda c: apply_window_settings(c, window), client_configs.all))
+
+
+def apply_window_settings(client_config: 'ClientConfig', window: 'sublime.Window') -> 'ClientConfig':
+    window_config = get_project_config(window)
+
+    if client_config.name in window_config:
+        overrides = window_config[client_config.name]
+        debug('window has override for', client_config.name, overrides)
+        return ClientConfig(
+            client_config.name,
+            overrides.get("command", client_config.binary_args),
+            overrides.get("tcp_port", client_config.tcp_port),
+            overrides.get("scopes", client_config.scopes),
+            overrides.get("syntaxes", client_config.syntaxes),
+            overrides.get("languageId", client_config.languageId),
+            overrides.get("enabled", client_config.enabled),
+            overrides.get("initializationOptions", client_config.init_options),
+            overrides.get("settings", client_config.settings),
+            overrides.get("env", client_config.env)
+        )
 
     return client_config
 
@@ -128,18 +129,25 @@ def is_supported_syntax(syntax: str) -> bool:
     return False
 
 
-def is_supported_view(view: sublime.View) -> bool:
-    # TODO: perhaps make this check for a client instead of a config
-    if config_for_scope(view):
-        return True
-    else:
-        return False
-
 
 class ConfigManager(object):
+
+    def for_window(self, window: 'Any') -> 'WindowConfigManager':
+        return WindowConfigManager(create_window_configs(window))
+    # def is_supported(self, view: 'Any') -> bool:
+    #     # todo: calls config_for_scope immediately.
+    #     return is_supported_view(view)
+
+    # def scope_config(self, view: 'Any') -> 'Optional[ClientConfig]':
+    #     return config_for_scope(view)
+
+
+class WindowConfigManager(object):
+    def __init__(self, configs: 'List[ClientConfig]'):
+        self._configs = configs
+
     def is_supported(self, view: 'Any') -> bool:
-        # todo: calls config_for_scope immediately.
-        return is_supported_view(view)
+        return self.scope_config(view) is not None
 
     def scope_config(self, view: 'Any') -> 'Optional[ClientConfig]':
-        return config_for_scope(view)
+        return get_scope_client_config(view, self._configs)

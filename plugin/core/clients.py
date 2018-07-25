@@ -3,7 +3,7 @@ import sublime_plugin
 import os
 
 from .logging import debug
-from .configurations import config_for_scope, is_supported_view
+# from .registry import config_for_scope, is_supported_view
 from .workspace import get_project_path
 from .types import ClientStates
 from .sessions import create_session, Session
@@ -108,58 +108,7 @@ def set_config_stopping(window: sublime.Window, config_name: str):
     window_configs(window)[config_name].state = ClientStates.STOPPING
 
 
-def client_for_closed_view(view: sublime.View) -> 'Optional[Client]':
-    return _client_for_view_and_window(view, sublime.active_window())
-
-
-def client_for_view(view: sublime.View) -> 'Optional[Client]':
-    return _client_for_view_and_window(view, view.window())
-
-
-def session_for_view(view: sublime.View) -> 'Optional[Session]':
-    return _session_for_view_and_window(view, view.window())
-
-
-def _session_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Window]') -> 'Optional[Session]':
-    if not window:
-        debug("no window for view", view.file_name())
-        return None
-
-    config = config_for_scope(view)
-    if not config:
-        debug("config not available for view", view.file_name())
-        return None
-
-    window_config_states = window_configs(window)
-    if config.name not in window_config_states:
-        debug(config.name, "not available for view",
-              view.file_name(), "in window", window.id())
-        return None
-    else:
-        session = window_config_states[config.name]
-        if session.state == ClientStates.READY:
-            return session
-        else:
-            return None
-
-
-def _client_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Window]') -> 'Optional[Client]':
-    session = _session_for_view_and_window(view, window)
-
-    if session:
-        if session.client:
-            return session.client
-        else:
-            debug(session.config.name, "in state", session.state, " for view",
-                  view.file_name())
-            return None
-    else:
-        debug('no session found')
-        return None
-
-
 # Shutdown
-
 def remove_window_client(window: sublime.Window, config_name: str):
     del clients_by_window[window.id()][config_name]
 

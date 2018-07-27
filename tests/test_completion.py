@@ -3,7 +3,6 @@ from unittest.mock import MagicMock
 import sublime
 from LSP.plugin.completion import CompletionHandler, CompletionState
 from LSP.plugin.core.settings import client_configs, ClientConfig
-# from LSP.plugin.core.clients import add_window_client, remove_window_client
 from os.path import dirname
 
 
@@ -113,6 +112,5 @@ class QueryCompletionsTests(unittest.TestCase):
 
     def tearDown(self):
         client_configs.all = self.old_configs
-        # remove_window_client(sublime.active_window(), test_client_config.name)
         if self.view:
             self.view.window().run_command("close_file")

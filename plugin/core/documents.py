@@ -52,10 +52,6 @@ def is_at_word(view: sublime.View, event) -> bool:
         return False
 
 
-# TODO: this should be per-window ?
-# document_states = {}  # type: Dict[int, Dict[str, DocumentState]]
-
-
 class DocumentState:
     """Stores version count for documents open in a language service"""
     def __init__(self, path: str) -> 'None':
@@ -65,106 +61,6 @@ class DocumentState:
     def inc_version(self):
         self.version += 1
         return self.version
-
-
-# def get_document_state(window: sublime.Window, path: str) -> DocumentState:
-#     window_document_states = document_states.setdefault(window.id(), {})
-#     if path not in window_document_states:
-#         window_document_states[path] = DocumentState(path)
-#     return window_document_states[path]
-
-
-# def has_document_state(window: sublime.Window, path: str):
-#     window_id = window.id()
-#     if window_id not in document_states:
-#         return False
-#     return path in document_states[window_id]
-
-
-# def clear_document_state(window: sublime.Window, path: str):
-#     window_id = window.id()
-#     if window_id in document_states:
-#         del document_states[window_id][path]
-
-
-# def clear_document_states(window: sublime.Window):
-#     if window.id() in document_states:
-#         del document_states[window.id()]
-
-
-# def notify_did_open(view: sublime.View):
-#     config = config_for_scope(view)
-#     client = client_for_view(view)
-#     if client and config:
-#         view.settings().set("show_definitions", False)
-#         window = view.window()
-#         view_file = view.file_name()
-#         if window and view_file:
-#             if not has_document_state(window, view_file):
-#                 ds = get_document_state(window, view_file)
-#                 if settings.show_view_status:
-#                     view.set_status("lsp_clients", config.name)
-#                 params = {
-#                     "textDocument": {
-#                         "uri": filename_to_uri(view_file),
-#                         "languageId": config.languageId,
-#                         "text": view.substr(sublime.Region(0, view.size())),
-#                         "version": ds.version
-#                     }
-#                 }
-#                 client.send_notification(Notification.didOpen(params))
-
-
-# def notify_did_close(view: sublime.View):
-#     file_name = view.file_name()
-#     window = sublime.active_window()
-#     if window and file_name:
-#         if has_document_state(window, file_name):
-#             clear_document_state(window, file_name)
-#             client = client_for_closed_view(view)
-#             if client:
-#                 params = {"textDocument": {"uri": filename_to_uri(file_name)}}
-#                 client.send_notification(Notification.didClose(params))
-
-
-# def notify_did_save(view: sublime.View):
-#     file_name = view.file_name()
-#     window = view.window()
-#     if window and file_name:
-#         if has_document_state(window, file_name):
-#             client = client_for_view(view)
-#             if client:
-#                 params = {"textDocument": {"uri": filename_to_uri(file_name)}}
-#                 client.send_notification(Notification.didSave(params))
-#         else:
-#             debug('document not tracked', file_name)
-
-
-# def notify_did_change(view: sublime.View):
-#     file_name = view.file_name()
-#     window = view.window()
-#     if window and file_name:
-#         if view.buffer_id() in pending_buffer_changes:
-#             del pending_buffer_changes[view.buffer_id()]
-#         # config = config_for_scope(view)
-#         client = client_for_view(view)
-#         if client:
-#             document_state = get_document_state(window, file_name)
-#             uri = filename_to_uri(file_name)
-#             params = {
-#                 "textDocument": {
-#                     "uri": uri,
-#                     # "languageId": config.languageId, clangd does not like this field, but no server uses it?
-#                     "version": document_state.inc_version(),
-#                 },
-#                 "contentChanges": [{
-#                     "text": view.substr(sublime.Region(0, view.size()))
-#                 }]
-#             }
-#             client.send_notification(Notification.didChange(params))
-
-
-# document_sync_initialized = False
 
 
 class CloseListener(sublime_plugin.EventListener):
@@ -218,29 +114,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
             Events.publish("view.on_activated_async", self.view)
 
 
-# def initialize_document_sync(text_document_sync_kind):
-#     global document_sync_initialized
-#     if document_sync_initialized:
-#         return
-
-#     document_sync_initialized = True
-#     # TODO: hook up events per scope/client
-#     Events.subscribe('view.on_load_async', notify_did_open)
-#     Events.subscribe('view.on_activated_async', notify_did_open)
-#     Events.subscribe('view.on_modified', queue_did_change)
-#     Events.subscribe('view.on_post_save_async', notify_did_save)
-#     Events.subscribe('view.on_close', notify_did_close)
-
-
 class DocumentHandlerFactory(object):
-    # def initialize(self, text_document_sync_kind):
-    #     initialize_document_sync(text_document_sync_kind)
 
-    # def notify_did_open(self, view: 'Any'):
-    #     notify_did_open(view)
-
-    # def reset(self, window: 'Any'):
-    #     clear_document_states(window)
     def for_window(self):
         return SessionDocumentHandler()
 

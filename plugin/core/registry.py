@@ -111,6 +111,12 @@ def _client_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Wi
         return None
 
 
+def unload_sessions():
+    for window in sublime.windows():
+        wm = windows.lookup(window)
+        wm.end_sessions()
+
+
 class SublimeUI(object):
     DIALOG_CANCEL = sublime.DIALOG_CANCEL
     DIALOG_YES = sublime.DIALOG_YES

@@ -11,11 +11,8 @@ from .settings import (
     settings, load_settings, unload_settings
 )
 from .logging import set_debug_logging
-from .clients import (
-    unload_all_clients
-)
 from .events import Events
-from .registry import windows, load_handlers
+from .registry import windows, load_handlers, unload_sessions
 
 
 def startup():
@@ -31,7 +28,7 @@ def startup():
 
 def shutdown():
     unload_settings()
-    unload_all_clients()
+    unload_sessions()
 
 
 def start_active_window():

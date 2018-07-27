@@ -26,3 +26,7 @@ class Events:
         if key in cls.listener_dict:
             for listener in cls.listener_dict[key]:
                 listener(*args)
+
+    @classmethod
+    def reset(cls):
+        cls.listener_dict = dict()

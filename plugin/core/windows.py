@@ -59,7 +59,7 @@ def get_active_views(window: WindowLike):
 class WindowManager(object):
     def __init__(self, window: WindowLike, configs: ConfigRegistry, documents: DocumentHandler,
                  diagnostics: DiagnosticsHandler, session_starter: 'Callable', sublime: SublimeGlobal,
-                 handler_dispatcher) -> None:
+                 handler_dispatcher, on_closed: 'Optional[Callable]'=None) -> None:
 
         # to move here:
         # configurations.py: window_client_configs and all references
@@ -74,6 +74,8 @@ class WindowManager(object):
         self._sublime = sublime
         self._handlers = handler_dispatcher
         self._restarting = False
+        self._project_path = get_project_path(self._window)
+        self._on_closed = on_closed
 
     def get_session(self, config_name: str) -> 'Optional[Session]':
         return self._sessions.get(config_name)
@@ -108,10 +110,8 @@ class WindowManager(object):
 
     def _initialize_on_open(self, view: ViewLike):
         debug("initialize on open", self._window.id(), view.file_name())
-
-        # TODO: move this back to main.py?
-        # if window_configs(window):
-        #     unload_old_clients(window)
+        if self._sessions:
+            self._end_old_sessions()
 
         self._open_after_initialize = []
         config = self._configs.scope_config(view)
@@ -154,10 +154,18 @@ class WindowManager(object):
 
     def restart_sessions(self):
         self._restarting = True
+        self.end_sessions()
+
+    def end_sessions(self):
         self._documents.reset(self._window)
         for config_name in list(self._sessions):
             debug("unloading session", config_name)
             self._sessions[config_name].end()
+
+    def _end_old_sessions(self):
+        if get_project_path(self._window) != self._project_path:
+            debug('project path changed, ending existing sessions')
+            self.end_sessions()
 
     def _apply_workspace_edit(self, params):
         edit = params.get('edit', dict())
@@ -212,13 +220,28 @@ class WindowManager(object):
 
     def _handle_view_closed(self, view, session):
         self._diagnostics.remove(view, session.config.name)
-        # todo: sublime.set_timeout_async(check_window_unloaded, 500)
+        self._sublime.set_timeout_async(lambda: self._check_window_closed(), 500)
+        debug('view closed:', self._window.id(), self._window.is_valid())
+
+    def _check_window_closed(self):
+        debug('check window closed')
+
+        if not self._window.is_valid():
+            self._handle_window_closed()
+
+    def _handle_window_closed(self):
+        debug('window closed, ending sessions')
+        self.end_sessions()
 
     def _handle_all_sessions_ended(self):
         debug('clients for window {} unloaded'.format(self._window.id()))
         if self._restarting:
             debug('restarting')
             self.start_active_views()
+        elif not self._window.is_valid():
+            debug('window no longer valid')
+            if self._on_closed:
+                self._on_closed()
 
     def _handle_session_ended(self, config_name):
         del self._sessions[config_name]
@@ -250,6 +273,9 @@ class WindowRegistry(object):
             window_configs = self._configs.for_window(window)
             window_documents = self._documents.for_window()
             state = WindowManager(window, window_configs, window_documents, self._diagnostics, self._session_starter,
-                                  self._sublime, self._handler_dispatcher)
+                                  self._sublime, self._handler_dispatcher, lambda: self._on_closed(window))
             self._windows[window.id()] = state
         return state
+
+    def _on_closed(self, window: WindowLike) -> None:
+        del self._windows[window.id()]

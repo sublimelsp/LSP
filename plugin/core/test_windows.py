@@ -2,7 +2,7 @@ from .windows import WindowManager, WindowRegistry, WindowLike, ViewLike
 from .sessions import create_session
 from .test_session import TestClient, test_config
 from .test_rpc import TestSettings
-# from .logging import set_debug_logging, debug
+from .events import Events
 import os
 import unittest
 try:
@@ -29,6 +29,9 @@ class TestSublimeGlobal(object):
     def yes_no_cancel_dialog(self, msg, yes_title: str, no_title: str) -> int:
         return self.DIALOG_YES
 
+    def set_timeout_async(self, callback, duration):
+        callback()
+
 
 class TestView(object):
     def __init__(self, file_name):
@@ -53,12 +56,17 @@ class TestHandlerDispatcher(object):
 class TestWindow(object):
     def __init__(self, files_in_groups: 'List[List[ViewLike]]' = []) -> None:
         self._files_in_groups = files_in_groups
+        self._is_valid = True
+        self._folders = [os.path.dirname(__file__)]
 
     def id(self):
         return 0
 
     def folders(self):
-        return [os.path.dirname(__file__)]
+        return self._folders
+
+    def set_folders(self, folders):
+        self._folders = folders
 
     def num_groups(self):
         return len(self._files_in_groups)
@@ -71,6 +79,12 @@ class TestWindow(object):
 
     def active_view(self) -> Optional[ViewLike]:
         return self.active_view_in_group(0)
+
+    def close(self):
+        self._is_valid = False
+
+    def is_valid(self):
+        return self._is_valid
 
     def active_view_in_group(self, group):
         if group < len(self._files_in_groups):
@@ -91,10 +105,13 @@ class TestGlobalConfigs(object):
 
 class TestConfigs(object):
     def is_supported(self, view):
-        return view.file_name() is not None
+        return self.scope_config(view) is not None
 
     def scope_config(self, view):
-        return test_config
+        if view.file_name() is None:
+            return None
+        else:
+            return test_config
 
 
 class TestDocuments(object):
@@ -146,6 +163,23 @@ class WindowRegistryTests(unittest.TestCase):
         wm = windows.lookup(test_window)
         self.assertIsNotNone(wm)
 
+    def test_removes_window_state(self):
+        Events.reset()
+        test_window = TestWindow([[TestView(__file__)]])
+        windows = WindowRegistry(TestGlobalConfigs(), TestDocumentHandlerFactory(),
+                                 TestDiagnostics(), test_start_session,
+                                 TestSublimeGlobal(), TestHandlerDispatcher())
+        wm = windows.lookup(test_window)
+        wm.start_active_views()
+
+        self.assertIsNotNone(wm)
+
+        # closing views triggers window unload detection
+        test_window.close()
+        Events.publish("view.on_close", TestView(__file__))
+
+        self.assertEqual(len(windows._windows), 0)
+
 
 class WindowManagerTests(unittest.TestCase):
 
@@ -195,6 +229,47 @@ class WindowManagerTests(unittest.TestCase):
 
         # our starting document must be loaded
         self.assertListEqual(docs._documents, [__file__])
+
+    def test_ends_sessions_when_closed(self):
+        Events.reset()
+        docs = TestDocuments()
+        test_window = TestWindow([[TestView(__file__)]])
+        wm = WindowManager(test_window, TestConfigs(), docs,
+                           TestDiagnostics(), test_start_session, TestSublimeGlobal(), TestHandlerDispatcher())
+        wm.start_active_views()
+
+        # session must be started (todo: verify session is ready)
+        self.assertIsNotNone(wm.get_session(test_config.name))
+
+        # our starting document must be loaded
+        self.assertListEqual(docs._documents, [__file__])
+
+        # closing views triggers window unload detection
+        test_window.close()
+        Events.publish("view.on_close", TestView(__file__))
+
+        self.assertEqual(len(wm._sessions), 0)
+
+    def test_ends_sessions_when_quick_switching(self):
+        Events.reset()
+        docs = TestDocuments()
+        test_window = TestWindow([[TestView(__file__)]])
+        wm = WindowManager(test_window, TestConfigs(), docs,
+                           TestDiagnostics(), test_start_session, TestSublimeGlobal(), TestHandlerDispatcher())
+        wm.start_active_views()
+
+        # session must be started (todo: verify session is ready)
+        self.assertIsNotNone(wm.get_session(test_config.name))
+
+        # our starting document must be loaded
+        self.assertListEqual(docs._documents, [__file__])
+
+        # change project_path
+        test_window.set_folders([os.path.dirname(__file__) + '/'])
+        # Events.publish("view.on_close", TestView(__file__))
+        wm.activate_view(TestView(None))
+
+        self.assertEqual(len(wm._sessions), 0)
 
     def test_offers_restart_on_crash(self):
         docs = TestDocuments()

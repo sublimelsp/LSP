@@ -16,9 +16,6 @@ except ImportError:
     pass
 
 
-# window_client_configs = dict()  # type: Dict[int, List[ClientConfig]]
-
-
 def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':
     # When there are multiple server configurations, all of which are for
     # similar scopes (e.g. 'source.json', 'source.json.sublime.settings') the
@@ -49,43 +46,6 @@ def get_global_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
 
 def get_default_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
     return get_scope_client_config(view, client_configs.defaults)
-
-
-# def get_window_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
-#     window = view.window()
-#     if window:
-#         configs_for_window = window_client_configs.get(window.id(), [])
-#         return get_scope_client_config(view, configs_for_window)
-#     else:
-#         return None
-
-
-# def config_for_scope(view: sublime.View) -> 'Optional[ClientConfig]':
-#     # check window_client_config first
-#     window_client_config = get_window_client_config(view)
-#     if not window_client_config:
-#         global_client_config = get_global_client_config(view)
-
-#         if global_client_config:
-#             window = view.window()
-#             if window:
-#                 window_client_config = apply_window_settings(global_client_config, window)
-#                 add_window_client_config(window, window_client_config)
-#                 return window_client_config
-#             else:
-#                 # always return a client config even if the view has no window anymore
-#                 return global_client_config
-
-#     return window_client_config
-
-
-# def add_window_client_config(window: 'sublime.Window', config: 'ClientConfig'):
-#     window_client_configs.setdefault(window.id(), []).append(config)
-
-
-# def clear_window_client_configs(window: 'sublime.Window'):
-#     if window.id() in window_client_configs:
-#         del window_client_configs[window.id()]
 
 
 def create_window_configs(window: 'sublime.Window') -> 'List[ClientConfig]':
@@ -133,12 +93,6 @@ class ConfigManager(object):
 
     def for_window(self, window: 'Any') -> 'WindowConfigManager':
         return WindowConfigManager(create_window_configs(window))
-    # def is_supported(self, view: 'Any') -> bool:
-    #     # todo: calls config_for_scope immediately.
-    #     return is_supported_view(view)
-
-    # def scope_config(self, view: 'Any') -> 'Optional[ClientConfig]':
-    #     return config_for_scope(view)
 
 
 class WindowConfigManager(object):

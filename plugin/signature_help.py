@@ -14,7 +14,7 @@ except ImportError:
 from .core.configurations import is_supported_syntax
 from .core.registry import config_for_scope, session_for_view, client_for_view
 from .core.documents import get_document_position
-from .core.events import Events
+from .core.events import global_events
 from .core.protocol import Request
 from .core.logging import debug
 from .core.popups import popup_css, popup_class
@@ -73,7 +73,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
     def request_signature_help(self, point):
         client = client_for_view(self.view)
         if client:
-            Events.publish("view.on_purge_changes", self.view)
+            global_events.publish("view.on_purge_changes", self.view)
             document_position = get_document_position(self.view, point)
             if document_position:
                 client.send_request(

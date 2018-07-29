@@ -1,4 +1,4 @@
-from .events import Events
+from .events import global_events
 from .logging import debug
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike, SublimeGlobal
 from .protocol import Notification
@@ -36,10 +36,13 @@ class DiagnosticsHandler(Protocol):
 
 
 class DocumentHandler(Protocol):
-    def initialize(self, text_document_sync_kind) -> None:
+    def add_session(self, session) -> None:
         ...
 
-    def notify_did_open(self, view: ViewLike) -> None:
+    def remove_session(self, config_name: str) -> None:
+        ...
+
+    def handle_view_opened(self, view: ViewLike) -> None:
         ...
 
 
@@ -63,7 +66,6 @@ class WindowManager(object):
 
         # to move here:
         # configurations.py: window_client_configs and all references
-        # clients.py: clients_by_window and all references
         self._window = window
         self._configs = configs
         self._diagnostics = diagnostics
@@ -196,14 +198,11 @@ class WindowManager(object):
 
         self._handlers.on_initialized(config.name, client)
 
-        # TODO: These handlers is already filtered by syntax but does not need to
-        # be enabled 2x per client
-        # Move filtering?
         document_sync = session.capabilities.get("textDocumentSync")
         if document_sync:
-            self._documents.initialize(Events, session)
+            self._documents.add_session(session)
 
-        Events.subscribe('view.on_close', lambda view: self._handle_view_closed(view, session))
+        global_events.subscribe('view.on_close', lambda view: self._handle_view_closed(view, session))
 
         client.send_notification(Notification.initialized())
         if config.settings:
@@ -213,7 +212,7 @@ class WindowManager(object):
             client.send_notification(Notification.didChangeConfiguration(configParams))
 
         for view in self._open_after_initialize:
-            self._documents.notify_did_open(view)
+            self._documents.handle_view_opened(view)
 
         self._window.status_message("{} initialized".format(config.name))
         self._open_after_initialize.clear()
@@ -221,7 +220,6 @@ class WindowManager(object):
     def _handle_view_closed(self, view, session):
         self._diagnostics.remove(view, session.config.name)
         self._sublime.set_timeout_async(lambda: self._check_window_closed(), 500)
-        debug('view closed:', self._window.id(), self._window.is_valid())
 
     def _check_window_closed(self):
         debug('check window closed')
@@ -244,6 +242,7 @@ class WindowManager(object):
                 self._on_closed()
 
     def _handle_session_ended(self, config_name):
+        self._documents.remove_session(config_name)
         del self._sessions[config_name]
         debug("session", config_name, "ended")
         if not self._sessions:
@@ -271,7 +270,7 @@ class WindowRegistry(object):
         state = self._windows.get(window.id())
         if state is None:
             window_configs = self._configs.for_window(window)
-            window_documents = self._documents.for_window()
+            window_documents = self._documents.for_window(window)
             state = WindowManager(window, window_configs, window_documents, self._diagnostics, self._session_starter,
                                   self._sublime, self._handler_dispatcher, lambda: self._on_closed(window))
             self._windows[window.id()] = state

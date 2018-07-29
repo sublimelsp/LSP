@@ -3,7 +3,7 @@ import sublime
 from .logging import debug
 from .url import uri_to_filename
 from .protocol import Diagnostic
-from .events import Events
+from .events import global_events
 from .views import range_to_region
 from .windows import WindowLike, ViewLike
 
@@ -54,7 +54,7 @@ def handle_client_diagnostics(window: sublime.Window, client_name: str, update: 
             Diagnostic.from_lsp(item) for item in update.get('diagnostics', []))
 
         update_file_diagnostics(window, file_path, client_name, diagnostics)
-        Events.publish("document.diagnostics", DiagnosticsUpdate(window, client_name, file_path, diagnostics))
+        global_events.publish("document.diagnostics", DiagnosticsUpdate(window, client_name, file_path, diagnostics))
     else:
         debug('missing uri in diagnostics update')
 # TODO: expose updates to features
@@ -69,7 +69,7 @@ def remove_diagnostics(view: sublime.View, client_name: str):
     if file_path:
         if not window.find_open_file(file_path):
             update_file_diagnostics(window, file_path, client_name, [])
-            Events.publish("document.diagnostics", DiagnosticsUpdate(window, client_name, file_path, []))
+            global_events.publish("document.diagnostics", DiagnosticsUpdate(window, client_name, file_path, []))
         else:
             debug('file still open?')
 

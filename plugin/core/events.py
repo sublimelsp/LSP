@@ -6,27 +6,27 @@ except ImportError:
 
 
 class Events:
-    listener_dict = dict()  # type: Dict[str, Callable[..., None]]
+    def __init__(self):
+        self._listener_dict = dict()  # type: Dict[str, Callable[..., None]]
 
-    @classmethod
-    def subscribe(cls, key, listener):
-        if key in cls.listener_dict:
-            cls.listener_dict[key].append(listener)
+    def subscribe(self, key, listener):
+        if key in self._listener_dict:
+            self._listener_dict[key].append(listener)
         else:
-            cls.listener_dict[key] = [listener]
-        return lambda: cls.unsubscribe(key, listener)
+            self._listener_dict[key] = [listener]
+        return lambda: self._unsubscribe(key, listener)
 
-    @classmethod
-    def unsubscribe(cls, key, listener):
-        if key in cls.listener_dict:
-            cls.listener_dict[key].remove(listener)
+    def unsubscribe(self, key, listener):
+        if key in self._listener_dict:
+            self._listener_dict[key].remove(listener)
 
-    @classmethod
-    def publish(cls, key, *args):
-        if key in cls.listener_dict:
-            for listener in cls.listener_dict[key]:
+    def publish(self, key, *args):
+        if key in self._listener_dict:
+            for listener in self._listener_dict[key]:
                 listener(*args)
 
-    @classmethod
-    def reset(cls):
-        cls.listener_dict = dict()
+    def reset(self):
+        self._listener_dict = dict()
+
+
+global_events = Events()

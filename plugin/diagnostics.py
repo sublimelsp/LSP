@@ -11,7 +11,7 @@ except ImportError:
 
 from .core.settings import settings, PLUGIN_NAME
 from .core.protocol import Diagnostic, DiagnosticSeverity
-from .core.events import Events
+from .core.events import global_events
 from .core.configurations import is_supported_syntax
 from .core.diagnostics import DiagnosticsUpdate, get_window_diagnostics, get_line_diagnostics
 from .core.workspace import get_project_path
@@ -196,9 +196,9 @@ def update_count_in_status_bar(view):
         update_diagnostics_in_status_bar(view)
 
 
-Events.subscribe("document.diagnostics",
-                 lambda update: handle_diagnostics(update))
-Events.subscribe("view.on_activated_async", update_count_in_status_bar)
+global_events.subscribe("document.diagnostics",
+                        lambda update: handle_diagnostics(update))
+global_events.subscribe("view.on_activated_async", update_count_in_status_bar)
 
 
 def handle_diagnostics(update: DiagnosticsUpdate):

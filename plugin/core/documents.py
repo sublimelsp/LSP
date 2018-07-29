@@ -6,16 +6,16 @@ from .logging import debug
 from .protocol import Notification
 from .settings import settings
 from .url import filename_to_uri
-from .configurations import is_supported_syntax, is_supportable_syntax  # config_for_scope, is_supported_view,
-# from .clients import client_for_view, client_for_closed_view, check_window_unloaded
-from .events import Events
+from .sessions import Session
+from .configurations import is_supported_syntax, is_supportable_syntax
+from .events import global_events
 from .views import offset_to_point
-from .windows import ViewLike
+from .windows import ViewLike, WindowLike
 
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
     assert Any and List and Dict and Tuple and Callable and Optional
-    assert ViewLike
+    assert ViewLike and WindowLike
 except ImportError:
     pass
 
@@ -63,18 +63,6 @@ class DocumentState:
         return self.version
 
 
-class CloseListener(sublime_plugin.EventListener):
-    def on_close(self, view):
-        if is_supported_syntax(view.settings().get("syntax")):
-            Events.publish("view.on_close", view)
-
-
-class SaveListener(sublime_plugin.EventListener):
-    def on_post_save_async(self, view):
-        if is_supported_syntax(view.settings().get("syntax")):
-            Events.publish("view.on_post_save_async", view)
-
-
 def is_transient_view(view):
     window = view.window()
     if window:
@@ -103,39 +91,51 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
     def on_load_async(self):
         # skip transient views:
         if not is_transient_view(self.view):
-            Events.publish("view.on_load_async", self.view)
-
-    def on_modified(self):
-        if self.view.file_name():
-            Events.publish("view.on_modified", self.view)
+            global_events.publish("view.on_load_async", self.view)
 
     def on_activated_async(self):
         if self.view.file_name() and not is_transient_view(self.view):
-            Events.publish("view.on_activated_async", self.view)
+            global_events.publish("view.on_activated_async", self.view)
+
+    def on_modified(self):
+        if self.view.file_name():
+            global_events.publish("view.on_modified", self.view)
+
+    def on_post_save_async(self):
+        global_events.publish("view.on_post_save_async", self.view)
+
+    def on_close(self):
+        if self.view.file_name() and self.view.is_primary():
+            global_events.publish("view.on_close", self.view)
 
 
 class DocumentHandlerFactory(object):
 
-    def for_window(self):
-        return SessionDocumentHandler()
+    def for_window(self, window: 'WindowLike'):
+        return WindowDocumentHandler(window, global_events)
 
 
-class SessionDocumentHandler(object):
-    def __init__(self):
+class WindowDocumentHandler(object):
+    def __init__(self, window, events):
+        self._window = window
         self._document_states = dict()  # type: Dict[str, DocumentState]
         self._pending_buffer_changes = dict()  # type: Dict[int, Dict]
-
-    def initialize(self, events, session):
-        self._session = session
-        self._client = session.client
-        events.subscribe('view.on_load_async', self.notify_did_open)
-        events.subscribe('view.on_activated_async', self.notify_did_open)
-        events.subscribe('view.on_modified', self.queue_did_change)
+        self._sessions = dict()  # type: Dict[str, Session]
+        events.subscribe('view.on_load_async', self.handle_view_opened)
+        events.subscribe('view.on_activated_async', self.handle_view_opened)
+        events.subscribe('view.on_modified', self.handle_view_modified)
         events.subscribe('view.on_purge_changes', self.purge_changes)
-        events.subscribe('view.on_post_save_async', self.notify_did_save)
-        events.subscribe('view.on_close', self.notify_did_close)
+        events.subscribe('view.on_post_save_async', self.handle_view_saved)
+        events.subscribe('view.on_close', self.handle_view_closed)
 
-    def reset(self, window: 'Any'):
+    def add_session(self, session: Session):
+        self._sessions[session.config.name] = session
+
+    def remove_session(self, config_name: str):
+        if config_name in self._sessions:
+            del self._sessions[config_name]
+
+    def reset(self):
         self._document_states.clear()
 
     def get_document_state(self, path: str) -> DocumentState:
@@ -146,62 +146,65 @@ class SessionDocumentHandler(object):
     def has_document_state(self, path: str) -> bool:
         return path in self._document_states
 
-    def notify_did_open(self, view: sublime.View):
-        view.settings().set("show_definitions", False)
-        window = view.window()
-        view_file = view.file_name()
-        if window and view_file:
-            if not self.has_document_state(view_file):
-                ds = self.get_document_state(view_file)
-                if settings.show_view_status:
-                    view.set_status("lsp_clients", self._session.config.name)
-                params = {
-                    "textDocument": {
-                        "uri": filename_to_uri(view_file),
-                        "languageId": self._session.config.languageId,
-                        "text": view.substr(sublime.Region(0, view.size())),
-                        "version": ds.version
-                    }
-                }
-                self._client.send_notification(Notification.didOpen(params))
-
-    def notify_did_close(self, view: sublime.View):
+    def handle_view_opened(self, view: sublime.View):
         file_name = view.file_name()
-        window = sublime.active_window()
-        if window and file_name:
+        if file_name and view.window() == self._window:
+            if not self.has_document_state(file_name):
+                ds = self.get_document_state(file_name)
+
+                view.settings().set("show_definitions", False)
+                if settings.show_view_status:
+                    view.set_status("lsp_clients", ",".join(list(self._sessions)))
+
+                for config_name, session in self._sessions.items():
+                    params = {
+                        "textDocument": {
+                            "uri": filename_to_uri(file_name),
+                            "languageId": session.config.languageId,
+                            "text": view.substr(sublime.Region(0, view.size())),
+                            "version": ds.version
+                        }
+                    }
+                    session.client.send_notification(Notification.didOpen(params))
+
+    def handle_view_closed(self, view: sublime.View):
+        file_name = view.file_name()
+        if view.window() == self._window:
             if file_name in self._document_states:
                 del self._document_states[file_name]
-                if self._client:
-                    params = {"textDocument": {"uri": filename_to_uri(file_name)}}
-                    self._client.send_notification(Notification.didClose(params))
+                for config_name, session in self._sessions.items():
+                    if session.client:
+                        params = {"textDocument": {"uri": filename_to_uri(file_name)}}
+                        session.client.send_notification(Notification.didClose(params))
 
-    def notify_did_save(self, view: sublime.View):
+    def handle_view_saved(self, view: sublime.View):
         file_name = view.file_name()
-        window = view.window()
-        if window and file_name:
+        if view.window() == self._window:
             if file_name in self._document_states:
-                if self._client:
-                    params = {"textDocument": {"uri": filename_to_uri(file_name)}}
-                    self._client.send_notification(Notification.didSave(params))
+                for config_name, session in self._sessions.items():
+                    if session.client:
+                        params = {"textDocument": {"uri": filename_to_uri(file_name)}}
+                        session.client.send_notification(Notification.didSave(params))
             else:
                 debug('document not tracked', file_name)
 
-    def queue_did_change(self, view: sublime.View):
-        buffer_id = view.buffer_id()
-        buffer_version = 1
-        pending_buffer = None
-        if buffer_id in self._pending_buffer_changes:
-            pending_buffer = self._pending_buffer_changes[buffer_id]
-            buffer_version = pending_buffer["version"] + 1
-            pending_buffer["version"] = buffer_version
-        else:
-            self._pending_buffer_changes[buffer_id] = {
-                "view": view,
-                "version": buffer_version
-            }
+    def handle_view_modified(self, view: sublime.View):
+        if view.window() == self._window:
+            buffer_id = view.buffer_id()
+            buffer_version = 1
+            pending_buffer = None
+            if buffer_id in self._pending_buffer_changes:
+                pending_buffer = self._pending_buffer_changes[buffer_id]
+                buffer_version = pending_buffer["version"] + 1
+                pending_buffer["version"] = buffer_version
+            else:
+                self._pending_buffer_changes[buffer_id] = {
+                    "view": view,
+                    "version": buffer_version
+                }
 
-        sublime.set_timeout_async(
-            lambda: self.purge_did_change(buffer_id, buffer_version), 500)
+            sublime.set_timeout_async(
+                lambda: self.purge_did_change(buffer_id, buffer_version), 500)
 
     def purge_changes(self, view: sublime.View):
         self.purge_did_change(view.buffer_id())
@@ -218,21 +221,22 @@ class SessionDocumentHandler(object):
 
     def notify_did_change(self, view: sublime.View):
         file_name = view.file_name()
-        window = view.window()
-        if window and file_name:
+        if file_name and view.window() == self._window:
             if view.buffer_id() in self._pending_buffer_changes:
                 del self._pending_buffer_changes[view.buffer_id()]
-            if self._client:
-                document_state = self.get_document_state(file_name)
-                uri = filename_to_uri(file_name)
-                params = {
-                    "textDocument": {
-                        "uri": uri,
-                        # "languageId": config.languageId, clangd does not like this field, but no server uses it?
-                        "version": document_state.inc_version(),
-                    },
-                    "contentChanges": [{
-                        "text": view.substr(sublime.Region(0, view.size()))
-                    }]
-                }
-                self._client.send_notification(Notification.didChange(params))
+
+                for config_name, session in self._sessions.items():
+                    if session.client:
+                        document_state = self.get_document_state(file_name)
+                        uri = filename_to_uri(file_name)
+                        params = {
+                            "textDocument": {
+                                "uri": uri,
+                                "languageId": session.config.languageId,
+                                "version": document_state.inc_version(),
+                            },
+                            "contentChanges": [{
+                                "text": view.substr(sublime.Region(0, view.size()))
+                            }]
+                        }
+                        session.client.send_notification(Notification.didChange(params))

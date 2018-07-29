@@ -1,13 +1,13 @@
 from .windows import WindowManager, WindowRegistry, WindowLike, ViewLike
-from .sessions import create_session
+from .sessions import create_session, Session
 from .test_session import TestClient, test_config
 from .test_rpc import TestSettings
-from .events import Events
+from .events import global_events
 import os
 import unittest
 try:
     from typing import Callable, List, Optional, Set
-    assert Callable and List and Optional and Set
+    assert Callable and List and Optional and Set and Session
 except ImportError:
     pass
 
@@ -118,10 +118,13 @@ class TestDocuments(object):
     def __init__(self):
         self._documents = []  # type: List[str]
 
-    def initialize(self, text_document_sync_kind) -> None:
+    def add_session(self, session: 'Session') -> None:
         pass
 
-    def notify_did_open(self, view: ViewLike):
+    def remove_session(self, config_name: str) -> None:
+        pass
+
+    def handle_view_opened(self, view: ViewLike):
         file_name = view.file_name()
         if file_name:
             self._documents.append(file_name)
@@ -131,7 +134,7 @@ class TestDocuments(object):
 
 
 class TestDocumentHandlerFactory(object):
-    def for_window(self):
+    def for_window(self, window):
         return TestDocuments()
 
 
@@ -164,7 +167,7 @@ class WindowRegistryTests(unittest.TestCase):
         self.assertIsNotNone(wm)
 
     def test_removes_window_state(self):
-        Events.reset()
+        global_events.reset()
         test_window = TestWindow([[TestView(__file__)]])
         windows = WindowRegistry(TestGlobalConfigs(), TestDocumentHandlerFactory(),
                                  TestDiagnostics(), test_start_session,
@@ -176,7 +179,7 @@ class WindowRegistryTests(unittest.TestCase):
 
         # closing views triggers window unload detection
         test_window.close()
-        Events.publish("view.on_close", TestView(__file__))
+        global_events.publish("view.on_close", TestView(__file__))
 
         self.assertEqual(len(windows._windows), 0)
 
@@ -231,7 +234,7 @@ class WindowManagerTests(unittest.TestCase):
         self.assertListEqual(docs._documents, [__file__])
 
     def test_ends_sessions_when_closed(self):
-        Events.reset()
+        global_events.reset()
         docs = TestDocuments()
         test_window = TestWindow([[TestView(__file__)]])
         wm = WindowManager(test_window, TestConfigs(), docs,
@@ -246,12 +249,12 @@ class WindowManagerTests(unittest.TestCase):
 
         # closing views triggers window unload detection
         test_window.close()
-        Events.publish("view.on_close", TestView(__file__))
+        global_events.publish("view.on_close", TestView(__file__))
 
         self.assertEqual(len(wm._sessions), 0)
 
     def test_ends_sessions_when_quick_switching(self):
-        Events.reset()
+        global_events.reset()
         docs = TestDocuments()
         test_window = TestWindow([[TestView(__file__)]])
         wm = WindowManager(test_window, TestConfigs(), docs,
@@ -266,7 +269,7 @@ class WindowManagerTests(unittest.TestCase):
 
         # change project_path
         test_window.set_folders([os.path.dirname(__file__) + '/'])
-        # Events.publish("view.on_close", TestView(__file__))
+        # global_events.publish("view.on_close", TestView(__file__))
         wm.activate_view(TestView(None))
 
         self.assertEqual(len(wm._sessions), 0)

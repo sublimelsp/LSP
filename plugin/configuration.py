@@ -10,7 +10,7 @@ from .core.configurations import (
 )
 from .core.registry import config_for_scope
 # from .core.clients import unload_window_sessions
-from .core.events import Events
+from .core.events import global_events
 # from .core.workspace import enable_in_project, disable_in_project
 
 
@@ -22,8 +22,8 @@ def detect_supportable_view(view: sublime.View):
             show_enable_config(view, available_config)
 
 
-Events.subscribe("view.on_load_async", detect_supportable_view)
-Events.subscribe("view.on_activated_async", detect_supportable_view)
+global_events.subscribe("view.on_load_async", detect_supportable_view)
+global_events.subscribe("view.on_activated_async", detect_supportable_view)
 
 
 def extract_syntax_name(syntax_file: str) -> str:

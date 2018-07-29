@@ -11,7 +11,7 @@ from .settings import (
     settings, load_settings, unload_settings
 )
 from .logging import set_debug_logging
-from .events import Events
+from .events import global_events
 from .registry import windows, load_handlers, unload_sessions
 
 
@@ -19,8 +19,8 @@ def startup():
     load_settings()
     set_debug_logging(settings.log_debug)
     load_handlers()
-    Events.subscribe("view.on_load_async", on_view_activated)
-    Events.subscribe("view.on_activated_async", on_view_activated)
+    global_events.subscribe("view.on_load_async", on_view_activated)
+    global_events.subscribe("view.on_activated_async", on_view_activated)
     if settings.show_status_messages:
         sublime.status_message("LSP initialized")
     start_active_window()

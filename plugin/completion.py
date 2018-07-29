@@ -8,7 +8,7 @@ except ImportError:
     pass
 
 from .core.protocol import Request
-from .core.events import Events
+from .core.events import global_events
 from .core.settings import settings
 from .core.logging import debug, exception_log
 from .core.protocol import CompletionItemKind, Range
@@ -218,7 +218,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             return
 
         if settings.complete_all_chars or self.is_after_trigger_character(locations[0]):
-            Events.publish("view.on_purge_changes", self.view)
+            global_events.publish("view.on_purge_changes", self.view)
             document_position = get_document_position(view, locations[0])
             if document_position:
                 client.send_request(

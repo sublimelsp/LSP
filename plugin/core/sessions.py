@@ -1,10 +1,9 @@
-from .types import ClientConfig, ClientStates
+from .types import ClientConfig, ClientStates, Settings
 from .protocol import Request, Notification
-from .transports import start_tcp_transport, StdioTransport
-from .rpc import Client
+from .transports import start_tcp_transport
+from .rpc import Client, attach_stdio_client
 from .process import start_server
 from .url import filename_to_uri
-# from .logging import debug
 import os
 from .protocol import CompletionItemKind, SymbolKind
 try:
@@ -14,7 +13,7 @@ except ImportError:
     pass
 
 
-def create_session(config: ClientConfig, project_path: str, env: dict, settings,
+def create_session(config: ClientConfig, project_path: str, env: dict, settings: Settings,
                    on_created=None, on_ended=None, bootstrap_client=None) -> 'Session':
 
     if config.binary_args:
@@ -32,8 +31,8 @@ def create_session(config: ClientConfig, project_path: str, env: dict, settings,
                     except Exception as e:
                         pass
             else:
-                transport = StdioTransport(process)
-                session = Session(config, project_path, Client(transport, settings), on_created, on_ended)
+                client = attach_stdio_client(process, settings)
+                session = Session(config, project_path, client, on_created, on_ended)
     else:
         if config.tcp_port:
             transport = start_tcp_transport(config.tcp_port)

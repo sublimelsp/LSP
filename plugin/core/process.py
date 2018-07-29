@@ -26,7 +26,7 @@ def start_server(server_binary_args, working_dir, env):
 
 
 def attach_logger(process, stream):
-    threading.Thread(target=lambda: log_stream(process, stream)).start()
+    threading.Thread(target=log_stream, args=(process, stream)).start()
 
 
 def log_stream(process, stream):

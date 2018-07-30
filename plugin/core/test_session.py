@@ -21,13 +21,14 @@ class TestClient():
             'initialize': {"capabilities": dict(testing=True, hoverProvider=True)},
             'textDocument/hover': {"contents": "greeting"}
         }  # type: dict
+        self._notifications = []  # type: List[Notification]
 
     def send_request(self, request: Request, on_success: 'Callable', on_error: 'Callable'=None) -> None:
         response = self.responses.get(request.method)
         on_success(response)
 
     def send_notification(self, notification: Notification) -> None:
-        pass
+        self._notifications.append(notification)
 
     def on_notification(self, name, handler: 'Callable') -> None:
         pass

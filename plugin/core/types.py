@@ -1,7 +1,7 @@
 try:
     from typing_extensions import Protocol
-    from typing import Optional, List, Callable, Dict
-    assert Optional and List and Callable and Dict
+    from typing import Optional, List, Callable, Dict, Any
+    assert Optional and List and Callable and Dict and Any
 except ImportError:
     pass
     Protocol = object  # type: ignore
@@ -87,11 +87,40 @@ class ClientConfig(object):
             self.env = settings.get("env", dict())
 
 
+class SettingsLike(object):
+    def __init__(self, values):
+        ...
+
+    def get(self, key: str) -> 'Any':
+        ...
+
+    def set(self, key: str, value: 'Any'):
+        ...
+
+
 class ViewLike(Protocol):
     def __init__(self):
         pass
 
     def file_name(self) -> 'Optional[str]':
+        ...
+
+    def window(self) -> 'Optional[Any]':  # WindowLike
+        ...
+
+    def buffer_id(self) -> int:
+        ...
+
+    def substr(self, region: 'Any') -> str:
+        ...
+
+    def settings(self) -> 'Any':  # SettingsLike
+        ...
+
+    def size(self) -> int:
+        ...
+
+    def set_status(self, key: str, status: str) -> None:
         ...
 
 
@@ -108,7 +137,7 @@ class WindowLike(Protocol):
     def active_group(self) -> int:
         ...
 
-    def active_view_in_group(self, group) -> ViewLike:
+    def active_view_in_group(self, group: int) -> ViewLike:
         ...
 
     def project_data(self) -> 'Optional[dict]':
@@ -120,17 +149,17 @@ class WindowLike(Protocol):
     def status_message(self, msg: str) -> None:
         ...
 
+# protocols can be modules once mypy implements this.
+# class SublimeGlobal(Protocol):
+#     DIALOG_CANCEL = 0  # type: int
+#     DIALOG_YES = 1  # type: int
+#     DIALOG_NO = 2  # type: int
 
-class SublimeGlobal(Protocol):
-    DIALOG_CANCEL = 0  # type: int
-    DIALOG_YES = 1  # type: int
-    DIALOG_NO = 2  # type: int
+#     def message_dialog(self, msg: str) -> None:
+#         ...
 
-    def message_dialog(self, msg: str) -> None:
-        ...
+#     def ok_cancel_dialog(self, msg: str, ok_title: str) -> bool:
+#         ...
 
-    def ok_cancel_dialog(self, msg: str, ok_title: str) -> bool:
-        ...
-
-    def yes_no_cancel_dialog(self, msg, yes_title: str, no_title: str) -> int:
-        ...
+#     def yes_no_cancel_dialog(self, msg, yes_title: str, no_title: str) -> int:
+#         ...

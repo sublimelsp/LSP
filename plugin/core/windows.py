@@ -1,13 +1,15 @@
 from .events import global_events
 from .logging import debug
-from .types import ClientStates, ClientConfig, WindowLike, ViewLike, SublimeGlobal
+from .types import ClientStates, ClientConfig, WindowLike, ViewLike
 from .protocol import Notification
 from .sessions import Session
+from .url import filename_to_uri
 from .workspace import get_project_path
 try:
     from typing_extensions import Protocol
     from typing import Optional, List, Callable, Dict, Any
-    assert Optional and List and Callable and Dict and Session and Any
+    from types import ModuleType
+    assert Optional and List and Callable and Dict and Session and Any and ModuleType
 except ImportError:
     pass
     Protocol = object  # type: ignore
@@ -59,9 +61,158 @@ def get_active_views(window: WindowLike):
     return views
 
 
+class DocumentState:
+    """Stores version count for documents open in a language service"""
+    def __init__(self, path: str) -> 'None':
+        self.path = path
+        self.version = 0
+
+    def inc_version(self):
+        self.version += 1
+        return self.version
+
+
+class DocumentHandlerFactory(object):
+    def __init__(self, sublime, settings):
+        self._sublime = sublime
+        self._settings = settings
+
+    def for_window(self, window: 'WindowLike'):
+        return WindowDocumentHandler(self._sublime, self._settings, window, global_events)
+
+
+class WindowDocumentHandler(object):
+    def __init__(self, sublime, settings, window, events):
+        self._sublime = sublime
+        self._settings = settings
+        self._window = window
+        self._document_states = dict()  # type: Dict[str, DocumentState]
+        self._pending_buffer_changes = dict()  # type: Dict[int, Dict]
+        self._sessions = dict()  # type: Dict[str, Session]
+        events.subscribe('view.on_load_async', self.handle_view_opened)
+        events.subscribe('view.on_activated_async', self.handle_view_opened)
+        events.subscribe('view.on_modified', self.handle_view_modified)
+        events.subscribe('view.on_purge_changes', self.purge_changes)
+        events.subscribe('view.on_post_save_async', self.handle_view_saved)
+        events.subscribe('view.on_close', self.handle_view_closed)
+
+    def add_session(self, session: Session):
+        self._sessions[session.config.name] = session
+
+    def remove_session(self, config_name: str):
+        if config_name in self._sessions:
+            del self._sessions[config_name]
+
+    def reset(self):
+        self._document_states.clear()
+
+    def get_document_state(self, path: str) -> DocumentState:
+        if path not in self._document_states:
+            self._document_states[path] = DocumentState(path)
+        return self._document_states[path]
+
+    def has_document_state(self, path: str) -> bool:
+        return path in self._document_states
+
+    def handle_view_opened(self, view: ViewLike):
+        file_name = view.file_name()
+        if file_name and view.window() == self._window:
+            if not self.has_document_state(file_name):
+                ds = self.get_document_state(file_name)
+
+                view.settings().set("show_definitions", False)
+                if self._settings.show_view_status:
+                    view.set_status("lsp_clients", ",".join(list(self._sessions)))
+
+                for config_name, session in self._sessions.items():
+                    params = {
+                        "textDocument": {
+                            "uri": filename_to_uri(file_name),
+                            "languageId": session.config.languageId,
+                            "text": view.substr(self._sublime.Region(0, view.size())),
+                            "version": ds.version
+                        }
+                    }
+                    session.client.send_notification(Notification.didOpen(params))
+
+    def handle_view_closed(self, view: ViewLike):
+        file_name = view.file_name()
+        if view.window() == self._window:
+            if file_name in self._document_states:
+                del self._document_states[file_name]
+                for config_name, session in self._sessions.items():
+                    if session.client:
+                        params = {"textDocument": {"uri": filename_to_uri(file_name)}}
+                        session.client.send_notification(Notification.didClose(params))
+
+    def handle_view_saved(self, view: ViewLike):
+        file_name = view.file_name()
+        if view.window() == self._window:
+            if file_name in self._document_states:
+                for config_name, session in self._sessions.items():
+                    if session.client:
+                        params = {"textDocument": {"uri": filename_to_uri(file_name)}}
+                        session.client.send_notification(Notification.didSave(params))
+            else:
+                debug('document not tracked', file_name)
+
+    def handle_view_modified(self, view: ViewLike):
+        if view.window() == self._window:
+            buffer_id = view.buffer_id()
+            buffer_version = 1
+            pending_buffer = None
+            if buffer_id in self._pending_buffer_changes:
+                pending_buffer = self._pending_buffer_changes[buffer_id]
+                buffer_version = pending_buffer["version"] + 1
+                pending_buffer["version"] = buffer_version
+            else:
+                self._pending_buffer_changes[buffer_id] = {
+                    "view": view,
+                    "version": buffer_version
+                }
+
+            self._sublime.set_timeout_async(
+                lambda: self.purge_did_change(buffer_id, buffer_version), 500)
+
+    def purge_changes(self, view: ViewLike):
+        self.purge_did_change(view.buffer_id())
+
+    def purge_did_change(self, buffer_id: int, buffer_version=None):
+        if buffer_id not in self._pending_buffer_changes:
+            return
+
+        pending_buffer = self._pending_buffer_changes.get(buffer_id)
+
+        if pending_buffer:
+            if buffer_version is None or buffer_version == pending_buffer["version"]:
+                self.notify_did_change(pending_buffer["view"])
+
+    def notify_did_change(self, view: ViewLike):
+        file_name = view.file_name()
+        if file_name and view.window() == self._window:
+            if view.buffer_id() in self._pending_buffer_changes:
+                del self._pending_buffer_changes[view.buffer_id()]
+
+                for config_name, session in self._sessions.items():
+                    if session.client:
+                        document_state = self.get_document_state(file_name)
+                        uri = filename_to_uri(file_name)
+                        params = {
+                            "textDocument": {
+                                "uri": uri,
+                                "languageId": session.config.languageId,
+                                "version": document_state.inc_version(),
+                            },
+                            "contentChanges": [{
+                                "text": view.substr(self._sublime.Region(0, view.size()))
+                            }]
+                        }
+                        session.client.send_notification(Notification.didChange(params))
+
+
 class WindowManager(object):
     def __init__(self, window: WindowLike, configs: ConfigRegistry, documents: DocumentHandler,
-                 diagnostics: DiagnosticsHandler, session_starter: 'Callable', sublime: SublimeGlobal,
+                 diagnostics: DiagnosticsHandler, session_starter: 'Callable', sublime: 'Any',
                  handler_dispatcher, on_closed: 'Optional[Callable]'=None) -> None:
 
         # to move here:
@@ -257,7 +408,7 @@ class WindowManager(object):
 
 class WindowRegistry(object):
     def __init__(self, configs: GlobalConfigs, documents: 'Any', diagnostics: DiagnosticsHandler,
-                 session_starter: 'Callable', sublime: SublimeGlobal, handler_dispatcher) -> None:
+                 session_starter: 'Callable', sublime: 'Any', handler_dispatcher) -> None:
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs
         self._diagnostics = diagnostics
@@ -266,7 +417,7 @@ class WindowRegistry(object):
         self._sublime = sublime
         self._handler_dispatcher = handler_dispatcher
 
-    def lookup(self, window: WindowLike) -> WindowManager:
+    def lookup(self, window: 'Any') -> WindowManager:
         state = self._windows.get(window.id())
         if state is None:
             window_configs = self._configs.for_window(window)

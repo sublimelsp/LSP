@@ -14,6 +14,7 @@ class TestSettings(object):
 
     def __init__(self):
         self.log_payloads = False
+        self.show_view_status = True
 
 
 def return_result(message):

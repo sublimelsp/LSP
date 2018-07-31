@@ -52,26 +52,3 @@ def start_window_config(window: sublime.Window, project_path: str, config: Clien
 
 def on_session_ended(window: sublime.Window, config_name: str, on_ended_handler: 'Callable'):
     on_ended_handler(config_name)
-
-# def check_window_unloaded():
-#     global clients_by_window
-#     open_window_ids = list(window.id() for window in sublime.windows())
-#     iterable_clients_by_window = clients_by_window.copy()
-#     for id, window_clients in iterable_clients_by_window.items():
-#         if id not in open_window_ids and window_clients:
-#             if id not in closing_window_ids:
-#                 closing_window_ids.add(id)
-#                 debug("window closed", id)
-#     for closed_window_id in closing_window_ids:
-#         unload_window_sessions(closed_window_id)
-#     closing_window_ids.clear()
-
-
-# def unload_old_clients(window: sublime.Window):
-#     project_path = get_project_path(window)
-#     configs = window_configs(window)
-#     for config_name, session in configs.items():
-#         if session.client and session.state == ClientStates.READY and session.project_path != project_path:
-#             debug('unload', config_name, 'project path changed from',
-#                   session.project_path, 'to', project_path)
-#             session.end()

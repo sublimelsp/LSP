@@ -111,21 +111,6 @@ def unload_sessions():
         wm.end_sessions()
 
 
-# class SublimeUI(object):
-#     DIALOG_CANCEL = sublime.DIALOG_CANCEL
-#     DIALOG_YES = sublime.DIALOG_YES
-#     DIALOG_NO = sublime.DIALOG_NO
-
-#     def message_dialog(self, msg: str) -> None:
-#         sublime.message_dialog(msg)
-
-#     def ok_cancel_dialog(self, msg: str, ok_title: str) -> bool:
-#         return sublime.ok_cancel_dialog(msg, ok_title)
-
-#     def yes_no_cancel_dialog(self, msg, yes_title: str, no_title: str) -> int:
-#         return sublime.yes_no_cancel_dialog(msg, yes_title, no_title)
-
-
 configs = ConfigManager()
 diagnostics = GlobalDiagnostics()
 documents = DocumentHandlerFactory(sublime, settings)

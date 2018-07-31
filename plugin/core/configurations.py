@@ -4,14 +4,14 @@ import sublime
 from .settings import ClientConfig, client_configs
 from .logging import debug
 from .workspace import get_project_config
-from .windows import ViewLike
+from .windows import ViewLike, WindowLike, ConfigRegistry
 
 assert ClientConfig
 
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
     assert Any and List and Dict and Tuple and Callable and Optional
-    assert ViewLike
+    assert ViewLike and WindowLike and ConfigRegistry
 except ImportError:
     pass
 
@@ -91,7 +91,7 @@ def is_supported_syntax(syntax: str) -> bool:
 
 class ConfigManager(object):
 
-    def for_window(self, window: 'Any') -> 'WindowConfigManager':
+    def for_window(self, window: 'Any') -> 'ConfigRegistry':
         return WindowConfigManager(create_window_configs(window))
 
 
@@ -104,3 +104,6 @@ class WindowConfigManager(object):
 
     def scope_config(self, view: 'Any') -> 'Optional[ClientConfig]':
         return get_scope_client_config(view, self._configs)
+
+    def update(self, configs: 'List[ClientConfig]') -> None:
+        self._configs = configs

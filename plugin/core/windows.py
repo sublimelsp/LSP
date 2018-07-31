@@ -23,6 +23,9 @@ class ConfigRegistry(Protocol):
     def scope_config(self, view: ViewLike) -> 'Optional[ClientConfig]':
         ...
 
+    def update(self, configs: 'List[ClientConfig]') -> None:
+        ...
+
 
 class GlobalConfigs(Protocol):
     def for_window(self, window: WindowLike) -> ConfigRegistry:
@@ -244,6 +247,9 @@ class WindowManager(object):
 
     def _can_start_config(self, config_name: str):
         return config_name not in self._sessions
+
+    def update_configs(self, configs: 'List[ClientConfig]') -> None:
+        self._configs.update(configs)
 
     def start_active_views(self):
         active_views = get_active_views(self._window)

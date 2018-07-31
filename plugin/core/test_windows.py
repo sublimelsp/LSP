@@ -3,7 +3,7 @@ from .sessions import create_session, Session
 from .test_session import TestClient, test_config
 from .test_rpc import TestSettings
 from .events import global_events
-# from .test_sublime import *
+from .types import ClientConfig
 from . import test_sublime as test_sublime
 import os
 import unittest
@@ -11,6 +11,7 @@ import unittest
 try:
     from typing import Callable, List, Optional, Set, Dict
     assert Callable and List and Optional and Set and Session and Dict
+    assert ClientConfig
 except ImportError:
     pass
 
@@ -130,6 +131,9 @@ class TestConfigs(object):
             return None
         else:
             return test_config
+
+    def update(self, configs: 'List[ClientConfig]') -> None:
+        pass
 
 
 class TestDocuments(object):

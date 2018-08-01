@@ -41,18 +41,15 @@ def show_enable_config(view: sublime.View, config: ClientConfig):
         window.status_message(message)
 
 
-def start_view(view: sublime.View):
-    view.run_command('lsp_start_client')
-
-
 class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
     def run(self):
         view = self.window.active_view()
         available_config = get_global_client_config(view)
         if available_config:
             client_configs.enable(available_config.name)
-            windows.lookup(self.window).update_configs(create_window_configs(self.window))
-            sublime.set_timeout_async(lambda: start_view(view), 500)
+            wm = windows.lookup(self.window)
+            wm.update_configs(create_window_configs(self.window))
+            sublime.set_timeout_async(lambda: wm.activate_view(view), 500)
             self.window.status_message("{} enabled, starting server...".format(available_config.name))
             return
 
@@ -67,7 +64,7 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         if config:
             enable_in_project(self.window, config.name)
             wm.update_configs(create_window_configs(self.window))
-            sublime.set_timeout_async(lambda: start_view(view), 500)
+            sublime.set_timeout_async(lambda: wm.activate_view(view), 500)
             self.window.status_message("{} enabled, starting server...".format(config.name))
         else:
             self.window.status_message("No config available to disable")

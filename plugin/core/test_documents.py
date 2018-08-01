@@ -125,5 +125,6 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         self.assertEqual(document2.get("languageId"), "test")
         self.assertEqual(document2.get("text"), "asdf")
         self.assertEqual(document2.get("version"), 0)
-
-        self.assertEqual(view._status.get("lsp_clients"), "test,test2")
+        status_configs = view._status.get("lsp_clients").split(",")
+        self.assertIn("test", status_configs)
+        self.assertIn("test2", status_configs)

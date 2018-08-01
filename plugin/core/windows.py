@@ -140,7 +140,7 @@ class WindowDocumentHandler(object):
 
                         view.settings().set("show_definitions", False)
                         if self._settings.show_view_status:
-                            view.set_status("lsp_clients", ",".join(list(self._sessions)))
+                            view.set_status("lsp_clients", ", ".join(session.config.name for session in sessions))
 
                         for session in sessions:
                             params = {

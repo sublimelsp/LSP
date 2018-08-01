@@ -56,6 +56,12 @@ class TestView(object):
     def size(self):
         return len(self._text)
 
+    def sel(self):
+        return [test_sublime.Region(1, 1)]
+
+    def score_selector(self, region, scope: str) -> int:
+        return 1
+
     def buffer_id(self):
         return 1
 
@@ -65,10 +71,10 @@ class TestHandlerDispatcher(object):
         self._can_start = can_start
         self._initialized = set()  # type: Set[str]
 
-    def on_start(self, config_name: str) -> bool:
+    def on_start(self, config_name: str, window) -> bool:
         return self._can_start
 
-    def on_initialized(self, config_name: str, client):
+    def on_initialized(self, config_name: str, window, client):
         self._initialized.add(config_name)
 
 

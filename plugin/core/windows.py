@@ -117,33 +117,45 @@ class WindowDocumentHandler(object):
     def has_document_state(self, path: str) -> bool:
         return path in self._document_states
 
+    def _get_applicable_sessions(self, view: ViewLike):
+        sessions = []  # type: List[Session]
+        for config_name, session in self._sessions.items():
+            for scope in session.config.scopes:
+                sel = view.sel()
+                if len(sel) > 0 and view.score_selector(sel[0].begin(), scope) > 0:
+                    sessions.append(session)
+        return sessions
+
     def handle_view_opened(self, view: ViewLike):
         file_name = view.file_name()
         if file_name and view.window() == self._window:
-            if not self.has_document_state(file_name):
-                ds = self.get_document_state(file_name)
 
-                view.settings().set("show_definitions", False)
-                if self._settings.show_view_status:
-                    view.set_status("lsp_clients", ",".join(list(self._sessions)))
+                if not self.has_document_state(file_name):
+                    sessions = self._get_applicable_sessions(view)
+                    if sessions:
+                        ds = self.get_document_state(file_name)
 
-                for config_name, session in self._sessions.items():
-                    params = {
-                        "textDocument": {
-                            "uri": filename_to_uri(file_name),
-                            "languageId": session.config.languageId,
-                            "text": view.substr(self._sublime.Region(0, view.size())),
-                            "version": ds.version
-                        }
-                    }
-                    session.client.send_notification(Notification.didOpen(params))
+                        view.settings().set("show_definitions", False)
+                        if self._settings.show_view_status:
+                            view.set_status("lsp_clients", ",".join(list(self._sessions)))
+
+                        for session in sessions:
+                            params = {
+                                "textDocument": {
+                                    "uri": filename_to_uri(file_name),
+                                    "languageId": session.config.languageId,
+                                    "text": view.substr(self._sublime.Region(0, view.size())),
+                                    "version": ds.version
+                                }
+                            }
+                            session.client.send_notification(Notification.didOpen(params))
 
     def handle_view_closed(self, view: ViewLike):
         file_name = view.file_name()
         if view.window() == self._window:
             if file_name in self._document_states:
                 del self._document_states[file_name]
-                for config_name, session in self._sessions.items():
+                for session in self._get_applicable_sessions(view):
                     if session.client:
                         params = {"textDocument": {"uri": filename_to_uri(file_name)}}
                         session.client.send_notification(Notification.didClose(params))
@@ -152,7 +164,7 @@ class WindowDocumentHandler(object):
         file_name = view.file_name()
         if view.window() == self._window:
             if file_name in self._document_states:
-                for config_name, session in self._sessions.items():
+                for session in self._get_applicable_sessions(view):
                     if session.client:
                         params = {"textDocument": {"uri": filename_to_uri(file_name)}}
                         session.client.send_notification(Notification.didSave(params))
@@ -196,7 +208,7 @@ class WindowDocumentHandler(object):
             if view.buffer_id() in self._pending_buffer_changes:
                 del self._pending_buffer_changes[view.buffer_id()]
 
-                for config_name, session in self._sessions.items():
+                for session in self._get_applicable_sessions(view):
                     if session.client:
                         document_state = self.get_document_state(file_name)
                         uri = filename_to_uri(file_name)

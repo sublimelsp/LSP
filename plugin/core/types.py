@@ -123,6 +123,12 @@ class ViewLike(Protocol):
     def set_status(self, key: str, status: str) -> None:
         ...
 
+    def sel(self):
+        ...
+
+    def score_selector(self, region, scope: str) -> int:
+        ...
+
 
 class WindowLike(Protocol):
     def id(self) -> int:

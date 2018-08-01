@@ -37,3 +37,6 @@ class Region(object):
     def __init__(self, a, b):
         self.a = a
         self.b = b
+
+    def begin(self):
+        return self.a

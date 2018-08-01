@@ -1,6 +1,7 @@
 from .rpc import (format_request, Client)
 from .transports import Transport
 from .protocol import (Request, Notification)
+from .types import Settings
 import unittest
 import json
 try:
@@ -10,9 +11,10 @@ except ImportError:
     pass
 
 
-class TestSettings(object):
+class TestSettings(Settings):
 
     def __init__(self):
+        Settings.__init__(self)
         self.log_payloads = False
         self.show_view_status = True
 

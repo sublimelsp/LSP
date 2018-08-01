@@ -17,8 +17,20 @@ def yes_no_cancel_dialog(msg, yes_title: str, no_title: str) -> int:
     return DIALOG_YES
 
 
+_callback = None
+
+
 def set_timeout_async(callback, duration):
-    callback()
+    global _callback
+    _callback = callback
+
+
+def _run_timeout():
+    global _callback
+    if _callback:
+        callback = _callback
+        _callback = None
+        callback()
 
 
 class Region(object):

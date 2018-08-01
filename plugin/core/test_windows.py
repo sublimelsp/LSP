@@ -202,6 +202,7 @@ class WindowRegistryTests(unittest.TestCase):
         # closing views triggers window unload detection
         test_window.close()
         global_events.publish("view.on_close", TestView(__file__))
+        test_sublime._run_timeout()
 
         self.assertEqual(len(windows._windows), 0)
 
@@ -272,7 +273,7 @@ class WindowManagerTests(unittest.TestCase):
         # closing views triggers window unload detection
         test_window.close()
         global_events.publish("view.on_close", TestView(__file__))
-
+        test_sublime._run_timeout()
         self.assertEqual(len(wm._sessions), 0)
 
     def test_ends_sessions_when_quick_switching(self):

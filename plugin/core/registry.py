@@ -77,18 +77,6 @@ def _session_for_view_and_window(view: sublime.View, window: 'Optional[sublime.W
             return session
     return None
 
-    # window_config_states = window_configs(window)
-    # if config.name not in window_config_states:
-    #     debug(config.name, "not available for view",
-    #           view.file_name(), "in window", window.id())
-    #     return None
-    # else:
-    #     session = window_config_states[config.name]
-    #     if session.state == ClientStates.READY:
-    #         return session
-    #     else:
-    #         return None
-
 
 def _client_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Window]') -> 'Optional[Client]':
     session = _session_for_view_and_window(view, window)

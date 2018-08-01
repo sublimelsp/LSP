@@ -7,14 +7,15 @@ from .url import filename_to_uri
 import os
 from .protocol import CompletionItemKind, SymbolKind
 try:
-    from typing import Callable, Dict, Any
-    assert Callable and Dict and Any
+    from typing import Callable, Dict, Any, Optional
+    assert Callable and Dict and Any and Optional
 except ImportError:
     pass
 
 
 def create_session(config: ClientConfig, project_path: str, env: dict, settings: Settings,
-                   on_created=None, on_ended=None, bootstrap_client=None) -> 'Session':
+                   on_created=None, on_ended: 'Optional[Callable[[str], None]]'=None,
+                   bootstrap_client=None) -> 'Session':
 
     if config.binary_args:
 
@@ -140,7 +141,7 @@ def get_initialize_params(project_path: str, config: ClientConfig):
 
 class Session(object):
     def __init__(self, config: ClientConfig, project_path, client: Client,
-                 on_created=None, on_ended=None) -> None:
+                 on_created=None, on_ended: 'Optional[Callable[[str], None]]'=None) -> None:
         self.config = config
         self.project_path = project_path
         self.state = ClientStates.STARTING

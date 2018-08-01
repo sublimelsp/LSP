@@ -2,6 +2,7 @@ from .plugin.core.main import startup, shutdown
 
 # TODO: narrow down imports
 from .plugin.core.panels import *
+from .plugin.core.registry import LspRestartClientCommand
 from .plugin.core.documents import *
 from .plugin.core.edit import *
 from .plugin.completion import *

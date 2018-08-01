@@ -157,7 +157,7 @@ class TestDocuments(object):
         if file_name:
             self._documents.append(file_name)
 
-    def reset(self, window):
+    def reset(self):
         self._documents = []
 
 

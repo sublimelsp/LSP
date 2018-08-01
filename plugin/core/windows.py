@@ -50,6 +50,9 @@ class DocumentHandler(Protocol):
     def handle_view_opened(self, view: ViewLike) -> None:
         ...
 
+    def reset(self) -> None:
+        ...
+
 
 def get_active_views(window: WindowLike):
     views = list()  # type: List[ViewLike]
@@ -106,7 +109,7 @@ class WindowDocumentHandler(object):
         if config_name in self._sessions:
             del self._sessions[config_name]
 
-    def reset(self):
+    def reset(self) -> None:
         self._document_states.clear()
 
     def get_document_state(self, path: str) -> DocumentState:
@@ -327,8 +330,8 @@ class WindowManager(object):
         self._restarting = True
         self.end_sessions()
 
-    def end_sessions(self):
-        self._documents.reset(self._window)
+    def end_sessions(self) -> None:
+        self._documents.reset()
         for config_name in list(self._sessions):
             debug("unloading session", config_name)
             self._sessions[config_name].end()

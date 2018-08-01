@@ -44,7 +44,7 @@ def start_window_config(window: sublime.Window, project_path: str, config: Clien
     config.binary_args = args
     session = create_session(config, project_path, env, settings,
                              on_created=on_created,
-                             on_ended=lambda: on_session_ended(window, config.name, on_ended))
+                             on_ended=lambda config_name: on_session_ended(window, config.name, on_ended))
 
     debug("{} client registered for window {}".format(config.name, window.id()))
     return session

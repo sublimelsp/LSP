@@ -106,7 +106,7 @@ class TCPTransport(Transport):
     def send(self, message):
         try:
             if self.socket:
-                debug('socket send')
+                # debug('socket send')
                 self.socket.sendall(bytes(message, 'UTF-8'))
         except Exception as err:
             exception_log("Failure writing to socket", err)

@@ -200,10 +200,11 @@ class Client(object):
         if method == "window/logMessage":
             debug('<--  ' + method)
             server_log(params.get("message"))
-        else:
-            debug('<--  ' + method)
-            if self.settings.log_payloads and params:
-                debug('     ' + str(params))
+            return
+
+        debug('<--  ' + method)
+        if self.settings.log_payloads and params:
+            debug('     ' + str(params))
         if method in self._notification_handlers:
             try:
                 self._notification_handlers[method](params)

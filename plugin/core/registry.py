@@ -28,13 +28,13 @@ client_initialization_listeners = {}  # type: Dict[str, Callable]
 
 class LanguageHandlerDispatcher(object):
 
-    def on_start(self, config_name: str) -> bool:
+    def on_start(self, config_name: str, window) -> bool:
         if config_name in client_start_listeners:
-            return client_start_listeners[config_name]()
+            return client_start_listeners[config_name](window)
         else:
             return True
 
-    def on_initialized(self, config_name: str, client):
+    def on_initialized(self, config_name: str, window, client):
         if config_name in client_initialization_listeners:
             client_initialization_listeners[config_name](client)
 

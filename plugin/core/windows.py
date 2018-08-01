@@ -292,7 +292,7 @@ class WindowManager(object):
             return
 
         if self._can_start_config(config.name):
-            if not self._handlers.on_start(config.name):
+            if not self._handlers.on_start(config.name, self._window):
                 return
 
             self._window.status_message("Starting " + config.name + "...")
@@ -353,7 +353,7 @@ class WindowManager(object):
             "window/showMessage",
             lambda params: self._sublime.message_dialog(params.get("message")))
 
-        self._handlers.on_initialized(config.name, client)
+        self._handlers.on_initialized(config.name, self._window, client)
 
         document_sync = session.capabilities.get("textDocumentSync")
         if document_sync:

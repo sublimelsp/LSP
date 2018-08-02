@@ -17,6 +17,8 @@ from .core.diagnostics import DiagnosticsUpdate, get_window_diagnostics, get_lin
 from .core.workspace import get_project_path
 from .core.panels import create_output_panel
 from .core.views import range_to_region
+from .core.logging import debug
+
 
 diagnostic_severity_names = {
     DiagnosticSeverity.Error: "error",
@@ -271,6 +273,11 @@ def ensure_diagnostics_panel(window: sublime.Window):
 
 def update_diagnostics_panel(window: sublime.Window):
     assert window, "missing window!"
+
+    if not window.is_valid():
+        debug('ignoring update to closed window')
+        return
+
     base_dir = get_project_path(window)
 
     panel = ensure_diagnostics_panel(window)

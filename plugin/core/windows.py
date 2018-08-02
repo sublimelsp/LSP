@@ -167,13 +167,13 @@ class WindowDocumentHandler(object):
 
     def handle_view_closed(self, view: ViewLike):
         file_name = view.file_name()
-        if view.window() == self._window:
-            if file_name in self._document_states:
-                del self._document_states[file_name]
-                for session in self._get_applicable_sessions(view):
-                    if session.client:
-                        params = {"textDocument": {"uri": filename_to_uri(file_name)}}
-                        session.client.send_notification(Notification.didClose(params))
+        if file_name in self._document_states:
+            del self._document_states[file_name]
+            for session in self._get_applicable_sessions(view):
+                debug('closing', file_name, session.config.name)
+                if session.client:
+                    params = {"textDocument": {"uri": filename_to_uri(file_name)}}
+                    session.client.send_notification(Notification.didClose(params))
 
     def handle_view_saved(self, view: ViewLike):
         file_name = view.file_name()

@@ -43,7 +43,7 @@ class TestClient():
         pass
 
 
-test_config = ClientConfig("test", [], None, ["source.test"], ["Test.sublime-syntax"], "test")
+test_config = ClientConfig("test", [], None, ["source.test"], ["Plain Text"], "test")
 
 
 class SessionTest(unittest.TestCase):

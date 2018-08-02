@@ -55,7 +55,7 @@ class LspHoverCommand(LspTextCommand):
             self.show_hover(point, self.diagnostics_content(point_diagnostics))
 
     def request_symbol_hover(self, point):
-        session = session_for_view(self.view)
+        session = session_for_view(self.view, point)
         if session:
             if session.has_capability('hoverProvider'):
                 document_position = get_document_position(self.view, point)

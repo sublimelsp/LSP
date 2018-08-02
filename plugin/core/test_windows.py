@@ -132,11 +132,20 @@ class TestConfigs(object):
     def is_supported(self, view):
         return self.scope_config(view) is not None
 
-    def scope_config(self, view):
+    def scope_config(self, view, point=None):
         if view.file_name() is None:
             return None
         else:
             return test_config
+
+    def syntax_configs(self, view):
+        if view.settings().get("syntax") == "Plain Text":
+            return [test_config]
+        else:
+            return []
+
+    def syntax_supported(self, view: ViewLike) -> bool:
+        return view.settings().get("syntax") == "Plain Text"
 
     def update(self, configs: 'List[ClientConfig]') -> None:
         pass
@@ -299,7 +308,9 @@ class WindowManagerTests(unittest.TestCase):
         # change project_path
         test_window.set_folders([os.path.dirname(__file__) + '/'])
         # global_events.publish("view.on_close", TestView(__file__))
-        wm.activate_view(TestView(None))
+        another_view = TestView(None)
+        another_view.settings().set("syntax", "Unsupported Syntax")
+        wm.activate_view(another_view)
 
         self.assertEqual(len(wm._sessions), 0)
 

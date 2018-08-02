@@ -1,3 +1,4 @@
+import re
 from .events import global_events
 from .logging import debug
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike
@@ -20,7 +21,13 @@ class ConfigRegistry(Protocol):
     def is_supported(self, view: ViewLike) -> bool:
         ...
 
-    def scope_config(self, view: ViewLike) -> 'Optional[ClientConfig]':
+    def scope_config(self, view: ViewLike, point: 'Optional[int]'=None) -> 'Optional[ClientConfig]':
+        ...
+
+    def syntax_configs(self, view: ViewLike) -> 'List[ClientConfig]':
+        ...
+
+    def syntax_supported(self, view: ViewLike) -> bool:
         ...
 
     def update(self, configs: 'List[ClientConfig]') -> None:
@@ -87,6 +94,12 @@ class DocumentHandlerFactory(object):
         return WindowDocumentHandler(self._sublime, self._settings, window, global_events)
 
 
+def config_supports_syntax(config: 'ClientConfig', syntax: str) -> bool:
+    if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in config.syntaxes), syntax, re.IGNORECASE):
+        return True
+    return False
+
+
 class WindowDocumentHandler(object):
     def __init__(self, sublime, settings, window, events):
         self._sublime = sublime
@@ -122,11 +135,10 @@ class WindowDocumentHandler(object):
 
     def _get_applicable_sessions(self, view: ViewLike):
         sessions = []  # type: List[Session]
+        syntax = view.settings().get("syntax")
         for config_name, session in self._sessions.items():
-            for scope in session.config.scopes:
-                sel = view.sel()
-                if len(sel) > 0 and view.score_selector(sel[0].begin(), scope) > 0:
-                    sessions.append(session)
+            if config_supports_syntax(session.config, syntax):
+                sessions.append(session)
         return sessions
 
     def handle_view_opened(self, view: ViewLike):
@@ -241,7 +253,7 @@ class WindowManager(object):
         self._documents = documents
         self._sessions = dict()  # type: Dict[str, Session]
         self._start_session = session_starter
-        self._open_after_initialize = []  # type: List[ViewLike]
+        self._open_after_initialize = {}  # type: Dict[str, List[ViewLike]]
         self._sublime = sublime
         self._handlers = handler_dispatcher
         self._restarting = False
@@ -273,30 +285,30 @@ class WindowManager(object):
         if len(startable_views) > 0:
             first_view = startable_views.pop(0)
             debug('starting active=', first_view.file_name(), 'other=', len(startable_views))
-            self._initialize_on_open(first_view)
-            if len(startable_views) > 0:
-                for view in startable_views:
-                    self._open_after_initialize.append(view)
+            # TODO: push opened views onto document handler, so it can take then on add_session
+            # see also todo below about initial views assumed to have the same config.
+            self._initialize_on_open(first_view, startable_views)
 
     def activate_view(self, view: ViewLike):
         # TODO: we can shortcut here by checking documentstate.
         self._initialize_on_open(view)
 
-    def _initialize_on_open(self, view: ViewLike):
+    def _initialize_on_open(self, view: ViewLike, additional_views: 'List[ViewLike]'=[]):
         debug("initialize on open", self._window.id(), view.file_name())
         if self._sessions:
             self._end_old_sessions()
 
-        self._open_after_initialize = []
-        config = self._configs.scope_config(view)
-        if config:
+        self._open_after_initialize = {}  # type: Dict[str, List]
+        configs = self._configs.syntax_configs(view)
+        for config in configs:
             if config.enabled:
                 if not self._is_session_ready(config.name):
                     # TODO: this assumes the 2nd, 3rd, 4th view all have the same config
-                    self._open_after_initialize.append(view)
+                    self._open_after_initialize.setdefault(config.name, additional_views).append(view)
+                    # debug('schedule open', config.name, self._open_after_initialize[config.name])
                     self._start_client(view, config)
-                else:
-                    debug('session already ready', config.name)
+                # else:
+                #     debug('session already ready', config.name)
             else:
                 debug(config.name, 'is not enabled')
 
@@ -383,11 +395,15 @@ class WindowManager(object):
             }
             client.send_notification(Notification.didChangeConfiguration(configParams))
 
-        for view in self._open_after_initialize:
-            self._documents.handle_view_opened(view)
+        # document handler only handles opening a file once, so config 2 never opens the file
+        to_open = self._open_after_initialize.pop(config.name, [])
+        if len(self._open_after_initialize) < 1:
+            for view in to_open:
+                self._documents.handle_view_opened(view)
+        else:
+            debug('delayed open for {} because waiting on '.format(config.name), list(self._open_after_initialize))
 
         self._window.status_message("{} initialized".format(config.name))
-        self._open_after_initialize.clear()
 
     def _handle_view_closed(self, view, session):
         self._diagnostics.remove(view, session.config.name)

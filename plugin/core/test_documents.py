@@ -103,7 +103,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         session = create_session(test_config, "", dict(), TestSettings(),
                                  bootstrap_client=client)
         client2 = TestClient()
-        test_config2 = ClientConfig("test2", [], None, ["source.test"], ["Test.sublime-syntax"], "test")
+        test_config2 = ClientConfig("test2", [], None, ["source.test"], ["Plain Text"], "test")
         session2 = create_session(test_config2, "", dict(), TestSettings(),
                                   bootstrap_client=client2)
 

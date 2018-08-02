@@ -57,16 +57,17 @@ def client_for_view(view: sublime.View) -> 'Optional[Client]':
     return _client_for_view_and_window(view, view.window())
 
 
-def session_for_view(view: sublime.View) -> 'Optional[Session]':
-    return _session_for_view_and_window(view, view.window())
+def session_for_view(view: sublime.View, point: 'Optional[int]'=None) -> 'Optional[Session]':
+    return _session_for_view_and_window(view, view.window(), point)
 
 
-def _session_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Window]') -> 'Optional[Session]':
+def _session_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Window]',
+                                 point=None) -> 'Optional[Session]':
     if not window:
         debug("no window for view", view.file_name())
         return None
 
-    config = config_for_scope(view)
+    config = config_for_scope(view, point)
     if not config:
         debug("config not available for view", view.file_name())
         return None
@@ -106,11 +107,11 @@ handlers_dispatcher = LanguageHandlerDispatcher()
 windows = WindowRegistry(configs, documents, diagnostics, start_window_config, sublime, handlers_dispatcher)
 
 
-def config_for_scope(view: 'Any') -> 'Optional[ClientConfig]':
+def config_for_scope(view: 'Any', point=None) -> 'Optional[ClientConfig]':
     window = view.window()
     if window:
         # todo: don't expose _configs
-        return windows.lookup(window)._configs.scope_config(view)
+        return windows.lookup(window)._configs.scope_config(view, point)
     return None
 
 

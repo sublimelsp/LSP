@@ -16,7 +16,8 @@ except ImportError:
     pass
 
 
-def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':
+def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]',
+                            point: 'Optional[int]'=None) -> 'Optional[ClientConfig]':
     # When there are multiple server configurations, all of which are for
     # similar scopes (e.g. 'source.json', 'source.json.sublime.settings') the
     # configuration with the most specific scope (highest ranked selector)
@@ -25,12 +26,18 @@ def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]')
     scope_client_config = None
     for config in configs:
         for scope in config.scopes:
-            sel = view.sel()
-            if len(sel) > 0:
-                score = view.score_selector(sel[0].begin(), scope)
+            if point is None:
+                sel = view.sel()
+                if len(sel) > 0:
+                    point = sel[0].begin()
+            if point is not None:
+                score = view.score_selector(point, scope)
+                # if score > 0:
+                #     debug('scope match score', scope, config.name, score)
                 if score > scope_score:
                     scope_score = score
                     scope_client_config = config
+    # debug('chose ', scope_client_config.name if scope_client_config else None)
     return scope_client_config
 
 
@@ -89,6 +96,12 @@ def is_supported_syntax(syntax: str) -> bool:
     return False
 
 
+def config_supports_syntax(config: 'ClientConfig', syntax: str) -> bool:
+    if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in config.syntaxes), syntax, re.IGNORECASE):
+        return True
+    return False
+
+
 class ConfigManager(object):
 
     def for_window(self, window: 'Any') -> 'ConfigRegistry':
@@ -102,8 +115,18 @@ class WindowConfigManager(object):
     def is_supported(self, view: 'Any') -> bool:
         return self.scope_config(view) is not None
 
-    def scope_config(self, view: 'Any') -> 'Optional[ClientConfig]':
-        return get_scope_client_config(view, self._configs)
+    def scope_config(self, view: 'Any', point=None) -> 'Optional[ClientConfig]':
+        return get_scope_client_config(view, self._configs, point)
+
+    def syntax_configs(self, view: 'Any') -> 'List[ClientConfig]':
+        syntax = view.settings().get("syntax")
+        return list(filter(lambda c: config_supports_syntax(c, syntax), self._configs))
+
+    def syntax_supported(self, view: ViewLike) -> bool:
+        syntax = view.settings().get("syntax")
+        for found in filter(lambda c: config_supports_syntax(c, syntax), self._configs):
+            return True
+        return False
 
     def update(self, configs: 'List[ClientConfig]') -> None:
         self._configs = configs

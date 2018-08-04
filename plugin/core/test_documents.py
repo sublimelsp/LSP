@@ -1,7 +1,7 @@
 import unittest
 from .events import Events
 from .windows import WindowDocumentHandler
-from .sessions import create_session
+from .sessions import create_session, Session
 from .test_windows import TestWindow, TestView, TestConfigs
 from .test_session import test_config, TestClient
 import unittest.mock
@@ -12,12 +12,16 @@ from os.path import basename
 
 try:
     from typing import Any, Dict
-    assert Any and Dict
+    assert Any and Dict and Session
 except ImportError:
     pass
 
 
 class WindowDocumentHandlerTests(unittest.TestCase):
+
+    def assert_if_none(self, session) -> 'Session':
+        self.assertIsNotNone(session)
+        return session
 
     def test_sends_did_open_to_session(self):
 
@@ -27,8 +31,9 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         view.set_window(window)
         handler = WindowDocumentHandler(test_sublime, TestSettings(), window, events, TestConfigs())
         client = TestClient()
-        session = create_session(test_config, "", dict(), TestSettings(),
-                                 bootstrap_client=client)
+        session = self.assert_if_none(
+            create_session(test_config, "", dict(), TestSettings(),
+                           bootstrap_client=client))
         handler.add_session(session)
 
         # open
@@ -86,8 +91,9 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         view = TestView(__file__)
         handler = WindowDocumentHandler(test_sublime, TestSettings(), window, events, TestConfigs())
         client = TestClient()
-        session = create_session(test_config, "", dict(), TestSettings(),
-                                 bootstrap_client=client)
+        session = self.assert_if_none(
+            create_session(test_config, "", dict(), TestSettings(),
+                           bootstrap_client=client))
         handler.add_session(session)
         events.publish("view.on_activated_async", view)
         self.assertFalse(handler.has_document_state(__file__))
@@ -100,12 +106,14 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         view.set_window(window)
         handler = WindowDocumentHandler(test_sublime, TestSettings(), window, events, TestConfigs())
         client = TestClient()
-        session = create_session(test_config, "", dict(), TestSettings(),
-                                 bootstrap_client=client)
+        session = self.assert_if_none(
+            create_session(test_config, "", dict(), TestSettings(),
+                           bootstrap_client=client))
         client2 = TestClient()
         test_config2 = ClientConfig("test2", [], None, ["source.test"], ["Plain Text"], "test")
-        session2 = create_session(test_config2, "", dict(), TestSettings(),
-                                  bootstrap_client=client2)
+        session2 = self.assert_if_none(
+            create_session(test_config2, "", dict(), TestSettings(),
+                           bootstrap_client=client2))
 
         handler.add_session(session)
         handler.add_session(session2)

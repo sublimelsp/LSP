@@ -1,7 +1,5 @@
 import sublime
 import os
-
-from .logging import debug
 from .sessions import create_session, Session
 
 # typing only
@@ -42,12 +40,9 @@ def start_window_config(window: sublime.Window, project_path: str, config: Clien
                         on_created: 'Callable', on_ended: 'Callable'):
     args, env = get_window_env(window, config)
     config.binary_args = args
-    session = create_session(config, project_path, env, settings,
-                             on_created=on_created,
-                             on_ended=lambda config_name: on_session_ended(window, config.name, on_ended))
-
-    debug("{} client registered for window {}".format(config.name, window.id()))
-    return session
+    return create_session(config, project_path, env, settings,
+                          on_created=on_created,
+                          on_ended=lambda config_name: on_session_ended(window, config.name, on_ended))
 
 
 def on_session_ended(window: sublime.Window, config_name: str, on_ended_handler: 'Callable'):

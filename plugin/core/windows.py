@@ -344,7 +344,9 @@ class WindowManager(object):
             session = self._start_session(self._window, project_path, config,
                                           lambda session: self._handle_session_started(session, project_path, config),
                                           lambda config_name: self._handle_session_ended(config_name))
-            self._sessions[config.name] = session
+            if session:
+                debug("window {} added session {}".format(self._window.id(), config.name))
+                self._sessions[config.name] = session
         else:
             debug('Already starting on this window:', config.name)
 

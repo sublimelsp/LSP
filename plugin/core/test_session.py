@@ -2,7 +2,7 @@
 # from .protocol import (Request, Notification)
 # from .clients import create_session, ClientConfig, ConfigState, ClientStates
 from .types import ClientConfig, ClientStates, Settings
-from .sessions import create_session
+from .sessions import create_session, Session
 from .protocol import Request, Notification
 
 import unittest
@@ -10,7 +10,7 @@ import unittest.mock
 # import json
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
-    assert Any and List and Dict and Tuple and Callable and Optional
+    assert Any and List and Dict and Tuple and Callable and Optional and Session
 except ImportError:
     pass
 
@@ -48,11 +48,16 @@ test_config = ClientConfig("test", [], None, ["source.test"], ["Plain Text"], "t
 
 class SessionTest(unittest.TestCase):
 
+    def assert_if_none(self, session) -> 'Session':
+        self.assertIsNotNone(session)
+        return session
+
     # @unittest.skip("need an example config")
     def test_can_create_session(self):
         config = ClientConfig("test", ["ls"], None, ["source.test"], ["Test.sublime-syntax"], "test")
         project_path = "/"
-        session = create_session(config, project_path, dict(), Settings())
+        session = self.assert_if_none(
+            create_session(config, project_path, dict(), Settings()))
 
         self.assertEqual(session.state, ClientStates.STARTING)
         self.assertEqual(session.project_path, project_path)
@@ -61,9 +66,10 @@ class SessionTest(unittest.TestCase):
     def test_can_get_started_session(self):
         project_path = "/"
         created_callback = unittest.mock.Mock()
-        session = create_session(test_config, project_path, dict(), Settings(),
-                                 bootstrap_client=TestClient(),
-                                 on_created=created_callback)
+        session = self.assert_if_none(
+            create_session(test_config, project_path, dict(), Settings(),
+                           bootstrap_client=TestClient(),
+                           on_created=created_callback))
 
         self.assertEqual(session.state, ClientStates.READY)
         self.assertIsNotNone(session.client)
@@ -76,10 +82,11 @@ class SessionTest(unittest.TestCase):
         project_path = "/"
         created_callback = unittest.mock.Mock()
         ended_callback = unittest.mock.Mock()
-        session = create_session(test_config, project_path, dict(), Settings(),
-                                 bootstrap_client=TestClient(),
-                                 on_created=created_callback,
-                                 on_ended=ended_callback)
+        session = self.assert_if_none(
+            create_session(test_config, project_path, dict(), Settings(),
+                           bootstrap_client=TestClient(),
+                           on_created=created_callback,
+                           on_ended=ended_callback))
 
         self.assertEqual(session.state, ClientStates.READY)
         self.assertIsNotNone(session.client)

@@ -15,8 +15,8 @@ except ImportError:
 
 def create_session(config: ClientConfig, project_path: str, env: dict, settings: Settings,
                    on_created=None, on_ended: 'Optional[Callable[[str], None]]'=None,
-                   bootstrap_client=None) -> 'Session':
-
+                   bootstrap_client=None) -> 'Optional[Session]':
+    session = None
     if config.binary_args:
 
         process = start_server(config.binary_args, project_path, env)

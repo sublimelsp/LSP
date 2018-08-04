@@ -63,15 +63,13 @@ def handle_client_diagnostics(window: sublime.Window, client_name: str, update: 
 def remove_diagnostics(view: sublime.View, client_name: str):
     """Removes diagnostics for a file if no views exist for it
     """
-    window = sublime.active_window()
+    window = view.window() or sublime.active_window()
 
     file_path = view.file_name()
     if file_path:
         if not window.find_open_file(file_path):
             update_file_diagnostics(window, file_path, client_name, [])
             global_events.publish("document.diagnostics", DiagnosticsUpdate(window, client_name, file_path, []))
-        else:
-            debug('file still open?')
 
 
 class GlobalDiagnostics(object):

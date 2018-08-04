@@ -177,7 +177,8 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             self.state = CompletionState.CANCELLING
 
     def on_query_completions(self, prefix, locations):
-        if self.view.match_selector(locations[0], NO_COMPLETION_SCOPES):
+        if prefix != "" and self.view.match_selector(locations[0], NO_COMPLETION_SCOPES):
+            # debug('discarding completion because no completion scope with prefix {}'.format(prefix))
             return (
                 [],
                 sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS

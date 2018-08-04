@@ -9,6 +9,12 @@ from .core.workspace import get_project_path
 from .core.protocol import Request, Point
 from .core.url import uri_to_filename
 
+try:
+    from typing import List, Dict, Optional
+    assert List and Dict and Optional
+except ImportError:
+    pass
+
 
 def ensure_references_panel(window: sublime.Window):
     return window.find_output_panel("references") or create_references_panel(window)
@@ -49,11 +55,13 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 client.send_request(
                     request, lambda response: self.handle_response(response, pos))
 
-    def handle_response(self, response, pos):
+    def handle_response(self, response: 'Optional[List[Dict]]', pos) -> None:
         window = self.view.window()
         word = self.view.substr(self.view.word(pos))
         base_dir = get_project_path(window)
         file_path = self.view.file_name()
+        if response is None:
+            response = []
 
         references = list(format_reference(item, base_dir) for item in response)
 

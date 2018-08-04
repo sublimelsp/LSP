@@ -5,6 +5,12 @@ from .core.protocol import Request, Range
 from .core.url import filename_to_uri
 from .core.views import range_to_region
 
+try:
+    from typing import List, Optional, Any
+    assert List and Optional and Any
+except ImportError:
+    pass
+
 symbol_kind_names = {
     SymbolKind.File: "file",
     SymbolKind.Module: "module",
@@ -42,7 +48,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
     def is_enabled(self, event=None):
         return self.has_client_with_capability('documentSymbolProvider')
 
-    def run(self, edit):
+    def run(self, edit) -> None:
         client = client_for_view(self.view)
         if client:
             params = {
@@ -53,9 +59,10 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             request = Request.documentSymbols(params)
             client.send_request(request, self.handle_response)
 
-    def handle_response(self, response):
-        symbols = list(format_symbol(item) for item in response)
-        self.symbols = response
+    def handle_response(self, response: 'Optional[List]') -> None:
+        response_list = response or []
+        symbols = list(format_symbol(item) for item in response_list)
+        self.symbols = response_list
         self.view.window().show_quick_panel(symbols, self.on_symbol_selected)
 
     def on_symbol_selected(self, symbol_index):

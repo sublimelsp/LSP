@@ -6,8 +6,8 @@ import re
 import html
 
 try:
-    from typing import Any, List, Dict
-    assert Any and List and Dict
+    from typing import Any, List, Dict, Optional
+    assert Any and List and Dict and Optional
 except ImportError:
     pass
 
@@ -70,7 +70,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 if last_char not in self._signature_help_triggers:
                     self.view.hide_popup()
 
-    def request_signature_help(self, point):
+    def request_signature_help(self, point) -> None:
         client = client_for_view(self.view)
         if client:
             global_events.publish("view.on_purge_changes", self.view)
@@ -80,7 +80,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                     Request.signatureHelp(document_position),
                     lambda response: self.handle_response(response, point))
 
-    def handle_response(self, response, point):
+    def handle_response(self, response: 'Optional[Dict]', point) -> None:
         if response is not None:
             self._signatures = response.get("signatures", [])
             self._active_signature = response.get("activeSignature", -1)

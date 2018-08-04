@@ -5,8 +5,8 @@ from .transports import TCPTransport, StdioTransport
 from .process import attach_logger
 
 try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional
-    assert Any and List and Dict and Tuple and Callable and Optional
+    from typing import Any, List, Dict, Tuple, Callable, Optional, Union
+    assert Any and List and Dict and Tuple and Callable and Optional and Union
 except ImportError:
     pass
 
@@ -82,7 +82,8 @@ class Client(object):
         self._error_display_handler = lambda msg: debug(msg)
         self.settings = settings
 
-    def send_request(self, request: Request, handler: 'Callable', error_handler: 'Optional[Callable]' = None):
+    def send_request(self, request: Request, handler: 'Callable[[Optional[Any]], None]',
+                     error_handler: 'Optional[Callable]' = None) -> None:
         self.request_id += 1
         debug(' --> ' + request.method)
         if handler is not None:

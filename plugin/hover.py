@@ -3,8 +3,8 @@ import sublime
 import sublime_plugin
 import webbrowser
 try:
-    from typing import List
-    assert List
+    from typing import List, Optional, Any
+    assert List and Optional and Any
 except ImportError:
     pass
 
@@ -54,7 +54,7 @@ class LspHoverCommand(LspTextCommand):
         if point_diagnostics:
             self.show_hover(point, self.diagnostics_content(point_diagnostics))
 
-    def request_symbol_hover(self, point):
+    def request_symbol_hover(self, point) -> None:
         session = session_for_view(self.view, point)
         if session:
             if session.has_capability('hoverProvider'):
@@ -65,7 +65,7 @@ class LspHoverCommand(LspTextCommand):
                             Request.hover(document_position),
                             lambda response: self.handle_response(response, point))
 
-    def handle_response(self, response, point):
+    def handle_response(self, response: 'Optional[Any]', point) -> None:
         all_content = ""
 
         point_diagnostics = get_point_diagnostics(self.view, point)
@@ -120,7 +120,7 @@ class LspHoverCommand(LspTextCommand):
 
         return "".join(formatted)
 
-    def hover_content(self, point, response):
+    def hover_content(self, point, response: 'Optional[Any]') -> str:
         contents = ["No description available."]
         if isinstance(response, dict):
             # Flow returns None sometimes

@@ -5,6 +5,11 @@ from .core.protocol import Request, Point
 from .core.documents import get_document_position, get_position, is_at_word
 from .core.url import uri_to_filename
 from .core.logging import debug
+try:
+    from typing import List, Dict, Optional, Any
+    assert List and Dict and Optional and Any
+except ImportError:
+    pass
 
 
 class LspSymbolDefinitionCommand(LspTextCommand):
@@ -16,7 +21,7 @@ class LspSymbolDefinitionCommand(LspTextCommand):
             return is_at_word(self.view, event)
         return False
 
-    def run(self, edit, event=None):
+    def run(self, edit, event=None) -> None:
         client = client_for_view(self.view)
         if client:
             pos = get_position(self.view, event)
@@ -26,7 +31,7 @@ class LspSymbolDefinitionCommand(LspTextCommand):
                 client.send_request(
                     request, lambda response: self.handle_response(response, pos))
 
-    def handle_response(self, response, position):
+    def handle_response(self, response: 'Optional[Any]', position) -> None:
         window = sublime.active_window()
         if response:
             location = response if isinstance(response, dict) else response[0]

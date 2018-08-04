@@ -9,8 +9,8 @@ from .core.views import range_to_region
 
 import sublime  # only for typing
 try:
-    from typing import List, Dict
-    assert List and Dict
+    from typing import List, Dict, Optional
+    assert List and Dict and Optional
 except ImportError:
     pass
 
@@ -81,7 +81,7 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
                     request = Request.documentHighlight(params)
                     client.send_request(request, self._handle_response)
 
-    def _handle_response(self, response: list) -> None:
+    def _handle_response(self, response: 'Optional[List]') -> None:
         if not response:
             return
         kind2regions = {}  # type: Dict[str, List[sublime.Region]]

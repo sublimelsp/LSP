@@ -1,11 +1,10 @@
 import sublime
 
 try:
-    from typing import Any, List
-    assert Any and List
+    from typing import Any, List, Dict
+    assert Any and List and Dict
 except ImportError:
     pass
-
 
 from .core.registry import client_for_view, LspTextCommand
 from .core.protocol import Request
@@ -44,7 +43,7 @@ class LspCodeActionsCommand(LspTextCommand):
 
             client.send_request(Request.codeAction(params), self.handle_codeaction_response)
 
-    def handle_codeaction_response(self, response):
+    def handle_codeaction_response(self, response: 'List[Dict]') -> None:
         titles = []
         self.commands = response
         for command in self.commands:
@@ -55,7 +54,7 @@ class LspCodeActionsCommand(LspTextCommand):
         else:
             self.view.show_popup('No actions available', sublime.HIDE_ON_MOUSE_MOVE_AWAY)
 
-    def handle_select(self, index):
+    def handle_select(self, index: int) -> None:
         if index > -1:
             client = client_for_view(self.view)
             if client:

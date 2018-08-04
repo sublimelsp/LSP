@@ -154,6 +154,25 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 self.trigger_chars = completionProvider.get(
                     'triggerCharacters') or []
                 self.has_resolve_provider = completionProvider.get('resolveProvider', False)
+                self.register_trigger_chars(session)
+
+    def register_trigger_chars(self, session):
+        completion_triggers = self.view.settings().get('auto_complete_triggers', [])
+        for scope in session.config.scopes:
+            # debug("registering", self.trigger_chars, "for", scope)
+            scope_trigger = next(
+                (trigger for trigger in completion_triggers if trigger.get('selector', None) == scope),
+                None
+            )
+            if scope_trigger:
+                scope_trigger['characters'] = "".join(self.trigger_chars)
+            else:
+                completion_triggers.append({
+                    'characters': "".join(self.trigger_chars),
+                    'selector': scope
+                })
+
+        self.view.settings().set('auto_complete_triggers', completion_triggers)
 
     def is_after_trigger_character(self, location):
         if location > 0:

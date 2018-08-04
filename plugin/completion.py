@@ -277,7 +277,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 items = response["items"]
             elif isinstance(response, list):
                 items = response
-            items = sorted(items, key=lambda item: item.get("sortText", item["label"]))
+            items = sorted(items, key=lambda item: item.get("sortText") or item["label"])
             self.completions = list(self.format_completion(item) for item in items)
 
             if self.has_resolve_provider:

@@ -83,6 +83,7 @@ class TestWindow(object):
         self._files_in_groups = files_in_groups
         self._is_valid = True
         self._folders = [os.path.dirname(__file__)]
+        self._default_view = TestView(None)
 
     def id(self):
         return 0
@@ -117,10 +118,23 @@ class TestWindow(object):
             if len(files) > 0:
                 return files[0]
             else:
-                return TestView(None)
+                return self._default_view
+
+    def add_view_in_group(self, group, view):
+        self._files_in_groups[group].append(view)
 
     def status_message(self, msg: str) -> None:
         pass
+
+    def views(self):
+        views = []
+        for views_in_group in self._files_in_groups:
+            if len(views_in_group) < 1:
+                views.append(self._default_view)
+            else:
+                for view in views_in_group:
+                    views.append(view)
+        return views
 
 
 class TestGlobalConfigs(object):
@@ -154,12 +168,13 @@ class TestConfigs(object):
 class TestDocuments(object):
     def __init__(self):
         self._documents = []  # type: List[str]
+        self._sessions = {}  # type: Dict[str, Session]
 
     def add_session(self, session: 'Session') -> None:
-        pass
+        self._sessions[session.config.name] = session
 
     def remove_session(self, config_name: str) -> None:
-        pass
+        del self._sessions[config_name]
 
     def handle_view_opened(self, view: ViewLike):
         file_name = view.file_name()
@@ -171,7 +186,7 @@ class TestDocuments(object):
 
 
 class TestDocumentHandlerFactory(object):
-    def for_window(self, window):
+    def for_window(self, window, configs):
         return TestDocuments()
 
 
@@ -247,9 +262,11 @@ class WindowManagerTests(unittest.TestCase):
         self.assertListEqual(docs._documents, [])
 
         # session must be started (todo: verify session is ready)
-        wm.activate_view(TestView(__file__))
+        view = TestView(__file__)
+
+        wm.activate_view(view)
         self.assertIsNotNone(wm.get_session(test_config.name))
-        self.assertListEqual(docs._documents, [__file__])
+        self.assertEqual(len(docs._sessions), 1)
 
     def test_can_restart_sessions(self):
         docs = TestDocuments()
@@ -290,6 +307,7 @@ class WindowManagerTests(unittest.TestCase):
         global_events.publish("view.on_close", TestView(__file__))
         test_sublime._run_timeout()
         self.assertEqual(len(wm._sessions), 0)
+        self.assertEqual(len(docs._sessions), 0)
 
     def test_ends_sessions_when_quick_switching(self):
         global_events.reset()
@@ -313,6 +331,7 @@ class WindowManagerTests(unittest.TestCase):
         wm.activate_view(another_view)
 
         self.assertEqual(len(wm._sessions), 0)
+        self.assertEqual(len(docs._sessions), 0)
 
     def test_offers_restart_on_crash(self):
         docs = TestDocuments()

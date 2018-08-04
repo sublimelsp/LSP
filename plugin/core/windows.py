@@ -90,8 +90,8 @@ class DocumentHandlerFactory(object):
         self._sublime = sublime
         self._settings = settings
 
-    def for_window(self, window: 'WindowLike'):
-        return WindowDocumentHandler(self._sublime, self._settings, window, global_events)
+    def for_window(self, window: 'WindowLike', configs: 'ConfigRegistry'):
+        return WindowDocumentHandler(self._sublime, self._settings, window, global_events, configs)
 
 
 def config_supports_syntax(config: 'ClientConfig', syntax: str) -> bool:
@@ -101,9 +101,10 @@ def config_supports_syntax(config: 'ClientConfig', syntax: str) -> bool:
 
 
 class WindowDocumentHandler(object):
-    def __init__(self, sublime, settings, window, events):
+    def __init__(self, sublime, settings, window, events, configs):
         self._sublime = sublime
         self._settings = settings
+        self._configs = configs
         self._window = window
         self._document_states = dict()  # type: Dict[str, DocumentState]
         self._pending_buffer_changes = dict()  # type: Dict[int, Dict]
@@ -117,12 +118,15 @@ class WindowDocumentHandler(object):
 
     def add_session(self, session: Session):
         self._sessions[session.config.name] = session
+        self._notify_open_documents(session)
 
     def remove_session(self, config_name: str):
         if config_name in self._sessions:
             del self._sessions[config_name]
 
     def reset(self) -> None:
+        for view in self._window.views():
+            self.detach_view(view)
         self._document_states.clear()
 
     def get_document_state(self, path: str) -> DocumentState:
@@ -141,29 +145,54 @@ class WindowDocumentHandler(object):
                 sessions.append(session)
         return sessions
 
+    def _notify_open_documents(self, session: Session) -> None:
+        for file_name in self._document_states:
+            view = self._window.find_open_file(file_name)
+            if view:
+                syntax = view.settings().get("syntax")
+                if config_supports_syntax(session.config, syntax):
+                    sessions = self._get_applicable_sessions(view)
+                    self._attach_view(view, sessions)
+                    self._notify_did_open(view, session)
+
+    def _is_supported_view(self, view: ViewLike):
+        return self._configs.syntax_supported(view)
+
+    def _attach_view(self, view: ViewLike, sessions: 'List[Session]'):
+        view.settings().set("show_definitions", False)
+        if self._settings.show_view_status:
+            view.set_status("lsp_clients", ", ".join(session.config.name for session in sessions))
+
+    def detach_view(self, view: ViewLike):
+        view.settings().erase("show_definitions")
+        view.set_status("lsp_clients", "")
+
     def handle_view_opened(self, view: ViewLike):
         file_name = view.file_name()
         if file_name and view.window() == self._window:
+            if not self.has_document_state(file_name):
+                if self._is_supported_view(view):
+                    # always register a supported document
+                    self.get_document_state(file_name)
 
-                if not self.has_document_state(file_name):
                     sessions = self._get_applicable_sessions(view)
-                    if sessions:
-                        ds = self.get_document_state(file_name)
+                    self._attach_view(view, sessions)
+                    for session in sessions:
+                        self._notify_did_open(view, session)
 
-                        view.settings().set("show_definitions", False)
-                        if self._settings.show_view_status:
-                            view.set_status("lsp_clients", ", ".join(session.config.name for session in sessions))
-
-                        for session in sessions:
-                            params = {
-                                "textDocument": {
-                                    "uri": filename_to_uri(file_name),
-                                    "languageId": session.config.languageId,
-                                    "text": view.substr(self._sublime.Region(0, view.size())),
-                                    "version": ds.version
-                                }
-                            }
-                            session.client.send_notification(Notification.didOpen(params))
+    def _notify_did_open(self, view: ViewLike, session: Session) -> None:
+        file_name = view.file_name()
+        if file_name:
+            ds = self.get_document_state(file_name)
+            params = {
+                "textDocument": {
+                    "uri": filename_to_uri(file_name),
+                    "languageId": session.config.languageId,
+                    "text": view.substr(self._sublime.Region(0, view.size())),
+                    "version": ds.version
+                }
+            }
+            session.client.send_notification(Notification.didOpen(params))
 
     def handle_view_closed(self, view: ViewLike):
         file_name = view.file_name()
@@ -253,7 +282,6 @@ class WindowManager(object):
         self._documents = documents
         self._sessions = dict()  # type: Dict[str, Session]
         self._start_session = session_starter
-        self._open_after_initialize = {}  # type: Dict[str, List[ViewLike]]
         self._sublime = sublime
         self._handlers = handler_dispatcher
         self._restarting = False
@@ -280,39 +308,28 @@ class WindowManager(object):
 
     def start_active_views(self):
         active_views = get_active_views(self._window)
-        startable_views = list(filter(self._configs.is_supported, active_views))  # type: List[ViewLike]
-
-        if len(startable_views) > 0:
-            first_view = startable_views.pop(0)
-            debug('starting active=', first_view.file_name(), 'other=', len(startable_views))
-            # TODO: push opened views onto document handler, so it can take then on add_session
-            # see also todo below about initial views assumed to have the same config.
-            self._initialize_on_open(first_view, startable_views)
+        debug('window {} starting {} initial views'.format(self._window.id(), len(active_views)))
+        for view in active_views:
+            if view.file_name():
+                self._initialize_on_open(view)
+                self._documents.handle_view_opened(view)
 
     def activate_view(self, view: ViewLike):
         # TODO: we can shortcut here by checking documentstate.
-        self._initialize_on_open(view)
-
-    def _initialize_on_open(self, view: ViewLike, additional_views: 'List[ViewLike]'=[]):
-        debug("initialize on open", self._window.id(), view.file_name())
         if self._sessions:
             self._end_old_sessions()
+        self._initialize_on_open(view)
 
-        self._open_after_initialize = {}  # type: Dict[str, List]
-        configs = self._configs.syntax_configs(view)
-        for config in configs:
-            if config.enabled:
-                if not self._is_session_ready(config.name):
-                    # TODO: this assumes the 2nd, 3rd, 4th view all have the same config
-                    self._open_after_initialize.setdefault(config.name, additional_views).append(view)
-                    # debug('schedule open', config.name, self._open_after_initialize[config.name])
-                    self._start_client(view, config)
-                # else:
-                #     debug('session already ready', config.name)
-            else:
-                debug(config.name, 'is not enabled')
+    def _initialize_on_open(self, view: ViewLike):
+        # have all sessions for this document been started?
+        startable_configs = filter(lambda c: c.enabled and c.name not in self._sessions,
+                                   self._configs.syntax_configs(view))
 
-    def _start_client(self, view: ViewLike, config: ClientConfig):
+        for config in startable_configs:
+            debug("window {} requests {} for {}".format(self._window.id(), config.name, view.file_name()))
+            self._start_client(config)
+
+    def _start_client(self, config: ClientConfig):
         project_path = get_project_path(self._window)
         if project_path is None:
             debug('Cannot start without a project folder')
@@ -345,6 +362,8 @@ class WindowManager(object):
     def end_sessions(self) -> None:
         self._documents.reset()
         for config_name in list(self._sessions):
+            for view in self._window.views():
+                self._diagnostics.remove(view, config_name)
             debug("unloading session", config_name)
             self._sessions[config_name].end()
 
@@ -394,14 +413,6 @@ class WindowManager(object):
                 'settings': config.settings
             }
             client.send_notification(Notification.didChangeConfiguration(configParams))
-
-        # document handler only handles opening a file once, so config 2 never opens the file
-        to_open = self._open_after_initialize.pop(config.name, [])
-        if len(self._open_after_initialize) < 1:
-            for view in to_open:
-                self._documents.handle_view_opened(view)
-        else:
-            debug('delayed open for {} because waiting on '.format(config.name), list(self._open_after_initialize))
 
         self._window.status_message("{} initialized".format(config.name))
 
@@ -458,7 +469,7 @@ class WindowRegistry(object):
         state = self._windows.get(window.id())
         if state is None:
             window_configs = self._configs.for_window(window)
-            window_documents = self._documents.for_window(window)
+            window_documents = self._documents.for_window(window, window_configs)
             state = WindowManager(window, window_configs, window_documents, self._diagnostics, self._session_starter,
                                   self._sublime, self._handler_dispatcher, lambda: self._on_closed(window))
             self._windows[window.id()] = state

@@ -18,7 +18,7 @@ except ImportError:
 class TestClient():
     def __init__(self) -> None:
         self.responses = {
-            'initialize': {"capabilities": dict(testing=True, hoverProvider=True)},
+            'initialize': {"capabilities": dict(testing=True, hoverProvider=True, textDocumentSync=True)},
             'textDocument/hover': {"contents": "greeting"}
         }  # type: dict
         self._notifications = []  # type: List[Notification]

@@ -2,7 +2,7 @@ import unittest
 from .events import Events
 from .windows import WindowDocumentHandler
 from .sessions import create_session
-from .test_windows import TestWindow, TestView
+from .test_windows import TestWindow, TestView, TestConfigs
 from .test_session import test_config, TestClient
 import unittest.mock
 from . import test_sublime as test_sublime
@@ -25,7 +25,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         view = TestView(__file__)
         window = TestWindow([[view]])
         view.set_window(window)
-        handler = WindowDocumentHandler(test_sublime, TestSettings(), window, events)
+        handler = WindowDocumentHandler(test_sublime, TestSettings(), window, events, TestConfigs())
         client = TestClient()
         session = create_session(test_config, "", dict(), TestSettings(),
                                  bootstrap_client=client)
@@ -84,7 +84,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         events = Events()
         window = TestWindow()
         view = TestView(__file__)
-        handler = WindowDocumentHandler(test_sublime, TestSettings(), window, events)
+        handler = WindowDocumentHandler(test_sublime, TestSettings(), window, events, TestConfigs())
         client = TestClient()
         session = create_session(test_config, "", dict(), TestSettings(),
                                  bootstrap_client=client)
@@ -98,7 +98,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         view = TestView(__file__)
         window = TestWindow([[view]])
         view.set_window(window)
-        handler = WindowDocumentHandler(test_sublime, TestSettings(), window, events)
+        handler = WindowDocumentHandler(test_sublime, TestSettings(), window, events, TestConfigs())
         client = TestClient()
         session = create_session(test_config, "", dict(), TestSettings(),
                                  bootstrap_client=client)

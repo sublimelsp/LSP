@@ -155,6 +155,9 @@ class WindowLike(Protocol):
     def status_message(self, msg: str) -> None:
         ...
 
+    def views(self) -> 'List[ViewLike]':
+        ...
+
 # protocols can be modules once mypy implements this.
 # class SublimeGlobal(Protocol):
 #     DIALOG_CANCEL = 0  # type: int

@@ -13,6 +13,7 @@ from .settings import (
 from .logging import set_debug_logging
 from .events import global_events
 from .registry import windows, load_handlers, unload_sessions
+from .panels import destroy_output_panels
 
 
 def startup():
@@ -27,8 +28,16 @@ def startup():
 
 
 def shutdown():
+    # Also needs to handle package being disabled or removed
+    # https://github.com/tomv564/LSP/issues/375
     unload_settings()
-    unload_sessions()
+    unload_sessions()  # unloads view state from document sync and diagnostics
+    unload_panels()  # references and diagnostics panels
+
+
+def unload_panels():
+    for window in sublime.windows():
+        destroy_output_panels(window)
 
 
 def start_active_window():

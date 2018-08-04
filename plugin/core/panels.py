@@ -26,6 +26,11 @@ def create_output_panel(window: sublime.Window, name: str) -> sublime.View:
     return panel
 
 
+def destroy_output_panels(window: sublime.Window):
+    for panel_name in ["references", "diagnostics"]:
+        window.destroy_output_panel(panel_name)
+
+
 class LspClearPanelCommand(sublime_plugin.TextCommand):
     """
     A clear_panel command to clear the error panel.

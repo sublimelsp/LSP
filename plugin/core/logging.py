@@ -1,11 +1,17 @@
 import traceback
 
 log_debug = False
+log_exceptions = True
 
 
 def set_debug_logging(logging_enabled):
     global log_debug
     log_debug = logging_enabled
+
+
+def set_exception_logging(logging_enabled):
+    global log_exceptions
+    log_exceptions = logging_enabled
 
 
 def debug(*args):
@@ -15,9 +21,10 @@ def debug(*args):
 
 
 def exception_log(message, ex):
-    print(message)
-    ex_traceback = ex.__traceback__
-    print(''.join(traceback.format_exception(ex.__class__, ex, ex_traceback)))
+    if log_exceptions:
+        print(message)
+        ex_traceback = ex.__traceback__
+        print(''.join(traceback.format_exception(ex.__class__, ex, ex_traceback)))
 
 
 def server_log(*args):

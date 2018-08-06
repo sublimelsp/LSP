@@ -5,12 +5,10 @@ import webbrowser
 
 from .core.settings import ClientConfig, client_configs
 from .core.configurations import (
-    # get_scope_client_config,
     create_window_configs,
-    get_global_client_config  # , clear_window_client_configs
+    get_global_client_config
 )
 from .core.registry import config_for_scope, windows
-# from .core.clients import unload_window_sessions
 from .core.events import global_events
 from .core.workspace import enable_in_project, disable_in_project
 
@@ -67,7 +65,7 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
             sublime.set_timeout_async(lambda: wm.activate_view(view), 500)
             self.window.status_message("{} enabled, starting server...".format(config.name))
         else:
-            self.window.status_message("No config available to disable")
+            self.window.status_message("No config available to enable")
 
 
 class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):

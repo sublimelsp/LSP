@@ -1,11 +1,12 @@
 import sublime
-from .types import Settings, ClientConfig
+from .types import Settings, ClientConfig, LanguageConfig
+from .logging import debug
 
 PLUGIN_NAME = 'LSP'
 
 try:
-    from typing import List, Optional, Dict
-    assert List and Optional and Dict
+    from typing import List, Optional, Dict, Any
+    assert List and Optional and Dict and Any
 except ImportError:
     pass
 
@@ -84,13 +85,12 @@ class ClientConfigs(object):
         self.all = read_client_configs(self._global_settings, self._default_settings)
         for config in self._external_configs:
             if config.name in self._global_settings:
-                config.apply_settings(self._global_settings[config.name])
+                config = update_client_config(config, self._global_settings[config.name])
         self.all.extend(self._external_configs)
 
     def add_external_config(self, config: ClientConfig):
-        print('adding ', config.name)
         if config.name in self._global_settings:
-            config.apply_settings(self._global_settings[config.name])
+            config = update_client_config(config, self._global_settings[config.name])
         self._external_configs.append(config)
         self.all.append(config)
 
@@ -129,7 +129,20 @@ def unload_settings():
         _settings_obj.clear_on_change("_on_new_client_settings")
 
 
-def read_client_config(name, client_config):
+def read_language_config(config: dict) -> 'LanguageConfig':
+    language_id = config.get("languageId", "")
+    scopes = config.get("scopes", [])
+    syntaxes = config.get("syntaxes", [])
+    return LanguageConfig(language_id, scopes, syntaxes)
+
+
+def read_language_configs(client_config: dict) -> 'List[LanguageConfig]':
+    return list(map(read_language_config, client_config.get("languages", [])))
+
+
+def read_client_config(name: str, client_config: 'Dict') -> ClientConfig:
+    languages = read_language_configs(client_config)
+
     return ClientConfig(
         name,
         client_config.get("command", []),
@@ -137,6 +150,7 @@ def read_client_config(name, client_config):
         client_config.get("scopes", []),
         client_config.get("syntaxes", []),
         client_config.get("languageId", ""),
+        languages,
         client_config.get("enabled", True),
         client_config.get("initializationOptions", dict()),
         client_config.get("settings", dict()),
@@ -144,20 +158,40 @@ def read_client_config(name, client_config):
     )
 
 
-def read_client_configs(client_settings, default_client_settings=None) -> 'List[ClientConfig]':
+def update_client_config(config: 'ClientConfig', settings: dict) -> 'ClientConfig':
+    default_language = config.languages[0]
+    return ClientConfig(
+        config.name,
+        settings.get("command", config.binary_args),
+        settings.get("tcp_port", config.tcp_port),
+        settings.get("scopes", default_language.scopes),
+        settings.get("syntaxes", default_language.syntaxes),
+        settings.get("languageId", default_language.id),
+        read_language_configs(settings) or config.languages,
+        settings.get("enabled", config.enabled),
+        settings.get("init_options", config.init_options),
+        settings.get("settings", config.settings),
+        settings.get("env", config.env),
+    )
+
+
+def read_client_configs(client_settings: 'Dict[str, Dict[str, Any]]',
+                        default_client_settings: 'Optional[Dict[str, Dict[str, Any]]]'=None) -> 'List[ClientConfig]':
     parsed_configs = []  # type: List[ClientConfig]
     if isinstance(client_settings, dict):
         for client_name, client_config in client_settings.items():
 
             # start with default settings for this client if available
-            client_with_defaults = {}  # type: Dict[str, dict]
+            client_with_defaults = {}  # type: Dict[str, Any]
             if default_client_settings and client_name in default_client_settings:
                 client_with_defaults = default_client_settings[client_name]
             client_with_defaults.update(client_config)
 
             config = read_client_config(client_name, client_with_defaults)
-            if config and config.scopes:  # don't return configs only containing "enabled" here.
+            if config and config.languages:  # don't return configs only containing "enabled" here.
                 parsed_configs.append(config)
+            else:
+                debug('skipping config', config.name)
         return parsed_configs
     else:
         raise ValueError("configs")

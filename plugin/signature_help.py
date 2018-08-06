@@ -49,7 +49,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
         config = config_for_scope(self.view)
         if config:
-            self._language_id = config.languageId
+            self._language_id = self._view_language(self.view, config.name)
 
         self._initialized = True
 
@@ -153,6 +153,10 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         else:
             # Default to "sublime".
             return self._build_popup_content_style_sublime()
+
+    def _view_language(self, view: sublime.View, config_name: str) -> 'Optional[str]':
+        languages = view.settings().get('lsp_language')
+        return languages.get(config_name) if languages else None
 
     def _on_hide(self):
         self._visible = False

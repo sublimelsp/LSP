@@ -1,7 +1,7 @@
 import re
 from .events import global_events
 from .logging import debug
-from .types import ClientStates, ClientConfig, WindowLike, ViewLike
+from .types import ClientStates, ClientConfig, WindowLike, ViewLike, LanguageConfig
 from .protocol import Notification
 from .sessions import Session
 from .url import filename_to_uri
@@ -11,6 +11,7 @@ try:
     from typing import Optional, List, Callable, Dict, Any
     from types import ModuleType
     assert Optional and List and Callable and Dict and Session and Any and ModuleType
+    assert LanguageConfig
 except ImportError:
     pass
     Protocol = object  # type: ignore
@@ -28,6 +29,9 @@ class ConfigRegistry(Protocol):
         ...
 
     def syntax_supported(self, view: ViewLike) -> bool:
+        ...
+
+    def syntax_config_languages(self, view: ViewLike) -> 'Dict[str, LanguageConfig]':
         ...
 
     def update(self, configs: 'List[ClientConfig]') -> None:
@@ -95,8 +99,9 @@ class DocumentHandlerFactory(object):
 
 
 def config_supports_syntax(config: 'ClientConfig', syntax: str) -> bool:
-    if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in config.syntaxes), syntax, re.IGNORECASE):
-        return True
+    for language in config.languages:
+        if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in language.syntaxes), syntax, re.IGNORECASE):
+            return True
     return False
 
 
@@ -155,8 +160,11 @@ class WindowDocumentHandler(object):
                     self._attach_view(view, sessions)
                     self._notify_did_open(view, session)
 
-    def _is_supported_view(self, view: ViewLike):
+    def _is_supported_view(self, view: ViewLike) -> bool:
         return self._configs.syntax_supported(view)
+
+    def _config_languages(self, view: ViewLike) -> 'Dict[str, LanguageConfig]':
+        return self._configs.syntax_config_languages(view)
 
     def _attach_view(self, view: ViewLike, sessions: 'List[Session]'):
         view.settings().set("show_definitions", False)
@@ -167,14 +175,28 @@ class WindowDocumentHandler(object):
         view.settings().erase("show_definitions")
         view.set_status("lsp_clients", "")
 
+    def _view_language(self, view: ViewLike, config_name: str) -> 'Optional[str]':
+        languages = view.settings().get('lsp_language')
+        return languages.get(config_name) if languages else None
+
+    def _set_view_languages(self, view: ViewLike, config_languages: 'Dict[str, LanguageConfig]') -> None:
+        languages = {}
+        for config_name, language in config_languages.items():
+            languages[config_name] = language.id
+        view.settings().set('lsp_language', languages)
+
     def handle_view_opened(self, view: ViewLike):
         file_name = view.file_name()
         if file_name and view.window() == self._window:
             if not self.has_document_state(file_name):
-                if self._is_supported_view(view):
+                config_languages = self._config_languages(view)
+                if len(config_languages) > 0:
                     # always register a supported document
                     self.get_document_state(file_name)
+                    self._set_view_languages(view, config_languages)
 
+                    # the sessions may not be available yet,
+                    # the document will get synced when a session is added.
                     sessions = self._get_applicable_sessions(view)
                     self._attach_view(view, sessions)
                     for session in sessions:
@@ -187,7 +209,7 @@ class WindowDocumentHandler(object):
             params = {
                 "textDocument": {
                     "uri": filename_to_uri(file_name),
-                    "languageId": session.config.languageId,
+                    "languageId": self._view_language(view, session.config.name),
                     "text": view.substr(self._sublime.Region(0, view.size())),
                     "version": ds.version
                 }
@@ -259,7 +281,7 @@ class WindowDocumentHandler(object):
                         params = {
                             "textDocument": {
                                 "uri": uri,
-                                "languageId": session.config.languageId,
+                                "languageId": self._view_language(view, session.config.name),
                                 "version": document_state.inc_version(),
                             },
                             "contentChanges": [{

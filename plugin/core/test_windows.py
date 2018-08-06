@@ -1,17 +1,18 @@
 from .windows import WindowManager, WindowRegistry, WindowLike, ViewLike
 from .sessions import create_session, Session
-from .test_session import TestClient, test_config
+from .test_session import TestClient, test_config, test_language
 from .test_rpc import TestSettings
 from .events import global_events
-from .types import ClientConfig
+from .types import ClientConfig, LanguageConfig
 from . import test_sublime as test_sublime
+# from .logging import set_debug_logging, debug
 import os
 import unittest
 
 try:
     from typing import Callable, List, Optional, Set, Dict
     assert Callable and List and Optional and Set and Session and Dict
-    assert ClientConfig
+    assert ClientConfig and LanguageConfig
 except ImportError:
     pass
 
@@ -160,6 +161,14 @@ class TestConfigs(object):
 
     def syntax_supported(self, view: ViewLike) -> bool:
         return view.settings().get("syntax") == "Plain Text"
+
+    def syntax_config_languages(self, view: ViewLike) -> 'Dict[str, LanguageConfig]':
+        if self.syntax_supported(view):
+            return {
+                "test": test_language
+            }
+        else:
+            return {}
 
     def update(self, configs: 'List[ClientConfig]') -> None:
         pass

@@ -1,7 +1,7 @@
 # from .rpc import (format_request, Client)
 # from .protocol import (Request, Notification)
 # from .clients import create_session, ClientConfig, ConfigState, ClientStates
-from .types import ClientConfig, ClientStates, Settings
+from .types import ClientConfig, LanguageConfig, ClientStates, Settings
 from .sessions import create_session, Session
 from .protocol import Request, Notification
 
@@ -43,7 +43,8 @@ class TestClient():
         pass
 
 
-test_config = ClientConfig("test", [], None, ["source.test"], ["Plain Text"], "test")
+test_language = LanguageConfig("test", ["source.test"], ["Plain Text"])
+test_config = ClientConfig("test", [], None, languages=[test_language])
 
 
 class SessionTest(unittest.TestCase):
@@ -54,7 +55,8 @@ class SessionTest(unittest.TestCase):
 
     # @unittest.skip("need an example config")
     def test_can_create_session(self):
-        config = ClientConfig("test", ["ls"], None, ["source.test"], ["Test.sublime-syntax"], "test")
+
+        config = ClientConfig("test", ["ls"], None, [test_language])
         project_path = "/"
         session = self.assert_if_none(
             create_session(config, project_path, dict(), Settings()))

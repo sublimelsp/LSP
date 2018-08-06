@@ -1,7 +1,7 @@
 import re
 import sublime
 
-from .settings import ClientConfig, client_configs
+from .settings import ClientConfig, client_configs, LanguageConfig
 from .logging import debug
 from .workspace import get_project_config
 from .windows import ViewLike, WindowLike, ConfigRegistry
@@ -11,7 +11,7 @@ assert ClientConfig
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
     assert Any and List and Dict and Tuple and Callable and Optional
-    assert ViewLike and WindowLike and ConfigRegistry
+    assert ViewLike and WindowLike and ConfigRegistry and LanguageConfig
 except ImportError:
     pass
 
@@ -25,18 +25,19 @@ def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]',
     scope_score = 0
     scope_client_config = None
     for config in configs:
-        for scope in config.scopes:
-            if point is None:
-                sel = view.sel()
-                if len(sel) > 0:
-                    point = sel[0].begin()
-            if point is not None:
-                score = view.score_selector(point, scope)
-                # if score > 0:
-                #     debug('scope match score', scope, config.name, score)
-                if score > scope_score:
-                    scope_score = score
-                    scope_client_config = config
+        for language in config.languages:
+            for scope in language.scopes:
+                if point is None:
+                    sel = view.sel()
+                    if len(sel) > 0:
+                        point = sel[0].begin()
+                if point is not None:
+                    score = view.score_selector(point, scope)
+                    # if score > 0:
+                    #     debug('scope match score', scope, config.name, score)
+                    if score > scope_score:
+                        scope_score = score
+                        scope_client_config = config
     # debug('chose ', scope_client_config.name if scope_client_config else None)
     return scope_client_config
 
@@ -69,9 +70,10 @@ def apply_window_settings(client_config: 'ClientConfig', window: 'sublime.Window
             client_config.name,
             overrides.get("command", client_config.binary_args),
             overrides.get("tcp_port", client_config.tcp_port),
-            overrides.get("scopes", client_config.scopes),
-            overrides.get("syntaxes", client_config.syntaxes),
-            overrides.get("languageId", client_config.languageId),
+            [],
+            [],
+            "",
+            client_config.languages,
             overrides.get("enabled", client_config.enabled),
             overrides.get("initializationOptions", client_config.init_options),
             overrides.get("settings", client_config.settings),
@@ -84,22 +86,32 @@ def apply_window_settings(client_config: 'ClientConfig', window: 'sublime.Window
 def is_supportable_syntax(syntax: str) -> bool:
     # TODO: filter out configs disabled by the user.
     for config in client_configs.defaults:
-        if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in config.syntaxes), syntax, re.IGNORECASE):
-            return True
+        for language in config.languages:
+            if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in language.syntaxes), syntax, re.IGNORECASE):
+                return True
     return False
 
 
 def is_supported_syntax(syntax: str) -> bool:
     for config in client_configs.all:
-        if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in config.syntaxes), syntax, re.IGNORECASE):
-            return True
+        for language in config.languages:
+            if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in language.syntaxes), syntax, re.IGNORECASE):
+                return True
     return False
 
 
 def config_supports_syntax(config: 'ClientConfig', syntax: str) -> bool:
-    if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in config.syntaxes), syntax, re.IGNORECASE):
-        return True
+    for language in config.languages:
+        if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in language.syntaxes), syntax, re.IGNORECASE):
+            return True
     return False
+
+
+def syntax_language(config: 'ClientConfig', syntax: str) -> 'Optional[LanguageConfig]':
+    for language in config.languages:
+        if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in language.syntaxes), syntax, re.IGNORECASE):
+            return language
+    return None
 
 
 class ConfigManager(object):
@@ -127,6 +139,15 @@ class WindowConfigManager(object):
         for found in filter(lambda c: config_supports_syntax(c, syntax), self._configs):
             return True
         return False
+
+    def syntax_config_languages(self, view: ViewLike) -> 'Dict[str, LanguageConfig]':
+        syntax = view.settings().get("syntax")
+        config_languages = {}
+        for config in self._configs:
+            language = syntax_language(config, syntax)
+            if language:
+                config_languages[config.name] = language
+        return config_languages
 
     def update(self, configs: 'List[ClientConfig]') -> None:
         self._configs = configs

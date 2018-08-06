@@ -3,10 +3,11 @@ from .events import Events
 from .windows import WindowDocumentHandler
 from .sessions import create_session, Session
 from .test_windows import TestWindow, TestView, TestConfigs
-from .test_session import test_config, TestClient
+from .test_session import test_config, TestClient, test_language
 import unittest.mock
 from . import test_sublime as test_sublime
 from .test_rpc import TestSettings
+# from .logging import debug, set_debug_logging
 from .types import ClientConfig
 from os.path import basename
 
@@ -24,7 +25,6 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         return session
 
     def test_sends_did_open_to_session(self):
-
         events = Events()
         view = TestView(__file__)
         window = TestWindow([[view]])
@@ -110,7 +110,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
             create_session(test_config, "", dict(), TestSettings(),
                            bootstrap_client=client))
         client2 = TestClient()
-        test_config2 = ClientConfig("test2", [], None, ["source.test"], ["Plain Text"], "test")
+        test_config2 = ClientConfig("test2", [], None, languages=[test_language])
         session2 = self.assert_if_none(
             create_session(test_config2, "", dict(), TestSettings(),
                            bootstrap_client=client2))

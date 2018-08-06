@@ -40,8 +40,7 @@ def create_session(config: ClientConfig, project_path: str, env: dict, settings:
 
             session = Session(config, project_path, Client(transport, settings),
                               on_created, on_ended)
-
-        if bootstrap_client:
+        elif bootstrap_client:
             session = Session(config, project_path, bootstrap_client,
                               on_created, on_ended)
         else:

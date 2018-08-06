@@ -11,7 +11,7 @@ from .logging import debug
 
 def get_project_path(window: 'Any') -> 'Optional[str]':
     """
-    Returns the common root of all open folders in the window
+    Returns the first project folder or the parent folder of the active view
     """
     if len(window.folders()):
         folder_paths = window.folders()

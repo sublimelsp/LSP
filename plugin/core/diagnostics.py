@@ -17,7 +17,7 @@ except ImportError:
     pass
 
 
-window_file_diagnostics = dict(
+global_diagnostics = dict(
 )  # type: Dict[int, Dict[str, Dict[str, List[Diagnostic]]]]
 
 
@@ -25,19 +25,19 @@ def update_file_diagnostics(window: sublime.Window, file_path: str, source: str,
                             diagnostics: 'List[Diagnostic]') -> bool:
     updated = False
     if diagnostics:
-        file_diagnostics = window_file_diagnostics.setdefault(window.id(), dict()).setdefault(
+        file_diagnostics = global_diagnostics.setdefault(window.id(), dict()).setdefault(
             file_path, dict())
         file_diagnostics[source] = diagnostics
         updated = True
     else:
-        if window.id() in window_file_diagnostics:
-            file_diagnostics = window_file_diagnostics[window.id()]
-            if file_path in file_diagnostics:
-                if source in file_diagnostics[file_path]:
+        if window.id() in global_diagnostics:
+            window_diagnostics = global_diagnostics[window.id()]
+            if file_path in window_diagnostics:
+                if source in window_diagnostics[file_path]:
                     updated = True
-                    del file_diagnostics[file_path][source]
-                if not file_diagnostics[file_path]:
-                    del file_diagnostics[file_path]
+                    del window_diagnostics[file_path][source]
+                if not window_diagnostics[file_path]:
+                    del window_diagnostics[file_path]
     return updated
 
 
@@ -105,7 +105,7 @@ def get_point_diagnostics(view, point):
 
 
 def get_window_diagnostics(window: sublime.Window) -> 'Optional[Dict[str, Dict[str, List[Diagnostic]]]]':
-    return window_file_diagnostics.get(window.id())
+    return global_diagnostics.get(window.id())
 
 
 def get_diagnostics_for_view(view: sublime.View) -> 'List[Diagnostic]':
@@ -113,8 +113,8 @@ def get_diagnostics_for_view(view: sublime.View) -> 'List[Diagnostic]':
     window = view.window()
     file_path = view.file_name()
     if file_path and window:
-        if window.id() in window_file_diagnostics:
-            file_diagnostics = window_file_diagnostics[window.id()]
+        if window.id() in global_diagnostics:
+            file_diagnostics = global_diagnostics[window.id()]
             if file_path in file_diagnostics:
                 for origin in file_diagnostics[file_path]:
                     view_diagnostics.extend(file_diagnostics[file_path][origin])

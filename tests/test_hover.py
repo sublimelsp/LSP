@@ -2,7 +2,7 @@ from unittesting import DeferrableTestCase
 import sublime
 from os.path import dirname
 from LSP.plugin.hover import _test_contents
-from LSP.plugin.core.types import ClientConfig, ClientStates
+from LSP.plugin.core.types import ClientConfig, ClientStates, LanguageConfig
 from LSP.plugin.core.test_session import TestClient
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.registry import windows  # , session_for_view
@@ -30,8 +30,8 @@ class LspHoverCommandTests(DeferrableTestCase):
         self.view.run_command('insert', {"characters": ORIGINAL_CONTENT})
 
         wm = windows.lookup(self.view.window())
-
-        text_config = ClientConfig("test", [], None, ["text.plain"], ["Plain text"], "test")
+        test_language = LanguageConfig("test", ["text.plain"], ["Plain text"])
+        text_config = ClientConfig("test", [], None, languages=[test_language],)
         client_configs.add_external_config(text_config)
         client_configs.update_configs()
         wm._configs.all.append(text_config)

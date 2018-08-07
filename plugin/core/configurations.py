@@ -24,14 +24,15 @@ def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]',
     # in the current position is preferred.
     scope_score = 0
     scope_client_config = None
+    if point is None:
+        sel = view.sel()
+        if len(sel) > 0:
+            point = sel[0].begin()
+
     for config in configs:
         if config.enabled:
             for language in config.languages:
                 for scope in language.scopes:
-                    if point is None:
-                        sel = view.sel()
-                        if len(sel) > 0:
-                            point = sel[0].begin()
                     if point is not None:
                         score = view.score_selector(point, scope)
                         # if score > 0:

@@ -283,16 +283,17 @@ def update_diagnostics_panel(window: sublime.Window):
 
     base_dir = get_project_path(window)
 
-    panel = ensure_diagnostics_panel(window)
-    assert panel, "must have a panel now!"
-
     diagnostics_by_file = get_window_diagnostics(window)
     if diagnostics_by_file is not None:
+
         active_panel = window.active_panel()
         is_active_panel = (active_panel == "output.diagnostics")
-        panel.settings().set("result_base_dir", base_dir)
-        panel.set_read_only(False)
+
         if diagnostics_by_file:
+            panel = ensure_diagnostics_panel(window)
+            assert panel, "must have a panel now!"
+            panel.settings().set("result_base_dir", base_dir)
+
             to_render = []
             for file_path, source_diagnostics in diagnostics_by_file.items():
                 try:
@@ -301,16 +302,21 @@ def update_diagnostics_panel(window: sublime.Window):
                     relative_file_path = file_path
                 if source_diagnostics:
                     to_render.append(format_diagnostics(relative_file_path, source_diagnostics))
+
+            panel.set_read_only(False)
             panel.run_command("lsp_update_panel", {"characters": "\n".join(to_render)})
+            panel.set_read_only(True)
+
             if settings.auto_show_diagnostics_panel and not active_panel:
                 window.run_command("show_panel",
                                    {"panel": "output.diagnostics"})
         else:
-            panel.run_command("lsp_clear_panel")
-            if is_active_panel:
-                window.run_command("hide_panel",
-                                   {"panel": "output.diagnostics"})
-        panel.set_read_only(True)
+            panel = window.find_output_panel("diagnostics")
+            if panel:
+                panel.run_command("lsp_clear_panel")
+                if is_active_panel:
+                    window.run_command("hide_panel",
+                                       {"panel": "output.diagnostics"})
 
 
 def format_diagnostics(file_path, origin_diagnostics):

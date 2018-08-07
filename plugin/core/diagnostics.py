@@ -22,18 +22,23 @@ window_file_diagnostics = dict(
 
 
 def update_file_diagnostics(window: sublime.Window, file_path: str, source: str,
-                            diagnostics: 'List[Diagnostic]'):
+                            diagnostics: 'List[Diagnostic]') -> bool:
+    updated = False
     if diagnostics:
-        window_file_diagnostics.setdefault(window.id(), dict()).setdefault(
-            file_path, dict())[source] = diagnostics
+        file_diagnostics = window_file_diagnostics.setdefault(window.id(), dict()).setdefault(
+            file_path, dict())
+        file_diagnostics[source] = diagnostics
+        updated = True
     else:
         if window.id() in window_file_diagnostics:
             file_diagnostics = window_file_diagnostics[window.id()]
             if file_path in file_diagnostics:
                 if source in file_diagnostics[file_path]:
+                    updated = True
                     del file_diagnostics[file_path][source]
                 if not file_diagnostics[file_path]:
                     del file_diagnostics[file_path]
+    return updated
 
 
 class DiagnosticsUpdate(object):
@@ -53,22 +58,22 @@ def handle_client_diagnostics(window: sublime.Window, client_name: str, update: 
         diagnostics = list(
             Diagnostic.from_lsp(item) for item in update.get('diagnostics', []))
 
-        update_file_diagnostics(window, file_path, client_name, diagnostics)
-        global_events.publish("document.diagnostics", DiagnosticsUpdate(window, client_name, file_path, diagnostics))
+        if update_file_diagnostics(window, file_path, client_name, diagnostics):
+            global_events.publish("document.diagnostics",
+                                  DiagnosticsUpdate(window, client_name, file_path, diagnostics))
     else:
         debug('missing uri in diagnostics update')
 # TODO: expose updates to features
 
 
 def remove_diagnostics(view: sublime.View, client_name: str):
-    """Removes diagnostics for a file if no views exist for it
+    """Removes diagnostics for a file
     """
     window = view.window() or sublime.active_window()
 
     file_path = view.file_name()
     if file_path:
-        if not window.find_open_file(file_path):
-            update_file_diagnostics(window, file_path, client_name, [])
+        if update_file_diagnostics(window, file_path, client_name, []):
             global_events.publish("document.diagnostics", DiagnosticsUpdate(window, client_name, file_path, []))
 
 

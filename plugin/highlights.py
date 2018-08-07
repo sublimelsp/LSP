@@ -1,3 +1,4 @@
+import sublime
 import sublime_plugin
 
 from .core.configurations import is_supported_syntax
@@ -7,7 +8,6 @@ from .core.documents import get_document_position
 from .core.settings import settings
 from .core.views import range_to_region
 
-import sublime  # only for typing
 try:
     from typing import List, Dict, Optional
     assert List and Dict and Optional
@@ -23,6 +23,18 @@ _kind2name = {
     DocumentHighlightKind.Read: "read",
     DocumentHighlightKind.Write: "write"
 }
+
+
+def remove_all_highlights():
+    for window in sublime.windows():
+        remove_highlights(window)
+
+
+def remove_highlights(window: sublime.Window):
+    for view in window.views():
+        if view.file_name():
+            for kind in settings.document_highlight_scopes.keys():
+                view.erase_regions("lsp_highlight_{}".format(kind))
 
 
 class DocumentHighlightListener(sublime_plugin.ViewEventListener):

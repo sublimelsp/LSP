@@ -25,3 +25,4 @@ def plugin_loaded():
 
 def plugin_unloaded():
     shutdown()
+    remove_all_highlights()

@@ -37,7 +37,9 @@ class LspClearPanelCommand(sublime_plugin.TextCommand):
     """
 
     def run(self, edit):
+        self.view.set_read_only(False)
         self.view.erase(edit, sublime.Region(0, self.view.size()))
+        self.view.set_read_only(True)
 
 
 class LspUpdatePanelCommand(sublime_plugin.TextCommand):

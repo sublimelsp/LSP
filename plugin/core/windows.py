@@ -392,8 +392,6 @@ class WindowManager(object):
 
     def end_session(self, config_name: str) -> None:
         if config_name in self._sessions:
-            for view in self._window.views():
-                self._diagnostics.remove(view, config_name)
             debug("unloading session", config_name)
             self._sessions[config_name].end()
 
@@ -473,6 +471,10 @@ class WindowManager(object):
     def _handle_session_ended(self, config_name):
         self._documents.remove_session(config_name)
         del self._sessions[config_name]
+        for view in self._window.views():
+            if view.file_name():
+                self._diagnostics.remove(view, config_name)
+
         debug("session", config_name, "ended")
         if not self._sessions:
             self._handle_all_sessions_ended()

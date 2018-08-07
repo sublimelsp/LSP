@@ -6,7 +6,7 @@ from LSP.plugin.core.types import ClientConfig, ClientStates
 from LSP.plugin.core.test_session import TestClient
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.registry import windows  # , session_for_view
-from LSP.plugin.core.configurations import register_client_config
+from LSP.plugin.core.settings import client_configs
 
 test_file_path = dirname(__file__) + "/testfile.txt"
 
@@ -32,8 +32,9 @@ class LspHoverCommandTests(DeferrableTestCase):
         wm = windows.lookup(self.view.window())
 
         text_config = ClientConfig("test", [], None, ["text.plain"], ["Plain text"], "test")
-        register_client_config(text_config)
-        wm._configs._configs.append(text_config)
+        client_configs.add_external_config(text_config)
+        client_configs.update_configs()
+        wm._configs.all.append(text_config)
 
         session = Session(text_config, dirname(__file__), TestClient())
         session.state = ClientStates.READY

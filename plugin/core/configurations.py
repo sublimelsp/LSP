@@ -25,35 +25,26 @@ def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]',
     scope_score = 0
     scope_client_config = None
     for config in configs:
-        for language in config.languages:
-            for scope in language.scopes:
-                if point is None:
-                    sel = view.sel()
-                    if len(sel) > 0:
-                        point = sel[0].begin()
-                if point is not None:
-                    score = view.score_selector(point, scope)
-                    # if score > 0:
-                    #     debug('scope match score', scope, config.name, score)
-                    if score > scope_score:
-                        scope_score = score
-                        scope_client_config = config
+        if config.enabled:
+            for language in config.languages:
+                for scope in language.scopes:
+                    if point is None:
+                        sel = view.sel()
+                        if len(sel) > 0:
+                            point = sel[0].begin()
+                    if point is not None:
+                        score = view.score_selector(point, scope)
+                        # if score > 0:
+                        #     debug('scope match score', scope, config.name, score)
+                        if score > scope_score:
+                            scope_score = score
+                            scope_client_config = config
     # debug('chose ', scope_client_config.name if scope_client_config else None)
     return scope_client_config
 
 
-def register_client_config(config: ClientConfig) -> None:
-    # todo: how to propagate global config changes to all window-specific configs.
-    # window_client_configs.clear()
-    client_configs.add_external_config(config)
-
-
 def get_global_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
     return get_scope_client_config(view, client_configs.all)
-
-
-def get_default_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
-    return get_scope_client_config(view, client_configs.defaults)
 
 
 def create_window_configs(window: 'sublime.Window') -> 'List[ClientConfig]':
@@ -65,7 +56,7 @@ def apply_window_settings(client_config: 'ClientConfig', window: 'sublime.Window
 
     if client_config.name in window_config:
         overrides = window_config[client_config.name]
-        debug('window has override for', client_config.name, overrides)
+        debug('window {} has override for {}'.format(window.id(), client_config.name), overrides)
         return ClientConfig(
             client_config.name,
             overrides.get("command", client_config.binary_args),
@@ -81,15 +72,6 @@ def apply_window_settings(client_config: 'ClientConfig', window: 'sublime.Window
         )
 
     return client_config
-
-
-def is_supportable_syntax(syntax: str) -> bool:
-    # TODO: filter out configs disabled by the user.
-    for config in client_configs.defaults:
-        for language in config.languages:
-            if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in language.syntaxes), syntax, re.IGNORECASE):
-                return True
-    return False
 
 
 def is_supported_syntax(syntax: str) -> bool:
@@ -122,32 +104,33 @@ class ConfigManager(object):
 
 class WindowConfigManager(object):
     def __init__(self, configs: 'List[ClientConfig]') -> None:
-        self._configs = configs
+        self.all = configs
 
     def is_supported(self, view: 'Any') -> bool:
         return self.scope_config(view) is not None
 
     def scope_config(self, view: 'Any', point=None) -> 'Optional[ClientConfig]':
-        return get_scope_client_config(view, self._configs, point)
+        return get_scope_client_config(view, self.all, point)
 
     def syntax_configs(self, view: 'Any') -> 'List[ClientConfig]':
         syntax = view.settings().get("syntax")
-        return list(filter(lambda c: config_supports_syntax(c, syntax), self._configs))
+        return list(filter(lambda c: config_supports_syntax(c, syntax) and c.enabled, self.all))
 
     def syntax_supported(self, view: ViewLike) -> bool:
         syntax = view.settings().get("syntax")
-        for found in filter(lambda c: config_supports_syntax(c, syntax), self._configs):
+        for found in filter(lambda c: config_supports_syntax(c, syntax) and c.enabled, self.all):
             return True
         return False
 
     def syntax_config_languages(self, view: ViewLike) -> 'Dict[str, LanguageConfig]':
         syntax = view.settings().get("syntax")
         config_languages = {}
-        for config in self._configs:
-            language = syntax_language(config, syntax)
-            if language:
-                config_languages[config.name] = language
+        for config in self.all:
+            if config.enabled:
+                language = syntax_language(config, syntax)
+                if language:
+                    config_languages[config.name] = language
         return config_languages
 
     def update(self, configs: 'List[ClientConfig]') -> None:
-        self._configs = configs
+        self.all = configs

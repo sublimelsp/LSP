@@ -73,26 +73,33 @@ class ClientConfigs(object):
     def __init__(self):
         self._default_settings = dict()  # type: Dict[str, dict]
         self._global_settings = dict()  # type: Dict[str, dict]
-        self.defaults = []  # type: List[ClientConfig]
+        self._external_configs = dict()  # type: Dict[str, ClientConfig]
         self.all = []  # type: List[ClientConfig]
-        self._external_configs = []  # type: List[ClientConfig]
 
     def update(self, settings_obj: sublime.Settings):
         self._default_settings = read_dict_setting(settings_obj, "default_clients", {})
         self._global_settings = read_dict_setting(settings_obj, "clients", {})
-
-        self.defaults = read_client_configs(self._default_settings)
-        self.all = read_client_configs(self._global_settings, self._default_settings)
-        for config in self._external_configs:
-            if config.name in self._global_settings:
-                config = update_client_config(config, self._global_settings[config.name])
-        self.all.extend(self._external_configs)
+        self.update_configs()
 
     def add_external_config(self, config: ClientConfig):
-        if config.name in self._global_settings:
-            config = update_client_config(config, self._global_settings[config.name])
-        self._external_configs.append(config)
-        self.all.append(config)
+        self._external_configs[config.name] = config
+
+    def update_configs(self):
+        self.all = []  # type: List[ClientConfig]
+
+        for config_name, config in self._external_configs.items():
+            user_settings = self._global_settings.get(config_name, dict())
+            global_config = update_client_config(config, user_settings)
+            self.all.append(global_config)
+
+        all_config_names = set(self._default_settings) | set(self._global_settings)
+        for config_name in all_config_names.difference(set(self._external_configs)):
+            merged_settings = self._default_settings.get(config_name, dict())
+            user_settings = self._global_settings.get(config_name, dict())
+            merged_settings.update(user_settings)
+            self.all.append(read_client_config(config_name, merged_settings))
+
+        debug('global configs', list('{}={}'.format(c.name, c.enabled) for c in self.all))
 
     def _set_enabled(self, config_name: str, is_enabled: bool):
         if _settings_obj:
@@ -151,7 +158,7 @@ def read_client_config(name: str, client_config: 'Dict') -> ClientConfig:
         client_config.get("syntaxes", []),
         client_config.get("languageId", ""),
         languages,
-        client_config.get("enabled", True),
+        client_config.get("enabled", False),
         client_config.get("initializationOptions", dict()),
         client_config.get("settings", dict()),
         client_config.get("env", dict())
@@ -173,25 +180,3 @@ def update_client_config(config: 'ClientConfig', settings: dict) -> 'ClientConfi
         settings.get("settings", config.settings),
         settings.get("env", config.env),
     )
-
-
-def read_client_configs(client_settings: 'Dict[str, Dict[str, Any]]',
-                        default_client_settings: 'Optional[Dict[str, Dict[str, Any]]]'=None) -> 'List[ClientConfig]':
-    parsed_configs = []  # type: List[ClientConfig]
-    if isinstance(client_settings, dict):
-        for client_name, client_config in client_settings.items():
-
-            # start with default settings for this client if available
-            client_with_defaults = {}  # type: Dict[str, Any]
-            if default_client_settings and client_name in default_client_settings:
-                client_with_defaults = default_client_settings[client_name]
-            client_with_defaults.update(client_config)
-
-            config = read_client_config(client_name, client_with_defaults)
-            if config and config.languages:  # don't return configs only containing "enabled" here.
-                parsed_configs.append(config)
-            else:
-                debug('skipping config', config.name)
-        return parsed_configs
-    else:
-        raise ValueError("configs")

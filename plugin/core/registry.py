@@ -3,7 +3,7 @@ import sublime_plugin
 from .diagnostics import GlobalDiagnostics
 from .windows import WindowRegistry, DocumentHandlerFactory
 from .configurations import (
-    ConfigManager, register_client_config
+    ConfigManager
 )
 from .clients import (
     start_window_config
@@ -13,7 +13,7 @@ from .handlers import LanguageHandler
 from .logging import debug
 from .sessions import Session
 from .clients import Client
-from .settings import settings
+from .settings import settings, client_configs
 
 try:
     from typing import Optional, List, Callable, Dict, Any
@@ -42,11 +42,12 @@ class LanguageHandlerDispatcher(object):
 def load_handlers():
     for handler in LanguageHandler.instantiate_all():
         register_language_handler(handler)
+    client_configs.update_configs()
 
 
 def register_language_handler(handler: LanguageHandler) -> None:
     debug("received config {} from {}".format(handler.name, handler.__class__.__name__))
-    register_client_config(handler.config)
+    client_configs.add_external_config(handler.config)
     if handler.on_start:
         client_start_listeners[handler.name] = handler.on_start
     if handler.on_initialized:

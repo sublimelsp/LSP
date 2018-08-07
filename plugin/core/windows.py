@@ -19,6 +19,8 @@ except ImportError:
 
 class ConfigRegistry(Protocol):
     # todo: calls config_for_scope immediately.
+    all = []  # type: List[ClientConfig]
+
     def is_supported(self, view: ViewLike) -> bool:
         ...
 
@@ -386,6 +388,10 @@ class WindowManager(object):
     def end_sessions(self) -> None:
         self._documents.reset()
         for config_name in list(self._sessions):
+            self.end_session(config_name)
+
+    def end_session(self, config_name: str) -> None:
+        if config_name in self._sessions:
             for view in self._window.views():
                 self._diagnostics.remove(view, config_name)
             debug("unloading session", config_name)

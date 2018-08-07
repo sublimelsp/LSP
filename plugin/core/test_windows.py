@@ -144,6 +144,9 @@ class TestGlobalConfigs(object):
 
 
 class TestConfigs(object):
+    def __init__(self):
+        self.all = [test_config]
+
     def is_supported(self, view):
         return self.scope_config(view) is not None
 

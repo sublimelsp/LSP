@@ -54,7 +54,6 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
         if not self._initialized:
             self._initialize()
         if self._enabled:
-            self._clear_regions()
             if settings.document_highlight_style:
                 self._queue()
 
@@ -65,9 +64,11 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
             self._enabled = session.get_capability("documentHighlightProvider")
 
     def _queue(self) -> None:
-        self._stored_point = self.view.sel()[0].begin()
-        current_point = self._stored_point
-        sublime.set_timeout_async(lambda: self._purge(current_point), 500)
+        current_point = self.view.sel()[0].begin()
+        if self._stored_point != current_point:
+            self._clear_regions()
+            self._stored_point = current_point
+            sublime.set_timeout_async(lambda: self._purge(current_point), 500)
 
     def _purge(self, current_point: int) -> None:
         if current_point == self._stored_point:

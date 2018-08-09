@@ -42,6 +42,9 @@ class TestClient():
     def set_crash_handler(self, handler: 'Callable') -> None:
         pass
 
+    def exit(self) -> None:
+        pass
+
 
 test_language = LanguageConfig("test", ["source.test"], ["Plain Text"])
 test_config = ClientConfig("test", [], None, languages=[test_language])

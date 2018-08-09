@@ -2,6 +2,7 @@ import mdpopups
 import sublime
 import sublime_plugin
 import webbrowser
+from html import escape
 try:
     from typing import List, Optional, Any
     assert List and Optional and Any
@@ -89,9 +90,9 @@ class LspHoverCommand(LspTextCommand):
 
     def format_diagnostic(self, diagnostic):
         if diagnostic.source:
-            return "<pre>[{}] {}</pre>".format(diagnostic.source, diagnostic.message)
+            return "<pre>[{}] {}</pre>".format(diagnostic.source, escape(diagnostic.message))
         else:
-            return "<pre>{}</pre>".format(diagnostic.message)
+            return "<pre>{}</pre>".format(escape(diagnostic.message))
 
     def diagnostics_content(self, diagnostics):
         formatted_errors = list(

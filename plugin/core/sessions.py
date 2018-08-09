@@ -1,5 +1,5 @@
 from .types import ClientConfig, ClientStates, Settings
-from .protocol import Request, Notification
+from .protocol import Request
 from .transports import start_tcp_transport
 from .rpc import Client, attach_stdio_client
 from .process import start_server
@@ -175,7 +175,7 @@ class Session(object):
             lambda result: self._handle_shutdown_result(result))
 
     def _handle_shutdown_result(self, result):
-        self.client.send_notification(Notification.exit())
+        self.client.exit()
         self.client = None
         self.capabilities = dict()
         if self._on_ended:

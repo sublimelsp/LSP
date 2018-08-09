@@ -508,4 +508,5 @@ class WindowRegistry(object):
         return state
 
     def _on_closed(self, window: WindowLike) -> None:
-        del self._windows[window.id()]
+        if window.id() in self._windows:
+            del self._windows[window.id()]

@@ -15,7 +15,7 @@ from .core.protocol import CompletionItemKind, Range
 from .core.registry import session_for_view, client_for_view
 from .core.configurations import is_supported_syntax
 from .core.documents import get_document_position
-
+from .core.sessions import Session
 
 NO_COMPLETION_SCOPES = 'comment, string'
 completion_item_kind_names = {v: k for k, v in CompletionItemKind.__dict__.items()}
@@ -156,23 +156,31 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 self.has_resolve_provider = completionProvider.get('resolveProvider', False)
                 self.register_trigger_chars(session)
 
-    def register_trigger_chars(self, session):
-        completion_triggers = self.view.settings().get('auto_complete_triggers', [])
-        for scope in session.config.scopes:
-            # debug("registering", self.trigger_chars, "for", scope)
-            scope_trigger = next(
-                (trigger for trigger in completion_triggers if trigger.get('selector', None) == scope),
-                None
-            )
-            if scope_trigger:
-                scope_trigger['characters'] = "".join(self.trigger_chars)
-            else:
-                completion_triggers.append({
-                    'characters': "".join(self.trigger_chars),
-                    'selector': scope
-                })
+    def _view_language(self, config_name: str) -> 'Optional[str]':
+        languages = self.view.settings().get('lsp_language')
+        return languages.get(config_name) if languages else None
 
-        self.view.settings().set('auto_complete_triggers', completion_triggers)
+    def register_trigger_chars(self, session: Session) -> None:
+        completion_triggers = self.view.settings().get('auto_complete_triggers', [])
+        view_language = self._view_language(session.config.name)
+        if view_language:
+            for language in session.config.languages:
+                if language.id == view_language:
+                    for scope in language.scopes:
+                        # debug("registering", self.trigger_chars, "for", scope)
+                        scope_trigger = next(
+                            (trigger for trigger in completion_triggers if trigger.get('selector', None) == scope),
+                            None
+                        )
+                        if scope_trigger:
+                            scope_trigger['characters'] = "".join(self.trigger_chars)
+                        else:
+                            completion_triggers.append({
+                                'characters': "".join(self.trigger_chars),
+                                'selector': scope
+                            })
+
+            self.view.settings().set('auto_complete_triggers', completion_triggers)
 
     def is_after_trigger_character(self, location):
         if location > 0:

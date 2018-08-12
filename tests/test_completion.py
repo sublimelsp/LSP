@@ -1,4 +1,5 @@
 import unittest
+from unittesting import DeferrableTestCase
 from unittest.mock import MagicMock
 import sublime
 from LSP.plugin.completion import CompletionHandler, CompletionState
@@ -6,9 +7,10 @@ from LSP.plugin.core.settings import client_configs, ClientConfig
 from os.path import dirname
 
 
-def create_completion_item(item: str):
+def create_completion_item(item: str, insert_text: 'Optional[str]'=None) -> dict:
     return {
-        "label": item
+        "label": item,
+        "insertText": insert_text
     }
 
 
@@ -38,7 +40,7 @@ test_file_path = dirname(__file__) + "/testfile.txt"
 
 
 @unittest.skip('asd')
-class InitializationTests(unittest.TestCase):
+class InitializationTests(DeferrableTestCase):
 
     def setUp(self):
         self.view = sublime.active_window().new_file()
@@ -113,4 +115,83 @@ class QueryCompletionsTests(unittest.TestCase):
     def tearDown(self):
         client_configs.all = self.old_configs
         if self.view:
+            self.view.window().run_command("close_file")
+
+
+class CompletionFormattingTests(DeferrableTestCase):
+
+    def setUp(self):
+        self.view = sublime.active_window().open_file(test_file_path)
+
+    def test_only_label_item(self):
+        handler = CompletionHandler(self.view)
+        result = handler.format_completion(create_completion_item("asdf"))
+        self.assertEqual(len(result), 2)
+        self.assertEqual("asdf", result[0])
+        self.assertEqual("asdf", result[1])
+
+    def test_prefers_insert_text(self):
+        handler = CompletionHandler(self.view)
+        result = handler.format_completion(create_completion_item("asdf", "Asdf"))
+        self.assertEqual(len(result), 2)
+        self.assertEqual("Asdf", result[0])
+        self.assertEqual("Asdf", result[1])
+
+    def test_ignores_text_edit(self):
+        handler = CompletionHandler(self.view)
+
+        # partial completion from cursor (instead of full word) causes issues.
+        item = {
+            'insertText': '$true',
+            'label': 'true',
+            'textEdit': {
+                'newText': 'rue',
+                'range': {
+                    'start': {'line': 0, 'character': 2},
+                    'end': {'line': 0, 'character': 2}
+                }
+            }
+        }
+
+        result = handler.format_completion(item)
+        self.assertEqual(len(result), 2)
+        self.assertEqual("$true", result[0])
+        self.assertEqual("\\$true", result[1])
+
+    def test_item_with_partial_edit(self):
+        # issue #368, where using textEdit breaks PHP completions:
+        # $|
+        # PHP language server returns a partial completion "what"
+        # sublime uses it to replace '$' with 'what'
+        # to test:
+        # settings.complete_using_text_edit = True
+        yield 100  # wait for file to be open
+
+        item = {
+            'insertText': None,
+            # 'sortText': None,
+            # 'filterText': None,
+            'label': '$what',
+            'textEdit': {
+                'range': {
+                    'end': {'character': 1, 'line': 0},
+                    'start': {'character': 1, 'line': 0}
+                },
+                'newText': 'what'
+            }
+        }
+
+        handler = CompletionHandler(self.view)
+        handler.last_location = 1
+        handler.last_prefix = ""
+        result = handler.format_completion(item)
+        self.assertEqual(len(result), 2)
+        self.assertEqual("$what", result[0])
+        self.assertEqual("\\$what", result[1])
+        # settings.complete_using_text_edit = False
+
+    def tearDown(self):
+        if self.view:
+            self.view.set_scratch(True)
+            self.view.window().focus_view(self.view)
             self.view.window().run_command("close_file")

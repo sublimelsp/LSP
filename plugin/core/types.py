@@ -30,6 +30,7 @@ class Settings(object):
         self.diagnostics_gutter_marker = "dot"
         self.complete_all_chars = False
         self.completion_hint_type = "auto"
+        self.complete_using_text_edit = False
         self.resolve_completion_for_snippets = False
         self.log_debug = True
         self.log_server = True

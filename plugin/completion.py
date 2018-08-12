@@ -274,25 +274,27 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 hint = completion_item_kind_names.get(kind)
         # label is an alternative for insertText if neither textEdit nor insertText is provided
         insert_text = self.text_edit_text(item) or item.get("insertText") or label
+        trigger = insert_text
         if len(insert_text) > 0 and insert_text[0] == '$':  # sublime needs leading '$' escaped.
             insert_text = '\\$' + insert_text[1:]
-        # only return label with a hint if available
-        return "\t  ".join((label, hint)) if hint else label, insert_text
+        # only return trigger with a hint if available
+        return "\t  ".join((trigger, hint)) if hint else trigger, insert_text
 
     def text_edit_text(self, item) -> 'Optional[str]':
-        # try to handle textEdit if present
-        text_edit = item.get("textEdit")
-        if text_edit:
-            edit_range, edit_text = text_edit.get("range"), text_edit.get("newText")
-            if edit_range and edit_text:
-                edit_range = Range.from_lsp(edit_range)
-                last_start = self.last_location - len(self.last_prefix)
-                last_row, last_col = self.view.rowcol(last_start)
-                if last_row == edit_range.start.row == edit_range.end.row and edit_range.start.col <= last_col:
-                    # sublime does not support explicit replacement with completion
-                    # at given range, but we try to trim the textEdit range and text
-                    # to the start location of the completion
-                    return edit_text[last_col - edit_range.start.col:]
+        if settings.complete_using_text_edit:
+            # try to handle textEdit if present
+            text_edit = item.get("textEdit")
+            if text_edit:
+                edit_range, edit_text = text_edit.get("range"), text_edit.get("newText")
+                if edit_range and edit_text:
+                    edit_range = Range.from_lsp(edit_range)
+                    last_start = self.last_location - len(self.last_prefix)
+                    last_row, last_col = self.view.rowcol(last_start)
+                    if last_row == edit_range.start.row == edit_range.end.row and edit_range.start.col <= last_col:
+                        # sublime does not support explicit replacement with completion
+                        # at given range, but we try to trim the textEdit range and text
+                        # to the start location of the completion
+                        return edit_text[last_col - edit_range.start.col:]
         return None
 
     def handle_response(self, response: 'Optional[Dict]'):

@@ -3,8 +3,15 @@ import subprocess
 import os
 import threading
 
+try:
+    from typing import Any, List, Dict, Tuple, Callable, Optional, Union
+    assert Any and List and Dict and Tuple and Callable and Optional and Union
+except ImportError:
+    pass
 
-def start_server(server_binary_args, working_dir, env):
+
+def start_server(server_binary_args: 'List[str]', working_dir: str,
+                 env: 'Dict[str,str]') -> 'Optional[subprocess.Popen]':
     debug("starting " + str(server_binary_args))
     si = None
     if os.name == "nt":
@@ -23,13 +30,14 @@ def start_server(server_binary_args, working_dir, env):
     except Exception as err:
         # sublime.status_message("Failed to start LSP server {}".format(str(server_binary_args)))
         exception_log("Failed to start server", err)
+        return None
 
 
-def attach_logger(process, stream):
+def attach_logger(process: 'subprocess.Popen', stream) -> None:
     threading.Thread(target=log_stream, args=(process, stream)).start()
 
 
-def log_stream(process, stream):
+def log_stream(process: 'subprocess.Popen', stream) -> None:
     """
     Reads any errors from the LSP process.
     """

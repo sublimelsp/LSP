@@ -2,23 +2,37 @@ from abc import ABCMeta, abstractmethod
 import threading
 import time
 import socket
+import subprocess
 from .logging import exception_log, debug
+
+try:
+    from typing import Callable, Dict, Any, Optional
+    assert Callable and Dict and Any and Optional and subprocess
+except ImportError:
+    pass
+
 
 ContentLengthHeader = b"Content-Length: "
 TCP_CONNECT_TIMEOUT = 5
 
+try:
+    from typing import Any, Dict, Callable
+    assert Any and Dict and Callable
+except ImportError:
+    pass
+
 
 class Transport(object, metaclass=ABCMeta):
     @abstractmethod
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @abstractmethod
-    def start(self, on_receive, on_closed):
+    def start(self, on_receive: 'Callable[[str], None]', on_closed: 'Callable[[], None]') -> None:
         pass
 
     @abstractmethod
-    def send(self, message):
+    def send(self, message: str) -> None:
         pass
 
 
@@ -26,7 +40,7 @@ STATE_HEADERS = 0
 STATE_CONTENT = 1
 
 
-def start_tcp_transport(port):
+def start_tcp_transport(port: int):
     host = "localhost"
     start_time = time.time()
     debug('connecting to {}:{}'.format(host, port))
@@ -43,20 +57,20 @@ def start_tcp_transport(port):
 
 
 class TCPTransport(Transport):
-    def __init__(self, socket):
-        self.socket = socket
+    def __init__(self, socket: 'Any') -> None:
+        self.socket = socket  # type: 'Optional[Any]'
 
-    def start(self, on_receive, on_closed):
+    def start(self, on_receive: 'Callable[[str], None]', on_closed: 'Callable[[], None]') -> None:
         self.on_receive = on_receive
         self.on_closed = on_closed
         self.read_thread = threading.Thread(target=self.read_socket)
         self.read_thread.start()
 
-    def close(self):
+    def close(self) -> None:
         self.socket = None
         self.on_closed()
 
-    def read_socket(self):
+    def read_socket(self) -> None:
         remaining_data = b""
         is_incomplete = False
         read_state = STATE_HEADERS
@@ -103,7 +117,7 @@ class TCPTransport(Transport):
                         is_incomplete = True
                         remaining_data = data
 
-    def send(self, message):
+    def send(self, message: str) -> None:
         try:
             if self.socket:
                 # debug('socket send')
@@ -115,27 +129,27 @@ class TCPTransport(Transport):
 
 
 class StdioTransport(Transport):
-    def __init__(self, process):
-        self.process = process
+    def __init__(self, process: 'subprocess.Popen') -> None:
+        self.process = process  # type: Optional[subprocess.Popen]
 
-    def start(self, on_receive, on_closed):
+    def start(self, on_receive: 'Callable[[str], None]', on_closed: 'Callable[[], None]') -> None:
         self.on_receive = on_receive
         self.on_closed = on_closed
         self.stdout_thread = threading.Thread(target=self.read_stdout)
         self.stdout_thread.start()
 
-    def close(self):
+    def close(self) -> None:
         self.process = None
         self.on_closed()
 
-    def read_stdout(self):
+    def read_stdout(self) -> None:
         """
         Reads JSON responses from process and dispatch them to response_handler
         """
         ContentLengthHeader = b"Content-Length: "
 
         running = True
-        while running:
+        while running and self.process:
             running = self.process.poll() is None
 
             try:
@@ -161,7 +175,7 @@ class StdioTransport(Transport):
 
         debug("LSP stdout process ended.")
 
-    def send(self, message):
+    def send(self, message: str) -> None:
         if self.process:
             try:
                 self.process.stdin.write(bytes(message, 'UTF-8'))

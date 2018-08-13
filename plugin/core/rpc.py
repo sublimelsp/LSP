@@ -1,12 +1,13 @@
 import json
 import socket
 import time
-from .transports import TCPTransport, StdioTransport
+from .transports import TCPTransport, StdioTransport, Transport
 from .process import attach_logger
-
 try:
+    import subprocess
     from typing import Any, List, Dict, Tuple, Callable, Optional, Union
-    assert Any and List and Dict and Tuple and Callable and Optional and Union
+    # from mypy_extensions import TypedDict
+    assert Any and List and Dict and Tuple and Callable and Optional and Union and subprocess
 except ImportError:
     pass
 
@@ -17,8 +18,10 @@ from .types import Settings
 
 TCP_CONNECT_TIMEOUT = 5
 
+# RequestDict = TypedDict('RequestDict', {'id': 'Union[str,int]', 'method': str, 'params': 'Optional[Any]'})
 
-def format_request(payload: 'Dict[str, Any]'):
+
+def format_request(payload: 'Dict[str, Any]') -> str:
     """Converts the request into json and adds the Content-Length header"""
     content = json.dumps(payload, sort_keys=False)
     content_length = len(content)
@@ -26,7 +29,7 @@ def format_request(payload: 'Dict[str, Any]'):
     return result
 
 
-def attach_tcp_client(tcp_port, process, settings: Settings):
+def attach_tcp_client(tcp_port: int, process: 'subprocess.Popen', settings: Settings) -> 'Optional[Client]':
     if settings.log_stderr:
         attach_logger(process, process.stdout)
 
@@ -49,7 +52,7 @@ def attach_tcp_client(tcp_port, process, settings: Settings):
     raise Exception("Timeout connecting to socket")
 
 
-def attach_stdio_client(process, settings: Settings):
+def attach_stdio_client(process: 'subprocess.Popen', settings: Settings) -> 'Client':
     transport = StdioTransport(process)
 
     # TODO: process owner can take care of this outside client?
@@ -60,7 +63,7 @@ def attach_stdio_client(process, settings: Settings):
     return client
 
 
-def try_terminate_process(process):
+def try_terminate_process(process: 'subprocess.Popen') -> None:
     try:
         process.terminate()
     except ProcessLookupError:
@@ -68,7 +71,7 @@ def try_terminate_process(process):
 
 
 class Client(object):
-    def __init__(self, transport, settings):
+    def __init__(self, transport: Transport, settings) -> None:
         self.transport = transport
         self.transport.start(self.receive_payload, self.on_transport_closed)
         self.request_id = 0
@@ -92,30 +95,30 @@ class Client(object):
             self._error_handlers[self.request_id] = error_handler
         self.send_payload(request.to_payload(self.request_id))
 
-    def send_notification(self, notification: Notification):
+    def send_notification(self, notification: Notification) -> None:
         debug(' --> ' + notification.method)
         self.send_payload(notification.to_payload())
 
-    def exit(self):
+    def exit(self) -> None:
         self.exiting = True
         self.send_notification(Notification.exit())
 
-    def set_crash_handler(self, handler: 'Callable'):
+    def set_crash_handler(self, handler: 'Callable') -> None:
         self._crash_handler = handler
 
-    def set_error_display_handler(self, handler: 'Callable'):
+    def set_error_display_handler(self, handler: 'Callable') -> None:
         self._error_display_handler = handler
 
-    def set_transport_failure_handler(self, handler: 'Callable'):
+    def set_transport_failure_handler(self, handler: 'Callable') -> None:
         self._transport_fail_handler = handler
 
-    def handle_transport_failure(self):
+    def handle_transport_failure(self) -> None:
         if self._transport_fail_handler is not None:
             self._transport_fail_handler()
         if self._crash_handler is not None:
             self._crash_handler()
 
-    def send_payload(self, payload):
+    def send_payload(self, payload: 'Dict[str, Any]') -> None:
         if self.transport:
             try:
                 message = format_request(payload)
@@ -125,7 +128,7 @@ class Client(object):
                 exception_log("Failure writing payload", err)
                 self.handle_transport_failure()
 
-    def receive_payload(self, message):
+    def receive_payload(self, message: str) -> None:
         payload = None
         try:
             payload = json.loads(message)
@@ -148,14 +151,14 @@ class Client(object):
         except Exception as err:
             exception_log("Error handling server payload", err)
 
-    def on_transport_closed(self):
+    def on_transport_closed(self) -> None:
         self._error_display_handler("Communication to server closed, exiting")
         # Differentiate between normal exit and server crash?
         if not self.exiting:
             self.handle_transport_failure()
 
-    def response_handler(self, response):
-        handler_id = int(response.get("id"))  # dotty sends strings back :(
+    def response_handler(self, response: 'Dict[str, Any]') -> None:
+        handler_id = int(response["id"])  # dotty sends strings back :(
         if 'result' in response and 'error' not in response:
             result = response['result']
             if self.settings.log_payloads:
@@ -175,15 +178,15 @@ class Client(object):
         else:
             debug('invalid response payload', response)
 
-    def on_request(self, request_method: str, handler: 'Callable'):
+    def on_request(self, request_method: str, handler: 'Callable') -> None:
         self._request_handlers[request_method] = handler
 
-    def on_notification(self, notification_method: str, handler: 'Callable'):
+    def on_notification(self, notification_method: str, handler: 'Callable') -> None:
         self._notification_handlers[notification_method] = handler
 
-    def request_handler(self, request):
-        params = request.get("params")
-        method = request.get("method")
+    def request_handler(self, request: 'Dict[str, Any]') -> None:
+        params = request.get("params", dict())
+        method = request.get("method", '')
         debug('<--  ' + method)
         if self.settings.log_payloads and params:
             debug('     ' + str(params))
@@ -195,12 +198,12 @@ class Client(object):
         else:
             debug("Unhandled request", method)
 
-    def notification_handler(self, notification):
-        method = notification.get("method")
+    def notification_handler(self, notification: 'Dict[str, Any]') -> None:
+        method = notification["method"]
         params = notification.get("params")
         if method == "window/logMessage":
             debug('<--  ' + method)
-            server_log(params.get("message"))
+            server_log(params.get("message", "???") if params else "???")
             return
 
         debug('<--  ' + method)

@@ -9,7 +9,7 @@ except ImportError:
 
 class Settings(object):
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.show_status_messages = True
         self.show_view_status = True
         self.auto_show_diagnostics_panel = True
@@ -44,15 +44,6 @@ class ClientStates(object):
     STOPPING = 2
 
 
-class ConfigState(object):
-
-    def __init__(self, project_path, state=ClientStates.STARTING, client=None, capabilities=None):
-        self.project_path = project_path
-        self.state = state
-        self.client = client
-        self.capabilities = capabilities
-
-
 class LanguageConfig(object):
     def __init__(self, language_id: str, scopes: 'List[str]', syntaxes: 'List[str]') -> None:
         self.id = language_id
@@ -61,8 +52,9 @@ class LanguageConfig(object):
 
 
 class ClientConfig(object):
-    def __init__(self, name, binary_args, tcp_port, scopes=[], syntaxes=[], languageId=None,
-                 languages: 'List[LanguageConfig]'=[], enabled=True, init_options=dict(),
+    def __init__(self, name: str, binary_args: 'List[str]', tcp_port: 'Optional[int]', scopes=[],
+                 syntaxes=[], languageId: 'Optional[str]'=None,
+                 languages: 'List[LanguageConfig]'=[], enabled: bool=True, init_options=dict(),
                  settings=dict(), env=dict()) -> None:
         self.name = name
         self.binary_args = binary_args
@@ -76,19 +68,8 @@ class ClientConfig(object):
         self.env = env
 
 
-class SettingsLike(object):
-    def __init__(self, values):
-        ...
-
-    def get(self, key: str) -> 'Any':
-        ...
-
-    def set(self, key: str, value: 'Any'):
-        ...
-
-
 class ViewLike(Protocol):
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     def file_name(self) -> 'Optional[str]':
@@ -146,18 +127,3 @@ class WindowLike(Protocol):
 
     def views(self) -> 'List[ViewLike]':
         ...
-
-# protocols can be modules once mypy implements this.
-# class SublimeGlobal(Protocol):
-#     DIALOG_CANCEL = 0  # type: int
-#     DIALOG_YES = 1  # type: int
-#     DIALOG_NO = 2  # type: int
-
-#     def message_dialog(self, msg: str) -> None:
-#         ...
-
-#     def ok_cancel_dialog(self, msg: str, ok_title: str) -> bool:
-#         ...
-
-#     def yes_no_cancel_dialog(self, msg, yes_title: str, no_title: str) -> int:
-#         ...

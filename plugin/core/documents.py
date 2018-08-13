@@ -19,7 +19,7 @@ except ImportError:
 SUBLIME_WORD_MASK = 515
 
 
-def get_document_position(view: sublime.View, point) -> 'Optional[OrderedDict]':
+def get_document_position(view: sublime.View, point: int) -> 'Optional[OrderedDict]':
     file_name = view.file_name()
     if file_name:
         if not point:
@@ -48,7 +48,7 @@ def is_at_word(view: sublime.View, event) -> bool:
         return False
 
 
-def is_transient_view(view):
+def is_transient_view(view: sublime.View) -> bool:
     window = view.window()
     if window:
         if window.get_view_index(view)[1] == -1:
@@ -59,7 +59,7 @@ def is_transient_view(view):
 
 
 class DocumentSyncListener(sublime_plugin.ViewEventListener):
-    def __init__(self, view):
+    def __init__(self, view: 'sublime.View') -> None:
         self.view = view
 
     @classmethod

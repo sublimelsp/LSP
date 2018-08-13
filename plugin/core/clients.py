@@ -16,7 +16,7 @@ except ImportError:
     pass
 
 
-def get_window_env(window: sublime.Window, config: ClientConfig):
+def get_window_env(window: sublime.Window, config: ClientConfig) -> 'Tuple[List[str], Dict[str, str]]':
 
     # Create a dictionary of Sublime Text variables
     variables = window.extract_variables()
@@ -37,7 +37,7 @@ def get_window_env(window: sublime.Window, config: ClientConfig):
 
 
 def start_window_config(window: sublime.Window, project_path: str, config: ClientConfig,
-                        on_created: 'Callable', on_ended: 'Callable'):
+                        on_created: 'Callable', on_ended: 'Callable[[str], None]') -> 'Optional[Session]':
     args, env = get_window_env(window, config)
     config.binary_args = args
     return create_session(config, project_path, env, settings,
@@ -45,5 +45,5 @@ def start_window_config(window: sublime.Window, project_path: str, config: Clien
                           on_ended=lambda config_name: on_session_ended(window, config.name, on_ended))
 
 
-def on_session_ended(window: sublime.Window, config_name: str, on_ended_handler: 'Callable'):
+def on_session_ended(window: sublime.Window, config_name: str, on_ended_handler: 'Callable[[str], None]') -> None:
     on_ended_handler(config_name)

@@ -41,7 +41,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         self.assertTrue(handler.has_document_state(__file__))
         self.assertEqual(len(client._notifications), 1)
         did_open = client._notifications[0]
-        document = did_open.params.get("textDocument")
+        document = did_open.params["textDocument"]
         self.assertEqual(document.get("languageId"), "test")
         self.assertEqual(document.get("text"), "asdf")
         self.assertEqual(document.get("version"), 0)
@@ -67,8 +67,8 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         did_change = client._notifications[1]
         document = did_change.params.get("textDocument")
         self.assertEqual(document.get("version"), 1)  # increments with did_change
-        changes = did_change.params.get("contentChanges")
-        self.assertEqual(changes[0].get("text"), view._text)
+        purged_changes = did_change.params["contentChanges"]
+        self.assertEqual(purged_changes[0].get("text"), view._text)
 
         # save
         events.publish('view.on_post_save_async', view)
@@ -123,13 +123,13 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         self.assertEqual(len(client2._notifications), 1)
 
         did_open = client._notifications[0]
-        document = did_open.params.get("textDocument")
+        document = did_open.params["textDocument"]
         self.assertEqual(document.get("languageId"), "test")
         self.assertEqual(document.get("text"), "asdf")
         self.assertEqual(document.get("version"), 0)
 
         did_open2 = client._notifications[0]
-        document2 = did_open2.params.get("textDocument")
+        document2 = did_open2.params["textDocument"]
         self.assertEqual(document2.get("languageId"), "test")
         self.assertEqual(document2.get("text"), "asdf")
         self.assertEqual(document2.get("version"), 0)

@@ -33,26 +33,12 @@
 
 For any of these components it is important that Sublime Text can find the language server executable through the path, especially when using virtual environments.
 
-For autocomplete to trigger on eg. `.` or `->`, you may need to add the listed `auto_complete_triggers` to your User or Syntax-specific settings.
+LSP registers a server's supported trigger characters with Sublime Text.
+If completion on `.` or `->`, is not working, you may need to add the listed `auto_complete_triggers` to your User or Syntax-specific settings.
 
 The default LSP.sublime-settings contains some default LSP client configuration that may not work for you. See [Client Config](#client-config) for explanations for the available settings.
 
 ### Javascript/Typescript<a name="jsts"></a>
-
-Autocomplete triggers: in User or Syntax-specific settings, add:
-
-```
-"auto_complete_triggers": [
-    {
-        "characters": ".",
-        "selector": "source.js"
-    },
-    {
-        "characters": ".",
-        "selector": "source.ts"
-    }
-]
-```
 
 You need to have [tomv564/lsp-tsserver](https://github.com/tomv564/lsp-tsserver) installed globally for the completions to work.
 
@@ -127,12 +113,6 @@ Be sure to install "Vue Syntax Highlight" from Package Control.
 
 See: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
 
-Autocomplete triggers: in User or Syntax-specific settings, add:
-
-```
-"auto_complete_triggers": [ {"selector": "source.python", "characters": "."} ],
-```
-
 ### PHP<a name="php"></a>
 
 UPDATE: Some new options for PHP language servers are discussed in [this issue](https://github.com/tomv564/LSP/issues/259)
@@ -158,7 +138,7 @@ UPDATE: Some new options for PHP language servers are discussed in [this issue](
 }
 ```
 
-5. add triggers to `Preferences.sublime-settings - User`
+5. (optional) add triggers to `Preferences.sublime-settings - User`
 ```
 "auto_complete_triggers":
 [
@@ -176,7 +156,7 @@ See: [github:felixfbecker/php-language-server](https://github.com/felixfbecker/p
 ### Ruby / Ruby on Rails<a name="ruby"></a>
 
 Requires the solargraph gem:
-    
+
     gem install solargraph
 
 See [github.com:castwide/solargraph](https://github.com/castwide/solargraph) for up-to-date installation instructions.
@@ -214,12 +194,6 @@ Requires Rust Nightly.
 
 See [github:rust-lang-nursery/rls](https://github.com/rust-lang-nursery/rls) for up-to-date installation instructions.
 
-Autocomplete triggers: in User or Syntax-specific settings, add:
-
-```
-"auto_complete_triggers": [ {"selector": "source.rust", "characters": ".:"} ]
-```
-
 
 ### Scala<a name="scala"></a>
 
@@ -239,12 +213,6 @@ Then the LSP plugin should launch as configured in LSP.sublime-settings using co
 ### C/C++ (Clangd)<a name="clang"></a>
 
 You will need to build from source, see [instructions](https://clang.llvm.org/extra/clangd.html)
-
-Autocomplete triggers: in User or Syntax-specific settings, add:
-
-```
-"auto_complete_triggers": [ {"selector": "source.c++", "characters": ".>:" }]
-```
 
 For any project of non-trivial size, you probably have a build system in place
 to compile your source files. The compilation command passed to your compiler

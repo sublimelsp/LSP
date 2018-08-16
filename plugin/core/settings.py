@@ -67,6 +67,8 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings):
     settings.log_server = read_bool_setting(settings_obj, "log_server", True)
     settings.log_stderr = read_bool_setting(settings_obj, "log_stderr", False)
     settings.log_payloads = read_bool_setting(settings_obj, "log_payloads", False)
+    settings.merge_client_env = read_bool_setting(settings_obj, "merge_client_env", False)
+    settings.merge_client_settings = read_bool_setting(settings_obj, "merge_client_settings", False)
 
 
 class ClientConfigs(object):

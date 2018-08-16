@@ -36,6 +36,8 @@ class Settings(object):
         self.log_server = True
         self.log_stderr = False
         self.log_payloads = False
+        self.merge_client_env = False
+        self.merge_client_settings = False
 
 
 class ClientStates(object):

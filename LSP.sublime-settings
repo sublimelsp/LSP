@@ -213,5 +213,11 @@
   "log_stderr": false,
 
   // Show full JSON-RPC responses in the console
-  "log_payloads": false
+  "log_payloads": false,
+
+  // Merge project env with global env. If false, then override.
+  "merge_client_env": false,
+
+  // Merge project settings with global settings. If false, then override.
+  "merge_client_settings": false
 }

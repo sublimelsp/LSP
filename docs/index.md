@@ -28,6 +28,8 @@
 * `log_server` `true` *show server/logMessage notifications from language servers in the console*
 * `log_stderr` `false` *show language server stderr output in the console*
 * `log_payloads` `false` *show full JSON-RPC responses in the console*
+* `merge_client_env` `false` *merge project env with global env, override if false*
+* `merge_client_settings` `false` *merge project settings with global settings, override if false*
 
 ## Language Specific Setup
 

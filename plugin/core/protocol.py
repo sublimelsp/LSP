@@ -242,7 +242,8 @@ class Range(object):
 
 
 class Diagnostic(object):
-    def __init__(self, message: str, range: Range, severity: int, source: 'Optional[str]', lsp_diagnostic: dict) -> None:
+    def __init__(self, message: str, range: Range, severity: int,
+                 source: 'Optional[str]', lsp_diagnostic: dict) -> None:
         self.message = message
         self.range = range
         self.severity = severity

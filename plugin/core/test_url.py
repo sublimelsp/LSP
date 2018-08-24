@@ -18,6 +18,7 @@ class WindowsTests(unittest.TestCase):
         # url2pathname does not understand %3A
         self.assertEqual("c:\\dir ectory\\file.txt", uri_to_filename("file:///c%3A/dir%20ectory/file.txt"))
 
+
 class NixTests(unittest.TestCase):
 
     @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")

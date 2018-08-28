@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 import threading
 import time
 import socket
+from queue import Queue
 import subprocess
 from .logging import exception_log, debug
 
@@ -131,15 +132,19 @@ class TCPTransport(Transport):
 class StdioTransport(Transport):
     def __init__(self, process: 'subprocess.Popen') -> None:
         self.process = process  # type: Optional[subprocess.Popen]
+        self.send_queue = Queue()  # type: Queue[Optional[str]]
 
     def start(self, on_receive: 'Callable[[str], None]', on_closed: 'Callable[[], None]') -> None:
         self.on_receive = on_receive
         self.on_closed = on_closed
-        self.stdout_thread = threading.Thread(target=self.read_stdout)
-        self.stdout_thread.start()
+        self.write_thread = threading.Thread(target=self.write_stdin)
+        self.write_thread.start()
+        self.read_thread = threading.Thread(target=self.read_stdout)
+        self.read_thread.start()
 
     def close(self) -> None:
         self.process = None
+        self.send_queue.put(None)  # kill the write thread as it's blocked on send_queue
         self.on_closed()
 
     def read_stdout(self) -> None:
@@ -176,10 +181,17 @@ class StdioTransport(Transport):
         debug("LSP stdout process ended.")
 
     def send(self, message: str) -> None:
-        if self.process:
-            try:
-                self.process.stdin.write(bytes(message, 'UTF-8'))
-                self.process.stdin.flush()
-            except (BrokenPipeError, OSError) as err:
-                exception_log("Failure writing to stdout", err)
-                self.close()
+        self.send_queue.put(message)
+
+    def write_stdin(self) -> None:
+        while self.process:
+            message = self.send_queue.get()
+            if message is None:
+                break
+            else:
+                try:
+                    self.process.stdin.write(bytes(message, 'UTF-8'))
+                    self.process.stdin.flush()
+                except (BrokenPipeError, OSError) as err:
+                    exception_log("Failure writing to stdout", err)
+                    self.close()

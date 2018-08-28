@@ -138,20 +138,6 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(len(responses), 0)
         self.assertGreater(len(errors), 0)
 
-    def test_forwards_transport_error(self):
-        set_exception_logging(False)
-        transport = TestTransport(raise_error)
-        settings = TestSettings()
-        client = Client(transport, settings)
-        errors = []
-        client.set_transport_failure_handler(lambda: errors.append(""))
-        self.assertTrue(transport.has_started)
-        responses = []
-        req = Request.initialize(dict())
-        client.send_request(req, lambda resp: responses.append(resp))
-        self.assertEqual(len(responses), 0)
-        self.assertGreater(len(errors), 0)
-
     def test_handles_transport_closed_unexpectedly(self):
         set_exception_logging(False)
         transport = TestTransport(raise_error)

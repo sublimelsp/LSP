@@ -133,20 +133,6 @@
           "fixOnSave": false
         }
       }
-    },
-    "rlang":
-    {
-      "command": ["R", "--quiet", "--slave", "-e", "languageserver::run()"],
-      "languageId": "r",
-      "scopes":
-      [
-        "source.r"
-      ],
-      "syntaxes":
-      [
-        "Packages/R/R.sublime-syntax",
-        "Packages/R-Box/syntax/R Extended.sublime-syntax"
-      ]
     }
   },
 

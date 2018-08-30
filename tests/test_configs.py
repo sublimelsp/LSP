@@ -51,7 +51,7 @@ class ConfigTests(DeferrableTestCase):
 
     @unittest.skipIf("CI" not in os.environ, 'not reliable for dev machine')
     def test_defaults(self):
-        self.assertEqual(len(client_configs.all), 11)
+        self.assertEqual(len(client_configs.all), 10)
         for config in client_configs.all:
             self.assertFalse(config.enabled)
 

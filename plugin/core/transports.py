@@ -60,14 +60,18 @@ def start_tcp_transport(port: int):
 class TCPTransport(Transport):
     def __init__(self, socket: 'Any') -> None:
         self.socket = socket  # type: 'Optional[Any]'
+        self.send_queue = Queue()  # type: Queue[Optional[str]]
 
     def start(self, on_receive: 'Callable[[str], None]', on_closed: 'Callable[[], None]') -> None:
         self.on_receive = on_receive
         self.on_closed = on_closed
         self.read_thread = threading.Thread(target=self.read_socket)
         self.read_thread.start()
+        self.write_thread = threading.Thread(target=self.write_socket)
+        self.write_thread.start()
 
     def close(self) -> None:
+        self.send_queue.put(None)  # kill the write thread as it's blocked on send_queue
         self.socket = None
         self.on_closed()
 
@@ -119,14 +123,19 @@ class TCPTransport(Transport):
                         remaining_data = data
 
     def send(self, message: str) -> None:
-        try:
-            if self.socket:
-                # debug('socket send')
-                self.socket.sendall(bytes(message, 'UTF-8'))
-        except Exception as err:
-            exception_log("Failure writing to socket", err)
-            self.socket = None
-            self.on_closed()
+        self.send_queue.put(message)
+
+    def write_socket(self) -> None:
+        while self.socket:
+            message = self.send_queue.get()
+            if message is None:
+                break
+            else:
+                try:
+                    self.socket.sendall(bytes(message, 'UTF-8'))
+                except Exception as err:
+                    exception_log("Failure writing to socket", err)
+                    self.close()
 
 
 class StdioTransport(Transport):

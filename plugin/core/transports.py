@@ -41,10 +41,9 @@ STATE_HEADERS = 0
 STATE_CONTENT = 1
 
 
-def start_tcp_transport(port: int):
-    host = "localhost"
+def start_tcp_transport(port: int, host: 'Optional[str]'=None) -> 'Transport':
     start_time = time.time()
-    debug('connecting to {}:{}'.format(host, port))
+    debug('connecting to {}:{}'.format(host or "localhost", port))
 
     while time.time() - start_time < TCP_CONNECT_TIMEOUT:
         try:

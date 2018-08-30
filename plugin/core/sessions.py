@@ -22,7 +22,7 @@ def create_session(config: ClientConfig, project_path: str, env: dict, settings:
         process = start_server(config.binary_args, project_path, env)
         if process:
             if config.tcp_port:
-                transport = start_tcp_transport(config.tcp_port)
+                transport = start_tcp_transport(config.tcp_port, config.tcp_host)
                 if transport:
                     session = Session(config, project_path, Client(transport, settings), on_created, on_ended)
                 else:

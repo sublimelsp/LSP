@@ -47,7 +47,7 @@ def start_tcp_transport(port: int, host: 'Optional[str]'=None) -> 'Transport':
 
     while time.time() - start_time < TCP_CONNECT_TIMEOUT:
         try:
-            sock = socket.create_connection((host, port))
+            sock = socket.create_connection((host or "localhost", port))
             return TCPTransport(sock)
         except ConnectionRefusedError as e:
             pass

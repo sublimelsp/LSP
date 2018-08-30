@@ -59,8 +59,8 @@ class ClientConfig(object):
         self.name = name
         self.binary_args = binary_args
         self.tcp_port = tcp_port
-        if not languages and languageId:
-            languages.append(LanguageConfig(languageId, scopes, syntaxes))
+        if not languages:
+            languages = [LanguageConfig(languageId, scopes, syntaxes)] if languageId else []
         self.languages = languages
         self.enabled = enabled
         self.init_options = init_options

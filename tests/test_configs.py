@@ -54,6 +54,7 @@ class ConfigTests(DeferrableTestCase):
         self.assertEqual(len(client_configs.all), 10)
         for config in client_configs.all:
             self.assertFalse(config.enabled)
+            self.assertEqual(1, len(config.languages))
 
 
 class WindowConfigTests(DeferrableTestCase):

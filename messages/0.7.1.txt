@@ -1,0 +1,15 @@
+=> 0.7.1
+
+WARNING: You will likely have to "enable" your langauge server.
+
+This was a breaking change in 0.7.0 that was not identified / called out.
+As the default configurations declare overlapping support for file types, default-disabled
+was adopted.
+
+Changes in this minor update:
+* Prevent sublime lockups by moving server writes to dedicated thread (@Kronuz)
+* Handle windows URIs where the ':' is unnecessarily encoded (file:///C%3A/file.txt)
+* Add tcp_host setting for connecting to remote tcp server
+* Fix major bug parsing client configs (@randy3k)
+
+See https://github.com/tomv564/LSP/releases/tag/0.7.1 for full update details.

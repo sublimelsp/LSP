@@ -148,6 +148,8 @@ class Request:
         r["jsonrpc"] = "2.0"
         r["id"] = id
         r["method"] = self.method
+        if self.params is not None:
+            r["params"] = self.params
         return r
 
 

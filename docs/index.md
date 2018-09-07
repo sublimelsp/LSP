@@ -310,6 +310,30 @@ Features:
 More info: https://github.com/Polymer/polymer-editor-service
 
 
+### Dart<a name="dart"></a>
+
+`pub global activate dart_language_server`
+
+See: [natebosch/dart_language_server](https://github.com/natebosch/dart_language_server)
+
+Client configuration (replace PATH_TO_PUB_BIN):
+```
+"dart": {
+  "command": [
+    "PATH_TO_PUB_BIN/dart_language_server"
+  ],
+  "enabled": true,
+  "languageId": "dart",
+  "scopes": [
+    "source.dart"
+  ],
+  "syntaxes": [
+    "Packages/Dart/Dart.tmLanguage"
+  ]
+}
+```
+
+
 ### Other<a name="other"></a>
 
 Please create issues / pull requests so we can get support for more languages.

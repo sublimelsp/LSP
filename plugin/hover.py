@@ -90,9 +90,9 @@ class LspHoverCommand(LspTextCommand):
 
     def format_diagnostic(self, diagnostic):
         if diagnostic.source:
-            return "<pre>[{}] {}</pre>".format(diagnostic.source, escape(diagnostic.message))
+            return "<pre>[{}] {}</pre>".format(diagnostic.source, escape(diagnostic.message, False))
         else:
-            return "<pre>{}</pre>".format(escape(diagnostic.message))
+            return "<pre>{}</pre>".format(escape(diagnostic.message, False))
 
     def diagnostics_content(self, diagnostics):
         formatted_errors = list(

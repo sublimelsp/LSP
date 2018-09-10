@@ -92,6 +92,7 @@ class DocumentOnTypeFormattingListener(sublime_plugin.ViewEventListener):
         self._client = None  # type: Optional[Client]
         self._initialized = False
         self._enabled = False
+        self._undo_was_invoked = False
 
     def on_modified_async(self) -> None:
         if not settings.format_on_type:
@@ -101,6 +102,9 @@ class DocumentOnTypeFormattingListener(sublime_plugin.ViewEventListener):
         if self._enabled:
             client = client_for_view(self.view)
             if client:
+                if self._undo_was_invoked:
+                    self._undo_was_invoked = False
+                    return
                 for region in self.view.sel():
                     self._on_type_formatting_async(client, region.begin())
 
@@ -129,6 +133,10 @@ class DocumentOnTypeFormattingListener(sublime_plugin.ViewEventListener):
         client.send_request(Request.onTypeFormatting(params),
                             lambda response: self.view.run_command("lsp_apply_document_edit",
                                                                    {"changes": response}))
+
+    def on_text_command(self, name, _) -> None:
+        if name == "undo":
+            self._undo_was_invoked = True
 
 
 def get_formatting_options(view: sublime.View) -> dict:

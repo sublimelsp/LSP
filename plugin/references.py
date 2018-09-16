@@ -114,13 +114,13 @@ class LspSymbolReferencesCommand(LspTextCommand):
             file_path = uri_to_filename(reference.get("uri"))
             relative_file_path = os.path.relpath(file_path, base_dir)
 
-            region = Point.from_lsp(reference.get('range').get('region'))
+            point = Point.from_lsp(reference.get('range').get('start'))
             # get line of the reference, to showcase its use
-            reference_line = linecache.getline(file_path, region.row + 1).strip()
+            reference_line = linecache.getline(file_path, point.row + 1).strip()
 
             if dict.get(relative_file_path) is None:
                 dict[relative_file_path] = []
-            dict[relative_file_path].append({'region': region, 'text': reference_line})
+            dict[relative_file_path].append({'point': point, 'text': reference_line})
 
         return dict
 
@@ -130,8 +130,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
             text += '◌ {}\n'.format(file)
             references = grouped_references.get(file)
             for reference in references:
-                region = reference.get('region')
-                text += '\t{:>8}:{:<4} {}\n'.format(region.row, region.col, reference.get('text'))
+                point = reference.get('point')
+                text += '\t{:>8}:{:<4} {}\n'.format(point.row, point.col, reference.get('text'))
             # append a new line after each file name
             text += '\n'
         return text

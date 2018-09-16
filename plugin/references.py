@@ -1,5 +1,6 @@
 import os
 import sublime
+import linecache
 
 from .core.panels import create_output_panel
 from .core.settings import PLUGIN_NAME
@@ -22,8 +23,10 @@ def ensure_references_panel(window: sublime.Window):
 
 def create_references_panel(window: sublime.Window):
     panel = create_output_panel(window, "references")
-    panel.settings().set("result_file_regex",
-                         r"^\s+\S\s+(\S.+)\s+(\d+):?(\d+)$")
+    # panel.settings().set("result_file_regex",
+    #                      r"^\s+\S\s+(\S.+)\s+(\d+):?(\d+)$")
+    panel.settings().set("result_file_regex", r"^\s*\S\s+(\S.*):$")
+    panel.settings().set("result_line_regex", r"^\s+([0-9]+):?([0-9]+).*$")
     panel.assign_syntax("Packages/" + PLUGIN_NAME +
                         "/Syntaxes/References.sublime-syntax")
     # Call create_output_panel a second time after assigning the above
@@ -57,44 +60,78 @@ class LspSymbolReferencesCommand(LspTextCommand):
 
     def handle_response(self, response: 'Optional[List[Dict]]', pos) -> None:
         window = self.view.window()
-        word = self.view.substr(self.view.word(pos))
-        base_dir = get_project_path(window)
-        file_path = self.view.file_name()
+
         if response is None:
             response = []
 
-        references = list(format_reference(item, base_dir) for item in response)
-
-        if (len(references)) > 0:
-            display_path = file_path
-            if base_dir and os.path.commonprefix([file_path, base_dir]):
-                display_path = os.path.relpath(file_path, base_dir)
-            panel = ensure_references_panel(window)
-            panel.settings().set("result_base_dir", base_dir)
-            panel.set_read_only(False)
-            panel.run_command("lsp_clear_panel")
-            panel.run_command('append', {
-                'characters': 'References to "' + word + '" at ' + display_path + ':\n'
-            })
-            window.run_command("show_panel", {"panel": "output.references"})
-            for reference in references:
-                panel.run_command('append', {
-                    'characters': reference + "\n",
-                    'force': True,
-                    'scroll_to_end': True
-                })
-            panel.set_read_only(True)
-
-        else:
+        references_count = len(response)
+        # return if there are no references
+        if references_count < 1:
             window.run_command("hide_panel", {"panel": "output.references"})
             window.status_message("No references found")
+            return
+
+        word = self.view.substr(self.view.word(pos))
+
+        base_dir = get_project_path(window)
+        formated_references = self._get_formated_references(response, base_dir)
+
+        panel = ensure_references_panel(window)
+        panel.settings().set("result_base_dir", base_dir)
+
+        panel.set_read_only(False)
+        panel.run_command("lsp_clear_panel")
+        window.run_command("show_panel", {"panel": "output.references"})
+        panel.run_command('append', {
+            'characters': "◌ {} references for '{}':\n\n{}".format(references_count, word, formated_references),
+            'force': True,
+            'scroll_to_end': False
+        })
+        panel.set_read_only(True)
 
     def want_event(self):
         return True
 
+    def _get_formated_references(self, references: 'List[Dict]', base_dir) -> str:
+        grouped_references = self._group_references_by_file(references, base_dir)
+        formated_references = self._format_references(grouped_references)
+        return formated_references
 
-def format_reference(reference, base_dir):
-    start = Point.from_lsp(reference.get('range').get('start'))
-    file_path = uri_to_filename(reference.get("uri"))
-    relative_file_path = os.path.relpath(file_path, base_dir)
-    return " ◌ {} {}:{}".format(relative_file_path, start.row + 1, start.col + 1)
+    def _group_references_by_file(self, references, base_dir):
+        """ Return a dictionary that groups references by the file it belongs.
+        Example:
+        {
+            'main.py': [
+                { Region, 'from .src.one import one' },
+                { Region, 'two = 1 + one()' }
+            ],
+            'src/one.py': [
+               { Region, 'def one():' }
+            ]
+        }"""
+        dict = {}  # type: Dict[str, List[Dict]]
+        for reference in references:
+            file_path = uri_to_filename(reference.get("uri"))
+            relative_file_path = os.path.relpath(file_path, base_dir)
+
+            region = Point.from_lsp(reference.get('range').get('region'))
+            # get line of the reference, to showcase its use
+            reference_line = linecache.getline(file_path, region.row + 1).strip()
+
+            if dict.get(relative_file_path) is None:
+                dict[relative_file_path] = []
+            dict[relative_file_path].append({'region': region, 'text': reference_line})
+
+        return dict
+
+    def _format_references(self, grouped_references) -> str:
+        text = ''
+        for file in grouped_references:
+            text += '◌ {}\n'.format(file)
+            references = grouped_references.get(file)
+            for reference in references:
+                region = reference.get('region')
+                text += '\t{:>8}:{:<4} {}\n'.format(region.row, region.col, reference.get('text'))
+            # append a new line after each file name
+            text += '\n'
+        return text

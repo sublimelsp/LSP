@@ -102,11 +102,11 @@ class LspSymbolReferencesCommand(LspTextCommand):
         Example:
         {
             'main.py': [
-                { Region, 'from .src.one import one' },
-                { Region, 'two = 1 + one()' }
+                { Point, 'from .src.one import one' },
+                { Point, 'two = 1 + one()' }
             ],
             'src/one.py': [
-               { Region, 'def one():' }
+               { Point, 'def one():' }
             ]
         }"""
         dict = {}  # type: Dict[str, List[Dict]]

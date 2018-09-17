@@ -83,7 +83,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         panel.run_command("lsp_clear_panel")
         window.run_command("show_panel", {"panel": "output.references"})
         panel.run_command('append', {
-            'characters': "◌ {} references for '{}':\n\n{}".format(references_count, word, formated_references),
+            'characters': "{} references for '{}'\n\n{}".format(references_count, word, formated_references),
             'force': True,
             'scroll_to_end': False
         })
@@ -118,6 +118,9 @@ class LspSymbolReferencesCommand(LspTextCommand):
             # get line of the reference, to showcase its use
             reference_line = linecache.getline(file_path, point.row + 1).strip()
 
+            # we don't want to cache the line, we always want to get fresh data
+            linecache.clearcache()
+
             if dict.get(relative_file_path) is None:
                 dict[relative_file_path] = []
             dict[relative_file_path].append({'point': point, 'text': reference_line})
@@ -127,11 +130,11 @@ class LspSymbolReferencesCommand(LspTextCommand):
     def _format_references(self, grouped_references) -> str:
         text = ''
         for file in grouped_references:
-            text += '◌ {}\n'.format(file)
+            text += '◌ {}:\n'.format(file)
             references = grouped_references.get(file)
             for reference in references:
                 point = reference.get('point')
-                text += '\t{:>8}:{:<4} {}\n'.format(point.row, point.col, reference.get('text'))
+                text += '\t{:>8}:{:<4} {}\n'.format(point.row + 1, point.col + 1, reference.get('text'))
             # append a new line after each file name
             text += '\n'
         return text

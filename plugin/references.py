@@ -23,8 +23,6 @@ def ensure_references_panel(window: sublime.Window):
 
 def create_references_panel(window: sublime.Window):
     panel = create_output_panel(window, "references")
-    # panel.settings().set("result_file_regex",
-    #                      r"^\s+\S\s+(\S.+)\s+(\d+):?(\d+)$")
     panel.settings().set("result_file_regex", r"^\s*\S\s+(\S.*):$")
     panel.settings().set("result_line_regex", r"^\s+([0-9]+):?([0-9]+).*$")
     panel.assign_syntax("Packages/" + PLUGIN_NAME +

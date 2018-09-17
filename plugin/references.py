@@ -87,6 +87,10 @@ class LspSymbolReferencesCommand(LspTextCommand):
             'force': True,
             'scroll_to_end': False
         })
+
+        # highlight all word occurrences
+        regions = panel.find_all(word)
+        panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_OUTLINED)
         panel.set_read_only(True)
 
     def want_event(self):

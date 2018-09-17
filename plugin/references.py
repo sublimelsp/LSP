@@ -89,7 +89,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         })
 
         # highlight all word occurrences
-        regions = panel.find_all(word)
+        regions = panel.find_all(r"\b{}\b".format(word))
         panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_OUTLINED)
         panel.set_read_only(True)
 

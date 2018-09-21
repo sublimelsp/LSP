@@ -19,14 +19,21 @@ contexts:
       captures:
         0: meta.reference.preamble.lsp
         1: punctuation.section.references.preample.lsp
-        2: string.unquoted.lsp
+        2: string.unquoted.lsp entity.name.file.references.lsp
         3: punctuation.separator.lsp
 
   references-body:
     - match: '{{start_of_reference_body}}'
       push:
         - ensure-reference-meta-scope
+        - code
         - expect-line-maybe-column
+      
+  code:
+    - match: '(?=\S)'
+      set:
+        - meta_scope: source
+        - include: pop-at-end
 
   ensure-reference-meta-scope:
     - meta_scope: meta.reference.body.lsp

@@ -104,13 +104,19 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
             r = range_to_region(Range.from_lsp(highlight["range"]), self.view)
             kind = highlight.get("kind", DocumentHighlightKind.Unknown)
             kind2regions[_kind2name[kind]].append(r)
-        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
-        if settings.document_highlight_style == "underline":
-            flags |= sublime.DRAW_SOLID_UNDERLINE
-        elif settings.document_highlight_style == "stippled":
-            flags |= sublime.DRAW_STIPPLED_UNDERLINE
-        elif settings.document_highlight_style == "squiggly":
-            flags |= sublime.DRAW_SQUIGGLY_UNDERLINE
+        if settings.document_highlight_style == "fill":
+            flags = 0
+        elif settings.document_highlight_style == "box":
+            flags = sublime.DRAW_NO_FILL
+        else:
+            flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+            if settings.document_highlight_style == "underline":
+                flags |= sublime.DRAW_SOLID_UNDERLINE
+            elif settings.document_highlight_style == "stippled":
+                flags |= sublime.DRAW_STIPPLED_UNDERLINE
+            elif settings.document_highlight_style == "squiggly":
+                flags |= sublime.DRAW_SQUIGGLY_UNDERLINE
+
         self._clear_regions()
         for kind_str, regions in kind2regions.items():
             if regions:

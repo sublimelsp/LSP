@@ -110,12 +110,12 @@ class LspSymbolReferencesCommand(LspTextCommand):
             # get line of the reference, to showcase its use
             reference_line = linecache.getline(file_path, point.row + 1).strip()
 
-            # we don't want to cache the line, we always want to get fresh data
-            linecache.clearcache()
-
             if grouped_references.get(relative_file_path) is None:
                 grouped_references[relative_file_path] = []
             grouped_references[relative_file_path].append({'point': point, 'text': reference_line})
+
+        # we don't want to cache the line, we always want to get fresh data
+        linecache.clearcache()
 
         return grouped_references
 

@@ -100,17 +100,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         return formatted_references
 
     def _group_references_by_file(self, references, base_dir):
-        """ Return a dictionary that groups references by the file it belongs.
-        Example:
-        {
-            'main.py': [
-                { Point, 'from .src.one import one' },
-                { Point, 'two = 1 + one()' }
-            ],
-            'src/one.py': [
-               { Point, 'def one():' }
-            ]
-        }"""
+        """ Return a dictionary that groups references by the file it belongs. """
         dict = {}  # type: Dict[str, List[Dict]]
         for reference in references:
             file_path = uri_to_filename(reference.get("uri"))

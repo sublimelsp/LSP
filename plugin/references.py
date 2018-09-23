@@ -72,7 +72,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         word = self.view.substr(self.view.word(pos))
 
         base_dir = get_project_path(window)
-        formated_references = self._get_formated_references(response, base_dir)
+        formatted_references = self._get_formatted_references(response, base_dir)
 
         panel = ensure_references_panel(window)
         panel.settings().set("result_base_dir", base_dir)
@@ -81,7 +81,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         panel.run_command("lsp_clear_panel")
         window.run_command("show_panel", {"panel": "output.references"})
         panel.run_command('append', {
-            'characters': "{} references for '{}'\n\n{}".format(references_count, word, formated_references),
+            'characters': "{} references for '{}'\n\n{}".format(references_count, word, formatted_references),
             'force': True,
             'scroll_to_end': False
         })
@@ -94,10 +94,10 @@ class LspSymbolReferencesCommand(LspTextCommand):
     def want_event(self):
         return True
 
-    def _get_formated_references(self, references: 'List[Dict]', base_dir) -> str:
+    def _get_formatted_references(self, references: 'List[Dict]', base_dir) -> str:
         grouped_references = self._group_references_by_file(references, base_dir)
-        formated_references = self._format_references(grouped_references)
-        return formated_references
+        formatted_references = self._format_references(grouped_references)
+        return formatted_references
 
     def _group_references_by_file(self, references, base_dir):
         """ Return a dictionary that groups references by the file it belongs.

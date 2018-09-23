@@ -101,7 +101,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
 
     def _group_references_by_file(self, references, base_dir):
         """ Return a dictionary that groups references by the file it belongs. """
-        dict = {}  # type: Dict[str, List[Dict]]
+        grouped_references = {}  # type: Dict[str, List[Dict]]
         for reference in references:
             file_path = uri_to_filename(reference.get("uri"))
             relative_file_path = os.path.relpath(file_path, base_dir)
@@ -113,11 +113,11 @@ class LspSymbolReferencesCommand(LspTextCommand):
             # we don't want to cache the line, we always want to get fresh data
             linecache.clearcache()
 
-            if dict.get(relative_file_path) is None:
-                dict[relative_file_path] = []
-            dict[relative_file_path].append({'point': point, 'text': reference_line})
+            if grouped_references.get(relative_file_path) is None:
+                grouped_references[relative_file_path] = []
+            grouped_references[relative_file_path].append({'point': point, 'text': reference_line})
 
-        return dict
+        return grouped_references
 
     def _format_references(self, grouped_references) -> str:
         text = ''

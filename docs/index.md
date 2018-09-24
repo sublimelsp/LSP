@@ -9,6 +9,8 @@
 
 ## LSP Settings
 
+Global plugin settings and settings defined at project level are merged together.
+
 * `complete_all_chars` `true` *request completions for all characters, not just trigger characters*
 * `only_show_lsp_completions` `false` *disable sublime word completion and snippets from autocomplete lists*
 * `completion_hint_type` `"auto"` *override automatic completion hints with "detail", "kind" or "none"*
@@ -28,8 +30,6 @@
 * `log_server` `true` *show server/logMessage notifications from language servers in the console*
 * `log_stderr` `false` *show language server stderr output in the console*
 * `log_payloads` `false` *show full JSON-RPC responses in the console*
-* `merge_client_env` `false` *merge project env with global env, override if false*
-* `merge_client_settings` `false` *merge project settings with global settings, override if false*
 
 ## Language Specific Setup
 

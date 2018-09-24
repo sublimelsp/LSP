@@ -2,7 +2,7 @@ import re
 import sublime
 from copy import deepcopy
 
-from .settings import ClientConfig, client_configs, LanguageConfig, settings
+from .settings import ClientConfig, client_configs, LanguageConfig
 from .logging import debug
 from .workspace import get_project_config
 from .windows import ViewLike, WindowLike, ConfigRegistry
@@ -59,14 +59,8 @@ def apply_window_settings(client_config: 'ClientConfig', window: 'sublime.Window
     if client_config.name in window_config:
         overrides = window_config[client_config.name]
         debug('window {} has override for {}'.format(window.id(), client_config.name), overrides)
-        if settings.merge_client_settings:
-            client_settings = _merge_dicts(client_config.settings, overrides.get("settings", {}))
-        else:
-            client_settings = overrides.get("settings", client_config.settings)
-        if settings.merge_client_env:
-            client_env = _merge_dicts(client_config.env, overrides.get("env", {}))
-        else:
-            client_env = overrides.get("env", client_config.env)
+        client_settings = _merge_dicts(client_config.settings, overrides.get("settings", {}))
+        client_env = _merge_dicts(client_config.env, overrides.get("env", {}))
         return ClientConfig(
             client_config.name,
             overrides.get("command", client_config.binary_args),
@@ -77,9 +71,9 @@ def apply_window_settings(client_config: 'ClientConfig', window: 'sublime.Window
             client_config.languages,
             overrides.get("enabled", client_config.enabled),
             overrides.get("initializationOptions", client_config.init_options),
-            overrides.get("settings", client_config.settings),
-            overrides.get("env", client_config.env),
-            overrides.get("tcp_host", client_config.tcp_host)
+            client_settings,
+            client_env,
+            overrides.get("tcp_host", client_config.tcp_host),
         )
 
     return client_config

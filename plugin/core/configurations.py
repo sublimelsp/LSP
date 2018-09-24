@@ -1,5 +1,6 @@
 import re
 import sublime
+from copy import deepcopy
 
 from .settings import ClientConfig, client_configs, LanguageConfig
 from .logging import debug
@@ -58,6 +59,8 @@ def apply_window_settings(client_config: 'ClientConfig', window: 'sublime.Window
     if client_config.name in window_config:
         overrides = window_config[client_config.name]
         debug('window {} has override for {}'.format(window.id(), client_config.name), overrides)
+        client_settings = _merge_dicts(client_config.settings, overrides.get("settings", {}))
+        client_env = _merge_dicts(client_config.env, overrides.get("env", {}))
         return ClientConfig(
             client_config.name,
             overrides.get("command", client_config.binary_args),
@@ -68,9 +71,9 @@ def apply_window_settings(client_config: 'ClientConfig', window: 'sublime.Window
             client_config.languages,
             overrides.get("enabled", client_config.enabled),
             overrides.get("initializationOptions", client_config.init_options),
-            overrides.get("settings", client_config.settings),
-            overrides.get("env", client_config.env),
-            overrides.get("tcp_host", client_config.tcp_host)
+            client_settings,
+            client_env,
+            overrides.get("tcp_host", client_config.tcp_host),
         )
 
     return client_config
@@ -136,3 +139,14 @@ class WindowConfigManager(object):
 
     def update(self, configs: 'List[ClientConfig]') -> None:
         self.all = configs
+
+
+def _merge_dicts(dict_a: dict, dict_b: dict) -> dict:
+    """Merge dict_b into dict_a with one level of recurse"""
+    result_dict = deepcopy(dict_a)
+    for key, value in dict_b.items():
+        if isinstance(value, dict):
+            result_dict.setdefault(key, {}).update(value)
+        else:
+            result_dict[key] = value
+    return result_dict

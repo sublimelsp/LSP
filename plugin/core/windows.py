@@ -311,6 +311,7 @@ class WindowManager(object):
         self._restarting = False
         self._project_path = get_project_path(self._window)
         self._on_closed = on_closed
+        self._is_closing = False
 
     def get_session(self, config_name: str) -> 'Optional[Session]':
         return self._sessions.get(config_name)
@@ -446,25 +447,33 @@ class WindowManager(object):
 
     def _handle_view_closed(self, view, session):
         self._diagnostics.remove(view, session.config.name)
-        self._sublime.set_timeout_async(lambda: self._check_window_closed(), 500)
+        if not self._is_closing:
+            if not self._window.is_valid():
+                # try to detect close synchronously (for quitting)
+                self._handle_window_closed()
+            else:
+                # in case the window is invalidated after the last view is closed
+                self._sublime.set_timeout_async(lambda: self._check_window_closed(), 100)
 
     def _check_window_closed(self):
-        debug('check window closed')
+        # debug('window {} check window closed closing={}, valid={}'.format(
+        # self._window.id(), self._is_closing, self._window.is_valid()))
 
-        if not self._window.is_valid():
+        if not self._is_closing and not self._window.is_valid():
             self._handle_window_closed()
 
     def _handle_window_closed(self):
-        debug('window closed, ending sessions')
+        debug('window {} closed, ending sessions'.format(self._window.id()))
+        self._is_closing = True
         self.end_sessions()
 
     def _handle_all_sessions_ended(self):
         debug('clients for window {} unloaded'.format(self._window.id()))
         if self._restarting:
-            debug('restarting')
+            debug('window {} sessions unloaded - restarting')
             self.start_active_views()
         elif not self._window.is_valid():
-            debug('window no longer valid')
+            debug('window {} closed and sessions unloaded'.format(self._window.id()))
             if self._on_closed:
                 self._on_closed()
 

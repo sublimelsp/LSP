@@ -30,17 +30,20 @@ def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]',
         if len(sel) > 0:
             point = sel[0].begin()
 
+    languages = view.settings().get('lsp_language')
+
     for config in configs:
         if config.enabled:
-            for language in config.languages:
-                for scope in language.scopes:
-                    if point is not None:
-                        score = view.score_selector(point, scope)
-                        # if score > 0:
-                        #     debug('scope match score', scope, config.name, score)
-                        if score > scope_score:
-                            scope_score = score
-                            scope_client_config = config
+            if languages and config.name in languages:
+                for language in config.languages:
+                    for scope in language.scopes:
+                        if point is not None:
+                            score = view.score_selector(point, scope)
+                            # if score > 0:
+                            #     debug('scope match score', scope, config.name, score)
+                            if score > scope_score:
+                                scope_score = score
+                                scope_client_config = config
     # debug('chose ', scope_client_config.name if scope_client_config else None)
     return scope_client_config
 

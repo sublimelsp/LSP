@@ -30,5 +30,19 @@ popup_css = '''
         margin-bottom: 0.5rem;
         padding: 0.5rem;
     }
+    .lsp_popup .info {
+        border-width: 0;
+        background-color: color(var(--bluish) alpha(0.25));
+        color: var(--whitish);
+        margin-bottom: 0.5rem;
+        padding: 0.5rem;
+    }
+    .lsp_popup .hints {
+        border-width: 0;
+        background-color: color(var(--bluish) alpha(0.25));
+        color: var(--whitish);
+        margin-bottom: 0.5rem;
+        padding: 0.5rem;
+    }
 
 '''

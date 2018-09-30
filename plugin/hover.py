@@ -38,6 +38,14 @@ class HoverHandler(sublime_plugin.ViewEventListener):
 _test_contents = []  # type: List[str]
 
 
+class_for_severity = {
+    DiagnosticSeverity.Error: 'errors',
+    DiagnosticSeverity.Warning: 'warnings',
+    DiagnosticSeverity.Information: 'info',
+    DiagnosticSeverity.Hint: 'hints'
+}
+
+
 class LspHoverCommand(LspTextCommand):
     def __init__(self, view):
         super().__init__(view)
@@ -95,26 +103,13 @@ class LspHoverCommand(LspTextCommand):
             return "<pre>{}</pre>".format(escape(diagnostic.message, False))
 
     def diagnostics_content(self, diagnostics):
-        formatted_errors = list(
-            self.format_diagnostic(diagnostic)
-            for diagnostic in diagnostics
-            if diagnostic.severity == DiagnosticSeverity.Error)
+        by_severity = {}
+        for diagnostic in diagnostics:
+            by_severity.setdefault(diagnostic.severity, []).append(self.format_diagnostic(diagnostic))
         formatted = []
-        if len(formatted_errors) > 0:
-            formatted.append("<div class='errors'>")
-            formatted.extend(formatted_errors)
-            formatted.append("<a href='{}'>{}</a>".format('code-actions',
-                                                          'Code Actions'))
-            formatted.append("</div>")
-
-        formatted_warnings = list(
-            self.format_diagnostic(diagnostic)
-            for diagnostic in diagnostics
-            if diagnostic.severity == DiagnosticSeverity.Warning)
-
-        if len(formatted_warnings) > 0:
-            formatted.append("<div class='warnings'>")
-            formatted.extend(formatted_warnings)
+        for severity, items in by_severity.items():
+            formatted.append("<div class='{}'>".format(class_for_severity[severity]))
+            formatted.extend(items)
             formatted.append("<a href='{}'>{}</a>".format('code-actions',
                                                           'Code Actions'))
             formatted.append("</div>")

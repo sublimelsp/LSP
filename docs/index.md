@@ -119,6 +119,8 @@ See: [github:palantir/python-language-server](https://github.com/palantir/python
 
 UPDATE: Some new options for PHP language servers are discussed in [this issue](https://github.com/tomv564/LSP/issues/259)
 
+#### PHP Language server
+
 1. modify `~/.composer/composer.json` to set
 ```
 "minimum-stability": "dev",
@@ -154,6 +156,28 @@ UPDATE: Some new options for PHP language servers are discussed in [this issue](
 
 See: [github:felixfbecker/php-language-server](https://github.com/felixfbecker/php-language-server)
 
+#### Intelephense
+
+See [bmewburn/intelephense-server/](https://github.com/bmewburn/intelephense-server/)
+
+```json
+ "intelephense-ls":
+  {
+      // npm i -g intelephense-server
+      "enabled": true,
+      "command": [
+          "node",
+          "PATH_TO_GLOBAL_NODE_MODULES/intelephense-server/lib/server.js",
+          "--stdio",
+      ],
+      "scopes": ["source.php", "embedding.php"],
+      "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
+      "languageId": "php",
+      "initializationOptions": {
+          "storagePath": "PATH_TO_TEMP_FOLDER/intelephense-ls",
+      },
+  },
+  ```
 
 ### Ruby / Ruby on Rails<a name="ruby"></a>
 

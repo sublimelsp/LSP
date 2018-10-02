@@ -335,6 +335,81 @@ Client configuration (replace PATH_TO_PUB_BIN):
 }
 ```
 
+### Kotlin
+
+
+Install from [kotlin language server](https://github.com/fwcd/KotlinLanguageServer)
+Requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUILDING.md) first.
+
+```json
+"kotlinls":
+{
+    "command":
+    [
+        "PATH_TO_KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat" // adjust this path!
+    ],
+    "enabled": true,
+    "languageId": "kotlin",
+    "scopes":
+    [
+        "source.Kotlin"
+    ],
+    "syntaxes":
+    [
+        "Packages/kotlin/Kotlin.tmLanguage"
+    ]
+}
+```
+
+Additionally, install the [Kotlin sublime package](https://github.com/vkostyukov/kotlin-sublime-package) for syntax highlighting.
+
+### Bash
+
+Install the [bash language server](https://github.com/mads-hartmann/bash-language-server)
+
+```npm i -g bash-language-server```
+
+Settings:
+
+```json
+"bashls":
+{
+    "command":
+    [
+        "bash-language-server", // add .cmd on windows
+        "start"
+    ],
+    "enabled": true,
+    "languageId": "bash",
+    "scopes":
+    [
+        "source.shell.bash"
+    ],
+    "syntaxes":
+    [
+        "Packages/ShellScript/Bash.sublime-syntax"
+    ]
+}
+```
+
+
+### IntelliJ
+
+Requires IntelliJ to be running.
+
+```
+"intellij":{
+  "tcp_port": 8080 // default port
+  "command": [],
+  "languageId": "java",
+  "scopes": [
+    "source.java"
+  ],
+  "syntaxes": [
+    "Packages/Java/Java.sublime-syntax"
+  ]
+}
+```
 
 ### Other<a name="other"></a>
 

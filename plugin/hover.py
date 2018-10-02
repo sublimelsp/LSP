@@ -4,8 +4,8 @@ import sublime_plugin
 import webbrowser
 from html import escape
 try:
-    from typing import List, Optional, Any
-    assert List and Optional and Any
+    from typing import List, Optional, Any, Dict
+    assert List and Optional and Any and Dict
 except ImportError:
     pass
 
@@ -103,7 +103,7 @@ class LspHoverCommand(LspTextCommand):
             return "<pre>{}</pre>".format(escape(diagnostic.message, False))
 
     def diagnostics_content(self, diagnostics):
-        by_severity = {}
+        by_severity = {}  # type: Dict[int, List[str]]
         for diagnostic in diagnostics:
             by_severity.setdefault(diagnostic.severity, []).append(self.format_diagnostic(diagnostic))
         formatted = []

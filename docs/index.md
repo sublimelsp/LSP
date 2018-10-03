@@ -441,7 +441,10 @@ Please create issues / pull requests so we can get support for more languages.
 
 ### Client Configuration<a name="client-config"></a>
 
-LSP ships with default client configuration for a few language servers. Here is an example for the Javascript/Typescript server:
+LSP ships with default client configuration for a few language servers.
+These configurations need to be enabled before they will start.
+
+Here is an example for the Javascript/Typescript server:
 
 ```json
 "jsts": {
@@ -452,14 +455,14 @@ LSP ships with default client configuration for a few language servers. Here is 
 }
 ```
 
-These can be customized as follows by adding an override in the User LSP.sublime-settings
+Client configurations can be customized as follows by adding an override in the User LSP.sublime-settings
 
 * `command` - specify a full paths, add arguments (if not specified then tcp_port must be specifed)
 * `tcp_port` - if not specified then stdin/out are used else sets the tcpport to connect to (if no command is specified then it is assumed that some process is listing on this port)
 * `scopes` - add language flavours, eg. `source.js`, `source.jsx`.
 * `syntaxes` - syntaxes that enable LSP features on a document, eg. `Packages/Babel/JavaScript (Babel).tmLanguage`
 * `languageId` - used both by the language servers and to select a syntax highlighter for sublime popups.
-* `enabled` - disable a language server globally, or per-project
+* `enabled` - enable a language server globally, or per-project
 * `settings` - per-project settings (equivalent to VS Code's Workspace Settings)
 * `env` - dict of environment variables to be injected into the language server's process (eg. PYTHONPATH)
 * `initializationOptions` - options to send to the server at startup (rarely used)

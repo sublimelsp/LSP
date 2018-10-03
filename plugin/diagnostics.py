@@ -294,6 +294,7 @@ def update_diagnostics_panel(window: sublime.Window):
             assert panel, "must have a panel now!"
             panel.settings().set("result_base_dir", base_dir)
 
+            auto_open_panel = False
             to_render = []
             for file_path, source_diagnostics in diagnostics_by_file.items():
                 try:
@@ -302,14 +303,18 @@ def update_diagnostics_panel(window: sublime.Window):
                     relative_file_path = file_path
                 if source_diagnostics:
                     to_render.append(format_diagnostics(relative_file_path, source_diagnostics))
+                    if not auto_open_panel:
+                        auto_open_panel = has_relevant_diagnostics(source_diagnostics)
 
             panel.set_read_only(False)
             panel.run_command("lsp_update_panel", {"characters": "\n".join(to_render)})
             panel.set_read_only(True)
 
             if settings.auto_show_diagnostics_panel and not active_panel:
-                window.run_command("show_panel",
-                                   {"panel": "output.diagnostics"})
+                if auto_open_panel:
+                    window.run_command("show_panel",
+                                       {"panel": "output.diagnostics"})
+
         else:
             panel = window.find_output_panel("diagnostics")
             if panel:
@@ -317,6 +322,16 @@ def update_diagnostics_panel(window: sublime.Window):
                 if is_active_panel:
                     window.run_command("hide_panel",
                                        {"panel": "output.diagnostics"})
+
+
+def has_relevant_diagnostics(origin_diagnostics):
+    for origin, diagnostics in origin_diagnostics.items():
+        for diagnostic in diagnostics:
+            debug('severity check', diagnostic.severity, '<=', settings.auto_show_diagnostics_panel_level)
+            if diagnostic.severity <= settings.auto_show_diagnostics_panel_level:
+                return True
+
+    return False
 
 
 def format_diagnostics(file_path, origin_diagnostics):

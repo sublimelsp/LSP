@@ -143,6 +143,14 @@
   // depending on available diagnostics.
   "auto_show_diagnostics_panel": true,
 
+  // Open the diagnostics panel automatically
+  // when diagnostics level is equal to or less than:
+  // error: 1
+  // warning: 2
+  // info: 3
+  // hint: 4
+  "auto_show_diagnostics_panel_level": 3,
+
   // Show in-line diagnostics using phantoms for unchanged files.
   "show_diagnostics_phantoms": false,
 

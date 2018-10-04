@@ -73,7 +73,7 @@
     },
     "phpls":
     {
-        "command": ["php", "~/vendor/felixfbecker/language-server/bin/php-language-server.php"],
+        "command": ["php", "/PATH-TO-HOME-DIR/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"],
         "scopes": ["source.php", "embedding.php"],
         "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
         "languageId": "php"

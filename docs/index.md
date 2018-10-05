@@ -2,11 +2,6 @@
 
 # Configuration
 
-
-## Sublime Settings
-
-*TODO: document any settings LSP depends on here*
-
 ## LSP Settings
 
 Global plugin settings and settings defined at project level are merged together.
@@ -33,7 +28,9 @@ Global plugin settings and settings defined at project level are merged together
 
 ## Language Specific Setup
 
-For any of these components it is important that Sublime Text can find the language server executable through the path, especially when using virtual environments.
+Install and verify Sublime Text can find the language server executable through the PATH, especially when using virtual environments with your interpreter.
+
+Run "LSP: Enable Language Server" from Sublime's Command Palette to allow LSP to start a server when a document with a certain syntax is opened/activated.
 
 LSP registers a server's supported trigger characters with Sublime Text.
 If completion on `.` or `->`, is not working, you may need to add the listed `auto_complete_triggers` to your User or Syntax-specific settings.

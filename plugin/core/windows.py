@@ -39,6 +39,9 @@ class ConfigRegistry(Protocol):
     def update(self, configs: 'List[ClientConfig]') -> None:
         ...
 
+    def disable(self, config_name: str) -> None:
+        ...
+
 
 class GlobalConfigs(Protocol):
     def for_window(self, window: WindowLike) -> ConfigRegistry:
@@ -360,20 +363,32 @@ class WindowManager(object):
             debug('Cannot start without a project folder')
             return
 
-        if self._can_start_config(config.name):
-            if not self._handlers.on_start(config.name, self._window):
-                return
+        if not self._can_start_config(config.name):
+            debug('Already starting on this window:', config.name)
+            return
 
-            self._window.status_message("Starting " + config.name + "...")
-            debug("starting in", project_path)
+        if not self._handlers.on_start(config.name, self._window):
+            return
+
+        self._window.status_message("Starting " + config.name + "...")
+        debug("starting in", project_path)
+        try:
             session = self._start_session(self._window, project_path, config,
                                           lambda session: self._handle_session_started(session, project_path, config),
                                           lambda config_name: self._handle_session_ended(config_name))
-            if session:
-                debug("window {} added session {}".format(self._window.id(), config.name))
-                self._sessions[config.name] = session
-        else:
-            debug('Already starting on this window:', config.name)
+        except Exception as e:
+            message = "\n\n".join([
+                "Could not start {}",
+                "{}",
+                "Do you want to disable it temporarily?"
+            ]).format(config.name, str(e))
+
+            if self._sublime.ok_cancel_dialog(message, "Disable"):
+                self._configs.disable(config.name)
+
+        if session:
+            debug("window {} added session {}".format(self._window.id(), config.name))
+            self._sessions[config.name] = session
 
     def _handle_message_request(self, params: dict):
         message = params.get("message", "(missing message)")

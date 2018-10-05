@@ -6,7 +6,7 @@ Gives Sublime Text 3 rich editing features for languages with Language Server Pr
 
 Tested against language servers for javascript, typescript, python, php, java, go, c/c++ (clangd), scala (dotty), julia, rust, reason.
 
-See [Langauge Server Protocol](https://microsoft.github.io/language-server-protocol/) for available implementations.
+See Microsoft's [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) site for available implementations.
 
 ## Features
 

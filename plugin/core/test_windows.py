@@ -176,6 +176,9 @@ class TestConfigs(object):
     def update(self, configs: 'List[ClientConfig]') -> None:
         pass
 
+    def disable(self, config_name: str) -> None:
+        pass
+
 
 class TestDocuments(object):
     def __init__(self):

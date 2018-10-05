@@ -143,6 +143,11 @@ class WindowConfigManager(object):
     def update(self, configs: 'List[ClientConfig]') -> None:
         self.all = configs
 
+    def disable(self, config_name: str) -> None:
+        for config in self.all:
+            if config.name == config_name:
+                config.enabled = False
+
 
 def _merge_dicts(dict_a: dict, dict_b: dict) -> dict:
     """Merge dict_b into dict_a with one level of recurse"""

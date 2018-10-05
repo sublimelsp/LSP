@@ -17,20 +17,15 @@ def start_server(server_binary_args: 'List[str]', working_dir: str,
     if os.name == "nt":
         si = subprocess.STARTUPINFO()  # type: ignore
         si.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW  # type: ignore
-    try:
-        return subprocess.Popen(
-            server_binary_args,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            cwd=working_dir,
-            env=env,
-            startupinfo=si)
 
-    except Exception as err:
-        # sublime.status_message("Failed to start LSP server {}".format(str(server_binary_args)))
-        exception_log("Failed to start server", err)
-        return None
+    return subprocess.Popen(
+        server_binary_args,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=working_dir,
+        env=env,
+        startupinfo=si)
 
 
 def attach_logger(process: 'subprocess.Popen', stream) -> None:

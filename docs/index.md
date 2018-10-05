@@ -457,7 +457,7 @@ Here is an example for the Javascript/Typescript server:
 
 Client configurations can be customized as follows by adding an override in the User LSP.sublime-settings
 
-* `command` - specify a full paths, add arguments (if not specified then tcp_port must be specifed)
+* `command` - specify a full paths, add arguments (if not specified then tcp_port must be specified)
 * `tcp_port` - if not specified then stdin/out are used else sets the tcpport to connect to (if no command is specified then it is assumed that some process is listing on this port)
 * `scopes` - add language flavours, eg. `source.js`, `source.jsx`.
 * `syntaxes` - syntaxes that enable LSP features on a document, eg. `Packages/Babel/JavaScript (Babel).tmLanguage`

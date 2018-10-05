@@ -33,7 +33,8 @@ To run latest master:
 ## Configuration
 
 1. Install a language server for a language of your choice
-2. Verify a matching configuration exists under `clients` in `Preferences: LSP Settings`
+2. Run `LSP: Enable Language Server` from the Command Palette to enable your server.
+  * A configuration can be added under `clients` in `Preferences: LSP Settings`
 3. Open a document supported by this language server.
 4. LSP should report the language server starting in the status bar.
 

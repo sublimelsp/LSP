@@ -60,7 +60,7 @@ Client configuration:
     "jsts": {
         "command": ["lsp-tsserver"],
         "enabled": true,
-        "languageId": "typescript"
+        "languageId": "typescript",
         "scopes": ["source.ts", "source.tsx"],
         "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"],
     }

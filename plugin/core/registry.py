@@ -70,7 +70,7 @@ def _session_for_view_and_window(view: sublime.View, window: 'Optional[sublime.W
 
     config = config_for_scope(view, point)
     if not config:
-        debug("config not available for view", view.file_name())
+        debug("no config found or enabled for view", view.file_name())
         return None
 
     session = windows.lookup(window).get_session(config.name)

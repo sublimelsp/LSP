@@ -174,7 +174,7 @@ See [bmewburn/intelephense-server/](https://github.com/bmewburn/intelephense-ser
           "storagePath": "PATH_TO_TEMP_FOLDER/intelephense-ls",
       },
   },
-  ```
+```
 
 ### Ruby / Ruby on Rails<a name="ruby"></a>
 
@@ -491,7 +491,6 @@ Any fields in a client configuration can be overridden by adding an LSP settings
     }
   }
 }
-
 ```
 
 

@@ -1,6 +1,7 @@
 from .logging import debug, exception_log, server_log
 import subprocess
 import os
+import shutil
 import threading
 
 try:
@@ -10,14 +11,35 @@ except ImportError:
     pass
 
 
+def add_extension_if_missing(server_binary_args: 'List[str]') -> 'List[str]':
+    if len(server_binary_args) > 0:
+        executable_arg = server_binary_args[0]
+        fname, ext = os.path.splitext(executable_arg)
+        if len(ext) < 1:
+            path_to_executable = shutil.which(executable_arg)
+
+            # what extensions should we append so CreateProcess can find it?
+            # node has .cmd
+            # are .bat files common?
+            # python has .exe wrappers - not needed
+            if path_to_executable and path_to_executable.lower().endswith('.cmd'):
+                executable_arg = executable_arg + ".cmd"
+                updated_args = [executable_arg]
+                updated_args.extend(server_binary_args[1:])
+                return updated_args
+
+    return server_binary_args
+
+
 def start_server(server_binary_args: 'List[str]', working_dir: str,
                  env: 'Dict[str,str]') -> 'Optional[subprocess.Popen]':
-    debug("starting " + str(server_binary_args))
     si = None
     if os.name == "nt":
+        server_binary_args = add_extension_if_missing(server_binary_args)
         si = subprocess.STARTUPINFO()  # type: ignore
         si.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW  # type: ignore
 
+    debug("starting " + str(server_binary_args))
     return subprocess.Popen(
         server_binary_args,
         stdin=subprocess.PIPE,

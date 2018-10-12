@@ -17,12 +17,12 @@ def add_extension_if_missing(server_binary_args: 'List[str]') -> 'List[str]':
         fname, ext = os.path.splitext(executable_arg)
         if len(ext) < 1:
             path_to_executable = shutil.which(executable_arg)
-        
+
             # what extensions should we append so CreateProcess can find it?
             # node has .cmd
             # are .bat files common?
             # python has .exe wrappers - not needed
-            if path_to_executable.lower().endswith('.cmd'):
+            if path_to_executable and path_to_executable.lower().endswith('.cmd'):
                 executable_arg = executable_arg + ".cmd"
                 updated_args = [executable_arg]
                 updated_args.extend(server_binary_args[1:])
@@ -48,6 +48,7 @@ def start_server(server_binary_args: 'List[str]', working_dir: str,
         cwd=working_dir,
         env=env,
         startupinfo=si)
+
 
 def attach_logger(process: 'subprocess.Popen', stream) -> None:
     threading.Thread(target=log_stream, args=(process, stream)).start()

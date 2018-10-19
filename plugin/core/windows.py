@@ -1,4 +1,5 @@
 import re
+import os
 from .events import global_events
 from .logging import debug
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike, LanguageConfig
@@ -371,6 +372,9 @@ class WindowManager(object):
             return
 
         self._window.status_message("Starting " + config.name + "...")
+
+        project_path = os.path.join(project_path, config.sub_folder)
+
         debug("starting in", project_path)
         try:
             session = self._start_session(self._window, project_path, config,

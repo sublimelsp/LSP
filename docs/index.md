@@ -112,6 +112,10 @@ Be sure to install "Vue Syntax Highlight" from Package Control.
 
 See: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
 
+Alternatively, Microsoft's python language server (using .NET Core runtime)
+
+[Instructions here](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md)
+
 ### PHP<a name="php"></a>
 
 UPDATE: Some new options for PHP language servers are discussed in [this issue](https://github.com/tomv564/LSP/issues/259)

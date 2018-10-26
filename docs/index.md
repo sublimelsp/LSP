@@ -291,10 +291,11 @@ NOTE: This language server is missing completions and diagnostics support. You m
 See: [github:palantir/sourcegraphgo-langserver](https://github.com/sourcegraph/go-langserver)
 
 Client configuration:
-```
+```json
 "golsp":
 {
   "command": ["go-langserver"],
+  "enabled": true,
   "scopes": ["source.go"],
   "syntaxes": ["Packages/Go/Go.sublime-syntax"],
   "languageId": "go"

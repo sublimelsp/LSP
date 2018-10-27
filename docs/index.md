@@ -510,7 +510,7 @@ Client configuration:
 }
 ```
 
-### Polymer (JavaScript)<a name="polymer"></a>
+### Polymer<a name="polymer"></a>
 
 Install globally [polymer-editor-service](https://www.npmjs.com/package/polymer-editor-service).
 For more info see [this](https://github.com/Polymer/tools/blob/master/packages/editor-service/docs/sublime.md).

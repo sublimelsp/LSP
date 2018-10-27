@@ -51,7 +51,7 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [Kotlin](https://lsp.readthedocs.io/en/latest/#kotlin)
 * [PHP (Felix Becker)](https://lsp.readthedocs.io/en/latest/#php)
 * [PHP (Intelephense)](https://lsp.readthedocs.io/en/latest/#intelephense)
-* [Polymer](https://lsp.readthedocs.io/en/latest/#polymer)
+* [Polymer (JavaScript)](https://lsp.readthedocs.io/en/latest/#polymer)
 * [Python](https://lsp.readthedocs.io/en/latest/#python)
 * [Python (Microsoft)](https://lsp.readthedocs.io/en/latest/#python_microsoft)
 * [R](https://lsp.readthedocs.io/en/latest/#r)

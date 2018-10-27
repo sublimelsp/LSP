@@ -239,7 +239,7 @@ Client configuration:
 "dart": {
   "enabled": true,
   "command": [
-    "PATH_TO_PUB_BIN/dart_language_server"
+    "PATH_TO_PUB_BIN/dart_language_server"  // Configure
   ],
   "languageId": "dart",
   "scopes": ["source.dart"],
@@ -351,7 +351,13 @@ Client configuration:
 ```jsonc
 "java": {
   "enabled": true,
-  "command": ["java", "-jar", "PATH_TO_JDT_SERVER/plugins/org.eclipse.equinox.launcher_1.4.0.v20161219-1356.jar", "-configuration", "PATH_TO_CONFIG_DIR"],
+  "command": [
+    "java", 
+    "-jar", 
+    "PATH_TO_JDT_SERVER/plugins/org.eclipse.equinox.launcher_1.4.0.v20161219-1356.jar", // Configure
+    "-configuration",
+    "PATH_TO_CONFIG_DIR"
+  ],
   "scopes": ["source.java"],
   "syntaxes": ["Packages/Java/Java.sublime-syntax"],
   "languageId": "java"
@@ -425,10 +431,7 @@ Client configuration:
   ],
   "languageId": "json",
   "scopes": ["source.json"],
-  "syntaxes":
-  [
-    "Packages/JavaScript/JSON.sublime-syntax"
-  ]
+  "syntaxes": ["Packages/JavaScript/JSON.sublime-syntax"]
 }
 ```
 
@@ -445,7 +448,7 @@ Requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUI
 "kotlin": {
   "enabled": true,
   "command": [
-      "PATH_TO_KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat" // adjust this path!
+      "PATH_TO_KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat" // Configure
   ],
   "languageId": "kotlin",
   "scopes": ["source.Kotlin"],
@@ -477,7 +480,7 @@ Client configuration:
 ```jsonc
 "php": {
   "enabled": true,
-  "command": ["php", "/PATH-TO-HOME-DIR/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"],
+  "command": ["php", "/PATH-TO-HOME-DIR/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"], // Configure
   "scopes": ["source.php"],
   "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
   "languageId": "php"
@@ -498,14 +501,14 @@ Client configuration:
   "enabled": true,
   "command": [
     "node",
-    "PATH_TO_GLOBAL_NODE_MODULES/intelephense-server/lib/server.js",
+    "PATH_TO_GLOBAL_NODE_MODULES/intelephense-server/lib/server.js",  // Configure
     "--stdio",
   ],
   "scopes": ["source.php", "embedding.php"],
   "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
   "languageId": "php",
   "initializationOptions": {
-    "storagePath": "PATH_TO_TEMP_FOLDER/intelephense-ls",
+    "storagePath": "/tmp/intelephense", // Configure
   }
 }
 ```

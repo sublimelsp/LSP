@@ -38,6 +38,7 @@ def get_window_env(window: sublime.Window, config: ClientConfig) -> 'Tuple[List[
 
 def start_window_config(window: sublime.Window,
                         project_path: str,
+                        client_path: str,
                         config: ClientConfig,
                         on_pre_initialize: 'Callable[[Session], None]',
                         on_post_initialize: 'Callable[[Session], None]',
@@ -46,6 +47,7 @@ def start_window_config(window: sublime.Window,
     config.binary_args = args
     return create_session(config=config,
                           project_path=project_path,
+                          client_path=client_path,
                           env=env,
                           settings=settings,
                           on_pre_initialize=on_pre_initialize,

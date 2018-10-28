@@ -9,6 +9,8 @@ from .url import filename_to_uri
 from .workspace import get_project_path, get_active_view_path
 from .rpc import Client
 import threading
+import re
+import os
 try:
     from typing_extensions import Protocol
     from typing import Optional, List, Callable, Dict, Any, Iterator
@@ -389,13 +391,16 @@ class WindowManager(object):
         if not self._handlers.on_start(config.name, self._window):
             return
 
+        client_path = project_path if config.client_path == None else os.path.join(project_path, config.client_path)
+
         self._window.status_message("Starting " + config.name + "...")
-        debug("starting in", project_path)
+        debug("starting {} in {}".format(config.name, client_path))
         session = None  # type: Optional[Session]
         try:
             session = self._start_session(
                 window=self._window,
                 project_path=project_path,
+                client_path=client_path,
                 config=config,
                 on_pre_initialize=self._handle_pre_initialize,
                 on_post_initialize=self._handle_post_initialize,

@@ -16,6 +16,7 @@ except ImportError:
 
 def create_session(config: ClientConfig,
                    project_path: str,
+                   client_path: str,
                    env: dict,
                    settings: Settings,
                    on_pre_initialize: 'Optional[Callable[[Session], None]]' = None,
@@ -27,6 +28,7 @@ def create_session(config: ClientConfig,
         return Session(
             config=config,
             project_path=project_path,
+            client_path=client_path,
             client=client,
             on_pre_initialize=on_pre_initialize,
             on_post_initialize=on_post_initialize,
@@ -59,11 +61,12 @@ def create_session(config: ClientConfig,
     return session
 
 
-def get_initialize_params(project_path: str, config: ClientConfig):
+def get_initialize_params(project_path: str, client_path: str, config: ClientConfig):
+    path = client_path or project_path
     initializeParams = {
         "processId": os.getpid(),
-        "rootUri": filename_to_uri(project_path),
-        "rootPath": project_path,
+        "rootUri": filename_to_uri(path),
+        "rootPath": path,
         "capabilities": {
             "textDocument": {
                 "synchronization": {
@@ -133,12 +136,14 @@ class Session(object):
     def __init__(self,
                  config: ClientConfig,
                  project_path: str,
+                 client_path: str,
                  client: Client,
                  on_pre_initialize: 'Optional[Callable[[Session], None]]' = None,
                  on_post_initialize: 'Optional[Callable[[Session], None]]' = None,
                  on_post_exit: 'Optional[Callable[[str], None]]' = None) -> None:
         self.config = config
         self.project_path = project_path
+        self.client_path = client_path
         self.state = ClientStates.STARTING
         self._on_post_initialize = on_post_initialize
         self._on_post_exit = on_post_exit
@@ -155,7 +160,7 @@ class Session(object):
         return self.capabilities.get(capability)
 
     def initialize(self):
-        params = get_initialize_params(self.project_path, self.config)
+        params = get_initialize_params(self.project_path, self.client_path, self.config)
         self.client.send_request(
             Request.initialize(params),
             lambda result: self._handle_initialize_result(result))

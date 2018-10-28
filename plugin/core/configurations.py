@@ -79,6 +79,7 @@ def apply_window_settings(client_config: 'ClientConfig', window: 'sublime.Window
             client_settings,
             client_env,
             overrides.get("tcp_host", client_config.tcp_host),
+            overrides.get("client_path", client_config.client_path),
         )
 
     return client_config

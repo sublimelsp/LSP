@@ -1,4 +1,6 @@
 from .diagnostics import WindowDiagnostics, DiagnosticsUpdate
+import re
+import os
 from .events import global_events
 from .logging import debug, server_log
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike, LanguageConfig, config_supports_syntax
@@ -360,12 +362,14 @@ class WindowManager(object):
         if not self._handlers.on_start(config.name, self._window):
             return
 
+        client_path = project_path if config.client_path == None else os.path.join(project_path, config.client_path)
+
         self._window.status_message("Starting " + config.name + "...")
-        debug("starting in", project_path)
+        debug("starting {} in {}".format(config.name, client_path))
         session = None  # type: Optional[Session]
         try:
-            session = self._start_session(self._window, project_path, config,
-                                          lambda session: self._handle_session_started(session, project_path, config),
+            session = self._start_session(self._window, client_path, config,
+                                          lambda session: self._handle_session_started(session, client_path, config),
                                           lambda config_name: self._handle_session_ended(config_name))
         except Exception as e:
             message = "\n\n".join([

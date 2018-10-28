@@ -1,25 +1,17 @@
-Please search for an existing issue before creating a new one.
+Your issue may have been solved already - please search before creating new!
 
-Tell choose if your issue is a question, bug or suggestion, then replace the instructions below with your request:
+Troubleshooting guide: https://lsp.readthedocs.io/en/latest/#troubleshooting
+Chat: https://gitter.im/SublimeLSP
 
-### Question:
+Is it a language server problem? The LSP package can do little to prevent slowness or missing content - please check their support materials!
 
-*Questions (if complete) are welcome here, although we also have chat at [http://gitter.im/SublimeLSP](http://gitter.im/SublimeLSP)*
-
-### Bug:
-
-*Consult the [Troubleshooting guide](https://lsp.readthedocs.io/en/latest/#troubleshooting) for tips and solutions for common problems.*
-
-*Is it a language server problem? The LSP package can do little to prevent slowness or missing content - you may want to create an issue for them instead.*
-
-*Please include in your report:*
+Please include in your report:
 
 * OS and language server
 * How you installed LSP (Package Control or from git?)
 * Minimal reproduction steps
-* Log (trimmed)
+* Log
 
+Requesting a feature?
 
-### Suggestion:
-
-*Please read the [Contributor Guidelines](https://github.com/tomv564/LSP/blob/master/CONTRIBUTING.md). Specifically, LSP avoids building functionality that does not exist in Sublime Text, or that serves only one language.*
+Please read https://github.com/tomv564/LSP/blob/master/CONTRIBUTING.md. Specifically, LSP avoids building functionality that does not exist in Sublime Text, or that serves only one language.

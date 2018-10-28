@@ -8,7 +8,7 @@ python:
 before_install:
     - pip install "mypy==0.570"
     - pip install flake8
-    - pip install python-coveralls
+    - pip install "python-coveralls==2.9.1"
     - curl -OL https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/travis.sh
     # enable gui, see https://docs.travis-ci.com/user/gui-and-headless-browsers
     - if [ "$TRAVIS_OS_NAME" == "linux"  ]; then

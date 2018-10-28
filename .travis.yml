@@ -4,11 +4,11 @@ env:
         - SUBLIME_TEXT_VERSION="3"
 language: python
 python:
-    - "3.3"  # sublime text 3
+    - "3.4"  # sublime text 3 has 3.3, but a build dependency forces us to 3.4
 before_install:
     - pip install "mypy==0.570"
     - pip install flake8
-    - pip install "python-coveralls==2.9.1"
+    - pip install python-coveralls
     - curl -OL https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/travis.sh
     # enable gui, see https://docs.travis-ci.com/user/gui-and-headless-browsers
     - if [ "$TRAVIS_OS_NAME" == "linux"  ]; then

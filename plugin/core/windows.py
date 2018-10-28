@@ -380,11 +380,11 @@ class WindowManager(object):
             message = "\n\n".join([
                 "Could not start {}",
                 "{}",
-                "Do you want to disable it temporarily?"
+                "Server will be disabled for this window"
             ]).format(config.name, str(e))
 
-            if self._sublime.ok_cancel_dialog(message, "Disable"):
-                self._configs.disable(config.name)
+            self._configs.disable(config.name)
+            self._sublime.message_dialog(message)
 
         if session:
             debug("window {} added session {}".format(self._window.id(), config.name))

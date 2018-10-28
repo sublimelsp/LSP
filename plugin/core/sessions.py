@@ -19,7 +19,7 @@ def create_session(config: ClientConfig, project_path: str, env: dict, settings:
     session = None
     if config.binary_args:
 
-        process = start_server(config.binary_args, project_path, env)
+        process = start_server(config.binary_args, project_path, env, settings.log_stderr)
         if process:
             if config.tcp_port:
                 transport = start_tcp_transport(config.tcp_port, config.tcp_host)

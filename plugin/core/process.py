@@ -32,7 +32,7 @@ def add_extension_if_missing(server_binary_args: 'List[str]') -> 'List[str]':
 
 
 def start_server(server_binary_args: 'List[str]', working_dir: str,
-                 env: 'Dict[str,str]') -> 'Optional[subprocess.Popen]':
+                 env: 'Dict[str,str]', attach_stderr: bool) -> 'Optional[subprocess.Popen]':
     si = None
     if os.name == "nt":
         server_binary_args = add_extension_if_missing(server_binary_args)
@@ -40,11 +40,14 @@ def start_server(server_binary_args: 'List[str]', working_dir: str,
         si.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW  # type: ignore
 
     debug("starting " + str(server_binary_args))
+
+    stderr_destination = subprocess.PIPE if attach_stderr else subprocess.DEVNULL
+
     return subprocess.Popen(
         server_binary_args,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=stderr_destination,
         cwd=working_dir,
         env=env,
         startupinfo=si)

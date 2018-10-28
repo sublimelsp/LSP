@@ -544,6 +544,14 @@ The following example overrides `f12` to use LSP's go to definition when in java
 }
 ```
 
+More useful keybindings (OS-X), edit Package Settings -> LSP -> Key Bindings
+```
+  { "keys": ["f2"], "command": "lsp_symbol_rename" },
+  { "keys": ["f12"], "command": "lsp_symbol_definition" },
+  { "keys": ["super+option+r"], "command": "lsp_document_symbols" },
+  { "keys": ["super+option+h"], "command": "lsp_hover"}
+```
+
 **Mouse map configuration**
 
 See below link, but bind to `lsp_symbol_definition` command

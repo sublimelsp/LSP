@@ -1,7 +1,6 @@
 from unittesting import DeferrableTestCase
 import unittest
 import sublime
-import os
 from os.path import dirname
 from LSP.plugin.core.settings import client_configs, read_client_config, update_client_config
 from LSP.plugin.core.registry import windows

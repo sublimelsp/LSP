@@ -179,6 +179,43 @@
         "nodePath": "/usr/local/bin/node"
       }
     },
+    "lsp-tsserver":
+    {
+      "command": ["lsp-tsserver"],
+      "languages": [{
+        "scopes": ["source.js", "source.jsx"],
+        "syntaxes": ["Javascript"],
+        "languageId": "javascript"
+      }, {
+        "scopes": ["source.ts", "source.tsx"],
+        "syntaxes": ["Typescript"],
+        "languageId": "typescript"
+      }
+      ]
+    },
+    "javascript-typescript-langserver":
+    {
+      "command": ["javascript-typescript-stdio"],
+      "languages": [{
+        "scopes": ["source.js", "source.jsx"],
+        "syntaxes": ["Javascript"],
+        "languageId": "javascript"
+      }, {
+        "scopes": ["source.ts", "source.tsx"],
+        "syntaxes": ["Typescript"],
+        "languageId": "typescript"
+      }
+      ]
+    },
+    "typescript-language-server":
+    {
+      "command": ["typescript-language-server", "--stdio"],
+      "languages": [{
+        "scopes": ["source.ts", "source.tsx"],
+        "syntaxes": ["Typescript"],
+        "languageId": "typescript"
+      }]
+    },
     "ocaml":
     {
       "command": ["ocaml-language-server", "--stdio"],

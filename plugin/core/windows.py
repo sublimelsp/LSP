@@ -372,6 +372,7 @@ class WindowManager(object):
 
         self._window.status_message("Starting " + config.name + "...")
         debug("starting in", project_path)
+        session = None  # type: Optional[Session]
         try:
             session = self._start_session(self._window, project_path, config,
                                           lambda session: self._handle_session_started(session, project_path, config),

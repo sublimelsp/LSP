@@ -79,6 +79,65 @@
         },
       ]
     },
+    "cquery":
+    {
+      "command":
+      [
+        "cquery",
+        "--log-all-to-stderr"
+      ],
+      "initializationOptions":
+      {
+        "cacheDirectory": "/tmp/cquery"
+      },
+      "languages":
+      [
+        {
+          "languageId": "c",
+          "scopes":
+          [
+            "source.c"
+          ],
+          "syntaxes":
+          [
+            "Packages/C++/C.sublime-syntax"
+          ]
+        },
+        {
+          "languageId": "cpp",
+          "scopes":
+          [
+            "source.c++"
+          ],
+          "syntaxes":
+          [
+            "Packages/C++/C++.sublime-syntax"
+          ]
+        },
+        {
+          "languageId": "objective-c",
+          "scopes":
+          [
+            "source.objc"
+          ],
+          "syntaxes":
+          [
+            "Packages/Objective-C/Objective-C.sublime-syntax"
+          ]
+        },
+        {
+          "languageId": "objective-cpp",
+          "scopes":
+          [
+            "source.objc++"
+          ],
+          "syntaxes":
+          [
+            "Packages/Objective-C/Objective-C++.sublime-syntax"
+          ]
+        }
+      ]
+    },
     "haskell-ide-engine":
     {
       "command":

@@ -60,9 +60,24 @@
     "clangd":
     {
       "command": ["clangd"],
-      "scopes": ["source.c", "source.c++", "source.objc", "source.objc++"],
-      "syntaxes": ["Packages/C++/C.sublime-syntax", "Packages/C++/C++.sublime-syntax", "Packages/Objective-C/Objective-C.sublime-syntax", "Packages/Objective-C/Objective-C++.sublime-syntax"],
-      "languageId": "objc++"
+      "languages": [{
+          "scopes": ["source.c"],
+          "syntaxes": ["Packages/C++/C.sublime-syntax"],
+          "languageId": "c"
+        },{
+          "scopes": ["source.c++"],
+          "syntaxes": ["Packages/C++/C++.sublime-syntax"],
+          "languageId": "cpp"
+        },{
+          "scopes": ["source.objc"],
+          "syntaxes": ["Packages/Objective-C/Objective-C.sublime-syntax"],
+          "languageId": "objective-c"
+        },{
+          "scopes": ["source.objc++"],
+          "syntaxes": ["Packages/Objective-C/Objective-C++.sublime-syntax"],
+          "languageId": "objective-cpp"
+        },
+      ]
     },
     "reason":
     {
@@ -112,21 +127,24 @@
     "polymer-ide":
     {
       "command": ["polymer-editor-service"],
-      "scopes": [
-        "text.html.basic",
-        "text.html",
-        "source.html",
-        "source.js",
-        "source.css",
-        "source.json"
+      "languages": [{
+          "scopes": ["text.html", "text.html.basic", "source.html"],
+          "syntaxes": ["Packages/HTML/HTML.sublime-syntax"],
+          "languageId": "html"
+        },{
+          "scopes": ["source.js"],
+          "syntaxes": ["Packages/JavaScript/JavaScript.sublime-syntax"],
+          "languageId": "javascript"
+        },{
+          "scopes": ["source.css"],
+          "syntaxes": ["Packages/CSS/CSS.sublime-syntax"],
+          "languageId": "css"
+        },{
+          "scopes": ["source.json"],
+          "syntaxes": ["Packages/JavaScript/JSON.sublime-syntax"],
+          "languageId": "json"
+        }
       ],
-      "syntaxes": [
-        "Packages/HTML/HTML.sublime-syntax",
-        "Packages/CSS/CSS.sublime-syntax",
-        "Packages/JavaScript/JavaScript.sublime-syntax",
-        "Packages/JavaScript/JSON.sublime-syntax"
-      ],
-      "languageId": "javascript",
       "settings": {
         "polymer-ide": {
           "analyzeWholePackage": false,

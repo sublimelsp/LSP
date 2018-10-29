@@ -79,6 +79,23 @@
         },
       ]
     },
+    "haskell-ide-engine":
+    {
+      "command":
+      [
+        "hie",
+        "--lsp"
+      ],
+      "languageId": "haskell",
+      "scopes":
+      [
+        "source.haskell"
+      ],
+      "syntaxes":
+      [
+        "Packages/Haskell/Haskell.sublime-syntax"
+      ]
+    },
     "reason":
     {
       "command": ["ocaml-language-server", "--stdio"],

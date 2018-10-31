@@ -77,7 +77,7 @@ You can also add a new client(language server) in the `clients` setting. Each ne
 * `env` - Dictionary of environment variables to be injected into the language server's process (eg. PYTHONPATH) Extra variables to override/add to language server's environment.
 * `initializationOptions` - Options to send to the server at startup in initialize request.
 
-Sometimes when a server can work with multiple type of files, you don't need to create multiple client configurations for each type. Instead you could do the following:
+You can define different languages for the same language server. The multi-language form has the following structure:
 
 ```jsonc 
 {

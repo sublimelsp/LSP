@@ -32,7 +32,7 @@ Override the `rls` command to use `stable` instead of `nightly`.
 
 > **Note** Install and verify that Sublime Text can find the language server executable through the `PATH`, especially when using virtual environments with your interpreter.
 
-You can also add a new client(language server) in the `clients` setting. Each new client has the following structure:
+You can also add a new client in the `clients` setting. Each new client has the following structure:
 
 ```jsonc
 // LSP.sublime-settings -- User
@@ -653,7 +653,7 @@ Client configuration:
 }
 ```
 
-## Features
+## Features<a name="features"></a>
 
 Smart auto completions with snippet support.
 

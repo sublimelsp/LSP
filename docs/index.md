@@ -127,6 +127,8 @@ Install [bash language server](https://github.com/mads-hartmann/bash-language-se
 
 ```npm i -g bash-language-server```
 
+Run `LSP: Enable Language Server` from the command palette and select `bash`.
+
 ### C/C++ (Clangd)<a name="clangd"></a>
 
 You will need to build from source, see [instructions](https://clang.llvm.org/extra/clangd.html)
@@ -173,6 +175,8 @@ Install [vscode-css-languageserver-bin](https://www.npmjs.com/package/vscode-css
 
 `npm install -g vscode-css-languageserver-bin`
 
+Run `LSP: Enable Language Server` from the command palette and select `css`.
+
 ### Dart<a name="dart"></a>
 
 Install [dart_language_server](https://github.com/natebosch/dart_language_server#installing) and  [Dart](https://packagecontrol.io/packages/Dart) from Package Control.
@@ -190,11 +194,16 @@ Override the dart configuration:
   }
 }
 ```
+
+Run `LSP: Enable Language Server` from the command palette and select `dart`.
+
 ### Flow (JavaScript)<a name="flow"></a>
 
 Install [flow-language-server](https://github.com/flowtype/flow-language-server#installation) globally.
 
 `npm install -g flow-language-server`
+
+Run `LSP: Enable Language Server` from the command palette and select `flow`.
 
 ### Go<a name="go"></a>
 
@@ -254,11 +263,15 @@ You can pass additional initialization options:
 }
 ```
 
+Run `LSP: Enable Language Server` from the command palette and select `golsp`.
+
 ### HTML<a name="html"></a>
 
 Install [vscode-html-languageserver-bin](https://www.npmjs.com/package/vscode-html-languageserver-bin) globally.
 
 `npm install -g vscode-html-languageserver-bin`
+
+Run `LSP: Enable Language Server` from the command palette and select `html`.
 
 ### Java<a name="java"></a>
 Implementations:
@@ -285,11 +298,15 @@ Override the `command` field:
 }
 ```
 
+Run `LSP: Enable Language Server` from the command palette and select `jdtls`.
+
 ### Java (IntelliJ)<a name="intellij"></a>
 
 Requires IntelliJ to be running.
 
 See [intellij-lsp-server](https://github.com/Ruin0x11/intellij-lsp-server) for more information.
+
+Run `LSP: Enable Language Server` from the command palette and select `intellij`.
 
 
 ### JavaScript/TypeScript<a name="typescript"></a>
@@ -302,6 +319,8 @@ If you work with `jsx` install `Babel`. You don't need a separate configuration 
 
 
 `npm install -g lsp-tsserver`
+
+Run `LSP: Enable Language Server` from the command palette and select `jsts`.
 
 
 You can enable type checking in JavaScript by creating [`jsconfig.json`](https://code.visualstudio.com/docs/languages/jsconfig) file with the following content:
@@ -320,6 +339,8 @@ You can enable type checking in JavaScript by creating [`jsconfig.json`](https:/
 Install [vscode-json-languageserver-bin](https://www.npmjs.com/package/vscode-json-languageserver-bin) globally.
 
 `npm install -g vscode-json-languageserver-bin`
+
+Run `LSP: Enable Language Server` from the command palette and select `json`.
 
 
 ### Julia<a name="julia"></a>
@@ -342,6 +363,8 @@ Override the kotlin configuration:
   }
 }
 ```
+
+Run `LSP: Enable Language Server` from the command palette and select `kotlin`.
 
 ### PHP <a name="php"></a>
 Implementations:
@@ -380,6 +403,9 @@ Override the configuration:
 }
 ```
 
+Run `LSP: Enable Language Server` from the command palette and select `phpls`.
+
+
 See [felixfbecker/php-language-server](https://github.com/felixfbecker/php-language-server) for more information.
 
 ### PHP (Intelephense)<a name="intelephense"></a>
@@ -407,12 +433,16 @@ Override the configuration:
 }
 ```
 
+Run `LSP: Enable Language Server` from the command palette and select `intelephense`.
+
 ### Polymer<a name="polymer"></a>
 
 Install globally [polymer-editor-service](https://www.npmjs.com/package/polymer-editor-service).
 For more info see [this](https://github.com/Polymer/tools/blob/master/packages/editor-service/docs/sublime.md).
 
 `npm install -g polymer-editor-service`
+
+Run `LSP: Enable Language Server` from the command palette and select `polymer-ide`.
 
 ### Python<a name="python"></a>
 Implementations:
@@ -422,6 +452,8 @@ Implementations:
 ### Python (Palantir Technologies)<a name="python_palantir"></a>
 
 Follow the [installation steps](https://github.com/palantir/python-language-server#installation).
+
+Run `LSP: Enable Language Server` from the command palette and select `pyls`.
 
 ### Python (Microsoft)<a name="python_microsoft"></a>
 
@@ -439,9 +471,13 @@ See [installation steps](https://github.com/freebroccolo/ocaml-language-server).
 
 You will need to install [sublime-reason](https://github.com/reasonml-editor/sublime-reason) and the dependencies listed in the repo, such as [ocaml-language-server](https://github.com/freebroccolo/ocaml-language-server). If you only use OCaml, you still need those listed dependencies, but not the sublime-reason plugin itself.
 
+Run `LSP: Enable Language Server` from the command palette and select `reason`/`ocaml`.
+
 ### Ruby<a name="ruby"></a>
 
 See [installation steps](https://github.com/castwide/solargraph#installation).
+
+Run `LSP: Enable Language Server` from the command palette and select `ruby`.
 
 ### Rust<a name="rust"></a>
 
@@ -461,6 +497,7 @@ If `rls` doesn't start. Try to override the command to use `stable` instead of `
 }
 ```
 
+Run `LSP: Enable Language Server` from the command palette and select `rls`.
 
 ### Scala<a name="scala"></a>
 
@@ -501,6 +538,8 @@ Client configuration:
   }
 }
 ```
+
+Run `LSP: Enable Language Server` from the command palette and select `vue`.
 
 ## Features<a name="features"></a>
 

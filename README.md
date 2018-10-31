@@ -26,8 +26,6 @@ Language Server Protocol support for Sublime Text 3 that gives you IDE [features
 
 Follow the installation steps for a <a href="#available_languages">language server</a>.
 
-Enable the server by running `LSP: Enable Language Server` from the command palette.
-
 Open a document supported by the language server. LSP should report the language server starting in the status bar.
 
 Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).

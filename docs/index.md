@@ -261,20 +261,13 @@ Implementations:
 
 Follow the instructions in this [issue](https://github.com/tomv564/LSP/issues/344).
 
-Client configuration:
+Override the `command` field:
 ```jsonc
 "jdtls": {
-  "enabled": true,
-  "command": [
-    "java", 
-    "-jar", 
-    "PATH_TO_JDT_SERVER/plugins/org.eclipse.equinox.launcher_1.4.0.v20161219-1356.jar", // Configure
-    "-configuration",
-    "PATH_TO_CONFIG_DIR"
-  ],
-  "scopes": ["source.java"],
-  "syntaxes": ["Packages/Java/Java.sublime-syntax"],
-  "languageId": "java"
+  "command": ["java", "-jar",
+    "PATH_TO_JDT_SERVER/plugins/org.eclipse.equinox.launcher_1.4.0.v20161219-1356.jar",
+    "-configuration", "PATH_TO_CONFIG_DIR"
+  ]
 }
 ```
 

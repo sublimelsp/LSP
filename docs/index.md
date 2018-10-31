@@ -1,33 +1,19 @@
 # Sublime LSP Plugin Documentation
 
-## Getting started
-
-Language servers can be setup on two ways:
-* Client configuration - You need to copy the configuration for a language. Open `LSP.sublime-settings` and paste the configuration in the `clients` section. 
-If the server doesn't start. Open the command palette and run `LSP: Enable Language Server` then select the server. If you still have any problems, see [troubleshooting](https://lsp.readthedocs.io/en/latest/#troubleshooting) problems or start a discussion in gitter [chat](https://gitter.im/SublimeLSP).
-* Language handler (plugin) - you just need to install the plugin for the language. If you want to help, see the guide for writing a language handler. (coming soon)
-
-For customizing LSP behavior open `LSP/Settings` menu. Each setting is documented there. 
-
-For customizing key bindings open `LSP/Key Bindings` menu. If you want to set goto definition with a mouse click see this [thread](https://stackoverflow.com/questions/16235706/sublime-3-set-key-map-for-function-goto-definition). 
-
 ### Client configurations 
 
-LSP ships with default client configuration for a few language servers.
-These configurations need to be enabled before they can start. To do that, open the command palette and run `LSP: Enable Language Server` then select the server.
-
-The default `LSP.sublime-settings` contains `default_clients` configuration that may not work for you. Do not modify `default_clients`. If you want to change server configurations, you can override them in the `clients` setting. Example:
+LSP ships with default client configuration for a few language servers that may not work for you. Do not modify the `default_clients`! If you want to change server configurations, you can override them in the `clients` setting. Example:
 
 ```jsonc
 // LSP.sublime-settings -- LSP
 {
   "default_clients":
-    "rust":
+    "rls":
     {
       "command": ["rustup", "run", "nightly", "rls"],
       "scopes": ["source.rust"],
       "syntaxes": ["Packages/Rust/Rust.sublime-syntax", "Packages/Rust Enhanced/RustEnhanced.sublime-syntax"],
-      "languageId": "rust"
+      "languageId": "rls"
     },
     // other clients
 }
@@ -266,7 +252,7 @@ See [installation steps](https://github.com/sourcegraph/go-langserver).
 
 Client configuration:
 ```jsonc
-"go": {
+"golsp": {
   "enabled": true,
   "command": ["go-langserver"],
   "scopes": ["source.go"],
@@ -354,7 +340,7 @@ Follow the instructions in this [issue](https://github.com/tomv564/LSP/issues/34
 
 Client configuration:
 ```jsonc
-"java": {
+"jdtls": {
   "enabled": true,
   "command": [
     "java", 
@@ -488,7 +474,7 @@ Modify `~/.composer/composer.json`.
 
 Client configuration:
 ```jsonc
-"php": {
+"phpls": {
   "enabled": true,
   "command": ["php", "/PATH-TO-HOME-DIR/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"], // Configure
   "scopes": ["source.php"],
@@ -532,7 +518,7 @@ For more info see [this](https://github.com/Polymer/tools/blob/master/packages/e
 
 Client configuration:
 ```jsonc
-"polymer": {
+"polymer-ide": {
   "enabled": true,
   "command": ["polymer-editor-service"],
   "scopes": ["text.html.basic", "text.html", "source.html", "source.js", "source.css", "source.json"],
@@ -558,7 +544,7 @@ See [installation steps](https://github.com/palantir/python-language-server#inst
 
 Client configuration:
 ```jsonc
-"python": {
+"pyls": {
   "enabled": true,
   "command": ["pyls"],
   "scopes": ["source.python"],
@@ -618,7 +604,7 @@ See [installation steps](https://github.com/rust-lang-nursery/rls).
 
 Client configuration:
 ```jsonc
-"rust": {
+"rls": {
   "enabled": true,
   "command": ["rustup", "run", "nightly", "rls"],
   "scopes": ["source.rust"],

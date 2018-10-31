@@ -207,6 +207,13 @@
         // "Packages/Vue Syntax Highlight/Vue Component.sublime-syntax"
       ]
     },
+    "ruby": {
+      "command": ["solargraph", "socket"],
+      "languageId": "ruby",
+      "scopes": ["source.ruby", "source.ruby.rails"],
+      "syntaxes": ["Packages/Ruby/Ruby.sublime-syntax", "Packages/Rails/Ruby on Rails.sublime-syntax", "Packages/Rails/HTML (Rails).sublime-syntax"],
+      "tcp_port": 7658
+    },
     "polymer-ide":
     {
       "command": ["polymer-editor-service"],

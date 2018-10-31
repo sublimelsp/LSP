@@ -443,17 +443,6 @@ You will need to install [sublime-reason](https://github.com/reasonml-editor/sub
 
 See [installation steps](https://github.com/castwide/solargraph#installation).
 
-Client configuration:
-```jsonc
-"ruby": {
-  "enabled": true,
-  "command": ["solargraph", "socket"],
-  "languageId": "ruby",
-  "scopes": ["source.ruby", "source.ruby.rails"],
-  "syntaxes": ["Packages/Ruby/Ruby.sublime-syntax", "Packages/Rails/Ruby on Rails.sublime-syntax", "Packages/Rails/HTML (Rails).sublime-syntax"],
-  "tcp_port": 7658
-},
-```
 ### Rust<a name="rust"></a>
 
 > **LanguageHandler** is available but not published to Package Control. Clone it from [tomv564/LSP-rust](https://github.com/tomv564/LSP-rust).

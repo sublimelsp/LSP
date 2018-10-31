@@ -420,23 +420,6 @@ For more info see [this](https://github.com/Polymer/tools/blob/master/packages/e
 
 `npm install -g polymer-editor-service`
 
-Client configuration:
-```jsonc
-"polymer-ide": {
-  "enabled": true,
-  "command": ["polymer-editor-service"],
-  "scopes": ["text.html.basic", "text.html", "source.html", "source.js", "source.css", "source.json"],
-  "syntaxes": ["Packages/HTML/HTML.sublime-syntax", "Packages/CSS/CSS.sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax", "Packages/JavaScript/JSON.sublime-syntax"],
-  "languageId": "javascript",
-  "settings": {
-    "polymer": {
-      "analyzeWholePackage": false,
-      "fixOnSave": false
-    }
-  }
-}
-```
-
 ### Python<a name="python"></a>
 Implementations:
 * [Python (Palantir Technologies)](https://lsp.readthedocs.io/en/latest/#python_palantir)

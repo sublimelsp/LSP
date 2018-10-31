@@ -106,7 +106,7 @@ Any fields in a client configuration can be overridden by adding an LSP settings
   ],
   "settings": {
     "LSP": {
-      "typescript": {
+      "pyls": {
         "enabled": false,
       },
       "eslint": {

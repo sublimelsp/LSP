@@ -653,6 +653,73 @@ Client configuration:
 }
 ```
 
+## Features
+
+Smart auto completions with snippet support.
+
+Navigate code with `Go to Symbol Definition` and `Find Symbol References`.
+
+Inline documentation from Hover and Signature Help popups.
+
+![hover screenshot](https://raw.githubusercontent.com/tomv564/LSP/master/docs/images/screenshot-hover.png)
+
+As-you-type diagnostics with support for code fixes (`F4` to select, `super+.` to trigger actions)
+
+![diagnostics screenshot](https://raw.githubusercontent.com/tomv564/LSP/master/docs/images/screenshot-diagnostics-action.png)
+
+**Plugin commands**
+
+* Restart Servers: kills all language servers belonging to the active window
+    * This command only works when in a supported document.
+    * It may change in the future to be always available, or only kill the relevant language server.
+* LSP Settings: Opens package settings.
+
+**Document actions**
+
+* Show Code Actions: `super+.`
+* Symbol References: `shift+f12`
+* Rename Symbol: UNBOUND
+    * Recommendation: Override `F2` (next bookmark)
+* Go to definition: UNBOUND
+    * Recommendation: Override `f12` (built-in goto definition),
+    * LSP falls back to ST3's built-in goto definition command in case LSP fails.
+* Format Document: UNBOUND
+* Format Selection: UNBOUND
+* Document Symbols: UNBOUND
+
+**Workspace actions**
+
+Show Diagnostics Panel: `super+shift+M` / `ctr+alt+M`
+
+**Overriding keybindings**
+
+Sublime's keybindings can be edited from the `Preferences: Key Bindings` command.
+The following example overrides `f12` to use LSP's go to definition when in javascript/typescript:
+
+```
+{
+  "keys": ["f12"],
+  "command": "lsp_symbol_definition",
+  "context": [
+    {
+      "key": "selector",
+      "operator": "equal",
+      "operand": "source.ts, source.js"
+    }
+  ]
+}
+```
+
+More useful keybindings (OS-X), edit Package Settings -> LSP -> Key Bindings
+```
+  { "keys": ["f2"], "command": "lsp_symbol_rename" },
+  { "keys": ["f12"], "command": "lsp_symbol_definition" },
+  { "keys": ["super+option+r"], "command": "lsp_document_symbols" },
+  { "keys": ["super+option+h"], "command": "lsp_hover"}
+```
+
+If you want to set goto definition with a mouse click see this [thread](https://stackoverflow.com/questions/16235706/sublime-3-set-key-map-for-function-goto-definition).
+
 ### Contributing<a name="contributing"></a>
 
 Please create issues / pull requests so we can get support for more languages.

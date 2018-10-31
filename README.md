@@ -63,6 +63,8 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 
 See [Language Server Protocol](https://microsoft.github.io/language-server-protocol/implementors/servers/) for more available implementations. Please create issues/pull requests so we can get support for more languages.
 
-## Troubleshooting Issues
+## Getting help
 
 Have any problems, see the [troubleshooting](https://lsp.readthedocs.io/en/latest/#troubleshooting) guide for tips and known limitations. If you still have any problems, discussions can be done in gitter [chat](https://gitter.im/SublimeLSP).
+
+Please search [issues](https://github.com/tomv564/LSP/issues) before submitting a new one.

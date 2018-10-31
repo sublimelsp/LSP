@@ -96,6 +96,14 @@
       "syntaxes": ["Packages/Python/Python.sublime-syntax"],
       "languageId": "python"
     },
+    "kotlin": {
+      "command": [
+          "PATH_TO_KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat" // Configure
+      ],
+      "languageId": "kotlin",
+      "scopes": ["source.Kotlin"],
+      "syntaxes": ["Packages/kotlin/Kotlin.tmLanguage"]
+    },
     "rls":
     {
       "command": ["rustup", "run", "nightly", "rls"],

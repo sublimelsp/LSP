@@ -358,15 +358,10 @@ Client configuration:
 Install [kotlin language server](https://github.com/fwcd/KotlinLanguageServer).
 Requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUILDING.md) first. Also install the [Kotlin sublime package](https://github.com/vkostyukov/kotlin-sublime-package) for syntax highlighting.
 
+Override the kotlin configuration:
 ```jsonc
 "kotlin": {
-  "enabled": true,
-  "command": [
-      "PATH_TO_KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat" // Configure
-  ],
-  "languageId": "kotlin",
-  "scopes": ["source.Kotlin"],
-  "syntaxes": ["Packages/kotlin/Kotlin.tmLanguage"]
+  "command": ["PATH_TO_KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat"]
 }
 ```
 

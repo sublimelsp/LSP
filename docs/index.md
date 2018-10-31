@@ -175,20 +175,14 @@ Install [vscode-css-languageserver-bin](https://www.npmjs.com/package/vscode-css
 
 ### Dart<a name="dart"></a>
 
-See [installation steps](https://github.com/natebosch/dart_language_server#installing).
+Install [dart_language_server](https://github.com/natebosch/dart_language_server#installing) and  [Dart](https://packagecontrol.io/packages/Dart) from Package Control.
 
 `pub global activate dart_language_server`
 
-Client configuration:
+Override the dart `client` configuration:
 ```jsonc
 "dart": {
-  "enabled": true,
-  "command": [
-    "PATH_TO_PUB_BIN/dart_language_server"  // Configure
-  ],
-  "languageId": "dart",
-  "scopes": ["source.dart"],
-  "syntaxes": ["Packages/Dart/Dart.tmLanguage"]
+  "command": ["PATH_TO_PUB_BIN/dart_language_server" ]
 }
 ```
 ### Flow (JavaScript)<a name="flow"></a>

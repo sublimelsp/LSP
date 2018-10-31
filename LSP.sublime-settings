@@ -69,6 +69,14 @@
         }
       ]
     },
+    "dart": {
+      "command": [
+        "PATH_TO_PUB_BIN/dart_language_server"  // Configure
+      ],
+      "languageId": "dart",
+      "scopes": ["source.dart"],
+      "syntaxes": ["Packages/Dart/Dart.tmLanguage"]
+    },
     "pyls":
     {
       "command": ["pyls"],

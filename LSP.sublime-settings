@@ -89,6 +89,12 @@
       "scopes": ["text.html.basic"],
       "syntaxes": ["Packages/HTML/HTML.sublime-syntax", "Packages/PHP/PHP.sublime-syntax"]
     },
+    "jsts": {
+      "command": ["lsp-tsserver"],
+      "languageId": "typescript",
+      "scopes": ["source.js", "source.jsx", "source.ts", "source.tsx"],
+      "syntaxes": ["Packages/JavaScript/JavaScript.sublime-syntax", "Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/TypeScript Syntax/TypeScript.tmLanguage", "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage"]
+    },
     "pyls":
     {
       "command": ["pyls"],

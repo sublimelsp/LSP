@@ -296,23 +296,13 @@ See [intellij-lsp-server](https://github.com/Ruin0x11/intellij-lsp-server) for m
 
 > **LanguageHandler** is available but not published to Package Control. Clone it from [tomv564/LSP-tss](https://github.com/tomv564/LSP-tss).
 
-Install globally [tomv564/lsp-tsserver](https://github.com/tomv564/lsp-tsserver).
+Install [tomv564/lsp-tsserver](https://github.com/tomv564/lsp-tsserver) globally.
 From Package Control if you use TypeScript install `TypeScript Syntax`.
 If you work with `jsx` install `Babel`. You don't need a separate configuration for JavaScript as this configuration will work for both languages. 
 
 
 `npm install -g lsp-tsserver`
 
-Client configuration:
-```jsonc
-"typescript": {
-  "enabled": true,
-  "command": ["lsp-tsserver"],
-  "languageId": "typescript",
-  "scopes": ["source.js", "source.jsx", "source.ts", "source.tsx"],
-  "syntaxes": ["Packages/JavaScript/JavaScript.sublime-syntax", "Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/TypeScript Syntax/TypeScript.tmLanguage", "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage"]
-}
-```
 
 You can enable type checking in JavaScript by creating [`jsconfig.json`](https://code.visualstudio.com/docs/languages/jsconfig) file with the following content:
 ```jsonc      

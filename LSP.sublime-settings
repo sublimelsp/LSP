@@ -77,6 +77,12 @@
       "scopes": ["source.dart"],
       "syntaxes": ["Packages/Dart/Dart.tmLanguage"]
     },
+    "flow": {
+      "command": ["flow-language-server", "--stdio"],
+      "scopes": ["source.js"],
+      "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+      "languageId": "javascript"
+    },
     "pyls":
     {
       "command": ["pyls"],

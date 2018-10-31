@@ -179,38 +179,25 @@ Install [dart_language_server](https://github.com/natebosch/dart_language_server
 
 `pub global activate dart_language_server`
 
-Override the dart `client` configuration:
+Override the dart configuration:
 ```jsonc
 "dart": {
   "command": ["PATH_TO_PUB_BIN/dart_language_server" ]
 }
 ```
 ### Flow (JavaScript)<a name="flow"></a>
-See [installation steps](https://github.com/flowtype/flow-language-server#installation).
 
-Client configuration:
-```jsonc
-"flow": {
-  "enabled": true,
-  "command": ["flow-language-server", "--stdio"],
-  "scopes": ["source.js"],
-  "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
-  "languageId": "javascript"
-}
-```
+Install [flow-language-server](https://github.com/flowtype/flow-language-server#installation) globally.
+
+`npm install -g flow-language-server`
 
 ### Go<a name="go"></a>
 
-See [installation steps](https://github.com/sourcegraph/go-langserver).
+Follow the [installation steps](https://github.com/sourcegraph/go-langserver).
 
-Client configuration:
+You can pass additional initialization options:
 ```jsonc
 "golsp": {
-  "enabled": true,
-  "command": ["go-langserver"],
-  "scopes": ["source.go"],
-  "syntaxes": ["Packages/Go/Go.sublime-syntax"],
-  "languageId": "go",
   "initializationOptions": {
     // funcSnippetEnabled enables the returning of argument snippets
     // on `func` completions, eg. func(foo string, arg2 bar).

@@ -317,23 +317,10 @@ You can enable type checking in JavaScript by creating [`jsconfig.json`](https:/
 
 ### JSON<a name="json"></a>
 
-Install globally [vscode-json-languageserver-bin](https://www.npmjs.com/package/vscode-json-languageserver-bin).
+Install [vscode-json-languageserver-bin](https://www.npmjs.com/package/vscode-json-languageserver-bin) globally.
 
 `npm install -g vscode-json-languageserver-bin`
 
-Client configuration:
-```jsonc
-"json": {
-  "enabled": true,
-  "command": [
-    "json-languageserver",
-    "--stdio"
-  ],
-  "languageId": "json",
-  "scopes": ["source.json"],
-  "syntaxes": ["Packages/JavaScript/JSON.sublime-syntax"]
-}
-```
 
 ### Julia<a name="julia"></a>
 

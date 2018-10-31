@@ -95,6 +95,12 @@
       "scopes": ["source.js", "source.jsx", "source.ts", "source.tsx"],
       "syntaxes": ["Packages/JavaScript/JavaScript.sublime-syntax", "Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/TypeScript Syntax/TypeScript.tmLanguage", "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage"]
     },
+    "json": {
+      "command": ["json-languageserver", "--stdio"],
+      "languageId": "json",
+      "scopes": ["source.json"],
+      "syntaxes": ["Packages/JavaScript/JSON.sublime-syntax"]
+    },
     "pyls":
     {
       "command": ["pyls"],

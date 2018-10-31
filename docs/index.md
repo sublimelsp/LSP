@@ -22,7 +22,7 @@ Override the `rls` command to use `stable` instead of `nightly`.
 ```jsonc
 // LSP.sublime-settings -- User
 {
-  "clients":
+  "clients": {
     "rls": {
       "command": ["rustup", "run", "stable", "rls"]
     },
@@ -181,8 +181,13 @@ Install [dart_language_server](https://github.com/natebosch/dart_language_server
 
 Override the dart configuration:
 ```jsonc
-"dart": {
-  "command": ["PATH_TO_PUB_BIN/dart_language_server" ]
+// LSP.sublime-settings -- User
+{
+  "clients": {
+    "dart": {
+      "command": ["PATH_TO_PUB_BIN/dart_language_server" ]
+    }
+  }
 }
 ```
 ### Flow (JavaScript)<a name="flow"></a>
@@ -197,50 +202,54 @@ Follow the [installation steps](https://github.com/sourcegraph/go-langserver).
 
 You can pass additional initialization options:
 ```jsonc
-"golsp": {
-  "initializationOptions": {
-    // funcSnippetEnabled enables the returning of argument snippets
-    // on `func` completions, eg. func(foo string, arg2 bar).
-    // Requires code completion to be enabled.
-    //
-    // Defaults to true if not specified.
-    "funcSnippetEnabled": true,
-    
-    // gocodeCompletionEnabled enables code completion feature (using gocode).
-    //
-    // Defaults to false if not specified.
-    "gocodeCompletionEnabled": false,
+// LSP.sublime-settings -- User
+{
+  "clients": {
+    "golsp": {
+      "initializationOptions": {
+        // funcSnippetEnabled enables the returning of argument snippets
+        // on `func` completions, eg. func(foo string, arg2 bar).
+        // Requires code completion to be enabled.
+        //
+        // Defaults to true if not specified.
+        "funcSnippetEnabled": true,
+        
+        // gocodeCompletionEnabled enables code completion feature (using gocode).
+        //
+        // Defaults to false if not specified.
+        "gocodeCompletionEnabled": false,
 
-    // formatTool decides which tool is used to format documents. Supported: goimports and gofmt.
-    // Values: "goimports" | "gofmt"
-    // Defaults to goimports if not specified.
-    "formatTool": "goimports",
+        // formatTool decides which tool is used to format documents. Supported: goimports and gofmt.
+        // Values: "goimports" | "gofmt"
+        // Defaults to goimports if not specified.
+        "formatTool": "goimports",
 
-    // lintTool decides which tool is used for linting documents. Supported: none and golint
-    //
-    // Diagnostics must be enabled for linting to work.
-    // Values:  "none" | "golint"
-    // Defaults to none if not specified.
-    "lintTool": "none",
+        // lintTool decides which tool is used for linting documents. Supported: none and golint
+        //
+        // Diagnostics must be enabled for linting to work.
+        // Values:  "none" | "golint"
+        // Defaults to none if not specified.
+        "lintTool": "none",
 
-    // goimportsLocalPrefix sets the local prefix (comma-separated string) that goimports will use.
-    //
-    // Defaults to empty string if not specified.
-    "goimportsLocalPrefix": "",
+        // goimportsLocalPrefix sets the local prefix (comma-separated string) that goimports will use.
+        //
+        // Defaults to empty string if not specified.
+        "goimportsLocalPrefix": "",
 
-    // MaxParallelism controls the maximum number of goroutines that should be used
-    // to fulfill requests. This is useful in editor environments where users do
-    // not want results ASAP, but rather just semi quickly without eating all of
-    // their CPU.
-    //
-    // Defaults to half of your CPU cores if not specified.
-    //"maxParallelism": number,
+        // MaxParallelism controls the maximum number of goroutines that should be used
+        // to fulfill requests. This is useful in editor environments where users do
+        // not want results ASAP, but rather just semi quickly without eating all of
+        // their CPU.
+        //
+        // Defaults to half of your CPU cores if not specified.
+        //"maxParallelism": number,
 
-    // useBinaryPkgCache controls whether or not $GOPATH/pkg binary .a files should
-    // be used.
-    //
-    // Defaults to true if not specified.
-    "useBinaryPkgCache": true,
+        // useBinaryPkgCache controls whether or not $GOPATH/pkg binary .a files should
+        // be used.
+        //
+        // Defaults to true if not specified.
+        "useBinaryPkgCache": true,
+    }
   }
 }
 ```
@@ -263,11 +272,16 @@ Follow the instructions in this [issue](https://github.com/tomv564/LSP/issues/34
 
 Override the `command` field:
 ```jsonc
-"jdtls": {
-  "command": ["java", "-jar",
-    "PATH_TO_JDT_SERVER/plugins/org.eclipse.equinox.launcher_1.4.0.v20161219-1356.jar",
-    "-configuration", "PATH_TO_CONFIG_DIR"
-  ]
+// LSP.sublime-settings -- User
+{
+  "clients": {
+    "jdtls": {
+      "command": ["java", "-jar",
+        "PATH_TO_JDT_SERVER/plugins/org.eclipse.equinox.launcher_1.4.0.v20161219-1356.jar",
+        "-configuration", "PATH_TO_CONFIG_DIR"
+      ]
+    }
+  }
 }
 ```
 

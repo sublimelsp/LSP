@@ -49,6 +49,26 @@
       "scopes": ["source.shell.bash"],
       "syntaxes": ["Packages/ShellScript/Bash.sublime-syntax"]
     },
+    "css": {
+      "command": ["css-languageserver", "--stdio"],
+      "languages": [
+        {
+          "scopes": ["source.css"],
+          "syntaxes": ["Packages/CSS/CSS.sublime-syntax"],
+          "languageId": "css"
+        },
+        {
+          "scopes": ["source.sass"],
+          "syntaxes": ["Packages/Sass/Syntaxes/Sass.sublime-syntax"],
+          "languageId": "scss"
+        },
+        {
+          "scopes": ["source.css.less"],
+          "syntaxes": ["Packages/LESS/LESS.sublime-syntax"],
+          "languageId": "less"
+        }
+      ]
+    },
     "pyls":
     {
       "command": ["pyls"],

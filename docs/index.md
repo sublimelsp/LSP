@@ -169,34 +169,9 @@ You can also read about attempts to address this [on the CMake issue tracker](ht
 of treating header files as translation units.
 ### CSS/LESS/SASS (SCSS only)<a name="css"></a>
 
-Install globally [vscode-css-languageserver-bin](https://www.npmjs.com/package/vscode-css-languageserver-bin).
+Install [vscode-css-languageserver-bin](https://www.npmjs.com/package/vscode-css-languageserver-bin) globally.
 
 `npm install -g vscode-css-languageserver-bin`
-
-Client configuration:
-```jsonc
-"css": {
-  "enabled": true,
-  "command": ["css-languageserver", "--stdio"],
-  "languages": [
-    {
-      "scopes": ["source.css"],
-      "syntaxes": ["Packages/CSS/CSS.sublime-syntax"],
-      "languageId": "css"
-    },
-    {
-      "scopes": ["source.sass"],
-      "syntaxes": ["Packages/Sass/Syntaxes/Sass.sublime-syntax"],
-      "languageId": "scss"
-    },
-    {
-      "scopes": ["source.css.less"],
-      "syntaxes": ["Packages/LESS/LESS.sublime-syntax"],
-      "languageId": "less"
-    }
-  ]
-}
-```
 
 ### Dart<a name="dart"></a>
 

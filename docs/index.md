@@ -277,17 +277,6 @@ Requires IntelliJ to be running.
 
 See [intellij-lsp-server](https://github.com/Ruin0x11/intellij-lsp-server) for more information.
 
-Client configuration:
-```jsonc
-"intellij":{
-  "enabled": true,
-  "tcp_port": 8080 // default port
-  "command": [],
-  "languageId": "java",
-  "scopes": ["source.java"],
-  "syntaxes": ["Packages/Java/Java.sublime-syntax"]
-}
-```
 
 ### JavaScript/TypeScript<a name="typescript"></a>
 

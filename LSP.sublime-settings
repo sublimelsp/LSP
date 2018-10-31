@@ -163,6 +163,13 @@
       "syntaxes": ["Packages/Java/Java.sublime-syntax"],
       "languageId": "java"
     },
+    "intellij":{
+      "tcp_port": 8080, // default port
+      "command": [],
+      "languageId": "java",
+      "scopes": ["source.java"],
+      "syntaxes": ["Packages/Java/Java.sublime-syntax"]
+    },
     "polymer-ide":
     {
       "command": ["polymer-editor-service"],

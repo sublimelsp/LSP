@@ -388,20 +388,21 @@ Install globally [bmewburn/intelephense-server](https://www.npmjs.com/package/in
 
 `npm install -g intelephense-server`
 
-Client configuration:
+Override the configuration:
 ```jsonc
-"intelephense": {
-  "enabled": true,
-  "command": [
-    "node",
-    "PATH_TO_GLOBAL_NODE_MODULES/intelephense-server/lib/server.js",  // Configure
-    "--stdio",
-  ],
-  "scopes": ["source.php", "embedding.php"],
-  "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
-  "languageId": "php",
-  "initializationOptions": {
-    "storagePath": "/tmp/intelephense", // Configure
+// LSP.sublime-settings -- User
+{
+  "clients": {
+    "intelephense": {
+      "command": [
+        "node",
+        "PATH_TO_GLOBAL_NODE_MODULES/intelephense-server/lib/server.js",  // Configure
+        "--stdio",
+      ],
+      "initializationOptions": {
+        "storagePath": "/tmp/intelephense", // Configure
+      }
+    }
   }
 }
 ```

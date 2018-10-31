@@ -144,6 +144,19 @@
         "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
         "languageId": "php"
     },
+    "intelephense": {
+      "command": [
+        "node",
+        "PATH_TO_GLOBAL_NODE_MODULES/intelephense-server/lib/server.js",  // Configure
+        "--stdio",
+      ],
+      "scopes": ["source.php", "embedding.php"],
+      "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
+      "languageId": "php",
+      "initializationOptions": {
+        "storagePath": "/tmp/intelephense", // Configure
+      }
+    },
     "eslint":
     {
       "command": ["node", "/Users/tomv/Projects/tomv564/vscode-eslint/eslint-server/src/server"],

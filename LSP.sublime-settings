@@ -43,6 +43,12 @@
   // Use "clients" to override settings instead!
   "default_clients":
   {
+    "bash": {
+      "command": ["bash-language-server", "start"],
+      "languageId": "bash",
+      "scopes": ["source.shell.bash"],
+      "syntaxes": ["Packages/ShellScript/Bash.sublime-syntax"]
+    },
     "pyls":
     {
       "command": ["pyls"],

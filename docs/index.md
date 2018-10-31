@@ -123,25 +123,9 @@ Any fields in a client configuration can be overridden by adding an LSP settings
 ## List of configured languages
 ### Bash<a name="bash"></a>
 
-Install globally [bash language server](https://github.com/mads-hartmann/bash-language-server).
+Install [bash language server](https://github.com/mads-hartmann/bash-language-server) globally.
 
 ```npm i -g bash-language-server```
-
-Client configuration:
-
-```jsonc
-"bash": {
-  "enabled": true,
-  "command": [
-      "bash-language-server",
-      "start"
-  ],
-  "languageId": "bash",
-  "scopes": ["source.shell.bash"],
-  "syntaxes": ["Packages/ShellScript/Bash.sublime-syntax"]
-}
-```
-
 
 ### C/C++ (Clangd)<a name="clangd"></a>
 

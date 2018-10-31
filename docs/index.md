@@ -23,7 +23,7 @@ Override the `rls` command to use `stable` instead of `nightly`.
 // LSP.sublime-settings -- User
 {
   "clients":
-    "rust": {
+    "rls": {
       "command": ["rustup", "run", "stable", "rls"]
     },
     // other clients
@@ -38,7 +38,7 @@ You can also add a new client(language server) in the `clients` setting. Each ne
 // LSP.sublime-settings -- User
 {
   "clients": {
-    "client_name": {
+    "pyls": {
       "command": ["pyls"],          // required
       "scopes": ["source.python"],  // required
       "syntaxes": ["Packages/Python/Python.sublime-syntax"], // required
@@ -52,10 +52,10 @@ You can also add a new client(language server) in the `clients` setting. Each ne
 }
 ```
 
-* `client_name` - The client name can be any string.
+* `pyls` - Is the client name. Can be any string.
 * `command` - The command line required to run the server. If not specified then `tcp_port` must be specified.
 * `tcp_port` - Sets the `tcp_port` to connect to. Else `stdin/out` is used. If no `command` is specified then it is assumed that some process is listing on this port.
-* `scopes` - Scopes of the file. Example `source.js`, `source.jsx`. To get the scopes, from the menu chose `Tools/Developer/Show Scope Name`.
+* `scopes` - Scopes of the file. Example `source.python`. To get the scopes, from the menu chose `Tools/Developer/Show Scope Name`.
 * `syntaxes` - Syntaxes enable LSP features on a document. To get the syntax name run in the sublime console: `view.settings().get("syntax")`.
 * `languageId` - Used both by the language servers and to select a syntax highlighter for sublime popups. Look up the identifiers [here](https://code.visualstudio.com/docs/languages/identifiers).
 * `enabled` - Boolean indicating if a server is enabled or disabled. You can enable a language server globally, or per-project.

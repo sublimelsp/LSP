@@ -32,7 +32,7 @@ The default `LSP.sublime-settings` contains `default_clients` configuration that
     // other clients
 }
 ```
-Override the `rust` command to use `stable` instead of `nightly`.
+Override the `rls` command to use `stable` instead of `nightly`.
 ```jsonc
 // LSP.sublime-settings -- User
 {
@@ -342,8 +342,13 @@ Client configuration:
 }
 ```
 
+### Java<a name="java"></a>
+Implementations:
 
-### Java (Eclipse)<a name="java"></a>
+* [Java (Eclipse)](https://lsp.readthedocs.io/en/latest/#eclipse)
+* [Java (IntelliJ)](https://lsp.readthedocs.io/en/latest/#intellij)
+
+### Java (Eclipse)<a name="eclipse"></a>
 
 Follow the instructions in this [issue](https://github.com/tomv564/LSP/issues/344).
 
@@ -456,7 +461,12 @@ Requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUI
 }
 ```
 
-### PHP (Felix Becker)<a name="php"></a>
+### PHP <a name="php"></a>
+Implementations:
+* [PHP (Felix Becker)](https://lsp.readthedocs.io/en/latest/#felix_becker)
+* [PHP (Intelephense)](https://lsp.readthedocs.io/en/latest/#intelephense)
+
+### PHP (Felix Becker)<a name="felix_becker"></a>
 
 Modify `~/.composer/composer.json`.
 ```jsonc
@@ -538,6 +548,11 @@ Client configuration:
 ```
 
 ### Python<a name="python"></a>
+Implementations:
+* [Python (Palantir Technologies)](https://lsp.readthedocs.io/en/latest/#python_palantir)
+* [Python (Microsoft)](https://lsp.readthedocs.io/en/latest/#python_microsoft)
+
+### Python (Palantir Technologies)<a name="python_palantir"></a>
 
 See [installation steps](https://github.com/palantir/python-language-server#installation).
 

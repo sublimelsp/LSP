@@ -445,18 +445,6 @@ See [installation steps](https://github.com/freebroccolo/ocaml-language-server).
 
 You will need to install [sublime-reason](https://github.com/reasonml-editor/sublime-reason) and the dependencies listed in the repo, such as [ocaml-language-server](https://github.com/freebroccolo/ocaml-language-server). If you only use OCaml, you still need those listed dependencies, but not the sublime-reason plugin itself.
 
-
-Client configuration:
-```jsonc
-"reason": {
-  "enabled": true,
-  "command": ["ocaml-language-server", "--stdio"],
-  "scopes": ["source.reason"],
-  "syntaxes": ["Packages/sublime-reason/Reason.tmLanguage"],
-  "languageId": "reason"
-}
-```
-
 ### Ruby<a name="ruby"></a>
 
 See [installation steps](https://github.com/castwide/solargraph#installation).

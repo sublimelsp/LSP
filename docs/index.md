@@ -333,8 +333,13 @@ Requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUI
 
 Override the kotlin configuration:
 ```jsonc
-"kotlin": {
-  "command": ["PATH_TO_KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat"]
+// LSP.sublime-settings -- User
+{
+  "clients": {
+    "kotlin": {
+      "command": ["PATH_TO_KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat"]
+    }
+  }
 }
 ```
 
@@ -363,14 +368,15 @@ Modify `~/.composer/composer.json`.
 * Run `composer global require felixfbecker/language-server`.
 * Run `composer run-script --working-dir=~/.composer/vendor/felixfbecker/language-server parse-stubs`.
 
-Client configuration:
+Override the configuration:
 ```jsonc
-"phpls": {
-  "enabled": true,
-  "command": ["php", "/PATH-TO-HOME-DIR/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"], // Configure
-  "scopes": ["source.php"],
-  "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
-  "languageId": "php"
+// LSP.sublime-settings -- User
+{
+  "clients": {
+    "phpls": {
+      "command": ["php", "/PATH-TO-HOME-DIR/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"],
+    }
+  }
 }
 ```
 

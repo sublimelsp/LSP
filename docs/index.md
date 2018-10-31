@@ -427,23 +427,12 @@ Implementations:
 
 ### Python (Palantir Technologies)<a name="python_palantir"></a>
 
-See [installation steps](https://github.com/palantir/python-language-server#installation).
-
-Client configuration:
-```jsonc
-"pyls": {
-  "enabled": true,
-  "command": ["pyls"],
-  "scopes": ["source.python"],
-  "syntaxes": ["Packages/Python/Python.sublime-syntax"],
-  "languageId": "python"
-}
-```
+Follow the [installation steps](https://github.com/palantir/python-language-server#installation).
 
 ### Python (Microsoft)<a name="python_microsoft"></a>
 
 Microsoft's python language server using .NET Core runtime.
-See [installation steps](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md).
+Follow the [installation steps](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md).
 
 
 ### R<a name="r"></a>

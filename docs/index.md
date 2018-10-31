@@ -458,19 +458,20 @@ Client configuration:
 
 > **LanguageHandler** is available but not published to Package Control. Clone it from [tomv564/LSP-rust](https://github.com/tomv564/LSP-rust).
 
-See [installation steps](https://github.com/rust-lang-nursery/rls).
+Follow the [installation steps](https://github.com/rust-lang-nursery/rls).
 
-Client configuration:
+If `rls` doesn't start. Try to override the command to use `stable` instead of `nightly`.
 ```jsonc
-"rls": {
-  "enabled": true,
-  "command": ["rustup", "run", "nightly", "rls"],
-  "scopes": ["source.rust"],
-  "syntaxes": ["Packages/Rust/Rust.sublime-syntax", "Packages/Rust Enhanced/RustEnhanced.sublime-syntax"],
-  "languageId": "rust"
+// LSP.sublime-settings -- User
+{
+  "clients": {
+    "rls": {
+      "command": ["rustup", "run", "stable", "rls"]
+    }
+  }
 }
 ```
-If you have problems starting `rls` try changing the `command` to `["rustup", "run", "stable", "rls"],`
+
 
 ### Scala<a name="scala"></a>
 
@@ -497,17 +498,18 @@ Install globally [vue-language-server](https://www.npmjs.com/package/vue-languag
 
 Client configuration:
 ```jsonc
-"vue": {
-  "enabled": true,
-  "command": ["vls"],
-  "languageId": "vue",
-  "scopes": ["text.html.vue"],
-  "syntaxes": [
-    // For ST3 builds < 3153
-    "Packages/Vue Syntax Highlight/vue.tmLanguage"
-    // For ST3 builds >= 3153
-    // "Packages/Vue Syntax Highlight/Vue Component.sublime-syntax"
-  ]
+// LSP.sublime-settings -- User
+{
+  "clients": {
+    "vue": {
+      "syntaxes": [
+        // For ST3 builds < 3153
+        "Packages/Vue Syntax Highlight/vue.tmLanguage"
+        // For ST3 builds >= 3153
+        // "Packages/Vue Syntax Highlight/Vue Component.sublime-syntax"
+      ]
+    }
+  }
 }
 ```
 

@@ -195,6 +195,18 @@
       "scopes": ["source.java"],
       "syntaxes": ["Packages/Java/Java.sublime-syntax"]
     },
+    "vue": {
+      "enabled": true,
+      "command": ["vls"],
+      "languageId": "vue",
+      "scopes": ["text.html.vue"],
+      "syntaxes": [
+        // For ST3 builds < 3153
+        "Packages/Vue Syntax Highlight/vue.tmLanguage"
+        // For ST3 builds >= 3153
+        // "Packages/Vue Syntax Highlight/Vue Component.sublime-syntax"
+      ]
+    },
     "polymer-ide":
     {
       "command": ["polymer-editor-service"],

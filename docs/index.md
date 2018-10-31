@@ -247,26 +247,9 @@ You can pass additional initialization options:
 
 ### HTML<a name="html"></a>
 
-Install globally [vscode-html-languageserver-bin](https://www.npmjs.com/package/vscode-html-languageserver-bin).
+Install [vscode-html-languageserver-bin](https://www.npmjs.com/package/vscode-html-languageserver-bin) globally.
 
 `npm install -g vscode-html-languageserver-bin`
-
-Client configuration:
-```jsonc
-"html": {
-  "enabled": true,
-  "command": [
-    "html-languageserver",
-    "--stdio"
-  ],
-  "languageId": "html",
-  "scopes": ["text.html.basic"],
-  "syntaxes": [
-    "Packages/HTML/HTML.sublime-syntax",
-    "Packages/PHP/PHP.sublime-syntax"
-  ]
-}
-```
 
 ### Java<a name="java"></a>
 Implementations:

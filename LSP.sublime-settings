@@ -83,6 +83,12 @@
       "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
       "languageId": "javascript"
     },
+    "html": {
+      "command": ["html-languageserver", "--stdio"],
+      "languageId": "html",
+      "scopes": ["text.html.basic"],
+      "syntaxes": ["Packages/HTML/HTML.sublime-syntax", "Packages/PHP/PHP.sublime-syntax"]
+    },
     "pyls":
     {
       "command": ["pyls"],

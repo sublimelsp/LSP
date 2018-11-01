@@ -1,0 +1,11 @@
+=> 0.7.3
+
+Fixes:
+* Redirect or consume stderr, so servers won't block on full pipes.
+* Only warn once and disable server if it fails to start.
+
+Features:
+* Add default server configs for Haskell, C/C++, javascript/typescript
+
+
+See https://github.com/tomv564/LSP/releases/tag/0.7.3 for full update details.

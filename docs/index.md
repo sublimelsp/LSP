@@ -78,8 +78,8 @@ You can define different languages for the same language server. The multi-langu
           "languageId": "css"
         },
         {
-          "scopes": ["source.sass"],
-          "syntaxes": ["Packages/Sass/Syntaxes/Sass.sublime-syntax"],
+          "scopes": ["source.css.scss"],
+          "syntaxes": ["Packages/Sass/Syntaxes/SCSS.sublime-syntax"],
           "languageId": "scss"
         },
         {
@@ -171,7 +171,7 @@ You can also read about attempts to address this [on the CMake issue tracker](ht
 of treating header files as translation units.
 ### CSS/LESS/SASS (SCSS only)<a name="css"></a>
 
-Install [vscode-css-languageserver-bin](https://www.npmjs.com/package/vscode-css-languageserver-bin) globally.
+Install [vscode-css-languageserver-bin](https://www.npmjs.com/package/vscode-css-languageserver-bin) globally and if you use `SCSS` install [Sass](https://packagecontrol.io/packages/Sass) from Package Control.
 
 `npm install -g vscode-css-languageserver-bin`
 

@@ -58,8 +58,8 @@
           "languageId": "css"
         },
         {
-          "scopes": ["source.sass"],
-          "syntaxes": ["Packages/Sass/Syntaxes/Sass.sublime-syntax"],
+          "scopes": ["source.css.scss"],
+          "syntaxes": ["Packages/Sass/Syntaxes/SCSS.sublime-syntax"],
           "languageId": "scss"
         },
         {

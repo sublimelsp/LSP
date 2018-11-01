@@ -1,7 +1,6 @@
-import re
 from .events import global_events
 from .logging import debug
-from .types import ClientStates, ClientConfig, WindowLike, ViewLike, LanguageConfig
+from .types import ClientStates, ClientConfig, WindowLike, ViewLike, LanguageConfig, config_supports_syntax
 from .protocol import Notification
 from .sessions import Session
 from .url import filename_to_uri
@@ -101,13 +100,6 @@ class DocumentHandlerFactory(object):
 
     def for_window(self, window: 'WindowLike', configs: 'ConfigRegistry'):
         return WindowDocumentHandler(self._sublime, self._settings, window, global_events, configs)
-
-
-def config_supports_syntax(config: 'ClientConfig', syntax: str) -> bool:
-    for language in config.languages:
-        if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in language.syntaxes), syntax, re.IGNORECASE):
-            return True
-    return False
 
 
 class WindowDocumentHandler(object):

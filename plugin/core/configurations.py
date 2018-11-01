@@ -4,6 +4,7 @@ from copy import deepcopy
 
 from .settings import ClientConfig, client_configs, LanguageConfig
 from .logging import debug
+from .types import config_supports_syntax
 from .workspace import get_project_config
 from .windows import ViewLike, WindowLike, ConfigRegistry
 
@@ -87,13 +88,6 @@ def is_supported_syntax(syntax: str) -> bool:
         for language in config.languages:
             if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in language.syntaxes), syntax, re.IGNORECASE):
                 return True
-    return False
-
-
-def config_supports_syntax(config: 'ClientConfig', syntax: str) -> bool:
-    for language in config.languages:
-        if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in language.syntaxes), syntax, re.IGNORECASE):
-            return True
     return False
 
 

@@ -18,8 +18,7 @@ Open the command palette and run `Package Control: Install Package`, then select
 
 ### Development Version
 
-* Clone this repository into your Packages directory.
-* Open the command palette and run `Package Control: Satisfy Dependencies`.
+Clone this repository into your Packages directory. Open the command palette and run `Package Control: Satisfy Dependencies`.
 
 
 ## Getting started

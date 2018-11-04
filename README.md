@@ -13,7 +13,7 @@ Language Server Protocol support for Sublime Text 3 that gives you IDE [features
 
 ### Stable Version
 
-* Open the command palette and run `Package Control: Install Package` then select `LSP`.
+Open the command palette and run `Package Control: Install Package`, then select `LSP`.
 
 
 ### Development Version

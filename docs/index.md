@@ -1,6 +1,6 @@
 # Sublime LSP Plugin Documentation
 
-### Client configurations 
+### Client configurations<a name="client-configurations"></a>
 
 LSP ships with default client configuration for a few language servers that may not work for you. Do not modify the `default_clients`! If you want to change server configurations, you can override them in the `clients` setting. Example:
 

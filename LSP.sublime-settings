@@ -2,6 +2,7 @@
   // User clients configuration. Used to:
   // - override single settings of "default_clients"
   // - add new user specified clients
+  // For more info see https://lsp.readthedocs.io/en/latest/#client-configurations
   "clients": {
 
   },
@@ -9,6 +10,7 @@
   // Default clients configuration.
   // DO NOT MODIFY THIS SETTING!
   // Use "clients" to override settings instead!
+  // For more info see https://lsp.readthedocs.io/en/latest/#client-configurations
   "default_clients":
   {
     "bash": {

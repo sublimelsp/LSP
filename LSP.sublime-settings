@@ -1,44 +1,12 @@
 {
-  // User clients configuration can be used to
+  // User clients configuration. Used to:
   // - override single settings of "default_clients"
-  // - create add new user specified clients
-  //
-  // "clients":
-  // {
-  //   // Each new client must have the following structure.
-  //   "client_name":
-  //   {
-  //     # Must-have settings (for new clients):
-  //
-  //     // The command line required to run the server.
-  //     "command": ["pyls"],
-  //
-  //     // Use: "Show Scope Name" from Sublime's Developer menu
-  //     "scopes": ["source.python"],
-  //
-  //     // Run: view.settings().get("syntax") in console
-  //     "syntaxes": ["Packages/Python/Python.sublime-syntax"],
-  //
-  //     // See: https://github.com/Microsoft/language-server-protocol/issues/213
-  //     "languageId": "python",
-  //
-  //     # Optional settings (key-value pairs):
-  //
-  //     // Sent to server once using workspace/didConfigurationChange notification
-  //     "settings": { },
-  //
-  //     // Sent once to server in initialize request
-  //     "initializationOptions": { },
-  //
-  //     // Extra variables to override/add to language server's environment.
-  //     "env": { },
-  //   }
-  // }
+  // - add new user specified clients
   "clients": {
 
   },
 
-  // Default clients configuration
+  // Default clients configuration.
   // DO NOT MODIFY THIS SETTING!
   // Use "clients" to override settings instead!
   "default_clients":

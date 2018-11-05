@@ -1,4 +1,91 @@
 {
+  // Show permanent language server status in the status bar.
+  "show_view_status": true,
+
+  // Open and close the diagnostics panel automatically,
+  // depending on available diagnostics.
+  "auto_show_diagnostics_panel": true,
+
+  // Open the diagnostics panel automatically
+  // when diagnostics level is equal to or less than:
+  // error: 1
+  // warning: 2
+  // info: 3
+  // hint: 4
+  "auto_show_diagnostics_panel_level": 3,
+
+  // Show in-line diagnostics using phantoms for unchanged files.
+  "show_diagnostics_phantoms": false,
+
+  // Show errors and warnings count in the status bar
+  "show_diagnostics_count_in_view_status": false,
+
+  // Show the diagnostics description of the code
+  // under the cursor in status bar if available.
+  "show_diagnostics_in_view_status": true,
+
+  // Show the diagnostics with level less than or equal to
+  // the given value.
+  // error: 1
+  // warning: 2
+  // info: 3
+  // hint: 4
+  "show_diagnostics_severity_level": 3,
+
+  // Highlighting style of code diagnostics.
+  // Valid values are "underline" or "box"
+  "diagnostics_highlight_style": "underline",
+
+  // If true, highlight the active parameter of the currently active signature.
+  // Note that this disables mdpopups highlighting.
+  "highlight_active_signature_parameter": true,
+
+  // Highlighting style of "highlights": accentuating nearby text entities that
+  // are related to the one under your cursor.
+  // Valid values are "fill", "box", "underline", "stippled", "squiggly" or "".
+  // When set to the empty string (""), no document highlighting is requested.
+  "document_highlight_style": "underline",
+
+  "document_highlight_scopes": {
+    "unknown": "text",
+    "text": "text",
+    "read": "markup.inserted",
+    "write": "markup.changed"
+  },
+
+  // Gutter marker for code diagnostics.
+  // Valid values are "bookmark", "circle", "cross", "dot" or ""
+  "diagnostics_gutter_marker": "dot",
+
+  // Request completions for all characters if set to true,
+  // or just after trigger characters only otherwise.
+  "complete_all_chars": true,
+
+  // Controls which hints the completion panel displays
+  // "auto": completion details if available or kind otherwise
+  // "detail": completion details if available
+  // "kind": completion kind if available
+  // "none": completion item label only
+  "completion_hint_type": "auto",
+
+  // Disable Sublime Text's explicit and word completion.
+  "only_show_lsp_completions": false,
+
+  // Resolve completions and apply snippet if received.
+  "resolve_completion_for_snippets": false,
+
+  // Show verbose debug messages in the sublime console.
+  "log_debug": false,
+
+  // Show notifications from language servers in the console.
+  "log_server": true,
+
+  // Show language server stderr output in the console.
+  "log_stderr": false,
+
+  // Show full JSON-RPC responses in the console
+  "log_payloads": false,
+
   // User clients configuration. Used to:
   // - override single settings of "default_clients"
   // - add new user specified clients
@@ -209,92 +296,5 @@
         }
       }
     }
-  },
-
-  // Show permanent language server status in the status bar.
-  "show_view_status": true,
-
-  // Open and close the diagnostics panel automatically,
-  // depending on available diagnostics.
-  "auto_show_diagnostics_panel": true,
-
-  // Open the diagnostics panel automatically
-  // when diagnostics level is equal to or less than:
-  // error: 1
-  // warning: 2
-  // info: 3
-  // hint: 4
-  "auto_show_diagnostics_panel_level": 3,
-
-  // Show in-line diagnostics using phantoms for unchanged files.
-  "show_diagnostics_phantoms": false,
-
-  // Show errors and warnings count in the status bar
-  "show_diagnostics_count_in_view_status": false,
-
-  // Show the diagnostics description of the code
-  // under the cursor in status bar if available.
-  "show_diagnostics_in_view_status": true,
-
-  // Show the diagnostics with level less than or equal to
-  // the given value.
-  // error: 1
-  // warning: 2
-  // info: 3
-  // hint: 4
-  "show_diagnostics_severity_level": 3,
-
-  // Highlighting style of code diagnostics.
-  // Valid values are "underline" or "box"
-  "diagnostics_highlight_style": "underline",
-
-  // If true, highlight the active parameter of the currently active signature.
-  // Note that this disables mdpopups highlighting.
-  "highlight_active_signature_parameter": true,
-
-  // Highlighting style of "highlights": accentuating nearby text entities that
-  // are related to the one under your cursor.
-  // Valid values are "fill", "box", "underline", "stippled", "squiggly" or "".
-  // When set to the empty string (""), no document highlighting is requested.
-  "document_highlight_style": "underline",
-
-  "document_highlight_scopes": {
-    "unknown": "text",
-    "text": "text",
-    "read": "markup.inserted",
-    "write": "markup.changed"
-  },
-
-  // Gutter marker for code diagnostics.
-  // Valid values are "bookmark", "circle", "cross", "dot" or ""
-  "diagnostics_gutter_marker": "dot",
-
-  // Request completions for all characters if set to true,
-  // or just after trigger characters only otherwise.
-  "complete_all_chars": true,
-
-  // Controls which hints the completion panel displays
-  // "auto": completion details if available or kind otherwise
-  // "detail": completion details if available
-  // "kind": completion kind if available
-  // "none": completion item label only
-  "completion_hint_type": "auto",
-
-  // Disable Sublime Text's explicit and word completion.
-  "only_show_lsp_completions": false,
-
-  // Resolve completions and apply snippet if received.
-  "resolve_completion_for_snippets": false,
-
-  // Show verbose debug messages in the sublime console.
-  "log_debug": false,
-
-  // Show notifications from language servers in the console.
-  "log_server": true,
-
-  // Show language server stderr output in the console.
-  "log_stderr": false,
-
-  // Show full JSON-RPC responses in the console
-  "log_payloads": false
+  }
 }

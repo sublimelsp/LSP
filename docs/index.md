@@ -18,7 +18,7 @@ LSP ships with default client configuration for a few language servers that may 
     // other clients
 }
 ```
-Override the `rls` command to use `stable` instead of `nightly`.
+Example of overriding the `rls` command to use `stable` instead of `nightly`.
 ```jsonc
 // LSP.sublime-settings -- User
 {

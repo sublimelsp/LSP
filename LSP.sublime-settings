@@ -184,7 +184,7 @@
       "command": ["lsp-tsserver"],
       "languages": [{
         "scopes": ["source.js", "source.jsx"],
-        "syntaxes": ["Javascript"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
         "languageId": "javascript"
       }, {
         "scopes": ["source.ts", "source.tsx"],

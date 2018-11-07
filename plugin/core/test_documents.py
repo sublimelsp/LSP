@@ -2,11 +2,11 @@ import unittest
 from .events import Events
 from .windows import WindowDocumentHandler
 from .sessions import create_session, Session
-from .test_windows import TestWindow, TestView, TestConfigs
-from .test_session import test_config, TestClient, test_language
+from .test_windows import MockWindow, MockView, MockConfigs
+from .test_session import test_config, MockClient, test_language
 import unittest.mock
 from . import test_sublime as test_sublime
-from .test_rpc import TestSettings
+from .test_rpc import MockSettings
 # from .logging import debug, set_debug_logging
 from .types import ClientConfig
 from os.path import basename
@@ -26,13 +26,13 @@ class WindowDocumentHandlerTests(unittest.TestCase):
 
     def test_sends_did_open_to_session(self):
         events = Events()
-        view = TestView(__file__)
-        window = TestWindow([[view]])
+        view = MockView(__file__)
+        window = MockWindow([[view]])
         view.set_window(window)
-        handler = WindowDocumentHandler(test_sublime, TestSettings(), window, events, TestConfigs())
-        client = TestClient()
+        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, events, MockConfigs())
+        client = MockClient()
         session = self.assert_if_none(
-            create_session(test_config, "", dict(), TestSettings(),
+            create_session(test_config, "", dict(), MockSettings(),
                            bootstrap_client=client))
         handler.add_session(session)
 
@@ -87,12 +87,12 @@ class WindowDocumentHandlerTests(unittest.TestCase):
 
     def test_ignores_views_from_other_window(self):
         events = Events()
-        window = TestWindow()
-        view = TestView(__file__)
-        handler = WindowDocumentHandler(test_sublime, TestSettings(), window, events, TestConfigs())
-        client = TestClient()
+        window = MockWindow()
+        view = MockView(__file__)
+        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, events, MockConfigs())
+        client = MockClient()
         session = self.assert_if_none(
-            create_session(test_config, "", dict(), TestSettings(),
+            create_session(test_config, "", dict(), MockSettings(),
                            bootstrap_client=client))
         handler.add_session(session)
         events.publish("view.on_activated_async", view)
@@ -101,18 +101,18 @@ class WindowDocumentHandlerTests(unittest.TestCase):
 
     def test_sends_did_open_to_multiple_sessions(self):
         events = Events()
-        view = TestView(__file__)
-        window = TestWindow([[view]])
+        view = MockView(__file__)
+        window = MockWindow([[view]])
         view.set_window(window)
-        handler = WindowDocumentHandler(test_sublime, TestSettings(), window, events, TestConfigs())
-        client = TestClient()
+        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, events, MockConfigs())
+        client = MockClient()
         session = self.assert_if_none(
-            create_session(test_config, "", dict(), TestSettings(),
+            create_session(test_config, "", dict(), MockSettings(),
                            bootstrap_client=client))
-        client2 = TestClient()
+        client2 = MockClient()
         test_config2 = ClientConfig("test2", [], None, languages=[test_language])
         session2 = self.assert_if_none(
-            create_session(test_config2, "", dict(), TestSettings(),
+            create_session(test_config2, "", dict(), MockSettings(),
                            bootstrap_client=client2))
 
         handler.add_session(session)

@@ -12,7 +12,7 @@ except ImportError:
     pass
 
 
-class TestSettings(Settings):
+class MockSettings(Settings):
 
     def __init__(self):
         Settings.__init__(self)
@@ -39,7 +39,7 @@ def notify_pong(message):
     return json.dumps(notification)
 
 
-class TestTransport(Transport):
+class MockTransport(Transport):
     def __init__(self, responder=None):
         self.messages = []  # type: List[str]
         self.responder = responder
@@ -70,14 +70,14 @@ class FormatTests(unittest.TestCase):
 class ClientTest(unittest.TestCase):
 
     def test_can_create_client(self):
-        transport = TestTransport()
+        transport = MockTransport()
         client = Client(transport, dict())
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
 
     def test_client_request_response(self):
-        transport = TestTransport(return_result)
-        settings = TestSettings()
+        transport = MockTransport(return_result)
+        settings = MockSettings()
         client = Client(transport, settings)
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
@@ -89,8 +89,8 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(len(client._response_handlers), 0)
 
     def test_client_notification(self):
-        transport = TestTransport(notify_pong)
-        settings = TestSettings()
+        transport = MockTransport(notify_pong)
+        settings = MockSettings()
         client = Client(transport, settings)
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
@@ -107,8 +107,8 @@ class ClientTest(unittest.TestCase):
     def test_server_request(self):
         # TODO: LSP never responds to eg workspace/applyEdit.
 
-        transport = TestTransport()
-        settings = TestSettings()
+        transport = MockTransport()
+        settings = MockSettings()
         client = Client(transport, settings)
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
@@ -122,8 +122,8 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(len(pings), 1)
 
     def test_response_error(self):
-        transport = TestTransport(return_error)
-        settings = TestSettings()
+        transport = MockTransport(return_error)
+        settings = MockSettings()
         client = Client(transport, settings)
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
@@ -138,8 +138,8 @@ class ClientTest(unittest.TestCase):
 
     def test_handles_transport_closed_unexpectedly(self):
         set_exception_logging(False)
-        transport = TestTransport(raise_error)
-        settings = TestSettings()
+        transport = MockTransport(raise_error)
+        settings = MockSettings()
         client = Client(transport, settings)
         errors = []
         client.set_transport_failure_handler(lambda: errors.append(""))
@@ -149,8 +149,8 @@ class ClientTest(unittest.TestCase):
 
     def test_survives_handler_error(self):
         set_exception_logging(False)
-        transport = TestTransport(return_result)
-        settings = TestSettings()
+        transport = MockTransport(return_result)
+        settings = MockSettings()
         client = Client(transport, settings)
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)

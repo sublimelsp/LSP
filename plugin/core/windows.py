@@ -405,9 +405,12 @@ class WindowManager(object):
             self._sessions[config_name].end()
 
     def _end_old_sessions(self):
-        if get_project_path(self._window) != self._project_path:
+        current_project_path = get_project_path(self._window)
+        if current_project_path != self._project_path:
             debug('project path changed, ending existing sessions')
+            debug('new path = {}'.format(current_project_path))
             self.end_sessions()
+            self._project_path = current_project_path
 
     def _apply_workspace_edit(self, params):
         edit = params.get('edit', dict())

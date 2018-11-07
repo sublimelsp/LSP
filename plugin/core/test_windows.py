@@ -1,7 +1,7 @@
 from .windows import WindowManager, WindowRegistry, WindowLike, ViewLike
 from .sessions import create_session, Session
-from .test_session import TestClient, test_config, test_language
-from .test_rpc import TestSettings
+from .test_session import MockClient, test_config, test_language
+from .test_rpc import MockSettings
 from .events import global_events
 from .types import ClientConfig, LanguageConfig
 from . import test_sublime as test_sublime
@@ -18,7 +18,7 @@ except ImportError:
     pass
 
 
-class TestSublimeSettings(object):
+class MockSublimeSettings(object):
     def __init__(self, values):
         self._values = values
 
@@ -29,11 +29,11 @@ class TestSublimeSettings(object):
         self._values[key] = value
 
 
-class TestView(object):
+class MockView(object):
     def __init__(self, file_name):
         self._file_name = file_name
         self._window = None
-        self._settings = TestSublimeSettings({"syntax": "Plain Text"})
+        self._settings = MockSublimeSettings({"syntax": "Plain Text"})
         self._status = dict()  # type: Dict[str, str]
         self._text = "asdf"
 
@@ -68,7 +68,7 @@ class TestView(object):
         return 1
 
 
-class TestHandlerDispatcher(object):
+class MockHandlerDispatcher(object):
     def __init__(self, can_start: bool = True) -> None:
         self._can_start = can_start
         self._initialized = set()  # type: Set[str]
@@ -80,12 +80,12 @@ class TestHandlerDispatcher(object):
         self._initialized.add(config_name)
 
 
-class TestWindow(object):
+class MockWindow(object):
     def __init__(self, files_in_groups: 'List[List[ViewLike]]' = []) -> None:
         self._files_in_groups = files_in_groups
         self._is_valid = True
         self._folders = [os.path.dirname(__file__)]
-        self._default_view = TestView(None)
+        self._default_view = MockView(None)
 
     def id(self):
         return 0
@@ -141,10 +141,10 @@ class TestWindow(object):
 
 class TestGlobalConfigs(object):
     def for_window(self, window):
-        return TestConfigs()
+        return MockConfigs()
 
 
-class TestConfigs(object):
+class MockConfigs(object):
     def __init__(self):
         self.all = [test_config]
 
@@ -181,7 +181,7 @@ class TestConfigs(object):
         pass
 
 
-class TestDocuments(object):
+class MockDocuments(object):
     def __init__(self):
         self._documents = []  # type: List[str]
         self._sessions = {}  # type: Dict[str, Session]
@@ -203,10 +203,10 @@ class TestDocuments(object):
 
 class TestDocumentHandlerFactory(object):
     def for_window(self, window, configs):
-        return TestDocuments()
+        return MockDocuments()
 
 
-class TestDiagnostics(object):
+class MockDiagnostics(object):
     def __init__(self):
         pass
 
@@ -218,8 +218,8 @@ class TestDiagnostics(object):
 
 
 def mock_start_session(window, project_path, config, on_created: 'Callable', on_ended: 'Callable'):
-    return create_session(test_config, project_path, dict(), TestSettings(),
-                          bootstrap_client=TestClient(),
+    return create_session(test_config, project_path, dict(), MockSettings(),
+                          bootstrap_client=MockClient(),
                           on_created=on_created,
                           on_ended=on_ended)
 
@@ -228,18 +228,18 @@ class WindowRegistryTests(unittest.TestCase):
 
     def test_can_get_window_state(self):
         windows = WindowRegistry(TestGlobalConfigs(), TestDocumentHandlerFactory(),
-                                 TestDiagnostics(), mock_start_session,
-                                 test_sublime, TestHandlerDispatcher())
-        test_window = TestWindow()
+                                 MockDiagnostics(), mock_start_session,
+                                 test_sublime, MockHandlerDispatcher())
+        test_window = MockWindow()
         wm = windows.lookup(test_window)
         self.assertIsNotNone(wm)
 
     def test_removes_window_state(self):
         global_events.reset()
-        test_window = TestWindow([[TestView(__file__)]])
+        test_window = MockWindow([[MockView(__file__)]])
         windows = WindowRegistry(TestGlobalConfigs(), TestDocumentHandlerFactory(),
-                                 TestDiagnostics(), mock_start_session,
-                                 test_sublime, TestHandlerDispatcher())
+                                 MockDiagnostics(), mock_start_session,
+                                 test_sublime, MockHandlerDispatcher())
         wm = windows.lookup(test_window)
         wm.start_active_views()
 
@@ -247,7 +247,7 @@ class WindowRegistryTests(unittest.TestCase):
 
         # closing views triggers window unload detection
         test_window.close()
-        global_events.publish("view.on_close", TestView(__file__))
+        global_events.publish("view.on_close", MockView(__file__))
         test_sublime._run_timeout()
 
         self.assertEqual(len(windows._windows), 0)
@@ -256,9 +256,9 @@ class WindowRegistryTests(unittest.TestCase):
 class WindowManagerTests(unittest.TestCase):
 
     def test_can_start_active_views(self):
-        docs = TestDocuments()
-        wm = WindowManager(TestWindow([[TestView(__file__)]]), TestConfigs(), docs,
-                           TestDiagnostics(), mock_start_session, test_sublime, TestHandlerDispatcher())
+        docs = MockDocuments()
+        wm = WindowManager(MockWindow([[MockView(__file__)]]), MockConfigs(), docs,
+                           MockDiagnostics(), mock_start_session, test_sublime, MockHandlerDispatcher())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -268,26 +268,26 @@ class WindowManagerTests(unittest.TestCase):
         self.assertListEqual(docs._documents, [__file__])
 
     def test_can_open_supported_view(self):
-        docs = TestDocuments()
-        window = TestWindow([[]])
-        wm = WindowManager(window, TestConfigs(), docs, TestDiagnostics(), mock_start_session, test_sublime,
-                           TestHandlerDispatcher())
+        docs = MockDocuments()
+        window = MockWindow([[]])
+        wm = WindowManager(window, MockConfigs(), docs, MockDiagnostics(), mock_start_session, test_sublime,
+                           MockHandlerDispatcher())
 
         wm.start_active_views()
         self.assertIsNone(wm.get_session(test_config.name))
         self.assertListEqual(docs._documents, [])
 
         # session must be started (todo: verify session is ready)
-        view = TestView(__file__)
+        view = MockView(__file__)
 
         wm.activate_view(view)
         self.assertIsNotNone(wm.get_session(test_config.name))
         self.assertEqual(len(docs._sessions), 1)
 
     def test_can_restart_sessions(self):
-        docs = TestDocuments()
-        wm = WindowManager(TestWindow([[TestView(__file__)]]), TestConfigs(), docs,
-                           TestDiagnostics(), mock_start_session, test_sublime, TestHandlerDispatcher())
+        docs = MockDocuments()
+        wm = WindowManager(MockWindow([[MockView(__file__)]]), MockConfigs(), docs,
+                           MockDiagnostics(), mock_start_session, test_sublime, MockHandlerDispatcher())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -306,10 +306,10 @@ class WindowManagerTests(unittest.TestCase):
 
     def test_ends_sessions_when_closed(self):
         global_events.reset()
-        docs = TestDocuments()
-        test_window = TestWindow([[TestView(__file__)]])
-        wm = WindowManager(test_window, TestConfigs(), docs,
-                           TestDiagnostics(), mock_start_session, test_sublime, TestHandlerDispatcher())
+        docs = MockDocuments()
+        test_window = MockWindow([[MockView(__file__)]])
+        wm = WindowManager(test_window, MockConfigs(), docs,
+                           MockDiagnostics(), mock_start_session, test_sublime, MockHandlerDispatcher())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -320,17 +320,17 @@ class WindowManagerTests(unittest.TestCase):
 
         # closing views triggers window unload detection
         test_window.close()
-        global_events.publish("view.on_close", TestView(__file__))
+        global_events.publish("view.on_close", MockView(__file__))
         test_sublime._run_timeout()
         self.assertEqual(len(wm._sessions), 0)
         self.assertEqual(len(docs._sessions), 0)
 
     def test_ends_sessions_when_quick_switching(self):
         global_events.reset()
-        docs = TestDocuments()
-        test_window = TestWindow([[TestView(__file__)]])
-        wm = WindowManager(test_window, TestConfigs(), docs,
-                           TestDiagnostics(), mock_start_session, test_sublime, TestHandlerDispatcher())
+        docs = MockDocuments()
+        test_window = MockWindow([[MockView(__file__)]])
+        wm = WindowManager(test_window, MockConfigs(), docs,
+                           MockDiagnostics(), mock_start_session, test_sublime, MockHandlerDispatcher())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -342,8 +342,8 @@ class WindowManagerTests(unittest.TestCase):
         # change project_path
         new_project_path = tempfile.gettempdir()
         test_window.set_folders([new_project_path])
-        # global_events.publish("view.on_close", TestView(__file__))
-        another_view = TestView(None)
+        # global_events.publish("view.on_close", MockView(__file__))
+        another_view = MockView(None)
         another_view.settings().set("syntax", "Unsupported Syntax")
         wm.activate_view(another_view)
 
@@ -354,10 +354,10 @@ class WindowManagerTests(unittest.TestCase):
         self.assertEqual(wm._project_path, new_project_path)
 
     def test_offers_restart_on_crash(self):
-        docs = TestDocuments()
-        wm = WindowManager(TestWindow([[TestView(__file__)]]), TestConfigs(), docs,
-                           TestDiagnostics(), mock_start_session, test_sublime,
-                           TestHandlerDispatcher())
+        docs = MockDocuments()
+        wm = WindowManager(MockWindow([[MockView(__file__)]]), MockConfigs(), docs,
+                           MockDiagnostics(), mock_start_session, test_sublime,
+                           MockHandlerDispatcher())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -375,10 +375,10 @@ class WindowManagerTests(unittest.TestCase):
         self.assertListEqual(docs._documents, [__file__])
 
     def test_invokes_language_handler(self):
-        docs = TestDocuments()
-        dispatcher = TestHandlerDispatcher()
-        wm = WindowManager(TestWindow([[TestView(__file__)]]), TestConfigs(), docs,
-                           TestDiagnostics(), mock_start_session, test_sublime,
+        docs = MockDocuments()
+        dispatcher = MockHandlerDispatcher()
+        wm = WindowManager(MockWindow([[MockView(__file__)]]), MockConfigs(), docs,
+                           MockDiagnostics(), mock_start_session, test_sublime,
                            dispatcher)
         wm.start_active_views()
 

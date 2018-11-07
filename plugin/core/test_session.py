@@ -11,7 +11,7 @@ except ImportError:
     pass
 
 
-class TestClient():
+class MockClient():
     def __init__(self) -> None:
         self.responses = {
             'initialize': {"capabilities": dict(testing=True, hoverProvider=True, textDocumentSync=True)},
@@ -69,7 +69,7 @@ class SessionTest(unittest.TestCase):
         created_callback = unittest.mock.Mock()
         session = self.assert_if_none(
             create_session(test_config, project_path, dict(), Settings(),
-                           bootstrap_client=TestClient(),
+                           bootstrap_client=MockClient(),
                            on_created=created_callback))
 
         self.assertEqual(session.state, ClientStates.READY)
@@ -85,7 +85,7 @@ class SessionTest(unittest.TestCase):
         ended_callback = unittest.mock.Mock()
         session = self.assert_if_none(
             create_session(test_config, project_path, dict(), Settings(),
-                           bootstrap_client=TestClient(),
+                           bootstrap_client=MockClient(),
                            on_created=created_callback,
                            on_ended=ended_callback))
 

@@ -7,6 +7,7 @@ from .types import ClientConfig, LanguageConfig
 from . import test_sublime as test_sublime
 # from .logging import set_debug_logging, debug
 import os
+import tempfile
 import unittest
 
 try:
@@ -339,7 +340,8 @@ class WindowManagerTests(unittest.TestCase):
         self.assertListEqual(docs._documents, [__file__])
 
         # change project_path
-        test_window.set_folders([os.path.dirname(__file__) + '/'])
+        new_project_path = tempfile.gettempdir()
+        test_window.set_folders([new_project_path])
         # global_events.publish("view.on_close", TestView(__file__))
         another_view = TestView(None)
         another_view.settings().set("syntax", "Unsupported Syntax")
@@ -347,6 +349,9 @@ class WindowManagerTests(unittest.TestCase):
 
         self.assertEqual(len(wm._sessions), 0)
         self.assertEqual(len(docs._sessions), 0)
+
+        # don't forget to check or we'll keep restarting sessions!
+        self.assertEqual(wm._project_path, new_project_path)
 
     def test_offers_restart_on_crash(self):
         docs = TestDocuments()

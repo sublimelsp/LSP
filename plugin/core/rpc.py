@@ -75,8 +75,7 @@ class Client(object):
         self.transport = transport
         self.transport.start(self.receive_payload, self.on_transport_closed)
         self.request_id = 0
-        self._response_handlers = {}  # type: Dict[int, Callable]
-        self._error_handlers = {}  # type: Dict[int, Callable]
+        self._response_handlers = {}  # type: Dict[int, Tuple[Optional[Callable], Optional[Callable]]]
         self._request_handlers = {}  # type: Dict[str, Callable]
         self._notification_handlers = {}  # type: Dict[str, Callable]
         self.exiting = False
@@ -89,10 +88,7 @@ class Client(object):
                      error_handler: 'Optional[Callable]' = None) -> None:
         self.request_id += 1
         debug(' --> ' + request.method)
-        if handler is not None:
-            self._response_handlers[self.request_id] = handler
-        if error_handler is not None:
-            self._error_handlers[self.request_id] = error_handler
+        self._response_handlers[self.request_id] = (handler, error_handler)
         self.send_payload(request.to_payload(self.request_id))
 
     def send_notification(self, notification: Notification) -> None:
@@ -152,21 +148,18 @@ class Client(object):
             self.handle_transport_failure()
 
     def response_handler(self, response: 'Dict[str, Any]') -> None:
-        handler_id = int(response["id"])  # dotty sends strings back :(
-        if 'result' in response and 'error' not in response:
-            result = response['result']
-            if self.settings.log_payloads:
-                debug('     ' + str(result))
-            if handler_id in self._response_handlers:
-                self._response_handlers[handler_id](result)
+        request_id = int(response["id"])
+        result = response.get("result", None)
+        error = response.get("error", None)
+        handler, error_handler = self._response_handlers.pop(request_id, (None, None))
+        if result is not None and error is None:
+            if handler:
+                handler(result)
             else:
-                debug("No handler found for id " + str(response.get("id")))
-        elif 'error' in response and 'result' not in response:
-            error = response['error']
-            if self.settings.log_payloads:
-                debug('     ' + str(error))
-            if handler_id in self._error_handlers:
-                self._error_handlers[handler_id](error)
+                debug("No handler found for id", request_id)
+        elif error is not None and result is None:
+            if error_handler:
+                error_handler(error)
             else:
                 self._error_display_handler(error.get("message"))
         else:

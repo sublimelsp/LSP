@@ -216,7 +216,7 @@ class TestDiagnostics(object):
         pass
 
 
-def test_start_session(window, project_path, config, on_created: 'Callable', on_ended: 'Callable'):
+def mock_start_session(window, project_path, config, on_created: 'Callable', on_ended: 'Callable'):
     return create_session(test_config, project_path, dict(), TestSettings(),
                           bootstrap_client=TestClient(),
                           on_created=on_created,
@@ -227,7 +227,7 @@ class WindowRegistryTests(unittest.TestCase):
 
     def test_can_get_window_state(self):
         windows = WindowRegistry(TestGlobalConfigs(), TestDocumentHandlerFactory(),
-                                 TestDiagnostics(), test_start_session,
+                                 TestDiagnostics(), mock_start_session,
                                  test_sublime, TestHandlerDispatcher())
         test_window = TestWindow()
         wm = windows.lookup(test_window)
@@ -237,7 +237,7 @@ class WindowRegistryTests(unittest.TestCase):
         global_events.reset()
         test_window = TestWindow([[TestView(__file__)]])
         windows = WindowRegistry(TestGlobalConfigs(), TestDocumentHandlerFactory(),
-                                 TestDiagnostics(), test_start_session,
+                                 TestDiagnostics(), mock_start_session,
                                  test_sublime, TestHandlerDispatcher())
         wm = windows.lookup(test_window)
         wm.start_active_views()
@@ -257,7 +257,7 @@ class WindowManagerTests(unittest.TestCase):
     def test_can_start_active_views(self):
         docs = TestDocuments()
         wm = WindowManager(TestWindow([[TestView(__file__)]]), TestConfigs(), docs,
-                           TestDiagnostics(), test_start_session, test_sublime, TestHandlerDispatcher())
+                           TestDiagnostics(), mock_start_session, test_sublime, TestHandlerDispatcher())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -269,7 +269,7 @@ class WindowManagerTests(unittest.TestCase):
     def test_can_open_supported_view(self):
         docs = TestDocuments()
         window = TestWindow([[]])
-        wm = WindowManager(window, TestConfigs(), docs, TestDiagnostics(), test_start_session, test_sublime,
+        wm = WindowManager(window, TestConfigs(), docs, TestDiagnostics(), mock_start_session, test_sublime,
                            TestHandlerDispatcher())
 
         wm.start_active_views()
@@ -286,7 +286,7 @@ class WindowManagerTests(unittest.TestCase):
     def test_can_restart_sessions(self):
         docs = TestDocuments()
         wm = WindowManager(TestWindow([[TestView(__file__)]]), TestConfigs(), docs,
-                           TestDiagnostics(), test_start_session, test_sublime, TestHandlerDispatcher())
+                           TestDiagnostics(), mock_start_session, test_sublime, TestHandlerDispatcher())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -308,7 +308,7 @@ class WindowManagerTests(unittest.TestCase):
         docs = TestDocuments()
         test_window = TestWindow([[TestView(__file__)]])
         wm = WindowManager(test_window, TestConfigs(), docs,
-                           TestDiagnostics(), test_start_session, test_sublime, TestHandlerDispatcher())
+                           TestDiagnostics(), mock_start_session, test_sublime, TestHandlerDispatcher())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -329,7 +329,7 @@ class WindowManagerTests(unittest.TestCase):
         docs = TestDocuments()
         test_window = TestWindow([[TestView(__file__)]])
         wm = WindowManager(test_window, TestConfigs(), docs,
-                           TestDiagnostics(), test_start_session, test_sublime, TestHandlerDispatcher())
+                           TestDiagnostics(), mock_start_session, test_sublime, TestHandlerDispatcher())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -351,7 +351,7 @@ class WindowManagerTests(unittest.TestCase):
     def test_offers_restart_on_crash(self):
         docs = TestDocuments()
         wm = WindowManager(TestWindow([[TestView(__file__)]]), TestConfigs(), docs,
-                           TestDiagnostics(), test_start_session, test_sublime,
+                           TestDiagnostics(), mock_start_session, test_sublime,
                            TestHandlerDispatcher())
         wm.start_active_views()
 
@@ -373,7 +373,7 @@ class WindowManagerTests(unittest.TestCase):
         docs = TestDocuments()
         dispatcher = TestHandlerDispatcher()
         wm = WindowManager(TestWindow([[TestView(__file__)]]), TestConfigs(), docs,
-                           TestDiagnostics(), test_start_session, test_sublime,
+                           TestDiagnostics(), mock_start_session, test_sublime,
                            dispatcher)
         wm.start_active_views()
 

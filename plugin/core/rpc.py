@@ -151,6 +151,8 @@ class Client(object):
         request_id = int(response["id"])
         result = response.get("result", None)
         error = response.get("error", None)
+        if self.settings.log_payloads:
+            debug('     ' + str(result))
         handler, error_handler = self._response_handlers.pop(request_id, (None, None))
         if result is not None and error is None:
             if handler:

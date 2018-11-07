@@ -23,11 +23,6 @@ class TestSettings(Settings):
 def return_result(message):
     return '{"id": 1, "result": {}}'
 
-    # parsed = json.loads(message)
-    # request_id = parsed.get("id")
-    # if request_id is not None:
-    #     return '{"id": ' + str(request_id) + ', "result": {}}'
-
 
 def return_error(message):
     return '{"id": 1, "error": {"message": "oops"}}'
@@ -90,6 +85,8 @@ class ClientTest(unittest.TestCase):
         responses = []
         client.send_request(req, lambda resp: responses.append(resp))
         self.assertGreater(len(responses), 0)
+        # Make sure the response handler dict does not grow.
+        self.assertEqual(len(client._response_handlers), 0)
 
     def test_client_notification(self):
         transport = TestTransport(notify_pong)
@@ -137,6 +134,7 @@ class ClientTest(unittest.TestCase):
         client.send_request(req, lambda resp: responses.append(resp))
         self.assertEqual(len(responses), 0)
         self.assertGreater(len(errors), 0)
+        self.assertEqual(len(client._response_handlers), 0)
 
     def test_handles_transport_closed_unexpectedly(self):
         set_exception_logging(False)
@@ -159,3 +157,4 @@ class ClientTest(unittest.TestCase):
         req = Request.initialize(dict())
         client.send_request(req, lambda resp: raise_error('handler failed'))
         # exception would fail test if not handled in client
+        self.assertEqual(len(client._response_handlers), 0)

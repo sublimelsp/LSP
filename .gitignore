@@ -1,5 +1,8 @@
 LSP.sublime-workspace
 LSP.sublime-project
 .mypy_cache
+.pytest_cache
+.tox
 .ropeproject
 *.pyc
+.coverage

@@ -3,7 +3,7 @@ import sublime
 from os.path import dirname
 from LSP.plugin.hover import _test_contents
 from LSP.plugin.core.types import ClientConfig, ClientStates, LanguageConfig
-from LSP.plugin.core.test_session import TestClient
+from LSP.plugin.core.test_session import MockClient
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.registry import windows  # , session_for_view
 from LSP.plugin.core.settings import client_configs
@@ -36,7 +36,7 @@ class LspHoverCommandTests(DeferrableTestCase):
         client_configs.update_configs()
         wm._configs.all.append(text_config)
 
-        session = Session(text_config, dirname(__file__), TestClient())
+        session = Session(text_config, dirname(__file__), MockClient())
         session.state = ClientStates.READY
         wm._sessions[text_config.name] = session
 

@@ -278,7 +278,6 @@ class WindowDocumentHandler(object):
                         params = {
                             "textDocument": {
                                 "uri": uri,
-                                "languageId": self._view_language(view, session.config.name),
                                 "version": document_state.inc_version(),
                             },
                             "contentChanges": [{

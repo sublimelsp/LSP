@@ -20,8 +20,12 @@ class MockSettings(Settings):
         self.show_view_status = True
 
 
-def return_result(message):
+def return_empty_dict_result(message):
     return '{"id": 1, "result": {}}'
+
+
+def return_null_result(message):
+    return '{"id": 1, "result": null}'
 
 
 def return_error(message):
@@ -76,7 +80,7 @@ class ClientTest(unittest.TestCase):
         self.assertTrue(transport.has_started)
 
     def test_client_request_response(self):
-        transport = MockTransport(return_result)
+        transport = MockTransport(return_empty_dict_result)
         settings = MockSettings()
         client = Client(transport, settings)
         self.assertIsNotNone(client)
@@ -87,6 +91,19 @@ class ClientTest(unittest.TestCase):
         self.assertGreater(len(responses), 0)
         # Make sure the response handler dict does not grow.
         self.assertEqual(len(client._response_handlers), 0)
+
+    def test_client_request_with_none_response(self):
+        transport = MockTransport(return_null_result)
+        settings = MockSettings()
+        client = Client(transport, settings)
+        self.assertIsNotNone(client)
+        self.assertTrue(transport.has_started)
+        req = Request.shutdown()
+        responses = []
+        errors = []
+        client.send_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
+        self.assertEqual(len(responses), 1)
+        self.assertEqual(len(errors), 0)
 
     def test_client_notification(self):
         transport = MockTransport(notify_pong)
@@ -121,7 +138,21 @@ class ClientTest(unittest.TestCase):
         transport.receive('{ "id": 1, "method": "ping"}')
         self.assertEqual(len(pings), 1)
 
-    def test_response_error(self):
+    def test_error_response_handler(self):
+        transport = MockTransport(return_error)
+        settings = MockSettings()
+        client = Client(transport, settings)
+        self.assertIsNotNone(client)
+        self.assertTrue(transport.has_started)
+        req = Request.initialize(dict())
+        errors = []
+        responses = []
+        client.send_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
+        self.assertEqual(len(responses), 0)
+        self.assertGreater(len(errors), 0)
+        self.assertEqual(len(client._response_handlers), 0)
+
+    def test_error_display_handler(self):
         transport = MockTransport(return_error)
         settings = MockSettings()
         client = Client(transport, settings)
@@ -149,7 +180,7 @@ class ClientTest(unittest.TestCase):
 
     def test_survives_handler_error(self):
         set_exception_logging(False)
-        transport = MockTransport(return_result)
+        transport = MockTransport(return_empty_dict_result)
         settings = MockSettings()
         client = Client(transport, settings)
         self.assertIsNotNone(client)

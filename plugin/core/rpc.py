@@ -154,18 +154,16 @@ class Client(object):
         if self.settings.log_payloads:
             debug('     ' + str(result))
         handler, error_handler = self._response_handlers.pop(request_id, (None, None))
-        if result is not None and error is None:
-            if handler:
-                handler(result)
-            else:
-                debug("No handler found for id", request_id)
-        elif error is not None and result is None:
+        if error is not None:
             if error_handler:
                 error_handler(error)
             else:
                 self._error_display_handler(error.get("message"))
         else:
-            debug('invalid response payload', response)
+            if handler:
+                handler(result)
+            else:
+                debug("No handler found for id", request_id)
 
     def on_request(self, request_method: str, handler: 'Callable') -> None:
         self._request_handlers[request_method] = handler

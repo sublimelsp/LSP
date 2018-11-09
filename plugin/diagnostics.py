@@ -302,9 +302,11 @@ def update_diagnostics_panel(window: sublime.Window):
                 except ValueError:
                     relative_file_path = file_path
                 if source_diagnostics:
-                    to_render.append(format_diagnostics(relative_file_path, source_diagnostics))
-                    if not auto_open_panel:
-                        auto_open_panel = has_relevant_diagnostics(source_diagnostics)
+                    formatted = format_diagnostics(relative_file_path, source_diagnostics)
+                    if formatted:
+                        to_render.append(formatted)
+                        if not auto_open_panel:
+                            auto_open_panel = has_relevant_diagnostics(source_diagnostics)
 
             panel.set_read_only(False)
             panel.run_command("lsp_update_panel", {"characters": "\n".join(to_render)})
@@ -335,9 +337,13 @@ def has_relevant_diagnostics(origin_diagnostics):
 
 
 def format_diagnostics(file_path, origin_diagnostics):
-    content = " ◌ {}:\n".format(file_path)
+    content = ""
     for origin, diagnostics in origin_diagnostics.items():
         for diagnostic in diagnostics:
-            item = format_diagnostic(diagnostic)
-            content += item + "\n"
-    return content
+            if diagnostic.severity <= settings.show_diagnostics_severity_level:
+                item = format_diagnostic(diagnostic)
+                content += item + "\n"
+    if content:
+        return " ◌ {}:\n{}".format(file_path, content)
+    else:
+        return None

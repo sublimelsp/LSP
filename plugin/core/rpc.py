@@ -149,17 +149,16 @@ class Client(object):
 
     def response_handler(self, response: 'Dict[str, Any]') -> None:
         request_id = int(response["id"])
-        result = response.get("result", None)
-        error = response.get("error", None)
         if self.settings.log_payloads:
-            debug('     ' + str(result))
+            debug('     ' + str(response.get("result", None)))
         handler, error_handler = self._response_handlers.pop(request_id, (None, None))
-        if result is not None and error is None:
+        if "result" in response and "error" not in response:
             if handler:
-                handler(result)
+                handler(response["result"])
             else:
                 debug("No handler found for id", request_id)
-        elif error is not None and result is None:
+        elif "result" not in response and "error" in response:
+            error = response["error"]
             if error_handler:
                 error_handler(error)
             else:

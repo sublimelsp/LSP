@@ -105,6 +105,28 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(len(responses), 1)
         self.assertEqual(len(errors), 0)
 
+    def test_client_should_reject_response_when_both_result_and_error_are_present(self):
+        transport = MockTransport(lambda x: '{"id": 1, "result": {"key": "value"}, "error": {"message": "oops"}}')
+        settings = MockSettings()
+        client = Client(transport, settings)
+        req = Request.initialize(dict())
+        responses = []
+        errors = []
+        client.send_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
+        self.assertEqual(len(responses), 0)
+        self.assertEqual(len(errors), 0)
+
+    def test_client_should_reject_response_when_both_result_and_error_keys_are_not_present(self):
+        transport = MockTransport(lambda x: '{"id": 1}')
+        settings = MockSettings()
+        client = Client(transport, settings)
+        req = Request.initialize(dict())
+        responses = []
+        errors = []
+        client.send_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
+        self.assertEqual(len(responses), 0)
+        self.assertEqual(len(errors), 0)
+
     def test_client_notification(self):
         transport = MockTransport(notify_pong)
         settings = MockSettings()

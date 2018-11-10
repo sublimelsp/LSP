@@ -263,8 +263,6 @@ class WindowManagerTests(unittest.TestCase):
 
         # session must be started (todo: verify session is ready)
         self.assertIsNotNone(wm.get_session(test_config.name))
-
-        #
         self.assertListEqual(docs._documents, [__file__])
 
     def test_can_open_supported_view(self):

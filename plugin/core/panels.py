@@ -1,6 +1,12 @@
 import sublime
 import sublime_plugin
 
+try:
+    from typing import Optional
+    assert Optional
+except ImportError:
+    pass
+
 
 OUTPUT_PANEL_SETTINGS = {
     "auto_indent": False,
@@ -18,7 +24,7 @@ OUTPUT_PANEL_SETTINGS = {
 }
 
 
-def create_output_panel(window: sublime.Window, name: str) -> sublime.View:
+def create_output_panel(window: sublime.Window, name: str) -> 'Optional[sublime.View]':
     panel = window.create_output_panel(name)
     settings = panel.settings()
     for key, value in OUTPUT_PANEL_SETTINGS.items():
@@ -26,9 +32,29 @@ def create_output_panel(window: sublime.Window, name: str) -> sublime.View:
     return panel
 
 
-def destroy_output_panels(window: sublime.Window):
+def destroy_output_panels(window: sublime.Window) -> None:
     for panel_name in ["references", "diagnostics"]:
         window.destroy_output_panel(panel_name)
+
+
+def create_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
+                 syntax: str) -> 'Optional[sublime.View]':
+    panel = create_output_panel(window, name)
+    if not panel:
+        return None
+    panel.settings().set("result_file_regex", result_file_regex)
+    panel.settings().set("result_line_regex", result_line_regex)
+    panel.assign_syntax(syntax)
+    # Call create_output_panel a second time after assigning the above
+    # settings, so that it'll be picked up as a result buffer
+    # see: Packages/Default/exec.py#L228-L230
+    panel = window.create_output_panel(name)
+    return panel
+
+
+def ensure_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
+                 syntax: str) -> 'Optional[sublime.View]':
+    return window.find_output_panel(name) or create_panel(window, name, result_file_regex, result_line_regex, syntax)
 
 
 class LspClearPanelCommand(sublime_plugin.TextCommand):

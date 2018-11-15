@@ -9,15 +9,15 @@ try:
 except ImportError:
     pass
 
-from .core.settings import settings, PLUGIN_NAME
-from .core.protocol import Diagnostic, DiagnosticSeverity
-from .core.events import global_events
 from .core.configurations import is_supported_syntax
 from .core.diagnostics import DiagnosticsUpdate, get_window_diagnostics, get_line_diagnostics
-from .core.workspace import get_project_path
-from .core.panels import create_output_panel
-from .core.views import range_to_region
+from .core.events import global_events
 from .core.logging import debug
+from .core.panels import ensure_panel
+from .core.protocol import Diagnostic, DiagnosticSeverity
+from .core.settings import settings, PLUGIN_NAME
+from .core.views import range_to_region
+from .core.workspace import get_project_path
 
 
 diagnostic_severity_names = {
@@ -257,21 +257,9 @@ class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
             self.window.run_command("show_panel", {"panel": "output.diagnostics"})
 
 
-def create_diagnostics_panel(window):
-    panel = create_output_panel(window, "diagnostics")
-    panel.settings().set("result_file_regex", r"^\s*\S\s+(\S.*):$")
-    panel.settings().set("result_line_regex", r"^\s+([0-9]+):?([0-9]+).*$")
-    panel.assign_syntax("Packages/" + PLUGIN_NAME +
-                        "/Syntaxes/Diagnostics.sublime-syntax")
-    # Call create_output_panel a second time after assigning the above
-    # settings, so that it'll be picked up as a result buffer
-    # see: Packages/Default/exec.py#L228-L230
-    panel = window.create_output_panel("diagnostics")
-    return panel
-
-
-def ensure_diagnostics_panel(window: sublime.Window):
-    return window.find_output_panel("diagnostics") or create_diagnostics_panel(window)
+def ensure_diagnostics_panel(window: sublime.Window) -> 'Optional[sublime.View]':
+    return ensure_panel(window, "diagnostics", r"^\s*\S\s+(\S.*):$", r"^\s+([0-9]+):?([0-9]+).*$",
+                        "Packages/" + PLUGIN_NAME + "/Syntaxes/Diagnostics.sublime-syntax")
 
 
 def update_diagnostics_panel(window: sublime.Window):

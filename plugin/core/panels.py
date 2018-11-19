@@ -1,3 +1,5 @@
+from .settings import settings
+
 import sublime
 import sublime_plugin
 
@@ -6,7 +8,7 @@ OUTPUT_PANEL_SETTINGS = {
     "auto_indent": False,
     "draw_indent_guides": False,
     "draw_white_space": "None",
-    "gutter": False,
+    "gutter": True,
     'is_widget': True,
     "line_numbers": False,
     "margin": 3,
@@ -14,7 +16,8 @@ OUTPUT_PANEL_SETTINGS = {
     "scroll_past_end": False,
     "tab_size": 4,
     "translate_tabs_to_spaces": False,
-    "word_wrap": False
+    "word_wrap": False,
+    "fold_buttons": True
 }
 
 
@@ -27,8 +30,8 @@ def create_output_panel(window: sublime.Window, name: str) -> sublime.View:
 
 
 def destroy_output_panels(window: sublime.Window):
-    for panel_name in ["references", "diagnostics"]:
-        window.destroy_output_panel(panel_name)
+    window.destroy_output_panel("references")
+    window.destroy_output_panel("diagnostics")
 
 
 class LspClearPanelCommand(sublime_plugin.TextCommand):
@@ -43,13 +46,26 @@ class LspClearPanelCommand(sublime_plugin.TextCommand):
 
 
 class LspUpdatePanelCommand(sublime_plugin.TextCommand):
-    """
-    A update_panel command to update the error panel with new text.
-    """
+    """ A update_panel command to update the error panel with new text """
 
     def run(self, edit, characters):
-        self.view.replace(edit, sublime.Region(0, self.view.size()), characters)
+        view = self.view
+        if settings.fold_diagnostics:
+            # get the text of the first line of every folded region
+            folded_regions = (view.substr(view.line(fr.a)) for fr in view.unfold(sublime.Region(0, view.size())))
+            view.replace(edit, sublime.Region(0, view.size()), characters)
+
+            for fr in folded_regions:
+                # get all file lines
+                for ln in view.find_by_selector("meta.diagnostic.preamble.lsp"):
+                    if view.substr(ln) == fr:
+                        # fold the region spanning from the end of the line of the
+                        # filename to the to the end of the indented body
+                        view.fold(sublime.Region(ln.b, view.indented_region(ln.b + 2).b - 1))
+                        break
+
+        else:
+            view.replace(edit, sublime.Region(0, view.size()), characters)
 
         # Clear the selection
-        selection = self.view.sel()
-        selection.clear()
+        view.sel().clear()

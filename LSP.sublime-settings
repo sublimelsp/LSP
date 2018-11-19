@@ -274,6 +274,9 @@
   // depending on available diagnostics.
   "auto_show_diagnostics_panel": true,
 
+  // enable folding diagnostics in the diagnostics panel
+  "fold_diagnostics": false,
+
   // Open the diagnostics panel automatically
   // when diagnostics level is equal to or less than:
   // error: 1

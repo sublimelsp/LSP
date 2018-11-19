@@ -1,8 +1,21 @@
-
 from .core.protocol import Request
-from .core.url import filename_to_uri
 from .core.registry import client_for_view, LspTextCommand
+from .core.types import ViewLike
+from .core.url import filename_to_uri
 from .core.views import region_to_range
+
+try:
+    from typing import Dict, Any
+    assert Dict and Any
+except ImportError:
+    pass
+
+
+def options_for_view(view: ViewLike) -> 'Dict[str, Any]':
+    return {
+        "tabSize": view.settings().get("tab_size", 4),
+        "insertSpaces": True
+    }
 
 
 class LspFormatDocumentCommand(LspTextCommand):
@@ -20,10 +33,7 @@ class LspFormatDocumentCommand(LspTextCommand):
                 "textDocument": {
                     "uri": filename_to_uri(self.view.file_name())
                 },
-                "options": {
-                    "tabSize": self.view.settings().get("tab_size", 4),
-                    "insertSpaces": True
-                }
+                "options": options_for_view(self.view)
             }
             request = Request.formatting(params)
             client.send_request(
@@ -55,10 +65,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
                     "uri": filename_to_uri(self.view.file_name())
                 },
                 "range": region_to_range(self.view, region).to_lsp(),
-                "options": {
-                    "tabSize": self.view.settings().get("tab_size", 4),
-                    "insertSpaces": True
-                }
+                "options": options_for_view(self.view)
             }
             client.send_request(Request.rangeFormatting(params),
                                 lambda response: self.view.run_command('lsp_apply_document_edit',

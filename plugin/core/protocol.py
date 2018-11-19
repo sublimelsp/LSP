@@ -4,7 +4,6 @@ try:
 except ImportError:
     pass
 
-from collections import OrderedDict
 
 TextDocumentSyncKindNone = 0
 TextDocumentSyncKindFull = 1
@@ -143,18 +142,19 @@ class Request:
     def __repr__(self) -> str:
         return self.method + " " + str(self.params)
 
-    def to_payload(self, id) -> dict:
-        r = OrderedDict()  # type: OrderedDict[str, Any]
-        r["jsonrpc"] = "2.0"
-        r["id"] = id
-        r["method"] = self.method
+    def to_payload(self, id) -> 'Dict[str, Any]':
+        r = {
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": self.method
+        }  # type: Dict[str, Any]
         if self.params is not None:
             r["params"] = self.params
         return r
 
 
 class Notification:
-    def __init__(self, method: str, params: dict={}) -> None:
+    def __init__(self, method: str, params: dict = {}) -> None:
         self.method = method
         self.params = params
         self.jsonrpc = "2.0"
@@ -190,10 +190,11 @@ class Notification:
     def __repr__(self) -> str:
         return self.method + " " + str(self.params)
 
-    def to_payload(self) -> dict:
-        r = OrderedDict()  # type: OrderedDict[str, Any]
-        r["jsonrpc"] = "2.0"
-        r["method"] = self.method
+    def to_payload(self) -> 'Dict[str, Any]':
+        r = {
+            "jsonrpc": "2.0",
+            "method": self.method
+        }  # type: Dict[str, Any]
         if self.params is not None:
             r["params"] = self.params
         else:
@@ -213,11 +214,11 @@ class Point(object):
     def from_lsp(cls, point: dict) -> 'Point':
         return Point(point['line'], point['character'])
 
-    def to_lsp(self) -> dict:
-        r = OrderedDict()  # type: OrderedDict[str, Any]
-        r['line'] = self.row
-        r['character'] = self.col
-        return r
+    def to_lsp(self) -> 'Dict[str, Any]':
+        return {
+            "line": self.row,
+            "character": self.col
+        }
 
 
 class Range(object):
@@ -232,11 +233,11 @@ class Range(object):
     def from_lsp(cls, range: dict) -> 'Range':
         return Range(Point.from_lsp(range['start']), Point.from_lsp(range['end']))
 
-    def to_lsp(self) -> dict:
-        r = OrderedDict()  # type: OrderedDict[str, Any]
-        r['start'] = self.start.to_lsp()
-        r['end'] = self.end.to_lsp()
-        return r
+    def to_lsp(self) -> 'Dict[str, Any]':
+        return {
+            'start': self.start.to_lsp(),
+            'end': self.end.to_lsp()
+        }
 
 
 class Diagnostic(object):
@@ -260,5 +261,5 @@ class Diagnostic(object):
             lsp_diagnostic
         )
 
-    def to_lsp(self)-> dict:
+    def to_lsp(self) -> 'Dict[str, Any]':
         return self._lsp_diagnostic

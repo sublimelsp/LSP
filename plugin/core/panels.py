@@ -1,3 +1,5 @@
+from .settings import settings
+
 import sublime
 import sublime_plugin
 
@@ -44,24 +46,26 @@ class LspClearPanelCommand(sublime_plugin.TextCommand):
 
 
 class LspUpdatePanelCommand(sublime_plugin.TextCommand):
-    """
-    A update_panel command to update the error panel with new text.
-    """
+    """ A update_panel command to update the error panel with new text """
 
     def run(self, edit, characters):
         view = self.view
-        # get the text of the first line of every folded region
-        folded_regions = (view.substr(view.line(fr.a)) for fr in view.unfold(sublime.Region(0, view.size())))
-        view.replace(edit, sublime.Region(0, view.size()), characters)
+        if settings.fold_diagnostics:
+            # get the text of the first line of every folded region
+            folded_regions = (view.substr(view.line(fr.a)) for fr in view.unfold(sublime.Region(0, view.size())))
+            view.replace(edit, sublime.Region(0, view.size()), characters)
 
-        for fr in folded_regions:
-            # get all file lines
-            for ln in view.find_by_selector("meta.diagnostic.preamble.lsp"):
-                if view.substr(ln) == fr:
-                    # fold the region spanning from the end of the line of the
-                    # filename to the to the end of the indented body
-                    view.fold(sublime.Region(ln.b, view.indented_region(ln.b + 2).b - 1))
-                    break
+            for fr in folded_regions:
+                # get all file lines
+                for ln in view.find_by_selector("meta.diagnostic.preamble.lsp"):
+                    if view.substr(ln) == fr:
+                        # fold the region spanning from the end of the line of the
+                        # filename to the to the end of the indented body
+                        view.fold(sublime.Region(ln.b, view.indented_region(ln.b + 2).b - 1))
+                        break
+
+        else:
+            view.replace(edit, sublime.Region(0, view.size()), characters)
 
         # Clear the selection
         view.sel().clear()

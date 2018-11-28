@@ -47,6 +47,7 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings):
     settings.show_view_status = read_bool_setting(settings_obj, "show_view_status", True)
     settings.auto_show_diagnostics_panel = read_bool_setting(settings_obj, "auto_show_diagnostics_panel", True)
     settings.auto_show_diagnostics_panel_level = read_int_setting(settings_obj, "auto_show_diagnostics_panel_level", 3)
+    settings.fold_diagnostics = read_bool_setting(settings_obj, "fold_diagnostics", False)
     settings.show_diagnostics_phantoms = read_bool_setting(settings_obj, "show_diagnostics_phantoms", False)
     settings.show_diagnostics_count_in_view_status = read_bool_setting(settings_obj,
                                                                        "show_diagnostics_count_in_view_status", False)
@@ -68,7 +69,6 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings):
     settings.log_server = read_bool_setting(settings_obj, "log_server", True)
     settings.log_stderr = read_bool_setting(settings_obj, "log_stderr", False)
     settings.log_payloads = read_bool_setting(settings_obj, "log_payloads", False)
-    settings.fold_diagnostics = read_bool_setting(settings_obj, "fold_diagnostics", False)
 
 class ClientConfigs(object):
 

@@ -15,6 +15,7 @@ class Settings(object):
         self.show_view_status = True
         self.auto_show_diagnostics_panel = True
         self.auto_show_diagnostics_panel_level = 3
+        self.fold_diagnostics = False
         self.show_diagnostics_phantoms = False
         self.show_diagnostics_count_in_view_status = False
         self.show_diagnostics_in_view_status = True

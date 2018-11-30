@@ -1,4 +1,3 @@
-from .registry import client_for_view
 from .events import global_events
 from .logging import debug
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike, LanguageConfig, config_supports_syntax
@@ -384,22 +383,20 @@ class WindowManager(object):
             debug("window {} added session {}".format(self._window.id(), config.name))
             self._sessions[config.name] = session
 
-    def _handle_message_request(self, params: dict):
+    def _handle_message_request(self, params: dict, client):
         actions = params.get("actions", [])
         titles = list(action.get("title") for action in actions)
-        client = client_for_view(self._window.active_view())
-
-        def handle_command_response(self, response):
-            print(response)
+        def handle_command_response(response):
             pass
 
-        def call_back(self,index):
+        def call_back(index):
             if index == -1:
                 # noop; nothing was selected
                 # e.g. the user pressed escape
                 return
+            cmd = {"command" : titles[index]}
             client.send_request(
-                    Request.executeCommand(titles[index]),
+                    Request.executeCommand(cmd),
                     handle_command_response)
 
         self._sublime.active_window().show_quick_panel(titles, call_back)
@@ -443,7 +440,7 @@ class WindowManager(object):
 
         client.on_request(
             "window/showMessageRequest",
-            lambda params: self._handle_message_request(params))
+            lambda params: self._handle_message_request(params, client))
 
         client.on_notification(
             "textDocument/publishDiagnostics",

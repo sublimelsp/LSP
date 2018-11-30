@@ -398,8 +398,8 @@ class WindowManager(object):
 
             cmd = {"command": titles[index]}
             client.send_request(
-                    Request.executeCommand(cmd),
-                    handle_command_response)
+                Request.executeCommand(cmd),
+                handle_command_response)
 
         self._sublime.active_window().show_quick_panel(titles, call_back)
 

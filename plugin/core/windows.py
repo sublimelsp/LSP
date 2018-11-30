@@ -386,6 +386,7 @@ class WindowManager(object):
     def _handle_message_request(self, params: dict, client):
         actions = params.get("actions", [])
         titles = list(action.get("title") for action in actions)
+
         def handle_command_response(response):
             pass
 
@@ -394,7 +395,8 @@ class WindowManager(object):
                 # noop; nothing was selected
                 # e.g. the user pressed escape
                 return
-            cmd = {"command" : titles[index]}
+
+            cmd = {"command": titles[index]}
             client.send_request(
                     Request.executeCommand(cmd),
                     handle_command_response)

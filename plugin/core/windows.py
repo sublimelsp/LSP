@@ -1,7 +1,9 @@
+from .registry import client_for_view
 from .events import global_events
 from .logging import debug
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike, LanguageConfig, config_supports_syntax
 from .protocol import Notification
+from .protocol import Request
 from .sessions import Session
 from .url import filename_to_uri
 from .workspace import get_project_path
@@ -383,11 +385,24 @@ class WindowManager(object):
             self._sessions[config.name] = session
 
     def _handle_message_request(self, params: dict):
-        message = params.get("message", "(missing message)")
         actions = params.get("actions", [])
-        addendum = "TODO: showMessageRequest with actions:"
         titles = list(action.get("title") for action in actions)
-        self._sublime.message_dialog("\n".join([message, addendum] + titles))
+        client = client_for_view(self._window.active_view())
+
+        def handle_command_response(self, response):
+            print(response)
+            pass
+
+        def call_back(self,index):
+            if index == -1:
+                # noop; nothing was selected
+                # e.g. the user pressed escape
+                return
+            client.send_request(
+                    Request.executeCommand(titles[index]),
+                    handle_command_response)
+
+        self._sublime.active_window().show_quick_panel(titles, call_back)
 
     def restart_sessions(self):
         self._restarting = True

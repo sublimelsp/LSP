@@ -1,7 +1,7 @@
 from .events import global_events
 from .logging import debug
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike, LanguageConfig, config_supports_syntax
-from .protocol import Notification
+from .protocol import Notification, Response
 from .protocol import Request
 from .sessions import Session
 from .url import filename_to_uri
@@ -383,25 +383,19 @@ class WindowManager(object):
             debug("window {} added session {}".format(self._window.id(), config.name))
             self._sessions[config.name] = session
 
-    def _handle_message_request(self, params: dict, client):
+    def _handle_message_request(self, params: dict, client, request_id):
         actions = params.get("actions", [])
         titles = list(action.get("title") for action in actions)
 
-        def handle_command_response(response):
-            pass
+        def send_user_choice(index):
+            if index != -1:
+                response = Response(request_id, {"title": titles[index]})
+                client.send_reponse(response)
+             # otherwise noop; nothing was selected
+             # e.g. the user pressed escape
 
-        def call_back(index):
-            if index == -1:
-                # noop; nothing was selected
-                # e.g. the user pressed escape
-                return
-
-            cmd = {"command": titles[index]}
-            client.send_request(
-                Request.executeCommand(cmd),
-                handle_command_response)
-
-        self._sublime.active_window().show_quick_panel(titles, call_back)
+        if actions:
+            self._sublime.active_window().show_quick_panel(titles, send_user_choice)
 
     def restart_sessions(self):
         self._restarting = True
@@ -442,7 +436,7 @@ class WindowManager(object):
 
         client.on_request(
             "window/showMessageRequest",
-            lambda params: self._handle_message_request(params, client))
+            lambda params, request_id: self._handle_message_request(params, client, request_id))
 
         client.on_notification(
             "textDocument/publishDiagnostics",

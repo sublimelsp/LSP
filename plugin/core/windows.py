@@ -1,10 +1,11 @@
 from .events import global_events
 from .logging import debug
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike, LanguageConfig, config_supports_syntax
-from .protocol import Notification
+from .protocol import Notification, Response
 from .sessions import Session
 from .url import filename_to_uri
 from .workspace import get_project_path
+from .rpc import Client
 try:
     from typing_extensions import Protocol
     from typing import Optional, List, Callable, Dict, Any
@@ -382,12 +383,18 @@ class WindowManager(object):
             debug("window {} added session {}".format(self._window.id(), config.name))
             self._sessions[config.name] = session
 
-    def _handle_message_request(self, params: dict):
-        message = params.get("message", "(missing message)")
+    def _handle_message_request(self, params: dict, client: Client, request_id: int) -> None:
         actions = params.get("actions", [])
-        addendum = "TODO: showMessageRequest with actions:"
         titles = list(action.get("title") for action in actions)
-        self._sublime.message_dialog("\n".join([message, addendum] + titles))
+
+        def send_user_choice(index):
+            # otherwise noop; nothing was selected e.g. the user pressed escape
+            if index != -1:
+                response = Response(request_id, {"title": titles[index]})
+                client.send_response(response)
+
+        if actions:
+            self._sublime.active_window().show_quick_panel(titles, send_user_choice)
 
     def restart_sessions(self):
         self._restarting = True
@@ -424,11 +431,11 @@ class WindowManager(object):
         # handle server requests and notifications
         client.on_request(
             "workspace/applyEdit",
-            lambda params: self._apply_workspace_edit(params))
+            lambda params, request_id: self._apply_workspace_edit(params))
 
         client.on_request(
             "window/showMessageRequest",
-            lambda params: self._handle_message_request(params))
+            lambda params, request_id: self._handle_message_request(params, client, request_id))
 
         client.on_notification(
             "textDocument/publishDiagnostics",

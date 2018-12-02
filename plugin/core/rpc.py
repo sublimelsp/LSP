@@ -95,7 +95,7 @@ class Client(object):
         debug(' --> ' + notification.method)
         self.send_payload(notification.to_payload())
 
-    def send_reponse(self, response: Response) -> None:
+    def send_response(self, response: Response) -> None:
         self.send_payload(response.to_payload())
 
     def exit(self) -> None:

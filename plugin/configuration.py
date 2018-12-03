@@ -87,10 +87,10 @@ class LspExecuteCommand(sublime_plugin.WindowCommand):
         if len(self._commands) > 0:
             self.window.show_quick_panel(self._commands, self._on_done)
 
-    def _handle_response(response):
+    def _handle_response(self, response: 'Optional[Any]') -> None:
         pass
 
-    def _on_done(self, index):
+    def _on_done(self, index: int) -> None:
         if index > -1:
             command = self._commands[index]
             client = client_for_view(self.window.active_view())

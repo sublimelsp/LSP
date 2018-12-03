@@ -153,6 +153,21 @@ class Request:
         return r
 
 
+class Response:
+    def __init__(self, request_id: int, result: 'Dict[str, Any]') -> None:
+        self.request_id = request_id
+        self.result = result
+        self.jsonrpc = "2.0"
+
+    def to_payload(self) -> 'Dict[str, Any]':
+        r = {
+            "id": self.request_id,
+            "jsonrpc": self.jsonrpc,
+            "result": self.result
+        }
+        return r
+
+
 class Notification:
     def __init__(self, method: str, params: dict = {}) -> None:
         self.method = method

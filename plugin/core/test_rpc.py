@@ -155,7 +155,7 @@ class ClientTest(unittest.TestCase):
 
         client.on_request(
             "ping",
-            lambda params: pings.append(params))
+            lambda params, request_id: pings.append(params))
 
         transport.receive('{ "id": 1, "method": "ping"}')
         self.assertEqual(len(pings), 1)

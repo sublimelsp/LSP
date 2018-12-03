@@ -8,7 +8,7 @@ from .core.configurations import (
     create_window_configs,
     get_global_client_config
 )
-from .core.registry import config_for_scope, windows, client_for_view
+from .core.registry import config_for_scope, windows, client_for_view, LspTextCommand
 from .core.events import global_events
 from .core.workspace import enable_in_project, disable_in_project
 from .core.protocol import Request
@@ -74,18 +74,18 @@ class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
             self.window.status_message("{} enabled, starting server...".format(config_name))
 
 
-class LspExecuteCommand(sublime_plugin.WindowCommand):
-    def __init__(self, window):
-        super().__init__(window)
+class LspExecuteCommand(LspTextCommand):
+    def __init__(self, view):
+        super().__init__(view)
 
-    def run(self):
+    def run(self, edit) -> None:
         self._commands = []   # type: List[str]
         for config in client_configs.all:
             if config.commands:
                 self._commands.extend(config.commands)
 
         if len(self._commands) > 0:
-            self.window.show_quick_panel(self._commands, self._on_done)
+            self.view.window().show_quick_panel(self._commands, self._on_done)
 
     def _handle_response(self, response: 'Optional[Any]') -> None:
         pass
@@ -93,7 +93,7 @@ class LspExecuteCommand(sublime_plugin.WindowCommand):
     def _on_done(self, index: int) -> None:
         if index > -1:
             command = self._commands[index]
-            client = client_for_view(self.window.active_view())
+            client = client_for_view(self.view)
             if client:
                 request = {
                     "command": command

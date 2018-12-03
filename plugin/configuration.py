@@ -8,9 +8,10 @@ from .core.configurations import (
     create_window_configs,
     get_global_client_config
 )
-from .core.registry import config_for_scope, windows
+from .core.registry import config_for_scope, windows, client_for_view
 from .core.events import global_events
 from .core.workspace import enable_in_project, disable_in_project
+from .core.protocol import Request
 
 try:
     from typing import List, Optional, Dict, Any
@@ -71,6 +72,33 @@ class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
 
             sublime.set_timeout_async(lambda: wm.start_active_views(), 500)
             self.window.status_message("{} enabled, starting server...".format(config_name))
+
+
+class LspExecuteCommand(sublime_plugin.WindowCommand):
+    def __init__(self, window):
+        super().__init__(window)
+
+    def run(self):
+        self._commands = []   # type: List[str]
+        for config in client_configs.all:
+            if config.commands:
+                self._commands.extend(config.commands)
+
+        if len(self._commands) > 0:
+            self.window.show_quick_panel(self._commands, self._on_done)
+
+    def _handle_response(response):
+        pass
+
+    def _on_done(self, index):
+        if index > -1:
+            command = self._commands[index]
+            client = client_for_view(self.window.active_view())
+            if client:
+                request = {
+                    "command": command
+                }
+                client.send_request(Request.executeCommand(request), self._handle_response)
 
 
 class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):

@@ -59,5 +59,9 @@
     {
         "caption": "LSP: Rename Symbol",
         "command": "lsp_symbol_rename"
+    },
+    {
+        "caption": "LSP: Execute command",
+        "command": "lsp_execute"
     }
 ]

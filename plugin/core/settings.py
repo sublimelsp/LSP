@@ -164,7 +164,8 @@ def read_client_config(name: str, client_config: 'Dict') -> ClientConfig:
         client_config.get("initializationOptions", dict()),
         client_config.get("settings", dict()),
         client_config.get("env", dict()),
-        client_config.get("tcp_host", None)
+        client_config.get("tcp_host", None),
+        client_config.get("commands", [])
     )
 
 

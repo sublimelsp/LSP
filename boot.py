@@ -17,7 +17,7 @@ from .plugin.signature_help import *
 from .plugin.code_actions import *
 from .plugin.symbols import *
 from .plugin.rename import *
-
+from .plugin.execute_command import *
 
 def plugin_loaded():
     startup()

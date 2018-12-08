@@ -1,37 +1,69 @@
 import os
 try:
-    from typing import List, Optional, Any
-    assert List and Optional and Any
+    from typing import List, Optional, Any, Iterable
+    assert List and Optional and Any and Iterable
 except ImportError:
     pass
 
 from .logging import debug
-# from .types import WindowLike
+from .types import ViewLike
+
+
+def get_filename_from_view(view: ViewLike) -> 'Optional[str]':
+    if not view:
+        debug("No view is active in current window")
+        return None  # https://github.com/tomv564/LSP/issues/219
+    filename = view.file_name()
+    if not filename:
+        debug("Couldn't determine project directory since no folders are open",
+              "and the current file isn't saved on the disk.")
+    return filename
+
+
+def get_directory_name(view: ViewLike) -> 'Optional[str]':
+    filename = get_filename_from_view(view)
+    if filename:
+        project_path = os.path.dirname(filename)
+        return project_path
+    return None
+
+
+def find_path_among_multi_folders(folders: 'Iterable[str]',
+                                  view: ViewLike) -> 'Optional[str]':
+    filename = get_filename_from_view(view)
+    if not filename:
+        return None
+    folders = [os.path.realpath(f) for f in folders]
+    file = view.file_name()
+    if not file:
+        return None
+    file = os.path.realpath(file)
+    while file not in folders:
+        file = os.path.dirname(file)
+        if os.path.dirname(file) == file:
+            # We're at the root of the filesystem.
+            file = None
+            break
+    debug('project path is', file)
+    return file
 
 
 def get_project_path(window: 'Any') -> 'Optional[str]':
     """
-    Returns the first project folder or the parent folder of the active view
+    Returns the project folder or the parent folder of the active view
     """
-    if len(window.folders()) == 1:
+    if not window:
+        return None
+    num_folders = len(window.folders())
+    if num_folders == 0:
+        return get_directory_name(window.active_view())
+    elif num_folders == 1:
         folder_paths = window.folders()
         return folder_paths[0]
-    else:
-        view = window.active_view()
-        if view:
-            filename = view.file_name()
-            if filename:
-                project_path = os.path.dirname(filename)
-                debug("Couldn't determine project directory since no folders are open!",
-                      "Using", project_path, "as a fallback.")
-                return project_path
-            else:
-                debug("Couldn't determine project directory since no folders are open",
-                      "and the current file isn't saved on the disk.")
-                return None
-        else:
-            debug("No view is active in current window")
-            return None  # https://github.com/tomv564/LSP/issues/219
+    else:  # num_folders > 1
+        return find_path_among_multi_folders(
+            window.folders(),
+            window.active_view())
 
 
 def get_common_parent(paths: 'List[str]') -> str:

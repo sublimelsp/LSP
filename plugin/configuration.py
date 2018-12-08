@@ -78,7 +78,7 @@ class LspExecuteCommand(LspTextCommand):
     def __init__(self, view):
         super().__init__(view)
 
-    def run(self, edit) -> None:
+    def run(self, lsp_command) -> None:
         self._commands = []   # type: List[str]
         for config in client_configs.all:
             if config.commands:

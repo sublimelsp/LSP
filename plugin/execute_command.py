@@ -18,9 +18,7 @@ class LspExecuteCommand(LspTextCommand):
 
     def run(self, command_name) -> None:
         client = client_for_view(self.view)
-        if not client:
-            self.view.show_popup("No connection with server")
-        else:
+        if client:
             self._command_names = []   # type: List[str]
             self._command_args = dict()   # type: Dict[str, Dict[str, Any]]
             for config in client_configs.all:

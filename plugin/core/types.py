@@ -60,11 +60,17 @@ class LanguageConfig(object):
         self.syntaxes = syntaxes
 
 
+class Command(object):
+    def __init__(self, name: str, args: 'Dict[str, Any]'):
+        self.name = name
+        self.args = args
+
+
 class ClientConfig(object):
     def __init__(self, name: str, binary_args: 'List[str]', tcp_port: 'Optional[int]', scopes=[],
                  syntaxes=[], languageId: 'Optional[str]'=None,
                  languages: 'List[LanguageConfig]'=[], enabled: bool=True, init_options=dict(),
-                 settings=dict(), env=dict(), tcp_host: 'Optional[str]'=None, commands: 'List[str]' = []) -> None:
+                 settings=dict(), env=dict(), tcp_host: 'Optional[str]'=None, commands: 'List[Command]' = []) -> None:
         self.name = name
         self.binary_args = binary_args
         self.tcp_port = tcp_port

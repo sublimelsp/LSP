@@ -6,9 +6,10 @@ from LSP.plugin.core.test_session import MockClient
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.registry import windows  # , session_for_view
 from LSP.plugin.core.settings import client_configs
+from LSP.plugin.core.types import Command
 
 test_language = LanguageConfig("test", ["text.plain"], ["Plain text"])
-test_commands = ["command1", "command2"]
+test_commands = [Command("command1", dict()), Command("command2", dict())]
 text_config = ClientConfig("test", [], None, languages=[test_language], commands=test_commands,)
 
 

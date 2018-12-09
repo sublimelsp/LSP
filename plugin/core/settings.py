@@ -1,5 +1,5 @@
 import sublime
-from .types import Settings, ClientConfig, LanguageConfig
+from .types import Settings, ClientConfig, LanguageConfig, Command
 from .logging import debug
 
 PLUGIN_NAME = 'LSP'
@@ -149,9 +149,19 @@ def read_language_configs(client_config: dict) -> 'List[LanguageConfig]':
     return list(map(read_language_config, client_config.get("languages", [])))
 
 
+def read_commands(commands: 'List[Dict[str, Any]]') -> 'List[Command]':
+    validCommands = []
+    for command in commands:
+        name = command.get("name")
+        if name:
+            args = command.get("args", dict())
+            validCommands.append(Command(name, args))
+    return validCommands
+
+
 def read_client_config(name: str, client_config: 'Dict') -> ClientConfig:
     languages = read_language_configs(client_config)
-
+    commands = read_commands(client_config.get("commands", list()))
     return ClientConfig(
         name,
         client_config.get("command", []),
@@ -165,7 +175,7 @@ def read_client_config(name: str, client_config: 'Dict') -> ClientConfig:
         client_config.get("settings", dict()),
         client_config.get("env", dict()),
         client_config.get("tcp_host", None),
-        client_config.get("commands", [])
+        commands
     )
 
 

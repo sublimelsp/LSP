@@ -61,7 +61,7 @@ class LanguageConfig(object):
 
 
 class Command(object):
-    def __init__(self, name: str, args: 'Dict[str, Any]'):
+    def __init__(self, name: str, args: 'Dict[str, Any]') -> None:
         self.name = name
         self.args = args
 

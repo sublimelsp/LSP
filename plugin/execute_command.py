@@ -16,19 +16,21 @@ class LspExecuteCommand(LspTextCommand):
     def __init__(self, view):
         super().__init__(view)
 
-    def run(self, command_name) -> None:
+    def run(self, edit, command_name: 'Optional[str]'=None, command_args: 'Dict[str, Any]'=dict()) -> None:
         client = client_for_view(self.view)
         if client:
-            self._command_names = []   # type: List[str]
-            self._command_args = dict()   # type: Dict[str, Dict[str, Any]]
-            for config in client_configs.all:
-                for command in config.commands:
-                    self._command_names.append(command.name)
-                    self._command_args[command.name] = command.args
+            if command_name:
+                self._send_command(client, command_name, command_args)
+            else:
+                self._command_names = []   # type: List[str]
+                self._command_args = dict()   # type: Dict[str, Dict[str, Any]]
+                for config in client_configs.all:
+                    for command in config.commands:
+                        self._command_names.append(command.name)
+                        self._command_args[command.name] = command.args
 
-            # TODO handle when command name is passed
-            if len(self._command_names) > 0:
-                self.view.window().show_quick_panel(self._command_names, lambda i: self._on_done(client, i))
+                if len(self._command_names) > 0:
+                    self.view.window().show_quick_panel(self._command_names, lambda i: self._on_done(client, i))
 
     def _handle_response(self, command: str, response: 'Optional[Any]') -> None:
         debug("response for command {}: {}".format(command, response))

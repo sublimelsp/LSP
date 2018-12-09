@@ -150,13 +150,13 @@ def read_language_configs(client_config: dict) -> 'List[LanguageConfig]':
 
 
 def read_commands(commands: 'List[Dict[str, Any]]') -> 'List[Command]':
-    validCommands = []
+    valid_commands = []
     for command in commands:
         name = command.get("name")
         if name:
             args = command.get("args", dict())
-            validCommands.append(Command(name, args))
-    return validCommands
+            valid_commands.append(Command(name, args))
+    return valid_commands
 
 
 def read_client_config(name: str, client_config: 'Dict') -> ClientConfig:

@@ -32,7 +32,9 @@ class LspExecuteCommandTests(DeferrableTestCase):
 
         # popup should be visible eventually
         yield self.view.is_popup_visible()
-        self.view.update_popup("command1")
+        # TODO: check the content of the pallet, select one element and hit enter
+
+        self.view.run_command("lsp_execute_command", {"command_name": "command1"})
 
     def tearDown(self):
         client_configs.all = self.old_configs

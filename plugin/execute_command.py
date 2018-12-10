@@ -49,11 +49,11 @@ class LspExecuteCommand(LspTextCommand):
                 self._send_command(client, command_name, command_args)
 
     def input(self, args):
-        return None if 'foo' in args else CommandNameInputHandler(self.view)
+        return None if 'command_name' in args else CommandNameInputHandler(self.view)
 
     def _handle_response(self, command: str, response: 'Optional[Any]') -> None:
-        debug("response for command {}: {}".format(command, response))
-        pass
+        if response:
+            debug("response for command {}: {}".format(command, response))
 
     def _handle_error(self, command: str, error: 'Dict[str, Any]') -> None:
         msg = "command {} failed. Reason: {}".format(command, error.get("message", "none provided by server :("))

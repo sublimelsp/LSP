@@ -487,7 +487,7 @@ class WindowManager(object):
     def _handle_all_sessions_ended(self):
         debug('clients for window {} unloaded'.format(self._window.id()))
         if self._restarting:
-            debug('window {} sessions unloaded - restarting')
+            debug('window {} sessions unloaded - restarting'.format(self._window.id()))
             self.start_active_views()
         elif not self._window.is_valid():
             debug('window {} closed and sessions unloaded'.format(self._window.id()))

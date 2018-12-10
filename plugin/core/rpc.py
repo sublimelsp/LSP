@@ -12,7 +12,7 @@ except ImportError:
     pass
 
 from .logging import debug, exception_log, server_log
-from .protocol import Request, Notification
+from .protocol import Request, Notification, Response
 from .types import Settings
 
 
@@ -95,6 +95,9 @@ class Client(object):
         debug(' --> ' + notification.method)
         self.send_payload(notification.to_payload())
 
+    def send_response(self, response: Response) -> None:
+        self.send_payload(response.to_payload())
+
     def exit(self) -> None:
         self.exiting = True
         self.send_notification(Notification.exit())
@@ -173,6 +176,7 @@ class Client(object):
         self._notification_handlers[notification_method] = handler
 
     def request_handler(self, request: 'Dict[str, Any]') -> None:
+        request_id = request.get("id")
         params = request.get("params", dict())
         method = request.get("method", '')
         debug('<--  ' + method)
@@ -180,7 +184,7 @@ class Client(object):
             debug('     ' + str(params))
         if method in self._request_handlers:
             try:
-                self._request_handlers[method](params)
+                self._request_handlers[method](params, request_id)
             except Exception as err:
                 exception_log("Error handling request " + method, err)
         else:

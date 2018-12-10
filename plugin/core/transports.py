@@ -178,7 +178,6 @@ class StdioTransport(Transport):
 
                 if (content_length > 0):
                     content = self.process.stdout.read(content_length)
-
                     self.on_receive(content.decode("UTF-8"))
 
             except IOError as err:

@@ -137,28 +137,24 @@ class ClientTest(unittest.TestCase):
         client.on_notification(
             "pong",
             lambda params: pongs.append(params))
-
         req = Notification("ping", dict())
         client.send_notification(req)
         self.assertGreater(len(transport.messages), 0)
         self.assertEqual(len(pongs), 1)
 
     def test_server_request(self):
-        # TODO: LSP never responds to eg workspace/applyEdit.
-
         transport = MockTransport()
         settings = MockSettings()
         client = Client(transport, settings)
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
-        pings = []
-
+        pings = []  # type: List[Tuple[int, Dict[str, Any]]]
         client.on_request(
             "ping",
-            lambda params: pings.append(params))
-
-        transport.receive('{ "id": 1, "method": "ping"}')
+            lambda params, request_id: pings.append((request_id, params)))
+        transport.receive('{ "id": 42, "method": "ping"}')
         self.assertEqual(len(pings), 1)
+        self.assertEqual(pings[0][0], 42)
 
     def test_error_response_handler(self):
         transport = MockTransport(return_error)

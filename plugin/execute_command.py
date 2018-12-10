@@ -36,15 +36,20 @@ class LspExecuteCommand(LspTextCommand):
     def __init__(self, view):
         super().__init__(view)
 
-    def run(self, edit, command_name: 'Optional[str]'=None, command_args: 'Dict[str, Any]'=dict()) -> None:
-        print("###### got command_name " + str(command_name))
-        print("###### got command_args " + str(command_args))
+    def run(self, edit, command_name=None, command_args=None) -> None:
         client = client_for_view(self.view)
         if client and command_name:
-            self._send_command(client, command_name, command_args)
+            # for some reason ListInputHandler put all the values in the command_name arg as a list
+            # so we have to detect that bellow
+            if type(command_name) is list:
+                name = command_name[0]
+                args = command_name[1] if len(command_name) == 2 else dict()
+                self._send_command(client, name, args)
+            elif type(command_name) is str:
+                self._send_command(client, command_name, command_args)
 
     def input(self, args):
-        return None if 'command_name' and 'command_args' in args else CommandNameInputHandler(self.view)
+        return None if 'foo' in args else CommandNameInputHandler(self.view)
 
     def _handle_response(self, command: str, response: 'Optional[Any]') -> None:
         debug("response for command {}: {}".format(command, response))
@@ -62,9 +67,3 @@ class LspExecuteCommand(LspTextCommand):
         client.send_request(Request.executeCommand(request),
                             lambda reponse: self._handle_response(command_name, reponse),
                             lambda error: self._handle_error(command_name, error))
-
-    # def _on_done(self, client: Client, index: int) -> None:
-    #     if index > -1:
-    #         command = self._command_names[index]
-    #         args = self._command_args.get(command, dict())
-    #         self._send_command(client, command, args)

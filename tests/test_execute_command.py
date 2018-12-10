@@ -20,7 +20,7 @@ class LspExecuteCommandTests(DeferrableTestCase):
         self.old_configs = client_configs.all
         client_configs.all = [text_config]
 
-    def test_execute_command(self):
+    def test_show_inputlistener(self):
         wm = windows.lookup(self.view.window())
         wm._configs.all.append(text_config)
 
@@ -34,6 +34,13 @@ class LspExecuteCommandTests(DeferrableTestCase):
         yield self.view.is_popup_visible()
         # TODO: check the content of the pallet, select one element and hit enter
 
+    def test_execute_command(self):
+        wm = windows.lookup(self.view.window())
+        wm._configs.all.append(text_config)
+
+        session = Session(text_config, dirname(__file__), MockClient())
+        session.state = ClientStates.READY
+        wm._sessions[text_config.name] = session
         self.view.run_command("lsp_execute_command", {"command_name": "command1"})
 
     def tearDown(self):

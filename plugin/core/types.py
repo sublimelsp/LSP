@@ -144,3 +144,6 @@ class WindowLike(Protocol):
 
     def views(self) -> 'List[ViewLike]':
         ...
+
+    def run_command(self, command_name: str, command_args: 'Dict[str, Any]') -> None:
+        ...

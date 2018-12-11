@@ -2,13 +2,13 @@ import os
 import sublime
 import linecache
 
-from .core.panels import create_output_panel
-from .core.settings import PLUGIN_NAME
-from .core.registry import client_for_view, LspTextCommand
 from .core.documents import is_at_word, get_position, get_document_position
-from .core.workspace import get_project_path
+from .core.panels import ensure_panel
 from .core.protocol import Request, Point
+from .core.registry import client_for_view, LspTextCommand
+from .core.settings import PLUGIN_NAME
 from .core.url import uri_to_filename
+from .core.workspace import get_project_path
 
 try:
     from typing import List, Dict, Optional
@@ -17,21 +17,9 @@ except ImportError:
     pass
 
 
-def ensure_references_panel(window: sublime.Window):
-    return window.find_output_panel("references") or create_references_panel(window)
-
-
-def create_references_panel(window: sublime.Window):
-    panel = create_output_panel(window, "references")
-    panel.settings().set("result_file_regex", r"^\s*\S\s+(\S.*):$")
-    panel.settings().set("result_line_regex", r"^\s+([0-9]+):?([0-9]+).*$")
-    panel.assign_syntax("Packages/" + PLUGIN_NAME +
-                        "/Syntaxes/References.sublime-syntax")
-    # Call create_output_panel a second time after assigning the above
-    # settings, so that it'll be picked up as a result buffer
-    # see: Packages/Default/exec.py#L228-L230
-    panel = window.create_output_panel("references")
-    return panel
+def ensure_references_panel(window: sublime.Window) -> 'Optional[sublime.View]':
+    return ensure_panel(window, "references", r"^\s*\S\s+(\S.*):$", r"^\s+([0-9]+):?([0-9]+).*$",
+                        "Packages/" + PLUGIN_NAME + "/Syntaxes/References.sublime-syntax")
 
 
 class LspSymbolReferencesCommand(LspTextCommand):
@@ -75,6 +63,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
         formatted_references = self._get_formatted_references(response, base_dir)
 
         panel = ensure_references_panel(window)
+        if not panel:
+            return
         panel.settings().set("result_base_dir", base_dir)
 
         panel.set_read_only(False)

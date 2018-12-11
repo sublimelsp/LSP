@@ -418,10 +418,15 @@ class WindowManager(object):
             self.end_sessions()
             self._project_path = current_project_path
 
-    def _apply_workspace_edit(self, params):
+    def _apply_workspace_edit(self, params: 'Dict[str, Any]', client: Client, request_id: int) -> None:
         edit = params.get('edit', dict())
         self._window.run_command('lsp_apply_workspace_edit', {'changes': edit.get('changes'),
-                                                              'documentChanges': edit.get('documentChanges')})
+                                                              'document_changes': edit.get('documentChanges')})
+        # TODO: We should ideally wait for all changes to have been applied.
+        # This however seems overly complicated, because we have to bring along a string representation of the
+        # client through the sublime-command invocations (as well as the request ID, but that is easy), and then
+        # reconstruct/get the actual Client object back. Maybe we can (ab)use our homebrew event system for this?
+        client.send_response(Response(request_id, {"applied": True}))
 
     def _handle_session_started(self, session, project_path, config):
         client = session.client
@@ -431,7 +436,7 @@ class WindowManager(object):
         # handle server requests and notifications
         client.on_request(
             "workspace/applyEdit",
-            lambda params, request_id: self._apply_workspace_edit(params))
+            lambda params, request_id: self._apply_workspace_edit(params, client, request_id))
 
         client.on_request(
             "window/showMessageRequest",
@@ -487,7 +492,7 @@ class WindowManager(object):
     def _handle_all_sessions_ended(self):
         debug('clients for window {} unloaded'.format(self._window.id()))
         if self._restarting:
-            debug('window {} sessions unloaded - restarting')
+            debug('window {} sessions unloaded - restarting'.format(self._window.id()))
             self.start_active_views()
         elif not self._window.is_valid():
             debug('window {} closed and sessions unloaded'.format(self._window.id()))

@@ -11,8 +11,8 @@ import tempfile
 import unittest
 
 try:
-    from typing import Callable, List, Optional, Set, Dict
-    assert Callable and List and Optional and Set and Session and Dict
+    from typing import Callable, List, Optional, Set, Dict, Any, Tuple
+    assert Callable and List and Optional and Set and Session and Dict and Any and Tuple
     assert ClientConfig and LanguageConfig
 except ImportError:
     pass
@@ -86,6 +86,7 @@ class MockWindow(object):
         self._is_valid = True
         self._folders = [os.path.dirname(__file__)]
         self._default_view = MockView(None)
+        self.commands = []  # type: List[Tuple[str, Dict[str, Any]]]
 
     def id(self):
         return 0
@@ -137,6 +138,9 @@ class MockWindow(object):
                 for view in views_in_group:
                     views.append(view)
         return views
+
+    def run_command(self, command_name: str, command_args: 'Dict[str, Any]') -> None:
+        self.commands.append((command_name, command_args))
 
 
 class TestGlobalConfigs(object):

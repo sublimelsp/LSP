@@ -4,7 +4,6 @@ import sublime
 from os.path import dirname
 from LSP.plugin.core.settings import client_configs, read_client_config, update_client_config
 from LSP.plugin.core.registry import windows
-from LSP.plugin.core.types import Command
 
 test_file_path = dirname(__file__) + "/testfile.txt"
 
@@ -45,27 +44,6 @@ class ConfigParsingTests(DeferrableTestCase):
         config = read_client_config("pyls", settings)
         config = update_client_config(config, {"enabled": True})
         self.assertEqual(config.enabled, True)
-
-    def test_can_parse_registered_commands(self):
-        settings = {
-            "command": ["pyls"],
-            "scopes": ["source.python"],
-            "syntaxes": ["Packages/Python/Python.sublime-syntax"],
-            "languageId": "python",
-            "commands": [
-                {"name": "foo", "args": {"arg1": "v1"}},
-                {"name": "bar"},
-                {"not_name": "baz", "args": {"arg1": "v1"}},
-            ]
-        }
-        config = read_client_config("pyls", settings)
-        expected = [
-            Command("foo", {"arg1": "v1"}),
-            Command("bar", dict())
-        ]
-        for idx, command in enumerate(config.commands):
-            self.assertEqual(command.name, expected[idx].name)
-            self.assertEqual(command.args, expected[idx].args)
 
 
 class ConfigTests(DeferrableTestCase):

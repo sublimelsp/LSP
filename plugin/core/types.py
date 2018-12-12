@@ -60,17 +60,11 @@ class LanguageConfig(object):
         self.syntaxes = syntaxes
 
 
-class Command(object):
-    def __init__(self, name: str, args: 'Dict[str, Any]') -> None:
-        self.name = name
-        self.args = args
-
-
 class ClientConfig(object):
     def __init__(self, name: str, binary_args: 'List[str]', tcp_port: 'Optional[int]', scopes=[],
                  syntaxes=[], languageId: 'Optional[str]'=None,
                  languages: 'List[LanguageConfig]'=[], enabled: bool=True, init_options=dict(),
-                 settings=dict(), env=dict(), tcp_host: 'Optional[str]'=None, commands: 'List[Command]' = []) -> None:
+                 settings=dict(), env=dict(), tcp_host: 'Optional[str]'=None) -> None:
         self.name = name
         self.binary_args = binary_args
         self.tcp_port = tcp_port
@@ -82,7 +76,6 @@ class ClientConfig(object):
         self.init_options = init_options
         self.settings = settings
         self.env = env
-        self.commands = commands
 
 
 class ViewLike(Protocol):

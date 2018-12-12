@@ -6,39 +6,31 @@ from LSP.plugin.core.test_session import MockClient
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.registry import windows  # , session_for_view
 from LSP.plugin.core.settings import client_configs
-from LSP.plugin.core.types import Command
 
+test_file_path = dirname(__file__) + "/testfile.txt"
+SUPPORTED_SCOPE = "text.plain"
+SUPPORTED_SYNTAX = "Lang.sublime-syntax"
+text_config = ClientConfig('langls', [], None, [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX], 'lang')
 test_language = LanguageConfig("test", ["text.plain"], ["Plain text"])
-test_commands = [Command("command1", dict()), Command("command2", dict())]
-text_config = ClientConfig("test", [], None, languages=[test_language], commands=test_commands,)
+# text_config = ClientConfig("test", [], None, languages=[test_language], commands=test_commands,)
 
 
 class LspExecuteCommandTests(DeferrableTestCase):
 
     def setUp(self):
-        self.view = sublime.active_window().new_file()
+        self.view = sublime.active_window().open_file(test_file_path)
         self.old_configs = client_configs.all
         client_configs.all = [text_config]
-
-    def test_show_inputlistener(self):
-        wm = windows.lookup(self.view.window())
-        wm._configs.all.append(text_config)
-
-        session = Session(text_config, dirname(__file__), MockClient())
-        session.state = ClientStates.READY
-        wm._sessions[text_config.name] = session
-
-        self.view.run_command('lsp_execute')
-
-        # popup should be visible eventually
-        yield self.view.is_popup_visible()
-        # TODO: check the content of the pallet, select one element and hit enter
 
     def test_execute_command(self):
         wm = windows.lookup(self.view.window())
         wm._configs.all.append(text_config)
+        point = self.view.sel()[0].begin()
+        print("point " + str(point))
+        print("in test {}".format(wm._configs.scope_config(self.view, point)))
 
         session = Session(text_config, dirname(__file__), MockClient())
+        session.initialize()
         session.state = ClientStates.READY
         wm._sessions[text_config.name] = session
         self.view.run_command("lsp_execute_command", {"command_name": "command1"})

@@ -16,23 +16,22 @@ from .views import range_to_region
 
 
 class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
-    def run(self, changes=None, documentChanges=None):
-        # debug('workspace edit', changes)
-        documentsChanged = 0
+    def run(self, changes=None, document_changes=None):
+        documents_changed = 0
         if changes:
             for uri, file_changes in changes.items():
                 path = uri_to_filename(uri)
                 self.open_and_apply_edits(path, file_changes)
-                documentsChanged += 1
-        elif documentChanges:
-            for document in documentChanges:
-                uri = document.get('textDocument').get('uri')
+                documents_changed += 1
+        elif document_changes:
+            for document_change in document_changes:
+                uri = document_change.get('textDocument').get('uri')
                 path = uri_to_filename(uri)
-                self.open_and_apply_edits(path, document.get('edits'))
-                documentsChanged += 1
+                self.open_and_apply_edits(path, document_change.get('edits'))
+                documents_changed += 1
 
-        if documentsChanged > 0:
-            message = 'Applied changes to {} documents'.format(documentsChanged)
+        if documents_changed > 0:
+            message = 'Applied changes to {} documents'.format(documents_changed)
             self.window.status_message(message)
         else:
             self.window.status_message('No changes to apply to workspace')

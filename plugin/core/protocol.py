@@ -154,7 +154,7 @@ class Request:
 
 
 class Response:
-    def __init__(self, request_id: int, result: 'Dict[str, Any]') -> None:
+    def __init__(self, request_id: int, result: 'Optional[Dict[str, Any]]') -> None:
         self.request_id = request_id
         self.result = result
         self.jsonrpc = "2.0"

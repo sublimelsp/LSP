@@ -8,35 +8,30 @@ from LSP.plugin.core.registry import windows  # , session_for_view
 from LSP.plugin.core.settings import client_configs
 
 test_file_path = dirname(__file__) + "/testfile.txt"
-SUPPORTED_SCOPE = "text.plain"
-SUPPORTED_SYNTAX = "Lang.sublime-syntax"
-text_config = ClientConfig('langls', [], None, [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX], 'lang')
-test_language = LanguageConfig("test", ["text.plain"], ["Plain text"])
-# text_config = ClientConfig("test", [], None, languages=[test_language], commands=test_commands,)
-
 
 class LspExecuteCommandTests(DeferrableTestCase):
 
     def setUp(self):
         self.view = sublime.active_window().open_file(test_file_path)
-        self.old_configs = client_configs.all
-        client_configs.all = [text_config]
 
     def test_execute_command(self):
+        yield 100  # wait for file to be open
+
         wm = windows.lookup(self.view.window())
+        test_language = LanguageConfig("test", ["text.plain"], ["Plain text"])
+        text_config = ClientConfig("test", [], None, languages=[test_language],)
+        client_configs.add_external_config(text_config)
+        client_configs.update_configs()
         wm._configs.all.append(text_config)
-        point = self.view.sel()[0].begin()
-        print("point " + str(point))
-        print("in test {}".format(wm._configs.scope_config(self.view, point)))
 
         session = Session(text_config, dirname(__file__), MockClient())
-        session.initialize()
         session.state = ClientStates.READY
         wm._sessions[text_config.name] = session
-        self.view.run_command("lsp_execute_command", {"command_name": "command1"})
+
+        self.view.run_command("lsp_execute", {"command_name": "command1"})
 
     def tearDown(self):
-        client_configs.all = self.old_configs
+        # client_configs.all = self.old_configs
         if self.view:
             self.view.set_scratch(True)
             self.view.window().focus_view(self.view)

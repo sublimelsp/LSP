@@ -15,7 +15,8 @@ class MockClient():
     def __init__(self) -> None:
         self.responses = {
             'initialize': {"capabilities": dict(testing=True, hoverProvider=True, textDocumentSync=True)},
-            'textDocument/hover': {"contents": "greeting"}
+            'textDocument/hover': {"contents": "greeting"},
+            'workspace/executeCommand': {}
         }  # type: dict
         self._notifications = []  # type: List[Notification]
 

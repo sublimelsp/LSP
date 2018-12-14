@@ -17,6 +17,7 @@ class LspExecuteCommand(LspTextCommand):
 
     def run(self, edit, command_name=None, command_args=None) -> None:
         client = client_for_view(self.view)
+        print("### client " + str(client))
         if client and command_name:
             self._send_command(client, command_name, command_args)
 

@@ -49,8 +49,9 @@ class LspExecuteCommandTests(DeferrableTestCase):
         wm._sessions[text_config.name] = session
 
         self.view.run_command("lsp_execute", {"command_name": "command1"})
-        self.assertTrue(self.view.is_popup_visible())
         self.assertEquals(client._responses[1], "unknown command")
+        yield 100  # wait for pop to be shown
+        self.assertTrue(self.view.is_popup_visible())
 
     def tearDown(self):
         if self.view:

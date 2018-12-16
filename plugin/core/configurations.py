@@ -40,7 +40,6 @@ def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]',
                     for scope in language.scopes:
                         if point is not None:
                             score = view.score_selector(point, scope)
-                            print("######## score {} for scope {}".format(score, scope))
                             # if score > 0:
                             #     debug('scope match score', scope, config.name, score)
                             if score > scope_score:

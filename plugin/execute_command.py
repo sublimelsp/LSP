@@ -17,13 +17,12 @@ class LspExecuteCommand(LspTextCommand):
 
     def run(self, edit, command_name=None, command_args=None) -> None:
         client = client_for_view(self.view)
-        print("### client " + str(client))
         if client and command_name:
             self._send_command(client, command_name, command_args)
 
     def _handle_response(self, command: str, response: 'Optional[Any]') -> None:
-        if response:
-            debug("response for command {}: {}".format(command, response))
+        # if response:
+        debug("response for command {}: {}".format(command, response))
 
     def _handle_error(self, command: str, error: 'Dict[str, Any]') -> None:
         msg = "command {} failed. Reason: {}".format(command, error.get("message", "none provided by server :("))

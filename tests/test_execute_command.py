@@ -9,6 +9,7 @@ from LSP.plugin.core.settings import client_configs
 
 test_file_path = __file__
 
+
 class LspExecuteCommandTests(DeferrableTestCase):
 
     def setUp(self):

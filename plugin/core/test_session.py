@@ -19,12 +19,12 @@ class MockClient():
             'workspace/executeCommand': {}
         }  # type: dict
         self._notifications = []  # type: List[Notification]
-        self._responses = [] # type: List[Any]
+        self._responses = []  # type: List[Any]
         self._errors = errors
 
-    def send_request(self, request: Request, on_success: 'Callable', on_error: 'Callable') -> None:
+    def send_request(self, request: Request, on_success: 'Callable', on_error: 'Callable'=None) -> None:
         error = self._errors.get(request.method)
-        if error:
+        if error and on_error:
             self._responses.append(error)
             on_error({"message": error})
         else:

@@ -1,5 +1,6 @@
 from unittesting import DeferrableTestCase
 import sublime
+import time
 from os.path import dirname
 from LSP.plugin.core.types import ClientConfig, ClientStates, LanguageConfig
 from LSP.plugin.core.test_session import MockClient
@@ -17,7 +18,6 @@ class LspExecuteCommandTests(DeferrableTestCase):
 
     def test_execute_command_success(self):
         yield 100  # wait for file to be open
-        self.view.window().focus_view(self.view)
         wm = windows.lookup(self.view.window())
         test_language = LanguageConfig("Python", ["source.python"], ["Packages/Python/Python.sublime-syntax"])
         text_config = ClientConfig("test", [], None, languages=[test_language],)
@@ -35,7 +35,6 @@ class LspExecuteCommandTests(DeferrableTestCase):
 
     def test_execute_command_failure(self):
         yield 100  # wait for file to be open
-        self.view.window().focus_view(self.view)
         wm = windows.lookup(self.view.window())
         test_language = LanguageConfig("Python", ["source.python"], ["Packages/Python/Python.sublime-syntax"])
         text_config = ClientConfig("test", [], None, languages=[test_language],)
@@ -50,7 +49,7 @@ class LspExecuteCommandTests(DeferrableTestCase):
 
         self.view.run_command("lsp_execute", {"command_name": "command1"})
         self.assertEquals(client._responses[1], "unknown command")
-        yield 2000  # wait for pop to be shown
+        time.sleep(1)  # wait for pop to be shown
         self.assertTrue(self.view.is_popup_visible())
 
     def tearDown(self):

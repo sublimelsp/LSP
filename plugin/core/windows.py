@@ -286,6 +286,8 @@ class WindowDocumentHandler(object):
                             }]
                         }
                         session.client.send_notification(Notification.didChange(params))
+                        # fire event to update code actions
+                        global_events.publish('textDocument/didChange', view)
 
 
 class WindowManager(object):

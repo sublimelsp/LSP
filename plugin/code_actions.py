@@ -3,14 +3,13 @@ import sublime_plugin
 import sublime
 
 try:
-    from typing import Any, List, Dict
-    assert Any and List and Dict
+    from typing import Any, List, Dict, Callable, Optional
+    assert Any and List and Dict and Callable and Optional
 except ImportError:
     pass
 
 from .core.registry import client_for_view, LspTextCommand
 from .core.protocol import Request
-from .core.documents import get_position
 from .core.diagnostics import get_point_diagnostics
 from .core.url import filename_to_uri
 from .core.views import region_to_range
@@ -19,14 +18,18 @@ from .core.events import global_events
 
 
 class CodeAction:
-    def __init__(self, view: sublime.View):
+    # holds the code action response
+    commands_cache = []  # type: 'List[Dict]'
+
+    def __init__(self, view: 'sublime.View'):
         self.view = view
 
-    def send_request(self, callback: 'Optional[Callable]'=None):
+    def send_request(self, callback: 'Optional[Callable]' = None):
         """ Send a code action request.
             callback - receives the response as the first argument """
         session = session_for_view(self.view)
         if not session or not session.has_capability('codeActionProvider'):
+            # the server doesn't support code actions, just return
             return
 
         params = self._get_code_action_params()
@@ -34,13 +37,14 @@ class CodeAction:
             Request.codeAction(params),
             lambda response: self._handle_response(response, callback))
 
-    def _handle_response(self, response: 'List[Dict]', callback: 'Optional[Callable]'=None) -> None:
+    def _handle_response(self, response: 'List[Dict]', callback: 'Optional[Callable]' = None) -> None:
+        CodeAction.commands_cache = response
         code_action = CodeAction(self.view)
         if len(response) > 0:
             code_action.show_bulb()
         else:
             code_action.hide_bulb()
-        
+
         if callback is not None:
             callback(response)
 
@@ -69,6 +73,7 @@ class CodeAction:
 
 class LspCodeActionListener(sublime_plugin.ViewEventListener):
     def on_selection_modified_async(self):
+        CodeAction.commands_cache = []
         self.handle_selection_modified()
 
     @debounce(0.3)
@@ -81,27 +86,38 @@ class LspCodeActionsCommand(LspTextCommand):
     def is_enabled(self):
         return self.has_client_with_capability('codeActionProvider')
 
-    def run(self, edit):
-        code_action = CodeAction(self.view)
-        code_action.send_request(self.handle_response)
+    def run(self, edit, make_request=False):
+        """ make_request - when true sends a request else it greabs from the cache. """
+        if make_request:
+            code_action = CodeAction(self.view)
+            code_action.send_request(self.handle_response)
+            return
 
-    def handle_response(self, response: 'List[Dict]') -> None:
-        self.commands = response
-        self.view.show_popup_menu(self.get_titles(), self.handle_select)
+        # show from cache
+        self.show_popup_menu()
 
     def get_titles(self) -> 'List[str]':
         ''' Return a list of all command titles. '''
         titles = []
-        for command in self.commands:
+        for command in CodeAction.commands_cache:
             titles.append(command.get('title'))  # TODO parse command and arguments
         return titles
+
+    def handle_response(self, response: 'List[Dict]') -> None:
+        self.show_popup_menu()
+
+    def show_popup_menu(self) -> None:
+        if len(CodeAction.commands_cache) > 0:
+            self.view.show_popup_menu(self.get_titles(), self.handle_select)
+        else:
+            self.view.show_popup('No actions available', sublime.HIDE_ON_MOUSE_MOVE_AWAY)
 
     def handle_select(self, index: int) -> None:
         if index > -1:
             client = client_for_view(self.view)
             if client:
                 client.send_request(
-                    Request.executeCommand(self.commands[index]),
+                    Request.executeCommand(CodeAction.commands_cache[index]),
                     self.handle_command_response)
 
     def handle_command_response(self, response):
@@ -115,8 +131,11 @@ def handle_did_change(view):
     def update_code_actions():
         code_action.send_request()
 
+    # clear the code actions
+    CodeAction.commands_cache = []
     code_action = CodeAction(view)
     code_action.hide_bulb()
     update_code_actions()
+
 
 global_events.subscribe('textDocument/didChange', handle_did_change)

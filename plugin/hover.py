@@ -164,7 +164,7 @@ class LspHoverCommand(LspTextCommand):
         elif href == 'rename':
             self.run_command_from_point(point, "lsp_symbol_rename")
         elif href == 'code-actions':
-            self.run_command_from_point(point, "lsp_code_actions", { "make_request": True })
+            self.run_command_from_point(point, "lsp_code_actions", {"make_request": True})
         else:
             webbrowser.open_new_tab(href)
 

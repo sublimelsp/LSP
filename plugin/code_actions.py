@@ -124,8 +124,7 @@ class LspCodeActionsCommand(LspTextCommand):
         pass
 
 
-# Need to send CodeAction request after DidChange, so code actions stay up to date
-# TODO: Find a better way to fire code action request after DidChange
+# TODO: Need to find a better way to send CodeAction request after DidChange, so code actions stay up to date
 def handle_did_change(view):
     @debounce(0.3)
     def update_code_actions():

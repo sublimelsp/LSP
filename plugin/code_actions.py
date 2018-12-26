@@ -1,4 +1,3 @@
-from LSP.plugin.core.registry import session_for_view
 import sublime_plugin
 import sublime
 
@@ -15,6 +14,7 @@ from .core.url import filename_to_uri
 from .core.views import region_to_range
 from .core.helpers import debounce
 from .core.events import global_events
+from .core.registry import session_for_view
 
 
 class CodeAction:

@@ -101,7 +101,7 @@ class LspCodeActionsCommand(LspTextCommand):
         # show from cache
         self.show_popup_menu()
 
-    def get_titles(self) -> 'List[str]':
+    def get_titles(self):
         ''' Return a list of all command titles. '''
         titles = []
         for command in CodeAction.commands_cache:

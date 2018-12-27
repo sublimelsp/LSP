@@ -390,10 +390,12 @@ class WindowManager(object):
         titles = list(action.get("title") for action in actions)
 
         def send_user_choice(index):
-            # otherwise noop; nothing was selected e.g. the user pressed escape
+            # when noop; nothing was selected e.g. the user pressed escape
+            result = None
             if index != -1:
-                response = Response(request_id, {"title": titles[index]})
-                client.send_response(response)
+                result = {"title": titles[index]}
+            response = Response(request_id, result)
+            client.send_response(response)
 
         if actions:
             self._sublime.active_window().show_quick_panel(titles, send_user_choice)

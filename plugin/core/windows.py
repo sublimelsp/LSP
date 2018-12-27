@@ -1,3 +1,4 @@
+import sublime
 from .events import global_events
 from .logging import debug
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike, LanguageConfig, config_supports_syntax
@@ -6,6 +7,7 @@ from .sessions import Session
 from .url import filename_to_uri
 from .workspace import get_project_path
 from .rpc import Client
+
 try:
     from typing_extensions import Protocol
     from typing import Optional, List, Callable, Dict, Any
@@ -286,8 +288,8 @@ class WindowDocumentHandler(object):
                             }]
                         }
                         session.client.send_notification(Notification.didChange(params))
-                        # fire event to update code actions
-                        global_events.publish('textDocument/didChange', view)
+                        # update code actions
+                        sublime.set_timeout(lambda: view.run_command('lsp_update_code_actions'), 300)  # type: ignore
 
 
 class WindowManager(object):

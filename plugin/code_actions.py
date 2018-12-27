@@ -87,7 +87,7 @@ class LspCodeActionsCommand(LspTextCommand):
         if len(CodeAction.commands_cache) > 0:
             return True
         return False
- 
+
     def is_enabled(self):
         return self.has_client_with_capability('codeActionProvider')
 

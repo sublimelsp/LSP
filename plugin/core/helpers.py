@@ -8,10 +8,10 @@ def debounce(seconds):
             def call_it():
                 fn(*args, **kwargs)
             try:
-                debounced.t.cancel()
+                debounced.t.cancel()  # type: ignore
             except(AttributeError):
                 pass
-            debounced.t = Timer(seconds, call_it)
-            debounced.t.start()
+            debounced.t = Timer(seconds, call_it)  # type: ignore
+            debounced.t.start()  # type: ignore
         return debounced
     return decorator

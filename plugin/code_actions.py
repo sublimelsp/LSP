@@ -83,6 +83,11 @@ class LspCodeActionListener(sublime_plugin.ViewEventListener):
 
 
 class LspCodeActionsCommand(LspTextCommand):
+    def is_visible(self):
+        if len(CodeAction.commands_cache) > 0:
+            return True
+        return False
+ 
     def is_enabled(self):
         return self.has_client_with_capability('codeActionProvider')
 

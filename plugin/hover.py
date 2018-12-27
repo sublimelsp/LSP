@@ -164,15 +164,12 @@ class LspHoverCommand(LspTextCommand):
         elif href == 'rename':
             self.run_command_from_point(point, "lsp_symbol_rename")
         elif href == 'code-actions':
-            self.run_command_from_point(point, "lsp_code_actions", {"make_request": True})
+            self.run_command_from_point(point, "lsp_code_actions")
         else:
             webbrowser.open_new_tab(href)
 
-    def run_command_from_point(self, point, command_name, args: 'Optional[Dict]' = None):
+    def run_command_from_point(self, point, command_name):
         sel = self.view.sel()
         sel.clear()
         sel.add(sublime.Region(point, point))
-        if args:
-            self.view.run_command(command_name, args)
-        else:
-            self.view.run_command(command_name)
+        self.view.run_command(command_name)

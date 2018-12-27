@@ -21,7 +21,7 @@ class CodeAction:
     # holds the code action response
     commands_cache = []  # type: 'List[Dict]'
 
-    def __init__(self, view: 'sublime.View'):
+    def __init__(self, view: 'sublime.View') -> None:
         self.view = view
 
     def send_request(self, callback: 'Optional[Callable]' = None):

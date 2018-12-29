@@ -14,6 +14,7 @@ from .core.url import filename_to_uri
 from .core.views import region_to_range
 from .core.helpers import debounce
 from .core.registry import session_for_view
+from .core.settings import settings
 
 
 class CodeAction:
@@ -34,10 +35,11 @@ class CodeAction:
 
     def _handle_response(self, response, callback: 'Optional[Callable]' = None) -> None:
         code_action = CodeAction(self.view)
-        if len(response) > 0:
-            code_action.show_bulb()
-        else:
-            code_action.hide_bulb()
+        if settings.show_bulb:
+            if len(response) > 0:
+                code_action.show_bulb()
+            else:
+                code_action.hide_bulb()
 
         if callback is not None:
             callback(response)
@@ -66,6 +68,12 @@ class CodeAction:
 
 
 class LspCodeActionListener(sublime_plugin.ViewEventListener):
+    @classmethod
+    def is_applicable(cls, _settings):
+        if settings.show_bulb:
+            return True
+        return False
+
     def on_selection_modified_async(self):
         self.fire_request()
 

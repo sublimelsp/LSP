@@ -69,7 +69,7 @@ class LspCodeActionListener(sublime_plugin.ViewEventListener):
     def on_selection_modified_async(self):
         self.handle_selection_modified()
 
-    @debounce(0.3)
+    @debounce(0.5)
     def handle_selection_modified(self):
         self.view.run_command('lsp_update_code_actions')
 

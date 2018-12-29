@@ -1,7 +1,6 @@
 import sublime
 from .core.registry import client_for_view, LspTextCommand
 from .core.protocol import Request
-from .core.logging import debug
 from .core.rpc import Client
 
 try:

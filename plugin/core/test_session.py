@@ -12,25 +12,16 @@ except ImportError:
 
 
 class MockClient():
-    def __init__(self, errors: 'Dict[str, str]'=dict()) -> None:
+    def __init__(self) -> None:
         self.responses = {
             'initialize': {"capabilities": dict(testing=True, hoverProvider=True, textDocumentSync=True)},
-            'textDocument/hover': {"contents": "greeting"},
-            'workspace/executeCommand': {}
+            'textDocument/hover': {"contents": "greeting"}
         }  # type: dict
         self._notifications = []  # type: List[Notification]
-        self._responses = []  # type: List[Any]
-        self._errors = errors
 
     def send_request(self, request: Request, on_success: 'Callable', on_error: 'Callable'=None) -> None:
-        error = self._errors.get(request.method)
-        if error and on_error:
-            self._responses.append(error)
-            on_error({"message": error})
-        else:
-            response = self.responses.get(request.method)
-            self._responses.append(response)
-            on_success(response)
+        response = self.responses.get(request.method)
+        on_success(response)
 
     def send_notification(self, notification: Notification) -> None:
         self._notifications.append(notification)

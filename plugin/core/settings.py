@@ -151,6 +151,7 @@ def read_language_configs(client_config: dict) -> 'List[LanguageConfig]':
 
 def read_client_config(name: str, client_config: 'Dict') -> ClientConfig:
     languages = read_language_configs(client_config)
+
     return ClientConfig(
         name,
         client_config.get("command", []),

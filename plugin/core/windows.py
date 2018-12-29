@@ -6,7 +6,6 @@ from .sessions import Session
 from .url import filename_to_uri
 from .workspace import get_project_path
 from .rpc import Client
-
 try:
     from typing_extensions import Protocol
     from typing import Optional, List, Callable, Dict, Any

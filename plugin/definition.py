@@ -5,6 +5,7 @@ from .core.protocol import Request, Point
 from .core.documents import get_document_position, get_position, is_at_word
 from .core.url import uri_to_filename
 from .core.logging import debug
+from Default.history_list import get_jump_history_for_view  # type: ignore
 try:
     from typing import List, Dict, Optional, Any
     assert List and Dict and Optional and Any
@@ -34,6 +35,9 @@ class LspSymbolDefinitionCommand(LspTextCommand):
     def handle_response(self, response: 'Optional[Any]', position) -> None:
         window = sublime.active_window()
         if response:
+            # save to jump back history
+            get_jump_history_for_view(self.view).push_selection(self.view)
+
             location = response if isinstance(response, dict) else response[0]
             file_path = uri_to_filename(location.get("uri"))
             start = Point.from_lsp(location['range']['start'])

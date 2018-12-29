@@ -5,7 +5,8 @@ from .core.protocol import Request, Point
 from .core.documents import get_document_position, get_position, is_at_word
 from .core.url import uri_to_filename
 from .core.logging import debug
-from Default.history_list import get_jump_history_for_view  # type: ignore
+from Default.history_list import get_jump_history_for_view
+
 try:
     from typing import List, Dict, Optional, Any
     assert List and Dict and Optional and Any

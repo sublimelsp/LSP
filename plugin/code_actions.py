@@ -67,10 +67,17 @@ class CodeAction:
 
 class LspCodeActionListener(sublime_plugin.ViewEventListener):
     def on_selection_modified_async(self):
-        self.handle_selection_modified()
+        self.fire_request()
+
+    def on_modified_async(self):
+        self.handle_modified_async()
+
+    @debounce(0.8)
+    def handle_modified_async(self):
+        self.fire_request()
 
     @debounce(0.5)
-    def handle_selection_modified(self):
+    def fire_request(self):
         self.view.run_command('lsp_update_code_actions')
 
 

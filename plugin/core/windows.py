@@ -1,4 +1,3 @@
-import sublime
 from .events import global_events
 from .logging import debug
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike, LanguageConfig, config_supports_syntax
@@ -288,8 +287,6 @@ class WindowDocumentHandler(object):
                             }]
                         }
                         session.client.send_notification(Notification.didChange(params))
-                        # update code actions
-                        sublime.set_timeout(lambda: view.run_command('lsp_update_code_actions'), 300)  # type: ignore
 
 
 class WindowManager(object):

@@ -75,23 +75,12 @@ class LspCodeActionListener(sublime_plugin.ViewEventListener):
         return False
 
     def on_selection_modified_async(self):
+        self.code_action = CodeAction(self.view)
+        self.code_action.hide_bulb()
         self.fire_request()
-
-    def on_modified_async(self):
-        self.handle_modified_async()
 
     @debounce(0.8)
-    def handle_modified_async(self):
-        self.fire_request()
-
-    @debounce(0.5)
     def fire_request(self):
-        self.view.run_command('lsp_update_code_actions')
-
-
-class LspUpdateCodeActionsCommand(sublime_plugin.TextCommand):
-    def run(self, edit):
-        self.code_action = CodeAction(self.view)
         self.code_action.send_request()
 
 

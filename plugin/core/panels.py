@@ -12,7 +12,7 @@ OUTPUT_PANEL_SETTINGS = {
     "auto_indent": False,
     "draw_indent_guides": False,
     "draw_white_space": "None",
-    "gutter": False,
+    "gutter": True,
     'is_widget': True,
     "line_numbers": False,
     "margin": 3,
@@ -20,7 +20,8 @@ OUTPUT_PANEL_SETTINGS = {
     "scroll_past_end": False,
     "tab_size": 4,
     "translate_tabs_to_spaces": False,
-    "word_wrap": False
+    "word_wrap": False,
+    "fold_buttons": True
 }
 
 
@@ -74,6 +75,9 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
     """
 
     def run(self, edit, characters):
+        # Clear folds
+        self.view.unfold(sublime.Region(0, self.view.size()))
+
         self.view.replace(edit, sublime.Region(0, self.view.size()), characters)
 
         # Clear the selection

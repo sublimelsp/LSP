@@ -35,7 +35,7 @@ class CodeAction:
 
     def _handle_response(self, response, callback: 'Optional[Callable]' = None) -> None:
         code_action = CodeAction(self.view)
-        if settings.show_bulb:
+        if settings.show_code_actions_bulb:
             if len(response) > 0:
                 code_action.show_bulb()
             else:
@@ -70,7 +70,7 @@ class CodeAction:
 class LspCodeActionListener(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, _settings):
-        if settings.show_bulb:
+        if settings.show_code_actions_bulb:
             return True
         return False
 

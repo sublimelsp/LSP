@@ -79,14 +79,7 @@ class LspCodeActionListener(sublime_plugin.ViewEventListener):
         self.code_action.hide_bulb()
         self.fire_request()
 
-    def on_modified_async(self):
-        self.handle_modified_async()
-
     @debounce(0.8)
-    def handle_modified_async(self):
-        self.fire_request()
-
-    @debounce(0.5)
     def fire_request(self):
         self.code_action.send_request()
 

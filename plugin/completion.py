@@ -154,7 +154,8 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 self.trigger_chars = completionProvider.get(
                     'triggerCharacters') or []
                 self.has_resolve_provider = completionProvider.get('resolveProvider', False)
-                self.register_trigger_chars(session)
+                if self.trigger_chars:
+                    self.register_trigger_chars(session)
 
     def _view_language(self, config_name: str) -> 'Optional[str]':
         languages = self.view.settings().get('lsp_language')

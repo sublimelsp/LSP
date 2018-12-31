@@ -1,56 +1,113 @@
+import sublime_plugin
 import sublime
 
 try:
-    from typing import Any, List, Dict
-    assert Any and List and Dict
+    from typing import Any, List, Dict, Callable, Optional
+    assert Any and List and Dict and Callable and Optional
 except ImportError:
     pass
 
 from .core.registry import client_for_view, LspTextCommand
 from .core.protocol import Request
-from .core.documents import get_position
 from .core.diagnostics import get_point_diagnostics
 from .core.url import filename_to_uri
 from .core.views import region_to_range
+from .core.helpers import debounce
+from .core.registry import session_for_view
+from .core.settings import settings
+
+
+class CodeAction:
+    def __init__(self, view: 'sublime.View') -> None:
+        self.view = view
+
+    def send_request(self, on_response_recieved: 'Optional[Callable]' = None):
+        """ callback - hook with response as the first argument. """
+        session = session_for_view(self.view)
+        if not session or not session.has_capability('codeActionProvider'):
+            # the server doesn't support code actions, just return
+            return
+
+        params = self._get_code_action_params()
+        session.client.send_request(
+            Request.codeAction(params),
+            lambda response: self._handle_response(response, on_response_recieved))
+
+    def _handle_response(self, response, callback: 'Optional[Callable]' = None) -> None:
+        code_action = CodeAction(self.view)
+        if settings.show_code_actions_bulb:
+            if len(response) > 0:
+                code_action.show_bulb()
+            else:
+                code_action.hide_bulb()
+
+        if callback is not None:
+            callback(response)
+
+    def show_bulb(self) -> None:
+        region = self.view.sel()[0]
+        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+        self.view.add_regions('lsp_bulb', [region], 'markup.changed', 'Packages/LSP/icons/lightbulb.png', flags)
+
+    def hide_bulb(self) -> None:
+        self.view.erase_regions('lsp_bulb')
+
+    def _get_code_action_params(self):
+        region = self.view.sel()[0]
+        pos = region.begin()
+        point_diagnostics = get_point_diagnostics(self.view, pos)
+        return {
+            "textDocument": {
+                "uri": filename_to_uri(self.view.file_name())
+            },
+            "range": region_to_range(self.view, region).to_lsp(),
+            "context": {
+                "diagnostics": list(diagnostic.to_lsp() for diagnostic in point_diagnostics)
+            }
+        }
+
+
+class LspCodeActionListener(sublime_plugin.ViewEventListener):
+    @classmethod
+    def is_applicable(cls, _settings):
+        if settings.show_code_actions_bulb:
+            return True
+        return False
+
+    def on_selection_modified_async(self):
+        self.code_action = CodeAction(self.view)
+        self.code_action.hide_bulb()
+        self.fire_request()
+
+    @debounce(0.8)
+    def fire_request(self):
+        self.code_action.send_request()
 
 
 class LspCodeActionsCommand(LspTextCommand):
-    def __init__(self, view):
-        super().__init__(view)
-
-    def is_enabled(self, event=None):
+    def is_enabled(self):
         return self.has_client_with_capability('codeActionProvider')
 
-    def run(self, edit, event=None):
-        client = client_for_view(self.view)
-        if client:
-            pos = get_position(self.view, event)
-            row, col = self.view.rowcol(pos)
-            point_diagnostics = get_point_diagnostics(self.view, pos)
-            params = {
-                "textDocument": {
-                    "uri": filename_to_uri(self.view.file_name())
-                },
-                "context": {
-                    "diagnostics": list(diagnostic.to_lsp() for diagnostic in point_diagnostics)
-                }
-            }
-            params["range"] = region_to_range(self.view, self.view.sel()[0]).to_lsp()
-            if event:  # if right-clicked, set cursor to menu position
-                sel = self.view.sel()
-                sel.clear()
-                sel.add(sublime.Region(pos))
+    def run(self, edit):
+        self.commands = []  # type: List[Dict]
 
-            client.send_request(Request.codeAction(params), self.handle_codeaction_response)
+        self.code_action = CodeAction(self.view)
+        self.code_action.send_request(self.handle_response)
 
-    def handle_codeaction_response(self, response: 'List[Dict]') -> None:
+    def get_titles(self):
+        ''' Return a list of all command titles. '''
         titles = []
-        self.commands = response
         for command in self.commands:
-            titles.append(
-                command.get('title'))  # TODO parse command and arguments
+            titles.append(command.get('title'))  # TODO parse command and arguments
+        return titles
+
+    def handle_response(self, response: 'List[Dict]') -> None:
+        self.commands = response
+        self.show_popup_menu()
+
+    def show_popup_menu(self) -> None:
         if len(self.commands) > 0:
-            self.view.show_popup_menu(titles, self.handle_select)
+            self.view.show_popup_menu(self.get_titles(), self.handle_select)
         else:
             self.view.show_popup('No actions available', sublime.HIDE_ON_MOUSE_MOVE_AWAY)
 
@@ -64,6 +121,3 @@ class LspCodeActionsCommand(LspTextCommand):
 
     def handle_command_response(self, response):
         pass
-
-    def want_event(self):
-        return True

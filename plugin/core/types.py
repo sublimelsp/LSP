@@ -30,6 +30,7 @@ class Settings(object):
             "write": "markup.changed"
         }
         self.diagnostics_gutter_marker = "dot"
+        self.show_code_actions_bulb = False
         self.complete_all_chars = False
         self.completion_hint_type = "auto"
         self.complete_using_text_edit = False

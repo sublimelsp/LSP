@@ -325,6 +325,9 @@
   // Valid values are "bookmark", "circle", "cross", "dot" or ""
   "diagnostics_gutter_marker": "dot",
 
+  // Show a bulb in the gutter when code actions are available
+  "show_code_actions_bulb": false, 
+
   // Request completions for all characters if set to true,
   // or just after trigger characters only otherwise.
   "complete_all_chars": true,

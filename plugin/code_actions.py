@@ -17,32 +17,50 @@ from .core.registry import session_for_view
 from .core.settings import settings
 
 
-class CodeAction:
-    def __init__(self, view: 'sublime.View') -> None:
-        self.view = view
+def send_code_action_request(view, on_response_recieved: 'Callable'):
+    session = session_for_view(view)
+    if not session or not session.has_capability('codeActionProvider'):
+        # the server doesn't support code actions, just return
+        return
 
-    def send_request(self, on_response_recieved: 'Optional[Callable]' = None):
-        """ callback - hook with response as the first argument. """
-        session = session_for_view(self.view)
-        if not session or not session.has_capability('codeActionProvider'):
-            # the server doesn't support code actions, just return
-            return
+    region = view.sel()[0]
+    pos = region.begin()
+    point_diagnostics = get_point_diagnostics(view, pos)
+    params = {
+        "textDocument": {
+            "uri": filename_to_uri(view.file_name())
+        },
+        "range": region_to_range(view, region).to_lsp(),
+        "context": {
+            "diagnostics": list(diagnostic.to_lsp() for diagnostic in point_diagnostics)
+        }
+    }
+    session.client.send_request(
+        Request.codeAction(params),
+        lambda response: on_response_recieved(response))
 
-        params = self._get_code_action_params()
-        session.client.send_request(
-            Request.codeAction(params),
-            lambda response: self._handle_response(response, on_response_recieved))
 
-    def _handle_response(self, response, callback: 'Optional[Callable]' = None) -> None:
-        code_action = CodeAction(self.view)
+class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
+    @classmethod
+    def is_applicable(cls, _settings):
+        if settings.show_code_actions_bulb:
+            return True
+        return False
+
+    def on_selection_modified_async(self):
+        self.hide_bulb()
+        self.fire_request()
+
+    @debounce(0.8)
+    def fire_request(self):
+        send_code_action_request(self.view, self.handle_response)
+
+    def handle_response(self, response) -> None:
         if settings.show_code_actions_bulb:
             if len(response) > 0:
-                code_action.show_bulb()
+                self.show_bulb()
             else:
-                code_action.hide_bulb()
-
-        if callback is not None:
-            callback(response)
+                self.hide_bulb()
 
     def show_bulb(self) -> None:
         region = self.view.sel()[0]
@@ -52,37 +70,6 @@ class CodeAction:
     def hide_bulb(self) -> None:
         self.view.erase_regions('lsp_bulb')
 
-    def _get_code_action_params(self):
-        region = self.view.sel()[0]
-        pos = region.begin()
-        point_diagnostics = get_point_diagnostics(self.view, pos)
-        return {
-            "textDocument": {
-                "uri": filename_to_uri(self.view.file_name())
-            },
-            "range": region_to_range(self.view, region).to_lsp(),
-            "context": {
-                "diagnostics": list(diagnostic.to_lsp() for diagnostic in point_diagnostics)
-            }
-        }
-
-
-class LspCodeActionListener(sublime_plugin.ViewEventListener):
-    @classmethod
-    def is_applicable(cls, _settings):
-        if settings.show_code_actions_bulb:
-            return True
-        return False
-
-    def on_selection_modified_async(self):
-        self.code_action = CodeAction(self.view)
-        self.code_action.hide_bulb()
-        self.fire_request()
-
-    @debounce(0.8)
-    def fire_request(self):
-        self.code_action.send_request()
-
 
 class LspCodeActionsCommand(LspTextCommand):
     def is_enabled(self):
@@ -91,8 +78,7 @@ class LspCodeActionsCommand(LspTextCommand):
     def run(self, edit):
         self.commands = []  # type: List[Dict]
 
-        self.code_action = CodeAction(self.view)
-        self.code_action.send_request(self.handle_response)
+        send_code_action_request(self.view, self.handle_response)
 
     def get_titles(self):
         ''' Return a list of all command titles. '''

@@ -12,7 +12,6 @@ from .core.protocol import Request
 from .core.diagnostics import get_point_diagnostics
 from .core.url import filename_to_uri
 from .core.views import region_to_range
-from .core.helpers import debounce
 from .core.registry import session_for_view
 from .core.settings import settings
 
@@ -41,6 +40,10 @@ def send_code_action_request(view, on_response_recieved: 'Callable'):
 
 
 class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
+    def __init__(self, view: sublime.View) -> None:
+        super().__init__(view)
+        self._stored_point = -1
+
     @classmethod
     def is_applicable(cls, _settings):
         if settings.show_code_actions_bulb:
@@ -51,9 +54,15 @@ class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
         self.hide_bulb()
         self.fire_request()
 
-    @debounce(0.8)
     def fire_request(self):
-        send_code_action_request(self.view, self.handle_response)
+        current_point = self.view.sel()[0].begin()
+        if self._stored_point != current_point:
+            self._stored_point = current_point
+            sublime.set_timeout_async(lambda: self._purge(current_point), 800)
+
+    def _purge(self, current_point: int) -> None:
+        if current_point == self._stored_point:
+            send_code_action_request(self.view, self.handle_response)
 
     def handle_response(self, response) -> None:
         if settings.show_code_actions_bulb:

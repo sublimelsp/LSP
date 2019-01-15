@@ -1,0 +1,14 @@
+=> 0.8.1
+
+Features:
+
+Lightbulb gutter icon shows Code actions! (@predragnikolic)
+To try this out:
+* Set the `show_code_actions_bulb` LSP setting to true
+* If using GitGutter, add 'lsp_bulb' to its 'protected_regions' setting.
+
+Bug fixes:
+* Send initialized to language server before opening documents
+* Handle completion response containing null instead of empty array. (@rwols)
+
+See https://github.com/tomv564/LSP/releases/tag/0.8.1 for full update details.

@@ -52,15 +52,15 @@ class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
 
     def on_selection_modified_async(self):
         self.hide_bulb()
-        self.fire_request()
+        self.schedule_request()
 
-    def fire_request(self):
+    def schedule_request(self):
         current_point = self.view.sel()[0].begin()
         if self._stored_point != current_point:
             self._stored_point = current_point
-            sublime.set_timeout_async(lambda: self._purge(current_point), 800)
+            sublime.set_timeout_async(lambda: self.fire_request(current_point), 800)
 
-    def _purge(self, current_point: int) -> None:
+    def fire_request(self, current_point: int) -> None:
         if current_point == self._stored_point:
             send_code_action_request(self.view, self.handle_response)
 

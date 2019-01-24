@@ -454,13 +454,14 @@ class WindowManager(object):
 
         self._handlers.on_initialized(config.name, self._window, client)
 
+        client.send_notification(Notification.initialized())
+
         document_sync = session.capabilities.get("textDocumentSync")
         if document_sync:
             self._documents.add_session(session)
 
         global_events.subscribe('view.on_close', lambda view: self._handle_view_closed(view, session))
 
-        client.send_notification(Notification.initialized())
         if config.settings:
             configParams = {
                 'settings': config.settings

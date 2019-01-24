@@ -47,7 +47,7 @@
     {
       "command": ["pyls"],
       "scopes": ["source.python"],
-      "syntaxes": ["Packages/Python/Python.sublime-syntax"],
+      "syntaxes": ["Packages/Python/Python.sublime-syntax", "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage"],
       "languageId": "python"
     },
     "rls":

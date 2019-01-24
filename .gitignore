@@ -6,3 +6,5 @@ LSP.sublime-project
 .ropeproject
 *.pyc
 .coverage
+mypycov
+htmlcov

@@ -304,7 +304,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         if self.state == CompletionState.REQUESTING:
             items = []  # type: List[Dict]
             if isinstance(response, dict):
-                items = response["items"]
+                items = response["items"] or []
             elif isinstance(response, list):
                 items = response
             items = sorted(items, key=lambda item: item.get("sortText") or item["label"])

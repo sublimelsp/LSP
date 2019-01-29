@@ -18,6 +18,7 @@ from .plugin.code_actions import *
 from .plugin.symbols import *
 from .plugin.rename import *
 from .plugin.execute_command import *
+from .plugin.workspace_symbol import *
 
 def plugin_loaded():
     startup()

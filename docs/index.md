@@ -524,7 +524,8 @@ Any fields in a client configuration can be overridden by adding an LSP settings
 
 **Workspace actions**
 
-Show Diagnostics Panel: `super+shift+M` / `ctr+alt+M`
+* Show Diagnostics Panel: `super+shift+M` / `ctr+alt+M`
+* Workspace Symbol Search: via command Palette `LSP: workspace symbol`
 
 **Overriding keybindings**
 

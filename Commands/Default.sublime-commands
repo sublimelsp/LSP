@@ -57,6 +57,10 @@
         "args": {}
     },
     {
+        "caption": "LSP: Workspace symbol",
+        "command": "lsp_workspace_symbol"
+    },
+    {
         "caption": "LSP: Rename Symbol",
         "command": "lsp_symbol_rename"
     }

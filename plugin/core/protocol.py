@@ -124,6 +124,10 @@ class Request:
         return Request("workspace/executeCommand", params)
 
     @classmethod
+    def workspaceSymbol(cls, params: dict) -> 'Request':
+        return Request("workspace/symbol", params)
+
+    @classmethod
     def formatting(cls, params: dict) -> 'Request':
         return Request("textDocument/formatting", params)
 

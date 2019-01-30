@@ -18,12 +18,26 @@ symbol_kind_names = {
     SymbolKind.Package: "package",
     SymbolKind.Class: "class",
     SymbolKind.Method: "method",
-    SymbolKind.Function: "function",
+    SymbolKind.Property: "property",
     SymbolKind.Field: "field",
+    SymbolKind.Constructor: "constructor",
+    SymbolKind.Enum: "enum",
+    SymbolKind.Interface: "interface",
+    SymbolKind.Function: "function",
     SymbolKind.Variable: "variable",
     SymbolKind.Constant: "constant",
-    SymbolKind.Interface: "interface",
-    SymbolKind.Property: "property"
+    SymbolKind.String: "string",
+    SymbolKind.Number: "number",
+    SymbolKind.Boolean: "boolean",
+    SymbolKind.Array: "array",
+    SymbolKind.Object: "object",
+    SymbolKind.Key: "key",
+    SymbolKind.Null: "null",
+    SymbolKind.EnumMember: "enum member",
+    SymbolKind.Struct: "struct",
+    SymbolKind.Event: "event",
+    SymbolKind.Operator: "operator",
+    SymbolKind.TypeParameter: "type parameter"
 }
 
 

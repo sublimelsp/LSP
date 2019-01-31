@@ -58,7 +58,7 @@
     },
     {
         "caption": "LSP: Workspace symbol",
-        "command": "lsp_workspace_symbol"
+        "command": "lsp_workspace_symbols"
     },
     {
         "caption": "LSP: Rename Symbol",

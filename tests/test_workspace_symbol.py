@@ -44,7 +44,7 @@ class LspWorkspaceSymbolTests(DeferrableTestCase):
                 }
             }
         }
-        self.view.run_command("lsp_workspace_symbol", {"symbol": args})
+        self.view.run_command("lsp_workspace_symbols", {"symbol_list_handler": args})
         yield 100  # wait for file to be open
         self.other_view = sublime.active_window().active_sheet().view()
         self.assertEquals(self.other_view.file_name(), target_file)

@@ -107,16 +107,24 @@ def get_initialize_params(project_path: str, config: ClientConfig):
                             SymbolKind.Method,
                             SymbolKind.Property,
                             SymbolKind.Field,
-                            # SymbolKind.Constructor,
-                            # SymbolKind.Enum,
+                            SymbolKind.Constructor,
+                            SymbolKind.Enum,
                             SymbolKind.Interface,
                             SymbolKind.Function,
                             SymbolKind.Variable,
-                            SymbolKind.Constant
-                            # SymbolKind.String,
-                            # SymbolKind.Number,
-                            # SymbolKind.Boolean,
-                            # SymbolKind.Array
+                            SymbolKind.Constant,
+                            SymbolKind.String,
+                            SymbolKind.Number,
+                            SymbolKind.Boolean,
+                            SymbolKind.Array,
+                            SymbolKind.Object,
+                            SymbolKind.Key,
+                            SymbolKind.Null,
+                            SymbolKind.EnumMember,
+                            SymbolKind.Struct,
+                            SymbolKind.Event,
+                            SymbolKind.Operator,
+                            SymbolKind.TypeParameter
                         ]
                     }
                 },

@@ -38,8 +38,6 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
             start = symbol['location']['range']['start']
             file_name = uri_to_filename(symbol['location']['uri'])
             encoded_file_name = "{}:{}:{}".format(file_name, start['line'], start['character'])
-            print("window " + str(self.view.window()))
-            print(str(self.view.name()))
             self.view.window().open_file(encoded_file_name, sublime.ENCODED_POSITION)
 
     def _handle_response(self, matches: 'Optional[List[Dict[str, Any]]]') -> None:

@@ -13,7 +13,7 @@ except ImportError:
     pass
 
 
-class QueryHandler(sublime_plugin.TextInputHandler):
+class SymbolQueryInput(sublime_plugin.TextInputHandler):
 
     def validate(self, txt) -> bool:
         return txt != ""
@@ -41,7 +41,7 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
             self.view.window().open_file(encoded_file_name, sublime.ENCODED_POSITION)
 
     def _handle_response(self, query: str, matches: 'Optional[List[Dict[str, Any]]]') -> None:
-        self.view.erase_status("lsp_wokspace_symbols")
+        self.view.erase_status("lsp_workspace_symbols")
         if matches:
             choices = list(map(lambda s: self._format(s), matches))
             self.view.window().show_quick_panel(choices, lambda i: self._open_file(matches, i))
@@ -49,6 +49,7 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
             sublime.message_dialog("No matches found for query string: '{}'".format(query))
 
     def _handle_error(self, error: 'Dict[str, Any]') -> None:
+        self.view.erase_status("lsp_workspace_symbols")
         reason = error.get("message", "none provided by server :(")
         msg = "command 'workspace/symbol' failed. Reason: {}".format(reason)
         sublime.error_message(msg)
@@ -57,12 +58,12 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
         return self.has_client_with_capability('workspaceSymbolProvider')
 
     def input(self, args):
-        return QueryHandler()
+        return SymbolQueryInput()
 
-    def run(self, edit, query_handler: str = "") -> None:
-        if query_handler:
-            request = Request.workspaceSymbol({"query": query_handler})
+    def run(self, edit, symbol_query_input: str = "") -> None:
+        if symbol_query_input:
+            request = Request.workspaceSymbol({"query": symbol_query_input})
             client = client_for_view(self.view)
             if client:
-                self.view.set_status("lsp_wokspace_symbols", "sending request")
-                client.send_request(request, lambda r: self._handle_response(query_handler, r), self._handle_error)
+                self.view.set_status("lsp_workspace_symbols", "Searching for '{}'...".format(symbol_query_input))
+                client.send_request(request, lambda r: self._handle_response(symbol_query_input, r), self._handle_error)

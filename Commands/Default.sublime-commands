@@ -57,7 +57,7 @@
         "args": {}
     },
     {
-        "caption": "LSP: Workspace symbol",
+        "caption": "LSP: Workspace Symbol",
         "command": "lsp_workspace_symbols"
     },
     {

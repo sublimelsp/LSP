@@ -32,7 +32,7 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
         name = "{} ({}) - {} -- {}".format(s['name'], symbol_kind, s.get('containerName', ""), file_name)
         return name
 
-    def _open_file(self, symbols, index):
+    def _open_file(self, symbols: 'List[Dict[str, Any]]', index: int) -> None:
         if index != -1:
             symbol = symbols[index]
             start = symbol['location']['range']['start']
@@ -40,10 +40,13 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
             encoded_file_name = "{}:{}:{}".format(file_name, start['line'], start['character'])
             self.view.window().open_file(encoded_file_name, sublime.ENCODED_POSITION)
 
-    def _handle_response(self, matches: 'Optional[List[Dict[str, Any]]]') -> None:
+    def _handle_response(self, query: str, matches: 'Optional[List[Dict[str, Any]]]') -> None:
+        self.view.erase_status("lsp_wokspace_symbols")
         if matches:
             choices = list(map(lambda s: self._format(s), matches))
             self.view.window().show_quick_panel(choices, lambda i: self._open_file(matches, i))
+        else:
+            sublime.message_dialog("No matches found for query string: '{}'".format(query))
 
     def _handle_error(self, error: 'Dict[str, Any]') -> None:
         reason = error.get("message", "none provided by server :(")
@@ -56,9 +59,10 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
     def input(self, args):
         return QueryHandler()
 
-    def run(self, edit, query_handler: str = None) -> None:
+    def run(self, edit, query_handler: str = "") -> None:
         if query_handler:
             request = Request.workspaceSymbol({"query": query_handler})
             client = client_for_view(self.view)
             if client:
-                client.send_request(request, self._handle_response, self._handle_error)
+                self.view.set_status("lsp_wokspace_symbols", "sending request")
+                client.send_request(request, lambda r: self._handle_response(query_handler, r), self._handle_error)

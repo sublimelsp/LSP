@@ -326,7 +326,7 @@
   "diagnostics_gutter_marker": "dot",
 
   // Show a bulb in the gutter when code actions are available
-  "show_code_actions_bulb": false, 
+  "show_code_actions_bulb": false,
 
   // Request completions for all characters if set to true,
   // or just after trigger characters only otherwise.
@@ -344,6 +344,9 @@
 
   // Resolve completions and apply snippet if received.
   "resolve_completion_for_snippets": false,
+
+  // Show symbol references in Sublime's quick panel instead of the bottom panel.
+  "show_references_in_quick_panel": false,
 
   // Show verbose debug messages in the sublime console.
   "log_debug": false,

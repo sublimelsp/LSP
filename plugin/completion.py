@@ -326,7 +326,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             if self.next_request:
                 prefix, locations = self.next_request
                 self.do_request(prefix, locations)
-                self.state = CompletionState.IDLE
+            self.state = CompletionState.IDLE
         else:
             debug('Got unexpected response while in state {}'.format(self.state))
 

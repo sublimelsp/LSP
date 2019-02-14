@@ -323,10 +323,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             self.view.run_command("hide_auto_complete")
             self.run_auto_complete()
         elif self.state == CompletionState.CANCELLING:
+            self.state = CompletionState.IDLE
             if self.next_request:
                 prefix, locations = self.next_request
                 self.do_request(prefix, locations)
-                self.state = CompletionState.IDLE
         else:
             debug('Got unexpected response while in state {}'.format(self.state))
 

@@ -103,7 +103,8 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
         for highlight in response:
             r = range_to_region(Range.from_lsp(highlight["range"]), self.view)
             kind = highlight.get("kind", DocumentHighlightKind.Unknown)
-            kind2regions[_kind2name[kind]].append(r)
+            if kind is not None:
+                kind2regions[_kind2name[kind]].append(r)
         if settings.document_highlight_style == "fill":
             flags = 0
         elif settings.document_highlight_style == "box":

@@ -161,7 +161,7 @@ See: [github:felixfbecker/php-language-server](https://github.com/felixfbecker/p
 
 #### Intelephense
 
-See [bmewburn/intelephense](https://github.com/bmewburn/intelephense)
+See [bmewburn/intelephense-docs](https://github.com/bmewburn/intelephense-docs)
 
 ```json
  "intelephense-ls":

@@ -170,7 +170,7 @@ See [bmewburn/intelephense](https://github.com/bmewburn/intelephense)
       "enabled": true,
       "command": [
           "node",
-          "PATH_TO_GLOBAL_NODE_MODULES/",
+          "PATH_TO_GLOBAL_NODE_MODULES/intelephense/lib/intelephense.js",
           "--stdio",
       ],
       "scopes": ["source.php", "embedding.php"],

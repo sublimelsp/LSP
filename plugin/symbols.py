@@ -81,7 +81,13 @@ class LspDocumentSymbolsCommand(LspTextCommand):
 
     def on_symbol_selected(self, symbol_index):
         selected_symbol = self.symbols[symbol_index]
-        range = selected_symbol['location']['range']
+        try:
+            range = selected_symbol['location']['range']
+        except KeyError:
+            range = selected_symbol.get('range')
+        if not range:
+            debug('could not recognize the type: expected either SymbolInformation or DocumentSymbol')
+            return
         region = range_to_region(Range.from_lsp(range), self.view)
         self.view.show_at_center(region)
         self.view.sel().clear()

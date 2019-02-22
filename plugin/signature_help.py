@@ -21,6 +21,22 @@ from .core.popups import popup_css, popup_class
 from .core.settings import settings
 
 
+def get_documentation(d: 'Dict[str, Any]') -> 'Optional[str]':
+    docs = d.get('documentation', None)
+    if docs is None:
+        return None
+    elif isinstance(docs, str):
+        # In older version of the protocol, documentation was just a string.
+        return docs
+    elif isinstance(docs, dict):
+        # This can be either "plaintext" or "markdown" format. For now, we can dump it into the popup box. It would
+        # be nice to handle the markdown in a special way.
+        return docs.get('value', None)
+    else:
+        debug('unknown documentation type:', str(d))
+        return None
+
+
 class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
     def __init__(self, view):
@@ -185,10 +201,10 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         params = signature.get('parameters')
         if params:
             for parameter in params:
-                paramDocs = parameter.get('documentation', None)
-                if paramDocs:
+                param_docs = get_documentation(parameter)
+                if param_docs:
                     formatted.append("**{}**\n".format(parameter.get('label')))
-                    formatted.append("* *{}*\n".format(paramDocs))
+                    formatted.append("* *{}*\n".format(param_docs))
         sigDocs = signature.get('documentation', None)
         if sigDocs:
             formatted.append(sigDocs)
@@ -197,18 +213,18 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
     def _build_popup_content_style_vscode(self) -> str:
         # Fetch all the relevant data.
         signature_label = ""
-        signature_documentation = ""
+        signature_documentation = ""  # type: Optional[str]
         parameter_label = ""
-        parameter_documentation = ""
+        parameter_documentation = ""  # type: Optional[str]
         if self._active_signature in range(0, len(self._signatures)):
             signature = self._signatures[self._active_signature]
             signature_label = html.escape(signature["label"], quote=False)
-            signature_documentation = signature.get("documentation", "")  # Optional.
+            signature_documentation = get_documentation(signature)
             parameters = signature.get("parameters", None)
             if parameters and self._active_parameter in range(0, len(parameters)):
                 parameter = parameters[self._active_parameter]
                 parameter_label = html.escape(parameter["label"], quote=False)
-                parameter_documentation = parameter.get("documentation", "")  # Optional.
+                parameter_documentation = get_documentation(parameter)
 
         formatted = []
 

@@ -1,0 +1,417 @@
+[
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "argc"
+    },
+    "filterText": "argc",
+    "insertText": "argc",
+    "label": "argc",
+    "detail": "int",
+    "kind": 6,
+    "sortText": "3e2cccccargc"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "argv"
+    },
+    "filterText": "argv",
+    "insertText": "argv",
+    "label": "argv",
+    "detail": "const char **",
+    "kind": 6,
+    "sortText": "3e2cccccargv"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "alignas(${1:expression})"
+    },
+    "filterText": "alignas",
+    "insertText": "alignas(${1:expression})",
+    "label": "alignas(expression)",
+    "kind": 15,
+    "sortText": "3f800000alignas"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "alignof(${1:type})"
+    },
+    "filterText": "alignof",
+    "insertText": "alignof(${1:type})",
+    "label": "alignof(type)",
+    "detail": "size_t",
+    "kind": 15,
+    "sortText": "3f800000alignof"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "auto"
+    },
+    "filterText": "auto",
+    "insertText": "auto",
+    "label": "auto",
+    "kind": 14,
+    "sortText": "3f800000auto"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "static_assert(${1:expression}, ${2:message})"
+    },
+    "filterText": "static_assert",
+    "insertText": "static_assert(${1:expression}, ${2:message})",
+    "label": "static_assert(expression, message)",
+    "kind": 15,
+    "sortText": "40555555static_assert"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "a64l(${1:const char *__s})"
+    },
+    "filterText": "a64l",
+    "insertText": "a64l(${1:const char *__s})",
+    "label": "a64l(const char *__s)",
+    "detail": "long",
+    "kind": 3,
+    "sortText": "40a7b70ba64l"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "abort()"
+    },
+    "filterText": "abort",
+    "insertText": "abort()",
+    "label": "abort()",
+    "detail": "void",
+    "kind": 3,
+    "sortText": "40a7b70babort"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "abs(${1:int __x})"
+    },
+    "filterText": "abs",
+    "insertText": "abs(${1:int __x})",
+    "label": "abs(int __x)",
+    "detail": "int",
+    "kind": 3,
+    "sortText": "40a7b70babs"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "aligned_alloc(${1:size_t __alignment}, ${2:size_t __size})"
+    },
+    "filterText": "aligned_alloc",
+    "insertText": "aligned_alloc(${1:size_t __alignment}, ${2:size_t __size})",
+    "label": "aligned_alloc(size_t __alignment, size_t __size)",
+    "detail": "void *",
+    "kind": 3,
+    "sortText": "40a7b70baligned_alloc"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "alloca(${1:size_t __size})"
+    },
+    "filterText": "alloca",
+    "insertText": "alloca(${1:size_t __size})",
+    "label": "alloca(size_t __size)",
+    "detail": "void *",
+    "kind": 3,
+    "sortText": "40a7b70balloca"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "asctime(${1:const struct tm *__tp})"
+    },
+    "filterText": "asctime",
+    "insertText": "asctime(${1:const struct tm *__tp})",
+    "label": "asctime(const struct tm *__tp)",
+    "detail": "char *",
+    "kind": 3,
+    "sortText": "40a7b70basctime"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "asctime_r(${1:const struct tm *__restrict __tp}, ${2:char *__restrict __buf})"
+    },
+    "filterText": "asctime_r",
+    "insertText": "asctime_r(${1:const struct tm *__restrict __tp}, ${2:char *__restrict __buf})",
+    "label": "asctime_r(const struct tm *__restrict __tp, char *__restrict __buf)",
+    "detail": "char *",
+    "kind": 3,
+    "sortText": "40a7b70basctime_r"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "asprintf(${1:char **__restrict __ptr}, ${2:const char *__restrict __fmt, ...})"
+    },
+    "filterText": "asprintf",
+    "insertText": "asprintf(${1:char **__restrict __ptr}, ${2:const char *__restrict __fmt, ...})",
+    "label": "asprintf(char **__restrict __ptr, const char *__restrict __fmt, ...)",
+    "detail": "int",
+    "kind": 3,
+    "sortText": "40a7b70basprintf"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "at_quick_exit(${1:void (*__func)()})"
+    },
+    "filterText": "at_quick_exit",
+    "insertText": "at_quick_exit(${1:void (*__func)()})",
+    "label": "at_quick_exit(void (*__func)())",
+    "detail": "int",
+    "kind": 3,
+    "sortText": "40a7b70bat_quick_exit"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "atexit(${1:void (*__func)()})"
+    },
+    "filterText": "atexit",
+    "insertText": "atexit(${1:void (*__func)()})",
+    "label": "atexit(void (*__func)())",
+    "detail": "int",
+    "kind": 3,
+    "sortText": "40a7b70batexit"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "atof(${1:const char *__nptr})"
+    },
+    "filterText": "atof",
+    "insertText": "atof(${1:const char *__nptr})",
+    "label": "atof(const char *__nptr)",
+    "detail": "double",
+    "kind": 3,
+    "sortText": "40a7b70batof"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "atoi(${1:const char *__nptr})"
+    },
+    "filterText": "atoi",
+    "insertText": "atoi(${1:const char *__nptr})",
+    "label": "atoi(const char *__nptr)",
+    "detail": "int",
+    "kind": 3,
+    "sortText": "40a7b70batoi"
+  },
+  {
+    "insertTextFormat": 2,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 5,
+          "line": 2
+        },
+        "start": {
+          "character": 4,
+          "line": 2
+        }
+      },
+      "newText": "atol(${1:const char *__nptr})"
+    },
+    "filterText": "atol",
+    "insertText": "atol(${1:const char *__nptr})",
+    "label": "atol(const char *__nptr)",
+    "detail": "long",
+    "kind": 3,
+    "sortText": "40a7b70batol"
+  }
+]

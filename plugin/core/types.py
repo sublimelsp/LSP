@@ -33,7 +33,6 @@ class Settings(object):
         self.show_code_actions_bulb = False
         self.complete_all_chars = False
         self.completion_hint_type = "auto"
-        self.complete_using_text_edit = False
         self.resolve_completion_for_snippets = False
         self.show_references_in_quick_panel = False
         self.log_debug = True

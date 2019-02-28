@@ -241,7 +241,16 @@ Then the LSP plugin should launch as configured in LSP.sublime-settings using co
 
 ### C/C++ (Clangd)<a name="clang"></a>
 
-You will need to build from source, see [instructions](https://clang.llvm.org/extra/clangd.html)
+To use clangd on Debian/Ubuntu, add the apt repositories [described here](apt.llvm.org).
+After that, install with e.g. `apt install clang-tools-9`. The clangd executable
+will have a version number suffix. For instance, clangd-9. You will thus have to
+adjust your `"clients"` dictionary in your user preferences.
+
+To use clangd on Mac, use Homebrew: `brew install llvm`. The clangd executable
+will be present in /usr/local/Cellar/llvm/*version*/bin
+
+To use clangd on Windows, install LLVM with the [LLVM installer](http://releases.llvm.org/download.html),
+and then add C:\\Program Files\\LLVM\\bin to your %PATH%.
 
 For any project of non-trivial size, you probably have a build system in place
 to compile your source files. The compilation command passed to your compiler

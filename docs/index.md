@@ -161,16 +161,16 @@ See: [github:felixfbecker/php-language-server](https://github.com/felixfbecker/p
 
 #### Intelephense
 
-See [bmewburn/intelephense-server/](https://github.com/bmewburn/intelephense-server/)
+See [bmewburn/intelephense-docs](https://github.com/bmewburn/intelephense-docs)
 
 ```json
  "intelephense-ls":
   {
-      // npm i -g intelephense-server
+      // npm i -g intelephense
       "enabled": true,
       "command": [
           "node",
-          "PATH_TO_GLOBAL_NODE_MODULES/intelephense-server/lib/server.js",
+          "PATH_TO_GLOBAL_NODE_MODULES/intelephense/lib/intelephense.js",
           "--stdio",
       ],
       "scopes": ["source.php", "embedding.php"],

@@ -233,25 +233,29 @@ class CompletionFormattingTests(DeferrableTestCase):
         self.assertEqual(
             result,
             [
-                ('argc\t  int', 'argc'),  # noqa: E501
-                ('argv\t  const char **', 'argv'),  # noqa: E501
-                ('alignas(${1:expression})\t  Snippet', 'alignas(${1:expression})'),  # noqa: E501
-                ('alignof(${1:type})\t  size_t', 'alignof(${1:type})'),  # noqa: E501
-                ('auto\t  Keyword', 'auto'),  # noqa: E501
-                ('static_assert(${1:expression}, ${2:message})\t  Snippet', 'static_assert(${1:expression}, ${2:message})'),  # noqa: E501
-                ('a64l(${1:const char *__s})\t  long', 'a64l(${1:const char *__s})'),  # noqa: E501
-                ('abort()\t  void', 'abort()'),  # noqa: E501
-                ('abs(${1:int __x})\t  int', 'abs(${1:int __x})'),  # noqa: E501
-                ('aligned_alloc(${1:size_t __alignment}, ${2:size_t __size})\t  void *', 'aligned_alloc(${1:size_t __alignment}, ${2:size_t __size})'),  # noqa: E501
-                ('alloca(${1:size_t __size})\t  void *', 'alloca(${1:size_t __size})'),  # noqa: E501
-                ('asctime(${1:const struct tm *__tp})\t  char *', 'asctime(${1:const struct tm *__tp})'),  # noqa: E501
-                ('asctime_r(${1:const struct tm *__restrict __tp}, ${2:char *__restrict __buf})\t  char *', 'asctime_r(${1:const struct tm *__restrict __tp}, ${2:char *__restrict __buf})'),  # noqa: E501
-                ('asprintf(${1:char **__restrict __ptr}, ${2:const char *__restrict __fmt, ...})\t  int', 'asprintf(${1:char **__restrict __ptr}, ${2:const char *__restrict __fmt, ...})'),  # noqa: E501
-                ('at_quick_exit(${1:void (*__func)()})\t  int', 'at_quick_exit(${1:void (*__func)()})'),  # noqa: E501
-                ('atexit(${1:void (*__func)()})\t  int', 'atexit(${1:void (*__func)()})'),  # noqa: E501
-                ('atof(${1:const char *__nptr})\t  double', 'atof(${1:const char *__nptr})'),  # noqa: E501
-                ('atoi(${1:const char *__nptr})\t  int', 'atoi(${1:const char *__nptr})'),  # noqa: E501
-                ('atol(${1:const char *__nptr})\t  long', 'atol(${1:const char *__nptr})')  # noqa: E501
+                ('argc\t  int', 'argc'),
+                ('argv\t  const char **', 'argv'),
+                ('alignas(${1:expression})\t  Snippet', 'alignas(${1:expression})'),
+                ('alignof(${1:type})\t  size_t', 'alignof(${1:type})'),
+                ('auto\t  Keyword', 'auto'),
+                ('static_assert(${1:expression}, ${2:message})\t  Snippet',
+                    'static_assert(${1:expression}, ${2:message})'),
+                ('a64l(${1:const char *__s})\t  long', 'a64l(${1:const char *__s})'),
+                ('abort()\t  void', 'abort()'),
+                ('abs(${1:int __x})\t  int', 'abs(${1:int __x})'),
+                ('aligned_alloc(${1:size_t __alignment}, ${2:size_t __size})\t  void *',
+                    'aligned_alloc(${1:size_t __alignment}, ${2:size_t __size})'),
+                ('alloca(${1:size_t __size})\t  void *', 'alloca(${1:size_t __size})'),
+                ('asctime(${1:const struct tm *__tp})\t  char *', 'asctime(${1:const struct tm *__tp})'),
+                ('asctime_r(${1:const struct tm *__restrict __tp}, ${2:char *__restrict __buf})\t  char *',
+                    'asctime_r(${1:const struct tm *__restrict __tp}, ${2:char *__restrict __buf})'),
+                ('asprintf(${1:char **__restrict __ptr}, ${2:const char *__restrict __fmt, ...})\t  int',
+                    'asprintf(${1:char **__restrict __ptr}, ${2:const char *__restrict __fmt, ...})'),
+                ('at_quick_exit(${1:void (*__func)()})\t  int', 'at_quick_exit(${1:void (*__func)()})'),
+                ('atexit(${1:void (*__func)()})\t  int', 'atexit(${1:void (*__func)()})'),
+                ('atof(${1:const char *__nptr})\t  double', 'atof(${1:const char *__nptr})'),
+                ('atoi(${1:const char *__nptr})\t  int', 'atoi(${1:const char *__nptr})'),
+                ('atol(${1:const char *__nptr})\t  long', 'atol(${1:const char *__nptr})')
             ]
         )
 
@@ -264,27 +268,30 @@ class CompletionFormattingTests(DeferrableTestCase):
         self.assertEqual(
             result,
             [
-                ('abc\t  os', 'abc'),  # noqa: E501
-                ('abort\t  os', 'abort'),  # noqa: E501
-                ('access(${1:path}, ${2:mode}, ${3:dir_fd}, ${4:effective_ids}, ${5:follow_symlinks})$0\t  os', 'access(${1:path}, ${2:mode}, ${3:dir_fd}, ${4:effective_ids}, ${5:follow_symlinks})$0'),  # noqa: E501
-                ('altsep\t  os', 'altsep'),  # noqa: E501
-                ('chdir(${1:path})$0\t  os', 'chdir(${1:path})$0'),  # noqa: E501
-                ('chmod(${1:path}, ${2:mode}, ${3:dir_fd}, ${4:follow_symlinks})$0\t  os', 'chmod(${1:path}, ${2:mode}, ${3:dir_fd}, ${4:follow_symlinks})$0'),  # noqa: E501
-                ('chown(${1:path}, ${2:uid}, ${3:gid}, ${4:dir_fd}, ${5:follow_symlinks})$0\t  os', 'chown(${1:path}, ${2:uid}, ${3:gid}, ${4:dir_fd}, ${5:follow_symlinks})$0'),  # noqa: E501
-                ('chroot(${1:path})$0\t  os', 'chroot(${1:path})$0'),  # noqa: E501
-                ('CLD_CONTINUED\t  os', 'CLD_CONTINUED'),  # noqa: E501
-                ('CLD_DUMPED\t  os', 'CLD_DUMPED'),  # noqa: E501
-                ('CLD_EXITED\t  os', 'CLD_EXITED'),  # noqa: E501
-                ('CLD_TRAPPED\t  os', 'CLD_TRAPPED'),  # noqa: E501
-                ('close(${1:fd})$0\t  os', 'close(${1:fd})$0'),  # noqa: E501
-                ('closerange(${1:fd_low}, ${2:fd_high})$0\t  os', 'closerange(${1:fd_low}, ${2:fd_high})$0'),  # noqa: E501
-                ('confstr(${1:name})$0\t  os', 'confstr(${1:name})$0'),  # noqa: E501
-                ('confstr_names\t  os', 'confstr_names'),  # noqa: E501
-                ('cpu_count\t  os', 'cpu_count'),  # noqa: E501
-                ('ctermid\t  os', 'ctermid'),  # noqa: E501
-                ('curdir\t  os', 'curdir'),  # noqa: E501
-                ('defpath\t  os', 'defpath'),  # noqa: E501
-                ('device_encoding(${1:fd})$0\t  os', 'device_encoding(${1:fd})$0')  # noqa: E501
+                ('abc\t  os', 'abc'),
+                ('abort\t  os', 'abort'),
+                ('access(${1:path}, ${2:mode}, ${3:dir_fd}, ${4:effective_ids}, ${5:follow_symlinks})$0\t  os',
+                    'access(${1:path}, ${2:mode}, ${3:dir_fd}, ${4:effective_ids}, ${5:follow_symlinks})$0'),
+                ('altsep\t  os', 'altsep'),
+                ('chdir(${1:path})$0\t  os', 'chdir(${1:path})$0'),
+                ('chmod(${1:path}, ${2:mode}, ${3:dir_fd}, ${4:follow_symlinks})$0\t  os',
+                    'chmod(${1:path}, ${2:mode}, ${3:dir_fd}, ${4:follow_symlinks})$0'),
+                ('chown(${1:path}, ${2:uid}, ${3:gid}, ${4:dir_fd}, ${5:follow_symlinks})$0\t  os',
+                    'chown(${1:path}, ${2:uid}, ${3:gid}, ${4:dir_fd}, ${5:follow_symlinks})$0'),
+                ('chroot(${1:path})$0\t  os', 'chroot(${1:path})$0'),
+                ('CLD_CONTINUED\t  os', 'CLD_CONTINUED'),
+                ('CLD_DUMPED\t  os', 'CLD_DUMPED'),
+                ('CLD_EXITED\t  os', 'CLD_EXITED'),
+                ('CLD_TRAPPED\t  os', 'CLD_TRAPPED'),
+                ('close(${1:fd})$0\t  os', 'close(${1:fd})$0'),
+                ('closerange(${1:fd_low}, ${2:fd_high})$0\t  os', 'closerange(${1:fd_low}, ${2:fd_high})$0'),
+                ('confstr(${1:name})$0\t  os', 'confstr(${1:name})$0'),
+                ('confstr_names\t  os', 'confstr_names'),
+                ('cpu_count\t  os', 'cpu_count'),
+                ('ctermid\t  os', 'ctermid'),
+                ('curdir\t  os', 'curdir'),
+                ('defpath\t  os', 'defpath'),
+                ('device_encoding(${1:fd})$0\t  os', 'device_encoding(${1:fd})$0')
             ]
         )
 

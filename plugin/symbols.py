@@ -1,4 +1,3 @@
-
 from .core.logging import debug
 from .core.protocol import Request, Range
 from .core.protocol import SymbolKind
@@ -82,10 +81,8 @@ class LspDocumentSymbolsCommand(LspTextCommand):
 
     def on_symbol_selected(self, symbol_index):
         selected_symbol = self.symbols[symbol_index]
-        try:
-            range = selected_symbol['location']['range']
-        except KeyError:
-            range = selected_symbol.get('range')
+        range = selected_symbol.get('location', selected_symbol.get('range'))
+        range = range.get('range', range)
         if not range:
             debug('could not recognize the type: expected either SymbolInformation or DocumentSymbol')
             return

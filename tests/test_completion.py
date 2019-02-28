@@ -195,7 +195,7 @@ class CompletionFormattingTests(DeferrableTestCase):
         result = handler.format_completion(item)
         self.assertEqual(result, ('const\t  Keyword', 'const'))
 
-    def test_text_edit1(self):
+    def test_text_edit_intelephense(self):
         yield 100  # wait for file to be open
         handler = CompletionHandler(self.view)
         handler.last_location = 1
@@ -223,7 +223,7 @@ class CompletionFormattingTests(DeferrableTestCase):
             ]
         )
 
-    def test_text_edit2(self):
+    def test_text_edit_clangd(self):
         yield 100  # wait for file to be open
         handler = CompletionHandler(self.view)
         handler.last_location = 1
@@ -255,7 +255,7 @@ class CompletionFormattingTests(DeferrableTestCase):
             ]
         )
 
-    def test_insert_text1(self):
+    def test_missing_text_edit_but_we_do_have_insert_text_for_pyls(self):
         yield 100  # wait for file to be open
         handler = CompletionHandler(self.view)
         handler.last_location = 1

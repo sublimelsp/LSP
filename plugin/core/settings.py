@@ -63,7 +63,6 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings):
     settings.only_show_lsp_completions = read_bool_setting(settings_obj, "only_show_lsp_completions", False)
     settings.complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
     settings.completion_hint_type = read_str_setting(settings_obj, "completion_hint_type", "auto")
-    settings.complete_using_text_edit = read_bool_setting(settings_obj, "complete_using_text_edit", False)
     settings.resolve_completion_for_snippets = read_bool_setting(settings_obj, "resolve_completion_for_snippets", False)
     settings.show_references_in_quick_panel = read_bool_setting(settings_obj, "show_references_in_quick_panel", False)
     settings.log_debug = read_bool_setting(settings_obj, "log_debug", False)

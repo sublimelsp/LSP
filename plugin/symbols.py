@@ -1,7 +1,7 @@
-
+from .core.logging import debug
+from .core.protocol import Request, Range
 from .core.protocol import SymbolKind
 from .core.registry import client_for_view, LspTextCommand
-from .core.protocol import Request, Range
 from .core.url import filename_to_uri
 from .core.views import range_to_region
 
@@ -81,7 +81,11 @@ class LspDocumentSymbolsCommand(LspTextCommand):
 
     def on_symbol_selected(self, symbol_index):
         selected_symbol = self.symbols[symbol_index]
-        range = selected_symbol['location']['range']
+        range = selected_symbol.get('location', selected_symbol.get('range'))
+        range = range.get('range', range)
+        if not range:
+            debug('could not recognize the type: expected either SymbolInformation or DocumentSymbol')
+            return
         region = range_to_region(Range.from_lsp(range), self.view)
         self.view.show_at_center(region)
         self.view.sel().clear()

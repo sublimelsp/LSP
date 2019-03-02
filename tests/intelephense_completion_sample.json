@@ -1,0 +1,365 @@
+[
+  {
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 6,
+          "line": 2
+        },
+        "start": {
+          "character": 5,
+          "line": 2
+        }
+      },
+      "newText": "$x"
+    },
+    "label": "$x",
+    "detail": "mixed",
+    "data": {
+      "fqsenHash": 1236,
+      "uriId": 158
+    },
+    "kind": 6,
+    "sortText": "$x"
+  },
+  {
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 6,
+          "line": 2
+        },
+        "start": {
+          "character": 5,
+          "line": 2
+        }
+      },
+      "newText": "$_ENV"
+    },
+    "label": "$_ENV",
+    "detail": "array",
+    "data": {
+      "fqsenHash": 36145714,
+      "uriId": 82
+    },
+    "kind": 6,
+    "sortText": "z$_ENV"
+  },
+  {
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 6,
+          "line": 2
+        },
+        "start": {
+          "character": 5,
+          "line": 2
+        }
+      },
+      "newText": "$php_errormsg"
+    },
+    "label": "$php_errormsg",
+    "detail": "string",
+    "data": {
+      "fqsenHash": -1647588988,
+      "uriId": 82
+    },
+    "kind": 6,
+    "sortText": "z$php_errormsg"
+  },
+  {
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 6,
+          "line": 2
+        },
+        "start": {
+          "character": 5,
+          "line": 2
+        }
+      },
+      "newText": "$_FILES"
+    },
+    "label": "$_FILES",
+    "detail": "array",
+    "data": {
+      "fqsenHash": 377059964,
+      "uriId": 82
+    },
+    "kind": 6,
+    "sortText": "z$_FILES"
+  },
+  {
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 6,
+          "line": 2
+        },
+        "start": {
+          "character": 5,
+          "line": 2
+        }
+      },
+      "newText": "$GLOBALS"
+    },
+    "label": "$GLOBALS",
+    "detail": "array",
+    "data": {
+      "fqsenHash": -844280724,
+      "uriId": 82
+    },
+    "kind": 6,
+    "sortText": "z$GLOBALS"
+  },
+  {
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 6,
+          "line": 2
+        },
+        "start": {
+          "character": 5,
+          "line": 2
+        }
+      },
+      "newText": "$argc"
+    },
+    "label": "$argc",
+    "detail": "int",
+    "data": {
+      "fqsenHash": 36249329,
+      "uriId": 82
+    },
+    "kind": 6,
+    "sortText": "z$argc"
+  },
+  {
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 6,
+          "line": 2
+        },
+        "start": {
+          "character": 5,
+          "line": 2
+        }
+      },
+      "newText": "$argv"
+    },
+    "label": "$argv",
+    "detail": "array",
+    "data": {
+      "fqsenHash": 36249348,
+      "uriId": 82
+    },
+    "kind": 6,
+    "sortText": "z$argv"
+  },
+  {
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 6,
+          "line": 2
+        },
+        "start": {
+          "character": 5,
+          "line": 2
+        }
+      },
+      "newText": "$_GET"
+    },
+    "label": "$_GET",
+    "detail": "array",
+    "data": {
+      "fqsenHash": 36147355,
+      "uriId": 82
+    },
+    "kind": 6,
+    "sortText": "z$_GET"
+  },
+  {
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 6,
+          "line": 2
+        },
+        "start": {
+          "character": 5,
+          "line": 2
+        }
+      },
+      "newText": "$HTTP_RAW_POST_DATA"
+    },
+    "label": "$HTTP_RAW_POST_DATA",
+    "detail": "string",
+    "data": {
+      "fqsenHash": 1354318879,
+      "uriId": 82
+    },
+    "kind": 6,
+    "sortText": "z$HTTP_RAW_POST_DATA"
+  },
+  {
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 6,
+          "line": 2
+        },
+        "start": {
+          "character": 5,
+          "line": 2
+        }
+      },
+      "newText": "$http_response_header"
+    },
+    "label": "$http_response_header",
+    "detail": "array",
+    "data": {
+      "fqsenHash": 985564344,
+      "uriId": 82
+    },
+    "kind": 6,
+    "sortText": "z$http_response_header"
+  },
+  {
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 6,
+          "line": 2
+        },
+        "start": {
+          "character": 5,
+          "line": 2
+        }
+      },
+      "newText": "$_POST"
+    },
+    "label": "$_POST",
+    "detail": "array",
+    "data": {
+      "fqsenHash": 1120845787,
+      "uriId": 82
+    },
+    "kind": 6,
+    "sortText": "z$_POST"
+  },
+  {
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 6,
+          "line": 2
+        },
+        "start": {
+          "character": 5,
+          "line": 2
+        }
+      },
+      "newText": "$_REQUEST"
+    },
+    "label": "$_REQUEST",
+    "detail": "array",
+    "data": {
+      "fqsenHash": -766918316,
+      "uriId": 82
+    },
+    "kind": 6,
+    "sortText": "z$_REQUEST"
+  },
+  {
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 6,
+          "line": 2
+        },
+        "start": {
+          "character": 5,
+          "line": 2
+        }
+      },
+      "newText": "$_SERVER"
+    },
+    "label": "$_SERVER",
+    "detail": "array",
+    "data": {
+      "fqsenHash": -827363394,
+      "uriId": 82
+    },
+    "kind": 6,
+    "sortText": "z$_SERVER"
+  },
+  {
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 6,
+          "line": 2
+        },
+        "start": {
+          "character": 5,
+          "line": 2
+        }
+      },
+      "newText": "$_SESSION"
+    },
+    "label": "$_SESSION",
+    "detail": "array",
+    "data": {
+      "fqsenHash": 122376539,
+      "uriId": 82
+    },
+    "kind": 6,
+    "sortText": "z$_SESSION"
+  },
+  {
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 6,
+          "line": 2
+        },
+        "start": {
+          "character": 5,
+          "line": 2
+        }
+      },
+      "newText": "$_COOKIE"
+    },
+    "label": "$_COOKIE",
+    "detail": "array",
+    "data": {
+      "fqsenHash": -1276294433,
+      "uriId": 82
+    },
+    "kind": 6,
+    "sortText": "z$_COOKIE"
+  },
+  {
+    "label": "$this",
+    "sortText": "$this",
+    "kind": 6,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 6,
+          "line": 2
+        },
+        "start": {
+          "character": 5,
+          "line": 2
+        }
+      },
+      "newText": "$this"
+    }
+  }
+]

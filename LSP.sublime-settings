@@ -48,7 +48,7 @@
       "command": ["pyls"],
       "scopes": ["source.python"],
       "syntaxes": ["Packages/Python/Python.sublime-syntax", "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage"],
-      "languageId": "python",
+      "languageId": "python"
       // "settings": {
       //   "pyls": {
       //       "configurationSources": ["flake8"],
@@ -56,9 +56,9 @@
       //           "pyflakes": {
       //               "enabled": false
       //           }
-      //       },
+      //       }
       //   }
-      // },
+      // }
     },
     "rls":
     {

@@ -241,7 +241,7 @@ Then the LSP plugin should launch as configured in LSP.sublime-settings using co
 
 ### C/C++ (Clangd)<a name="clang"></a>
 
-To use clangd on Debian/Ubuntu, add the apt repositories [described here](apt.llvm.org).
+To use clangd on Debian/Ubuntu, add the apt repositories [described here](https://apt.llvm.org).
 After that, install with e.g. `apt install clang-tools-9`. The clangd executable
 will have a version number suffix. For instance, clangd-9. You will thus have to
 adjust your `"clients"` dictionary in your user preferences.

@@ -279,6 +279,9 @@ cache variable `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` when invoking CMake. It will
 be present in your build directory, and you can copy that file to the root of
 your project. Make sure to ignore this file in your version control system.
 
+If you are using a make-based build system, you could use [compiledb](https://github.com/nickdiego/compiledb)
+to generate a `compile_commands.json`.
+
 Since header files are (usually) not passed to a compiler, they don't have
 compile commands. So even with a compilation database in place, clangd will
 *still* spit out nonsense in header files. You can try to remedy this by

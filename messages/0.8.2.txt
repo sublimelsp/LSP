@@ -1,0 +1,19 @@
+=> 0.8.2
+
+Features:
+
+Option to use QuickPanel for Symbol References (@alin23)
+* Set `show_references_in_quick_panel` to true
+
+Support for workspace/symbol query (@ayoub-benali)
+
+Fixes:
+
+Account for protocol updates (@rwols)
+* Significantly, completions now use textEdit instead of insertText.
+
+Prevent completion state getting stuck in CANCELLING (@simonklb)
+
+Fix error reading optional field in document highlight responses (@kkurian)
+
+See https://github.com/tomv564/LSP/releases/tag/0.8.2 for full update details.

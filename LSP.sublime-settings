@@ -169,7 +169,7 @@
     {
       "command": ["ocaml-language-server", "--stdio"],
       "scopes": ["source.reason"],
-      "syntaxes": ["Packages/sublime-reason/Reason.tmLanguage"],
+      "syntaxes": ["Packages/Reason/Reason.tmLanguage"],
       "languageId": "reason"
     },
     "phpls":

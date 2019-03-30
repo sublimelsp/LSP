@@ -72,7 +72,7 @@ def try_terminate_process(process: 'subprocess.Popen') -> None:
 
 class Client(object):
     def __init__(self, transport: Transport, settings) -> None:
-        self.transport = transport
+        self.transport = transport  # type: Optional[Transport]
         self.transport.start(self.receive_payload, self.on_transport_closed)
         self.request_id = 0
         self._response_handlers = {}  # type: Dict[int, Tuple[Optional[Callable], Optional[Callable]]]

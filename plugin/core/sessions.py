@@ -180,8 +180,8 @@ class Session(object):
         self.state = ClientStates.STOPPING
         self.client.send_request(
             Request.shutdown(),
-            handler=lambda result: self._handle_shutdown_result(),
-            error_handler=lambda: self._handle_shutdown_result())
+            lambda result: self._handle_shutdown_result(),
+            lambda: self._handle_shutdown_result())
 
     def _handle_shutdown_result(self):
         self.client.exit()

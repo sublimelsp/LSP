@@ -92,7 +92,7 @@ class Client(object):
             self._response_handlers[self.request_id] = (handler, error_handler)
             self.send_payload(request.to_payload(self.request_id))
         else:
-            debug(' sending ' + request.method + ' omitted')
+            debug('Unable to send', request.method)
             if error_handler is not None:
                 error_handler()
 
@@ -101,7 +101,7 @@ class Client(object):
             debug(' --> ' + notification.method)
             self.send_payload(notification.to_payload())
         else:
-            debug(' sending ' + notification.method + ' omitted')
+            debug('Unable to send', notification.method)
 
     def send_response(self, response: Response) -> None:
         self.send_payload(response.to_payload())
@@ -120,6 +120,7 @@ class Client(object):
         self._transport_fail_handler = handler
 
     def handle_transport_failure(self) -> None:
+        debug('Transport failed')
         self.transport = None
         if self._transport_fail_handler is not None:
             self._transport_fail_handler()

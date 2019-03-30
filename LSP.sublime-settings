@@ -24,7 +24,7 @@
   //
   //     # Optional settings (key-value pairs):
   //
-  //     // Sent to server once using workspace/didConfigurationChange notification
+  //     // Sent to server once using workspace/didChangeConfiguration notification
   //     "settings": { },
   //
   //     // Sent once to server in initialize request
@@ -169,7 +169,7 @@
     {
       "command": ["ocaml-language-server", "--stdio"],
       "scopes": ["source.reason"],
-      "syntaxes": ["Packages/sublime-reason/Reason.tmLanguage"],
+      "syntaxes": ["Packages/Reason/Reason.tmLanguage"],
       "languageId": "reason"
     },
     "phpls":

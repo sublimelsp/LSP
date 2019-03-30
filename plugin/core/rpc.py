@@ -87,7 +87,7 @@ class Client(object):
     def send_request(self, request: Request, handler: 'Callable[[Optional[Any]], None]',
                      error_handler: 'Optional[Callable]' = None) -> None:
         self.request_id += 1
-        if self.transport:
+        if self.transport is not None:
             debug(' --> ' + request.method)
             self._response_handlers[self.request_id] = (handler, error_handler)
             self.send_payload(request.to_payload(self.request_id))
@@ -97,7 +97,7 @@ class Client(object):
                 error_handler()
 
     def send_notification(self, notification: Notification) -> None:
-        if self.transport:
+        if self.transport is not None:
             debug(' --> ' + notification.method)
             self.send_payload(notification.to_payload())
         else:

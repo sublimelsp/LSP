@@ -87,13 +87,21 @@ class Client(object):
     def send_request(self, request: Request, handler: 'Callable[[Optional[Any]], None]',
                      error_handler: 'Optional[Callable]' = None) -> None:
         self.request_id += 1
-        debug(' --> ' + request.method)
-        self._response_handlers[self.request_id] = (handler, error_handler)
-        self.send_payload(request.to_payload(self.request_id))
+        if self.transport:
+            debug(' --> ' + request.method)
+            self._response_handlers[self.request_id] = (handler, error_handler)
+            self.send_payload(request.to_payload(self.request_id))
+        else:
+            debug(' sending ' + request.method + ' omitted')
+            if error_handler is not None:
+                error_handler()
 
     def send_notification(self, notification: Notification) -> None:
-        debug(' --> ' + notification.method)
-        self.send_payload(notification.to_payload())
+        if self.transport:
+            debug(' --> ' + notification.method)
+            self.send_payload(notification.to_payload())
+        else:
+            debug(' sending ' + notification.method + ' omitted')
 
     def send_response(self, response: Response) -> None:
         self.send_payload(response.to_payload())
@@ -112,14 +120,16 @@ class Client(object):
         self._transport_fail_handler = handler
 
     def handle_transport_failure(self) -> None:
+        self.transport = None
         if self._transport_fail_handler is not None:
             self._transport_fail_handler()
         if self._crash_handler is not None:
             self._crash_handler()
 
     def send_payload(self, payload: 'Dict[str, Any]') -> None:
-        message = format_request(payload)
-        self.transport.send(message)
+        if self.transport:
+            message = format_request(payload)
+            self.transport.send(message)
 
     def receive_payload(self, message: str) -> None:
         payload = None

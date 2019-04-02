@@ -55,30 +55,11 @@ class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
     def run(self, edit, changes: 'Optional[List[dict]]' = None, show_status=True):
+        # Sort changes so we can apply them one by one.
+        changes = self.changes_sorted_in_reverse(changes) if changes else []
+        for change in changes:
+            self.apply_change(self.create_region(change), change.get('newText'), edit)
 
-        # Sort changes due to issues with self.view.get_regions
-        # See https://github.com/tomv564/LSP/issues/325
-        changes = self.changes_sorted(changes) if changes else []
-        regions = list(self.create_region(change) for change in changes)
-        replacements = list(change.get('newText') for change in changes)
-
-        # TODO why source.python here?
-        self.view.add_regions('lsp_edit', regions, "source.python")
-
-        index = 0
-        last_region_count = len(regions)
-        for newText in replacements:
-            # refresh updated regions after each edit.
-            updated_regions = self.view.get_regions('lsp_edit')
-            region = updated_regions[index]  #
-            self.apply_change(region, newText, edit)
-            if len(self.view.get_regions('lsp_edit')) == last_region_count and last_region_count > 1:
-                index += 1  # no regions lost, move to next region.
-            else:
-                # current region was removed, don't advance index.
-                last_region_count = len(self.view.get_regions('lsp_edit'))
-
-        self.view.erase_regions('lsp_edit')
         if show_status:
             window = self.view.window()
             if window:
@@ -88,7 +69,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
                 message = 'Applied {} change(s) to {}'.format(len(changes), relative_file_path)
                 window.status_message(message)
 
-    def changes_sorted(self, changes: 'List[dict]') -> 'List[Dict]':
+    def changes_sorted_in_reverse(self, changes: 'List[dict]') -> 'List[Dict]':
         # changes looks like this:
         # [
         #   {
@@ -109,7 +90,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
             return (line, character)  # Return tuple so comparing/sorting tuples in the form of (1, 2)
 
         # Sort by start position
-        return sorted(changes, key=get_start_position)
+        return sorted(changes, key=get_start_position, reverse=True)
 
     def create_region(self, change):
         return range_to_region(Range.from_lsp(change['range']), self.view)

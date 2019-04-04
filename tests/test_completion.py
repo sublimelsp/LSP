@@ -7,6 +7,12 @@ from LSP.plugin.completion import CompletionHandler, CompletionState
 from LSP.plugin.core.settings import client_configs, ClientConfig
 from os.path import dirname, join
 
+try:
+    from typing import Dict, Optional
+    assert Dict and Optional
+except ImportError:
+    pass
+
 
 def load_completion_sample(name: str) -> 'Dict':
     return json.load(open(join(dirname(__file__), name + ".json")))
@@ -17,7 +23,7 @@ clangd_completion_sample = load_completion_sample("clangd_completion_sample")
 intelephense_completion_sample = load_completion_sample("intelephense_completion_sample")
 
 
-def create_completion_item(item: str, insert_text: 'Optional[str]'=None) -> dict:
+def create_completion_item(item: str, insert_text: 'Optional[str]' = None) -> dict:
     return {
         "label": item,
         "insertText": insert_text
@@ -144,7 +150,7 @@ class CompletionFormattingTests(DeferrableTestCase):
         handler = CompletionHandler(self.view)
         result = handler.format_completion(create_completion_item("asdf", "Asdf"))
         self.assertEqual(len(result), 2)
-        self.assertEqual("Asdf", result[0])
+        self.assertEqual("asdf", result[0])
         self.assertEqual("Asdf", result[1])
 
     def test_ignores_text_edit(self):
@@ -165,7 +171,7 @@ class CompletionFormattingTests(DeferrableTestCase):
 
         result = handler.format_completion(item)
         self.assertEqual(len(result), 2)
-        self.assertEqual("$true", result[0])
+        self.assertEqual("true", result[0])
         self.assertEqual("\\$true", result[1])
 
     def test_ignore_label(self):
@@ -235,27 +241,24 @@ class CompletionFormattingTests(DeferrableTestCase):
             [
                 ('argc\t  int', 'argc'),
                 ('argv\t  const char **', 'argv'),
-                ('alignas(${1:expression})\t  Snippet', 'alignas(${1:expression})'),
-                ('alignof(${1:type})\t  size_t', 'alignof(${1:type})'),
+                ('alignas\t  Snippet', 'alignas(${1:expression})'),
+                ('alignof\t  size_t', 'alignof(${1:type})'),
                 ('auto\t  Keyword', 'auto'),
-                ('static_assert(${1:expression}, ${2:message})\t  Snippet',
-                    'static_assert(${1:expression}, ${2:message})'),
-                ('a64l(${1:const char *__s})\t  long', 'a64l(${1:const char *__s})'),
-                ('abort()\t  void', 'abort()'),
-                ('abs(${1:int __x})\t  int', 'abs(${1:int __x})'),
-                ('aligned_alloc(${1:size_t __alignment}, ${2:size_t __size})\t  void *',
-                    'aligned_alloc(${1:size_t __alignment}, ${2:size_t __size})'),
-                ('alloca(${1:size_t __size})\t  void *', 'alloca(${1:size_t __size})'),
-                ('asctime(${1:const struct tm *__tp})\t  char *', 'asctime(${1:const struct tm *__tp})'),
-                ('asctime_r(${1:const struct tm *__restrict __tp}, ${2:char *__restrict __buf})\t  char *',
-                    'asctime_r(${1:const struct tm *__restrict __tp}, ${2:char *__restrict __buf})'),
-                ('asprintf(${1:char **__restrict __ptr}, ${2:const char *__restrict __fmt, ...})\t  int',
-                    'asprintf(${1:char **__restrict __ptr}, ${2:const char *__restrict __fmt, ...})'),
-                ('at_quick_exit(${1:void (*__func)()})\t  int', 'at_quick_exit(${1:void (*__func)()})'),
-                ('atexit(${1:void (*__func)()})\t  int', 'atexit(${1:void (*__func)()})'),
-                ('atof(${1:const char *__nptr})\t  double', 'atof(${1:const char *__nptr})'),
-                ('atoi(${1:const char *__nptr})\t  int', 'atoi(${1:const char *__nptr})'),
-                ('atol(${1:const char *__nptr})\t  long', 'atol(${1:const char *__nptr})')
+                ('static_assert\t  Snippet', 'static_assert(${1:expression}, ${2:message})'),
+                ('a64l\t  long', 'a64l(${1:const char *__s})'),
+                ('abort\t  void', 'abort()'),
+                ('abs\t  int', 'abs(${1:int __x})'),
+                ('aligned_alloc\t  void *', 'aligned_alloc(${1:size_t __alignment}, ${2:size_t __size})'),
+                ('alloca\t  void *', 'alloca(${1:size_t __size})'),
+                ('asctime\t  char *', 'asctime(${1:const struct tm *__tp})'),
+                ('asctime_r\t  char *',
+                 'asctime_r(${1:const struct tm *__restrict __tp}, ${2:char *__restrict __buf})'),
+                ('asprintf\t  int', 'asprintf(${1:char **__restrict __ptr}, ${2:const char *__restrict __fmt, ...})'),
+                ('at_quick_exit\t  int', 'at_quick_exit(${1:void (*__func)()})'),
+                ('atexit\t  int', 'atexit(${1:void (*__func)()})'),
+                ('atof\t  double', 'atof(${1:const char *__nptr})'),
+                ('atoi\t  int', 'atoi(${1:const char *__nptr})'),
+                ('atol\t  long', 'atol(${1:const char *__nptr})')
             ]
         )
 
@@ -269,29 +272,29 @@ class CompletionFormattingTests(DeferrableTestCase):
             result,
             [
                 ('abc\t  os', 'abc'),
-                ('abort\t  os', 'abort'),
-                ('access(${1:path}, ${2:mode}, ${3:dir_fd}, ${4:effective_ids}, ${5:follow_symlinks})$0\t  os',
-                    'access(${1:path}, ${2:mode}, ${3:dir_fd}, ${4:effective_ids}, ${5:follow_symlinks})$0'),
+                ('abort()\t  os', 'abort'),
+                ('access(path, mode, dir_fd, effective_ids, follow_symlinks)\t  os',
+                 'access(${1:path}, ${2:mode}, ${3:dir_fd}, ${4:effective_ids}, ${5:follow_symlinks})$0'),
                 ('altsep\t  os', 'altsep'),
-                ('chdir(${1:path})$0\t  os', 'chdir(${1:path})$0'),
-                ('chmod(${1:path}, ${2:mode}, ${3:dir_fd}, ${4:follow_symlinks})$0\t  os',
-                    'chmod(${1:path}, ${2:mode}, ${3:dir_fd}, ${4:follow_symlinks})$0'),
-                ('chown(${1:path}, ${2:uid}, ${3:gid}, ${4:dir_fd}, ${5:follow_symlinks})$0\t  os',
-                    'chown(${1:path}, ${2:uid}, ${3:gid}, ${4:dir_fd}, ${5:follow_symlinks})$0'),
-                ('chroot(${1:path})$0\t  os', 'chroot(${1:path})$0'),
+                ('chdir(path)\t  os', 'chdir(${1:path})$0'),
+                ('chmod(path, mode, dir_fd, follow_symlinks)\t  os',
+                 'chmod(${1:path}, ${2:mode}, ${3:dir_fd}, ${4:follow_symlinks})$0'),
+                ('chown(path, uid, gid, dir_fd, follow_symlinks)\t  os',
+                 'chown(${1:path}, ${2:uid}, ${3:gid}, ${4:dir_fd}, ${5:follow_symlinks})$0'),
+                ('chroot(path)\t  os', 'chroot(${1:path})$0'),
                 ('CLD_CONTINUED\t  os', 'CLD_CONTINUED'),
                 ('CLD_DUMPED\t  os', 'CLD_DUMPED'),
                 ('CLD_EXITED\t  os', 'CLD_EXITED'),
                 ('CLD_TRAPPED\t  os', 'CLD_TRAPPED'),
-                ('close(${1:fd})$0\t  os', 'close(${1:fd})$0'),
-                ('closerange(${1:fd_low}, ${2:fd_high})$0\t  os', 'closerange(${1:fd_low}, ${2:fd_high})$0'),
-                ('confstr(${1:name})$0\t  os', 'confstr(${1:name})$0'),
+                ('close(fd)\t  os', 'close(${1:fd})$0'),
+                ('closerange(fd_low, fd_high)\t  os', 'closerange(${1:fd_low}, ${2:fd_high})$0'),
+                ('confstr(name)\t  os', 'confstr(${1:name})$0'),
                 ('confstr_names\t  os', 'confstr_names'),
-                ('cpu_count\t  os', 'cpu_count'),
-                ('ctermid\t  os', 'ctermid'),
+                ('cpu_count()\t  os', 'cpu_count'),
+                ('ctermid()\t  os', 'ctermid'),
                 ('curdir\t  os', 'curdir'),
                 ('defpath\t  os', 'defpath'),
-                ('device_encoding(${1:fd})$0\t  os', 'device_encoding(${1:fd})$0')
+                ('device_encoding(fd)\t  os', 'device_encoding(${1:fd})$0')
             ]
         )
 

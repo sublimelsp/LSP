@@ -358,6 +358,9 @@
   // Show symbol references in Sublime's quick panel instead of the bottom panel.
   "show_references_in_quick_panel": false,
 
+  // Use monospace font for the quick panel.
+  "quick_panel_monospace_font": false,
+
   // Show verbose debug messages in the sublime console.
   "log_debug": false,
 

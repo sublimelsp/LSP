@@ -65,10 +65,13 @@ class LspSymbolReferencesCommand(LspTextCommand):
         formatted_references = self._get_formatted_references(response, base_dir)
 
         if settings.show_references_in_quick_panel:
+            flags = sublime.KEEP_OPEN_ON_FOCUS_LOST
+            if settings.quick_panel_monospace_font:
+                flags |= sublime.MONOSPACE_FONT
             window.show_quick_panel(
                 self.reflist,
                 lambda index: self.on_ref_choice(base_dir, index),
-                sublime.MONOSPACE_FONT | sublime.KEEP_OPEN_ON_FOCUS_LOST,
+                flags,
                 self.get_current_ref(base_dir, word_region.begin()),
                 lambda index: self.on_ref_highlight(base_dir, index)
             )

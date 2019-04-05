@@ -11,6 +11,7 @@ Global plugin settings and settings defined at project level are merged together
 * `completion_hint_type` `"auto"` *override automatic completion hints with "detail", "kind" or "none"*
 * `resolve_completion_for_snippets` `false` *resolve completions and apply snippet if received*
 * `show_references_in_quick_panel` `false` *show symbol references in Sublime's quick panel instead of the bottom panel*
+* `quick_panel_monospace_font` `false` *use monospace font for the quick panel*
 * `show_status_messages` `true` *show messages in the status bar for a few seconds*
 * `show_view_status` `true` *show permanent language server status in the status bar*
 * `auto_show_diagnostics_panel` `true` *open the diagnostics panel automatically if there are diagnostics*

@@ -31,7 +31,7 @@ class ApplyDocumentEditTests(DeferrableTestCase):
         file_changes = [
             text_edit((0, 28), (1, 0), ''),  # delete first \n
             text_edit((1, 0), (1, 15), ''),  # delete second line (but not the \n)
-            text_edit((2, 10), (2, 10), '\n    <style></style>'), # insert after <template>
+            text_edit((2, 10), (2, 10), '\n    <style></style>'),  # insert after <template>
         ]
         expected = (
             '<dom-module id="some-thing">\n'
@@ -41,7 +41,6 @@ class ApplyDocumentEditTests(DeferrableTestCase):
             '</dom-module>\n'
         )
         self.run_test(original, expected, file_changes)
-
 
     def test_apply_and_preserve_order(self):
         original = (

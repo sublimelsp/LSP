@@ -55,7 +55,8 @@ class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
     def run(self, edit, changes: 'Optional[List[dict]]' = None, show_status=True):
-        # Sort changes so we can apply them one by one.
+        # We want to apply the changes in reverse, so that we don't invalidate the range
+        # of any change that we haven't applied yet.
         changes = self.changes_sorted_in_reverse(changes) if changes else []
         for change in changes:
             self.apply_change(self.create_region(change), change.get('newText'), edit)
@@ -70,7 +71,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
                 window.status_message(message)
 
     def changes_sorted_in_reverse(self, changes: 'List[dict]') -> 'List[Dict]':
-        # changes looks like this:
+        # Changes look like this:
         # [
         #   {
         #       'newText': str,
@@ -81,16 +82,24 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         #   }
         # ]
 
-        # Maps a change to the tuple (range.start.line, range.start.character)
-        def get_start_position(change):
-            r = change.get('range')
-            start = r.get('start')
+        def get_start_position(ic):
+            index = ic[0]
+            change = ic[1]
+            start = change.get('range').get('start')
             line = start.get('line')
             character = start.get('character')
-            return (line, character)  # Return tuple so comparing/sorting tuples in the form of (1, 2)
+            return (line, character, index)
 
-        # Sort by start position
-        return sorted(changes, key=get_start_position, reverse=True)
+        # The spec reads:
+        # > However, it is possible that multiple edits have the same start position: multiple
+        # > inserts, or any number of inserts followed by a single remove or replace edit. If
+        # > multiple inserts have the same position, the order in the array defines the order in
+        # > which the inserted strings appear in the resulting text.
+        # So we sort by start position. But if multiple text edits start at the same position,
+        # we use the index in the array as the key.
+        indexed_changes = [(i, c) for i, c in enumerate(changes)]
+        indexed_changes = sorted(indexed_changes, key=get_start_position, reverse=True)
+        return [ic[1] for ic in indexed_changes]
 
     def create_region(self, change):
         return range_to_region(Range.from_lsp(change['range']), self.view)

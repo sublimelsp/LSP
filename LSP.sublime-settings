@@ -355,8 +355,16 @@
   // Resolve completions and apply snippet if received.
   "resolve_completion_for_snippets": false,
 
+  // When presenting completions, prefer the "label" over the "filterText" key
+  // in the CompletionItem. By default, the "filterText" is chosen over the
+  // "label". If the "filterText" is not present, fall back to the "label".
+  "prefer_label_over_filter_text": false,
+
   // Show symbol references in Sublime's quick panel instead of the bottom panel.
   "show_references_in_quick_panel": false,
+
+  // Use monospace font for the quick panel.
+  "quick_panel_monospace_font": false,
 
   // Show verbose debug messages in the sublime console.
   "log_debug": false,

@@ -258,7 +258,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
     def format_completion(self, item: dict) -> 'Tuple[str, str]':
         # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
-        label = item["label"]
+        if settings.prefer_label_over_filter_text:
+            trigger = item["label"]
+        else:
+            trigger = item.get("filterText", item["label"])
         # choose hint based on availability and user preference
         hint = None
         if settings.completion_hint_type == "auto":
@@ -274,12 +277,11 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             if kind:
                 hint = completion_item_kind_names.get(kind)
         # label is an alternative for insertText if neither textEdit nor insertText is provided
-        insert_text = self.text_edit_text(item) or item.get("insertText") or label
-        trigger = insert_text
-        if len(insert_text) > 0 and insert_text[0] == '$':  # sublime needs leading '$' escaped.
-            insert_text = '\\$' + insert_text[1:]
+        replacement = self.text_edit_text(item) or item.get("insertText") or trigger
+        if len(replacement) > 0 and replacement[0] == '$':  # sublime needs leading '$' escaped.
+            replacement = '\\$' + replacement[1:]
         # only return trigger with a hint if available
-        return "\t  ".join((trigger, hint)) if hint else trigger, insert_text
+        return "\t  ".join((trigger, hint)) if hint else trigger, replacement
 
     def text_edit_text(self, item) -> 'Optional[str]':
         text_edit = item.get("textEdit")

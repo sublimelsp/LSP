@@ -59,7 +59,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         # Apply the changes in reverse, so that we don't invalidate the range
         # of any change that we haven't applied yet.
         start = timer()
-        changes2 = changes or []
+        changes2 = changes or []  # New variable of type List[dict]
         indices = self.changes_order(changes2)
         for index in indices:
             change = changes2[index]

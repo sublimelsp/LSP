@@ -4,7 +4,7 @@ import sublime_plugin
 from timeit import default_timer as timer
 
 try:
-    from typing import List, Dict, Optional, Any
+    from typing import List, Dict, Optional
     assert List and Dict and Optional
 except ImportError:
     pass

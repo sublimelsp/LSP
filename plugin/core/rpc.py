@@ -11,7 +11,7 @@ try:
 except ImportError:
     pass
 
-from .logging import debug, exception_log, server_log
+from .logging import debug, exception_log
 from .protocol import Request, Notification, Response
 from .types import Settings
 
@@ -45,7 +45,7 @@ def attach_tcp_client(tcp_port: int, process: 'subprocess.Popen', settings: Sett
             client = Client(transport, settings)
             client.set_transport_failure_handler(lambda: try_terminate_process(process))
             return client
-        except ConnectionRefusedError as e:
+        except ConnectionRefusedError:
             pass
 
     process.kill()
@@ -145,9 +145,9 @@ class Client(object):
         try:
             if "method" in payload:
                 if "id" in payload:
-                    self.request_handler(payload)
+                    self.handle("request", payload, self._request_handlers, payload.get("id"))
                 else:
-                    self.notification_handler(payload)
+                    self.handle("notification", payload, self._notification_handlers)
             elif "id" in payload:
                 self.response_handler(payload)
             else:
@@ -186,36 +186,17 @@ class Client(object):
     def on_notification(self, notification_method: str, handler: 'Callable') -> None:
         self._notification_handlers[notification_method] = handler
 
-    def request_handler(self, request: 'Dict[str, Any]') -> None:
-        request_id = request.get("id")
-        params = request.get("params", dict())
-        method = request.get("method", '')
+    def handle(self, typestr: str, message: 'Dict[str, Any]', handlers: 'Dict[str, Callable]', *args) -> None:
+        method = message.get("method", "")
+        params = message.get("params")
         debug('<--  ' + method)
         if self.settings.log_payloads and params:
             debug('     ' + str(params))
-        if method in self._request_handlers:
+        handler = handlers.get(method)
+        if handler:
             try:
-                self._request_handlers[method](params, request_id)
+                handler(params, *args)
             except Exception as err:
-                exception_log("Error handling request " + method, err)
+                exception_log("Error handling {} {}".format(typestr, method), err)
         else:
-            debug("Unhandled request", method)
-
-    def notification_handler(self, notification: 'Dict[str, Any]') -> None:
-        method = notification["method"]
-        params = notification.get("params")
-        if method == "window/logMessage":
-            debug('<--  ' + method)
-            server_log(params.get("message", "???") if params else "???")
-            return
-
-        debug('<--  ' + method)
-        if self.settings.log_payloads and params:
-            debug('     ' + str(params))
-        if method in self._notification_handlers:
-            try:
-                self._notification_handlers[method](params)
-            except Exception as err:
-                exception_log("Error handling notification " + method, err)
-        else:
-            debug("Unhandled notification:", method)
+            debug("Unhandled {}".format(typestr), method)

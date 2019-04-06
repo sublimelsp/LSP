@@ -1,5 +1,5 @@
 from .events import global_events
-from .logging import debug
+from .logging import debug, server_log
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike, LanguageConfig, config_supports_syntax
 from .protocol import Notification, Response
 from .sessions import Session
@@ -291,7 +291,7 @@ class WindowDocumentHandler(object):
 class WindowManager(object):
     def __init__(self, window: WindowLike, configs: ConfigRegistry, documents: DocumentHandler,
                  diagnostics: DiagnosticsHandler, session_starter: 'Callable', sublime: 'Any',
-                 handler_dispatcher, on_closed: 'Optional[Callable]'=None) -> None:
+                 handler_dispatcher, on_closed: 'Optional[Callable]' = None) -> None:
 
         # to move here:
         # configurations.py: window_client_configs and all references
@@ -451,6 +451,10 @@ class WindowManager(object):
         client.on_notification(
             "window/showMessage",
             lambda params: self._sublime.message_dialog(params.get("message")))
+
+        client.on_notification(
+            "window/logMessage",
+            lambda params: server_log(params.get("message", "???") if params else "???"))
 
         self._handlers.on_initialized(config.name, self._window, client)
 

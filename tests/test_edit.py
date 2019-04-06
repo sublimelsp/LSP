@@ -1,9 +1,5 @@
 from unittesting import DeferrableTestCase
 import sublime
-try:
-    from typing import Tuple
-except ImportError:
-    pass
 
 
 def text_edit(Start: 'Tuple[int, int]', End: 'Tuple[int, int]', NewText: str):

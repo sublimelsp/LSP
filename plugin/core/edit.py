@@ -1,9 +1,10 @@
 import os
 import sublime
 import sublime_plugin
+from timeit import default_timer as timer
 
 try:
-    from typing import List, Dict, Optional
+    from typing import List, Dict, Optional, Any
     assert List and Dict and Optional
 except ImportError:
     pass
@@ -55,11 +56,15 @@ class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
     def run(self, edit, changes: 'Optional[List[dict]]' = None, show_status=True):
-        # We want to apply the changes in reverse, so that we don't invalidate the range
+        # Apply the changes in reverse, so that we don't invalidate the range
         # of any change that we haven't applied yet.
-        changes = self.changes_sorted_in_reverse(changes) if changes else []
-        for change in changes:
+        start = timer()
+        changes2 = changes or []
+        indices = self.changes_order(changes2)
+        for index in indices:
+            change = changes2[index]
             self.apply_change(self.create_region(change), change.get('newText'), edit)
+        elapsed = timer() - start
 
         if show_status:
             window = self.view.window()
@@ -67,10 +72,12 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
                 base_dir = get_project_path(window)
                 file_path = self.view.file_name()
                 relative_file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
-                message = 'Applied {} change(s) to {}'.format(len(changes), relative_file_path)
+                message = 'Applied {} change(s) to {} in {:.1f} ms'.format(
+                    len(indices), relative_file_path, elapsed * 1000)
                 window.status_message(message)
+                debug(message)
 
-    def changes_sorted_in_reverse(self, changes: 'List[dict]') -> 'List[Dict]':
+    def changes_order(self, changes: 'List[dict]') -> 'List[int]':
         # Changes look like this:
         # [
         #   {
@@ -82,9 +89,8 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         #   }
         # ]
 
-        def get_start_position(ic):
-            index = ic[0]
-            change = ic[1]
+        def get_start_position(index: int):
+            change = changes[index]  # type: Any
             start = change.get('range').get('start')
             line = start.get('line')
             character = start.get('character')
@@ -97,9 +103,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         # > which the inserted strings appear in the resulting text.
         # So we sort by start position. But if multiple text edits start at the same position,
         # we use the index in the array as the key.
-        indexed_changes = [(i, c) for i, c in enumerate(changes)]
-        indexed_changes = sorted(indexed_changes, key=get_start_position, reverse=True)
-        return [ic[1] for ic in indexed_changes]
+        return sorted(range(len(changes)), key=get_start_position, reverse=True)
 
     def create_region(self, change):
         return range_to_region(Range.from_lsp(change['range']), self.view)

@@ -11,7 +11,7 @@ from .core.protocol import Request
 from .core.events import global_events
 from .core.settings import settings
 from .core.logging import debug, exception_log
-from .core.protocol import CompletionItemKind, Range
+from .core.protocol import CompletionItemKind
 from .core.registry import session_for_view, client_for_view
 from .core.configurations import is_supported_syntax
 from .core.documents import get_document_position
@@ -19,6 +19,52 @@ from .core.sessions import Session
 
 NO_COMPLETION_SCOPES = 'comment, string'
 completion_item_kind_names = {v: k for k, v in CompletionItemKind.__dict__.items()}
+
+
+def extract_trigger(completion_item: 'Dict[str, Any]') -> str:
+    if settings.prefer_label_over_filter_text:
+        return completion_item["label"]
+    else:
+        return completion_item.get("filterText", completion_item["label"])
+
+
+def extract_hint(completion_item: 'Dict[str, Any]') -> 'Optional[str]':
+    hint = None
+    if settings.completion_hint_type == "auto":
+        hint = completion_item.get("detail")
+        if not hint:
+            kind = completion_item.get("kind")
+            if kind:
+                hint = completion_item_kind_names[kind]
+    elif settings.completion_hint_type == "detail":
+        hint = completion_item.get("detail")
+    elif settings.completion_hint_type == "kind":
+        kind = completion_item.get("kind")
+        if kind:
+            hint = completion_item_kind_names.get(kind)
+    return hint
+
+
+def extract_replacement(completion_item: 'Dict[str, Any]', fallback: str) -> str:
+    replacement = None
+    text_edit = completion_item.get("textEdit")
+    if text_edit:
+        # Unfortunately the ST API does not naturally allow us to pass along the replacement range.
+        replacement = text_edit.get("newText")
+    if not replacement:
+        replacement = completion_item.get("insertText") or fallback
+    # We make a choice here. If no "insertTextFormat" key is present, what should we choose as default?
+    # The specification is not clear about the absence of this key. We will assume PlainText.
+    if completion_item.get("insertTextFormat", 1) == 1:
+        replacement = replacement.replace("$", "\\$")
+    return replacement
+
+
+def format_completion(completion_item: 'Dict[str, Any]') -> 'Tuple[str, str]':
+    trigger = extract_trigger(completion_item)
+    hint = extract_hint(completion_item)
+    replacement = extract_replacement(completion_item, trigger)
+    return "{}\t  {}".format(trigger, hint) if hint else trigger, replacement
 
 
 class CompletionState(object):
@@ -256,48 +302,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                     self.handle_error)
                 self.state = CompletionState.REQUESTING
 
-    def format_completion(self, item: dict) -> 'Tuple[str, str]':
-        # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
-        if settings.prefer_label_over_filter_text:
-            trigger = item["label"]
-        else:
-            trigger = item.get("filterText", item["label"])
-        # choose hint based on availability and user preference
-        hint = None
-        if settings.completion_hint_type == "auto":
-            hint = item.get("detail")
-            if not hint:
-                kind = item.get("kind")
-                if kind:
-                    hint = completion_item_kind_names[kind]
-        elif settings.completion_hint_type == "detail":
-            hint = item.get("detail")
-        elif settings.completion_hint_type == "kind":
-            kind = item.get("kind")
-            if kind:
-                hint = completion_item_kind_names.get(kind)
-        # label is an alternative for insertText if neither textEdit nor insertText is provided
-        replacement = self.text_edit_text(item) or item.get("insertText") or trigger
-        if len(replacement) > 0 and replacement[0] == '$':  # sublime needs leading '$' escaped.
-            replacement = '\\$' + replacement[1:]
-        # only return trigger with a hint if available
-        return "\t  ".join((trigger, hint)) if hint else trigger, replacement
-
-    def text_edit_text(self, item) -> 'Optional[str]':
-        text_edit = item.get("textEdit")
-        if text_edit:
-            edit_range, edit_text = text_edit.get("range"), text_edit.get("newText")
-            if edit_range and edit_text:
-                edit_range = Range.from_lsp(edit_range)
-                last_start = self.last_location - len(self.last_prefix)
-                last_row, last_col = self.view.rowcol(last_start)
-                if last_row == edit_range.start.row == edit_range.end.row and edit_range.start.col <= last_col:
-                    # sublime does not support explicit replacement with completion
-                    # at given range, but we try to trim the textEdit range and text
-                    # to the start location of the completion
-                    return edit_text[last_col - edit_range.start.col:]
-        return None
-
     def handle_response(self, response: 'Optional[Dict]'):
         global resolvable_completion_items
 
@@ -308,7 +312,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             elif isinstance(response, list):
                 items = response
             items = sorted(items, key=lambda item: item.get("sortText") or item["label"])
-            self.completions = list(self.format_completion(item) for item in items)
+            self.completions = list(format_completion(item) for item in items)
 
             if self.has_resolve_provider:
                 resolvable_completion_items = items

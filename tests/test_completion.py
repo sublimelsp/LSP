@@ -3,7 +3,7 @@ from unittesting import DeferrableTestCase
 from unittest.mock import MagicMock
 import sublime
 import json
-from LSP.plugin.completion import CompletionHandler, CompletionState
+from LSP.plugin.completion import CompletionHandler, CompletionState, format_completion
 from LSP.plugin.core.settings import client_configs, ClientConfig
 from os.path import dirname, join
 
@@ -140,22 +140,18 @@ class CompletionFormattingTests(DeferrableTestCase):
         self.view = sublime.active_window().open_file(test_file_path)
 
     def test_only_label_item(self):
-        handler = CompletionHandler(self.view)
-        result = handler.format_completion(create_completion_item("asdf"))
+        result = format_completion(create_completion_item("asdf"))
         self.assertEqual(len(result), 2)
         self.assertEqual("asdf", result[0])
         self.assertEqual("asdf", result[1])
 
     def test_prefers_insert_text(self):
-        handler = CompletionHandler(self.view)
-        result = handler.format_completion(create_completion_item("asdf", "Asdf"))
+        result = format_completion(create_completion_item("asdf", "Asdf"))
         self.assertEqual(len(result), 2)
         self.assertEqual("asdf", result[0])
         self.assertEqual("Asdf", result[1])
 
     def test_ignores_text_edit(self):
-        handler = CompletionHandler(self.view)
-
         # partial completion from cursor (instead of full word) causes issues.
         item = {
             'insertText': '$true',
@@ -169,10 +165,10 @@ class CompletionFormattingTests(DeferrableTestCase):
             }
         }
 
-        result = handler.format_completion(item)
+        result = format_completion(item)
         self.assertEqual(len(result), 2)
         self.assertEqual("true", result[0])
-        self.assertEqual("\\$true", result[1])
+        self.assertEqual("rue", result[1])
 
     def test_ignore_label(self):
         # issue #368
@@ -198,7 +194,7 @@ class CompletionFormattingTests(DeferrableTestCase):
         handler = CompletionHandler(self.view)
         handler.last_location = 1
         handler.last_prefix = ""
-        result = handler.format_completion(item)
+        result = format_completion(item)
         self.assertEqual(result, ('const\t  Keyword', 'const'))
 
     def test_text_edit_intelephense(self):
@@ -206,7 +202,7 @@ class CompletionFormattingTests(DeferrableTestCase):
         handler = CompletionHandler(self.view)
         handler.last_location = 1
         handler.last_prefix = ""
-        result = [handler.format_completion(item) for item in intelephense_completion_sample]
+        result = [format_completion(item) for item in intelephense_completion_sample]
         self.assertEqual(
             result,
             [
@@ -234,7 +230,7 @@ class CompletionFormattingTests(DeferrableTestCase):
         handler = CompletionHandler(self.view)
         handler.last_location = 1
         handler.last_prefix = ""
-        result = [handler.format_completion(item) for item in clangd_completion_sample]
+        result = [format_completion(item) for item in clangd_completion_sample]
         # We should prefer textEdit over insertText. This test covers that.
         self.assertEqual(
             result,
@@ -267,7 +263,7 @@ class CompletionFormattingTests(DeferrableTestCase):
         handler = CompletionHandler(self.view)
         handler.last_location = 1
         handler.last_prefix = ""
-        result = [handler.format_completion(item) for item in pyls_completion_sample]
+        result = [format_completion(item) for item in pyls_completion_sample]
         self.assertEqual(
             result,
             [

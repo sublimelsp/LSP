@@ -240,6 +240,13 @@
       "syntaxes": ["Packages/Go/Go.sublime-syntax"],
       "languageId": "go"
     },
+    "gopls":
+    {
+      "command": ["gopls"],
+      "scopes": ["source.go"],
+      "syntaxes": ["Packages/Go/Go.sublime-syntax"],
+      "languageId": "go"
+    },
     "jdtls":
     {
       "command": ["java", "-jar", "PATH_TO_JDT_SERVER/plugins/org.eclipse.equinox.launcher_1.4.0.v20161219-1356.jar", "-configuration", "PATH_TO_CONFIG_DIR"],

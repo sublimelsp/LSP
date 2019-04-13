@@ -1,0 +1,407 @@
+[
+  {
+    "sortText": "0001Error",
+    "range": null,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 2,
+          "line": 2
+        },
+        "start": {
+          "character": 0,
+          "line": 2
+        }
+      },
+      "newText": "$Error"
+    },
+    "insertText": "$Error",
+    "command": null,
+    "label": "Error",
+    "commitCharacters": null,
+    "documentation": null,
+    "detail": "[ArrayList]",
+    "additionalTextEdits": null,
+    "kind": 6,
+    "filterText": "$Error",
+    "data": null
+  },
+  {
+    "sortText": "0002ErrorActionPreference",
+    "range": null,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 2,
+          "line": 2
+        },
+        "start": {
+          "character": 0,
+          "line": 2
+        }
+      },
+      "newText": "$ErrorActionPreference"
+    },
+    "insertText": "$ErrorActionPreference",
+    "command": null,
+    "label": "ErrorActionPreference",
+    "commitCharacters": null,
+    "documentation": null,
+    "detail": "[ActionPreference]",
+    "additionalTextEdits": null,
+    "kind": 6,
+    "filterText": "$ErrorActionPreference",
+    "data": null
+  },
+  {
+    "sortText": "0003ErrorView",
+    "range": null,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 2,
+          "line": 2
+        },
+        "start": {
+          "character": 0,
+          "line": 2
+        }
+      },
+      "newText": "$ErrorView"
+    },
+    "insertText": "$ErrorView",
+    "command": null,
+    "label": "ErrorView",
+    "commitCharacters": null,
+    "documentation": null,
+    "detail": "[string]",
+    "additionalTextEdits": null,
+    "kind": 6,
+    "filterText": "$ErrorView",
+    "data": null
+  },
+  {
+    "sortText": "0004ExecutionContext",
+    "range": null,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 2,
+          "line": 2
+        },
+        "start": {
+          "character": 0,
+          "line": 2
+        }
+      },
+      "newText": "$ExecutionContext"
+    },
+    "insertText": "$ExecutionContext",
+    "command": null,
+    "label": "ExecutionContext",
+    "commitCharacters": null,
+    "documentation": null,
+    "detail": "[EngineIntrinsics]",
+    "additionalTextEdits": null,
+    "kind": 6,
+    "filterText": "$ExecutionContext",
+    "data": null
+  },
+  {
+    "sortText": "0005env:__CF_USER_TEXT_ENCODING",
+    "range": null,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 2,
+          "line": 2
+        },
+        "start": {
+          "character": 0,
+          "line": 2
+        }
+      },
+      "newText": "$env:__CF_USER_TEXT_ENCODING"
+    },
+    "insertText": "$env:__CF_USER_TEXT_ENCODING",
+    "command": null,
+    "label": "env:__CF_USER_TEXT_ENCODING",
+    "commitCharacters": null,
+    "documentation": null,
+    "detail": "[string]",
+    "additionalTextEdits": null,
+    "kind": 6,
+    "filterText": "$env:__CF_USER_TEXT_ENCODING",
+    "data": null
+  },
+  {
+    "sortText": "0006env:Apple_PubSub_Socket_Render",
+    "range": null,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 2,
+          "line": 2
+        },
+        "start": {
+          "character": 0,
+          "line": 2
+        }
+      },
+      "newText": "$env:Apple_PubSub_Socket_Render"
+    },
+    "insertText": "$env:Apple_PubSub_Socket_Render",
+    "command": null,
+    "label": "env:Apple_PubSub_Socket_Render",
+    "commitCharacters": null,
+    "documentation": null,
+    "detail": "[string]",
+    "additionalTextEdits": null,
+    "kind": 6,
+    "filterText": "$env:Apple_PubSub_Socket_Render",
+    "data": null
+  },
+  {
+    "sortText": "0007env:BROWSER",
+    "range": null,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 2,
+          "line": 2
+        },
+        "start": {
+          "character": 0,
+          "line": 2
+        }
+      },
+      "newText": "$env:BROWSER"
+    },
+    "insertText": "$env:BROWSER",
+    "command": null,
+    "label": "env:BROWSER",
+    "commitCharacters": null,
+    "documentation": null,
+    "detail": "[string]",
+    "additionalTextEdits": null,
+    "kind": 6,
+    "filterText": "$env:BROWSER",
+    "data": null
+  },
+  {
+    "sortText": "0011env:DISPLAY",
+    "range": null,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 2,
+          "line": 2
+        },
+        "start": {
+          "character": 0,
+          "line": 2
+        }
+      },
+      "newText": "$env:DISPLAY"
+    },
+    "insertText": "$env:DISPLAY",
+    "command": null,
+    "label": "env:DISPLAY",
+    "commitCharacters": null,
+    "documentation": null,
+    "detail": "[string]",
+    "additionalTextEdits": null,
+    "kind": 6,
+    "filterText": "$env:DISPLAY",
+    "data": null
+  },
+  {
+    "sortText": "0012env:EDITOR",
+    "range": null,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 2,
+          "line": 2
+        },
+        "start": {
+          "character": 0,
+          "line": 2
+        }
+      },
+      "newText": "$env:EDITOR"
+    },
+    "insertText": "$env:EDITOR",
+    "command": null,
+    "label": "env:EDITOR",
+    "commitCharacters": null,
+    "documentation": null,
+    "detail": "[string]",
+    "additionalTextEdits": null,
+    "kind": 6,
+    "filterText": "$env:EDITOR",
+    "data": null
+  },
+  {
+    "sortText": "0013env:HOME",
+    "range": null,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 2,
+          "line": 2
+        },
+        "start": {
+          "character": 0,
+          "line": 2
+        }
+      },
+      "newText": "$env:HOME"
+    },
+    "insertText": "$env:HOME",
+    "command": null,
+    "label": "env:HOME",
+    "commitCharacters": null,
+    "documentation": null,
+    "detail": "[string]",
+    "additionalTextEdits": null,
+    "kind": 6,
+    "filterText": "$env:HOME",
+    "data": null
+  },
+  {
+    "sortText": "0025env:VISUAL",
+    "range": null,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 2,
+          "line": 2
+        },
+        "start": {
+          "character": 0,
+          "line": 2
+        }
+      },
+      "newText": "$env:VISUAL"
+    },
+    "insertText": "$env:VISUAL",
+    "command": null,
+    "label": "env:VISUAL",
+    "commitCharacters": null,
+    "documentation": null,
+    "detail": "[string]",
+    "additionalTextEdits": null,
+    "kind": 6,
+    "filterText": "$env:VISUAL",
+    "data": null
+  },
+  {
+    "sortText": "0026env:XPC_FLAGS",
+    "range": null,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 2,
+          "line": 2
+        },
+        "start": {
+          "character": 0,
+          "line": 2
+        }
+      },
+      "newText": "$env:XPC_FLAGS"
+    },
+    "insertText": "$env:XPC_FLAGS",
+    "command": null,
+    "label": "env:XPC_FLAGS",
+    "commitCharacters": null,
+    "documentation": null,
+    "detail": "[string]",
+    "additionalTextEdits": null,
+    "kind": 6,
+    "filterText": "$env:XPC_FLAGS",
+    "data": null
+  },
+  {
+    "sortText": "0027env:XPC_SERVICE_NAME",
+    "range": null,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 2,
+          "line": 2
+        },
+        "start": {
+          "character": 0,
+          "line": 2
+        }
+      },
+      "newText": "$env:XPC_SERVICE_NAME"
+    },
+    "insertText": "$env:XPC_SERVICE_NAME",
+    "command": null,
+    "label": "env:XPC_SERVICE_NAME",
+    "commitCharacters": null,
+    "documentation": null,
+    "detail": "[string]",
+    "additionalTextEdits": null,
+    "kind": 6,
+    "filterText": "$env:XPC_SERVICE_NAME",
+    "data": null
+  },
+  {
+    "sortText": "0028env:PATHEXT",
+    "range": null,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 2,
+          "line": 2
+        },
+        "start": {
+          "character": 0,
+          "line": 2
+        }
+      },
+      "newText": "$env:PATHEXT"
+    },
+    "insertText": "$env:PATHEXT",
+    "command": null,
+    "label": "env:PATHEXT",
+    "commitCharacters": null,
+    "documentation": null,
+    "detail": null,
+    "additionalTextEdits": null,
+    "kind": 6,
+    "filterText": "$env:PATHEXT",
+    "data": null
+  },
+  {
+    "sortText": "0029Env",
+    "range": null,
+    "textEdit": {
+      "range": {
+        "end": {
+          "character": 2,
+          "line": 2
+        },
+        "start": {
+          "character": 0,
+          "line": 2
+        }
+      },
+      "newText": "$Env:"
+    },
+    "insertText": "$Env:",
+    "command": null,
+    "label": "Env",
+    "commitCharacters": null,
+    "documentation": null,
+    "detail": null,
+    "additionalTextEdits": null,
+    "kind": 6,
+    "filterText": "$Env:",
+    "data": null
+  }
+]

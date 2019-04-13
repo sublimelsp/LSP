@@ -45,7 +45,7 @@ def extract_hint(completion_item: 'Dict[str, Any]') -> 'Optional[str]':
     return hint
 
 
-def extract_replacement(completion_item: 'Dict[str, Any]', fallback: str) -> str:
+def extract_replacement(completion_item: 'Dict[str, Any]', fallback: str, prefix: str, word_separators: str) -> str:
     replacement = None
     text_edit = completion_item.get("textEdit")
     if text_edit:
@@ -53,17 +53,21 @@ def extract_replacement(completion_item: 'Dict[str, Any]', fallback: str) -> str
         replacement = text_edit.get("newText")
     if not replacement:
         replacement = completion_item.get("insertText") or fallback
-    # We make a choice here. If no "insertTextFormat" key is present, what should we choose as default?
-    # The specification is not clear about the absence of this key. We will assume PlainText.
     if completion_item.get("insertTextFormat", 1) == 1:
+        if replacement[0] in word_separators and prefix and prefix[0] not in word_separators:
+            repl = replacement[1:]
+            for sep in word_separators:
+                if sep in repl:
+                    replacement = repl
+                    break
         replacement = replacement.replace("$", "\\$")
     return replacement
 
 
-def format_completion(completion_item: 'Dict[str, Any]') -> 'Tuple[str, str]':
+def format_completion(completion_item: 'Dict[str, Any]', prefix: str, word_separators: str) -> 'Tuple[str, str]':
     trigger = extract_trigger(completion_item)
     hint = extract_hint(completion_item)
-    replacement = extract_replacement(completion_item, trigger)
+    replacement = extract_replacement(completion_item, trigger, prefix, word_separators)
     return "{}\t  {}".format(trigger, hint) if hint else trigger, replacement
 
 
@@ -298,11 +302,11 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             if document_position:
                 client.send_request(
                     Request.complete(document_position),
-                    self.handle_response,
+                    lambda response: self.handle_response(prefix, response),
                     self.handle_error)
                 self.state = CompletionState.REQUESTING
 
-    def handle_response(self, response: 'Optional[Dict]'):
+    def handle_response(self, prefix: str, response: 'Optional[Dict]'):
         global resolvable_completion_items
 
         if self.state == CompletionState.REQUESTING:
@@ -312,7 +316,8 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             elif isinstance(response, list):
                 items = response
             items = sorted(items, key=lambda item: item.get("sortText") or item["label"])
-            self.completions = list(format_completion(item) for item in items)
+            word_separators = self.view.settings().get("word_separators") or ""
+            self.completions = list(format_completion(item, prefix, word_separators) for item in items)
 
             if self.has_resolve_provider:
                 resolvable_completion_items = items

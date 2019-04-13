@@ -21,6 +21,7 @@ def load_completion_sample(name: str) -> 'Dict':
 pyls_completion_sample = load_completion_sample("pyls_completion_sample")
 clangd_completion_sample = load_completion_sample("clangd_completion_sample")
 intelephense_completion_sample = load_completion_sample("intelephense_completion_sample")
+powershell_completion_sample = load_completion_sample("powershell_completion_sample")
 
 
 def create_completion_item(item: str, insert_text: 'Optional[str]' = None) -> dict:
@@ -138,15 +139,17 @@ class CompletionFormattingTests(DeferrableTestCase):
 
     def setUp(self):
         self.view = sublime.active_window().open_file(test_file_path)
+        self.word_separators = self.view.settings().get("word_separators")
+        self.assertTrue(self.word_separators)
 
     def test_only_label_item(self):
-        result = format_completion(create_completion_item("asdf"))
+        result = format_completion(create_completion_item("asdf"), "a", self.word_separators)
         self.assertEqual(len(result), 2)
         self.assertEqual("asdf", result[0])
         self.assertEqual("asdf", result[1])
 
     def test_prefers_insert_text(self):
-        result = format_completion(create_completion_item("asdf", "Asdf"))
+        result = format_completion(create_completion_item("asdf", "Asdf"), "A", self.word_separators)
         self.assertEqual(len(result), 2)
         self.assertEqual("asdf", result[0])
         self.assertEqual("Asdf", result[1])
@@ -164,8 +167,7 @@ class CompletionFormattingTests(DeferrableTestCase):
                 }
             }
         }
-
-        result = format_completion(item)
+        result = format_completion(item, "t", self.word_separators)
         self.assertEqual(len(result), 2)
         self.assertEqual("true", result[0])
         self.assertEqual("rue", result[1])
@@ -193,16 +195,16 @@ class CompletionFormattingTests(DeferrableTestCase):
         }
         handler = CompletionHandler(self.view)
         handler.last_location = 1
-        handler.last_prefix = ""
-        result = format_completion(item)
+        handler.last_prefix = "c"
+        result = format_completion(item, "c", self.word_separators)
         self.assertEqual(result, ('const\t  Keyword', 'const'))
 
     def test_text_edit_intelephense(self):
         yield 100  # wait for file to be open
         handler = CompletionHandler(self.view)
         handler.last_location = 1
-        handler.last_prefix = ""
-        result = [format_completion(item) for item in intelephense_completion_sample]
+        handler.last_prefix = "$"
+        result = [format_completion(item, "$", self.word_separators) for item in intelephense_completion_sample]
         self.assertEqual(
             result,
             [
@@ -229,8 +231,8 @@ class CompletionFormattingTests(DeferrableTestCase):
         yield 100  # wait for file to be open
         handler = CompletionHandler(self.view)
         handler.last_location = 1
-        handler.last_prefix = ""
-        result = [format_completion(item) for item in clangd_completion_sample]
+        handler.last_prefix = "a"
+        result = [format_completion(item, "a", self.word_separators) for item in clangd_completion_sample]
         # We should prefer textEdit over insertText. This test covers that.
         self.assertEqual(
             result,
@@ -262,8 +264,8 @@ class CompletionFormattingTests(DeferrableTestCase):
         yield 100  # wait for file to be open
         handler = CompletionHandler(self.view)
         handler.last_location = 1
-        handler.last_prefix = ""
-        result = [format_completion(item) for item in pyls_completion_sample]
+        handler.last_prefix = "a"
+        result = [format_completion(item, "a", self.word_separators) for item in pyls_completion_sample]
         self.assertEqual(
             result,
             [
@@ -291,6 +293,34 @@ class CompletionFormattingTests(DeferrableTestCase):
                 ('curdir\t  os', 'curdir'),
                 ('defpath\t  os', 'defpath'),
                 ('device_encoding(fd)\t  os', 'device_encoding(${1:fd})$0')
+            ]
+        )
+
+    def test_text_edit_powershell(self):
+        yield 100  # wait for file to be open
+        # Note that the prefix is "e", not "$". This tests wether we can work around a sublime text quirk
+        # where the prefix string does not start with a word separator and the completion contains two
+        # word separators.
+        # Notice in particular that the completion for e.g. $env:VISUAL is env:VISUAL.
+        result = [format_completion(item, "e", self.word_separators) for item in powershell_completion_sample]
+        self.assertEqual(
+            result,
+            [
+                ('$Error\t  [ArrayList]', '\\$Error'),
+                ('$ErrorActionPreference\t  [ActionPreference]', '\\$ErrorActionPreference'),
+                ('$ErrorView\t  [string]', '\\$ErrorView'),
+                ('$ExecutionContext\t  [EngineIntrinsics]', '\\$ExecutionContext'),
+                ('$env:__CF_USER_TEXT_ENCODING\t  [string]', 'env:__CF_USER_TEXT_ENCODING'),
+                ('$env:Apple_PubSub_Socket_Render\t  [string]', 'env:Apple_PubSub_Socket_Render'),
+                ('$env:BROWSER\t  [string]', 'env:BROWSER'),
+                ('$env:DISPLAY\t  [string]', 'env:DISPLAY'),
+                ('$env:EDITOR\t  [string]', 'env:EDITOR'),
+                ('$env:HOME\t  [string]', 'env:HOME'),
+                ('$env:VISUAL\t  [string]', 'env:VISUAL'),
+                ('$env:XPC_FLAGS\t  [string]', 'env:XPC_FLAGS'),
+                ('$env:XPC_SERVICE_NAME\t  [string]', 'env:XPC_SERVICE_NAME'),
+                ('$env:PATHEXT\t  Variable', 'env:PATHEXT'),
+                ('$Env:\t  Variable', 'Env:')
             ]
         )
 

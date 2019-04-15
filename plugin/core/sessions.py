@@ -140,7 +140,8 @@ def get_initialize_params(project_path: str, config: ClientConfig):
             },
             "workspace": {
                 "applyEdit": True,
-                "didChangeConfiguration": {}
+                "didChangeConfiguration": {},
+                "executeCommand": {},
             }
         }
     }

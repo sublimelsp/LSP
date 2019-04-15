@@ -7,7 +7,7 @@ try:
 except ImportError:
     pass
 
-from .core.registry import client_for_view, LspTextCommand
+from .core.registry import LspTextCommand
 from .core.protocol import Request
 from .diagnostics import get_point_diagnostics
 from .core.url import filename_to_uri
@@ -108,11 +108,18 @@ class LspCodeActionsCommand(LspTextCommand):
 
     def handle_select(self, index: int) -> None:
         if index > -1:
-            client = client_for_view(self.view)
-            if client:
-                client.send_request(
-                    Request.executeCommand(self.commands[index]),
-                    self.handle_command_response)
+            # TODO for CodeAction, handle potential WorkspaceEdit before Command.
+            result = self.commands[index]
+            command_attr = result.get('command', None)
+            # Result can be either a Command or CodeAction type.
+            command = result if isinstance(command_attr, str) else command_attr
+            if command:
+                command_name = command.get('command')
+                command_args = command.get('arguments', None)
 
-    def handle_command_response(self, response):
-        pass
+                args = {
+                    "command_name": command_name,
+                    "command_args": command_args,
+                    "modal_result": False,
+                }
+                self.view.run_command('lsp_execute', args)

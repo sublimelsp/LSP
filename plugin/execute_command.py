@@ -33,7 +33,7 @@ class LspExecuteCommand(LspTextCommand):
     def _send_command(self, client: Client, command_name: str, command_args: 'Dict[str, Any]') -> None:
         request = {
             "command": command_name,
-            "args": command_args
+            "arguments": command_args
         }
         client.send_request(Request.executeCommand(request),
                             lambda reponse: self._handle_response(command_name, reponse),

@@ -82,21 +82,23 @@ class LspHoverCommand(LspTextCommand):
             all_content += self.diagnostics_content(point_diagnostics)
 
         all_content += self.hover_content(point, response)
-        all_content += self.symbol_actions_content()
+        all_content += self.symbol_actions_content(point)
 
         _test_contents.clear()
         _test_contents.append(all_content)  # for testing only
         self.show_hover(point, all_content)
 
-    def symbol_actions_content(self):
+    def symbol_actions_content(self, point):
         actions = []
-        if self.has_client_with_capability('definitionProvider') and is_at_word(self.view, None):
+        (x, y) = self.view.rowcol(point)
+        event = {"x": x, "y": y}
+        if self.has_client_with_capability('definitionProvider') and is_at_word(self.view, event):
             actions.append("<a href='{}'>{}</a>".format('definition', 'Definition'))
 
-        if self.has_client_with_capability('referencesProvider') and is_at_word(self.view, None):
+        if self.has_client_with_capability('referencesProvider') and is_at_word(self.view, event):
             actions.append("<a href='{}'>{}</a>".format('references', 'References'))
 
-        if self.has_client_with_capability('renameProvider') and is_at_word(self.view, None):
+        if self.has_client_with_capability('renameProvider') and is_at_word(self.view, event):
             actions.append("<a href='{}'>{}</a>".format('rename', 'Rename'))
 
         return "<p>" + " | ".join(actions) + "</p>"

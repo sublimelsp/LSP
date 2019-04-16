@@ -13,7 +13,7 @@ from .core.configurations import is_supported_syntax
 from .core.diagnostics import get_point_diagnostics
 from .core.registry import session_for_view, LspTextCommand
 from .core.protocol import Request, DiagnosticSeverity
-from .core.documents import get_document_position
+from .core.documents import get_document_position, is_at_word
 from .core.popups import popup_css, popup_class
 
 SUBLIME_WORD_MASK = 515
@@ -90,10 +90,15 @@ class LspHoverCommand(LspTextCommand):
 
     def symbol_actions_content(self):
         actions = []
-        # TODO: filter by client capabilities
-        actions.append("<a href='{}'>{}</a>".format('definition', 'Definition'))
-        actions.append("<a href='{}'>{}</a>".format('references', 'References'))
-        actions.append("<a href='{}'>{}</a>".format('rename', 'Rename'))
+        if self.has_client_with_capability('definitionProvider') and is_at_word(self.view, None):
+            actions.append("<a href='{}'>{}</a>".format('definition', 'Definition'))
+
+        if self.has_client_with_capability('referencesProvider') and is_at_word(self.view, None):
+            actions.append("<a href='{}'>{}</a>".format('references', 'References'))
+
+        if self.has_client_with_capability('renameProvider') and is_at_word(self.view, None):
+            actions.append("<a href='{}'>{}</a>".format('rename', 'Rename'))
+
         return "<p>" + " | ".join(actions) + "</p>"
 
     def format_diagnostic(self, diagnostic):

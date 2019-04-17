@@ -91,11 +91,11 @@ class LspHoverCommand(LspTextCommand):
     def symbol_actions_content(self, point):
         actions = []
         (x, y) = self.view.rowcol(point)
-        is_at_word = is_at_word(self.view, {"x": x, "y": y})
-        if self.has_client_with_capability('definitionProvider') and is_at_word:
+        is_word = is_at_word(self.view, {"x": x, "y": y})
+        if self.has_client_with_capability('definitionProvider') and is_word:
             actions.append("<a href='{}'>{}</a>".format('definition', 'Definition'))
 
-        if self.has_client_with_capability('referencesProvider') and is_at_word:
+        if self.has_client_with_capability('referencesProvider') and is_word:
             actions.append("<a href='{}'>{}</a>".format('references', 'References'))
 
         if self.has_client_with_capability('renameProvider') and is_at_word:

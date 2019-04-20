@@ -228,21 +228,15 @@ See [github:rust-lang-nursery/rls](https://github.com/rust-lang-nursery/rls) for
 
 ### Scala<a name="scala"></a>
 
-* Metals
-Most complete LSP server for Scala, see [instructions](https://scalameta.org/metals/docs/editors/sublime.html) for installation
-
-* SBT (deprecated)
-SBT 1.x supports limited language server functionality, setup is described here: [sbt server with Sublime Text 3](http://eed3si9n.com/sbt-server-with-sublime-text3).
-
-* Dotty, the future Scala compiler [contains LSP support](http://dotty.epfl.ch/docs/usage/ide-support.html). It is developed against VS Code, so ignore instructions related to VS Code.
-
-Get the project compiling with dotty first (see https://github.com/lampepfl/dotty-example-project#using-dotty-in-an-existing-project)
-
+*  **[Metals](https://scalameta.org/metals/)**: Most complete LSP server for Scala, see instructions [here](https://scalameta.org/metals/docs/editors/sublime.html) for installation.
+* **[SBT](https://www.scala-sbt.org/)**: Version 1.x supports limited and *unmaintained* language server functionalities, setup is described [here](http://eed3si9n.com/sbt-server-with-sublime-text3).
+* **[Dotty](http://dotty.epfl.ch/)**: The future Scala compiler [contains LSP support](http://dotty.epfl.ch/docs/usage/ide-support.html).  
+It is developed against VS Code, so ignore instructions related to VS Code. 
+Get the project compiling with dotty first (see [instructions](https://github.com/lampepfl/dotty-example-project#using-dotty-in-an-existing-project)).  
 At this point LSP should complain in the logs
-`java.util.concurrent.CompletionException: java.io.FileNotFoundException: /Users/tomv/Projects/tomv564/dottytest/finagle/doc/src/sphinx/code/quickstart/.dotty-ide.json`
-
-Then run `sbt configureIDE` to create the .dotty-ide.json file
-Then the LSP plugin should launch as configured in LSP.sublime-settings using coursier.
+`java.util.concurrent.CompletionException: java.io.FileNotFoundException: /Users/tomv/Projects/tomv564/dottytest/finagle/doc/src/sphinx/code/quickstart/.dotty-ide.json`   
+Then run `sbt configureIDE` to create the `.dotty-ide.json` file  
+Then the LSP plugin should launch as configured in `LSP.sublime-settings` using coursier.
 
 
 ### C/C++ (Clangd)<a name="clang"></a>

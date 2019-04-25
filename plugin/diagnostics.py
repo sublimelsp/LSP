@@ -15,7 +15,7 @@ from .core.events import global_events
 from .core.logging import debug
 from .core.panels import ensure_panel
 from .core.protocol import Diagnostic, DiagnosticSeverity
-from .core.settings import settings, PLUGIN_NAME
+from .core.settings import settings, PLUGIN_NAME, client_configs
 from .core.views import range_to_region
 from .core.workspace import get_project_path
 
@@ -224,7 +224,7 @@ class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, view_settings):
         syntax = view_settings.get('syntax')
-        return settings.show_diagnostics_in_view_status and syntax and is_supported_syntax(syntax)
+        return settings.show_diagnostics_in_view_status and syntax and is_supported_syntax(syntax, client_configs.all)
 
     def on_selection_modified_async(self):
         selections = self.view.sel()

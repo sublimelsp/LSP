@@ -9,7 +9,7 @@ except ImportError:
 
 from .core.protocol import Request
 from .core.events import global_events
-from .core.settings import settings
+from .core.settings import settings, client_configs
 from .core.logging import debug, exception_log
 from .core.protocol import CompletionItemKind, Range
 from .core.registry import session_for_view, client_for_view
@@ -139,7 +139,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
         if syntax is not None:
-            return is_supported_syntax(syntax)
+            return is_supported_syntax(syntax, client_configs.all)
         else:
             return False
 

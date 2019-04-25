@@ -7,6 +7,7 @@ from .configurations import is_supported_syntax
 from .events import global_events
 from .views import offset_to_point
 from .windows import ViewLike, WindowLike
+from .settings import client_configs
 
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
@@ -67,7 +68,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
         syntax = settings.get('syntax')
         # This enables all of document sync for any supportable syntax
         # Global performance cost, consider a detect_lsp_support setting
-        return syntax and is_supported_syntax(syntax)
+        return syntax and is_supported_syntax(syntax, client_configs.all)
 
     @classmethod
     def applies_to_primary_view_only(cls):

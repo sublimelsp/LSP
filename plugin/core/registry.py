@@ -101,7 +101,7 @@ def unload_sessions():
         wm.end_sessions()
 
 
-configs = ConfigManager()
+configs = ConfigManager(client_configs.all)
 diagnostics = GlobalDiagnostics()
 documents = DocumentHandlerFactory(sublime, settings)
 handlers_dispatcher = LanguageHandlerDispatcher()

@@ -82,13 +82,13 @@ class LspHoverCommand(LspTextCommand):
             all_content += self.diagnostics_content(point_diagnostics)
 
         all_content += self.hover_content(point, response)
-        all_content += self.symbol_actions_content(point)
+        all_content += self.symbol_actions_content()
 
         _test_contents.clear()
         _test_contents.append(all_content)  # for testing only
         self.show_hover(point, all_content)
 
-    def symbol_actions_content(self, point):
+    def symbol_actions_content(self):
         actions = []
         if self.has_client_with_capability('definitionProvider'):
             actions.append("<a href='{}'>{}</a>".format('definition', 'Definition'))

@@ -203,7 +203,7 @@
       }
       ]
     },
-    "Metals":
+    "metals":
     {
       "command": ["metals-sublime"],
       "languageId": "scala",

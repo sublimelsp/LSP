@@ -57,4 +57,3 @@ class WindowDiagnosticsTest(unittest.TestCase):
 
         view_diags = wd.get_by_path(test_file_path)
         self.assertEqual(len(view_diags), 0)
-

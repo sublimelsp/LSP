@@ -1,6 +1,5 @@
 import sublime
 import sublime_plugin
-from .diagnostics import GlobalDiagnostics
 from .windows import WindowRegistry, DocumentHandlerFactory
 from .configurations import (
     ConfigManager
@@ -102,10 +101,9 @@ def unload_sessions():
 
 
 configs = ConfigManager(client_configs.all)
-diagnostics = GlobalDiagnostics()
 documents = DocumentHandlerFactory(sublime, settings)
 handlers_dispatcher = LanguageHandlerDispatcher()
-windows = WindowRegistry(configs, documents, diagnostics, start_window_config, sublime, handlers_dispatcher)
+windows = WindowRegistry(configs, documents, start_window_config, sublime, handlers_dispatcher)
 
 
 def config_for_scope(view: 'Any', point=None) -> 'Optional[ClientConfig]':

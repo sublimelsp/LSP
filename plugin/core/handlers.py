@@ -1,5 +1,5 @@
 import abc
-from .settings import ClientConfig
+from .types import ClientConfig
 # from .rpc import Client
 try:
     from typing import List, Callable, Optional, Type

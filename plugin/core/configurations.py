@@ -50,8 +50,8 @@ def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]',
     return scope_client_config
 
 
-# def get_global_client_config(view: 'sublime.View') -> 'Optional[ClientConfig]':
-#     return get_scope_client_config(view, client_configs.all)
+def get_global_client_config(view: 'sublime.View', global_configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':
+    return get_scope_client_config(view, global_configs)
 
 
 def create_window_configs(window: 'sublime.Window', global_configs: 'List[ClientConfig]') -> 'List[ClientConfig]':

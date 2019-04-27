@@ -10,7 +10,7 @@ except ImportError:
     pass
 
 from .core.configurations import is_supported_syntax
-from .core.diagnostics import get_point_diagnostics
+from .diagnostics import get_point_diagnostics
 from .core.registry import session_for_view, LspTextCommand
 from .core.protocol import Request, DiagnosticSeverity
 from .core.documents import get_document_position

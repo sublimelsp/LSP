@@ -1,3 +1,4 @@
+from .diagnostics import WindowDiagnostics, DiagnosticsUpdate
 from .events import global_events
 from .logging import debug, server_log
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike, LanguageConfig, config_supports_syntax
@@ -45,14 +46,6 @@ class ConfigRegistry(Protocol):
 
 class GlobalConfigs(Protocol):
     def for_window(self, window: WindowLike) -> ConfigRegistry:
-        ...
-
-
-class DiagnosticsHandler(Protocol):
-    def update(self, window: WindowLike, client_name: str, update: dict) -> None:
-        ...
-
-    def remove(self, view: ViewLike, client_name: str) -> None:
         ...
 
 
@@ -290,7 +283,7 @@ class WindowDocumentHandler(object):
 
 class WindowManager(object):
     def __init__(self, window: WindowLike, configs: ConfigRegistry, documents: DocumentHandler,
-                 diagnostics: DiagnosticsHandler, session_starter: 'Callable', sublime: 'Any',
+                 diagnostics: WindowDiagnostics, session_starter: 'Callable', sublime: 'Any',
                  handler_dispatcher, on_closed: 'Optional[Callable]' = None) -> None:
 
         # to move here:
@@ -305,6 +298,10 @@ class WindowManager(object):
         self._handlers = handler_dispatcher
         self._restarting = False
         self._project_path = get_project_path(self._window)
+        self._diagnostics.set_on_updated(
+            lambda file_path, client_name, diagnostics:
+                global_events.publish("document.diagnostics",
+                                      DiagnosticsUpdate(self._window, client_name, file_path, diagnostics)))
         self._on_closed = on_closed
         self._is_closing = False
 
@@ -446,7 +443,7 @@ class WindowManager(object):
 
         client.on_notification(
             "textDocument/publishDiagnostics",
-            lambda params: self._diagnostics.update(self._window, config.name, params))
+            lambda params: self._diagnostics.handle_client_diagnostics(config.name, params))
 
         client.on_notification(
             "window/showMessage",
@@ -475,14 +472,15 @@ class WindowManager(object):
         self._window.status_message("{} initialized".format(config.name))
 
     def _handle_view_closed(self, view, session):
-        self._diagnostics.remove(view, session.config.name)
-        if not self._is_closing:
-            if not self._window.is_valid():
-                # try to detect close synchronously (for quitting)
-                self._handle_window_closed()
-            else:
-                # in case the window is invalidated after the last view is closed
-                self._sublime.set_timeout_async(lambda: self._check_window_closed(), 100)
+        if view.file_name():
+            self._diagnostics.remove(view.file_name(), session.config.name)
+            if not self._is_closing:
+                if not self._window.is_valid():
+                    # try to detect close synchronously (for quitting)
+                    self._handle_window_closed()
+                else:
+                    # in case the window is invalidated after the last view is closed
+                    self._sublime.set_timeout_async(lambda: self._check_window_closed(), 100)
 
     def _check_window_closed(self):
         # debug('window {} check window closed closing={}, valid={}'.format(
@@ -525,11 +523,10 @@ class WindowManager(object):
 
 
 class WindowRegistry(object):
-    def __init__(self, configs: GlobalConfigs, documents: 'Any', diagnostics: DiagnosticsHandler,
+    def __init__(self, configs: GlobalConfigs, documents: 'Any',
                  session_starter: 'Callable', sublime: 'Any', handler_dispatcher) -> None:
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs
-        self._diagnostics = diagnostics
         self._documents = documents
         self._session_starter = session_starter
         self._sublime = sublime
@@ -540,7 +537,7 @@ class WindowRegistry(object):
         if state is None:
             window_configs = self._configs.for_window(window)
             window_documents = self._documents.for_window(window, window_configs)
-            state = WindowManager(window, window_configs, window_documents, self._diagnostics, self._session_starter,
+            state = WindowManager(window, window_configs, window_documents, WindowDiagnostics(), self._session_starter,
                                   self._sublime, self._handler_dispatcher, lambda: self._on_closed(window))
             self._windows[window.id()] = state
         return state

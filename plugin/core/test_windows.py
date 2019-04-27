@@ -22,8 +22,8 @@ class MockSublimeSettings(object):
     def __init__(self, values):
         self._values = values
 
-    def get(self, key):
-        return self._values.get(key)
+    def get(self, key, default=None):
+        return self._values.get(key, default)
 
     def set(self, key, value):
         self._values[key] = value
@@ -86,6 +86,7 @@ class MockWindow(object):
         self._is_valid = True
         self._folders = [os.path.dirname(__file__)]
         self._default_view = MockView(None)
+        self._project_data = None  # type: Optional[Dict[str, Any]]
         self.commands = []  # type: List[Tuple[str, Dict[str, Any]]]
 
     def id(self):
@@ -104,7 +105,10 @@ class MockWindow(object):
         return 0
 
     def project_data(self) -> Optional[dict]:
-        return None
+        return self._project_data
+
+    def set_project_data(self, data: Optional[dict]):
+        self._project_data = data
 
     def active_view(self) -> Optional[ViewLike]:
         return self.active_view_in_group(0)
@@ -114,6 +118,11 @@ class MockWindow(object):
 
     def is_valid(self):
         return self._is_valid
+
+    def extract_variables(self):
+        return {
+            "project_path": os.path.dirname(__file__)
+        }
 
     def active_view_in_group(self, group):
         if group < len(self._files_in_groups):

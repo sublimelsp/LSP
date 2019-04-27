@@ -90,7 +90,7 @@ class ClientConfigs(object):
         self._external_configs[config.name] = config
 
     def update_configs(self):
-        self.all = []  # type: List[ClientConfig]
+        del self.all[:]
 
         for config_name, config in self._external_configs.items():
             user_settings = self._global_settings.get(config_name, dict())

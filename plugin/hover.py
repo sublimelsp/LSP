@@ -91,10 +91,15 @@ class LspHoverCommand(LspTextCommand):
 
     def symbol_actions_content(self):
         actions = []
-        # TODO: filter by client capabilities
-        actions.append("<a href='{}'>{}</a>".format('definition', 'Definition'))
-        actions.append("<a href='{}'>{}</a>".format('references', 'References'))
-        actions.append("<a href='{}'>{}</a>".format('rename', 'Rename'))
+        if self.has_client_with_capability('definitionProvider'):
+            actions.append("<a href='{}'>{}</a>".format('definition', 'Definition'))
+
+        if self.has_client_with_capability('referencesProvider'):
+            actions.append("<a href='{}'>{}</a>".format('references', 'References'))
+
+        if self.has_client_with_capability('renameProvider'):
+            actions.append("<a href='{}'>{}</a>".format('rename', 'Rename'))
+
         return "<p>" + " | ".join(actions) + "</p>"
 
     def format_diagnostic(self, diagnostic):

@@ -1,4 +1,4 @@
-from .core.protocol import Request
+from .core.protocol import Request, Edit
 from .core.registry import client_for_view, LspTextCommand
 from .core.types import ViewLike
 from .core.url import filename_to_uri
@@ -18,6 +18,11 @@ def options_for_view(view: ViewLike) -> 'Dict[str, Any]':
     }
 
 
+def apply_reponse_to_view(response, view):
+    edits = list(Edit.from_lsp(change) for change in response) if response else []
+    view.run_command('lsp_apply_document_edit', {'changes': edits})
+
+
 class LspFormatDocumentCommand(LspTextCommand):
     def __init__(self, view):
         super().__init__(view)
@@ -28,7 +33,6 @@ class LspFormatDocumentCommand(LspTextCommand):
     def run(self, edit):
         client = client_for_view(self.view)
         if client:
-            pos = self.view.sel()[0].begin()
             params = {
                 "textDocument": {
                     "uri": filename_to_uri(self.view.file_name())
@@ -37,11 +41,7 @@ class LspFormatDocumentCommand(LspTextCommand):
             }
             request = Request.formatting(params)
             client.send_request(
-                request, lambda response: self.handle_response(response, pos))
-
-    def handle_response(self, response, pos):
-        self.view.run_command('lsp_apply_document_edit',
-                              {'changes': response})
+                request, lambda response: apply_reponse_to_view(response, self.view))
 
 
 class LspFormatDocumentRangeCommand(LspTextCommand):
@@ -68,5 +68,4 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
                 "options": options_for_view(self.view)
             }
             client.send_request(Request.rangeFormatting(params),
-                                lambda response: self.view.run_command('lsp_apply_document_edit',
-                                                                       {'changes': response}))
+                                lambda response: apply_reponse_to_view(response, self.view))

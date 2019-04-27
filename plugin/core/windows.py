@@ -2,7 +2,7 @@ from .diagnostics import WindowDiagnostics, DiagnosticsUpdate
 from .events import global_events
 from .logging import debug, server_log
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike, LanguageConfig, config_supports_syntax
-from .protocol import Notification, Response
+from .protocol import Notification, Response, parse_workspace_edit
 from .sessions import Session
 from .url import filename_to_uri
 from .workspace import get_project_path
@@ -419,8 +419,8 @@ class WindowManager(object):
 
     def _apply_workspace_edit(self, params: 'Dict[str, Any]', client: Client, request_id: int) -> None:
         edit = params.get('edit', dict())
-        self._window.run_command('lsp_apply_workspace_edit', {'changes': edit.get('changes'),
-                                                              'document_changes': edit.get('documentChanges')})
+        changes = parse_workspace_edit(edit)
+        self._window.run_command('lsp_apply_workspace_edit', {'changes': changes})
         # TODO: We should ideally wait for all changes to have been applied.
         # This however seems overly complicated, because we have to bring along a string representation of the
         # client through the sublime-command invocations (as well as the request ID, but that is easy), and then

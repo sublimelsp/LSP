@@ -1,3 +1,4 @@
+from .url import uri_to_filename
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
     assert Any and List and Dict and Tuple and Callable and Optional
@@ -265,6 +266,29 @@ class Range(object):
             'start': self.start.to_lsp(),
             'end': self.end.to_lsp()
         }
+
+
+def parse_workspace_edit(workspace_edit: Dict[str, Any]) -> 'Dict[str, List[Edit]]':
+    changes = {}  # type: Dict[str, List[Edit]]
+    if 'changes' in workspace_edit:
+        for uri, file_changes in workspace_edit.get('changes', {}).items():
+            changes[uri_to_filename(uri)] = list(Edit.from_lsp(change) for change in file_changes)
+    if 'documentChanges' in workspace_edit:
+        for document_change in workspace_edit.get('documentChanges', []):
+            uri = document_change.get('textDocument').get('uri')
+            changes[uri_to_filename(uri)] = list(Edit.from_lsp(change) for change in document_change.get('edits'))
+    return changes
+
+
+class Edit(object):
+
+    def __init__(self, range: Range, newText: str) -> None:
+        self.newText = newText
+        self.range = range
+
+    @classmethod
+    def from_lsp(cls, edit: dict) -> 'Edit':
+        return Edit(Range.from_lsp(edit.get('range', {})), edit.get('newText', ''))
 
 
 class Diagnostic(object):

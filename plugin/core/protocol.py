@@ -268,7 +268,7 @@ class Range(object):
         }
 
 
-def parse_workspace_edit(workspace_edit: Dict[str, Any]) -> 'Dict[str, List[Edit]]':
+def parse_workspace_edit(workspace_edit: 'Dict[str, Any]') -> 'Dict[str, List[Edit]]':
     changes = {}  # type: Dict[str, List[Edit]]
     if 'changes' in workspace_edit:
         for uri, file_changes in workspace_edit.get('changes', {}).items():

@@ -3,7 +3,7 @@ import sublime_plugin
 
 try:
     from typing import List, Dict, Optional, Any, Iterable
-    assert List and Dict and Optional and Any
+    assert List and Dict and Optional and Any and Iterable
 except ImportError:
     pass
 

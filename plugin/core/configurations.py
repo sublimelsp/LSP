@@ -1,5 +1,4 @@
 import re
-# import sublime
 from copy import deepcopy
 
 from .types import ClientConfig, LanguageConfig

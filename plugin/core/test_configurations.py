@@ -25,23 +25,23 @@ class GlobalConfigManagerTests(unittest.TestCase):
         self.assertFalse(window_mgr.all[0].enabled)
 
 
-
 class MergeDictsTests(unittest.TestCase):
 
     def test_preserves_against_empty(self):
 
         # merge against one empty dict
-        self.assertEqual(_merge_dicts({'a': 1}, {}), {'a':1})
-        self.assertEqual(_merge_dicts({}, {'a': 1}), {'a':1})
+        self.assertEqual(_merge_dicts({'a': 1}, {}), {'a': 1})
+        self.assertEqual(_merge_dicts({}, {'a': 1}), {'a': 1})
 
         # first-level collision
-        self.assertEqual(_merge_dicts({'a': 2}, {'a': 1}), {'a':1})
+        self.assertEqual(_merge_dicts({'a': 2}, {'a': 1}), {'a': 1})
 
         # replace number value with dict
         self.assertEqual(_merge_dicts({'a': 2}, {'a': {'b': 4}}), {'a': {'b': 4}})
 
         # update existing child dict.
         self.assertEqual(_merge_dicts({'a': {'b': 2, 'c': 3}}, {'a': {'b': 4}}), {'a': {'b': 4, 'c': 3}})
+
 
 class WindowConfigManagerTests(unittest.TestCase):
 

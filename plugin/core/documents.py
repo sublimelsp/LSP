@@ -1,7 +1,6 @@
 import sublime
 import sublime_plugin
 
-from collections import OrderedDict
 from .url import filename_to_uri
 from .configurations import is_supported_syntax
 from .events import global_events
@@ -20,12 +19,12 @@ except ImportError:
 SUBLIME_WORD_MASK = 515
 
 
-def get_document_position(view: sublime.View, point: int) -> 'Optional[OrderedDict]':
+def get_document_position(view: sublime.View, point: int) -> 'Optional[Dict[str, Any]]':
     file_name = view.file_name()
     if file_name:
         if not point:
             point = view.sel()[0].begin()
-        d = OrderedDict()  # type: OrderedDict[str, Any]
+        d = dict()  # type: Dict[str, Any]
         d['textDocument'] = {"uri": filename_to_uri(file_name)}
         d['position'] = offset_to_point(view, point).to_lsp()
         return d

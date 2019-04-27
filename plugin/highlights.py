@@ -7,7 +7,6 @@ from .core.registry import session_for_view, client_for_view
 from .core.documents import get_document_position
 from .core.settings import settings, client_configs
 from .core.views import range_to_region
-from .core.registry import windows
 try:
     from typing import List, Dict, Optional
     assert List and Dict and Optional

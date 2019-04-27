@@ -12,6 +12,7 @@ assert ClientConfig
 try:
     import sublime
     from typing import Any, List, Dict, Tuple, Callable, Optional
+    assert sublime
     assert Any and List and Dict and Tuple and Callable and Optional
     assert ViewLike and WindowLike and ConfigRegistry and LanguageConfig
 except ImportError:

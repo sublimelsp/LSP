@@ -18,7 +18,7 @@ from .core.events import global_events
 from .core.protocol import Request
 from .core.logging import debug
 from .core.popups import popup_css, popup_class
-from .core.settings import settings
+from .core.settings import settings, client_configs
 
 
 def get_documentation(d: 'Dict[str, Any]') -> 'Optional[str]':
@@ -52,7 +52,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return syntax and is_supported_syntax(syntax)
+        return syntax and is_supported_syntax(syntax, client_configs.all)
 
     def initialize(self):
         session = session_for_view(self.view)

@@ -5,9 +5,8 @@ from .core.configurations import is_supported_syntax
 from .core.protocol import Request, Range, DocumentHighlightKind
 from .core.registry import session_for_view, client_for_view
 from .core.documents import get_document_position
-from .core.settings import settings
+from .core.settings import settings, client_configs
 from .core.views import range_to_region
-
 try:
     from typing import List, Dict, Optional
     assert List and Dict and Optional
@@ -42,7 +41,7 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return syntax and is_supported_syntax(syntax)
+        return syntax and is_supported_syntax(syntax, client_configs.all)
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)

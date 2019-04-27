@@ -317,7 +317,7 @@ def update_diagnostics_panel(window: sublime.Window):
 def has_relevant_diagnostics(origin_diagnostics):
     for origin, diagnostics in origin_diagnostics.items():
         for diagnostic in diagnostics:
-            debug('severity check', diagnostic.severity, '<=', settings.auto_show_diagnostics_panel_level)
+            # debug('severity check', diagnostic.severity, '<=', settings.auto_show_diagnostics_panel_level)
             if diagnostic.severity <= settings.auto_show_diagnostics_panel_level:
                 return True
 

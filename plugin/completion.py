@@ -28,14 +28,6 @@ class CompletionState(object):
     CANCELLING = 3
 
 
-resolvable_completion_items = []  # type: List[Any]
-
-
-def find_completion_item(label: str) -> 'Optional[Any]':
-    matches = list(filter(lambda i: i.get("label") == label, resolvable_completion_items))
-    return matches[0] if matches else None
-
-
 last_text_command = None
 
 
@@ -51,8 +43,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
-        self.resolve = False
-        self.resolve_details = []  # type: List[Tuple[str, str]]
         self.state = CompletionState.IDLE
         self.completions = []  # type: List[Any]
         self.next_request = None  # type: Optional[Tuple[str, List[int]]]
@@ -77,7 +67,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 self.enabled = True
                 self.trigger_chars = completionProvider.get(
                     'triggerCharacters') or []
-                self.has_resolve_provider = completionProvider.get('resolveProvider', False)
                 if self.trigger_chars:
                     self.register_trigger_chars(session)
 
@@ -223,7 +212,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         return None
 
     def handle_response(self, response: 'Optional[Dict]'):
-        global resolvable_completion_items
 
         if self.state == CompletionState.REQUESTING:
             items = []  # type: List[Dict]
@@ -233,9 +221,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 items = response
             items = sorted(items, key=lambda item: item.get("sortText") or item["label"])
             self.completions = list(self.format_completion(item) for item in items)
-
-            if self.has_resolve_provider:
-                resolvable_completion_items = items
 
             # if insert_best_completion was just ran, undo it before presenting new completions.
             prev_char = self.view.substr(self.view.sel()[0].begin() - 1)

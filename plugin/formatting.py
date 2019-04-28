@@ -1,4 +1,5 @@
-from .core.protocol import Request, Edit
+from .core.protocol import Request
+from .core.edit import parse_text_edit
 from .core.registry import client_for_view, LspTextCommand
 from .core.types import ViewLike
 from .core.url import filename_to_uri
@@ -18,8 +19,8 @@ def options_for_view(view: ViewLike) -> 'Dict[str, Any]':
     }
 
 
-def apply_reponse_to_view(response, view):
-    edits = list(Edit.from_lsp(change) for change in response) if response else []
+def apply_response_to_view(response, view):
+    edits = list(parse_text_edit(change) for change in response) if response else []
     view.run_command('lsp_apply_document_edit', {'changes': edits})
 
 
@@ -41,7 +42,7 @@ class LspFormatDocumentCommand(LspTextCommand):
             }
             request = Request.formatting(params)
             client.send_request(
-                request, lambda response: apply_reponse_to_view(response, self.view))
+                request, lambda response: apply_response_to_view(response, self.view))
 
 
 class LspFormatDocumentRangeCommand(LspTextCommand):
@@ -68,4 +69,4 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
                 "options": options_for_view(self.view)
             }
             client.send_request(Request.rangeFormatting(params),
-                                lambda response: apply_reponse_to_view(response, self.view))
+                                lambda response: apply_response_to_view(response, self.view))

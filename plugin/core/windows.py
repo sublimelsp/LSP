@@ -2,7 +2,8 @@ from .diagnostics import WindowDiagnostics, DiagnosticsUpdate
 from .events import global_events
 from .logging import debug, server_log
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike, LanguageConfig, config_supports_syntax
-from .protocol import Notification, Response, parse_workspace_edit
+from .protocol import Notification, Response
+from .edit import parse_workspace_edit
 from .sessions import Session
 from .url import filename_to_uri
 from .workspace import get_project_path

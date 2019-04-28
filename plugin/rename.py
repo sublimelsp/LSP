@@ -1,6 +1,7 @@
 import sublime_plugin
 from .core.registry import client_for_view, LspTextCommand
-from .core.protocol import Request, parse_workspace_edit
+from .core.protocol import Request
+from .core.edit import parse_workspace_edit
 from .core.documents import get_document_position, get_position, is_at_word
 try:
     from typing import List, Dict, Optional

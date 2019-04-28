@@ -1,55 +1,41 @@
-import sublime
-import sublime_plugin
-
+from .url import uri_to_filename
 try:
-    from typing import List, Dict, Optional, Any, Iterable
-    assert List and Dict and Optional and Any and Iterable
+    from typing import List, Dict, Optional, Any, Iterable, Tuple
+    TextEdit = Tuple[Tuple[int, int], Tuple[int, int], str]
+    assert List and Dict and Optional and Any and Iterable and Tuple
 except ImportError:
     pass
 
-from .url import uri_to_filename
-from .protocol import Edit
-from .logging import debug
-from .views import range_to_region
+
+def parse_workspace_edit(workspace_edit: 'Dict[str, Any]') -> 'Dict[str, List[TextEdit]]':
+    changes = {}  # type: Dict[str, List[TextEdit]]
+    if 'changes' in workspace_edit:
+        for uri, file_changes in workspace_edit.get('changes', {}).items():
+            changes[uri_to_filename(uri)] = list(parse_text_edit(change) for change in file_changes)
+    if 'documentChanges' in workspace_edit:
+        for document_change in workspace_edit.get('documentChanges', []):
+            uri = document_change.get('textDocument').get('uri')
+            changes[uri_to_filename(uri)] = list(parse_text_edit(change) for change in document_change.get('edits'))
+    return changes
 
 
-class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
-    def run(self, changes: 'Optional[Dict[str, List[Edit]]]'=None):
-        documents_changed = 0
-        if changes:
-            for (document_uri, document_changes) in changes.items():
-                path = uri_to_filename(document_uri)
-                self.open_and_apply_edits(path, document_changes)
-                documents_changed += 1
-
-        if documents_changed > 0:
-            message = 'Applied changes to {} documents'.format(documents_changed)
-            self.window.status_message(message)
-        else:
-            self.window.status_message('No changes to apply to workspace')
-
-    def open_and_apply_edits(self, path, file_changes):
-        view = self.window.open_file(path)
-        if view:
-            if view.is_loading():
-                # TODO: wait for event instead.
-                sublime.set_timeout_async(
-                    lambda: view.run_command('lsp_apply_document_edit', {'changes': file_changes}),
-                    500
-                )
-            else:
-                view.run_command('lsp_apply_document_edit',
-                                 {'changes': file_changes,
-                                  'show_status': False})
-        else:
-            debug('view not found to apply', path, file_changes)
+def parse_range(range: 'Dict[str, int]') -> 'Tuple[int, int]':
+    return range['line'], range['character']
 
 
-def sort_by_application_order(changes: 'Iterable[Edit]') -> 'List[Edit]':
+def parse_text_edit(text_edit: 'Dict[str, Any]') -> 'TextEdit':
+    return (
+        parse_range(text_edit['range']['start']),
+        parse_range(text_edit['range']['end']),
+        text_edit.get('newText', '')
+    )
 
-    def get_start_position(change: Edit):
-        start = change.range.start
-        return (start.row, start.col)
+
+def sort_by_application_order(changes: 'Iterable[TextEdit]') -> 'List[TextEdit]':
+
+    def get_start_position(pair: 'Tuple[int, TextEdit]'):
+        index, change = pair
+        return change[0][0], change[0][1], index
 
     # The spec reads:
     # > However, it is possible that multiple edits have the same start position: multiple
@@ -59,24 +45,4 @@ def sort_by_application_order(changes: 'Iterable[Edit]') -> 'List[Edit]':
     # So we sort by start position. But if multiple text edits start at the same position,
     # we use the index in the array as the key.
 
-    # todo: removed array logic because sorted is stable, but does it work correctly with reverse?
-    return sorted(changes, key=get_start_position, reverse=True)
-
-
-class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
-    def run(self, edit, changes: 'Optional[List[Edit]]'=None):
-        # Apply the changes in reverse, so that we don't invalidate the range
-        # of any change that we haven't applied yet.
-        if changes:
-            sorted_changes = sort_by_application_order(changes)
-            for change in sorted_changes:
-                self.apply_change(range_to_region(change.range, self.view), change.newText, edit)
-
-    def apply_change(self, region: 'sublime.Region', newText: str, edit):
-        if region.empty():
-            self.view.insert(edit, region.a, newText)
-        else:
-            if len(newText) > 0:
-                self.view.replace(edit, region, newText)
-            else:
-                self.view.erase(edit, region)
+    return list(map(lambda pair: pair[1], sorted(enumerate(changes), key=get_start_position, reverse=True)))

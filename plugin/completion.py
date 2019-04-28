@@ -10,7 +10,7 @@ except ImportError:
 from .core.protocol import Request
 from .core.events import global_events
 from .core.settings import settings, client_configs
-from .core.logging import debug, exception_log
+from .core.logging import debug
 from .core.protocol import CompletionItemKind, Range
 from .core.registry import session_for_view, client_for_view
 from .core.configurations import is_supported_syntax
@@ -34,82 +34,6 @@ resolvable_completion_items = []  # type: List[Any]
 def find_completion_item(label: str) -> 'Optional[Any]':
     matches = list(filter(lambda i: i.get("label") == label, resolvable_completion_items))
     return matches[0] if matches else None
-
-
-class CompletionContext(object):
-
-    def __init__(self, begin):
-        self.begin = begin  # type: Optional[int]
-        self.end = None  # type: Optional[int]
-        self.region = None  # type: Optional[sublime.Region]
-        self.committing = False
-
-    def committed_at(self, end):
-        self.end = end
-        self.region = sublime.Region(self.begin, self.end)
-        self.committing = False
-
-
-current_completion = None  # type: Optional[CompletionContext]
-
-
-def has_resolvable_completions(view):
-    session = session_for_view(view)
-    if session:
-        completionProvider = session.get_capability(
-            'completionProvider')
-        if completionProvider:
-            if completionProvider.get('resolveProvider', False):
-                return True
-    return False
-
-
-class CompletionSnippetHandler(sublime_plugin.EventListener):
-
-    def on_query_completions(self, view, prefix, locations):
-        global current_completion
-        if settings.resolve_completion_for_snippets and has_resolvable_completions(view):
-            current_completion = CompletionContext(view.sel()[0].begin())
-
-    def on_text_command(self, view, command_name, args):
-        if settings.resolve_completion_for_snippets and current_completion:
-            current_completion.committing = command_name in ('commit_completion', 'insert_best_completion')
-
-    def on_modified(self, view):
-        global current_completion
-
-        if settings.resolve_completion_for_snippets and view.file_name():
-            if current_completion and current_completion.committing:
-                current_completion.committed_at(view.sel()[0].end())
-                inserted = view.substr(current_completion.region)
-                item = find_completion_item(inserted)
-                if item:
-                    self.resolve_completion(item, view)
-                else:
-                    current_completion = None
-
-    def resolve_completion(self, item, view):
-        session = session_for_view(view)
-        if not session:
-            return
-        if not session.client:
-            return
-
-        session.client.send_request(
-            Request.resolveCompletionItem(item),
-            lambda response: self.handle_resolve_response(response, view))
-
-    def handle_resolve_response(self, response, view):
-        # replace inserted text if a snippet was returned.
-        if current_completion and response.get('insertTextFormat') == 2:  # snippet
-            insertText = response.get('insertText')
-            try:
-                sel = view.sel()
-                sel.clear()
-                sel.add(current_completion.region)
-                view.run_command("insert_snippet", {"contents": insertText})
-            except Exception as err:
-                exception_log("Error inserting snippet: " + insertText, err)
 
 
 last_text_command = None

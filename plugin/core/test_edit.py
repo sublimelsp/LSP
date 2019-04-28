@@ -19,7 +19,7 @@ LSP_EDIT_CHANGES = {
 
 LSP_EDIT_DOCUMENT_CHANGES = {
     'documentChanges': [{
-        'document': {'uri': 'file:///file.py'},
+        'textDocument': {'uri': 'file:///file.py'},
         'edits': [LSP_TEXT_EDIT]
     }]
 }
@@ -27,7 +27,7 @@ LSP_EDIT_DOCUMENT_CHANGES = {
 
 class TextEditTests(unittest.TestCase):
 
-    def parse_from_lsp(self):
+    def test_parse_from_lsp(self):
         (start, end, newText) = parse_text_edit(LSP_TEXT_EDIT)
         self.assertEqual(newText, 'newText')
         self.assertEqual(start[0], 10)
@@ -38,16 +38,16 @@ class TextEditTests(unittest.TestCase):
 
 class WorkspaceEditTests(unittest.TestCase):
 
-    def parse_no_changes_from_lsp(self):
+    def test_parse_no_changes_from_lsp(self):
         edit = parse_workspace_edit(dict())
         self.assertEqual(len(edit), 0)
 
-    def parse_changes_from_lsp(self):
+    def test_parse_changes_from_lsp(self):
         edit = parse_workspace_edit(LSP_EDIT_CHANGES)
         self.assertEqual(len(edit), 1)
         self.assertEqual(len(edit['/file.py']), 1)
 
-    def parse_document_changes_from_lsp(self):
+    def test_parse_document_changes_from_lsp(self):
         edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES)
         self.assertEqual(len(edit), 1)
         self.assertEqual(len(edit['/file.py']), 1)

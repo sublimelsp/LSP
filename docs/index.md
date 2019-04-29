@@ -9,7 +9,6 @@ Global plugin settings and settings defined at project level are merged together
 * `complete_all_chars` `true` *request completions for all characters, not just trigger characters*
 * `only_show_lsp_completions` `false` *disable sublime word completion and snippets from autocomplete lists*
 * `completion_hint_type` `"auto"` *override automatic completion hints with "detail", "kind" or "none"*
-* `resolve_completion_for_snippets` `false` *resolve completions and apply snippet if received*
 * `prefer_label_over_filter_text` `false` *always use the "label" key instead of the "filterText" key in CompletionItems*
 * `show_references_in_quick_panel` `false` *show symbol references in Sublime's quick panel instead of the bottom panel*
 * `quick_panel_monospace_font` `false` *use monospace font for the quick panel*
@@ -230,12 +229,12 @@ See [github:rust-lang-nursery/rls](https://github.com/rust-lang-nursery/rls) for
 
 *  **[Metals](https://scalameta.org/metals/)**: Most complete LSP server for Scala, see instructions [here](https://scalameta.org/metals/docs/editors/sublime.html) for installation.
 * **[SBT](https://www.scala-sbt.org/)**: Version 1.x supports limited and *unmaintained* language server functionalities, setup is described [here](http://eed3si9n.com/sbt-server-with-sublime-text3).
-* **[Dotty](http://dotty.epfl.ch/)**: The future Scala compiler [contains LSP support](http://dotty.epfl.ch/docs/usage/ide-support.html).  
-It is developed against VS Code, so ignore instructions related to VS Code. 
-Get the project compiling with dotty first (see [instructions](https://github.com/lampepfl/dotty-example-project#using-dotty-in-an-existing-project)).  
+* **[Dotty](http://dotty.epfl.ch/)**: The future Scala compiler [contains LSP support](http://dotty.epfl.ch/docs/usage/ide-support.html).
+It is developed against VS Code, so ignore instructions related to VS Code.
+Get the project compiling with dotty first (see [instructions](https://github.com/lampepfl/dotty-example-project#using-dotty-in-an-existing-project)).
 At this point LSP should complain in the logs
-`java.util.concurrent.CompletionException: java.io.FileNotFoundException: /Users/tomv/Projects/tomv564/dottytest/finagle/doc/src/sphinx/code/quickstart/.dotty-ide.json`   
-Then run `sbt configureIDE` to create the `.dotty-ide.json` file  
+`java.util.concurrent.CompletionException: java.io.FileNotFoundException: /Users/tomv/Projects/tomv564/dottytest/finagle/doc/src/sphinx/code/quickstart/.dotty-ide.json`
+Then run `sbt configureIDE` to create the `.dotty-ide.json` file
 Then the LSP plugin should launch as configured in `LSP.sublime-settings` using coursier.
 
 

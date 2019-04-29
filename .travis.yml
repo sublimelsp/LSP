@@ -7,7 +7,7 @@ python:
     - "3.3"  # sublime text 3 has 3.3
 before_install:
     - pip install "mypy==0.570"
-    - pip install "flake8==3.5.0"
+    - pip install "flake8==3.7.7"
     - pip install python-coveralls
     - curl -OL https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/travis.sh
     # enable gui, see https://docs.travis-ci.com/user/gui-and-headless-browsers
@@ -20,7 +20,7 @@ install:
     - sh travis.sh install_package_control
 script:
     - mypy -p plugin
-    - flake8 --exclude=./boot.py
+    - flake8 plugin tests
     - coverage run -m unittest discover
     - sh travis.sh run_tests
 after_success:

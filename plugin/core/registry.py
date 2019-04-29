@@ -57,7 +57,7 @@ def client_for_view(view: sublime.View) -> 'Optional[Client]':
     return _client_for_view_and_window(view, view.window())
 
 
-def session_for_view(view: sublime.View, point: 'Optional[int]'=None) -> 'Optional[Session]':
+def session_for_view(view: sublime.View, point: 'Optional[int]' = None) -> 'Optional[Session]':
     return _session_for_view_and_window(view, view.window(), point)
 
 

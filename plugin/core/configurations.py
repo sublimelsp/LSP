@@ -20,7 +20,7 @@ except ImportError:
 
 
 def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]',
-                            point: 'Optional[int]'=None) -> 'Optional[ClientConfig]':
+                            point: 'Optional[int]' = None) -> 'Optional[ClientConfig]':
     # When there are multiple server configurations, all of which are for
     # similar scopes (e.g. 'source.json', 'source.json.sublime.settings') the
     # configuration with the most specific scope (highest ranked selector)

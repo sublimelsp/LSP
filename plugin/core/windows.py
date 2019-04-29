@@ -26,7 +26,7 @@ class ConfigRegistry(Protocol):
     def is_supported(self, view: ViewLike) -> bool:
         ...
 
-    def scope_config(self, view: ViewLike, point: 'Optional[int]'=None) -> 'Optional[ClientConfig]':
+    def scope_config(self, view: ViewLike, point: 'Optional[int]' = None) -> 'Optional[ClientConfig]':
         ...
 
     def syntax_configs(self, view: ViewLike) -> 'List[ClientConfig]':

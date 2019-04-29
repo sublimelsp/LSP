@@ -19,7 +19,7 @@ class MockClient():
         }  # type: dict
         self._notifications = []  # type: List[Notification]
 
-    def send_request(self, request: Request, on_success: 'Callable', on_error: 'Callable'=None) -> None:
+    def send_request(self, request: Request, on_success: 'Callable', on_error: 'Callable' = None) -> None:
         response = self.responses.get(request.method)
         on_success(response)
 

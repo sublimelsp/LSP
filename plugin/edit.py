@@ -11,7 +11,7 @@ from .core.logging import debug
 
 
 class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
-    def run(self, changes: 'Optional[Dict[str, List[TextEdit]]]'=None):
+    def run(self, changes: 'Optional[Dict[str, List[TextEdit]]]' = None):
         documents_changed = 0
         if changes:
             for path, document_changes in changes.items():
@@ -42,7 +42,7 @@ class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
 
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
-    def run(self, edit, changes: 'Optional[List[TextEdit]]'=None):
+    def run(self, edit, changes: 'Optional[List[TextEdit]]' = None):
         # Apply the changes in reverse, so that we don't invalidate the range
         # of any change that we haven't applied yet.
         if changes:

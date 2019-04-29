@@ -14,7 +14,7 @@ except ImportError:
 
 
 def create_session(config: ClientConfig, project_path: str, env: dict, settings: Settings,
-                   on_created=None, on_ended: 'Optional[Callable[[str], None]]'=None,
+                   on_created=None, on_ended: 'Optional[Callable[[str], None]]' = None,
                    bootstrap_client=None) -> 'Optional[Session]':
     session = None
     if config.binary_args:
@@ -29,7 +29,7 @@ def create_session(config: ClientConfig, project_path: str, env: dict, settings:
                     # try to terminate the process
                     try:
                         process.terminate()
-                    except Exception as e:
+                    except Exception:
                         pass
             else:
                 client = attach_stdio_client(process, settings)
@@ -148,7 +148,7 @@ def get_initialize_params(project_path: str, config: ClientConfig):
 
 class Session(object):
     def __init__(self, config: ClientConfig, project_path, client: Client,
-                 on_created=None, on_ended: 'Optional[Callable[[str], None]]'=None) -> None:
+                 on_created=None, on_ended: 'Optional[Callable[[str], None]]' = None) -> None:
         self.config = config
         self.project_path = project_path
         self.state = ClientStates.STARTING

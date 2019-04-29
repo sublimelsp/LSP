@@ -1,7 +1,7 @@
 import unittest
 from os import path
 import json
-from .completion import format_completion
+from .completion import format_completion, parse_completion_response
 from .types import Settings
 try:
     from typing import Optional, Dict
@@ -19,20 +19,41 @@ clangd_completion_sample = load_completion_sample("clangd_completion_sample")
 intelephense_completion_sample = load_completion_sample("intelephense_completion_sample")
 
 
-def create_completion_item(item: str, insert_text: 'Optional[str]' = None) -> dict:
+def create_completion_item(item: str, insert_text: 'Optional[str]' = None, filter_text: 'Optional[str]' = None) -> dict:
     return {
         "label": item,
-        "insertText": insert_text
+        "insertText": insert_text or item,
+        "filterText": filter_text or item
     }
 
 
 settings = Settings()
 
 
+class CompletionResponseParsingTests(unittest.TestCase):
+
+    def test_no_response(self):
+        self.assertEqual(parse_completion_response(None, 0, settings), [])
+
+    def test_array_response(self):
+        self.assertEqual(parse_completion_response([], 0, settings), [])
+
+    def test_dict_response(self):
+        self.assertEqual(parse_completion_response({'items': []}, 0, settings), [])
+
+
 class CompletionFormattingTests(unittest.TestCase):
 
     def test_only_label_item(self):
         result = format_completion(create_completion_item("asdf"), 0, settings)
+        self.assertEqual(len(result), 2)
+        self.assertEqual("asdf", result[0])
+        self.assertEqual("asdf", result[1])
+
+    def test_prefer_label_over_filter_text(self):
+        updated_settings = Settings()
+        updated_settings.prefer_label_over_filter_text = True
+        result = format_completion(create_completion_item("asdf", None, "filterText"), 0, updated_settings)
         self.assertEqual(len(result), 2)
         self.assertEqual("asdf", result[0])
         self.assertEqual("asdf", result[1])
@@ -83,16 +104,11 @@ class CompletionFormattingTests(unittest.TestCase):
                 }
             }
         }
-        # handler.last_location = 1
-        # handler.last_prefix = ""
         last_col = 1
         result = format_completion(item, last_col, settings)
         self.assertEqual(result, ('const\t  Keyword', 'const'))
 
     def test_text_edit_intelephense(self):
-
-        # handler.last_location = 1
-        # handler.last_prefix = ""
         last_col = 1
         result = [format_completion(item, last_col, settings) for item in intelephense_completion_sample]
         self.assertEqual(
@@ -150,8 +166,6 @@ class CompletionFormattingTests(unittest.TestCase):
         )
 
     def test_missing_text_edit_but_we_do_have_insert_text_for_pyls(self):
-        # handler.last_location = 1
-        # handler.last_prefix = ""
         last_col = 1
         result = [format_completion(item, last_col, settings) for item in pyls_completion_sample]
         self.assertEqual(

@@ -1,8 +1,8 @@
 from .protocol import CompletionItemKind, Range
 from .types import Settings
 try:
-    from typing import Tuple, Optional, Dict, List
-    assert Tuple and Optional and Dict and List
+    from typing import Tuple, Optional, Dict, List, Union
+    assert Tuple and Optional and Dict and List and Union
 except ImportError:
     pass
 
@@ -53,7 +53,7 @@ def text_edit_text(item: dict, last_col: int) -> 'Optional[str]':
     return None
 
 
-def parse_completion_response(response: 'Optional[Dict]', last_col: int, settings: Settings):
+def parse_completion_response(response: 'Optional[Union[Dict,List]]', last_col: int, settings: Settings):
     items = []  # type: List[Dict]
     if isinstance(response, dict):
         items = response["items"] or []

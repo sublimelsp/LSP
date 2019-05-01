@@ -19,14 +19,6 @@ clangd_completion_sample = load_completion_sample("clangd_completion_sample")
 intelephense_completion_sample = load_completion_sample("intelephense_completion_sample")
 
 
-def create_completion_item(item: str, insert_text: 'Optional[str]' = None, filter_text: 'Optional[str]' = None) -> dict:
-    return {
-        "label": item,
-        "insertText": insert_text or item,
-        "filterText": filter_text or item
-    }
-
-
 settings = Settings()
 
 
@@ -45,7 +37,7 @@ class CompletionResponseParsingTests(unittest.TestCase):
 class CompletionFormattingTests(unittest.TestCase):
 
     def test_only_label_item(self):
-        result = format_completion(create_completion_item("asdf"), 0, settings)
+        result = format_completion({"label": "asdf"}, 0, settings)
         self.assertEqual(len(result), 2)
         self.assertEqual("asdf", result[0])
         self.assertEqual("asdf", result[1])
@@ -53,16 +45,28 @@ class CompletionFormattingTests(unittest.TestCase):
     def test_prefer_label_over_filter_text(self):
         updated_settings = Settings()
         updated_settings.prefer_label_over_filter_text = True
-        result = format_completion(create_completion_item("asdf", None, "filterText"), 0, updated_settings)
+        result = format_completion(
+            {"label": "asdf", "insertText": "asdf", "filterText": "filterText"},
+            0, updated_settings)
         self.assertEqual(len(result), 2)
         self.assertEqual("asdf", result[0])
         self.assertEqual("asdf", result[1])
 
     def test_prefers_insert_text(self):
-        result = format_completion(create_completion_item("asdf", "Asdf"), 0, settings)
+        result = format_completion(
+            {"label": "asdf", "insertText": "Asdf", "filterText": "asdf"},
+            0, settings)
         self.assertEqual(len(result), 2)
         self.assertEqual("asdf", result[0])
         self.assertEqual("Asdf", result[1])
+
+    def test_null_filter_text(self):
+        result = format_completion(
+            {"label": "asdf", "insertText": None, "filterText": None},
+            0, settings)
+        self.assertEqual(len(result), 2)
+        self.assertEqual("asdf", result[0])
+        self.assertEqual("asdf", result[1])
 
     def test_ignores_text_edit(self):
 

@@ -15,7 +15,7 @@ def format_completion(item: dict, last_col: int, settings: 'Settings') -> 'Tuple
     if settings.prefer_label_over_filter_text:
         trigger = item["label"]
     else:
-        trigger = item.get("filterText", item["label"])
+        trigger = item.get("filterText") or item["label"]
     # choose hint based on availability and user preference
     hint = None
     if settings.completion_hint_type == "auto":

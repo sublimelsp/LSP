@@ -1,4 +1,4 @@
-from .signature_help import create_signature_help, SignatureHelp, get_documentation
+from .signature_help import create_signature_help, SignatureHelp, get_documentation, replace_active_parameter
 from .types import Settings
 import unittest
 
@@ -89,6 +89,14 @@ foo_bar(<span style="font-weight: bold; text-decoration: underline">value</span>
 A number to foobar on
 Foobaring with a multiplier"""
 
+VSCODE_OVERLOADS_SECOND_SECOND_PARAMETER = """**2** of **2** overloads (use the ↑ ↓ keys to navigate):
+
+<div class="highlight"><pre>
+foo_bar(value: int, <span style="font-weight: bold; text-decoration: underline">multiplier</span>: int) -&gt; None
+</pre></div>
+Change foobar to work on larger increments
+Foobaring with a multiplier"""
+
 
 class GetDocumentationTests(unittest.TestCase):
 
@@ -166,3 +174,28 @@ class VsCodeSignatureHelpTests(unittest.TestCase):
             help.select_signature(1)  # verify we don't go out of bounds,
             content = help.build_popup_content()
             self.assertEqual(content, VSCODE_OVERLOADS_SECOND)
+
+    def test_active_parameter(self):
+        help = SignatureHelp([signature, signature_overload], language_id, active_signature=1, active_parameter=1,
+                             highlight_parameter=True)
+        self.assertIsNotNone(help)
+        if help:
+            content = help.build_popup_content()
+            self.assertTrue(help.has_overloads())
+            self.assertEqual(content, VSCODE_OVERLOADS_SECOND_SECOND_PARAMETER)
+
+
+class ReplaceActiveParameterTests(unittest.TestCase):
+
+    def test_simple(self):
+        # BUG: here fun(<-- triggers signature help in a string!
+        bold_format = "<b>{}</b>"
+        self.assertEqual(replace_active_parameter("def fun(param)", "param",
+                                                  highlight_format=bold_format), "def fun(<b>param</b>)")
+
+    def test_matching_substrings(self):
+        bold_format = "<b>{}</b>"
+        self.assertEqual(replace_active_parameter("def fun(param, parameter)", "param",
+                                                  highlight_format=bold_format), "def fun(<b>param</b>, parameter)")
+        self.assertEqual(replace_active_parameter("def fun(parameter, param)", "param",
+                                                  highlight_format=bold_format), "def fun(parameter, <b>param</b>)")

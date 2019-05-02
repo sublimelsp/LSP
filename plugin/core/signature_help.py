@@ -58,10 +58,6 @@ def create_signature_help(response: 'Optional[Dict]', language_id, settings: Set
                 debug("activeSignature {} not a valid index for signatures length {}".format(
                     active_signature, len(signatures)))
                 active_signature = 0
-        else:
-            if active_signature != -1:
-                debug("activeSignature should be -1 or null when no signatures are returned")
-                active_signature = -1
 
     if signatures:
         return SignatureHelp(signatures, language_id, active_signature, active_parameter,

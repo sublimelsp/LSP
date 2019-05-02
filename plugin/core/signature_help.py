@@ -91,7 +91,7 @@ class SignatureHelp(object):
                 if param_docs:
                     formatted.append("**{}**\n".format(parameter.get('label')))
                     formatted.append("* *{}*\n".format(param_docs))
-        sigDocs = signature.get('documentation', None)
+        sigDocs = get_documentation(signature)
         if sigDocs:
             formatted.append(sigDocs)
         return "\n".join(formatted)

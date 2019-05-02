@@ -6,6 +6,14 @@ language_id = "asdf"
 settings = Settings()
 signature = {
     'label': 'foo_bar(value: int) -> None',
+    'documentation': {'value': 'The default function for foobaring'},
+    'parameters': [{
+        'label': 'value'
+    }]
+}  # type: dict
+signature_overload = {
+    'label': 'foo_bar(value: int, multiplier: int) -> None',
+    'documentation': {'value': 'Foobaring with a multipler'},
     'parameters': [{
         'label': 'value'
     }]
@@ -15,11 +23,13 @@ signature = {
 SUBLIME_SINGLE_SIGNATURE = """```asdf
 foo_bar(value: int) -> None
 ```
-"""
+
+The default function for foobaring"""
 
 VSCODE_SINGLE_SIGNATURE = """<div class="highlight"><pre>
 foo_bar(<span style="font-weight: bold; text-decoration: underline">value</span>: int) -&gt; None
-</pre></div>"""
+</pre></div>
+The default function for foobaring"""
 
 
 class GetDocumentationTests(unittest.TestCase):

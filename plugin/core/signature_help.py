@@ -66,6 +66,15 @@ class SignatureHelp(object):
         else:
             return self._build_popup_content_style_sublime()
 
+    def has_overloads(self) -> bool:
+        return len(self._signatures) > 1
+
+    def select_signature(self, direction: int) -> None:
+        new_index = self._active_signature + direction
+
+        # clamp signature index
+        self._active_signature = max(0, min(new_index, len(self._signatures) - 1))
+
     def _build_overload_selector(self) -> str:
         return "**{}** of **{}** overloads (use the ↑ ↓ keys to navigate):\n".format(
             str(self._active_signature + 1), str(len(self._signatures)))

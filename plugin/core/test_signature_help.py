@@ -2,7 +2,7 @@ from .signature_help import create_signature_help, SignatureHelp, get_documentat
 from .types import Settings
 import unittest
 
-language_id = "asdf"
+language_id = "python"
 settings = Settings()
 signature = {
     'label': 'foo_bar(value: int) -> None',
@@ -16,7 +16,7 @@ signature = {
 }  # type: dict
 signature_overload = {
     'label': 'foo_bar(value: int, multiplier: int) -> None',
-    'documentation': {'value': 'Foobaring with a multipler'},
+    'documentation': {'value': 'Foobaring with a multiplier'},
     'parameters': [{
         'label': 'value',
         'documentation': {
@@ -29,7 +29,7 @@ signature_overload = {
 }  # type: dict
 
 
-SUBLIME_SINGLE_SIGNATURE = """```asdf
+SUBLIME_SINGLE_SIGNATURE = """```python
 foo_bar(value: int) -> None
 ```
 
@@ -39,11 +39,55 @@ foo_bar(value: int) -> None
 
 The default function for foobaring"""
 
+SUBLIME_OVERLOADS_FIRST = """**1** of **2** overloads (use the ↑ ↓ keys to navigate):
+
+```python
+foo_bar(value: int) -> None
+```
+
+**value**
+
+* *A number to foobar on*
+
+The default function for foobaring"""
+
+SUBLIME_OVERLOADS_SECOND = """**2** of **2** overloads (use the ↑ ↓ keys to navigate):
+
+```python
+foo_bar(value: int, multiplier: int) -> None
+```
+
+**value**
+
+* *A number to foobar on*
+
+**multiplier**
+
+* *Change foobar to work on larger increments*
+
+Foobaring with a multiplier"""
+
 VSCODE_SINGLE_SIGNATURE = """<div class="highlight"><pre>
 foo_bar(<span style="font-weight: bold; text-decoration: underline">value</span>: int) -&gt; None
 </pre></div>
 A number to foobar on
 The default function for foobaring"""
+
+VSCODE_OVERLOADS_FIRST = """**1** of **2** overloads (use the ↑ ↓ keys to navigate):
+
+<div class="highlight"><pre>
+foo_bar(<span style="font-weight: bold; text-decoration: underline">value</span>: int) -&gt; None
+</pre></div>
+A number to foobar on
+The default function for foobaring"""
+
+VSCODE_OVERLOADS_SECOND = """**2** of **2** overloads (use the ↑ ↓ keys to navigate):
+
+<div class="highlight"><pre>
+foo_bar(<span style="font-weight: bold; text-decoration: underline">value</span>: int, multiplier: int) -&gt; None
+</pre></div>
+A number to foobar on
+Foobaring with a multiplier"""
 
 
 class GetDocumentationTests(unittest.TestCase):
@@ -83,7 +127,21 @@ class SublimeSignatureHelpTests(unittest.TestCase):
         self.assertIsNotNone(help)
         if help:
             content = help.build_popup_content()
+            self.assertFalse(help.has_overloads())
             self.assertEqual(content, SUBLIME_SINGLE_SIGNATURE)
+
+    def test_overload(self):
+        help = SignatureHelp([signature, signature_overload], language_id)
+        self.assertIsNotNone(help)
+        if help:
+            content = help.build_popup_content()
+            self.assertTrue(help.has_overloads())
+            self.assertEqual(content, SUBLIME_OVERLOADS_FIRST)
+
+            help.select_signature(1)
+            help.select_signature(1)  # verify we don't go out of bounds,
+            content = help.build_popup_content()
+            self.assertEqual(content, SUBLIME_OVERLOADS_SECOND)
 
 
 class VsCodeSignatureHelpTests(unittest.TestCase):
@@ -93,4 +151,18 @@ class VsCodeSignatureHelpTests(unittest.TestCase):
         self.assertIsNotNone(help)
         if help:
             content = help.build_popup_content()
+            self.assertFalse(help.has_overloads())
             self.assertEqual(content, VSCODE_SINGLE_SIGNATURE)
+
+    def test_overload(self):
+        help = SignatureHelp([signature, signature_overload], language_id, highlight_parameter=True)
+        self.assertIsNotNone(help)
+        if help:
+            content = help.build_popup_content()
+            self.assertTrue(help.has_overloads())
+            self.assertEqual(content, VSCODE_OVERLOADS_FIRST)
+
+            help.select_signature(1)
+            help.select_signature(1)  # verify we don't go out of bounds,
+            content = help.build_popup_content()
+            self.assertEqual(content, VSCODE_OVERLOADS_SECOND)

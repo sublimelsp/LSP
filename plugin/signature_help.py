@@ -97,7 +97,6 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
     def handle_response(self, response: 'Optional[Dict]', point) -> None:
         self._help = create_signature_help(response, self._language_id, settings)
 
-        # if len(self._signatures) > 0:
         if self._help:
             if self._visible:
                 self._update_popup()
@@ -113,21 +112,15 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 return True
             else:
                 return False  # Let someone else handle this keybinding.
-        elif len(self._signatures) < 2:
-            return False  # Let someone else handle this keybinding.
-        else:
+        elif self._help and self._help.has_overloads():
+
             # We use the "operand" for the number -1 or +1. See the keybindings.
-            new_index = self._active_signature + operand
-
-            # clamp signature index
-            new_index = max(0, min(new_index, len(self._signatures) - 1))
-
-            # only update when changed
-            if new_index != self._active_signature:
-                self._active_signature = new_index
-                self._update_popup()
+            self._help.select_signature(operand)
+            self._update_popup()
 
             return True  # We handled this keybinding.
+
+        return False
 
     def _build_popup_content(self) -> str:
         if self._help:

@@ -4,6 +4,7 @@ from .transports import start_tcp_transport
 from .rpc import Client, attach_stdio_client
 from .process import start_server
 from .url import filename_to_uri
+from .logging import debug
 import os
 from .protocol import CompletionItemKind, SymbolKind
 try:
@@ -44,7 +45,7 @@ def create_session(config: ClientConfig, project_path: str, env: dict, settings:
             session = Session(config, project_path, bootstrap_client,
                               on_created, on_ended)
         else:
-            raise Exception("No way to start session")
+            debug("No way to start session")
 
     return session
 

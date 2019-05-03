@@ -510,7 +510,7 @@ class WindowManager(object):
         del self._sessions[config_name]
         for view in self._window.views():
             if view.file_name():
-                self._diagnostics.remove(view, config_name)
+                self._diagnostics.remove(view.file_name(), config_name)
 
         debug("session", config_name, "ended")
         if not self._sessions:

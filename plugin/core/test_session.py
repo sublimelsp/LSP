@@ -62,6 +62,7 @@ class SessionTest(unittest.TestCase):
 
         self.assertEqual(session.state, ClientStates.STARTING)
         self.assertEqual(session.project_path, project_path)
+        session.end()
         # self.assertIsNone(session.capabilities) -- empty dict
 
     def test_can_get_started_session(self):

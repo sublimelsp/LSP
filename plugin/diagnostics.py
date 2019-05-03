@@ -239,7 +239,6 @@ global_events.subscribe("view.on_activated_async", update_count_in_status_bar)
 
 
 def handle_diagnostics(update: DiagnosticsUpdate):
-    debug('got update for', update.file_path, update.window.id())
     window = update.window
     view = window.find_open_file(update.file_path)
     if view:

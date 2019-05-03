@@ -102,7 +102,7 @@ class QueryCompletionsTests(DeferrableTestCase):
             self.assertIsNotNone(result)
             items, mask = result
             self.assertEquals(len(items), 0)
-            self.assertEquals(mask, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+            self.assertEquals(mask, 0)
 
             yield 100
             self.assertEquals(handler.state, CompletionState.IDLE)

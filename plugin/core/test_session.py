@@ -23,7 +23,6 @@ class MockClient():
         self.responses = {
             'initialize': {"capabilities": dict(testing=True, hoverProvider=True,
                                                 completionProvider=completion_provider, textDocumentSync=True)},
-            'textDocument/hover': {"contents": "greeting"}
         }  # type: dict
         self._notifications = []  # type: List[Notification]
         self._async_response_callback = async_response

@@ -14,27 +14,10 @@ from .core.registry import config_for_scope, session_for_view, client_for_view
 from .core.documents import get_document_position
 from .core.events import global_events
 from .core.protocol import Request
-from .core.logging import debug
 from .core.popups import popup_css, popup_class
 from .core.settings import client_configs, settings
 from .core.signature_help import create_signature_help, SignatureHelp
 assert SignatureHelp
-
-
-def get_documentation(d: 'Dict[str, Any]') -> 'Optional[str]':
-    docs = d.get('documentation', None)
-    if docs is None:
-        return None
-    elif isinstance(docs, str):
-        # In older version of the protocol, documentation was just a string.
-        return docs
-    elif isinstance(docs, dict):
-        # This can be either "plaintext" or "markdown" format. For now, we can dump it into the popup box. It would
-        # be nice to handle the markdown in a special way.
-        return docs.get('value', None)
-    else:
-        debug('unknown documentation type:', str(d))
-        return None
 
 
 class SignatureHelpListener(sublime_plugin.ViewEventListener):

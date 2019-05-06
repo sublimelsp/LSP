@@ -27,6 +27,30 @@ def get_documentation(d: 'Dict[str, Any]') -> 'Optional[str]':
         return None
 
 
+def parse_signature_information(signature: 'Dict') -> 'SignatureInformation':
+    param_infos = []  # type: 'List[ParameterInformation]'
+    parameters = signature.get('parameters')
+    if parameters:
+        param_infos = list(ParameterInformation(param['label'], get_documentation(param)) for param in parameters)
+    return SignatureInformation(signature['label'], get_documentation(signature), param_infos)
+
+
+class ParameterInformation(object):
+
+    def __init__(self, label: str, documentation: 'Optional[str]') -> None:
+        self.label = label
+        self.documentation = documentation
+
+
+class SignatureInformation(object):
+
+    def __init__(self, label: str, documentation: 'Optional[str]',
+                 parameters: 'List[ParameterInformation]' = []) -> None:
+        self.label = label
+        self.documentation = documentation
+        self.parameters = parameters
+
+
 def replace_active_parameter(signature: str, parameter: str, highlight_format: str = BOLD_UNDERLINED) -> str:
     if parameter[0].isalnum() and parameter[-1].isalnum():
         pattern = r'\b{}\b'.format(re.escape(parameter))
@@ -45,21 +69,19 @@ def replace_active_parameter(signature: str, parameter: str, highlight_format: s
 
 
 def create_signature_help(response: 'Optional[Dict]', language_id, settings: Settings) -> 'Optional[SignatureHelp]':
-    signatures = []  # type: List[Dict]
-    active_signature = -1
-    active_parameter = -1
-    if response is not None:
-        signatures = response.get("signatures", [])
-        active_signature = response.get("activeSignature", -1)
-        active_parameter = response.get("activeParameter", -1)
+    if response is None:
+        return None
 
-        if len(signatures) > 0:
-            if not 0 <= active_signature < len(signatures):
-                debug("activeSignature {} not a valid index for signatures length {}".format(
-                    active_signature, len(signatures)))
-                active_signature = 0
+    signatures = list(parse_signature_information(signature) for signature in response.get("signatures", []))
+    active_signature = response.get("activeSignature", -1)
+    active_parameter = response.get("activeParameter", -1)
 
     if signatures:
+        if not 0 <= active_signature < len(signatures):
+            debug("activeSignature {} not a valid index for signatures length {}".format(
+                active_signature, len(signatures)))
+            active_signature = 0
+
         return SignatureHelp(signatures, language_id, active_signature, active_parameter,
                              settings.highlight_active_signature_parameter)
     else:
@@ -68,7 +90,8 @@ def create_signature_help(response: 'Optional[Dict]', language_id, settings: Set
 
 class SignatureHelp(object):
 
-    def __init__(self, signatures, language_id, active_signature=0, active_parameter=0, highlight_parameter=False):
+    def __init__(self, signatures: 'List[SignatureInformation]', language_id: str, active_signature=0,
+                 active_parameter=0, highlight_parameter=False) -> None:
         self._signatures = signatures
         self._language_id = language_id
         self._active_signature = active_signature
@@ -95,46 +118,38 @@ class SignatureHelp(object):
             str(self._active_signature + 1), str(len(self._signatures)))
 
     def _build_popup_content_style_sublime(self) -> str:
-        signature = self._signatures[self._active_signature]
+        signature = self._signatures[self._active_signature]  # type: SignatureInformation
         formatted = []
 
         if len(self._signatures) > 1:
             formatted.append(self._build_overload_selector())
 
-        signature_label = signature.get('label')
-        if len(signature_label) > 400:
-            label = "```{} ...```".format(signature_label[0:400])  # long code blocks = hangs
+        if len(signature.label) > 400:
+            label = "```{} ...```".format(signature.label[0:400])  # long code blocks = hangs
         else:
-            label = "```{}\n{}\n```\n".format(self._language_id, signature_label)
+            label = "```{}\n{}\n```\n".format(self._language_id, signature.label)
         formatted.append(label)
 
-        params = signature.get('parameters')
-        if params:
-            for parameter in params:
-                param_docs = get_documentation(parameter)
-                if param_docs:
-                    formatted.append("**{}**\n".format(parameter.get('label')))
-                    formatted.append("* *{}*\n".format(param_docs))
-        sigDocs = get_documentation(signature)
-        if sigDocs:
-            formatted.append(sigDocs)
+        for parameter in signature.parameters:
+            formatted.append("**{}**\n".format(parameter.label))
+            formatted.append("* *{}*\n".format(parameter.documentation))
+
+        if signature.documentation:
+            formatted.append(signature.documentation)
+
         return "\n".join(formatted)
 
     def _build_popup_content_style_vscode(self) -> str:
         # Fetch all the relevant data.
-        signature_label = ""
-        signature_documentation = ""  # type: Optional[str]
         parameter_label = ""
         parameter_documentation = ""  # type: Optional[str]
-        if self._active_signature in range(0, len(self._signatures)):
-            signature = self._signatures[self._active_signature]
-            signature_label = html.escape(signature["label"], quote=False)
-            signature_documentation = get_documentation(signature)
-            parameters = signature.get("parameters", None)
-            if parameters and self._active_parameter in range(0, len(parameters)):
-                parameter = parameters[self._active_parameter]
-                parameter_label = html.escape(parameter["label"], quote=False)
-                parameter_documentation = get_documentation(parameter)
+
+        signature = self._signatures[self._active_signature]  # type: SignatureInformation
+        signature_label = html.escape(signature.label, quote=False)
+        if signature.parameters and self._active_parameter in range(0, len(signature.parameters)):
+            parameter = signature.parameters[self._active_parameter]
+            parameter_label = html.escape(parameter.label, quote=False)
+            parameter_documentation = parameter.documentation
 
         formatted = []
 
@@ -153,7 +168,7 @@ class SignatureHelp(object):
         if parameter_documentation:
             formatted.append(parameter_documentation)
 
-        if signature_documentation:
-            formatted.append(signature_documentation)
+        if signature.documentation:
+            formatted.append(signature.documentation)
 
         return "\n".join(formatted)

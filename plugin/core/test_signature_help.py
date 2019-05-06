@@ -1,4 +1,7 @@
-from .signature_help import create_signature_help, SignatureHelp, get_documentation, replace_active_parameter
+from .signature_help import (
+    create_signature_help, SignatureHelp, get_documentation, replace_active_parameter,
+    parse_signature_information
+)
 from .types import Settings
 import unittest
 
@@ -28,6 +31,8 @@ signature_overload = {
     }]
 }  # type: dict
 
+signature_information = parse_signature_information(signature)
+signature_overload_information = parse_signature_information(signature_overload)
 
 SUBLIME_SINGLE_SIGNATURE = """```python
 foo_bar(value: int) -> None
@@ -131,7 +136,7 @@ class CreateSignatureHelpTests(unittest.TestCase):
 class SublimeSignatureHelpTests(unittest.TestCase):
 
     def test_single_signature(self):
-        help = SignatureHelp([signature], language_id)
+        help = SignatureHelp([signature_information], language_id)
         self.assertIsNotNone(help)
         if help:
             content = help.build_popup_content()
@@ -139,7 +144,7 @@ class SublimeSignatureHelpTests(unittest.TestCase):
             self.assertEqual(content, SUBLIME_SINGLE_SIGNATURE)
 
     def test_overload(self):
-        help = SignatureHelp([signature, signature_overload], language_id)
+        help = SignatureHelp([signature_information, signature_overload_information], language_id)
         self.assertIsNotNone(help)
         if help:
             content = help.build_popup_content()
@@ -155,7 +160,7 @@ class SublimeSignatureHelpTests(unittest.TestCase):
 class VsCodeSignatureHelpTests(unittest.TestCase):
 
     def test_single_signature(self):
-        help = SignatureHelp([signature], language_id, highlight_parameter=True)
+        help = SignatureHelp([signature_information], language_id, highlight_parameter=True)
         self.assertIsNotNone(help)
         if help:
             content = help.build_popup_content()
@@ -163,7 +168,8 @@ class VsCodeSignatureHelpTests(unittest.TestCase):
             self.assertEqual(content, VSCODE_SINGLE_SIGNATURE)
 
     def test_overload(self):
-        help = SignatureHelp([signature, signature_overload], language_id, highlight_parameter=True)
+        help = SignatureHelp([signature_information, signature_overload_information], language_id,
+                             highlight_parameter=True)
         self.assertIsNotNone(help)
         if help:
             content = help.build_popup_content()
@@ -176,8 +182,8 @@ class VsCodeSignatureHelpTests(unittest.TestCase):
             self.assertEqual(content, VSCODE_OVERLOADS_SECOND)
 
     def test_active_parameter(self):
-        help = SignatureHelp([signature, signature_overload], language_id, active_signature=1, active_parameter=1,
-                             highlight_parameter=True)
+        help = SignatureHelp([signature_information, signature_overload_information], language_id, active_signature=1,
+                             active_parameter=1, highlight_parameter=True)
         self.assertIsNotNone(help)
         if help:
             content = help.build_popup_content()

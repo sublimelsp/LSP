@@ -1,10 +1,9 @@
-import unittest
 from unittesting import DeferrableTestCase
-from unittest.mock import MagicMock
 import sublime
 from LSP.plugin.completion import CompletionHandler, CompletionState
-from LSP.plugin.core.settings import client_configs, ClientConfig
-from os.path import dirname
+from setup import (
+    SUPPORTED_SYNTAX, text_config, add_config, remove_config, TextDocumentTestCase
+)
 
 try:
     from typing import Dict, Optional
@@ -13,38 +12,19 @@ except ImportError:
     pass
 
 
-class FakeClient(object):
-
-    def __init__(self):
-        self.response = None
-        pass
-
-    def get_capability(self, capability_name: str):
-        return {
-            'triggerCharacters': ['.'],
-            'resolveProvider': False
-        }
+completions = [dict(label='asdf'), dict(label='efgh')]
 
 
-SUPPORTED_SCOPE = "text.plain"
-SUPPORTED_SYNTAX = "Lang.sublime-syntax"
-test_client_config = ClientConfig('langls', [], None, [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX], 'lang')
-test_file_path = dirname(__file__) + "/testfile.txt"
-
-
-@unittest.skip('asd')
 class InitializationTests(DeferrableTestCase):
 
     def setUp(self):
         self.view = sublime.active_window().new_file()
-        self.old_configs = client_configs.all
-        client_configs.all = [test_client_config]
+        add_config(text_config)
 
     def test_is_not_applicable(self):
         self.assertFalse(CompletionHandler.is_applicable(dict()))
 
     def test_is_applicable(self):
-        self.assertEquals(len(client_configs.all), 1)
         self.assertTrue(CompletionHandler.is_applicable(dict(syntax=SUPPORTED_SYNTAX)))
 
     def test_not_enabled(self):
@@ -52,60 +32,46 @@ class InitializationTests(DeferrableTestCase):
         self.assertFalse(handler.initialized)
         self.assertFalse(handler.enabled)
         result = handler.on_query_completions("", [0])
+        yield 100
         self.assertTrue(handler.initialized)
         self.assertFalse(handler.enabled)
         self.assertIsNone(result)
 
     def tearDown(self):
-        client_configs.all = self.old_configs
+        remove_config(text_config)
         if self.view:
             self.view.set_scratch(True)
             self.view.window().focus_view(self.view)
             self.view.window().run_command("close_file")
 
 
-@unittest.skip('asf')
-class QueryCompletionsTests(unittest.TestCase):
-
-    def setUp(self):
-        self.view = sublime.active_window().open_file(test_file_path)
-        self.old_configs = client_configs.all
-        client_configs.all = [test_client_config]
-        self.client = FakeClient()
-        # add_window_client(sublime.active_window(), test_client_config.name, self.client)
+class QueryCompletionsTests(TextDocumentTestCase):
 
     def test_enabled(self):
-        self.view.run_command('insert', {"characters": '.'})
+        yield 100
 
-        self.client.send_request = MagicMock()
+        self.client.responses['textDocument/completion'] = completions
 
-        handler = CompletionHandler(self.view)
-        self.assertEquals(handler.state, CompletionState.IDLE)
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            # todo: want to test trigger chars instead?
+            # self.view.run_command('insert', {"characters": '.'})
+            result = handler.on_query_completions("", [1])
 
-        result = handler.on_query_completions("", [1])
-        self.assertIsNotNone(result)
-        items, mask = result
-        self.assertEquals(len(items), 0)
-        self.assertEquals(mask, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+            # synchronous response
+            self.assertTrue(handler.initialized)
+            self.assertTrue(handler.enabled)
+            self.assertIsNotNone(result)
+            items, mask = result
+            self.assertEquals(len(items), 0)
+            self.assertEquals(mask, 0)
 
-        self.assertTrue(handler.initialized)
-        self.assertTrue(handler.enabled)
-        self.assertEquals(handler.state, CompletionState.REQUESTING)
+            # now wait for server response
+            yield 100
+            self.assertEquals(handler.state, CompletionState.IDLE)
+            self.assertEquals(len(handler.completions), 2)
 
-        self.client.send_request.assert_called_once()
-        # time.sleep(1000)
-        # self.assertEquals(len(handler.completions), 2)
-        # self.assertEquals(handler.state, CompletionState.APPLYING)
-
-        # running auto_complete command does not work
-        # sublime does not know about the instance we registered here.
-        # we do it directly here
-        # items, mask = handler.on_query_completions("", [1])
-
-        # self.assertEquals(len(items), 2)
-        # self.assertEquals(mask, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
-
-    def tearDown(self):
-        client_configs.all = self.old_configs
-        if self.view:
-            self.view.window().run_command("close_file")
+            # verify insertion works
+            self.view.run_command("insert_best_completion")
+            self.assertEquals(self.view.substr(sublime.Region(0, self.view.size())), completions[0]["label"])

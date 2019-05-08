@@ -41,12 +41,14 @@ STATE_HEADERS = 0
 STATE_CONTENT = 1
 STATE_EOF = 2
 
-StateStrings = { STATE_HEADERS: 'STATE_HEADERS'
-               , STATE_CONTENT: 'STATE_CONTENT'
-               , STATE_EOF:     'STATE_EOF'}
+StateStrings = {STATE_HEADERS: 'STATE_HEADERS',
+                STATE_CONTENT: 'STATE_CONTENT',
+               STATE_EOF:     'STATE_EOF'}
 
-def state_to_string(state: int) -> None:
-    return StateStrings.get(state, '<unknown state: %d'.format(state))
+
+def state_to_string(state: int) -> str:
+    return StateStrings.get(state, '<unknown state: %d>'.format(state))
+
 
 def start_tcp_transport(port: int, host: 'Optional[str]' = None) -> 'Transport':
     start_time = time.time()
@@ -179,13 +181,13 @@ class StdioTransport(Transport):
                         header = self.process.stdout.readline()
                         debug('read_stdout reads: {}'.format(header))
                         if not header:
-                            ## Truly, this is the EOF on the stream
+                            # Truly, this is the EOF on the stream
                             state = STATE_EOF
                             break
 
                         header = header.strip()
                         if not header:
-                            ## Not EOF, blank line -> content follows
+                            # Not EOF, blank line -> content follows
                             state = STATE_CONTENT
                         elif header.startswith(ContentLengthHeader):
                             content_length = int(header[len(ContentLengthHeader):])

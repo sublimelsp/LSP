@@ -43,7 +43,7 @@ STATE_EOF = 2
 
 StateStrings = {STATE_HEADERS: 'STATE_HEADERS',
                 STATE_CONTENT: 'STATE_CONTENT',
-               STATE_EOF:     'STATE_EOF'}
+                STATE_EOF:     'STATE_EOF'}
 
 
 def state_to_string(state: int) -> str:

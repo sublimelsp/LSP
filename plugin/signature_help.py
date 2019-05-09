@@ -15,9 +15,30 @@ from .core.documents import get_document_position
 from .core.events import global_events
 from .core.protocol import Request
 from .core.popups import popup_css, popup_class
-from .core.settings import client_configs, settings
-from .core.signature_help import create_signature_help, SignatureHelp
+from .core.settings import client_configs
+from .core.signature_help import create_signature_help, SignatureHelp, ScopeRenderer
 assert SignatureHelp
+
+
+class ColorSchemeScopeRenderer(ScopeRenderer):
+    def __init__(self, view) -> None:
+        self._scope_styles = {}  # type: dict
+        for scope in ["entity.name.function", "variable.parameter", "punctuation"]:
+            self._scope_styles[scope] = mdpopups.scope2style(view, scope)
+
+    def render_function(self, content: str) -> str:
+        return self._wrap_with_scope_style(content, "entity.name.function")
+
+    def render_punctuation(self, content: str) -> str:
+        return self._wrap_with_scope_style(content, "punctuation")
+
+    def render_parameter(self, content: str, emphasize: bool = False) -> str:
+        return self._wrap_with_scope_style(content, "variable.parameter", emphasize)
+
+    def _wrap_with_scope_style(self, content: str, scope: str, emphasize: bool = False) -> str:
+        color = self._scope_styles[scope]["color"]
+        weight_style = ';font-weight: bold' if emphasize else ''
+        return '<span style="color: {}{}">{}</span>'.format(color, weight_style, content)
 
 
 class SignatureHelpListener(sublime_plugin.ViewEventListener):
@@ -29,6 +50,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         self._visible = False
         self._language_id = ""
         self._help = None  # type: Optional[SignatureHelp]
+        self._renderer = ColorSchemeScopeRenderer(self.view)
 
     @classmethod
     def is_applicable(cls, settings):
@@ -78,8 +100,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                     lambda response: self.handle_response(response, point))
 
     def handle_response(self, response: 'Optional[Dict]', point) -> None:
-        self._help = create_signature_help(response, self._language_id, settings)
-
+        self._help = create_signature_help(response, self._renderer)
         if self._help:
             if self._visible:
                 self._update_popup()

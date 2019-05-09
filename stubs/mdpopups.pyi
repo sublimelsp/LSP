@@ -24,6 +24,7 @@ def show_popup(
     allow_code_wrap=False
 ): ...
 
+
 def update_popup(
     view: sublime.View,
     content: str,
@@ -43,4 +44,12 @@ def md2html(
     template_env_options=None,  # type: Optional[dict]
     nl2br=True,
     allow_code_wrap=False
-): ...
+) -> str: ...
+
+
+def scope2style(
+    view: sublime.View,
+    scope: str,
+    selected: bool=False,
+    explicit_background: bool = False
+) -> str: ...

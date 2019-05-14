@@ -6,6 +6,7 @@ try:
     assert Tuple and Optional and Dict and List and Union and Any
 except ImportError:
     pass
+    Protocol = object  # type: ignore
 
 
 class ScopeRenderer(Protocol):
@@ -36,29 +37,72 @@ def get_documentation(d: 'Dict[str, Any]') -> 'Optional[str]':
         return None
 
 
+def parse_signature_label(signature_label: str, parameters: 'List[ParameterInformation]') -> 'Tuple[int, int]':
+    current_index = -1
+
+    # assumption - if there are parens, the first paren starts arguments
+    # (note: self argument in pyls-returned method calls not included in params!)
+    # if no parens, start detecting from first parameter instead.
+    # if paren, extract and highlight
+    open_paren_index = signature_label.find('(')
+    params_start_index = open_paren_index + 1
+    current_index = params_start_index
+
+    for parameter in parameters:
+
+        if parameter.label:
+            range_start = signature_label.find(parameter.label, current_index)
+            range_end = range_start + len(parameter.label)
+            parameter.range = (range_start, range_end)
+        elif parameter.range:
+            parameter.label = signature_label[parameter.range[0]:parameter.range[1]]
+
+        if parameter.range:
+            current_index = parameter.range[1] + 1
+
+    close_paren_index = signature_label.find(')', current_index)
+
+    return open_paren_index, close_paren_index
+
+
+def parse_parameter_information(parameter: 'Dict') -> 'ParameterInformation':
+    label_or_range = parameter['label']
+    label_range = None
+    if isinstance(label_or_range, str):
+        label = label_or_range
+    else:
+        label_range = label_or_range
+    return ParameterInformation(label, label_range, get_documentation(parameter))
+
+
 def parse_signature_information(signature: 'Dict') -> 'SignatureInformation':
+    signature_label = signature['label']
     param_infos = []  # type: 'List[ParameterInformation]'
     parameters = signature.get('parameters')
+    paren_bounds = (-1, -1)
     if parameters:
-        # todo: if we advertise labelOffsetSupport, we can get [int,int] ranges in "label"
-        param_infos = list(ParameterInformation(param['label'], get_documentation(param)) for param in parameters)
-    return SignatureInformation(signature['label'], get_documentation(signature), param_infos)
+        param_infos = list(parse_parameter_information(param) for param in parameters)
+        paren_bounds = parse_signature_label(signature_label, param_infos)
+
+    return SignatureInformation(signature_label, get_documentation(signature), paren_bounds, param_infos)
 
 
 class ParameterInformation(object):
 
-    def __init__(self, label: str, documentation: 'Optional[str]') -> None:
+    def __init__(self, label: str, label_range: 'Optional[Tuple[int, int]]', documentation: 'Optional[str]') -> None:
         self.label = label
+        self.range = label_range
         self.documentation = documentation
 
 
 class SignatureInformation(object):
 
-    def __init__(self, label: str, documentation: 'Optional[str]',
+    def __init__(self, label: str, documentation: 'Optional[str]', paren_bounds: 'Tuple[int, int]',
                  parameters: 'List[ParameterInformation]' = []) -> None:
         self.label = label
         self.documentation = documentation
         self.parameters = parameters
+        [self.open_paren_index, self.close_paren_index] = paren_bounds
 
 
 def create_signature_help(response: 'Optional[Dict]', renderer: ScopeRenderer) -> 'Optional[SignatureHelp]':
@@ -92,33 +136,29 @@ class SignatureHelp(object):
     def build_popup_content(self) -> str:
         parameter_documentation = None  # type: Optional[str]
 
-        signature = self._signatures[self._active_signature_index]  # type: SignatureInformation
-        signature_label = self._highlight_signature(signature.label)
-        debug('LABEL:', signature_label)
-
-        # signature_label = html.escape(signature.label, quote=False)
-        if signature.parameters and self._active_parameter in range(0, len(signature.parameters)):
-            parameter = signature.parameters[self._active_parameter]
-            parameter_label = html.escape(parameter.label, quote=False)
-            parameter_documentation = parameter.documentation
-
         formatted = []
 
         if len(self._signatures) > 1:
             formatted.append(self._build_overload_selector())
 
+        signature = self._signatures[self._active_signature_index]  # type: SignatureInformation
+
         # Write the active signature and give special treatment to the active parameter (if found).
         # Note that this <div> class and the extra <pre> are copied from mdpopups' HTML output. When mdpopups changes
         # its output style, we must update this literal string accordingly.
         formatted.append('<div class="highlight"><pre>')
-        formatted.append(signature_label)
+        formatted.append(self._render_signature_label(signature))
         formatted.append("</pre></div>")
 
         if signature.documentation:
             formatted.append("<p>{}</p>".format(signature.documentation))
 
-        if parameter_documentation:
-            formatted.append("<p><b>{}</b>: {}</p>".format(parameter_label, parameter_documentation))
+        if signature.parameters and self._active_parameter in range(0, len(signature.parameters)):
+            parameter = signature.parameters[self._active_parameter]
+            parameter_label = html.escape(parameter.label, quote=False)
+            parameter_documentation = parameter.documentation
+            if parameter_documentation:
+                formatted.append("<p><b>{}</b>: {}</p>".format(parameter_label, parameter_documentation))
 
         return "\n".join(formatted)
 
@@ -138,54 +178,33 @@ class SignatureHelp(object):
         return "**{}** of **{}** overloads (use the ↑ ↓ keys to navigate):\n".format(
             str(self._active_signature_index + 1), str(len(self._signatures)))
 
-    def _read_parameter(self, signature_label: str, param_info: ParameterInformation,
-                        start_at: int) -> 'Tuple[str, str, int]':
-        param_index = signature_label.find(param_info.label, start_at)
-        param_end = param_index + len(param_info.label)
+    def _render_signature_label(self, sig_info: SignatureInformation) -> str:
 
-        comma_index = signature_label.find(',', param_end)
-        if comma_index > -1:
-            return signature_label[start_at:comma_index], ', ', comma_index + 2
-        else:
-            close_paren_index = signature_label.find(')', param_end)
-            if close_paren_index > -1:
-                return signature_label[start_at:close_paren_index], ')', close_paren_index + 1
-            else:
-                # we have no delimiters, just return param label.
-                return param_info.label, ' ', start_at
-
-    def _highlight_signature(self, signature_label: str) -> str:
-
-        rendered_signature = []  # type: List[str]
-        sig_info = self._active_signature()
-        # assumption - if there are parens, the first paren starts arguments
-        # (note: self argument in pyls-returned method calls not included in params!)
-        # if no parens, start detecting from first parameter instead.
-        # if paren, extract and highlight
-        first_paren_index = signature_label.find('(')
-        if first_paren_index > -1:
-            rendered_signature.append(
-                self._renderer.render_function(signature_label[:first_paren_index])
-            )
-            rendered_signature.append(
-                self._renderer.render_punctuation('(')
-            )
-        current_pos = first_paren_index + 1
         if sig_info.parameters:
-            for index, param_info in enumerate(sig_info.parameters):
-                parameter, delimiter, current_pos = self._read_parameter(signature_label, param_info, current_pos)
+            label = sig_info.label
 
-                # append parameter and punctuation
-                rendered_signature.append(
-                    self._renderer.render_parameter(parameter, index == self._active_parameter)
-                )
-                rendered_signature.append(
-                    self._renderer.render_punctuation(delimiter)
-                )
+            # replace with styled spans in reverse order
 
-        # append remainder
-        rendered_signature.append(
-            self._renderer.render_function(signature_label[current_pos:])
-        )
+            if sig_info.close_paren_index > -1:
+                start = sig_info.close_paren_index
+                end = start+1
+                label = label[:start] + self._renderer.render_punctuation(label[start:end]) + label[end:]
 
-        return "".join(rendered_signature)
+            max_param_index = len(sig_info.parameters) - 1
+            for index, param in enumerate(reversed(sig_info.parameters)):
+                if param.range:
+                    start, end = param.range
+                    is_current = self._active_parameter == max_param_index - index
+                    label = label[:start] + self._renderer.render_parameter(label[start:end], is_current) + label[end:]
+
+                    # todo: highlight commas between parameters as punctuation.
+
+            if sig_info.open_paren_index > -1:
+                start = sig_info.open_paren_index
+                end = start+1
+                label = label[:start] + self._renderer.render_punctuation(label[start:end]) + label[end:]
+
+            # todo: only render up to first parameter as function scope.
+            return self._renderer.render_function(label)
+        else:
+            return self._renderer.render_function(sig_info.label)

@@ -1,5 +1,6 @@
 import mdpopups
 import sublime
+import html
 import sublime_plugin
 import webbrowser
 
@@ -16,11 +17,11 @@ from .core.events import global_events
 from .core.protocol import Request
 from .core.popups import popup_css, popup_class
 from .core.settings import client_configs
-from .core.signature_help import create_signature_help, SignatureHelp, ScopeRenderer
+from .core.signature_help import create_signature_help, SignatureHelp
 assert SignatureHelp
 
 
-class ColorSchemeScopeRenderer(ScopeRenderer):
+class ColorSchemeScopeRenderer(object):
     def __init__(self, view) -> None:
         self._scope_styles = {}  # type: dict
         for scope in ["entity.name.function", "variable.parameter", "punctuation"]:
@@ -38,7 +39,7 @@ class ColorSchemeScopeRenderer(ScopeRenderer):
     def _wrap_with_scope_style(self, content: str, scope: str, emphasize: bool = False) -> str:
         color = self._scope_styles[scope]["color"]
         weight_style = ';font-weight: bold' if emphasize else ''
-        return '<span style="color: {}{}">{}</span>'.format(color, weight_style, content)
+        return '<span style="color: {}{}">{}</span>'.format(color, weight_style, html.escape(content, quote=False))
 
 
 class SignatureHelpListener(sublime_plugin.ViewEventListener):

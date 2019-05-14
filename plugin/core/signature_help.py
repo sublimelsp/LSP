@@ -130,7 +130,7 @@ class SignatureHelp(object):
                  active_signature=0, active_parameter=0) -> None:
         self._signatures = signatures
         self._active_signature_index = active_signature
-        self._active_parameter = active_parameter
+        self._active_parameter_index = active_parameter
         self._renderer = renderer
 
     def build_popup_content(self) -> str:
@@ -153,8 +153,8 @@ class SignatureHelp(object):
         if signature.documentation:
             formatted.append("<p>{}</p>".format(signature.documentation))
 
-        if signature.parameters and self._active_parameter in range(0, len(signature.parameters)):
-            parameter = signature.parameters[self._active_parameter]
+        if signature.parameters and self._active_parameter_index in range(0, len(signature.parameters)):
+            parameter = signature.parameters[self._active_parameter_index]
             parameter_label = html.escape(parameter.label, quote=False)
             parameter_documentation = parameter.documentation
             if parameter_documentation:
@@ -194,7 +194,7 @@ class SignatureHelp(object):
             for index, param in enumerate(reversed(sig_info.parameters)):
                 if param.range:
                     start, end = param.range
-                    is_current = self._active_parameter == max_param_index - index
+                    is_current = self._active_parameter_index == max_param_index - index
                     label = label[:start] + self._renderer.render_parameter(label[start:end], is_current) + label[end:]
 
                     # todo: highlight commas between parameters as punctuation.

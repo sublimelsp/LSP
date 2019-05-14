@@ -2,11 +2,9 @@ from .signature_help import (
     create_signature_help, SignatureHelp, get_documentation,
     parse_signature_information, ScopeRenderer
 )
-from .types import Settings
 import unittest
 
 language_id = "python"
-settings = Settings()
 signature = {
     'label': 'foo_bar(value: int) -> None',
     'documentation': {'value': 'The default function for foobaring'},
@@ -67,73 +65,45 @@ object properties that will be stringified.""", 'label': 'replacer?: (string | n
 signature_information = parse_signature_information(signature)
 signature_overload_information = parse_signature_information(signature_overload)
 
-SUBLIME_SINGLE_SIGNATURE = """```python
-foo_bar(value: int) -> None
-```
-
-**value**
-
-* *A number to foobar on*
-
-The default function for foobaring"""
-
-SUBLIME_OVERLOADS_FIRST = """**1** of **2** overloads (use the ↑ ↓ keys to navigate):
-
-```python
-foo_bar(value: int) -> None
-```
-
-**value**
-
-* *A number to foobar on*
-
-The default function for foobaring"""
-
-SUBLIME_OVERLOADS_SECOND = """**2** of **2** overloads (use the ↑ ↓ keys to navigate):
-
-```python
-foo_bar(value: int, multiplier: int) -> None
-```
-
-**value**
-
-* *A number to foobar on*
-
-**multiplier**
-
-* *Change foobar to work on larger increments*
-
-Foobaring with a multiplier"""
-
-VSCODE_SINGLE_SIGNATURE = """<div class="highlight"><pre>
-foo_bar(<span style="font-weight: bold; text-decoration: underline">value</span>: int) -&gt; None
+SINGLE_SIGNATURE = """<div class="highlight"><pre>
+<span style="color: #6699cc">foo_bar<span style="color: #5fb3b3">(</span>\
+<span style="color: #f99157;font-weight: bold">value</span>: int<span \
+style="color: #5fb3b3">)</span> -> None</span>
 </pre></div>
-A number to foobar on
-The default function for foobaring"""
+<p>The default function for foobaring</p>
+<p><b>value</b>: A number to foobar on</p>"""
 
-VSCODE_OVERLOADS_FIRST = """**1** of **2** overloads (use the ↑ ↓ keys to navigate):
+OVERLOADS_FIRST = """**1** of **2** overloads (use the ↑ ↓ keys to navigate):
 
 <div class="highlight"><pre>
-foo_bar(<span style="font-weight: bold; text-decoration: underline">value</span>: int) -&gt; None
+<span style="color: #6699cc">foo_bar<span style="color: #5fb3b3">(</span>\
+<span style="color: #f99157;font-weight: bold">value</span>: int\
+<span style="color: #5fb3b3">)</span> -> None</span>
 </pre></div>
-A number to foobar on
-The default function for foobaring"""
+<p>The default function for foobaring</p>
+<p><b>value</b>: A number to foobar on</p>"""
 
-VSCODE_OVERLOADS_SECOND = """**2** of **2** overloads (use the ↑ ↓ keys to navigate):
+
+OVERLOADS_SECOND = """**2** of **2** overloads (use the ↑ ↓ keys to navigate):
 
 <div class="highlight"><pre>
-foo_bar(<span style="font-weight: bold; text-decoration: underline">value</span>: int, multiplier: int) -&gt; None
+<span style="color: #6699cc">foo_bar<span style="color: #5fb3b3">(</span>\
+<span style="color: #f99157;font-weight: bold">value</span>: int, \
+<span style="color: #f99157">multiplier</span>: int<span style="color: #5fb3b3">)\
+</span> -> None</span>
 </pre></div>
-A number to foobar on
-Foobaring with a multiplier"""
+<p>Foobaring with a multiplier</p>
+<p><b>value</b>: A number to foobar on</p>"""
 
-VSCODE_OVERLOADS_SECOND_SECOND_PARAMETER = """**2** of **2** overloads (use the ↑ ↓ keys to navigate):
+OVERLOADS_SECOND_SECOND_PARAMETER = """**2** of **2** overloads (use the ↑ ↓ keys to navigate):
 
 <div class="highlight"><pre>
-foo_bar(value: int, <span style="font-weight: bold; text-decoration: underline">multiplier</span>: int) -&gt; None
+<span style="color: #6699cc">foo_bar<span style="color: #5fb3b3">(</span><span style="color: #f99157">value</span>\
+: int, <span style="color: #f99157;font-weight: bold">multiplier</span>: int<span style="color: #5fb3b3">)</span>\
+ -> None</span>
 </pre></div>
-Change foobar to work on larger increments
-Foobaring with a multiplier"""
+<p>Foobaring with a multiplier</p>
+<p><b>multiplier</b>: Change foobar to work on larger increments</p>"""
 
 
 class TestRenderer(ScopeRenderer):
@@ -188,8 +158,8 @@ class CreateSignatureHelpTests(unittest.TestCase):
 
         self.assertIsNotNone(help)
         if help:
-            self.assertEqual(help._active_signature, 0)
-            self.assertEqual(help._active_parameter, -1)
+            self.assertEqual(help._active_signature_index, 0)
+            self.assertEqual(help._active_parameter_index, -1)
 
 
 class SignatureHelpTests(unittest.TestCase):
@@ -201,7 +171,7 @@ class SignatureHelpTests(unittest.TestCase):
         if help:
             content = help.build_popup_content()
             self.assertFalse(help.has_overloads())
-            self.assertEqual(content, VSCODE_SINGLE_SIGNATURE)
+            self.assertEqual(content, SINGLE_SIGNATURE)
 
     def test_overload(self):
         help = SignatureHelp([signature_information, signature_overload_information],
@@ -210,12 +180,12 @@ class SignatureHelpTests(unittest.TestCase):
         if help:
             content = help.build_popup_content()
             self.assertTrue(help.has_overloads())
-            self.assertEqual(content, VSCODE_OVERLOADS_FIRST)
+            self.assertEqual(content, OVERLOADS_FIRST)
 
             help.select_signature(1)
             help.select_signature(1)  # verify we don't go out of bounds,
             content = help.build_popup_content()
-            self.assertEqual(content, VSCODE_OVERLOADS_SECOND)
+            self.assertEqual(content, OVERLOADS_SECOND)
 
     def test_active_parameter(self):
         help = SignatureHelp([signature_information, signature_overload_information], renderer, active_signature=1,
@@ -224,4 +194,4 @@ class SignatureHelpTests(unittest.TestCase):
         if help:
             content = help.build_popup_content()
             self.assertTrue(help.has_overloads())
-            self.assertEqual(content, VSCODE_OVERLOADS_SECOND_SECOND_PARAMETER)
+            self.assertEqual(content, OVERLOADS_SECOND_SECOND_PARAMETER)

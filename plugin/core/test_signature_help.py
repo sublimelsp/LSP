@@ -14,6 +14,7 @@ signature = {
         }
     }]
 }  # type: dict
+
 signature_overload = {
     'label': 'foo_bar(value: int, multiplier: int) -> None',
     'documentation': {'value': 'Foobaring with a multiplier'},
@@ -27,39 +28,6 @@ signature_overload = {
         'documentation': 'Change foobar to work on larger increments'
     }]
 }  # type: dict
-
-
-# json_stringify = {
-#     'activeParameter': 0,
-#     'signatures': [
-#         {
-#             'documentation': 'Converts a JavaScript value to a JavaScript Object Notation (JSON) string.',
-#             'parameters': [
-#                 {'documentation': 'A JavaScript value, usually an object or array, to be converted.',
-#                  'label': 'value: any'},
-#                 {'documentation': 'A function that transforms the results.',
-#                  'label': 'replacer?: (key: string, value: any) => any'},
-#                 {'documentation': """Adds indentation, white space, and line break characters to the return-value
-#  JSON text to make it easier to read.""", 'label': 'space?: string | number'}
-#             ],
-#             'label': """stringify(value: any, replacer?: (key: string, value: any) => any, space?:
-#  string | number): string"""
-#         },
-#         {
-#             'documentation': 'Converts a JavaScript value to a JavaScript Object Notation (JSON) string.',
-#             'parameters': [
-#                 {'documentation': 'A JavaScript value, usually an object or array, to be converted.',
-#                  'label': 'value: any'},
-#                 {'documentation': """An array of strings and numbers that acts as a approved list for selecting the
-# object properties that will be stringified.""", 'label': 'replacer?: (string | number)[]'},
-#                 {'documentation': """Adds indentation, white space, and line break characters to the return-value JSON
-#  text to make it easier to read.""", 'label': 'space?: string | number'}
-#             ],
-#             'label': 'stringify(value: any, replacer?: (string | number)[], space?: string | number): string'
-#         }
-#     ],
-#     'activeSignature': 0
-# }
 
 signature_information = parse_signature_information(signature)
 signature_overload_information = parse_signature_information(signature_overload)

@@ -11,7 +11,7 @@ except ImportError:
     pass
 
 from .core.configurations import is_supported_syntax
-from .core.registry import config_for_scope, session_for_view, client_for_view
+from .core.registry import session_for_view, client_for_view
 from .core.documents import get_document_position
 from .core.events import global_events
 from .core.protocol import Request
@@ -27,19 +27,20 @@ class ColorSchemeScopeRenderer(object):
         for scope in ["entity.name.function", "variable.parameter", "punctuation"]:
             self._scope_styles[scope] = mdpopups.scope2style(view, scope)
 
-    def render_function(self, content: str) -> str:
-        return self._wrap_with_scope_style(content, "entity.name.function")
+    def function(self, content: str, escape: bool = True) -> str:
+        return self._wrap_with_scope_style(content, "entity.name.function", escape=escape)
 
-    def render_punctuation(self, content: str) -> str:
+    def punctuation(self, content: str) -> str:
         return self._wrap_with_scope_style(content, "punctuation")
 
-    def render_parameter(self, content: str, emphasize: bool = False) -> str:
+    def parameter(self, content: str, emphasize: bool = False) -> str:
         return self._wrap_with_scope_style(content, "variable.parameter", emphasize)
 
-    def _wrap_with_scope_style(self, content: str, scope: str, emphasize: bool = False) -> str:
+    def _wrap_with_scope_style(self, content: str, scope: str, emphasize: bool = False, escape: bool = True) -> str:
         color = self._scope_styles[scope]["color"]
         weight_style = ';font-weight: bold' if emphasize else ''
-        return '<span style="color: {}{}">{}</span>'.format(color, weight_style, html.escape(content, quote=False))
+        content = html.escape(content, quote=False) if escape else content
+        return '<span style="color: {}{}">{}</span>'.format(color, weight_style, content)
 
 
 class SignatureHelpListener(sublime_plugin.ViewEventListener):
@@ -49,7 +50,6 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         self._initialized = False
         self._signature_help_triggers = []  # type: List[str]
         self._visible = False
-        self._language_id = ""
         self._help = None  # type: Optional[SignatureHelp]
         self._renderer = ColorSchemeScopeRenderer(self.view)
 
@@ -66,10 +66,6 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             if signatureHelpProvider:
                 self._signature_help_triggers = signatureHelpProvider.get(
                     'triggerCharacters')
-
-        config = config_for_scope(self.view)
-        if config:
-            self._language_id = self._view_language(self.view, config.name)
 
         self._initialized = True
 
@@ -101,12 +97,13 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                     lambda response: self.handle_response(response, point))
 
     def handle_response(self, response: 'Optional[Dict]', point) -> None:
-        self._help = create_signature_help(response, self._renderer)
+        self._help = create_signature_help(response)
         if self._help:
+            content = self._help.build_popup_content(self._renderer)
             if self._visible:
-                self._update_popup()
+                self._update_popup(content)
             else:
-                self._show_popup(point)
+                self._show_popup(content, point)
 
     def on_query_context(self, key, _, operand, __):
         if key != "lsp.signature_help":
@@ -117,24 +114,19 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 return True
             else:
                 return False  # Let someone else handle this keybinding.
-        elif self._help and self._help.has_overloads():
+        elif self._help and self._help.has_multiple_signatures():
 
             # We use the "operand" for the number -1 or +1. See the keybindings.
             self._help.select_signature(operand)
-            self._update_popup()
+            self._update_popup(self._help.build_popup_content(self._renderer))
 
             return True  # We handled this keybinding.
 
         return False
 
-    def _build_popup_content(self) -> str:
-        if self._help:
-            return self._help.build_popup_content()
-        return ""
-
-    def _show_popup(self, point: int) -> None:
+    def _show_popup(self, content: str, point: int) -> None:
         mdpopups.show_popup(self.view,
-                            self._build_popup_content(),
+                            content,
                             css=popup_css,
                             md=True,
                             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
@@ -145,16 +137,12 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                             on_navigate=self._on_hover_navigate)
         self._visible = True
 
-    def _update_popup(self) -> None:
+    def _update_popup(self, content: str) -> None:
         mdpopups.update_popup(self.view,
-                              self._build_popup_content(),
+                              content,
                               css=popup_css,
                               md=True,
                               wrapper_class=popup_class)
-
-    def _view_language(self, view: sublime.View, config_name: str) -> 'Optional[str]':
-        languages = view.settings().get('lsp_language')
-        return languages.get(config_name) if languages else None
 
     def _on_hide(self):
         self._visible = False

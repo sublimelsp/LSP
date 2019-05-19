@@ -21,7 +21,6 @@ class Settings(object):
         self.show_diagnostics_severity_level = 3
         self.only_show_lsp_completions = False
         self.diagnostics_highlight_style = "underline"
-        self.highlight_active_signature_parameter = True
         self.document_highlight_style = "stippled"
         self.document_highlight_scopes = {
             "unknown": "text",

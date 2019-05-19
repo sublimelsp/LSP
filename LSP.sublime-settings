@@ -328,10 +328,6 @@
   // Valid values are "underline" or "box"
   "diagnostics_highlight_style": "underline",
 
-  // If true, highlight the active parameter of the currently active signature.
-  // Note that this disables mdpopups highlighting.
-  "highlight_active_signature_parameter": true,
-
   // Highlighting style of "highlights": accentuating nearby text entities that
   // are related to the one under your cursor.
   // Valid values are "fill", "box", "underline", "stippled", "squiggly" or "".

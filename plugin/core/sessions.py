@@ -92,7 +92,10 @@ def get_initialize_params(project_path: str, config: ClientConfig):
                 },
                 "signatureHelp": {
                     "signatureInformation": {
-                        "documentationFormat": ["markdown", "plaintext"]
+                        "documentationFormat": ["markdown", "plaintext"],
+                        "parameterInformation": {
+                            "labelOffsetSupport": True
+                        }
                     }
                 },
                 "references": {},

@@ -53,8 +53,6 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings):
     settings.show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
     settings.show_diagnostics_severity_level = read_int_setting(settings_obj, "show_diagnostics_severity_level", 3)
     settings.diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
-    settings.highlight_active_signature_parameter = read_bool_setting(settings_obj,
-                                                                      "highlight_active_signature_parameter", True)
     settings.document_highlight_style = read_str_setting(settings_obj, "document_highlight_style", "stippled")
     settings.document_highlight_scopes = read_dict_setting(settings_obj, "document_highlight_scopes",
                                                            settings.document_highlight_scopes)

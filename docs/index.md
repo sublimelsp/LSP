@@ -1,66 +1,29 @@
-### Sublime LSP Plugin Documentation
 
-# Configuration
+# Getting started
 
-## LSP Settings
+1. Install a language server from the list below, ensuring it can be started from the command line (is in your PATH)
 
-Global plugin settings and settings defined at project level are merged together.
+2. Run "LSP: Enable Language Server" from Sublime's Command Palette to allow the server to start.
 
-* `complete_all_chars` `true` *request completions for all characters, not just trigger characters*
-* `only_show_lsp_completions` `false` *disable sublime word completion and snippets from autocomplete lists*
-* `completion_hint_type` `"auto"` *override automatic completion hints with "detail", "kind" or "none"*
-* `prefer_label_over_filter_text` `false` *always use the "label" key instead of the "filterText" key in CompletionItems*
-* `show_references_in_quick_panel` `false` *show symbol references in Sublime's quick panel instead of the bottom panel*
-* `quick_panel_monospace_font` `false` *use monospace font for the quick panel*
-* `show_status_messages` `true` *show messages in the status bar for a few seconds*
-* `show_view_status` `true` *show permanent language server status in the status bar*
-* `auto_show_diagnostics_panel` `true` *open the diagnostics panel automatically if there are diagnostics*
-* `show_diagnostics_phantoms` `false` *show diagnostics as phantoms while the file has no changes*
-* `show_diagnostics_count_in_view_status` `false` *show errors and warnings count in the status bar*
-* `show_diagnostics_in_view_status` `true` *when on a diagnostic with the cursor, show the text in the status bar*
-* `diagnostics_highlight_style` `"underline"` *highlight style of code diagnostics, `"underline"` or `"box"`*
-* `highlight_active_signature_parameter`: *highlight the active parameter of the currently active signature*
-* `document_highlight_style`: *document highlight style: "underline", "stippled", "squiggly" or ""*
-* `document_highlight_scopes`: *customize your sublime text scopes for document highlighting*
-* `diagnostics_gutter_marker` `"dot"` *gutter marker for code diagnostics: "dot", "circle", "bookmark", "cross" or ""*
-* `show_code_actions_bulb` `false` *show a bulb in the gutter when code actions are available*
-* `log_debug` `false` *show debug logging in the sublime console*
-* `log_server` `true` *show server/logMessage notifications from language servers in the console*
-* `log_stderr` `false` *show language server stderr output in the console*
-* `log_payloads` `false` *show full JSON-RPC responses in the console*
+3. Open a document in your language - if the server starts its name will be in the left side of the status bar.
 
-## Language Specific Setup
-
-Install and verify Sublime Text can find the language server executable through the PATH, especially when using virtual environments with your interpreter.
-
-Run "LSP: Enable Language Server" from Sublime's Command Palette to allow LSP to start a server when a document with a certain syntax is opened/activated.
-
-LSP registers a server's supported trigger characters with Sublime Text.
-If completion on `.` or `->`, is not working, you may need to add the listed `auto_complete_triggers` to your User or Syntax-specific settings.
-
-The default LSP.sublime-settings contains some default LSP client configuration that may not work for you. See [Client Config](#client-config) for explanations for the available settings.
 
 ### Javascript/Typescript<a name="jsts"></a>
 
 Different servers wrapping microsoft's typescript services, most support plain javascript:
 
-Theia's [typescript-language-server](https://github.com/theia-ide/typescript-language-server)
+Theia's [typescript-language-server](https://github.com/theia-ide/typescript-language-server): `npm install -g typescript-language-server`
 
-`npm install -g typescript-language-server`
+My own [tomv564/lsp-tsserver](https://github.com/tomv564/lsp-tsserver): `npm install -g lsp-tsserver`
 
-My own [tomv564/lsp-tsserver](https://github.com/tomv564/lsp-tsserver)
-
-`npm install -g lsp-tsserver`
-
-Sourcegraph's [javascript-typescript-langserver](https://github.com/sourcegraph/javascript-typescript-langserver)
-
-`npm install -g javascript-typescript-langserver`
+Sourcegraph's [javascript-typescript-langserver](https://github.com/sourcegraph/javascript-typescript-langserver): `npm install -g javascript-typescript-langserver`
 
 
 ### Flow (Javascript)<a name="flow"></a>
 
-See: [github](https://github.com/flowtype/flow-language-server)
+Official part of [flow-bin](https://github.com/facebook/flow): `npm install -g flow-bin`
 
+Older flow-language-server: [github](https://github.com/flowtype/flow-language-server): `npm install -g flow-bin`
 
 ### Vue (Javascript)<a name="vue"></a>
 
@@ -112,26 +75,12 @@ See [bmewburn/intelephense-docs](https://github.com/bmewburn/intelephense-docs)
 
 See: [github:felixfbecker/php-language-server](https://github.com/felixfbecker/php-language-server)
 
-1. modify `~/.composer/composer.json` to set
-```
-"minimum-stability": "dev",
-"prefer-stable": true,
-```
+Global installation:
+
+1. modify `~/.composer/composer.json` to set `"minimum-stability": "dev"` and `"prefer-stable": true`
 2. run `composer global require felixfbecker/language-server`
 3. run `composer run-script --working-dir=~/.composer/vendor/felixfbecker/language-server parse-stubs`
-4. modify `LSP.sublime-settings - User`
-```
-{
-  "clients": {
-    "phpls": {
-      "command": ["php", "/PATH-TO-HOME-DIR/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"],
-      "scopes": ["source.php"],
-      "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
-      "languageId": "php"
-    }
-  }
-}
-```
+
 
 ### Ruby / Ruby on Rails<a name="ruby"></a>
 
@@ -274,37 +223,56 @@ Requires IntelliJ to be running.
 
 Please create issues / pull requests so we can get support for more languages.
 
-### Client Configuration<a name="client-config"></a>
+# Client Configuration<a name="client-config"></a>
 
 LSP ships with default client configuration for a few language servers.
 These configurations need to be enabled before they will start.
+
+If your language server is missing or not configured correctly, you can add/override the below settings under the `"clients"` key in the LSP Settings.
 
 Here is an example for the Javascript/Typescript server:
 
 ```json
 "jsts": {
-    "command": ["lsp-tsserver"],
-    "scopes": ["source.ts", "source.tsx"],
-    "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"],
-    "languageId": "typescript"
+  "command": ["lsp-tsserver"],
+  "scopes": ["source.ts", "source.tsx"],
+  "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"],
+  "languageId": "typescript"
 }
 ```
 
-Client configurations can be customized as follows by adding an override in the User LSP.sublime-settings
+or in multi-language form:
+
+```json
+"lsp-tsserver": {
+  "command": ["lsp-tsserver"],
+  "languages": [{
+    "scopes": ["source.js", "source.jsx"],
+    "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+    "languageId": "javascript"
+  }, {
+    "scopes": ["source.ts", "source.tsx"],
+    "syntaxes": ["Typescript"],
+    "languageId": "typescript"
+  }
+  ]
+}
+```
 
 * `command` - specify a full paths, add arguments (if not specified then tcp_port must be specified)
 * `tcp_port` - if not specified then stdin/out are used else sets the tcpport to connect to (if no command is specified then it is assumed that some process is listing on this port)
 * `scopes` - add language flavours, eg. `source.js`, `source.jsx`.
 * `syntaxes` - syntaxes that enable LSP features on a document, eg. `Packages/Babel/JavaScript (Babel).tmLanguage`
 * `languageId` - used both by the language servers and to select a syntax highlighter for sublime popups.
-* `enabled` - enable a language server globally, or per-project
+* `languages` - group scope, syntax and languageId together for servers that support more than one language
+* `enabled` - enables a language server (default is disabled)
 * `settings` - per-project settings (equivalent to VS Code's Workspace Settings)
 * `env` - dict of environment variables to be injected into the language server's process (eg. PYTHONPATH)
 * `initializationOptions` - options to send to the server at startup (rarely used)
 
 ## Per-project overrides
 
-Any fields in a client configuration can be overridden by adding an LSP settings block to your `.sublime-project` file:
+Any global language server settings can be overridden per project by adding an LSP settings block to your `.sublime-project` file.
 
 ```json
 {
@@ -331,85 +299,3 @@ Any fields in a client configuration can be overridden by adding an LSP settings
 }
 ```
 
-
-# Features
-
-**Plugin commands**
-
-* Restart Servers: kills all language servers belonging to the active window
-    * This command only works when in a supported document.
-    * It may change in the future to be always available, or only kill the relevant language server.
-* LSP Settings: Opens package settings.
-
-**Document actions**
-
-* Show Code Actions: `super+.`
-* Symbol References: `shift+f12`
-* Rename Symbol: UNBOUND
-    * Recommendation: Override `F2` (next bookmark)
-* Go to definition: UNBOUND
-    * Recommendation: Override `f12` (built-in goto definition),
-    * LSP falls back to ST3's built-in goto definition command in case LSP fails.
-* Format Document: UNBOUND
-* Format Selection: UNBOUND
-* Document Symbols: UNBOUND
-
-**Workspace actions**
-
-* Show Diagnostics Panel: `super+shift+M` / `ctr+alt+M`
-* Workspace Symbol Search: via command Palette `LSP: workspace symbol`
-
-**Overriding keybindings**
-
-Sublime's keybindings can be edited from the `Preferences: Key Bindings` command.
-The following example overrides `f12` to use LSP's go to definition when in javascript/typescript:
-
-```
-{
-	"keys": ["f12"],
-	"command": "lsp_symbol_definition",
-	"context": [
-		{
-			"key": "selector",
-			"operator": "equal",
-			"operand": "source.ts, source.js"
-		}
-	]
-}
-```
-
-More useful keybindings (OS-X), edit Package Settings -> LSP -> Key Bindings
-```
-  { "keys": ["f2"], "command": "lsp_symbol_rename" },
-  { "keys": ["f12"], "command": "lsp_symbol_definition" },
-  { "keys": ["super+option+r"], "command": "lsp_document_symbols" },
-  { "keys": ["super+option+h"], "command": "lsp_hover"}
-```
-
-**Mouse map configuration**
-
-See below link, but bind to `lsp_symbol_definition` command
-https://stackoverflow.com/questions/16235706/sublime-3-set-key-map-for-function-goto-definition
-
-# Troubleshooting
-
-First step should be to set the `log_debug` setting to `true`, restart sublime and examine the output in the Sublime console.
-`log_stderr` can also be set to `true` to see the language server's own logging.
-
-**LSP doesn't try to start my language server**
-
-* Make sure you have a folder added in your Sublime workspace.
-* Make sure the document you are opening lives under that folder.
-
-Your client configuration requires two settings to match the document your are editing:
-
-* Scope (eg. `source.php`): Verify this is correct by running "Show Scope Name" from the developer menu.
-* Syntax (eg. `Packages\PHP\PHP.sublime-syntax`): Verify by running `sublime.active_window().active_view().settings().get("syntax")` in the console.
-
-**LSP cannot find my language server through PATH on OS-X**
-
-This issue can be solved in a few ways:
-
-* Install the [SublimeFixMacPath](https://github.com/int3h/SublimeFixMacPath) package
-* Or always launch sublime from the command line (so it inherits your shell's environment)
-* Use `launchctl setenv` to set PATH for OS-X UI applications.

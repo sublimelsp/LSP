@@ -42,45 +42,25 @@ The default LSP.sublime-settings contains some default LSP client configuration 
 
 ### Javascript/Typescript<a name="jsts"></a>
 
-You need to have [tomv564/lsp-tsserver](https://github.com/tomv564/lsp-tsserver) installed globally for the completions to work.
+Different servers wrapping microsoft's typescript services, most support plain javascript:
+
+Theia's [typescript-language-server](https://github.com/theia-ide/typescript-language-server)
+
+`npm install -g typescript-language-server`
+
+My own [tomv564/lsp-tsserver](https://github.com/tomv564/lsp-tsserver)
 
 `npm install -g lsp-tsserver`
 
-Client configuration:
+Sourcegraph's [javascript-typescript-langserver](https://github.com/sourcegraph/javascript-typescript-langserver)
 
-```
-{
-    "js": {
-        "command": ["lsp-tsserver"],
-        "enabled": true,
-        "languageId": "javascript",
-        "scopes": ["source.js"],
-        "syntaxes": ["Packages/JavaScript/JavaScript.sublime-syntax"]
-    },
-    "jsts": {
-        "command": ["lsp-tsserver"],
-        "enabled": true,
-        "languageId": "typescript",
-        "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"],
-    }
-}
-```
+`npm install -g javascript-typescript-langserver`
+
 
 ### Flow (Javascript)<a name="flow"></a>
 
 See: [github](https://github.com/flowtype/flow-language-server)
 
-Client configuration:
-```
-      "flow":
-      {
-        "command": ["flow-language-server", "--stdio"],
-        "scopes": ["source.js"],
-        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
-        "languageId": "javascript"
-      }
-```
 
 ### Vue (Javascript)<a name="vue"></a>
 
@@ -121,9 +101,16 @@ Alternatively, Microsoft's python language server (using .NET Core runtime)
 
 ### PHP<a name="php"></a>
 
-UPDATE: Some new options for PHP language servers are discussed in [this issue](https://github.com/tomv564/LSP/issues/259)
+#### Intelephense
+
+`npm i intelephense -g`
+
+See [bmewburn/intelephense-docs](https://github.com/bmewburn/intelephense-docs)
+
 
 #### PHP Language server
+
+See: [github:felixfbecker/php-language-server](https://github.com/felixfbecker/php-language-server)
 
 1. modify `~/.composer/composer.json` to set
 ```
@@ -146,43 +133,6 @@ UPDATE: Some new options for PHP language servers are discussed in [this issue](
 }
 ```
 
-5. (optional) add triggers to `Preferences.sublime-settings - User`
-```
-"auto_complete_triggers":
-[
-  {
-    "characters": "$>:\\",
-    "selector": "source.php"
-  }
-]
-```
-
-
-See: [github:felixfbecker/php-language-server](https://github.com/felixfbecker/php-language-server)
-
-#### Intelephense
-
-See [bmewburn/intelephense-docs](https://github.com/bmewburn/intelephense-docs)
-
-```json
- "intelephense-ls":
-  {
-      // npm i -g intelephense
-      "enabled": true,
-      "command": [
-          "node",
-          "PATH_TO_GLOBAL_NODE_MODULES/intelephense/lib/intelephense.js",
-          "--stdio",
-      ],
-      "scopes": ["source.php", "embedding.php"],
-      "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
-      "languageId": "php",
-      "initializationOptions": {
-          "storagePath": "PATH_TO_TEMP_FOLDER/intelephense-ls",
-      },
-  },
-```
-
 ### Ruby / Ruby on Rails<a name="ruby"></a>
 
 Requires the solargraph gem:
@@ -191,38 +141,12 @@ Requires the solargraph gem:
 
 See [github.com:castwide/solargraph](https://github.com/castwide/solargraph) for up-to-date installation instructions.
 
-Client configuration:
-
-```
-"ruby": {
-	"command":
-	[
-		"solargraph",
-		"socket"
-	],
-	"enabled": true,
-	"languageId": "ruby",
-	"scopes":
-	[
-		"source.ruby",
-		"source.ruby.rails"
-	],
-	"syntaxes":
-	[
-		"Packages/Ruby/Ruby.sublime-syntax",
-		"Packages/Rails/Ruby on Rails.sublime-syntax",
-		"Packages/Rails/HTML (Rails).sublime-syntax"
-	],
-	"tcp_port": 7658
-},
-```
-
 
 ### Rust<a name="rust"></a>
 
-Requires Rust Nightly.
+Goes well with the [Rust Enhanced package](https://github.com/rust-lang/rust-enhanced) which uses the RLS server: [github:rust-lang-nursery/rls](https://github.com/rust-lang-nursery/rls) for up-to-date installation instructions.
 
-See [github:rust-lang-nursery/rls](https://github.com/rust-lang-nursery/rls) for up-to-date installation instructions.
+Alternatively, a newer [rust-analyzer](https://github.com/rust-analyzer/rust-analyzer) server is under development, also supported by LSP.
 
 
 ### Scala<a name="scala"></a>
@@ -238,58 +162,9 @@ Then run `sbt configureIDE` to create the `.dotty-ide.json` file
 Then the LSP plugin should launch as configured in `LSP.sublime-settings` using coursier.
 
 
-### C/C++ (Clangd)<a name="clang"></a>
+### C/C++
 
-To use clangd on Debian/Ubuntu, add the apt repositories [described here](https://apt.llvm.org).
-After that, install with e.g. `apt install clang-tools-9`. The clangd executable
-will have a version number suffix. For instance, clangd-9. You will thus have to
-adjust your `"clients"` dictionary in your user preferences.
-
-To use clangd on Mac, use Homebrew: `brew install llvm`. The clangd executable
-will be present in /usr/local/Cellar/llvm/*version*/bin
-
-To use clangd on Windows, install LLVM with the [LLVM installer](http://releases.llvm.org/download.html),
-and then add C:\\Program Files\\LLVM\\bin to your %PATH%.
-
-For any project of non-trivial size, you probably have a build system in place
-to compile your source files. The compilation command passed to your compiler
-might include things like:
-
-* Include directories,
-* Define directives,
-* Compiler-specific flags.
-
-Like any language server, clangd works on a per-file (or per-buffer) basis. But
-unlike most other language servers, it must also be aware of the exact compile
-flags that you pass to your compiler. For this reason, people have come up with
-the idea of a [*compilation database*](https://clang.llvm.org/docs/JSONCompilationDatabase.html).
-At this time, this is just a simple JSON file that describes for each
-*translation unit* (i.e. a `.cpp`, `.c`, `.m` or `.mm` file) the exact
-compilation flags that you pass to your compiler.
-
-It's pretty much standardized that this file should be called
-`compile_commands.json`. **clangd searches for this file up in parent
-directories from the currently active document**. If you don't have such a file
-present, most likely clangd will spit out nonsense errors and diagnostics about
-your code.
-
-As it turns out, CMake can generate this file *for you* if you pass it the
-cache variable `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` when invoking CMake. It will
-be present in your build directory, and you can copy that file to the root of
-your project. Make sure to ignore this file in your version control system.
-
-If you are using a make-based build system, you could use [compiledb](https://github.com/nickdiego/compiledb)
-to generate a `compile_commands.json`.
-
-Since header files are (usually) not passed to a compiler, they don't have
-compile commands. So even with a compilation database in place, clangd will
-*still* spit out nonsense in header files. You can try to remedy this by
-enhancing your compilation database with your header files using [this project called compdb](https://github.com/Sarcasm/compdb).
-
-To generate headers with compdb, read [this closed issue](https://github.com/Sarcasm/compdb/issues/2).
-
-You can also read about attempts to address this [on the CMake issue tracker](https://gitlab.kitware.com/cmake/cmake/issues/16285), along with the problem
-of treating header files as translation units.
+See the dedicated <a href="cplusplus"/>C/C++</a> guide for using ccls, cquery or clangd.
 
 ### Ocaml/Reason<a name="reason"></a>
 
@@ -297,41 +172,25 @@ You will need to install [sublime-reason](https://github.com/reasonml-editor/sub
 
 ### Go<a name="go"></a>
 
-NOTE: This language server is missing completions and diagnostics support. You may be better served by the [GoSublime](https://github.com/DisposaBoy/GoSublime) package.
+Gopls
+
+`go get -u golang.org/x/tools/cmd/gopls`
+
+[Official go language server](https://github.com/golang/go/wiki/gopls), under development.
+
+Sourcegraph's go-langserver
 
 `go get github.com/sourcegraph/go-langserver`
 
 See: [github:palantir/sourcegraphgo-langserver](https://github.com/sourcegraph/go-langserver)
 
-Client configuration:
-```json
-"golsp":
-{
-  "command": ["go-langserver"],
-  "enabled": true,
-  "scopes": ["source.go"],
-  "syntaxes": ["Packages/Go/Go.sublime-syntax"],
-  "languageId": "go"
-},
-```
 
 ### CSS<a name="css"></a>
 
-Using the VS Code CSS language server:
+Using the CSS language server from VS Code
 
 `npm install -g vscode-css-languageserver-bin`
 
-Then add to your LSP settings (replace PATH_TO_NODE_MODULES):
-
-```
-"vscode-css":
-  {
-    "command": ["node", "PATH_TO_NODE_MODULES/vscode-css-languageserver-bin/cssServerMain.js", "--stdio"],
-    "scopes": ["source.css"],
-    "syntaxes": ["Packages/CSS/CSS.sublime-syntax"],
-    "languageId": "css"
-  },
-```
 
 ### Polymer<a name="polymer"></a>
 
@@ -355,24 +214,9 @@ More info: https://github.com/Polymer/polymer-editor-service
 
 `pub global activate dart_language_server`
 
-See: [natebosch/dart_language_server](https://github.com/natebosch/dart_language_server)
+Make sure the pub bin directory is part of your path.
 
-Client configuration (replace PATH_TO_PUB_BIN):
-```
-"dart": {
-  "command": [
-    "PATH_TO_PUB_BIN/dart_language_server"
-  ],
-  "enabled": true,
-  "languageId": "dart",
-  "scopes": [
-    "source.dart"
-  ],
-  "syntaxes": [
-    "Packages/Dart/Dart.tmLanguage"
-  ]
-}
-```
+See: [natebosch/dart_language_server](https://github.com/natebosch/dart_language_server)
 
 ### Kotlin
 
@@ -407,30 +251,6 @@ Additionally, install the [Kotlin sublime package](https://github.com/vkostyukov
 Install the [bash language server](https://github.com/mads-hartmann/bash-language-server)
 
 ```npm i -g bash-language-server```
-
-Settings:
-
-```json
-"bashls":
-{
-    "command":
-    [
-        "bash-language-server", // add .cmd on windows
-        "start"
-    ],
-    "enabled": true,
-    "languageId": "bash",
-    "scopes":
-    [
-        "source.shell.bash"
-    ],
-    "syntaxes":
-    [
-        "Packages/ShellScript/Bash.sublime-syntax"
-    ]
-}
-```
-
 
 ### IntelliJ
 

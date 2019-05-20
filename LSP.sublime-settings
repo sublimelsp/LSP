@@ -169,6 +169,23 @@
       "syntaxes": ["Packages/Rust/Rust.sublime-syntax", "Packages/Rust Enhanced/RustEnhanced.sublime-syntax"],
       "languageId": "rust"
     },
+    "bashls":
+    {
+        "command":
+        [
+            "bash-language-server", // add .cmd on windows
+            "start"
+        ],
+        "languageId": "bash",
+        "scopes":
+        [
+            "source.shell.bash"
+        ],
+        "syntaxes":
+        [
+            "Packages/ShellScript/Bash.sublime-syntax"
+        ]
+    },
     "clangd":
     {
       "command": ["clangd"],
@@ -250,6 +267,25 @@
         }
       ]
     },
+    "dart": {
+      "command": [
+        "dart_language_server"
+      ],
+      "languageId": "dart",
+      "scopes": [
+        "source.dart"
+      ],
+      "syntaxes": [
+        "Packages/Dart/Dart.tmLanguage"
+      ]
+    },
+    "flow":
+    {
+      "command": ["flow-language-server", "--stdio"],
+      "scopes": ["source.js"],
+      "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+      "languageId": "javascript"
+    },
     "haskell-ide-engine":
     {
       "command":
@@ -266,6 +302,13 @@
       [
         "Packages/Haskell/Haskell.sublime-syntax"
       ]
+    },
+    "intelephense-ls":
+    {
+         "command": ["intelephense", "--stdio"],
+         "scopes": ["source.php", "embedding.php"],
+         "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
+         "languageId": "php"
     },
     "reason":
     {
@@ -390,6 +433,34 @@
           "fixOnSave": false
         }
       }
-    }
+    },
+    "ruby": {
+      "command":
+      [
+        "solargraph",
+        "socket"
+      ],
+      "languageId": "ruby",
+      "scopes":
+      [
+        "source.ruby",
+        "source.ruby.rails"
+      ],
+      "syntaxes":
+      [
+        "Packages/Ruby/Ruby.sublime-syntax",
+        "Packages/Rails/Ruby on Rails.sublime-syntax",
+        "Packages/Rails/HTML (Rails).sublime-syntax"
+      ],
+      "tcp_port": 7658
+    },
+    "vscode-css":
+      {
+        "command": ["css-languageserver", "--stdio"],
+        "scopes": ["source.css"],
+        "syntaxes": ["Packages/CSS/CSS.sublime-syntax"],
+        "languageId": "css"
+      },
+
   }
 }

@@ -1,4 +1,4 @@
-# Self-help instructions
+## Self-help instructions
 
 In LSP Settings enable the `log_debug` setting and `log_payloads` if needed. Restart Sublime and watch the logs as you reproduce the problem.
 If you believe the issue is with this package, please include the output from the Sublime console in your issue report!

@@ -1,5 +1,5 @@
 
-# Commands and shortcuts
+## Commands and shortcuts
 
 **Plugin commands**
 
@@ -59,7 +59,7 @@ See below link, but bind to `lsp_symbol_definition` command
 https://stackoverflow.com/questions/16235706/sublime-3-set-key-map-for-function-goto-definition
 
 
-# Configuring
+## Configuring
 
 Global plugin settings and settings defined at project level are merged together.
 

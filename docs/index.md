@@ -1,5 +1,6 @@
 
-# Getting started
+
+## Getting started
 
 1. Install a language server from the list below, ensuring it can be started from the command line (is in your PATH)
 
@@ -223,9 +224,9 @@ Requires IntelliJ to be running.
 
 Please create issues / pull requests so we can get support for more languages.
 
-# Client Configuration<a name="client-config"></a>
+## Server Configuration<a name="client-config"></a>
 
-LSP ships with default client configuration for a few language servers.
+LSP ships with default configurations for a few language servers.
 These configurations need to be enabled before they will start.
 
 If your language server is missing or not configured correctly, you can add/override the below settings under the `"clients"` key in the LSP Settings.

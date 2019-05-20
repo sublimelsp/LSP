@@ -162,6 +162,13 @@
       "syntaxes": ["Packages/Rust/Rust.sublime-syntax", "Packages/Rust Enhanced/RustEnhanced.sublime-syntax"],
       "languageId": "rust"
     },
+     "ra-lsp":
+    {
+      "command": ["ra_lsp_server"],
+      "scopes": ["source.rust"],
+      "syntaxes": ["Packages/Rust/Rust.sublime-syntax", "Packages/Rust Enhanced/RustEnhanced.sublime-syntax"],
+      "languageId": "rust"
+    },
     "clangd":
     {
       "command": ["clangd"],

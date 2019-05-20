@@ -281,7 +281,7 @@
     },
     "flow":
     {
-      "command": ["flow-language-server", "--stdio"],
+      "command": ["flow", "lsp"],
       "scopes": ["source.js"],
       "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
       "languageId": "javascript"
@@ -319,7 +319,7 @@
     },
     "phpls":
     {
-        "command": ["php", "~/vendor/felixfbecker/language-server/bin/php-language-server.php"],
+        "command": ["php", "~/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"],
         "scopes": ["source.php", "embedding.php"],
         "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
         "languageId": "php"

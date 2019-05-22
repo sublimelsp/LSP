@@ -1,0 +1,45 @@
+import unittest
+import io
+from .transports import StdioTransport
+import time
+
+
+def json_rpc_message(payload: str) -> bytes:
+    content_length = len(payload)
+    return b'Content-Length: ' + bytes(
+        str(content_length), 'utf-8') + b'\r\n\r\n' + bytes(payload, 'utf-8')
+
+
+class FakeProcess(object):
+    def __init__(self):
+        self.stdin = io.BytesIO(b'foo\nbaz\n')  # io.BufferedReader()
+        self.stdout = io.BytesIO(
+            json_rpc_message("hello") +
+            json_rpc_message("world"))  # io.BufferedWriter()
+        self.returncode = None
+
+    def poll(self):
+        return self.returncode
+
+    def exit(self, returncode):
+        self.returncode = returncode
+
+
+class StdioTransportTests(unittest.TestCase):
+    def test_read_messages(self):
+
+        process = FakeProcess()
+        t = StdioTransport(process)  # type: ignore
+        self.assertIsNotNone(t)
+        received = []
+
+        def on_receive(msg):
+            received.append(msg)
+
+        def on_close():
+            pass
+
+        t.start(on_receive, on_close)
+        time.sleep(0.01)
+        self.assertEqual(received, ["hello", "world"])
+        t.close()

@@ -51,7 +51,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return is_supported_syntax(syntax) if syntax else False
+        return is_supported_syntax(syntax, client_configs) if syntax else False
 
     def initialize(self):
         self.initialized = True

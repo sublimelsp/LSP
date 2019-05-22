@@ -21,7 +21,6 @@ class Settings(object):
         self.show_diagnostics_severity_level = 3
         self.only_show_lsp_completions = False
         self.diagnostics_highlight_style = "underline"
-        self.highlight_active_signature_parameter = True
         self.document_highlight_style = "stippled"
         self.document_highlight_scopes = {
             "unknown": "text",
@@ -33,7 +32,6 @@ class Settings(object):
         self.show_code_actions_bulb = False
         self.complete_all_chars = False
         self.completion_hint_type = "auto"
-        self.resolve_completion_for_snippets = False
         self.prefer_label_over_filter_text = False
         self.show_references_in_quick_panel = False
         self.quick_panel_monospace_font = False
@@ -65,9 +63,9 @@ class LanguageConfig(object):
 
 class ClientConfig(object):
     def __init__(self, name: str, binary_args: 'List[str]', tcp_port: 'Optional[int]', scopes=[],
-                 syntaxes=[], languageId: 'Optional[str]'=None,
-                 languages: 'List[LanguageConfig]'=[], enabled: bool=True, init_options=dict(),
-                 settings=dict(), env=dict(), tcp_host: 'Optional[str]'=None) -> None:
+                 syntaxes=[], languageId: 'Optional[str]' = None,
+                 languages: 'List[LanguageConfig]' = [], enabled: bool = True, init_options=dict(),
+                 settings=dict(), env=dict(), tcp_host: 'Optional[str]' = None) -> None:
         self.name = name
         self.binary_args = binary_args
         self.tcp_port = tcp_port

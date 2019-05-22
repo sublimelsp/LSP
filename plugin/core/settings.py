@@ -53,8 +53,6 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings):
     settings.show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
     settings.show_diagnostics_severity_level = read_int_setting(settings_obj, "show_diagnostics_severity_level", 3)
     settings.diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
-    settings.highlight_active_signature_parameter = read_bool_setting(settings_obj,
-                                                                      "highlight_active_signature_parameter", True)
     settings.document_highlight_style = read_str_setting(settings_obj, "document_highlight_style", "stippled")
     settings.document_highlight_scopes = read_dict_setting(settings_obj, "document_highlight_scopes",
                                                            settings.document_highlight_scopes)
@@ -63,7 +61,6 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings):
     settings.only_show_lsp_completions = read_bool_setting(settings_obj, "only_show_lsp_completions", False)
     settings.complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
     settings.completion_hint_type = read_str_setting(settings_obj, "completion_hint_type", "auto")
-    settings.resolve_completion_for_snippets = read_bool_setting(settings_obj, "resolve_completion_for_snippets", False)
     settings.prefer_label_over_filter_text = read_bool_setting(settings_obj, "prefer_label_over_filter_text", False)
     settings.show_references_in_quick_panel = read_bool_setting(settings_obj, "show_references_in_quick_panel", False)
     settings.quick_panel_monospace_font = read_bool_setting(settings_obj, "quick_panel_monospace_font", False)
@@ -90,7 +87,7 @@ class ClientConfigs(object):
         self._external_configs[config.name] = config
 
     def update_configs(self):
-        self.all = []  # type: List[ClientConfig]
+        del self.all[:]
 
         for config_name, config in self._external_configs.items():
             user_settings = self._global_settings.get(config_name, dict())

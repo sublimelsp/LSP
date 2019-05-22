@@ -1,0 +1,20 @@
+=> 0.8.3
+
+Includes some refactoring and cleanups for improved testing.
+
+Features:
+
+* Completions can use filterText for completion trigger (@rwols)
+* Improved performance applying document edits (@haferburg)
+* New configurations for Metals, gopls
+
+Fixes:
+
+(Various small fixes)
+
+Deprecations:
+
+`resolve_completion_for_snippets` setting removed, feature no longer supported.
+
+
+See https://github.com/tomv564/LSP/releases/tag/0.8.3 for full update details.

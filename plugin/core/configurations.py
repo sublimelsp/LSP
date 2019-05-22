@@ -1,8 +1,7 @@
 import re
-import sublime
 from copy import deepcopy
 
-from .settings import ClientConfig, client_configs, LanguageConfig
+from .types import ClientConfig, LanguageConfig
 from .logging import debug
 from .types import config_supports_syntax
 from .workspace import get_project_config
@@ -11,7 +10,9 @@ from .windows import ViewLike, WindowLike, ConfigRegistry
 assert ClientConfig
 
 try:
+    import sublime
     from typing import Any, List, Dict, Tuple, Callable, Optional
+    assert sublime
     assert Any and List and Dict and Tuple and Callable and Optional
     assert ViewLike and WindowLike and ConfigRegistry and LanguageConfig
 except ImportError:
@@ -19,7 +20,7 @@ except ImportError:
 
 
 def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]',
-                            point: 'Optional[int]'=None) -> 'Optional[ClientConfig]':
+                            point: 'Optional[int]' = None) -> 'Optional[ClientConfig]':
     # When there are multiple server configurations, all of which are for
     # similar scopes (e.g. 'source.json', 'source.json.sublime.settings') the
     # configuration with the most specific scope (highest ranked selector)
@@ -49,12 +50,12 @@ def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]',
     return scope_client_config
 
 
-def get_global_client_config(view: sublime.View) -> 'Optional[ClientConfig]':
-    return get_scope_client_config(view, client_configs.all)
+def get_global_client_config(view: 'sublime.View', global_configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':
+    return get_scope_client_config(view, global_configs)
 
 
-def create_window_configs(window: 'sublime.Window') -> 'List[ClientConfig]':
-    return list(map(lambda c: apply_window_settings(c, window), client_configs.all))
+def create_window_configs(window: 'sublime.Window', global_configs: 'List[ClientConfig]') -> 'List[ClientConfig]':
+    return list(map(lambda c: apply_window_settings(c, window), global_configs))
 
 
 def apply_window_settings(client_config: 'ClientConfig', window: 'sublime.Window') -> 'ClientConfig':
@@ -83,8 +84,8 @@ def apply_window_settings(client_config: 'ClientConfig', window: 'sublime.Window
     return client_config
 
 
-def is_supported_syntax(syntax: str) -> bool:
-    for config in client_configs.all:
+def is_supported_syntax(syntax: str, configs: 'List[ClientConfig]') -> bool:
+    for config in configs:
         for language in config.languages:
             if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in language.syntaxes), syntax, re.IGNORECASE):
                 return True
@@ -100,8 +101,11 @@ def syntax_language(config: 'ClientConfig', syntax: str) -> 'Optional[LanguageCo
 
 class ConfigManager(object):
 
+    def __init__(self, global_configs: 'List[ClientConfig]') -> None:
+        self._configs = global_configs
+
     def for_window(self, window: 'Any') -> 'ConfigRegistry':
-        return WindowConfigManager(create_window_configs(window))
+        return WindowConfigManager(create_window_configs(window, self._configs))
 
 
 class WindowConfigManager(object):
@@ -147,7 +151,7 @@ def _merge_dicts(dict_a: dict, dict_b: dict) -> dict:
     """Merge dict_b into dict_a with one level of recurse"""
     result_dict = deepcopy(dict_a)
     for key, value in dict_b.items():
-        if isinstance(value, dict):
+        if isinstance(result_dict.get(key), dict) and isinstance(value, dict):
             result_dict.setdefault(key, {}).update(value)
         else:
             result_dict[key] = value

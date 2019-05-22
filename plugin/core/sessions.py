@@ -4,6 +4,7 @@ from .transports import start_tcp_transport
 from .rpc import Client, attach_stdio_client
 from .process import start_server
 from .url import filename_to_uri
+from .logging import debug
 import os
 from .protocol import CompletionItemKind, SymbolKind
 try:
@@ -14,7 +15,7 @@ except ImportError:
 
 
 def create_session(config: ClientConfig, project_path: str, env: dict, settings: Settings,
-                   on_created=None, on_ended: 'Optional[Callable[[str], None]]'=None,
+                   on_created=None, on_ended: 'Optional[Callable[[str], None]]' = None,
                    bootstrap_client=None) -> 'Optional[Session]':
     session = None
     if config.binary_args:
@@ -29,7 +30,7 @@ def create_session(config: ClientConfig, project_path: str, env: dict, settings:
                     # try to terminate the process
                     try:
                         process.terminate()
-                    except Exception as e:
+                    except Exception:
                         pass
             else:
                 client = attach_stdio_client(process, settings)
@@ -44,7 +45,7 @@ def create_session(config: ClientConfig, project_path: str, env: dict, settings:
             session = Session(config, project_path, bootstrap_client,
                               on_created, on_ended)
         else:
-            raise Exception("No way to start session")
+            debug("No way to start session")
 
     return session
 
@@ -91,7 +92,10 @@ def get_initialize_params(project_path: str, config: ClientConfig):
                 },
                 "signatureHelp": {
                     "signatureInformation": {
-                        "documentationFormat": ["markdown", "plaintext"]
+                        "documentationFormat": ["markdown", "plaintext"],
+                        "parameterInformation": {
+                            "labelOffsetSupport": True
+                        }
                     }
                 },
                 "references": {},
@@ -148,7 +152,7 @@ def get_initialize_params(project_path: str, config: ClientConfig):
 
 class Session(object):
     def __init__(self, config: ClientConfig, project_path, client: Client,
-                 on_created=None, on_ended: 'Optional[Callable[[str], None]]'=None) -> None:
+                 on_created=None, on_ended: 'Optional[Callable[[str], None]]' = None) -> None:
         self.config = config
         self.project_path = project_path
         self.state = ClientStates.STARTING

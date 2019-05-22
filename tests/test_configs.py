@@ -62,6 +62,7 @@ class WindowConfigTests(DeferrableTestCase):
         self.view = sublime.active_window().open_file(test_file_path)
 
     def test_window_without_configs(self):
+        yield 100
         wm = windows.lookup(sublime.active_window())
         self.assertFalse(wm._configs.syntax_supported(self.view))
 

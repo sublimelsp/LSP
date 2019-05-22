@@ -1,0 +1,7 @@
+site_name: Sublime Text Language Server Protocol Documentation
+theme: readthedocs
+
+nav:
+    - Home: 'index.md'
+    - Features: 'features.md'
+    - Troubleshooting: 'troubleshooting.md'

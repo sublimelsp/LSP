@@ -41,7 +41,7 @@ STATE_HEADERS = 0
 STATE_CONTENT = 1
 
 
-def start_tcp_transport(port: int, host: 'Optional[str]'=None) -> 'Transport':
+def start_tcp_transport(port: int, host: 'Optional[str]' = None) -> 'Transport':
     start_time = time.time()
     debug('connecting to {}:{}'.format(host or "localhost", port))
 
@@ -49,7 +49,7 @@ def start_tcp_transport(port: int, host: 'Optional[str]'=None) -> 'Transport':
         try:
             sock = socket.create_connection((host or "localhost", port))
             return TCPTransport(sock)
-        except ConnectionRefusedError as e:
+        except ConnectionRefusedError:
             pass
 
     # process.kill()

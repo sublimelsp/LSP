@@ -9,16 +9,15 @@ except ImportError:
 
 from .core.protocol import Request
 from .core.events import global_events
-from .core.settings import settings
-from .core.logging import debug, exception_log
-from .core.protocol import CompletionItemKind, Range
+from .core.settings import settings, client_configs
+from .core.logging import debug
+from .core.completion import parse_completion_response
 from .core.registry import session_for_view, client_for_view
 from .core.configurations import is_supported_syntax
 from .core.documents import get_document_position
 from .core.sessions import Session
 
 NO_COMPLETION_SCOPES = 'comment, string'
-completion_item_kind_names = {v: k for k, v in CompletionItemKind.__dict__.items()}
 
 
 class CompletionState(object):
@@ -26,90 +25,6 @@ class CompletionState(object):
     REQUESTING = 1
     APPLYING = 2
     CANCELLING = 3
-
-
-resolvable_completion_items = []  # type: List[Any]
-
-
-def find_completion_item(label: str) -> 'Optional[Any]':
-    matches = list(filter(lambda i: i.get("label") == label, resolvable_completion_items))
-    return matches[0] if matches else None
-
-
-class CompletionContext(object):
-
-    def __init__(self, begin):
-        self.begin = begin  # type: Optional[int]
-        self.end = None  # type: Optional[int]
-        self.region = None  # type: Optional[sublime.Region]
-        self.committing = False
-
-    def committed_at(self, end):
-        self.end = end
-        self.region = sublime.Region(self.begin, self.end)
-        self.committing = False
-
-
-current_completion = None  # type: Optional[CompletionContext]
-
-
-def has_resolvable_completions(view):
-    session = session_for_view(view)
-    if session:
-        completionProvider = session.get_capability(
-            'completionProvider')
-        if completionProvider:
-            if completionProvider.get('resolveProvider', False):
-                return True
-    return False
-
-
-class CompletionSnippetHandler(sublime_plugin.EventListener):
-
-    def on_query_completions(self, view, prefix, locations):
-        global current_completion
-        if settings.resolve_completion_for_snippets and has_resolvable_completions(view):
-            current_completion = CompletionContext(view.sel()[0].begin())
-
-    def on_text_command(self, view, command_name, args):
-        if settings.resolve_completion_for_snippets and current_completion:
-            current_completion.committing = command_name in ('commit_completion', 'insert_best_completion')
-
-    def on_modified(self, view):
-        global current_completion
-
-        if settings.resolve_completion_for_snippets and view.file_name():
-            if current_completion and current_completion.committing:
-                current_completion.committed_at(view.sel()[0].end())
-                inserted = view.substr(current_completion.region)
-                item = find_completion_item(inserted)
-                if item:
-                    self.resolve_completion(item, view)
-                else:
-                    current_completion = None
-
-    def resolve_completion(self, item, view):
-        session = session_for_view(view)
-        if not session:
-            return
-        if not session.client:
-            return
-
-        session.client.send_request(
-            Request.resolveCompletionItem(item),
-            lambda response: self.handle_resolve_response(response, view))
-
-    def handle_resolve_response(self, response, view):
-        # replace inserted text if a snippet was returned.
-        if current_completion and response.get('insertTextFormat') == 2:  # snippet
-            insertText = response.get('insertText')
-            try:
-                sel = view.sel()
-                sel.clear()
-                sel.add(current_completion.region)
-                view.run_command("insert_snippet", {"contents": insertText})
-            except Exception as err:
-                exception_log("Error inserting snippet: " + insertText, err)
 
 
 last_text_command = None
@@ -127,8 +42,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
-        self.resolve = False
-        self.resolve_details = []  # type: List[Tuple[str, str]]
         self.state = CompletionState.IDLE
         self.completions = []  # type: List[Any]
         self.next_request = None  # type: Optional[Tuple[str, List[int]]]
@@ -150,7 +63,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 self.enabled = True
                 self.trigger_chars = completionProvider.get(
                     'triggerCharacters') or []
-                self.has_resolve_provider = completionProvider.get('resolveProvider', False)
                 if self.trigger_chars:
                     self.register_trigger_chars(session)
 
@@ -253,62 +165,12 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                     self.handle_error)
                 self.state = CompletionState.REQUESTING
 
-    def format_completion(self, item: dict) -> 'Tuple[str, str]':
-        # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
-        if settings.prefer_label_over_filter_text:
-            trigger = item["label"]
-        else:
-            trigger = item.get("filterText", item["label"])
-        # choose hint based on availability and user preference
-        hint = None
-        if settings.completion_hint_type == "auto":
-            hint = item.get("detail")
-            if not hint:
-                kind = item.get("kind")
-                if kind:
-                    hint = completion_item_kind_names[kind]
-        elif settings.completion_hint_type == "detail":
-            hint = item.get("detail")
-        elif settings.completion_hint_type == "kind":
-            kind = item.get("kind")
-            if kind:
-                hint = completion_item_kind_names.get(kind)
-        # label is an alternative for insertText if neither textEdit nor insertText is provided
-        replacement = self.text_edit_text(item) or item.get("insertText") or trigger
-        if len(replacement) > 0 and replacement[0] == '$':  # sublime needs leading '$' escaped.
-            replacement = '\\$' + replacement[1:]
-        # only return trigger with a hint if available
-        return "\t  ".join((trigger, hint)) if hint else trigger, replacement
-
-    def text_edit_text(self, item) -> 'Optional[str]':
-        text_edit = item.get("textEdit")
-        if text_edit:
-            edit_range, edit_text = text_edit.get("range"), text_edit.get("newText")
-            if edit_range and edit_text:
-                edit_range = Range.from_lsp(edit_range)
-                last_start = self.last_location - len(self.last_prefix)
-                last_row, last_col = self.view.rowcol(last_start)
-                if last_row == edit_range.start.row == edit_range.end.row and edit_range.start.col <= last_col:
-                    # sublime does not support explicit replacement with completion
-                    # at given range, but we try to trim the textEdit range and text
-                    # to the start location of the completion
-                    return edit_text[last_col - edit_range.start.col:]
-        return None
-
     def handle_response(self, response: 'Optional[Dict]'):
-        global resolvable_completion_items
 
         if self.state == CompletionState.REQUESTING:
-            items = []  # type: List[Dict]
-            if isinstance(response, dict):
-                items = response["items"] or []
-            elif isinstance(response, list):
-                items = response
-            items = sorted(items, key=lambda item: item.get("sortText") or item["label"])
-            self.completions = list(self.format_completion(item) for item in items)
-
-            if self.has_resolve_provider:
-                resolvable_completion_items = items
+            last_start = self.last_location - len(self.last_prefix)
+            last_row, last_col = self.view.rowcol(last_start)
+            self.completions = parse_completion_response(response, last_col, settings)
 
             # if insert_best_completion was just ran, undo it before presenting new completions.
             prev_char = self.view.substr(self.view.sel()[0].begin() - 1)

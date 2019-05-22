@@ -14,6 +14,7 @@ except ImportError:
 
 
 ContentLengthHeader = b"Content-Length: "
+ContentLengthHeader_len = len(ContentLengthHeader)
 TCP_CONNECT_TIMEOUT = 5
 
 try:
@@ -39,6 +40,15 @@ class Transport(object, metaclass=ABCMeta):
 
 STATE_HEADERS = 0
 STATE_CONTENT = 1
+STATE_EOF = 2
+
+StateStrings = {STATE_HEADERS: 'STATE_HEADERS',
+                STATE_CONTENT: 'STATE_CONTENT',
+                STATE_EOF:     'STATE_EOF'}
+
+
+def state_to_string(state: int) -> str:
+    return StateStrings.get(state, '<unknown state: %d>'.format(state))
 
 
 def start_tcp_transport(port: int, host: 'Optional[str]' = None) -> 'Transport':
@@ -105,7 +115,7 @@ class TCPTransport(Transport):
                     else:
                         for header in headers.split(b"\r\n"):
                             if header.startswith(ContentLengthHeader):
-                                header_value = header[len(ContentLengthHeader):]
+                                header_value = header[ContentLengthHeader_len:]
                                 content_length = int(header_value)
                                 read_state = STATE_CONTENT
                         data = rest
@@ -159,30 +169,39 @@ class StdioTransport(Transport):
         """
         Reads JSON responses from process and dispatch them to response_handler
         """
-        ContentLengthHeader = b"Content-Length: "
-
         running = True
-        while running and self.process:
+        state = STATE_HEADERS
+        content_length = 0
+        while running and self.process and state != STATE_EOF:
             running = self.process.poll() is None
-
             try:
-                content_length = 0
-                while self.process:
+                # debug("read_stdout: state = {}".format(state_to_string(state)))
+                if state == STATE_HEADERS:
                     header = self.process.stdout.readline()
-                    if header:
-                        header = header.strip()
+                    # debug('read_stdout reads: {}'.format(header))
                     if not header:
+                        # Truly, this is the EOF on the stream
+                        state = STATE_EOF
                         break
-                    if header.startswith(ContentLengthHeader):
-                        content_length = int(header[len(ContentLengthHeader):])
 
-                if (content_length > 0):
-                    content = self.process.stdout.read(content_length)
-                    self.on_receive(content.decode("UTF-8"))
+                    header = header.strip()
+                    if not header:
+                        # Not EOF, blank line -> content follows
+                        state = STATE_CONTENT
+                    elif header.startswith(ContentLengthHeader):
+                        content_length = int(header[ContentLengthHeader_len:])
+                elif state == STATE_CONTENT:
+                    if content_length > 0:
+                        content = self.process.stdout.read(content_length)
+                        self.on_receive(content.decode("UTF-8"))
+                        # debug("read_stdout: read and received {} byte message".format(content_length))
+                        content_length = 0
+                    state = STATE_HEADERS
 
             except IOError as err:
                 self.close()
                 exception_log("Failure reading stdout", err)
+                state = STATE_EOF
                 break
 
         debug("LSP stdout process ended.")
@@ -197,7 +216,8 @@ class StdioTransport(Transport):
                 break
             else:
                 try:
-                    self.process.stdin.write(bytes(message, 'UTF-8'))
+                    msgbytes = bytes(message, 'UTF-8')
+                    self.process.stdin.write(msgbytes)
                     self.process.stdin.flush()
                 except (BrokenPipeError, OSError) as err:
                     exception_log("Failure writing to stdout", err)

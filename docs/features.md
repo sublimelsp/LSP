@@ -66,7 +66,7 @@ Global plugin settings and settings defined at project level are merged together
 * `complete_all_chars` `true` *request completions for all characters, not just trigger characters*
 * `only_show_lsp_completions` `false` *disable sublime word completion and snippets from autocomplete lists*
 * `completion_hint_type` `"auto"` *override automatic completion hints with "detail", "kind" or "none"*
-* `prefer_label_over_filter_text` `false` *always use the "label" key instead of the "filterText" key in CompletionItems*
+* `completion_trigger` `replacement` *Decide how to present completions from a language server with "label", "filter_text" or "replacement"*
 * `show_references_in_quick_panel` `false` *show symbol references in Sublime's quick panel instead of the bottom panel*
 * `quick_panel_monospace_font` `false` *use monospace font for the quick panel*
 * `show_status_messages` `true` *show messages in the status bar for a few seconds*

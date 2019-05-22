@@ -10,12 +10,7 @@ except ImportError:
 completion_item_kind_names = {v: k for k, v in CompletionItemKind.__dict__.items()}
 
 
-def format_completion(item: dict, last_col: int, settings: 'Settings') -> 'Tuple[str, str]':
-    # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
-    if settings.prefer_label_over_filter_text:
-        trigger = item["label"]
-    else:
-        trigger = item.get("filterText") or item["label"]
+def extract_hint(item: dict, settings: 'Settings') -> 'Optional[str]':
     # choose hint based on availability and user preference
     hint = None
     if settings.completion_hint_type == "auto":
@@ -30,11 +25,33 @@ def format_completion(item: dict, last_col: int, settings: 'Settings') -> 'Tuple
         kind = item.get("kind")
         if kind:
             hint = completion_item_kind_names.get(kind)
+    return hint
+
+
+def extract_replacement(item: dict, last_col: int) -> str:
     # label is an alternative for insertText if neither textEdit nor insertText is provided
-    replacement = text_edit_text(item, last_col) or item.get("insertText") or trigger
+    replacement = text_edit_text(item, last_col) or item.get("insertText") or item["label"]
     if len(replacement) > 0 and replacement[0] == '$':  # sublime needs leading '$' escaped.
         replacement = '\\$' + replacement[1:]
-    # only return trigger with a hint if available
+    return replacement
+
+
+def extract_trigger(item: dict, settings: 'Settings', replacement: str) -> str:
+    if settings.completion_trigger == "label":
+        trigger = item["label"]
+    elif settings.completion_trigger == "filter_text":
+        trigger = item.get("filterText") or item["label"]
+    elif settings.completion_trigger == "replacement":
+        trigger = replacement
+    else:
+        trigger = item["label"]
+    return trigger
+
+
+def format_completion(item: dict, last_col: int, settings: 'Settings') -> 'Tuple[str, str]':
+    replacement = extract_replacement(item, last_col)
+    hint = extract_hint(item, settings)
+    trigger = extract_trigger(item, settings, replacement)
     return "\t  ".join((trigger, hint)) if hint else trigger, replacement
 
 

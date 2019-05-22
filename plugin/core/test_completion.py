@@ -20,6 +20,7 @@ intelephense_completion_sample = load_completion_sample("intelephense_completion
 
 
 settings = Settings()
+settings.completion_trigger = 'filter_text'
 
 
 class CompletionResponseParsingTests(unittest.TestCase):
@@ -44,7 +45,7 @@ class CompletionFormattingTests(unittest.TestCase):
 
     def test_prefer_label_over_filter_text(self):
         updated_settings = Settings()
-        updated_settings.prefer_label_over_filter_text = True
+        updated_settings.completion_trigger = "label"
         result = format_completion(
             {"label": "asdf", "insertText": "asdf", "filterText": "filterText"},
             0, updated_settings)

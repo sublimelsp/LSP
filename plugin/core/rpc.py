@@ -22,11 +22,8 @@ TCP_CONNECT_TIMEOUT = 5
 
 
 def format_request(payload: 'Dict[str, Any]') -> str:
-    """Converts the request into json and adds the Content-Length header"""
-    content = json.dumps(payload, sort_keys=False)
-    content_length = len(content)
-    result = "Content-Length: {}\r\n\r\n{}".format(content_length, content)
-    return result
+    """Converts the request into json"""
+    return json.dumps(payload, sort_keys=False)
 
 
 def attach_tcp_client(tcp_port: int, process: 'subprocess.Popen', settings: Settings) -> 'Optional[Client]':

@@ -68,7 +68,7 @@ class MockTransport(Transport):
 class FormatTests(unittest.TestCase):
 
     def test_converts_payload_to_string(self):
-        self.assertEqual("Content-Length: 2\r\n\r\n{}", format_request(dict()))
+        self.assertEqual("{}", format_request(dict()))
 
 
 class ClientTest(unittest.TestCase):

@@ -66,6 +66,12 @@ def start_tcp_transport(port: int, host: 'Optional[str]' = None) -> 'Transport':
     raise Exception("Timeout connecting to socket")
 
 
+def build_message(content: str) -> str:
+    content_length = len(content)
+    result = "Content-Length: {}\r\n\r\n{}".format(content_length, content)
+    return result
+
+
 class TCPTransport(Transport):
     def __init__(self, socket: 'Any') -> None:
         self.socket = socket  # type: 'Optional[Any]'
@@ -131,8 +137,8 @@ class TCPTransport(Transport):
                         is_incomplete = True
                         remaining_data = data
 
-    def send(self, message: str) -> None:
-        self.send_queue.put(message)
+    def send(self, content: str) -> None:
+        self.send_queue.put(build_message(content))
 
     def write_socket(self) -> None:
         while self.socket:
@@ -206,8 +212,8 @@ class StdioTransport(Transport):
 
         debug("LSP stdout process ended.")
 
-    def send(self, message: str) -> None:
-        self.send_queue.put(message)
+    def send(self, content: str) -> None:
+        self.send_queue.put(build_message(content))
 
     def write_stdin(self) -> None:
         while self.process:

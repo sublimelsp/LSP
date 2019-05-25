@@ -85,7 +85,7 @@ class StdioTransportTests(unittest.TestCase):
         t.send("hello")
         t.send("world")
         time.sleep(0.01)
-        self.assertEqual(process.stdin.getvalue(), b"helloworld")
+        self.assertEqual(process.stdin.getvalue(), json_rpc_message("hello") + json_rpc_message("world"))
         t.close()
 
 
@@ -121,9 +121,8 @@ class TCPTransportTests(unittest.TestCase):
             pass
 
         t.start(on_receive, on_close)
-        # TODO: move building payload into transport instead of client.
         t.send("hello")
         t.send("world")
         time.sleep(0.1)
-        self.assertEqual(sock.sent, [b"hello", b"world"])
+        self.assertEqual(sock.sent, [json_rpc_message("hello"), json_rpc_message("world")])
         t.close()

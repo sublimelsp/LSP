@@ -34,20 +34,34 @@ Client configuration:
 ```
 "vue-ls":{
   "command": [
-    "node",
-    "/ABSOLUTE/PATH/TO/SERVER/.npm-global/bin/vls"
+    "vls"
+    // note: you may need to use the absolute path to the language server binary
   ],
   "enabled": true,
   "languageId": "vue",
-  "scopes": [
-    "text.html.vue"
-  ],
-  "syntaxes": [
-    // For ST3 builds < 3153
-    "Packages/Vue Syntax Highlight/vue.tmLanguage"
-    // For ST3 builds >= 3153
-    // "Packages/Vue Syntax Highlight/Vue Component.sublime-syntax"
-  ]
+  "scopes": ["text.html.vue"],
+  "syntaxes": ["Vue Component"],
+  "initializationOptions": {
+    "config": {
+      "vetur": {
+        "useWorkspaceDependencies": false,
+        "validation": { "template": true, "style": true, "script": true },
+        "completion": { "autoImport": false, "useScaffoldSnippets": false, "tagCasing": "kebab" },
+        "format": {
+          "defaultFormatter": {"js": "none", "ts": "none"},
+          "defaultFormatterOptions": {},
+          "scriptInitialIndent": false,
+          "styleInitialIndent": false
+        }
+      },
+      "css": {},
+      "html": {"suggest": {} },
+      "javascript": {"format": {} },
+      "typescript": {"format": {} },
+      "emmet": {},
+      "stylusSupremacy": {}
+    }
+  }
 }
 ```
 

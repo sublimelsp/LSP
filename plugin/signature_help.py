@@ -38,9 +38,9 @@ class ColorSchemeScopeRenderer(object):
 
     def _wrap_with_scope_style(self, content: str, scope: str, emphasize: bool = False, escape: bool = True) -> str:
         color = self._scope_styles[scope]["color"]
-        weight_style = ';font-weight: bold' if emphasize else ''
+        additional_styles = 'font-weight: bold; text-decoration: underline;' if emphasize else ''
         content = html.escape(content, quote=False) if escape else content
-        return '<span style="color: {}{}">{}</span>'.format(color, weight_style, content)
+        return '<span style="color: {};{}">{}</span>'.format(color, additional_styles, content)
 
 
 class SignatureHelpListener(sublime_plugin.ViewEventListener):

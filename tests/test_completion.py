@@ -32,6 +32,24 @@ var_prefix_added_in_label = [
 ]
 space_added_in_label = [dict(label=' const', insertText='const')]
 
+dash_missing_from_label = [
+    dict(label='UniqueId',
+         textEdit={
+             'range': {
+                 'start': {
+                     'character': 14,
+                     'line': 26
+                 },
+                 'end': {
+                     'character': 15,
+                     'line': 26
+                 }
+             },
+             'newText': '-UniqueId'
+         },
+         insertText='-UniqueId')
+]
+
 
 class InitializationTests(DeferrableTestCase):
     def setUp(self):
@@ -207,3 +225,23 @@ class QueryCompletionsTests(TextDocumentTestCase):
             self.view.run_command("insert_best_completion")
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), 'const')
+
+    def test_dash_missing_from_label(self):
+        """
+
+        Powershell: label="UniqueId", insertText="-UniqueId" (https://github.com/tomv564/LSP/issues/572)
+
+        """
+        yield 100
+        self.view.run_command('append', {'characters': '-'})
+        self.view.run_command('move_to', {'to': 'eol'})
+
+        self.client.responses['textDocument/completion'] = dash_missing_from_label
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [1])
+            yield 100
+            self.view.run_command("insert_best_completion")
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())), '-UniqueId')

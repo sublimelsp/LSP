@@ -32,6 +32,16 @@ def format_completion(item: dict, last_col: int, settings: 'Settings') -> 'Tuple
             hint = completion_item_kind_names.get(kind)
     # label is an alternative for insertText if neither textEdit nor insertText is provided
     replacement = text_edit_text(item, last_col) or item.get("insertText") or trigger
+
+    if replacement[0] != trigger[0]:
+        # fix some common cases when server sends different start on label and replacement.
+        if replacement[0] == '$':
+            trigger = '$' + trigger  # add missing $
+        elif trigger[0] == '$':
+            trigger = trigger[1:]  # remove leading $
+        elif trigger[0] == ' ' or trigger[0] == '•':
+            trigger = trigger[1:]  # remove clangd insertion indicator
+
     if len(replacement) > 0 and replacement[0] == '$':  # sublime needs leading '$' escaped.
         replacement = '\\$' + replacement[1:]
     # only return trigger with a hint if available

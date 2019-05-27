@@ -37,7 +37,7 @@ def format_completion(item: dict, last_col: int, settings: 'Settings') -> 'Tuple
         # fix some common cases when server sends different start on label and replacement.
         if replacement[0] == '$':
             trigger = '$' + trigger  # add missing $
-        if replacement[0] == '-':
+        elif replacement[0] == '-':
             trigger = '-' + trigger  # add missing -
         elif trigger[0] == '$':
             trigger = trigger[1:]  # remove leading $

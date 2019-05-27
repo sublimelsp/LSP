@@ -1,0 +1,21 @@
+=> 0.8.4
+
+Features:
+
+Signature help popup has syntax highlighting on signature, and emphasizes active parameter (with help from @predragnikolic)
+Documentation and default configs have been updated.
+
+Fixes:
+
+* Fix for workspace edits failing to apply
+* Fix double '$' or removal of leading characters in some completions (clangd/PHP/Powershell)
+* Fix completions occasionally failing while checking view syntax (@rwols)
+* Increased protocol compatibility in stdio header parsing (@bscottm)
+
+Deprecations:
+
+`highlight_active_signature_parameter` setting removed, this is now default behaviour.
+
+See https://github.com/tomv564/LSP/releases/tag/0.8.4 for full update details.
+
+Thanks to all contributors & reporters!

@@ -35,8 +35,7 @@ class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
                 )
             else:
                 view.run_command('lsp_apply_document_edit',
-                                 {'changes': file_changes,
-                                  'show_status': False})
+                                 {'changes': file_changes})
         else:
             debug('view not found to apply', path, file_changes)
 

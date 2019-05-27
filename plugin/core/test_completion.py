@@ -85,7 +85,7 @@ class CompletionFormattingTests(unittest.TestCase):
 
         result = format_completion(item, 0, settings)
         self.assertEqual(len(result), 2)
-        self.assertEqual("true", result[0])
+        self.assertEqual("$true", result[0])
         self.assertEqual("\\$true", result[1])
 
     def test_ignore_label(self):

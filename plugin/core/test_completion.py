@@ -25,13 +25,13 @@ settings = Settings()
 class CompletionResponseParsingTests(unittest.TestCase):
 
     def test_no_response(self):
-        self.assertEqual(parse_completion_response(None, 0, settings), [])
+        self.assertEqual(parse_completion_response(None), [])
 
     def test_array_response(self):
-        self.assertEqual(parse_completion_response([], 0, settings), [])
+        self.assertEqual(parse_completion_response([]), [])
 
     def test_dict_response(self):
-        self.assertEqual(parse_completion_response({'items': []}, 0, settings), [])
+        self.assertEqual(parse_completion_response({'items': []}), [])
 
 
 class CompletionFormattingTests(unittest.TestCase):

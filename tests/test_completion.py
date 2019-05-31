@@ -1,4 +1,3 @@
-from unittesting import DeferrableTestCase
 import sublime
 from LSP.plugin.completion import CompletionHandler, CompletionState
 from setup import (SUPPORTED_SYNTAX, text_config, add_config, remove_config,
@@ -50,66 +49,55 @@ dash_missing_from_label = [
          insertText='-UniqueId')
 ]
 
+edit_before_cursor = [
+    dict(label='override def myFunction(): Unit',
+         textEdit={
+             'newText': 'override def myFunction(): Unit = ${0:???}',
+             'range': {
+                 'start': {
+                     'line': 0,
+                     'character': 2
+                 },
+                 'end': {
+                     'line': 0,
+                     'character': 18
+                 }
+             }
+         })
+]
 
-class InitializationTests(DeferrableTestCase):
-    def setUp(self):
-        self.view = sublime.active_window().new_file()
-        add_config(text_config)
 
-    def test_is_not_applicable(self):
-        self.assertFalse(CompletionHandler.is_applicable(dict()))
+# class InitializationTests(DeferrableTestCase):
+#     def setUp(self):
+#         self.view = sublime.active_window().new_file()
+#         add_config(text_config)
 
-    def test_is_applicable(self):
-        self.assertTrue(
-            CompletionHandler.is_applicable(dict(syntax=SUPPORTED_SYNTAX)))
+#     def test_is_not_applicable(self):
+#         self.assertFalse(CompletionHandler.is_applicable(dict()))
 
-    def test_not_enabled(self):
-        handler = CompletionHandler(self.view)
-        self.assertFalse(handler.initialized)
-        self.assertFalse(handler.enabled)
-        result = handler.on_query_completions("", [0])
-        yield 100
-        self.assertTrue(handler.initialized)
-        self.assertFalse(handler.enabled)
-        self.assertIsNone(result)
+#     def test_is_applicable(self):
+#         self.assertTrue(
+#             CompletionHandler.is_applicable(dict(syntax=SUPPORTED_SYNTAX)))
 
-    def tearDown(self):
-        remove_config(text_config)
-        if self.view:
-            self.view.set_scratch(True)
-            self.view.window().focus_view(self.view)
-            self.view.window().run_command("close_file")
+#     def test_not_enabled(self):
+#         handler = CompletionHandler(self.view)
+#         self.assertFalse(handler.initialized)
+#         self.assertFalse(handler.enabled)
+#         result = handler.on_query_completions("", [0])
+#         yield 100
+#         self.assertTrue(handler.initialized)
+#         self.assertFalse(handler.enabled)
+#         self.assertIsNone(result)
+
+#     def tearDown(self):
+#         remove_config(text_config)
+#         if self.view:
+#             self.view.set_scratch(True)
+#             self.view.window().focus_view(self.view)
+#             self.view.window().run_command("close_file")
 
 
 class QueryCompletionsTests(TextDocumentTestCase):
-    def _verify_completes_to(self, completions: 'List[Dict]', result: str):
-        yield 100
-        self.client.responses['textDocument/completion'] = completions
-
-        handler = self.get_view_event_listener("on_query_completions")
-        self.assertIsNotNone(handler)
-        if handler:
-            # todo: want to test trigger chars instead?
-            # self.view.run_command('insert', {"characters": '.'})
-            result = handler.on_query_completions("", [1])
-
-            # synchronous response
-            self.assertTrue(handler.initialized)
-            self.assertTrue(handler.enabled)
-            self.assertIsNotNone(result)
-            items, mask = result
-            self.assertEquals(len(items), 0)
-            self.assertEquals(mask, 0)
-
-            # now wait for server response
-            yield 100
-            self.assertEquals(handler.state, CompletionState.IDLE)
-            self.assertEquals(len(handler.completions), 2)
-
-            # verify insertion works
-            self.view.run_command("insert_best_completion")
-            self.assertEquals(
-                self.view.substr(sublime.Region(0, self.view.size())), result)
 
     def test_simple_label(self):
         yield 100
@@ -236,7 +224,8 @@ class QueryCompletionsTests(TextDocumentTestCase):
         self.view.run_command('append', {'characters': '-'})
         self.view.run_command('move_to', {'to': 'eol'})
 
-        self.client.responses['textDocument/completion'] = dash_missing_from_label
+        self.client.responses[
+            'textDocument/completion'] = dash_missing_from_label
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
@@ -244,4 +233,31 @@ class QueryCompletionsTests(TextDocumentTestCase):
             yield 100
             self.view.run_command("insert_best_completion")
             self.assertEquals(
-                self.view.substr(sublime.Region(0, self.view.size())), '-UniqueId')
+                self.view.substr(sublime.Region(0, self.view.size())),
+                '-UniqueId')
+
+    def test_edit_before_cursor(self):
+        """
+
+        Metals: label="override def myFunction(): Unit"
+
+        """
+        yield 100
+        self.view.run_command('append', {'characters': '  def myF'})
+        self.view.run_command('move_to', {'to': 'eol'})
+
+        self.client.responses[
+            'textDocument/completion'] = edit_before_cursor
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("myF", [7])
+            # self.view.run_command("auto_complete")
+            yield 100
+            # todo: this command listener should be invoked??
+            handler.on_text_command('insert_best_completion', {})
+            self.view.run_command("insert_best_completion", {})
+            yield 100
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())),
+                '  override def myFunction(): Unit = ???')

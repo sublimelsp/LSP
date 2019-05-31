@@ -2,8 +2,8 @@ import sublime
 import sublime_plugin
 
 try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional
-    assert Any and List and Dict and Tuple and Callable and Optional
+    from typing import Any, List, Dict, Tuple, Callable, Optional, Union
+    assert Any and List and Dict and Tuple and Callable and Optional and Union
 except ImportError:
     pass
 
@@ -11,11 +11,12 @@ from .core.protocol import Request
 from .core.events import global_events
 from .core.settings import settings, client_configs
 from .core.logging import debug
-from .core.completion import parse_completion_response
+from .core.completion import parse_completion_response, format_completion
 from .core.registry import session_for_view, client_for_view
 from .core.configurations import is_supported_syntax
 from .core.documents import get_document_position
 from .core.sessions import Session
+from .core.edit import parse_text_edit
 
 NO_COMPLETION_SCOPES = 'comment, string'
 
@@ -36,6 +37,15 @@ class CompletionHelper(sublime_plugin.EventListener):
         last_text_command = command_name
 
 
+class LspTrimCompletionCommand(sublime_plugin.TextCommand):
+
+    def run(self, edit, range: 'Optional[Tuple[int, int]]'=None):
+        if range:
+            start, end = range
+            region = sublime.Region(start, end)
+            self.view.erase(edit, region)
+
+
 class CompletionHandler(sublime_plugin.ViewEventListener):
     def __init__(self, view):
         self.view = view
@@ -47,6 +57,9 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         self.next_request = None  # type: Optional[Tuple[str, List[int]]]
         self.last_prefix = ""
         self.last_location = 0
+        self.committing = False
+        self.fixing = False
+        self.response = []  # type: List[dict]
 
     @classmethod
     def is_applicable(cls, settings):
@@ -103,7 +116,24 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         last_start = self.last_location - len(self.last_prefix)
         return prefix.startswith(self.last_prefix) and current_start == last_start
 
+    def find_completion_item(self, inserted: str):
+        if self.completions:
+            for index, item in enumerate(self.completions):
+                trigger, replacement = item
+
+                snippet_offset = replacement.find('$', 2)
+                if snippet_offset > -1:
+                    debug("checking if '{}' startswith '{}'".format(inserted, replacement[:snippet_offset]))
+                    if inserted.startswith(replacement[:snippet_offset]):
+                        return self.response[index]
+                else:
+                    debug("checking '{}' == '{}'".format(inserted, replacement))
+                    if replacement == inserted:
+                        return self.response[index]
+        return None
+
     def on_modified(self):
+        debug('modified, committing=', self.committing)
         # hide completion when backspacing past last completion.
         if self.view.sel()[0].begin() < self.last_location:
             self.last_location = 0
@@ -112,6 +142,32 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         prev_char = self.view.substr(self.view.sel()[0].begin() - 1)
         if self.state == CompletionState.REQUESTING and prev_char.isspace():
             self.state = CompletionState.CANCELLING
+
+        if self.committing and not self.fixing:
+            word = self.view.word(self.last_location)
+            region = sublime.Region(word.begin(), self.view.sel()[0].end())
+            inserted = self.view.substr(region)
+            debug('finding completion for inserted "{}"'.format(inserted))
+            item = self.find_completion_item(inserted)
+            if item:
+                edit = item.get('textEdit')
+                if edit:
+                    parsed_edit = parse_text_edit(edit)
+                    debug('found completion with textEdit "{}"'.format(parsed_edit))
+                    self.fixing = True
+                    start, end, newText = parsed_edit
+                    row, col = start
+                    debug('col for edit={}, completion word={}'.format(col, word.begin()))
+                    edit_start_loc = self.view.text_point(row, col)
+                    trim_range = (edit_start_loc, word.begin())
+                    debug('trimming between', trim_range)
+                    self.view.run_command("lsp_trim_completion", {'range': trim_range})
+                    self.fixing = False
+                else:
+                    debug('found completion with no textEdit', item)
+            else:
+                debug('could not find item')
+            self.committing = False
 
     def on_query_completions(self, prefix, locations):
         if prefix != "" and self.view.match_selector(locations[0], NO_COMPLETION_SCOPES):
@@ -146,6 +202,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 else sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
             )
 
+    def on_text_command(self, command_name, args):
+        debug('on_text_command', command_name)
+        self.committing = command_name in ('commit_completion', 'insert_best_completion', 'auto_complete')
+
     def do_request(self, prefix: str, locations: 'List[int]'):
         self.next_request = None
         view = self.view
@@ -158,6 +218,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         if settings.complete_all_chars or self.is_after_trigger_character(locations[0]):
             global_events.publish("view.on_purge_changes", self.view)
             document_position = get_document_position(view, locations[0])
+            debug('getting completions, location', locations[0], 'prefix', prefix)
             if document_position:
                 client.send_request(
                     Request.complete(document_position),
@@ -165,12 +226,30 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                     self.handle_error)
                 self.state = CompletionState.REQUESTING
 
-    def handle_response(self, response: 'Optional[Dict]'):
+    def handle_response(self, response: 'Optional[Union[Dict,List]]'):
+        # test_response = [dict(
+        #     label='override def myFunction(): Unit',
+        #     textEdit={
+        #         'newText': 'override def myFunction(): Unit = ${0:???}',
+        #         'range': {
+        #             'start': {
+        #                 'line': 0,
+        #                 'character': 2
+        #             },
+        #             'end': {
+        #                 'line': 0,
+        #                 'character': 18
+        #             }
+        #         }
+        #     })]
+
+        # response = test_response
 
         if self.state == CompletionState.REQUESTING:
             last_start = self.last_location - len(self.last_prefix)
             last_row, last_col = self.view.rowcol(last_start)
-            self.completions = parse_completion_response(response, last_col, settings)
+            self.response = parse_completion_response(response)
+            self.completions = list(format_completion(item, last_col, settings) for item in self.response)
 
             # if insert_best_completion was just ran, undo it before presenting new completions.
             prev_char = self.view.substr(self.view.sel()[0].begin() - 1)

@@ -246,7 +246,9 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         # response = test_response
 
         if self.state == CompletionState.REQUESTING:
-            last_start = self.last_location - len(self.last_prefix)
+            word = self.view.word(self.last_location)
+
+            last_start = word.begin()  # self.last_location - len(self.last_prefix)
             last_row, last_col = self.view.rowcol(last_start)
             self.response = parse_completion_response(response)
             self.completions = list(format_completion(item, last_col, settings) for item in self.response)

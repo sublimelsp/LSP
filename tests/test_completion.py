@@ -1,5 +1,6 @@
 import sublime
 from LSP.plugin.completion import CompletionHandler, CompletionState
+from unittesting import DeferrableTestCase
 from setup import (SUPPORTED_SYNTAX, text_config, add_config, remove_config,
                    TextDocumentTestCase)
 
@@ -67,34 +68,34 @@ edit_before_cursor = [
 ]
 
 
-# class InitializationTests(DeferrableTestCase):
-#     def setUp(self):
-#         self.view = sublime.active_window().new_file()
-#         add_config(text_config)
+class InitializationTests(DeferrableTestCase):
+    def setUp(self):
+        self.view = sublime.active_window().new_file()
+        add_config(text_config)
 
-#     def test_is_not_applicable(self):
-#         self.assertFalse(CompletionHandler.is_applicable(dict()))
+    def test_is_not_applicable(self):
+        self.assertFalse(CompletionHandler.is_applicable(dict()))
 
-#     def test_is_applicable(self):
-#         self.assertTrue(
-#             CompletionHandler.is_applicable(dict(syntax=SUPPORTED_SYNTAX)))
+    def test_is_applicable(self):
+        self.assertTrue(
+            CompletionHandler.is_applicable(dict(syntax=SUPPORTED_SYNTAX)))
 
-#     def test_not_enabled(self):
-#         handler = CompletionHandler(self.view)
-#         self.assertFalse(handler.initialized)
-#         self.assertFalse(handler.enabled)
-#         result = handler.on_query_completions("", [0])
-#         yield 100
-#         self.assertTrue(handler.initialized)
-#         self.assertFalse(handler.enabled)
-#         self.assertIsNone(result)
+    def test_not_enabled(self):
+        handler = CompletionHandler(self.view)
+        self.assertFalse(handler.initialized)
+        self.assertFalse(handler.enabled)
+        result = handler.on_query_completions("", [0])
+        yield 100
+        self.assertTrue(handler.initialized)
+        self.assertFalse(handler.enabled)
+        self.assertIsNone(result)
 
-#     def tearDown(self):
-#         remove_config(text_config)
-#         if self.view:
-#             self.view.set_scratch(True)
-#             self.view.window().focus_view(self.view)
-#             self.view.window().run_command("close_file")
+    def tearDown(self):
+        remove_config(text_config)
+        if self.view:
+            self.view.set_scratch(True)
+            self.view.window().focus_view(self.view)
+            self.view.window().run_command("close_file")
 
 
 class QueryCompletionsTests(TextDocumentTestCase):

@@ -29,7 +29,7 @@ def get_completion_hint(item: dict, settings: 'Settings') -> 'Optional[str]':
     return hint
 
 
-def format_completion(item: dict, last_col: int, settings: 'Settings') -> 'Tuple[str, str]':
+def format_completion(item: dict, word_col: int, settings: 'Settings') -> 'Tuple[str, str]':
     # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
     if settings.prefer_label_over_filter_text:
         trigger = item["label"]
@@ -39,17 +39,7 @@ def format_completion(item: dict, last_col: int, settings: 'Settings') -> 'Tuple
     hint = get_completion_hint(item, settings)
 
     # label is an alternative for insertText if neither textEdit nor insertText is provided
-    # replacement = text_edit_text(item, last_col) or item.get("insertText") or trigger
-
-    text_edit = item.get("textEdit")
-    replacement = None
-    if text_edit:
-        # if edit starts with current word,
-        # if edit starts before current word, use the whole thing and we'll fix it up later.
-        replacement = text_edit.get('newText')
-
-    if replacement is None:
-        replacement = item.get("insertText") or trigger
+    replacement = text_edit_text(item, word_col) or item.get("insertText") or trigger
 
     if replacement[0] != trigger[0]:
         # fix some common cases when server sends different start on label and replacement.
@@ -71,20 +61,21 @@ def format_completion(item: dict, last_col: int, settings: 'Settings') -> 'Tuple
     return "\t  ".join((trigger, hint)) if hint else trigger, replacement
 
 
-def text_edit_text(item: dict, last_col: int) -> 'Optional[str]':
-    text_edit = item.get("textEdit")
+def text_edit_text(item: dict, word_col: int) -> 'Optional[str]':
+    text_edit = item.get('textEdit')
     if text_edit:
         edit_range, edit_text = text_edit.get("range"), text_edit.get("newText")
         if edit_range and edit_text:
             edit_range = Range.from_lsp(edit_range)
 
-            debug('textEdit from col {}, {} applied at col {}'.format(edit_range.start.col, edit_range.end.col, last_col))
+            debug('textEdit from col {}, {} applied at col {}'.format(
+                edit_range.start.col, edit_range.end.col, word_col))
 
-            if edit_range.start.col <= last_col:
-                # sublime does not support explicit replacement with completion
-                # at given range, but we try to trim the textEdit range and text
-                # to the start location of the completion
-                return edit_text[last_col - edit_range.start.col:]
+            if edit_range.start.col <= word_col:
+                # if edit starts at current word, we can use it.
+                # if edit starts before current word, use the whole thing and we'll fix it up later.
+                return edit_text
+
     return None
 
 

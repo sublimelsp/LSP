@@ -52,6 +52,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
+        self.resolve = False
         self.state = CompletionState.IDLE
         self.completions = []  # type: List[Any]
         self.next_request = None  # type: Optional[Tuple[str, List[int]]]
@@ -74,6 +75,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 'completionProvider')
             if completionProvider:
                 self.enabled = True
+                self.resolve = completionProvider.get('resolveProvider') or False
                 self.trigger_chars = completionProvider.get(
                     'triggerCharacters') or []
                 if self.trigger_chars:
@@ -123,17 +125,17 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
                 snippet_offset = replacement.find('$', 2)
                 if snippet_offset > -1:
-                    debug("checking if '{}' startswith '{}'".format(inserted, replacement[:snippet_offset]))
+                    # debug("checking if '{}' startswith '{}'".format(inserted, replacement[:snippet_offset]))
                     if inserted.startswith(replacement[:snippet_offset]):
                         return self.response[index]
                 else:
-                    debug("checking '{}' == '{}'".format(inserted, replacement))
+                    # debug("checking '{}' == '{}'".format(inserted, replacement))
                     if replacement == inserted:
                         return self.response[index]
         return None
 
     def on_modified(self):
-        debug('modified, committing=', self.committing)
+        # debug('modified, committing=', self.committing)
         # hide completion when backspacing past last completion.
         if self.view.sel()[0].begin() < self.last_location:
             self.last_location = 0
@@ -163,6 +165,11 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                     debug('trimming between', trim_range)
                     self.view.run_command("lsp_trim_completion", {'range': trim_range})
                     self.fixing = False
+                additional_edits = item.get('additionalTextEdits')
+                if additional_edits:
+                    self.apply_additional_edits(item)
+                elif self.resolve:
+                    self.do_resolve(item)
                 else:
                     debug('found completion with no textEdit', item)
             else:
@@ -203,7 +210,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             )
 
     def on_text_command(self, command_name, args):
-        debug('on_text_command', command_name)
         self.committing = command_name in ('commit_completion', 'insert_best_completion', 'auto_complete')
 
     def do_request(self, prefix: str, locations: 'List[int]'):
@@ -226,25 +232,27 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                     self.handle_error)
                 self.state = CompletionState.REQUESTING
 
+    def do_resolve(self, item) -> None:
+        view = self.view
+
+        client = client_for_view(view)
+        if not client:
+            return
+
+        client.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
+
+    def handle_resolve_response(self, response: 'Optional[Dict]') -> None:
+        if response:
+            additional_edits = response.get('additionalTextEdits')
+            if additional_edits:
+                self.apply_additional_edits(additional_edits)
+
+    def apply_additional_edits(self, additional_edits: 'List[Dict]') -> None:
+            edits = list(parse_text_edit(additional_edit) for additional_edit in additional_edits)
+            debug('applying additional edits:', edits)
+            self.view.run_command("lsp_apply_document_edit", {'changes': edits})
+
     def handle_response(self, response: 'Optional[Union[Dict,List]]'):
-        # test_response = [dict(
-        #     label='override def myFunction(): Unit',
-        #     textEdit={
-        #         'newText': 'override def myFunction(): Unit = ${0:???}',
-        #         'range': {
-        #             'start': {
-        #                 'line': 0,
-        #                 'character': 2
-        #             },
-        #             'end': {
-        #                 'line': 0,
-        #                 'character': 18
-        #             }
-        #         }
-        #     })]
-
-        # response = test_response
-
         if self.state == CompletionState.REQUESTING:
             word = self.view.word(self.last_location)
 

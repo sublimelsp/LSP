@@ -11,6 +11,22 @@ except ImportError:
     pass
 
 label_completions = [dict(label='asdf'), dict(label='efgh')]
+completion_with_additional_edits = [
+    dict(label='asdf',
+         additionalTextEdits=[{
+             'range': {
+                 'start': {
+                     'line': 0,
+                     'character': 0
+                 },
+                 'end': {
+                     'line': 0,
+                     'character': 0
+                 }
+             },
+             'newText': 'import asdf;\n'
+         }])
+]
 insert_text_completions = [dict(label='asdf', insertText='asdf()')]
 var_completion_using_label = [dict(label='$what')]
 var_prefix_added_in_insertText = [dict(label='$what', insertText='what')]
@@ -99,7 +115,6 @@ class InitializationTests(DeferrableTestCase):
 
 
 class QueryCompletionsTests(TextDocumentTestCase):
-
     def test_simple_label(self):
         yield 100
         self.client.responses['textDocument/completion'] = label_completions
@@ -247,8 +262,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         self.view.run_command('append', {'characters': '  def myF'})
         self.view.run_command('move_to', {'to': 'eol'})
 
-        self.client.responses[
-            'textDocument/completion'] = edit_before_cursor
+        self.client.responses['textDocument/completion'] = edit_before_cursor
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
@@ -262,3 +276,54 @@ class QueryCompletionsTests(TextDocumentTestCase):
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 '  override def myFunction(): Unit = ???')
+
+    def test_additional_edits(self):
+        """
+
+        """
+        yield 100
+        self.client.responses[
+            'textDocument/completion'] = completion_with_additional_edits
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [1])
+            # self.view.run_command("auto_complete")
+            yield 100
+            # todo: this command listener should be invoked??
+            handler.on_text_command('insert_best_completion', {})
+            self.view.run_command("insert_best_completion", {})
+            yield 100
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())),
+                'import asdf;\nasdf')
+
+    def test_resolve_for_additional_edits(self):
+        """
+
+        """
+        yield 100
+        # capabilities = dict(completionProvider=dict(triggerCharacters=['.'],
+        #                                             resolveProvider=True))
+        self.client.responses['textDocument/completion'] = label_completions
+        self.client.responses[
+            'completionItem/resolve'] = completion_with_additional_edits[0]
+
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [1])
+
+            # todo: filthy hack
+            handler.resolve = True
+
+            # self.view.run_command("auto_complete")
+            yield 100
+            # todo: this command listener should be invoked??
+            handler.on_text_command('insert_best_completion', {})
+            self.view.run_command("insert_best_completion", {})
+            yield 100
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())),
+                'import asdf;\nasdf')
+            handler.resolve = False

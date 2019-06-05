@@ -167,7 +167,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                     self.fixing = False
                 additional_edits = item.get('additionalTextEdits')
                 if additional_edits:
-                    self.apply_additional_edits(item)
+                    self.apply_additional_edits(additional_edits)
                 elif self.resolve:
                     self.do_resolve(item)
                 else:

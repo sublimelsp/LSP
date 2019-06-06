@@ -49,7 +49,11 @@ def format_completion(item: dict, last_col: int, settings: 'Settings') -> 'Tuple
         replacement = '\\$' + replacement[1:]
     if limit > 0:
         if len(trigger) + len (hint) > limit:
-            hint = hint[0:limit - len(trigger)]
+            relativelimit = limit - len(trigger)
+            if relativelimit > 0:
+                hint = hint[0:relativelimit]
+            else:
+                hint=''
     # only return trigger with a hint if available
     return "\t  ".join((trigger, hint)) if hint else trigger, replacement
 

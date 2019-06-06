@@ -59,7 +59,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         self.last_prefix = ""
         self.last_location = 0
         self.committing = False
-        self.fixing = False
         self.response = []  # type: List[dict]
 
     @classmethod
@@ -119,62 +118,69 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         return prefix.startswith(self.last_prefix) and current_start == last_start
 
     def find_completion_item(self, inserted: str):
+        """
+
+        Returns the completionItem for a given replacement string.
+        Matches exactly or up to first snippet placeholder ($s)
+
+        """
         if self.completions:
             for index, item in enumerate(self.completions):
                 trigger, replacement = item
 
                 snippet_offset = replacement.find('$', 2)
                 if snippet_offset > -1:
-                    # debug("checking if '{}' startswith '{}'".format(inserted, replacement[:snippet_offset]))
                     if inserted.startswith(replacement[:snippet_offset]):
                         return self.response[index]
                 else:
-                    # debug("checking '{}' == '{}'".format(inserted, replacement))
                     if replacement == inserted:
                         return self.response[index]
         return None
 
     def on_modified(self):
-        # debug('modified, committing=', self.committing)
+
         # hide completion when backspacing past last completion.
         if self.view.sel()[0].begin() < self.last_location:
             self.last_location = 0
             self.view.run_command("hide_auto_complete")
+
         # cancel current completion if the previous input is an space
         prev_char = self.view.substr(self.view.sel()[0].begin() - 1)
         if self.state == CompletionState.REQUESTING and prev_char.isspace():
             self.state = CompletionState.CANCELLING
 
-        if self.committing and not self.fixing:
-            word = self.view.word(self.last_location)
-            region = sublime.Region(word.begin(), self.view.sel()[0].end())
-            inserted = self.view.substr(region)
-            debug('finding completion for inserted "{}"'.format(inserted))
-            item = self.find_completion_item(inserted)
-            if item:
-                edit = item.get('textEdit')
-                if edit:
-                    parsed_edit = parse_text_edit(edit)
-                    debug('found completion with textEdit "{}"'.format(parsed_edit))
-                    self.fixing = True
-                    start, end, newText = parsed_edit
-                    row, col = start
-                    debug('col for edit={}, completion word={}'.format(col, word.begin()))
-                    edit_start_loc = self.view.text_point(row, col)
-                    trim_range = (edit_start_loc, word.begin())
-                    debug('trimming between', trim_range)
-                    self.view.run_command("lsp_trim_completion", {'range': trim_range})
-                    self.fixing = False
-                additional_edits = item.get('additionalTextEdits')
-                if additional_edits:
-                    self.apply_additional_edits(additional_edits)
-                elif self.resolve:
-                    self.do_resolve(item)
-                else:
-                    debug('found completion with no textEdit', item)
-            else:
-                debug('could not find item')
+        if self.committing:
             self.committing = False
+            self.on_completion_inserted()
+
+    def on_completion_inserted(self):
+        word = self.view.word(self.last_location)
+        region = sublime.Region(word.begin(), self.view.sel()[0].end())
+        inserted = self.view.substr(region)
+        item = self.find_completion_item(inserted)
+        if item:
+            edit = item.get('textEdit')
+            if edit:
+                parsed_edit = parse_text_edit(edit)
+                start, end, newText = parsed_edit
+                row, col = start
+                edit_start_loc = self.view.text_point(row, col)
+
+                # if the edit started before the word, we need to trim back to the start of the edit.
+                if edit_start_loc < word.begin():
+                    trim_range = (edit_start_loc, word.begin())
+                    debug('trimming between', trim_range, 'because textEdit', parsed_edit)
+                    self.view.run_command("lsp_trim_completion", {'range': trim_range})
+
+            # import statements, etc. some servers only return these after a resolve.
+            additional_edits = item.get('additionalTextEdits')
+            if additional_edits:
+                self.apply_additional_edits(additional_edits)
+            elif self.resolve:
+                self.do_resolve(item)
+
+        else:
+            debug('could not find completion item for inserted "{}"'.format(inserted))
 
     def on_query_completions(self, prefix, locations):
         if prefix != "" and self.view.match_selector(locations[0], NO_COMPLETION_SCOPES):
@@ -251,12 +257,13 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             edits = list(parse_text_edit(additional_edit) for additional_edit in additional_edits)
             debug('applying additional edits:', edits)
             self.view.run_command("lsp_apply_document_edit", {'changes': edits})
+            sublime.status_message('Applied additional edits for completion')
 
     def handle_response(self, response: 'Optional[Union[Dict,List]]'):
         if self.state == CompletionState.REQUESTING:
             word = self.view.word(self.last_location)
 
-            last_start = word.begin()  # self.last_location - len(self.last_prefix)
+            last_start = word.begin()
             last_row, last_col = self.view.rowcol(last_start)
             self.response = parse_completion_response(response)
             self.completions = list(format_completion(item, last_col, settings) for item in self.response)

@@ -267,9 +267,8 @@ class QueryCompletionsTests(TextDocumentTestCase):
         self.assertIsNotNone(handler)
         if handler:
             handler.on_query_completions("myF", [7])
-            # self.view.run_command("auto_complete")
             yield 100
-            # todo: this command listener should be invoked??
+            # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('insert_best_completion', {})
             self.view.run_command("insert_best_completion", {})
             yield 100
@@ -278,9 +277,6 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 '  override def myFunction(): Unit = ???')
 
     def test_additional_edits(self):
-        """
-
-        """
         yield 100
         self.client.responses[
             'textDocument/completion'] = completion_with_additional_edits
@@ -288,9 +284,8 @@ class QueryCompletionsTests(TextDocumentTestCase):
         self.assertIsNotNone(handler)
         if handler:
             handler.on_query_completions("", [1])
-            # self.view.run_command("auto_complete")
             yield 100
-            # todo: this command listener should be invoked??
+            # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('insert_best_completion', {})
             self.view.run_command("insert_best_completion", {})
             yield 100
@@ -299,12 +294,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 'import asdf;\nasdf')
 
     def test_resolve_for_additional_edits(self):
-        """
-
-        """
         yield 100
-        # capabilities = dict(completionProvider=dict(triggerCharacters=['.'],
-        #                                             resolveProvider=True))
         self.client.responses['textDocument/completion'] = label_completions
         self.client.responses[
             'completionItem/resolve'] = completion_with_additional_edits[0]
@@ -314,12 +304,11 @@ class QueryCompletionsTests(TextDocumentTestCase):
         if handler:
             handler.on_query_completions("", [1])
 
-            # todo: filthy hack
+            # note: ideally the handler is initialized with resolveProvider capability
             handler.resolve = True
 
-            # self.view.run_command("auto_complete")
             yield 100
-            # todo: this command listener should be invoked??
+            # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('insert_best_completion', {})
             self.view.run_command("insert_best_completion", {})
             yield 100

@@ -67,6 +67,10 @@
   // "kind": completion kind if available
   // "none": completion item label only
   "completion_hint_type": "auto",
+    
+  // Controls the lenght of the hint
+  // 0 : no lenght limit
+  "completion_maxsize":0,
 
   // Disable Sublime Text's explicit and word completion.
   "only_show_lsp_completions": false,

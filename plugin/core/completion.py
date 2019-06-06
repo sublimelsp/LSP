@@ -18,6 +18,7 @@ def format_completion(item: dict, last_col: int, settings: 'Settings') -> 'Tuple
         trigger = item.get("filterText") or item["label"]
     # choose hint based on availability and user preference
     hint = None
+    limit = settings.completion_maxsize
     if settings.completion_hint_type == "auto":
         hint = item.get("detail")
         if not hint:
@@ -46,6 +47,9 @@ def format_completion(item: dict, last_col: int, settings: 'Settings') -> 'Tuple
 
     if len(replacement) > 0 and replacement[0] == '$':  # sublime needs leading '$' escaped.
         replacement = '\\$' + replacement[1:]
+    if limit > 0:
+        if len(trigger) + len (hint) > limit:
+            hint = hint[0:limit - len(trigger)]
     # only return trigger with a hint if available
     return "\t  ".join((trigger, hint)) if hint else trigger, replacement
 

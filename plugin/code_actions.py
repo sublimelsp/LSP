@@ -96,8 +96,8 @@ class LspCodeActionsCommand(LspTextCommand):
             titles.append(command.get('title'))  # TODO parse command and arguments
         return titles
 
-    def handle_response(self, response: 'List[Dict]') -> None:
-        self.commands = response
+    def handle_response(self, response: 'Optional[List[Dict]]') -> None:
+        self.commands = response or []
         self.show_popup_menu()
 
     def show_popup_menu(self) -> None:

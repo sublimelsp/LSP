@@ -124,6 +124,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         Matches exactly or up to first snippet placeholder ($s)
 
         """
+        # TODO: candidate for extracting and thorough testing.
         if self.completions:
             for index, item in enumerate(self.completions):
                 trigger, replacement = item
@@ -154,17 +155,19 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             self.on_completion_inserted()
 
     def on_completion_inserted(self):
+        # get text inserted from last completion
         word = self.view.word(self.last_location)
         region = sublime.Region(word.begin(), self.view.sel()[0].end())
         inserted = self.view.substr(region)
+
         item = self.find_completion_item(inserted)
         if item:
+            # the newText is already inserted, now we need to check where it should start.
             edit = item.get('textEdit')
             if edit:
                 parsed_edit = parse_text_edit(edit)
                 start, end, newText = parsed_edit
-                row, col = start
-                edit_start_loc = self.view.text_point(row, col)
+                edit_start_loc = self.view.text_point(*start)
 
                 # if the edit started before the word, we need to trim back to the start of the edit.
                 if edit_start_loc < word.begin():
@@ -261,10 +264,12 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
     def handle_response(self, response: 'Optional[Union[Dict,List]]'):
         if self.state == CompletionState.REQUESTING:
-            word = self.view.word(self.last_location)
 
+            # where does the current word start?
+            word = self.view.word(self.last_location)
             last_start = word.begin()
-            last_row, last_col = self.view.rowcol(last_start)
+            _last_row, last_col = self.view.rowcol(last_start)
+
             self.response = parse_completion_response(response)
             self.completions = list(format_completion(item, last_col, settings) for item in self.response)
 

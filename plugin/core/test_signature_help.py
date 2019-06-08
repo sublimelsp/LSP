@@ -195,17 +195,6 @@ class RenderSignatureLabelTests(unittest.TestCase):
  \n<variable.parameter>foo</variable.parameter>\
  \n<variable.parameter emphasize>foo</variable.parameter></entity.name.function>""")
 
-    def test_escape_content(self):
-        sig = create_signature("foobar<T>(foo: Option<i32>) -> List<T>", "foo: Option<i32>", activeParameter=0)
-        help = create_signature_help(dict(signatures=[sig]))
-        if help:
-            label = render_signature_label(renderer, help.active_signature(), 0)
-            self.assertEqual(label, """
-<entity.name.function>foobar&lt;T&gt;
-<punctuation>(</punctuation>
-<variable.parameter emphasize>foo: Option&lt;i32&gt;</variable.parameter>
-<punctuation>)</punctuation> -&gt; List&lt;T&gt;</entity.name.function>""")
-
 
 class SignatureHelpTests(unittest.TestCase):
 

@@ -130,6 +130,29 @@ Then the LSP plugin should launch as configured in `LSP.sublime-settings` using 
 
 See the dedicated <a href="cplusplus"/>C/C++</a> guide for using ccls, cquery or clangd.
 
+### D<a name="d"></a>
+
+See instructions for [d-language-server](https://github.com/d-language-server/dls).
+
+```
+dub fetch dls
+dub run dls:bootstrap
+```
+
+Add to LSP settings' clients:
+
+```json
+
+"dls": {
+    "command": ["<PATH TO DLS EXECUTABLE>"],
+    "enabled": true,
+    "languageId": "d",
+    "scopes": ["source.d"],
+    "syntaxes": ["Packages/D/D.sublime-syntax"]
+}
+```
+
+
 ### Ocaml/Reason<a name="reason"></a>
 
 You will need to install [sublime-reason](https://github.com/reasonml-editor/sublime-reason) and the dependencies listed in the repo, such as [ocaml-language-server](https://github.com/freebroccolo/ocaml-language-server). If you only use OCaml, you still need those listed dependencies, but not the sublime-reason plugin itself.

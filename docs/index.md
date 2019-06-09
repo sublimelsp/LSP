@@ -239,6 +239,46 @@ Install the [bash language server](https://github.com/mads-hartmann/bash-languag
 
 ```npm i -g bash-language-server```
 
+### XML
+
+Discussed in [this issue](https://github.com/tomv564/LSP/issues/578)
+
+Download jar from [angelozerr/lsp4xml](https://github.com/angelozerr/lsp4xml/releases)
+
+Add config:
+
+```json
+"lsp4xml":
+{
+    "command":
+    [
+        "java",
+
+        // false on windows, true on other operating systems
+        "-DwatchParentProcess=false",
+        // JVM options (not necessary) but the vscode extension uses them by default
+        "-noverify",  // bypass class verification
+        "-Xmx64M",  // set the maximum heap size
+        "-XX:+UseG1GC",  // use the G1 garbage collector
+        "-XX:+UseStringDeduplication",  // enable string deduplication optimisation
+        "-jar",
+        "PATH/TO/org.eclipse.lsp4xml-uber.jar"
+    ],
+    "enabled": true,
+    "languageId": "xml",
+    "scopes":
+    [
+        "text.xml"
+    ],
+    "syntaxes":
+    [
+        "Packages/XML/XML.sublime-syntax"
+    ]
+}
+
+```
+
+
 ### IntelliJ
 
 Requires IntelliJ to be running.

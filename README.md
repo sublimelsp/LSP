@@ -54,6 +54,7 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [Rust](https://lsp.readthedocs.io/en/latest/#rust)
 * [Scala](https://lsp.readthedocs.io/en/latest/#scala)
 * [Vue (JavaScript)](https://lsp.readthedocs.io/en/latest/#vue)
+* [XML](https://lsp.readthedocs.io/en/latest/#xml)
 
 See [Language Server Protocol](https://microsoft.github.io/language-server-protocol/implementors/servers/) for more available implementations. Please create issues/pull requests so we can get support for more languages.
 

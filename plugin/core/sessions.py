@@ -135,7 +135,9 @@ def get_initialize_params(project_path: str, config: ClientConfig):
                 "formatting": {},
                 "rangeFormatting": {},
                 "definition": {},
-                "codeAction": {},
+                "codeAction": {
+                    "codeActionLiteralSupport": {}
+                },
                 "rename": {}
             },
             "workspace": {

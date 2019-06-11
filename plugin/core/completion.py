@@ -79,11 +79,13 @@ def text_edit_text(item: dict, word_col: int) -> 'Optional[str]':
     return None
 
 
-def parse_completion_response(response: 'Optional[Union[Dict,List]]'):
+def parse_completion_response(response: 'Optional[Union[Dict,List]]') -> 'Tuple[List[Dict], bool]':
     items = []  # type: List[Dict]
+    is_incomplete = False
     if isinstance(response, dict):
         items = response["items"] or []
+        is_incomplete = response.get("isIncomplete", False)
     elif isinstance(response, list):
         items = response
     items = sorted(items, key=lambda item: item.get("sortText") or item["label"])
-    return items
+    return items, is_incomplete

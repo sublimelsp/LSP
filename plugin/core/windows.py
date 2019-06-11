@@ -493,7 +493,6 @@ class WindowManager(object):
 
     def _handle_view_closed(self, view, session):
         if view.file_name():
-            self._diagnostics.remove(view.file_name(), session.config.name)
             if not self._is_closing:
                 if not self._window.is_valid():
                     # try to detect close synchronously (for quitting)

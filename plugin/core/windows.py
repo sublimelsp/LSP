@@ -471,7 +471,7 @@ class WindowManager(object):
 
         client.on_notification(
             "window/logMessage",
-            lambda params: server_log(params.get("message", "???") if params else "???"))
+            lambda params: server_log(config.name, params.get("message", "???") if params else "???"))
 
         self._handlers.on_initialized(config.name, self._window, client)
 

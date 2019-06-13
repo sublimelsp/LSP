@@ -77,6 +77,21 @@ Alternatively, Microsoft's python language server (using .NET Core runtime)
 
 [Instructions here](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md)
 
+Use virtualenv adding the following settings :
+
+```json
+"settings": {
+        "python_interpreter": "/Users/mike/.virtualenvs/my-virtual-env/bin/python",
+        "LSP": {
+            "pyls": {
+                "env": {
+                    "PYTHONPATH": "/Users/mike/.virtualenvs/my-virtual-env/lib/python3.7/site-packages"
+                }
+            }
+        }
+    }
+```
+
 ### PHP<a name="php"></a>
 
 #### Intelephense

@@ -47,6 +47,8 @@ def format_completion(item: dict, word_col: int, settings: 'Settings') -> 'Tuple
             trigger = '$' + trigger  # add missing $
         elif replacement[0] == '-':
             trigger = '-' + trigger  # add missing -
+        elif trigger[0] == ':':
+            replacement = ':' + replacement  # add missing :
         elif trigger[0] == '$':
             trigger = trigger[1:]  # remove leading $
         elif trigger[0] == ' ' or trigger[0] == '•':

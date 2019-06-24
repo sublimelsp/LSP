@@ -160,11 +160,9 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         else:
             if self.view.is_auto_complete_visible():
                 if self.response_incomplete:
-                    debug('incomplete, triggering new completions')
+                    # debug('incomplete, triggering new completions')
                     self.view.run_command("hide_auto_complete")
                     sublime.set_timeout(self.run_auto_complete, 0)
-                else:
-                    debug('buffer modified but response was complete')
 
     def on_completion_inserted(self):
         # get text inserted from last completion
@@ -210,7 +208,6 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
         if self.enabled:
             reuse_completion = self.is_same_completion(prefix, locations)
-            debug('on_query_completions', prefix, locations, 'state', self.state, 'reuse', reuse_completion)
             if self.state == CompletionState.IDLE:
                 if not reuse_completion:
                     self.last_prefix = prefix

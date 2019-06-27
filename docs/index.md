@@ -81,7 +81,6 @@ Use virtualenv adding the following settings :
 
 ```json
 "settings": {
-        "python_interpreter": "/Users/mike/.virtualenvs/my-virtual-env/bin/python",
         "LSP": {
             "pyls": {
                 "env": {

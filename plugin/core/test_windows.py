@@ -35,7 +35,7 @@ class MockView(object):
         self._file_name = file_name
         self._window = None
         self._settings = MockSublimeSettings({"syntax": "Plain Text"})
-        self._status = dict()  # type: Dict[str, str]
+        self._status = {}  # type: Dict[str, str]
         self._text = "asdf"
 
     def file_name(self):
@@ -221,7 +221,7 @@ class TestDocumentHandlerFactory(object):
 
 
 def mock_start_session(window, project_path, config, on_created: 'Callable', on_ended: 'Callable'):
-    return create_session(test_config, project_path, dict(), MockSettings(),
+    return create_session(test_config, project_path, {}, MockSettings(),
                           bootstrap_client=MockClient(),
                           on_created=on_created,
                           on_ended=on_ended)

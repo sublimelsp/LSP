@@ -82,7 +82,7 @@ def parse_signature_information(signature: 'Dict') -> 'SignatureInformation':
     parameters = signature.get('parameters')
     paren_bounds = (-1, -1)
     if parameters:
-        param_infos = list(parse_parameter_information(param) for param in parameters)
+        param_infos = [parse_parameter_information(param) for param in parameters]
         paren_bounds = parse_signature_label(signature_label, param_infos)
 
     return SignatureInformation(signature_label, get_documentation(signature), paren_bounds, param_infos)
@@ -104,14 +104,14 @@ class SignatureInformation(object):
         self.label = label
         self.documentation = documentation
         self.parameters = parameters
-        [self.open_paren_index, self.close_paren_index] = paren_bounds
+        self.open_paren_index, self.close_paren_index = paren_bounds
 
 
 def create_signature_help(response: 'Optional[Dict]') -> 'Optional[SignatureHelp]':
     if response is None:
         return None
 
-    signatures = list(parse_signature_information(signature) for signature in response.get("signatures", []))
+    signatures = [parse_signature_information(signature) for signature in response.get("signatures", [])]
     active_signature = response.get("activeSignature", -1)
     active_parameter = response.get("activeParameter", -1)
 
@@ -147,14 +147,14 @@ def render_signature_label(renderer: ScopeRenderer, sig_info: SignatureInformati
                 rendered_param = renderer.parameter(content=label[start:end], emphasize=is_current)
                 label = label[:start] + rendered_param + label[end:]
 
-                # todo: highlight commas between parameters as punctuation.
+                # TODO: highlight commas between parameters as punctuation.
 
         if sig_info.open_paren_index > -1:
             start = sig_info.open_paren_index
-            end = start+1
+            end = start + 1
             label = html.escape(label[:start], quote=False) + renderer.punctuation(label[start:end]) + label[end:]
 
-        # todo: only render up to first parameter as function scope.
+        # TODO: only render up to first parameter as function scope.
         return renderer.function(label, escape=False)
     else:
         return renderer.function(sig_info.label)
@@ -211,4 +211,4 @@ class SignatureHelp(object):
 
     def _build_overload_selector(self) -> str:
         return "**{}** of **{}** overloads (use the ↑ ↓ keys to navigate):\n".format(
-            str(self._active_signature_index + 1), str(len(self._signatures)))
+            self._active_signature_index + 1, len(self._signatures))

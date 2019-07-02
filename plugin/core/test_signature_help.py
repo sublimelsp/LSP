@@ -86,7 +86,7 @@ JSON_STRINGIFY = """"""
 
 
 def create_signature(label: str, *param_labels, **kwargs) -> dict:
-    raw = dict(label=label, parameters=list(dict(label=param_label) for param_label in param_labels))
+    raw = dict(label=label, parameters=[dict(label=param_label) for param_label in param_labels])
     raw.update(kwargs)
     return raw
 

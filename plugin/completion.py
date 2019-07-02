@@ -39,11 +39,9 @@ class CompletionHelper(sublime_plugin.EventListener):
 
 class LspTrimCompletionCommand(sublime_plugin.TextCommand):
 
-    def run(self, edit, range: 'Optional[Tuple[int, int]]'=None):
+    def run(self, edit, range: 'Optional[Tuple[int, int]]' = None):
         if range:
-            start, end = range
-            region = sublime.Region(start, end)
-            self.view.erase(edit, region)
+            self.view.erase(edit, sublime.Region(*range))
 
 
 class CompletionHandler(sublime_plugin.ViewEventListener):
@@ -123,10 +121,8 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
     def find_completion_item(self, inserted: str):
         """
-
         Returns the completionItem for a given replacement string.
         Matches exactly or up to first snippet placeholder ($s)
-
         """
         # TODO: candidate for extracting and thorough testing.
         if self.completions:
@@ -149,7 +145,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             self.last_location = 0
             self.view.run_command("hide_auto_complete")
 
-        # cancel current completion if the previous input is an space
+        # cancel current completion if the previous input is a space
         prev_char = self.view.substr(self.view.sel()[0].begin() - 1)
         if self.state == CompletionState.REQUESTING and prev_char.isspace():
             self.state = CompletionState.CANCELLING
@@ -267,10 +263,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 self.apply_additional_edits(additional_edits)
 
     def apply_additional_edits(self, additional_edits: 'List[Dict]') -> None:
-            edits = list(parse_text_edit(additional_edit) for additional_edit in additional_edits)
-            debug('applying additional edits:', edits)
-            self.view.run_command("lsp_apply_document_edit", {'changes': edits})
-            sublime.status_message('Applied additional edits for completion')
+        edits = [parse_text_edit(additional_edit) for additional_edit in additional_edits]
+        debug('applying additional edits:', edits)
+        self.view.run_command("lsp_apply_document_edit", {'changes': edits})
+        sublime.status_message('Applied additional edits for completion')
 
     def handle_response(self, response: 'Optional[Union[Dict,List]]'):
         if self.state == CompletionState.REQUESTING:
@@ -283,7 +279,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             response_items, response_incomplete = parse_completion_response(response)
             self.response_items = response_items
             self.response_incomplete = response_incomplete
-            self.completions = list(format_completion(item, last_col, settings) for item in self.response_items)
+            self.completions = [format_completion(item, last_col, settings) for item in self.response_items]
 
             # if insert_best_completion was just ran, undo it before presenting new completions.
             prev_char = self.view.substr(self.view.sel()[0].begin() - 1)

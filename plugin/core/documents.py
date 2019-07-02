@@ -24,7 +24,7 @@ def get_document_position(view: sublime.View, point: int) -> 'Optional[Dict[str,
     if file_name:
         if not point:
             point = view.sel()[0].begin()
-        d = dict()  # type: Dict[str, Any]
+        d = {}  # type: Dict[str, Any]
         d['textDocument'] = {"uri": filename_to_uri(file_name)}
         d['position'] = offset_to_point(view, point).to_lsp()
         return d

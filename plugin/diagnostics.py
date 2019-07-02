@@ -135,8 +135,7 @@ def update_diagnostics_phantoms(view: sublime.View, diagnostics: 'List[Diagnosti
     if not settings.show_diagnostics_phantoms or view.is_dirty():
         phantoms = None
     else:
-        phantoms = list(
-            create_phantom(view, diagnostic) for diagnostic in diagnostics)
+        phantoms = [create_phantom(view, diagnostic) for diagnostic in diagnostics]
     if phantoms:
         phantom_set = phantom_sets_by_buffer.get(buffer_id)
         if not phantom_set:
@@ -160,8 +159,8 @@ def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic
     if settings.show_diagnostics_phantoms and not view.is_dirty():
         regions = None
     else:
-        regions = list(range_to_region(diagnostic.range, view) for diagnostic in diagnostics
-                       if diagnostic.severity == severity)
+        regions = [range_to_region(diagnostic.range, view) for diagnostic in diagnostics
+                       if diagnostic.severity == severity]
     if regions:
         scope_name = diagnostic_severity_scopes[severity]
         view.add_regions(

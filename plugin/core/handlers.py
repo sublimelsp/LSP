@@ -22,9 +22,7 @@ class LanguageHandler(metaclass=abc.ABCMeta):
 
     @classmethod
     def instantiate_all(cls) -> 'List[LanguageHandler]':
-        return list(
-            instantiate(c) for c in cls.__subclasses__()
-            if issubclass(c, LanguageHandler))
+        return [instantiate(c) for c in cls.__subclasses__() if issubclass(c, LanguageHandler)]
 
 
 def instantiate(c: 'Type[LanguageHandler]') -> LanguageHandler:

@@ -90,7 +90,7 @@ class InitializationTests(DeferrableTestCase):
         add_config(text_config)
 
     def test_is_not_applicable(self):
-        self.assertFalse(CompletionHandler.is_applicable(dict()))
+        self.assertFalse(CompletionHandler.is_applicable({}))
 
     def test_is_applicable(self):
         self.assertTrue(
@@ -122,7 +122,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
-            # todo: want to test trigger chars instead?
+            # TODO: want to test trigger chars instead?
             # self.view.run_command('insert', {"characters": '.'})
             result = handler.on_query_completions("", [1])
 

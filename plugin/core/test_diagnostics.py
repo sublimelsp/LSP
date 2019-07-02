@@ -12,13 +12,13 @@ class WindowDiagnosticsTest(unittest.TestCase):
         wd = WindowDiagnostics()
         self.assertEqual(wd.get_by_path(__file__), [])
 
-        # todo: remove
+        # TODO: remove
 
     def test_updated_diagnostics(self):
         wd = WindowDiagnostics()
 
         test_file_path = "test.py"
-        diag = Diagnostic('message', Range(Point(0, 0), Point(1, 1)), 1, None, dict())
+        diag = Diagnostic('message', Range(Point(0, 0), Point(1, 1)), 1, None, {})
 
         wd.update(test_file_path, "test_server", [diag])
         view_diags = wd.get_by_path(test_file_path)
@@ -47,7 +47,7 @@ class WindowDiagnosticsTest(unittest.TestCase):
         wd = WindowDiagnostics()
 
         test_file_path = "test.py"
-        diag = Diagnostic('message', Range(Point(0, 0), Point(1, 1)), 1, None, dict())
+        diag = Diagnostic('message', Range(Point(0, 0), Point(1, 1)), 1, None, {})
 
         wd.update(test_file_path, "test_server", [diag])
         view_diags = wd.get_by_path(test_file_path)

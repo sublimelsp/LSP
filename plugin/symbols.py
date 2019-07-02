@@ -75,7 +75,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
 
     def handle_response(self, response: 'Optional[List]') -> None:
         response_list = response or []
-        symbols = list(format_symbol(item) for item in response_list)
+        symbols = [format_symbol(item) for item in response_list]
         self.symbols = response_list
         self.view.window().show_quick_panel(symbols, self.on_symbol_selected)
 

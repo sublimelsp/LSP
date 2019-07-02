@@ -32,7 +32,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         handler = WindowDocumentHandler(test_sublime, MockSettings(), window, events, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
-            create_session(test_config, "", dict(), MockSettings(),
+            create_session(test_config, "", {}, MockSettings(),
                            bootstrap_client=client))
         handler.add_session(session)
 
@@ -92,7 +92,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         handler = WindowDocumentHandler(test_sublime, MockSettings(), window, events, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
-            create_session(test_config, "", dict(), MockSettings(),
+            create_session(test_config, "", {}, MockSettings(),
                            bootstrap_client=client))
         handler.add_session(session)
         events.publish("view.on_activated_async", view)
@@ -107,12 +107,12 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         handler = WindowDocumentHandler(test_sublime, MockSettings(), window, events, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
-            create_session(test_config, "", dict(), MockSettings(),
+            create_session(test_config, "", {}, MockSettings(),
                            bootstrap_client=client))
         client2 = MockClient()
         test_config2 = ClientConfig("test2", [], None, languages=[test_language])
         session2 = self.assert_if_none(
-            create_session(test_config2, "", dict(), MockSettings(),
+            create_session(test_config2, "", {}, MockSettings(),
                            bootstrap_client=client2))
 
         handler.add_session(session)

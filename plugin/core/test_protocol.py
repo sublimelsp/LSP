@@ -81,4 +81,4 @@ class NotificationTests(unittest.TestCase):
         self.assertEqual(payload["jsonrpc"], "2.0")
         self.assertNotIn("id", payload)
         self.assertEqual(payload["method"], "initialized")
-        self.assertEqual(payload["params"], dict())
+        self.assertEqual(payload["params"], {})

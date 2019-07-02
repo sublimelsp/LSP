@@ -32,7 +32,7 @@ def send_code_action_request(view, on_response_recieved: 'Callable'):
         },
         "range": region_to_range(view, region).to_lsp(),
         "context": {
-            "diagnostics": list(diagnostic.to_lsp() for diagnostic in point_diagnostics)
+            "diagnostics": [diagnostic.to_lsp() for diagnostic in point_diagnostics]
         }
     }
     session.client.send_request(
@@ -82,8 +82,7 @@ class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
 
 
 def is_command(command_or_code_action: dict) -> bool:
-    command_field = command_or_code_action.get('command')
-    return isinstance(command_field, str)
+    return isinstance(command_or_code_action.get('command'), str)
 
 
 class LspCodeActionsCommand(LspTextCommand):

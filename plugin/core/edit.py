@@ -11,11 +11,11 @@ def parse_workspace_edit(workspace_edit: 'Dict[str, Any]') -> 'Dict[str, List[Te
     changes = {}  # type: Dict[str, List[TextEdit]]
     if 'changes' in workspace_edit:
         for uri, file_changes in workspace_edit.get('changes', {}).items():
-            changes[uri_to_filename(uri)] = list(parse_text_edit(change) for change in file_changes)
+            changes[uri_to_filename(uri)] = [parse_text_edit(change) for change in file_changes]
     if 'documentChanges' in workspace_edit:
         for document_change in workspace_edit.get('documentChanges', []):
             uri = document_change.get('textDocument').get('uri')
-            changes[uri_to_filename(uri)] = list(parse_text_edit(change) for change in document_change.get('edits'))
+            changes[uri_to_filename(uri)] = [parse_text_edit(change) for change in document_change.get('edits')]
     return changes
 
 
@@ -45,4 +45,4 @@ def sort_by_application_order(changes: 'Iterable[TextEdit]') -> 'List[TextEdit]'
     # So we sort by start position. But if multiple text edits start at the same position,
     # we use the index in the array as the key.
 
-    return list(map(lambda pair: pair[1], sorted(enumerate(changes), key=get_start_position, reverse=True)))
+    return [pair[1] for pair in sorted(enumerate(changes), key=get_start_position, reverse=True)]

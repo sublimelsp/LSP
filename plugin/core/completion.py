@@ -89,5 +89,5 @@ def parse_completion_response(response: 'Optional[Union[Dict,List]]') -> 'Tuple[
         is_incomplete = response.get("isIncomplete", False)
     elif isinstance(response, list):
         items = response
-    items = sorted(items, key=lambda item: item.get("sortText") or item["label"])
+    items.sort(key=lambda item: item.get("sortText") or item["label"])
     return items, is_incomplete

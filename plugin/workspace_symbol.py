@@ -43,7 +43,7 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
     def _handle_response(self, query: str, matches: 'Optional[List[Dict[str, Any]]]') -> None:
         self.view.erase_status("lsp_workspace_symbols")
         if matches:
-            choices = list(map(lambda s: self._format(s), matches))
+            choices = [self._format(m) for m in matches]
             self.view.window().show_quick_panel(choices, lambda i: self._open_file(matches, i))
         else:
             sublime.message_dialog("No matches found for query string: '{}'".format(query))
@@ -51,7 +51,7 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
     def _handle_error(self, error: 'Dict[str, Any]') -> None:
         self.view.erase_status("lsp_workspace_symbols")
         reason = error.get("message", "none provided by server :(")
-        msg = "command 'workspace/symbol' failed. Reason: {}".format(reason)
+        msg = "command 'workspace/symbol' failed. Reason: " + reason
         sublime.error_message(msg)
 
     def is_enabled(self, event=None):

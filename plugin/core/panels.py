@@ -34,8 +34,8 @@ def create_output_panel(window: sublime.Window, name: str) -> 'Optional[sublime.
 
 
 def destroy_output_panels(window: sublime.Window) -> None:
-    for panel_name in ["references", "diagnostics"]:
-        window.destroy_output_panel(panel_name)
+    window.destroy_output_panel("references")
+    window.destroy_output_panel("diagnostics")
 
 
 def create_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
@@ -75,10 +75,11 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
     """
 
     def run(self, edit, characters):
+        entire_region = sublime.Region(0, self.view.size())
         # Clear folds
-        self.view.unfold(sublime.Region(0, self.view.size()))
+        self.view.unfold(entire_region)
 
-        self.view.replace(edit, sublime.Region(0, self.view.size()), characters)
+        self.view.replace(edit, entire_region, characters)
 
         # Clear the selection
         selection = self.view.sel()

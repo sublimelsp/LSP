@@ -1,4 +1,13 @@
 [
+    // Show a list of all LSP commands
+    {
+        "keys": ["f1"],
+        "command": "show_overlay",
+        "args": {
+            "overlay": "command_palette",
+            "text": "LSP: ",
+        }
+    },
     // Show Code Actions
     { "keys": ["ctrl+."], "command": "lsp_code_actions" },
 

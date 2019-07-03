@@ -8,116 +8,133 @@
 
 3. Open a document in your language - if the server starts its name will be in the left side of the status bar.
 
+## Language Servers
 
 ### Javascript/Typescript<a name="jsts"></a>
 
 Different servers wrapping microsoft's typescript services, most support plain javascript:
 
-Theia's [typescript-language-server](https://github.com/theia-ide/typescript-language-server): `npm install -g typescript-language-server`
+#### My own [tomv564/lsp-tsserver](https://github.com/tomv564/lsp-tsserver)
+`npm install -g lsp-tsserver`
 
-My own [tomv564/lsp-tsserver](https://github.com/tomv564/lsp-tsserver): `npm install -g lsp-tsserver`
+#### Theia's [typescript-language-server](https://github.com/theia-ide/typescript-language-server)
+`npm install -g typescript-language-server`
 
-Sourcegraph's [javascript-typescript-langserver](https://github.com/sourcegraph/javascript-typescript-langserver): `npm install -g javascript-typescript-langserver`
+#### Sourcegraph's [javascript-typescript-langserver](https://github.com/sourcegraph/javascript-typescript-langserver)
+`npm install -g javascript-typescript-langserver`
 
 
 ### Flow (Javascript)<a name="flow"></a>
 
-Official part of [flow-bin](https://github.com/facebook/flow): `npm install -g flow-bin`
+#### Official part of [flow-bin](https://github.com/facebook/flow)
+`npm install -g flow-bin`
 
-Older flow-language-server: [github](https://github.com/flowtype/flow-language-server): `npm install -g flow-bin`
+#### Older [flow-language-server](https://github.com/flowtype/flow-language-server)
+`npm install -g flow-bin`
 
 ### Vue (Javascript)<a name="vue"></a>
 
-See: [npm package](https://www.npmjs.com/package/vue-language-server)
+#### [vue-language-server](https://www.npmjs.com/package/vue-language-server)
+`npm install -g vue-language-server`
 
 Client configuration:
-```
-"vue-ls":{
-  "command": [
-    "vls"
-    // note: you may need to use the absolute path to the language server binary
-  ],
-  "enabled": true,
-  "languageId": "vue",
-  "scopes": ["text.html.vue"],
-  "syntaxes": ["Vue Component"],
-  "initializationOptions": {
-    "config": {
-      "vetur": {
-        "useWorkspaceDependencies": false,
-        "validation": { "template": true, "style": true, "script": true },
-        "completion": { "autoImport": false, "useScaffoldSnippets": false, "tagCasing": "kebab" },
-        "format": {
-          "defaultFormatter": {"js": "none", "ts": "none"},
-          "defaultFormatterOptions": {},
-          "scriptInitialIndent": false,
-          "styleInitialIndent": false
+```json
+"vue-ls": {
+    "command": [
+        "vls"
+        // note: you may need to use the absolute path to the language server binary
+    ],
+    "enabled": true,
+    "languageId": "vue",
+    "scopes": ["text.html.vue"],
+    "syntaxes": ["Vue Component"],
+    "initializationOptions": {
+        "config": {
+            "vetur": {
+                "useWorkspaceDependencies": false,
+                "validation": {
+                    "template": true,
+                    "style": true,
+                    "script": true
+                },
+                "completion": {
+                    "autoImport": false,
+                    "useScaffoldSnippets": false,
+                    "tagCasing": "kebab"
+                },
+                "format": {
+                    "defaultFormatter": {
+                        "js": "none",
+                        "ts": "none"
+                    },
+                    "defaultFormatterOptions": {},
+                    "scriptInitialIndent": false,
+                    "styleInitialIndent": false
+                }
+            },
+            "css": {},
+            "html": {"suggest": {}},
+            "javascript": {"format": {} },
+            "typescript": {"format": {} },
+            "emmet": {},
+            "stylusSupremacy": {}
         }
-      },
-      "css": {},
-      "html": {"suggest": {} },
-      "javascript": {"format": {} },
-      "typescript": {"format": {} },
-      "emmet": {},
-      "stylusSupremacy": {}
     }
-  }
 }
 ```
 
-Be sure to install "Vue Syntax Highlight" from Package Control.
+Be sure to install [Vue Syntax Highlight](https://packagecontrol.io/packages/Vue%20Synatx%20Highlight) from Package Control.
 
 ### Python<a name="python"></a>
 
+#### Palantir's [python-language-server](https://github.com/palantir/python-language-server)
 `pip install python-language-server`
 
-See: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
-
-Alternatively, Microsoft's python language server (using .NET Core runtime)
-
+#### Microsoft's [python-language-server](https://github.com/Microsoft/python-language-server)
 [Instructions here](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md)
 
 ### PHP<a name="php"></a>
 
 #### Intelephense
-
 `npm i intelephense -g`
 
 See [bmewburn/intelephense-docs](https://github.com/bmewburn/intelephense-docs)
 
-
-#### PHP Language server
-
-See: [github:felixfbecker/php-language-server](https://github.com/felixfbecker/php-language-server)
+#### [PHP Language server](https://github.com/felixfbecker/php-language-server)
 
 Global installation:
 
-1. modify `~/.composer/composer.json` to set `"minimum-stability": "dev"` and `"prefer-stable": true`
+1. modify "~/.composer/composer.json" to set `"minimum-stability": "dev"` and `"prefer-stable": true`
 2. run `composer global require felixfbecker/language-server`
 3. run `composer run-script --working-dir=~/.composer/vendor/felixfbecker/language-server parse-stubs`
 
 
 ### Ruby / Ruby on Rails<a name="ruby"></a>
 
-Requires the solargraph gem:
-
-    gem install solargraph
-
-See [github.com:castwide/solargraph](https://github.com/castwide/solargraph) for up-to-date installation instructions.
+#### [solargraph](https://github.com/castwide/solargraph)
+`gem install solargraph`
 
 
 ### Rust<a name="rust"></a>
 
-Goes well with the [Rust Enhanced package](https://github.com/rust-lang/rust-enhanced) which uses the RLS server: [github:rust-lang-nursery/rls](https://github.com/rust-lang-nursery/rls) for up-to-date installation instructions.
+#### [RLS](https://github.com/rust-lang-nursery/rls)
+Goes well with the [Rust Enhanced package](https://github.com/rust-lang/rust-enhanced)
 
-Alternatively, a newer [rust-analyzer](https://github.com/rust-analyzer/rust-analyzer) server is under development, also supported by LSP.
+### [rust-analyzer](https://github.com/rust-analyzer/rust-analyzer)
 
 
 ### Scala<a name="scala"></a>
 
-*  **[Metals](https://scalameta.org/metals/)**: Most complete LSP server for Scala, see instructions [here](https://scalameta.org/metals/docs/editors/sublime.html) for installation.
-* **[SBT](https://www.scala-sbt.org/)**: Version 1.x supports limited and *unmaintained* language server functionalities, setup is described [here](http://eed3si9n.com/sbt-server-with-sublime-text3).
-* **[Dotty](http://dotty.epfl.ch/)**: The future Scala compiler [contains LSP support](http://dotty.epfl.ch/docs/usage/ide-support.html).
+#### [Metals](https://scalameta.org/metals/)
+Most complete LSP server for Scala
+see instructions [here](https://scalameta.org/metals/docs/editors/sublime.html) for installation.
+
+#### [SBT](https://www.scala-sbt.org/)
+Version 1.x supports limited and *unmaintained* language server functionalities
+setup is described [here](http://eed3si9n.com/sbt-server-with-sublime-text3).
+
+#### [Dotty](http://dotty.epfl.ch/)
+The future Scala compiler [contains LSP support](http://dotty.epfl.ch/docs/usage/ide-support.html).
 It is developed against VS Code, so ignore instructions related to VS Code.
 Get the project compiling with dotty first (see [instructions](https://github.com/lampepfl/dotty-example-project#using-dotty-in-an-existing-project)).
 At this point LSP should complain in the logs
@@ -132,9 +149,9 @@ See the dedicated <a href="cplusplus"/>C/C++</a> guide for using ccls, cquery or
 
 ### D<a name="d"></a>
 
-See instructions for [d-language-server](https://github.com/d-language-server/dls).
+#### [d-language-server](https://github.com/d-language-server/dls)
 
-```
+```sh
 dub fetch dls
 dub run dls:bootstrap
 ```
@@ -180,21 +197,9 @@ Using the CSS language server from VS Code
 
 
 ### Polymer<a name="polymer"></a>
+`npm install -g polymer-editor-service`
 
-    npm install -g polymer-editor-service
-
-> Note: requires an up to date version of NodeJS. v6 is the minimum supported
-  version as of 2017.
-
-Features:
-
- * typeahead completions for elements, attributes, and css custom properties
- * typeahead completions for elements, attributes, and css custom properties
- * documentation on hover for elements and attributes
- * jump to definition for elements, attributes, and css custom properties
- * linting, configured through `polymer.json` at your workspace root.
-
-More info: https://github.com/Polymer/polymer-editor-service
+Instructions [here](https://github.com/Polymer/tools/blob/master/packages/editor-service/docs/sublime.md)
 
 
 ### Dart<a name="dart"></a>
@@ -205,18 +210,17 @@ Make sure the pub bin directory is part of your path.
 
 See: [natebosch/dart_language_server](https://github.com/natebosch/dart_language_server)
 
-### Kotlin
+### Kotlin<a name="kotlin"></a>
 
-
-Install from [kotlin language server](https://github.com/fwcd/KotlinLanguageServer)
-Requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUILDING.md) first.
-
+#### fwcd's KotlinLanguageServer
+1. download and extract the [zip package](https://github.com/fwcd/KotlinLanguageServer/releases) 
+3. add these configurations:
 ```json
-"kotlinls":
+"kotlin-ls":
 {
     "command":
     [
-        "PATH_TO_KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat" // adjust this path!
+        "PATH/TO/KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server"
     ],
     "enabled": true,
     "languageId": "kotlin",
@@ -230,23 +234,20 @@ Requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUI
     ]
 }
 ```
-
-Additionally, install the [Kotlin sublime package](https://github.com/vkostyukov/kotlin-sublime-package) for syntax highlighting.
+4.Install the [Kotlin sublime package](https://packagecontrol.io/packages/Kotlin) for syntax highlighting.
 
 ### Bash
 
 Install the [bash language server](https://github.com/mads-hartmann/bash-language-server)
 
-```npm i -g bash-language-server```
+`npm i -g bash-language-server`
 
 ### XML
 
+#### lsp4xml
 Discussed in [this issue](https://github.com/tomv564/LSP/issues/578)
-
-Download jar from [angelozerr/lsp4xml](https://github.com/angelozerr/lsp4xml/releases)
-
-Add config:
-
+1. download the [jar package](https://github.com/angelozerr/lsp4xml/releases)
+2. add these configurations:
 ```json
 "lsp4xml":
 {
@@ -278,22 +279,21 @@ Add config:
 
 ```
 
-
 ### IntelliJ
 
 Requires IntelliJ to be running.
 
-```
+```json
 "intellij":{
-  "tcp_port": 8080 // default port
-  "command": [],
-  "languageId": "java",
-  "scopes": [
-    "source.java"
-  ],
-  "syntaxes": [
-    "Packages/Java/Java.sublime-syntax"
-  ]
+    "tcp_port": 8080 // default port
+    "command": [],
+    "languageId": "java",
+    "scopes": [
+        "source.java"
+    ],
+    "syntaxes": [
+        "Packages/Java/Java.sublime-syntax"
+    ]
 }
 ```
 
@@ -337,16 +337,18 @@ or in multi-language form:
 }
 ```
 
-* `command` - specify a full paths, add arguments (if not specified then tcp_port must be specified)
-* `tcp_port` - if not specified then stdin/out are used else sets the tcpport to connect to (if no command is specified then it is assumed that some process is listing on this port)
-* `scopes` - add language flavours, eg. `source.js`, `source.jsx`.
-* `syntaxes` - syntaxes that enable LSP features on a document, eg. `Packages/Babel/JavaScript (Babel).tmLanguage`
-* `languageId` - used both by the language servers and to select a syntax highlighter for sublime popups.
-* `languages` - group scope, syntax and languageId together for servers that support more than one language
-* `enabled` - enables a language server (default is disabled)
-* `settings` - per-project settings (equivalent to VS Code's Workspace Settings)
-* `env` - dict of environment variables to be injected into the language server's process (eg. PYTHONPATH)
-* `initializationOptions` - options to send to the server at startup (rarely used)
+|Setting|Description|
+|:------|:----------|
+|command|specify a full paths, add arguments (if not specified then tcp_port must be specified)|
+|tcp_port|if not specified then stdin/out are used else sets the tcpport to connect to (if no command is specified then it is assumed that some process is listening on this port)|
+|scopes|add language flavours, eg. `source.js`, `source.jsx`.
+|syntaxes|syntaxes that enable LSP features on a document, eg. `Packages/Babel/JavaScript (Babel).tmLanguage`|
+|languageId|used both by the language servers and to select a syntax highlighter for sublime popups.|
+|languages|group scope, syntax and languageId together for servers that support more than one language|
+|enabled|enables a language server (default is disabled)|
+|settings|per-project settings (equivalent to VS Code's Workspace Settings)|
+|env|dict of environment variables to be injected into the language server's process (eg. PYTHONPATH)|
+|initializationOptions|options to send to the server at startup (rarely used)|
 
 ## Per-project overrides
 

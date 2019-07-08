@@ -12,7 +12,7 @@ class WindowDiagnosticsTest(unittest.TestCase):
         wd = WindowDiagnostics()
         self.assertEqual(wd.get_by_path(__file__), [])
 
-        # todo: remove
+        # TODO: remove
 
     def test_updated_diagnostics(self):
         wd = WindowDiagnostics()

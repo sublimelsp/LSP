@@ -20,7 +20,7 @@ except ImportError:
 
 
 class ConfigRegistry(Protocol):
-    # todo: calls config_for_scope immediately.
+    # TODO: calls config_for_scope immediately.
     all = []  # type: List[ClientConfig]
 
     def is_supported(self, view: ViewLike) -> bool:
@@ -79,6 +79,7 @@ def get_active_views(window: WindowLike):
 
 class DocumentState:
     """Stores version count for documents open in a language service"""
+
     def __init__(self, path: str) -> 'None':
         self.path = path
         self.version = 0

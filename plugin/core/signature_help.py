@@ -147,14 +147,14 @@ def render_signature_label(renderer: ScopeRenderer, sig_info: SignatureInformati
                 rendered_param = renderer.parameter(content=label[start:end], emphasize=is_current)
                 label = label[:start] + rendered_param + label[end:]
 
-                # todo: highlight commas between parameters as punctuation.
+                # TODO: highlight commas between parameters as punctuation.
 
         if sig_info.open_paren_index > -1:
             start = sig_info.open_paren_index
-            end = start+1
+            end = start + 1
             label = html.escape(label[:start], quote=False) + renderer.punctuation(label[start:end]) + label[end:]
 
-        # todo: only render up to first parameter as function scope.
+        # TODO: only render up to first parameter as function scope.
         return renderer.function(label, escape=False)
     else:
         return renderer.function(sig_info.label)

@@ -109,7 +109,7 @@ windows = WindowRegistry(configs, documents, start_window_config, sublime, handl
 def config_for_scope(view: 'Any', point=None) -> 'Optional[ClientConfig]':
     window = view.window()
     if window:
-        # todo: don't expose _configs
+        # TODO: don't expose _configs
         return windows.lookup(window)._configs.scope_config(view, point)
     return None
 

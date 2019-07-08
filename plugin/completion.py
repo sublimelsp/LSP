@@ -123,10 +123,8 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
     def find_completion_item(self, inserted: str):
         """
-
         Returns the completionItem for a given replacement string.
         Matches exactly or up to first snippet placeholder ($s)
-
         """
         # TODO: candidate for extracting and thorough testing.
         if self.completions:
@@ -149,7 +147,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             self.last_location = 0
             self.view.run_command("hide_auto_complete")
 
-        # cancel current completion if the previous input is an space
+        # cancel current completion if the previous input is a space
         prev_char = self.view.substr(self.view.sel()[0].begin() - 1)
         if self.state == CompletionState.REQUESTING and prev_char.isspace():
             self.state = CompletionState.CANCELLING

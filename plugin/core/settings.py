@@ -13,34 +13,22 @@ except ImportError:
 
 def read_bool_setting(settings_obj: sublime.Settings, key: str, default: bool) -> bool:
     val = settings_obj.get(key)
-    if isinstance(val, bool):
-        return val
-    else:
-        return default
+    return val if isinstance(val, bool) else default
 
 
 def read_int_setting(settings_obj: sublime.Settings, key: str, default: int) -> int:
     val = settings_obj.get(key)
-    if isinstance(val, int):
-        return val
-    else:
-        return default
+    return val if isinstance(val, int) else default
 
 
 def read_dict_setting(settings_obj: sublime.Settings, key: str, default: dict) -> dict:
     val = settings_obj.get(key)
-    if isinstance(val, dict):
-        return val
-    else:
-        return default
+    return val if isinstance(val, dict) else default
 
 
 def read_str_setting(settings_obj: sublime.Settings, key: str, default: str) -> str:
     val = settings_obj.get(key)
-    if isinstance(val, str):
-        return val
-    else:
-        return default
+    return val if isinstance(val, str) else default
 
 
 def update_settings(settings: Settings, settings_obj: sublime.Settings):

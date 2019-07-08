@@ -10,7 +10,7 @@ from .core.configurations import (
 )
 from .core.registry import config_for_scope, windows
 from .core.events import global_events
-from .core.workspace import enable_in_project, disable_in_project
+from .core.workspace import set_enabled_in_project
 
 try:
     from typing import List, Optional, Dict, Any
@@ -93,7 +93,7 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         if index > -1:
             config_name = self._items[index][0]
             wm = windows.lookup(self.window)
-            enable_in_project(self.window, config_name)
+            set_enabled_in_project(self.window, config_name, True)
             wm.update_configs(create_window_configs(self.window, client_configs.all))
             sublime.set_timeout_async(lambda: wm.start_active_views(), 500)
             self.window.status_message("{} enabled, starting server...".format(config_name))
@@ -144,7 +144,7 @@ class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         if index > -1:
             config_name = self._items[index][0]
             wm = windows.lookup(self.window)
-            disable_in_project(self.window, config_name)
+            set_enabled_in_project(self.window, config_name, False)
             wm.update_configs(create_window_configs(self.window, client_configs.all))
             wm.end_session(config_name)
 

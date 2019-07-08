@@ -53,25 +53,13 @@ def is_in_workspace(window: 'Any', file_path: str) -> bool:
     return workspace_path == common_dir
 
 
-def enable_in_project(window, config_name: str) -> None:
+def set_enabled_in_project(window, config_name: str, enabled: bool) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
         project_settings = project_data.setdefault('settings', {})
         project_lsp_settings = project_settings.setdefault('LSP', {})
         project_client_settings = project_lsp_settings.setdefault(config_name, {})
-        project_client_settings['enabled'] = True
-        window.set_project_data(project_data)
-    else:
-        debug('non-dict returned in project_settings: ', project_data)
-
-
-def disable_in_project(window, config_name: str) -> None:
-    project_data = window.project_data()
-    if isinstance(project_data, dict):
-        project_settings = project_data.setdefault('settings', {})
-        project_lsp_settings = project_settings.setdefault('LSP', {})
-        project_client_settings = project_lsp_settings.setdefault(config_name, {})
-        project_client_settings['enabled'] = False
+        project_client_settings['enabled'] = enabled
         window.set_project_data(project_data)
     else:
         debug('non-dict returned in project_settings: ', project_data)

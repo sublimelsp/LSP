@@ -22,10 +22,8 @@ def get_window_env(window: sublime.Window, config: ClientConfig) -> 'Tuple[List[
     variables = window.extract_variables()
 
     # Expand language server command line environment variables
-    expanded_args = list(
-        sublime.expand_variables(os.path.expanduser(arg), variables)
-        for arg in config.binary_args
-    )
+    expanded_args = [sublime.expand_variables(os.path.expanduser(arg), variables)
+                     for arg in config.binary_args]
 
     # Override OS environment variables
     env = os.environ.copy()

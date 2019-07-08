@@ -225,7 +225,7 @@ class Notification:
         if self.params is not None:
             r["params"] = self.params
         else:
-            r["params"] = dict()
+            r["params"] = {}
         return r
 
 

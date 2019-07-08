@@ -43,7 +43,7 @@ class WindowDiagnostics(object):
     def update(self, file_path: str, client_name: str, diagnostics: 'List[Diagnostic]') -> bool:
         updated = False
         if diagnostics:
-            file_diagnostics = self._diagnostics.setdefault(file_path, dict())
+            file_diagnostics = self._diagnostics.setdefault(file_path, {})
             file_diagnostics[client_name] = diagnostics
             updated = True
         else:
@@ -66,8 +66,7 @@ class WindowDiagnostics(object):
         if maybe_file_uri is not None:
             file_path = uri_to_filename(maybe_file_uri)
 
-            diagnostics = list(
-                Diagnostic.from_lsp(item) for item in update.get('diagnostics', []))
+            diagnostics = [Diagnostic.from_lsp(item) for item in update.get('diagnostics', [])]
 
             if self.update(file_path, client_name, diagnostics):
                 if self._on_updated:

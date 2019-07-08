@@ -55,7 +55,7 @@ def get_global_client_config(view: 'sublime.View', global_configs: 'List[ClientC
 
 
 def create_window_configs(window: 'sublime.Window', global_configs: 'List[ClientConfig]') -> 'List[ClientConfig]':
-    return list(map(lambda c: apply_window_settings(c, window), global_configs))
+    return [apply_window_settings(c, window) for c in global_configs]
 
 
 def apply_window_settings(client_config: 'ClientConfig', window: 'sublime.Window') -> 'ClientConfig':
@@ -120,13 +120,11 @@ class WindowConfigManager(object):
 
     def syntax_configs(self, view: 'Any') -> 'List[ClientConfig]':
         syntax = view.settings().get("syntax")
-        return list(filter(lambda c: config_supports_syntax(c, syntax) and c.enabled, self.all))
+        return [c for c in self.all if c.enabled and config_supports_syntax(c, syntax)]
 
     def syntax_supported(self, view: ViewLike) -> bool:
         syntax = view.settings().get("syntax")
-        for found in filter(lambda c: config_supports_syntax(c, syntax) and c.enabled, self.all):
-            return True
-        return False
+        return any(c.enabled and config_supports_syntax(c, syntax) for c in self.all)
 
     def syntax_config_languages(self, view: ViewLike) -> 'Dict[str, LanguageConfig]':
         syntax = view.settings().get("syntax")

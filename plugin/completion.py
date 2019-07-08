@@ -267,10 +267,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 self.apply_additional_edits(additional_edits)
 
     def apply_additional_edits(self, additional_edits: 'List[Dict]') -> None:
-            edits = list(parse_text_edit(additional_edit) for additional_edit in additional_edits)
-            debug('applying additional edits:', edits)
-            self.view.run_command("lsp_apply_document_edit", {'changes': edits})
-            sublime.status_message('Applied additional edits for completion')
+        edits = [parse_text_edit(additional_edit) for additional_edit in additional_edits]
+        debug('applying additional edits:', edits)
+        self.view.run_command("lsp_apply_document_edit", {'changes': edits})
+        sublime.status_message('Applied additional edits for completion')
 
     def handle_response(self, response: 'Optional[Union[Dict,List]]'):
         if self.state == CompletionState.REQUESTING:
@@ -283,7 +283,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             response_items, response_incomplete = parse_completion_response(response)
             self.response_items = response_items
             self.response_incomplete = response_incomplete
-            self.completions = list(format_completion(item, last_col, settings) for item in self.response_items)
+            self.completions = [format_completion(item, last_col, settings) for item in self.response_items]
 
             # if insert_best_completion was just ran, undo it before presenting new completions.
             prev_char = self.view.substr(self.view.sel()[0].begin() - 1)

@@ -90,7 +90,7 @@ class InitializationTests(DeferrableTestCase):
         add_config(text_config)
 
     def test_is_not_applicable(self):
-        self.assertFalse(CompletionHandler.is_applicable(dict()))
+        self.assertFalse(CompletionHandler.is_applicable({}))
 
     def test_is_applicable(self):
         self.assertTrue(

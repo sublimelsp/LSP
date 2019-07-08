@@ -73,9 +73,9 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings):
 class ClientConfigs(object):
 
     def __init__(self):
-        self._default_settings = dict()  # type: Dict[str, dict]
-        self._global_settings = dict()  # type: Dict[str, dict]
-        self._external_configs = dict()  # type: Dict[str, ClientConfig]
+        self._default_settings = {}  # type: Dict[str, dict]
+        self._global_settings = {}  # type: Dict[str, dict]
+        self._external_configs = {}  # type: Dict[str, ClientConfig]
         self.all = []  # type: List[ClientConfig]
 
     def update(self, settings_obj: sublime.Settings):
@@ -90,18 +90,18 @@ class ClientConfigs(object):
         del self.all[:]
 
         for config_name, config in self._external_configs.items():
-            user_settings = self._global_settings.get(config_name, dict())
+            user_settings = self._global_settings.get(config_name, {})
             global_config = update_client_config(config, user_settings)
             self.all.append(global_config)
 
         all_config_names = set(self._default_settings) | set(self._global_settings)
         for config_name in all_config_names.difference(set(self._external_configs)):
-            merged_settings = self._default_settings.get(config_name, dict())
-            user_settings = self._global_settings.get(config_name, dict())
+            merged_settings = self._default_settings.get(config_name, {})
+            user_settings = self._global_settings.get(config_name, {})
             merged_settings.update(user_settings)
             self.all.append(read_client_config(config_name, merged_settings))
 
-        debug('global configs', list('{}={}'.format(c.name, c.enabled) for c in self.all))
+        debug('global configs', ['{}={}'.format(c.name, c.enabled) for c in self.all])
 
     def _set_enabled(self, config_name: str, is_enabled: bool):
         if _settings_obj:
@@ -146,7 +146,7 @@ def read_language_config(config: dict) -> 'LanguageConfig':
 
 
 def read_language_configs(client_config: dict) -> 'List[LanguageConfig]':
-    return list(map(read_language_config, client_config.get("languages", [])))
+    return [read_language_config(c) for c in client_config.get("languages", [])]
 
 
 def read_client_config(name: str, client_config: 'Dict') -> ClientConfig:
@@ -161,9 +161,9 @@ def read_client_config(name: str, client_config: 'Dict') -> ClientConfig:
         client_config.get("languageId", ""),
         languages,
         client_config.get("enabled", False),
-        client_config.get("initializationOptions", dict()),
-        client_config.get("settings", dict()),
-        client_config.get("env", dict()),
+        client_config.get("initializationOptions", {}),
+        client_config.get("settings", {}),
+        client_config.get("env", {}),
         client_config.get("tcp_host", None)
     )
 

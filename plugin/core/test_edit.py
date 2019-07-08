@@ -39,7 +39,7 @@ class TextEditTests(unittest.TestCase):
 class WorkspaceEditTests(unittest.TestCase):
 
     def test_parse_no_changes_from_lsp(self):
-        edit = parse_workspace_edit(dict())
+        edit = parse_workspace_edit({})
         self.assertEqual(len(edit), 0)
 
     def test_parse_changes_from_lsp(self):

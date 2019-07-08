@@ -68,14 +68,14 @@ class MockTransport(Transport):
 class FormatTests(unittest.TestCase):
 
     def test_converts_payload_to_string(self):
-        self.assertEqual("{}", format_request(dict()))
+        self.assertEqual("{}", format_request({}))
 
 
 class ClientTest(unittest.TestCase):
 
     def test_can_create_client(self):
         transport = MockTransport()
-        client = Client(transport, dict())
+        client = Client(transport, {})
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
 
@@ -85,7 +85,7 @@ class ClientTest(unittest.TestCase):
         client = Client(transport, settings)
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
-        req = Request.initialize(dict())
+        req = Request.initialize({})
         responses = []
         client.send_request(req, lambda resp: responses.append(resp))
         self.assertGreater(len(responses), 0)
@@ -109,7 +109,7 @@ class ClientTest(unittest.TestCase):
         transport = MockTransport(lambda x: '{"id": 1, "result": {"key": "value"}, "error": {"message": "oops"}}')
         settings = MockSettings()
         client = Client(transport, settings)
-        req = Request.initialize(dict())
+        req = Request.initialize({})
         responses = []
         errors = []
         client.send_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
@@ -120,7 +120,7 @@ class ClientTest(unittest.TestCase):
         transport = MockTransport(lambda x: '{"id": 1}')
         settings = MockSettings()
         client = Client(transport, settings)
-        req = Request.initialize(dict())
+        req = Request.initialize({})
         responses = []
         errors = []
         client.send_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
@@ -137,7 +137,7 @@ class ClientTest(unittest.TestCase):
         client.on_notification(
             "pong",
             lambda params: pongs.append(params))
-        req = Notification("ping", dict())
+        req = Notification("ping", {})
         client.send_notification(req)
         self.assertGreater(len(transport.messages), 0)
         self.assertEqual(len(pongs), 1)
@@ -162,7 +162,7 @@ class ClientTest(unittest.TestCase):
         client = Client(transport, settings)
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
-        req = Request.initialize(dict())
+        req = Request.initialize({})
         errors = []
         responses = []
         client.send_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
@@ -176,7 +176,7 @@ class ClientTest(unittest.TestCase):
         client = Client(transport, settings)
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
-        req = Request.initialize(dict())
+        req = Request.initialize({})
         errors = []
         client.set_error_display_handler(lambda err: errors.append(err))
         responses = []
@@ -203,7 +203,7 @@ class ClientTest(unittest.TestCase):
         client = Client(transport, settings)
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
-        req = Request.initialize(dict())
+        req = Request.initialize({})
         client.send_request(req, lambda resp: raise_error('handler failed'))
         # exception would fail test if not handled in client
         self.assertEqual(len(client._response_handlers), 0)

@@ -7,7 +7,7 @@ except ImportError:
 
 class Events:
     def __init__(self):
-        self._listener_dict = dict()  # type: Dict[str, Callable[..., None]]
+        self._listener_dict = {}  # type: Dict[str, Callable[..., None]]
 
     def subscribe(self, key, listener):
         if key in self._listener_dict:
@@ -26,7 +26,7 @@ class Events:
                 listener(*args)
 
     def reset(self):
-        self._listener_dict = dict()
+        self._listener_dict = {}
 
 
 global_events = Events()

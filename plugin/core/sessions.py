@@ -165,7 +165,7 @@ class Session(object):
         self.state = ClientStates.STARTING
         self._on_created = on_created
         self._on_ended = on_ended
-        self.capabilities = dict()  # type: Dict[str, Any]
+        self.capabilities = {}  # type: Dict[str, Any]
         self.client = client
         self.initialize()
 
@@ -183,7 +183,7 @@ class Session(object):
 
     def _handle_initialize_result(self, result):
         self.state = ClientStates.READY
-        self.capabilities = result.get('capabilities', dict())
+        self.capabilities = result.get('capabilities', {})
         if self._on_created:
             self._on_created(self)
 
@@ -197,6 +197,6 @@ class Session(object):
     def _handle_shutdown_result(self):
         self.client.exit()
         self.client = None
-        self.capabilities = dict()
+        self.capabilities = {}
         if self._on_ended:
             self._on_ended(self.config.name)

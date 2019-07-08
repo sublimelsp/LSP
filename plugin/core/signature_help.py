@@ -82,7 +82,7 @@ def parse_signature_information(signature: 'Dict') -> 'SignatureInformation':
     parameters = signature.get('parameters')
     paren_bounds = (-1, -1)
     if parameters:
-        param_infos = list(parse_parameter_information(param) for param in parameters)
+        param_infos = [parse_parameter_information(param) for param in parameters]
         paren_bounds = parse_signature_label(signature_label, param_infos)
 
     return SignatureInformation(signature_label, get_documentation(signature), paren_bounds, param_infos)
@@ -104,14 +104,14 @@ class SignatureInformation(object):
         self.label = label
         self.documentation = documentation
         self.parameters = parameters
-        [self.open_paren_index, self.close_paren_index] = paren_bounds
+        self.open_paren_index, self.close_paren_index = paren_bounds
 
 
 def create_signature_help(response: 'Optional[Dict]') -> 'Optional[SignatureHelp]':
     if response is None:
         return None
 
-    signatures = list(parse_signature_information(signature) for signature in response.get("signatures", []))
+    signatures = [parse_signature_information(signature) for signature in response.get("signatures", [])]
     active_signature = response.get("activeSignature", -1)
     active_parameter = response.get("activeParameter", -1)
 

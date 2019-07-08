@@ -43,7 +43,7 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
     def _handle_response(self, query: str, matches: 'Optional[List[Dict[str, Any]]]') -> None:
         self.view.erase_status("lsp_workspace_symbols")
         if matches:
-            choices = list(map(lambda s: self._format(s), matches))
+            choices = [self._format(m) for m in matches]
             self.view.window().show_quick_panel(choices, lambda i: self._open_file(matches, i))
         else:
             sublime.message_dialog("No matches found for query string: '{}'".format(query))

@@ -70,7 +70,7 @@ class SessionTest(unittest.TestCase):
         config = ClientConfig("test", ["ls"], None, [test_language])
         project_path = "/"
         session = self.assert_if_none(
-            create_session(config, project_path, dict(), Settings()))
+            create_session(config, project_path, {}, Settings()))
 
         self.assertEqual(session.state, ClientStates.STARTING)
         self.assertEqual(session.project_path, project_path)
@@ -81,7 +81,7 @@ class SessionTest(unittest.TestCase):
         project_path = "/"
         created_callback = unittest.mock.Mock()
         session = self.assert_if_none(
-            create_session(test_config, project_path, dict(), Settings(),
+            create_session(test_config, project_path, {}, Settings(),
                            bootstrap_client=MockClient(),
                            on_created=created_callback))
 
@@ -97,7 +97,7 @@ class SessionTest(unittest.TestCase):
         created_callback = unittest.mock.Mock()
         ended_callback = unittest.mock.Mock()
         session = self.assert_if_none(
-            create_session(test_config, project_path, dict(), Settings(),
+            create_session(test_config, project_path, {}, Settings(),
                            bootstrap_client=MockClient(),
                            on_created=created_callback,
                            on_ended=ended_callback))

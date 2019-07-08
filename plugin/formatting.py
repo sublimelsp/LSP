@@ -20,7 +20,7 @@ def options_for_view(view: ViewLike) -> 'Dict[str, Any]':
 
 
 def apply_response_to_view(response, view):
-    edits = list(parse_text_edit(change) for change in response) if response else []
+    edits = [parse_text_edit(change) for change in response] if response else []
     view.run_command('lsp_apply_document_edit', {'changes': edits})
 
 

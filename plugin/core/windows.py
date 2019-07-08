@@ -65,7 +65,7 @@ class DocumentHandler(Protocol):
 
 
 def get_active_views(window: WindowLike):
-    views = list()  # type: List[ViewLike]
+    views = []  # type: List[ViewLike]
     num_groups = window.num_groups()
     for group in range(0, num_groups):
         view = window.active_view_in_group(group)
@@ -103,9 +103,9 @@ class WindowDocumentHandler(object):
         self._settings = settings
         self._configs = configs
         self._window = window
-        self._document_states = dict()  # type: Dict[str, DocumentState]
-        self._pending_buffer_changes = dict()  # type: Dict[int, Dict]
-        self._sessions = dict()  # type: Dict[str, Session]
+        self._document_states = {}  # type: Dict[str, DocumentState]
+        self._pending_buffer_changes = {}  # type: Dict[int, Dict]
+        self._sessions = {}  # type: Dict[str, Session]
         events.subscribe('view.on_load_async', self.handle_view_opened)
         events.subscribe('view.on_activated_async', self.handle_view_opened)
         events.subscribe('view.on_modified', self.handle_view_modified)
@@ -312,7 +312,7 @@ class WindowManager(object):
         self._configs = configs
         self._diagnostics = diagnostics
         self._documents = documents
-        self._sessions = dict()  # type: Dict[str, Session]
+        self._sessions = {}  # type: Dict[str, Session]
         self._start_session = session_starter
         self._sublime = sublime
         self._handlers = handler_dispatcher
@@ -359,12 +359,10 @@ class WindowManager(object):
 
     def _initialize_on_open(self, view: ViewLike):
         # have all sessions for this document been started?
-        startable_configs = filter(lambda c: c.enabled and c.name not in self._sessions,
-                                   self._configs.syntax_configs(view))
-
-        for config in startable_configs:
-            debug("window {} requests {} for {}".format(self._window.id(), config.name, view.file_name()))
-            self._start_client(config)
+        for config in self._configs.syntax_configs(view):
+            if config.enabled and config.name not in self._sessions:
+                debug("window {} requests {} for {}".format(self._window.id(), config.name, view.file_name()))
+                self._start_client(config)
 
     def _start_client(self, config: ClientConfig):
         project_path = get_project_path(self._window)
@@ -402,7 +400,7 @@ class WindowManager(object):
 
     def _handle_message_request(self, params: dict, client: Client, request_id: int) -> None:
         actions = params.get("actions", [])
-        titles = list(action.get("title") for action in actions)
+        titles = [action.get("title") for action in actions]
 
         def send_user_choice(index):
             # when noop; nothing was selected e.g. the user pressed escape
@@ -421,7 +419,7 @@ class WindowManager(object):
 
     def end_sessions(self) -> None:
         self._documents.reset()
-        for config_name in list(self._sessions):
+        for config_name in self._sessions:
             self.end_session(config_name)
 
     def end_session(self, config_name: str) -> None:
@@ -438,7 +436,7 @@ class WindowManager(object):
             self._project_path = current_project_path
 
     def _apply_workspace_edit(self, params: 'Dict[str, Any]', client: Client, request_id: int) -> None:
-        edit = params.get('edit', dict())
+        edit = params.get('edit', {})
         changes = parse_workspace_edit(edit)
         self._window.run_command('lsp_apply_workspace_edit', {'changes': changes})
         # TODO: We should ideally wait for all changes to have been applied.

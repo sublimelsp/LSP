@@ -56,9 +56,9 @@ def is_in_workspace(window: 'Any', file_path: str) -> bool:
 def enable_in_project(window, config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
-        project_settings = project_data.setdefault('settings', dict())
-        project_lsp_settings = project_settings.setdefault('LSP', dict())
-        project_client_settings = project_lsp_settings.setdefault(config_name, dict())
+        project_settings = project_data.setdefault('settings', {})
+        project_lsp_settings = project_settings.setdefault('LSP', {})
+        project_client_settings = project_lsp_settings.setdefault(config_name, {})
         project_client_settings['enabled'] = True
         window.set_project_data(project_data)
     else:
@@ -68,9 +68,9 @@ def enable_in_project(window, config_name: str) -> None:
 def disable_in_project(window, config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
-        project_settings = project_data.setdefault('settings', dict())
-        project_lsp_settings = project_settings.setdefault('LSP', dict())
-        project_client_settings = project_lsp_settings.setdefault(config_name, dict())
+        project_settings = project_data.setdefault('settings', {})
+        project_lsp_settings = project_settings.setdefault('LSP', {})
+        project_client_settings = project_lsp_settings.setdefault(config_name, {})
         project_client_settings['enabled'] = False
         window.set_project_data(project_data)
     else:
@@ -78,11 +78,11 @@ def disable_in_project(window, config_name: str) -> None:
 
 
 def get_project_config(window: 'Any') -> dict:
-    project_data = window.project_data() or dict()
+    project_data = window.project_data() or {}
     if isinstance(project_data, dict):
-        project_settings = project_data.setdefault('settings', dict())
-        project_lsp_settings = project_settings.setdefault('LSP', dict())
+        project_settings = project_data.setdefault('settings', {})
+        project_lsp_settings = project_settings.setdefault('LSP', {})
         return project_lsp_settings
     else:
         debug('non-dict returned in project_settings: ', project_data)
-        return dict()
+        return {}

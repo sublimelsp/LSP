@@ -169,31 +169,30 @@ class SignatureHelp(object):
     def build_popup_content(self, renderer: ScopeRenderer) -> str:
         parameter_documentation = None  # type: Optional[str]
 
-        formatted = []
+        formatted = ""
 
         if len(self._signatures) > 1:
-            formatted.append(self._build_overload_selector())
+            formatted += self._build_overload_selector()
 
         signature = self._signatures[self._active_signature_index]  # type: SignatureInformation
 
         # Write the active signature and give special treatment to the active parameter (if found).
         # Note that this <div> class and the extra <pre> are copied from mdpopups' HTML output. When mdpopups changes
         # its output style, we must update this literal string accordingly.
-        formatted.append('<div class="highlight"><pre>')
-        formatted.append(render_signature_label(renderer, signature, self._active_parameter_index))
-        formatted.append("</pre></div>")
+        formatted += '<div class="highlight"><pre>{}</pre></div>'.format(
+                        render_signature_label(renderer, signature, self._active_parameter_index))
 
         if signature.documentation:
-            formatted.append("<p>{}</p>".format(signature.documentation))
+            formatted += "<p>{}</p>".format(signature.documentation)
 
         if signature.parameters and self._active_parameter_index in range(0, len(signature.parameters)):
             parameter = signature.parameters[self._active_parameter_index]
             parameter_label = html.escape(parameter.label, quote=False)
             parameter_documentation = parameter.documentation
             if parameter_documentation:
-                formatted.append("<p><b>{}</b>: {}</p>".format(parameter_label, parameter_documentation))
+                formatted += "<p><b>{}</b>: {}</p>".format(parameter_label, parameter_documentation)
 
-        return "\n".join(formatted)
+        return formatted
 
     def has_multiple_signatures(self) -> bool:
         return len(self._signatures) > 1

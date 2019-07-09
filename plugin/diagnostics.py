@@ -351,7 +351,7 @@ def update_diagnostics_panel(window: sublime.Window):
 
 
 def has_relevant_diagnostics(origin_diagnostics):
-    for origin, diagnostics in origin_diagnostics.items():
+    for diagnostics in origin_diagnostics.values():
         for diagnostic in diagnostics:
             # debug('severity check', diagnostic.severity, '<=', settings.auto_show_diagnostics_panel_level)
             if diagnostic.severity <= settings.auto_show_diagnostics_panel_level:
@@ -362,12 +362,8 @@ def has_relevant_diagnostics(origin_diagnostics):
 
 def format_diagnostics(file_path, origin_diagnostics):
     content = ""
-    for origin, diagnostics in origin_diagnostics.items():
+    for diagnostics in origin_diagnostics.values():
         for diagnostic in diagnostics:
             if diagnostic.severity <= settings.show_diagnostics_severity_level:
-                item = format_diagnostic(diagnostic)
-                content += item + "\n"
-    if content:
-        return " ◌ {}:\n{}".format(file_path, content)
-    else:
-        return None
+                content += format_diagnostic(diagnostic) + "\n"
+    return " ◌ {}:\n{}".format(file_path, content) if content else None

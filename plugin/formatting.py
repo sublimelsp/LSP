@@ -52,7 +52,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
         if self.has_client_with_capability('documentRangeFormattingProvider'):
             if len(self.view.sel()) == 1:
                 region = self.view.sel()[0]
-                if region.begin() != region.end():
+                if not region.empty():
                     return True
         return False
 

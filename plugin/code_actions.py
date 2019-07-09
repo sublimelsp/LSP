@@ -94,11 +94,9 @@ class LspCodeActionsCommand(LspTextCommand):
         send_code_action_request(self.view, self.handle_response)
 
     def get_titles(self):
-        ''' Return a list of all command titles. '''
-        titles = []
-        for command in self.commands:
-            titles.append(command.get('title'))  # TODO parse command and arguments
-        return titles
+        '''Return a list of all command titles.'''
+        # TODO parse command and arguments
+        return [command.get('title') for command in self.commands]
 
     def handle_response(self, response: 'Optional[List[Dict]]') -> None:
         self.commands = response or []

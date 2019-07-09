@@ -87,6 +87,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         completion_triggers = self.view.settings().get('auto_complete_triggers', [])
         view_language = self._view_language(session.config.name)
         if view_language:
+            trigger_chars = "".join(self.trigger_chars)
             for language in session.config.languages:
                 if language.id == view_language:
                     for scope in language.scopes:
@@ -96,12 +97,9 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                             None
                         )
                         if scope_trigger:
-                            scope_trigger['characters'] = "".join(self.trigger_chars)
+                            scope_trigger['characters'] = trigger_chars
                         else:
-                            completion_triggers.append({
-                                'characters': "".join(self.trigger_chars),
-                                'selector': scope
-                            })
+                            completion_triggers.append({'characters': trigger_chars, 'selector': scope})
 
             self.view.settings().set('auto_complete_triggers', completion_triggers)
 

@@ -135,7 +135,7 @@ class WindowDocumentHandler(object):
     def has_document_state(self, path: str) -> bool:
         return path in self._document_states
 
-    def _get_applicable_sessions(self, view: ViewLike, notification_type: 'Optional[str]'=None):
+    def _get_applicable_sessions(self, view: ViewLike, notification_type: 'Optional[str]' = None):
         sessions = []  # type: List[Session]
         syntax = view.settings().get("syntax")
         for config_name, session in self._sessions.items():

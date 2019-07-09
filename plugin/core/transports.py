@@ -42,13 +42,15 @@ STATE_HEADERS = 0
 STATE_CONTENT = 1
 STATE_EOF = 2
 
-StateStrings = {STATE_HEADERS: 'STATE_HEADERS',
-                STATE_CONTENT: 'STATE_CONTENT',
-                STATE_EOF:     'STATE_EOF'}
+StateStrings = {
+    STATE_HEADERS: 'STATE_HEADERS',
+    STATE_CONTENT: 'STATE_CONTENT',
+    STATE_EOF:     'STATE_EOF'
+}
 
 
 def state_to_string(state: int) -> str:
-    return StateStrings.get(state, '<unknown state: %d>'.format(state))
+    return StateStrings.get(state, '<unknown state: {}>'.format(state))
 
 
 def start_tcp_transport(port: int, host: 'Optional[str]' = None) -> 'Transport':

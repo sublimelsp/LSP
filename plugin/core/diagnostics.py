@@ -14,7 +14,7 @@ except ImportError:
 
 class DiagnosticsUpdate(object):
     def __init__(self, window, client_name: str,
-                 file_path: str, diagnostics: 'List[Diagnostic]') -> 'None':
+                 file_path: str, diagnostics: 'List[Diagnostic]') -> None:
         self.window = window
         self.client_name = client_name
         self.file_path = file_path

@@ -160,7 +160,7 @@ def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic
         regions = None
     else:
         regions = [range_to_region(diagnostic.range, view) for diagnostic in diagnostics
-                       if diagnostic.severity == severity]
+                   if diagnostic.severity == severity]
     if regions:
         scope_name = diagnostic_severity_scopes[severity]
         view.add_regions(
@@ -294,8 +294,13 @@ class LspClearDiagnosticsCommand(sublime_plugin.WindowCommand):
 
 
 def ensure_diagnostics_panel(window: sublime.Window) -> 'Optional[sublime.View]':
-    return ensure_panel(window, "diagnostics", r"^\s*\S\s+(\S.*):$", r"^\s+([0-9]+):?([0-9]+).*$",
-                        "Packages/" + PLUGIN_NAME + "/Syntaxes/Diagnostics.sublime-syntax")
+    return ensure_panel(
+              window,
+              "diagnostics",
+              r"^\s*\S\s+(\S.*):$",
+              r"^\s+([0-9]+):?([0-9]+).*$",
+              "Packages/" + PLUGIN_NAME + "/Syntaxes/Diagnostics.sublime-syntax"
+            )
 
 
 def update_diagnostics_panel(window: sublime.Window):
@@ -338,16 +343,14 @@ def update_diagnostics_panel(window: sublime.Window):
 
             if settings.auto_show_diagnostics_panel and not active_panel:
                 if auto_open_panel:
-                    window.run_command("show_panel",
-                                       {"panel": "output.diagnostics"})
+                    window.run_command("show_panel", {"panel": "output.diagnostics"})
 
         else:
             panel = window.find_output_panel("diagnostics")
             if panel:
                 panel.run_command("lsp_clear_panel")
                 if is_active_panel:
-                    window.run_command("hide_panel",
-                                       {"panel": "output.diagnostics"})
+                    window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
 
 def has_relevant_diagnostics(origin_diagnostics):

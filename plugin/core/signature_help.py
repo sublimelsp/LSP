@@ -134,7 +134,7 @@ def render_signature_label(renderer: ScopeRenderer, sig_info: SignatureInformati
 
         if sig_info.close_paren_index > -1:
             start = sig_info.close_paren_index
-            end = start+1
+            end = start + 1
             label = label[:start] + renderer.punctuation(label[start:end]) + html.escape(label[end:], quote=False)
 
         max_param_index = len(sig_info.parameters) - 1
@@ -209,4 +209,4 @@ class SignatureHelp(object):
 
     def _build_overload_selector(self) -> str:
         return "**{}** of **{}** overloads (use the ↑ ↓ keys to navigate):\n".format(
-            str(self._active_signature_index + 1), str(len(self._signatures)))
+                   self._active_signature_index + 1, len(self._signatures))

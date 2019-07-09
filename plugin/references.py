@@ -18,8 +18,13 @@ except ImportError:
 
 
 def ensure_references_panel(window: sublime.Window) -> 'Optional[sublime.View]':
-    return ensure_panel(window, "references", r"^\s*\S\s+(\S.*):$", r"^\s+([0-9]+):?([0-9]+).*$",
-                        "Packages/" + PLUGIN_NAME + "/Syntaxes/References.sublime-syntax")
+    return ensure_panel(
+                window,
+                "references",
+                r"^\s*\S\s+(\S.*):$",
+                r"^\s+([0-9]+):?([0-9]+).*$",
+                "Packages/" + PLUGIN_NAME + "/Syntaxes/References.sublime-syntax"
+            )
 
 
 class LspSymbolReferencesCommand(LspTextCommand):
@@ -141,7 +146,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         return self._format_references(grouped_references)
 
     def _group_references_by_file(self, references, base_dir):
-        """ Return a dictionary that groups references by the file it belongs. """
+        """Return a dictionary that groups references by the file it belongs."""
         grouped_references = {}  # type: Dict[str, List[Dict]]
         for reference in references:
             file_path = uri_to_filename(reference.get("uri"))

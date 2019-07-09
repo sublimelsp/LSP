@@ -46,13 +46,14 @@ def start_server(server_binary_args: 'List[str]', working_dir: str,
     stderr_destination = subprocess.PIPE if attach_stderr else subprocess.DEVNULL
 
     return subprocess.Popen(
-        server_binary_args,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=stderr_destination,
-        cwd=working_dir,
-        env=env,
-        startupinfo=si)
+            server_binary_args,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=stderr_destination,
+            cwd=working_dir,
+            env=env,
+            startupinfo=si
+        )
 
 
 def attach_logger(process: 'subprocess.Popen', stream) -> None:

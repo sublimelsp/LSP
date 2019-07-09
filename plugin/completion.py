@@ -69,13 +69,11 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         self.initialized = True
         session = session_for_view(self.view)
         if session:
-            completionProvider = session.get_capability(
-                'completionProvider')
+            completionProvider = session.get_capability('completionProvider')
             if completionProvider:
                 self.enabled = True
                 self.resolve = completionProvider.get('resolveProvider') or False
-                self.trigger_chars = completionProvider.get(
-                    'triggerCharacters') or []
+                self.trigger_chars = completionProvider.get('triggerCharacters') or []
                 if self.trigger_chars:
                     self.register_trigger_chars(session)
 
@@ -118,7 +116,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
     def find_completion_item(self, inserted: str):
         """
-        Returns the completionItem for a given replacement string.
+        Return the completionItem for a given replacement string.
         Matches exactly or up to first snippet placeholder ($s)
         """
         # TODO: candidate for extracting and thorough testing.
@@ -191,10 +189,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
     def on_query_completions(self, prefix, locations):
         if prefix != "" and self.view.match_selector(locations[0], NO_COMPLETION_SCOPES):
             # debug('discarding completion because no completion scope with prefix {}'.format(prefix))
-            return (
-                [],
-                sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
-            )
+            return ([], sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
         if not self.initialized:
             self.initialize()
@@ -305,4 +300,5 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 'disable_auto_insert': True,
                 'api_completions_only': settings.only_show_lsp_completions,
                 'next_completion_if_showing': False
-            })
+            }
+        )

@@ -128,9 +128,7 @@ class LspCodeActionsCommand(LspTextCommand):
     def run_command(self, command) -> None:
         client = client_for_view(self.view)
         if client:
-            client.send_request(
-                Request.executeCommand(command),
-                self.handle_command_response)
+            client.send_request(Request.executeCommand(command), self.handle_command_response)
 
     def handle_command_response(self, response):
         pass

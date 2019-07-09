@@ -92,13 +92,13 @@ class LspHoverCommand(LspTextCommand):
     def symbol_actions_content(self):
         actions = []
         if self.has_client_with_capability('definitionProvider'):
-            actions.append("<a href='{}'>{}</a>".format('definition', 'Definition'))
+            actions.append("<a href='definition'>Definition</a>")
 
         if self.has_client_with_capability('referencesProvider'):
-            actions.append("<a href='{}'>{}</a>".format('references', 'References'))
+            actions.append("<a href='references'>References</a>")
 
         if self.has_client_with_capability('renameProvider'):
-            actions.append("<a href='{}'>{}</a>".format('rename', 'Rename'))
+            actions.append("<a href='rename'>Rename</a>")
 
         return "<p>" + " | ".join(actions) + "</p>"
 

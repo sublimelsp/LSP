@@ -14,8 +14,7 @@ def get_project_path(window: 'Any') -> 'Optional[str]':
     Returns the first project folder or the parent folder of the active view
     """
     if len(window.folders()):
-        folder_paths = window.folders()
-        return folder_paths[0]
+        return window.folders()[0]
     else:
         view = window.active_view()
         if view:

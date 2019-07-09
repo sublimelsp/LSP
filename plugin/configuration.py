@@ -36,9 +36,8 @@ def extract_syntax_name(syntax_file: str) -> str:
 
 
 def show_enable_config(view: sublime.View, config: ClientConfig):
-    syntax = str(view.settings().get("syntax", ""))
     message = "LSP has found a language server for {}. Run \"Setup Language Server\" to start using it".format(
-        extract_syntax_name(syntax)
+        extract_syntax_name(str(view.settings().get("syntax", "")))
     )
     window = view.window()
     if window:
@@ -148,13 +147,12 @@ Visit [langserver.org](https://langserver.org) to find out if a language server 
 class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
     def run(self):
         view = self.window.active_view()
-        syntax = view.settings().get("syntax")
         available_config = get_global_client_config(view, client_configs.all)
 
-        syntax_name = extract_syntax_name(syntax)
-        title = "# Language Server for {}\n".format(syntax_name)
+        syntax_name = extract_syntax_name(view.settings().get("syntax"))
 
         if available_config:
+            title = "# Language Server for {}\n".format(syntax_name)
             content = supported_syntax_template.format(syntax_name)
         else:
             title = "# No Language Server support"

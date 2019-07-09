@@ -127,10 +127,11 @@ def unload_settings():
 
 
 def read_language_config(config: dict) -> 'LanguageConfig':
-    language_id = config.get("languageId", "")
-    scopes = config.get("scopes", [])
-    syntaxes = config.get("syntaxes", [])
-    return LanguageConfig(language_id, scopes, syntaxes)
+    return LanguageConfig(
+                config.get("languageId", ""),
+                config.get("scopes", []),
+                config.get("syntaxes", [])
+            )
 
 
 def read_language_configs(client_config: dict) -> 'List[LanguageConfig]':

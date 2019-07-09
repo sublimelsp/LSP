@@ -22,12 +22,13 @@ def add_extension_if_missing(server_binary_args: 'List[str]') -> 'List[str]':
             # node has .cmd
             # dart has .bat
             # python has .exe wrappers - not needed
-            for extension in ('.cmd', '.bat'):
-                if path_to_executable and path_to_executable.lower().endswith(extension):
-                    executable_arg = executable_arg + extension
-                    updated_args = [executable_arg]
-                    updated_args.extend(server_binary_args[1:])
-                    return updated_args
+            if path_to_executable:
+                path_to_executable = path_to_executable.lower()
+                for extension in ('.cmd', '.bat'):
+                    if path_to_executable.endswith(extension):
+                        updated_args = [executable_arg + extension]
+                        updated_args.extend(server_binary_args[1:])
+                        return updated_args
 
     return server_binary_args
 

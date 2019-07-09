@@ -19,8 +19,7 @@ class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
                 documents_changed += 1
 
         if documents_changed > 0:
-            message = 'Applied changes to {} documents'.format(documents_changed)
-            self.window.status_message(message)
+            self.window.status_message('Applied changes to {} documents'.format(documents_changed))
         else:
             self.window.status_message('No changes to apply to workspace')
 

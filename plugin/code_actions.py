@@ -24,8 +24,7 @@ def send_code_action_request(view, on_response_recieved: 'Callable'):
         return
 
     region = view.sel()[0]
-    pos = region.begin()
-    point_diagnostics = get_point_diagnostics(view, pos)
+    point_diagnostics = get_point_diagnostics(view, region.begin())
     params = {
         "textDocument": {
             "uri": filename_to_uri(view.file_name())
@@ -45,9 +44,7 @@ class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
 
     @classmethod
     def is_applicable(cls, _settings):
-        if settings.show_code_actions_bulb:
-            return True
-        return False
+        return settings.show_code_actions_bulb
 
     def on_selection_modified_async(self):
         self.hide_bulb()
@@ -64,6 +61,7 @@ class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
             send_code_action_request(self.view, self.handle_response)
 
     def handle_response(self, response) -> None:
+        # TODO: is this check necessary ?
         if settings.show_code_actions_bulb:
             if len(response) > 0:
                 self.show_bulb()
@@ -71,17 +69,20 @@ class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
                 self.hide_bulb()
 
     def show_bulb(self) -> None:
-        region = self.view.sel()[0]
-        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
-        self.view.add_regions('lsp_bulb', [region], 'markup.changed', 'Packages/LSP/icons/lightbulb.png', flags)
+        self.view.add_regions(
+            'lsp_bulb',
+            [self.view.sel()[0]],
+            'markup.changed',
+            'Packages/LSP/icons/lightbulb.png',
+            sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+        )
 
     def hide_bulb(self) -> None:
         self.view.erase_regions('lsp_bulb')
 
 
 def is_command(command_or_code_action: dict) -> bool:
-    command_field = command_or_code_action.get('command')
-    return isinstance(command_field, str)
+    return isinstance(command_or_code_action.get('command'), str)
 
 
 class LspCodeActionsCommand(LspTextCommand):

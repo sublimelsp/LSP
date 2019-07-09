@@ -45,8 +45,7 @@ def parse_signature_label(signature_label: str, parameters: 'List[ParameterInfor
     # if no parens, start detecting from first parameter instead.
     # if paren, extract and highlight
     open_paren_index = signature_label.find('(')
-    params_start_index = open_paren_index + 1
-    current_index = params_start_index
+    current_index = open_paren_index + 1
 
     for parameter in parameters:
 

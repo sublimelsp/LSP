@@ -165,10 +165,8 @@ class WindowDocumentHandler(object):
         for file_name in self._document_states:
             view = self._window.find_open_file(file_name)
             if view:
-                syntax = view.settings().get("syntax")
-                if config_supports_syntax(session.config, syntax):
-                    sessions = self._get_applicable_sessions(view)
-                    self._attach_view(view, sessions)
+                if config_supports_syntax(session.config, view.settings().get("syntax")):
+                    self._attach_view(view, self._get_applicable_sessions(view))
                     self._notify_did_open(view, session)
 
     def _is_supported_view(self, view: ViewLike) -> bool:
@@ -330,13 +328,7 @@ class WindowManager(object):
         return self._sessions.get(config_name)
 
     def _is_session_ready(self, config_name: str):
-        if config_name not in self._sessions:
-            return False
-
-        if self._sessions[config_name].state == ClientStates.READY:
-            return True
-
-        return False
+        return config_name in self._sessions and self._sessions[config_name].state == ClientStates.READY
 
     def _can_start_config(self, config_name: str):
         return config_name not in self._sessions
@@ -386,12 +378,7 @@ class WindowManager(object):
                                           lambda session: self._handle_session_started(session, project_path, config),
                                           self._handle_session_ended)
         except Exception as e:
-            message = "\n\n".join([
-                "Could not start {}",
-                "{}",
-                "Server will be disabled for this window"
-            ]).format(config.name, str(e))
-
+            message = "Could not start {}\n\n{}\n\nServer will be disabled for this window".format(config.name, e)
             self._configs.disable(config.name)
             self._sublime.message_dialog(message)
 
@@ -437,8 +424,7 @@ class WindowManager(object):
             self._project_path = current_project_path
 
     def _apply_workspace_edit(self, params: 'Dict[str, Any]', client: Client, request_id: int) -> None:
-        edit = params.get('edit', {})
-        changes = parse_workspace_edit(edit)
+        changes = parse_workspace_edit(params.get('edit', {}))
         self._window.run_command('lsp_apply_workspace_edit', {'changes': changes})
         # TODO: We should ideally wait for all changes to have been applied.
         # This however seems overly complicated, because we have to bring along a string representation of the
@@ -483,10 +469,7 @@ class WindowManager(object):
         global_events.subscribe('view.on_close', lambda view: self._handle_view_closed(view, session))
 
         if config.settings:
-            configParams = {
-                'settings': config.settings
-            }
-            client.send_notification(Notification.didChangeConfiguration(configParams))
+            client.send_notification(Notification.didChangeConfiguration({'settings': config.settings}))
 
         self._window.status_message("{} initialized".format(config.name))
 
@@ -554,9 +537,16 @@ class WindowRegistry(object):
         state = self._windows.get(window.id())
         if state is None:
             window_configs = self._configs.for_window(window)
-            window_documents = self._documents.for_window(window, window_configs)
-            state = WindowManager(window, window_configs, window_documents, WindowDiagnostics(), self._session_starter,
-                                  self._sublime, self._handler_dispatcher, lambda: self._on_closed(window))
+            state = WindowManager(
+                        window,
+                        window_configs,
+                        self._documents.for_window(window, window_configs),
+                        WindowDiagnostics(),
+                        self._session_starter,
+                        self._sublime,
+                        self._handler_dispatcher,
+                        lambda: self._on_closed(window)
+                    )
             self._windows[window.id()] = state
         return state
 

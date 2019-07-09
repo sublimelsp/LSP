@@ -188,10 +188,9 @@ def get_view_diagnostics(view):
 
 
 def get_line_diagnostics(view, point):
-    row, _ = view.rowcol(point)
-    diagnostics = get_view_diagnostics(view)
+    row = view.rowcol(point)[0]
     return tuple(
-        diagnostic for diagnostic in diagnostics
+        diagnostic for diagnostic in get_view_diagnostics(view)
         if diagnostic.range.start.row <= row <= diagnostic.range.end.row
     )
 

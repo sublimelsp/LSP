@@ -28,9 +28,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         self.reflist = []  # type: List[List[str]]
 
     def is_enabled(self, event=None):
-        if self.has_client_with_capability('referencesProvider'):
-            return is_at_word(self.view, event)
-        return False
+        return self.has_client_with_capability('referencesProvider') and is_at_word(self.view, event)
 
     def run(self, edit, event=None):
         client = client_for_view(self.view)
@@ -41,9 +39,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 document_position['context'] = {
                     "includeDeclaration": False
                 }
-                request = Request.references(document_position)
-                client.send_request(
-                    request, lambda response: self.handle_response(response, pos))
+                client.send_request(Request.references(document_position),
+                                    lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response: 'Optional[List[Dict]]', pos) -> None:
         window = self.view.window()

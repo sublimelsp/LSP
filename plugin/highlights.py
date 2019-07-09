@@ -90,8 +90,7 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
             if client:
                 params = get_document_position(self.view, point)
                 if params:
-                    request = Request.documentHighlight(params)
-                    client.send_request(request, self._handle_response)
+                    client.send_request(Request.documentHighlight(params), self._handle_response)
 
     def _handle_response(self, response: 'Optional[List]') -> None:
         if not response:

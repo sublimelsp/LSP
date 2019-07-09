@@ -172,12 +172,11 @@ class Response:
         self.jsonrpc = "2.0"
 
     def to_payload(self) -> 'Dict[str, Any]':
-        r = {
+        return {
             "id": self.request_id,
             "jsonrpc": self.jsonrpc,
             "result": self.result
         }
-        return r
 
 
 class Notification:

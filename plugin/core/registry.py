@@ -96,8 +96,7 @@ def _client_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Wi
 
 def unload_sessions():
     for window in sublime.windows():
-        wm = windows.lookup(window)
-        wm.end_sessions()
+        windows.lookup(window).end_sessions()
 
 
 configs = ConfigManager(client_configs.all)
@@ -116,10 +115,7 @@ def config_for_scope(view: 'Any', point=None) -> 'Optional[ClientConfig]':
 
 def is_supported_view(view: sublime.View) -> bool:
     # TODO: perhaps make this check for a client instead of a config
-    if config_for_scope(view):
-        return True
-    else:
-        return False
+    return config_for_scope(view) is not None
 
 
 class LspTextCommand(sublime_plugin.TextCommand):
@@ -131,9 +127,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
     def has_client_with_capability(self, capability):
         session = session_for_view(self.view)
-        if session and session.has_capability(capability):
-            return True
-        return False
+        return session is not None and session.has_capability(capability)
 
 
 class LspRestartClientCommand(sublime_plugin.TextCommand):

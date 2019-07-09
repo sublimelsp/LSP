@@ -27,12 +27,7 @@ class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
         return len(name) > 0
 
     def get_current_symbol_name(self):
-        pos = get_position(self.view)
-        current_name = self.view.substr(self.view.word(pos))
-        # Is this check necessary?
-        if not current_name:
-            current_name = ""
-        return current_name
+        return self.view.substr(self.view.word(get_position(self.view)))
 
 
 class LspSymbolRenameCommand(LspTextCommand):
@@ -41,9 +36,7 @@ class LspSymbolRenameCommand(LspTextCommand):
 
     def is_enabled(self, event=None):
         # TODO: check what kind of scope we're in.
-        if self.has_client_with_capability('renameProvider'):
-            return is_at_word(self.view, event)
-        return False
+        return self.has_client_with_capability('renameProvider') and is_at_word(self.view, event)
 
     def input(self, args):
         if "new_name" not in args:

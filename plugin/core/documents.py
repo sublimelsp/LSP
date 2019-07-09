@@ -24,10 +24,10 @@ def get_document_position(view: sublime.View, point: int) -> 'Optional[Dict[str,
     if file_name:
         if not point:
             point = view.sel()[0].begin()
-        d = {}  # type: Dict[str, Any]
-        d['textDocument'] = {"uri": filename_to_uri(file_name)}
-        d['position'] = offset_to_point(view, point).to_lsp()
-        return d
+        return {
+            'textDocument': {"uri": filename_to_uri(file_name)},
+            'position': offset_to_point(view, point).to_lsp()
+        }
     else:
         return None
 
@@ -40,12 +40,8 @@ def get_position(view: sublime.View, event=None) -> int:
 
 
 def is_at_word(view: sublime.View, event) -> bool:
-    pos = get_position(view, event)
-    point_classification = view.classify(pos)
-    if point_classification & SUBLIME_WORD_MASK:
-        return True
-    else:
-        return False
+    point_classification = view.classify(get_position(view, event))
+    return bool(point_classification & SUBLIME_WORD_MASK)
 
 
 def is_transient_view(view: sublime.View) -> bool:

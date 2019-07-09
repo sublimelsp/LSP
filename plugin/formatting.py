@@ -40,9 +40,8 @@ class LspFormatDocumentCommand(LspTextCommand):
                 },
                 "options": options_for_view(self.view)
             }
-            request = Request.formatting(params)
-            client.send_request(
-                request, lambda response: apply_response_to_view(response, self.view))
+            client.send_request(Request.formatting(params),
+                                lambda response: apply_response_to_view(response, self.view))
 
 
 class LspFormatDocumentRangeCommand(LspTextCommand):

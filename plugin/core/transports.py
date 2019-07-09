@@ -67,10 +67,7 @@ def start_tcp_transport(port: int, host: 'Optional[str]' = None) -> 'Transport':
 
 
 def build_message(content: str) -> str:
-    content_length = len(content)
-    result = "Content-Length: {}\r\n\r\n{}".format(content_length, content)
-    return result
-
+    return "Content-Length: {}\r\n\r\n{}".format(len(content), content)
 
 class TCPTransport(Transport):
     def __init__(self, socket: 'Any') -> None:

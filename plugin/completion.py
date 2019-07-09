@@ -39,11 +39,9 @@ class CompletionHelper(sublime_plugin.EventListener):
 
 class LspTrimCompletionCommand(sublime_plugin.TextCommand):
 
-    def run(self, edit, range: 'Optional[Tuple[int, int]]'=None):
+    def run(self, edit, range: 'Optional[Tuple[int, int]]' = None):
         if range:
-            start, end = range
-            region = sublime.Region(start, end)
-            self.view.erase(edit, region)
+            self.view.erase(edit, sublime.Region(*range))
 
 
 class CompletionHandler(sublime_plugin.ViewEventListener):
@@ -65,7 +63,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return is_supported_syntax(syntax, client_configs.all) if syntax else False
+        return syntax is not None and is_supported_syntax(syntax, client_configs.all)
 
     def initialize(self):
         self.initialized = True
@@ -108,9 +106,8 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             self.view.settings().set('auto_complete_triggers', completion_triggers)
 
     def is_after_trigger_character(self, location):
-        if location > 0:
-            prev_char = self.view.substr(location - 1)
-            return prev_char in self.trigger_chars
+        prev_char = self.view.substr(location - 1)
+        return location > 0 and prev_char in self.trigger_chars
 
     def is_same_completion(self, prefix, locations):
         if self.response_incomplete:
@@ -142,13 +139,14 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
     def on_modified(self):
 
+        current_location = self.view.sel()[0].begin()
         # hide completion when backspacing past last completion.
-        if self.view.sel()[0].begin() < self.last_location:
+        if current_location < self.last_location:
             self.last_location = 0
             self.view.run_command("hide_auto_complete")
 
         # cancel current completion if the previous input is a space
-        prev_char = self.view.substr(self.view.sel()[0].begin() - 1)
+        prev_char = self.view.substr(current_location - 1)
         if self.state == CompletionState.REQUESTING and prev_char.isspace():
             self.state = CompletionState.CANCELLING
 
@@ -165,8 +163,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
     def on_completion_inserted(self):
         # get text inserted from last completion
         word = self.view.word(self.last_location)
-        region = sublime.Region(word.begin(), self.view.sel()[0].end())
-        inserted = self.view.substr(region)
+        inserted = self.view.substr(sublime.Region(word.begin(), self.view.sel()[0].end()))
 
         item = self.find_completion_item(inserted)
         if item:

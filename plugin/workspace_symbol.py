@@ -29,8 +29,7 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
     def _format(self, s: 'Dict[str, Any]') -> str:
         file_name = os.path.basename(s['location']['uri'])
         symbol_kind = format_symbol_kind(s["kind"])
-        name = "{} ({}) - {} -- {}".format(s['name'], symbol_kind, s.get('containerName', ""), file_name)
-        return name
+        return "{} ({}) - {} -- {}".format(s['name'], symbol_kind, s.get('containerName', ""), file_name)
 
     def _open_file(self, symbols: 'List[Dict[str, Any]]', index: int) -> None:
         if index != -1:
@@ -51,8 +50,7 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
     def _handle_error(self, error: 'Dict[str, Any]') -> None:
         self.view.erase_status("lsp_workspace_symbols")
         reason = error.get("message", "none provided by server :(")
-        msg = "command 'workspace/symbol' failed. Reason: {}".format(reason)
-        sublime.error_message(msg)
+        sublime.error_message("command 'workspace/symbol' failed. Reason: {}".format(reason))
 
     def is_enabled(self, event=None):
         return self.has_client_with_capability('workspaceSymbolProvider')

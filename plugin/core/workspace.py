@@ -21,8 +21,8 @@ def get_project_path(window: 'Any') -> 'Optional[str]':
             filename = view.file_name()
             if filename:
                 project_path = os.path.dirname(filename)
-                debug("Couldn't determine project directory since no folders are open!",
-                      "Using", project_path, "as a fallback.")
+                debug("Couldn't determine project directory since no folders are open! Using",
+                      project_path, "as a fallback.")
                 return project_path
             else:
                 debug("Couldn't determine project directory since no folders are open",
@@ -61,7 +61,7 @@ def set_enabled_in_project(window, config_name: str, enabled: bool) -> None:
         project_client_settings['enabled'] = enabled
         window.set_project_data(project_data)
     else:
-        debug('non-dict returned in project_settings: ', project_data)
+        debug('non-dict returned in project_settings:', project_data)
 
 
 def get_project_config(window: 'Any') -> dict:

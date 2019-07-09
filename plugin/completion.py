@@ -293,7 +293,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 prefix, locations = self.next_request
                 self.do_request(prefix, locations)
         else:
-            debug('Got unexpected response while in state {}'.format(self.state))
+            debug('Got unexpected response while in state', self.state)
 
     def handle_error(self, error: dict):
         sublime.status_message('Completion error: ' + str(error.get('message')))

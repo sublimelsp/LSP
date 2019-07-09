@@ -41,7 +41,7 @@ def start_server(server_binary_args: 'List[str]', working_dir: str,
         si = subprocess.STARTUPINFO()  # type: ignore
         si.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW  # type: ignore
 
-    debug("starting " + str(server_binary_args))
+    debug("starting", server_binary_args)
 
     stderr_destination = subprocess.PIPE if attach_stderr else subprocess.DEVNULL
 

@@ -63,7 +63,7 @@ def apply_window_settings(client_config: 'ClientConfig', window: 'sublime.Window
 
     if client_config.name in window_config:
         overrides = window_config[client_config.name]
-        debug('window {} has override for {}'.format(window.id(), client_config.name), overrides)
+        debug('window', window.id(), 'has override for', client_config.name, overrides)
         client_settings = _merge_dicts(client_config.settings, overrides.get("settings", {}))
         client_env = _merge_dicts(client_config.env, overrides.get("env", {}))
         return ClientConfig(

@@ -338,7 +338,7 @@ class WindowManager(object):
 
     def start_active_views(self):
         active_views = get_active_views(self._window)
-        debug('window {} starting {} initial views'.format(self._window.id(), len(active_views)))
+        debug('window', self._window.id(), 'starting', len(active_views), 'initial views')
         for view in active_views:
             if view.file_name():
                 self._initialize_on_open(view)
@@ -354,7 +354,7 @@ class WindowManager(object):
         # have all sessions for this document been started?
         for config in self._configs.syntax_configs(view):
             if config.enabled and config.name not in self._sessions:
-                debug("window {} requests {} for {}".format(self._window.id(), config.name, view.file_name()))
+                debug("window", self._window.id(), "requests", config.name, "for", view.file_name())
                 self._start_client(config)
 
     def _start_client(self, config: ClientConfig):
@@ -383,7 +383,7 @@ class WindowManager(object):
             self._sublime.message_dialog(message)
 
         if session:
-            debug("window {} added session {}".format(self._window.id(), config.name))
+            debug("window", self._window.id(), "added session", config.name)
             self._sessions[config.name] = session
 
     def _handle_message_request(self, params: dict, client: Client, request_id: int) -> None:
@@ -419,7 +419,7 @@ class WindowManager(object):
         current_project_path = get_project_path(self._window)
         if current_project_path != self._project_path:
             debug('project path changed, ending existing sessions')
-            debug('new path = {}'.format(current_project_path))
+            debug('new path =', current_project_path)
             self.end_sessions()
             self._project_path = current_project_path
 
@@ -491,17 +491,17 @@ class WindowManager(object):
             self._handle_window_closed()
 
     def _handle_window_closed(self):
-        debug('window {} closed, ending sessions'.format(self._window.id()))
+        debug('window', self._window.id(), 'closed, ending sessions')
         self._is_closing = True
         self.end_sessions()
 
     def _handle_all_sessions_ended(self):
-        debug('clients for window {} unloaded'.format(self._window.id()))
+        debug('clients for window', self._window.id(), 'unloaded')
         if self._restarting:
-            debug('window {} sessions unloaded - restarting'.format(self._window.id()))
+            debug('window', self._window.id(), 'sessions unloaded - restarting')
             self.start_active_views()
         elif not self._window.is_valid():
-            debug('window {} closed and sessions unloaded'.format(self._window.id()))
+            debug('window', self._window.id(), 'closed and sessions unloaded')
             if self._on_closed:
                 self._on_closed()
 

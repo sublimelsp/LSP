@@ -33,7 +33,7 @@ def get_documentation(d: 'Dict[str, Any]') -> 'Optional[str]':
         # be nice to handle the markdown in a special way.
         return docs.get('value', None)
     else:
-        debug('unknown documentation type:', str(d))
+        debug('unknown documentation type:', d)
         return None
 
 
@@ -116,8 +116,7 @@ def create_signature_help(response: 'Optional[Dict]') -> 'Optional[SignatureHelp
 
     if signatures:
         if not 0 <= active_signature < len(signatures):
-            debug("activeSignature {} not a valid index for signatures length {}".format(
-                active_signature, len(signatures)))
+            debug("activeSignature", active_signature, "not a valid index for signatures length", len(signatures))
             active_signature = 0
 
         return SignatureHelp(signatures, active_signature, active_parameter)

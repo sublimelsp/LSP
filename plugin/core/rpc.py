@@ -85,7 +85,7 @@ class Client(object):
                      error_handler: 'Optional[Callable]' = None) -> None:
         self.request_id += 1
         if self.transport is not None:
-            debug(' --> ' + request.method)
+            debug(' -->', request.method)
             self._response_handlers[self.request_id] = (handler, error_handler)
             self.send_payload(request.to_payload(self.request_id))
         else:
@@ -95,7 +95,7 @@ class Client(object):
 
     def send_notification(self, notification: Notification) -> None:
         if self.transport is not None:
-            debug(' --> ' + notification.method)
+            debug(' -->', notification.method)
             self.send_payload(notification.to_payload())
         else:
             debug('unable to send', notification.method)
@@ -148,20 +148,20 @@ class Client(object):
             elif "id" in payload:
                 self.response_handler(payload)
             else:
-                debug("Unknown payload type: ", payload)
+                debug("Unknown payload type:", payload)
         except Exception as err:
             exception_log("Error handling server payload", err)
 
     def on_transport_closed(self) -> None:
         self._error_display_handler("Communication to server closed, exiting")
-        # Differentiate between normal exit and server crash?
+        # TODO: Differentiate between normal exit and server crash?
         if not self.exiting:
             self.handle_transport_failure()
 
     def response_handler(self, response: 'Dict[str, Any]') -> None:
         request_id = int(response["id"])
         if self.settings.log_payloads:
-            debug('     ' + str(response.get("result", None)))
+            debug('    ', response.get("result", None))
         handler, error_handler = self._response_handlers.pop(request_id, (None, None))
         if "result" in response and "error" not in response:
             if handler:
@@ -187,9 +187,9 @@ class Client(object):
         method = message.get("method", "")
         params = message.get("params")
         if method != "window/logMessage":
-            debug('<--  ' + method)
+            debug(' <--', method)
             if self.settings.log_payloads and params:
-                debug('     ' + str(params))
+                debug('    ', params)
         handler = handlers.get(method)
         if handler:
             try:
@@ -197,4 +197,4 @@ class Client(object):
             except Exception as err:
                 exception_log("Error handling {} {}".format(typestr, method), err)
         else:
-            debug("Unhandled {}".format(typestr), method)
+            debug("Unhandled", typestr, method)

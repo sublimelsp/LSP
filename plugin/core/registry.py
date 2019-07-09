@@ -45,7 +45,7 @@ def load_handlers():
 
 
 def register_language_handler(handler: LanguageHandler) -> None:
-    debug("received config {} from {}".format(handler.name, handler.__class__.__name__))
+    debug("received config", handler.name, "from", handler.__class__.__name__)
     client_configs.add_external_config(handler.config)
     if handler.on_start:
         client_start_listeners[handler.name] = handler.on_start
@@ -86,7 +86,7 @@ def _client_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Wi
         if session.client:
             return session.client
         else:
-            debug(session.config.name, "in state", session.state, " for view",
+            debug(session.config.name, "in state", session.state, "for view",
                   view.file_name())
             return None
     else:

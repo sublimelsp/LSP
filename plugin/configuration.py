@@ -46,8 +46,13 @@ def show_enable_config(view: sublime.View, config: ClientConfig):
 
 class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
     def run(self):
-        self._items = [[config.name, ", ".join(language.id for language in config.languages)]
-                       for config in client_configs.all if not config.enabled]
+        self._items = []  # type: List[List[str]]
+        for config in client_configs.all:
+            if not config.enabled:
+                self._items.append([
+                    config.name,
+                    ", ".join(language.id for language in config.languages)
+                ])
 
         if len(self._items) > 0:
             self.window.show_quick_panel(self._items, self._on_done)
@@ -68,9 +73,15 @@ class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
 
 class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
     def run(self):
+        self._items = []  # type: List[List[str]]
         wm = windows.lookup(self.window)
-        self._items = [[config.name, ", ".join(language.id for language in config.languages)]
-                       for config in wm._configs.all if not config.enabled]
+        for config in wm._configs.all:
+            # should also check if enabled here.
+            if not config.enabled:
+                self._items.append([
+                    config.name,
+                    ", ".join(language.id for language in config.languages)
+                ])
 
         if len(self._items) > 0:
             self.window.show_quick_panel(self._items, self._on_done)
@@ -89,8 +100,13 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
 
 class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
     def run(self):
-        self._items = [[config.name, ", ".join(language.id for language in config.languages)]
-                       for config in client_configs.all if config.enabled]
+        self._items = []  # type: List[List[str]]
+        for config in client_configs.all:
+            if config.enabled:
+                self._items.append([
+                    config.name,
+                    ", ".join(language.id for language in config.languages)
+                ])
 
         if len(self._items) > 0:
             self.window.show_quick_panel(self._items, self._on_done)
@@ -110,8 +126,13 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
 class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
     def run(self):
         wm = windows.lookup(self.window)
-        self._items = [[config.name, ", ".join(language.id for language in config.languages)]
-                       for config in wm._configs.all if config.enabled]
+        self._items = []  # type: List[List[str]]
+        for config in wm._configs.all:
+            if config.enabled:
+                self._items.append([
+                    config.name,
+                    ", ".join(language.id for language in config.languages)
+                ])
 
         if len(self._items) > 0:
             self.window.show_quick_panel(self._items, self._on_done)

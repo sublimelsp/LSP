@@ -95,7 +95,9 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
     def _handle_response(self, response: 'Optional[List]') -> None:
         if not response:
             return
-        kind2regions = {_kind2name[kind]: [] for kind in range(0, 4)}  # type: Dict[str, List[sublime.Region]]
+        kind2regions = {}  # type: Dict[str, List[sublime.Region]]
+        for kind in range(0, 4):
+            kind2regions[_kind2name[kind]] = []
         for highlight in response:
             r = range_to_region(Range.from_lsp(highlight["range"]), self.view)
             kind = highlight.get("kind", DocumentHighlightKind.Unknown)

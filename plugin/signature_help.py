@@ -23,8 +23,9 @@ assert SignatureHelp
 
 class ColorSchemeScopeRenderer(object):
     def __init__(self, view) -> None:
-        self._scope_styles = {scope: mdpopups.scope2style(view, scope)
-                              for scope in ("entity.name.function", "variable.parameter", "punctuation")}
+        self._scope_styles = {}  # type: dict
+        for scope in ("entity.name.function", "variable.parameter", "punctuation"):
+            self._scope_styles[scope] = mdpopups.scope2style(view, scope)
 
     def function(self, content: str, escape: bool = True) -> str:
         return self._wrap_with_scope_style(content, "entity.name.function", escape=escape)

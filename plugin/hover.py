@@ -139,9 +139,9 @@ class LspHoverCommand(LspTextCommand):
             value = ""
             language = None
             if isinstance(item, str):
-                value = item
+                value = escape(item)
             else:
-                value = item.get("value")
+                value = escape(item.get("value"))
                 language = item.get("language")
             if language:
                 formatted.append("```{}\n{}\n```\n".format(language, value))

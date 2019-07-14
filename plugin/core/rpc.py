@@ -67,7 +67,7 @@ def try_terminate_process(process: 'subprocess.Popen') -> None:
         pass  # process can be terminated already
 
 
-class Client(object):
+class Client:
     def __init__(self, transport: Transport, settings) -> None:
         self.transport = transport  # type: Optional[Transport]
         self.transport.start(self.receive_payload, self.on_transport_closed)

@@ -58,7 +58,7 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings):
     settings.log_payloads = read_bool_setting(settings_obj, "log_payloads", False)
 
 
-class ClientConfigs(object):
+class ClientConfigs:
 
     def __init__(self):
         self._default_settings = {}  # type: Dict[str, dict]

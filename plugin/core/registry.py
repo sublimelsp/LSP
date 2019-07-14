@@ -25,7 +25,7 @@ client_start_listeners = {}  # type: Dict[str, Callable]
 client_initialization_listeners = {}  # type: Dict[str, Callable]
 
 
-class LanguageHandlerDispatcher(object):
+class LanguageHandlerDispatcher:
 
     def on_start(self, config_name: str, window) -> bool:
         if config_name in client_start_listeners:

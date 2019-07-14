@@ -10,14 +10,14 @@ TextDocumentSyncKindFull = 1
 TextDocumentSyncKindIncremental = 2
 
 
-class DiagnosticSeverity(object):
+class DiagnosticSeverity:
     Error = 1
     Warning = 2
     Information = 3
     Hint = 4
 
 
-class SymbolKind(object):
+class SymbolKind:
     File = 1
     Module = 2
     Namespace = 3
@@ -46,7 +46,7 @@ class SymbolKind(object):
     TypeParameter = 26
 
 
-class CompletionItemKind(object):
+class CompletionItemKind:
     Text = 1
     Method = 2
     Function = 3
@@ -74,7 +74,7 @@ class CompletionItemKind(object):
     TypeParameter = 25
 
 
-class DocumentHighlightKind(object):
+class DocumentHighlightKind:
     Unknown = 0
     Text = 1
     Read = 2
@@ -228,7 +228,7 @@ class Notification:
         return r
 
 
-class Point(object):
+class Point:
     def __init__(self, row: int, col: int) -> None:
         self.row = int(row)
         self.col = int(col)
@@ -247,7 +247,7 @@ class Point(object):
         }
 
 
-class Range(object):
+class Range:
     def __init__(self, start: Point, end: Point) -> None:
         self.start = start
         self.end = end
@@ -266,7 +266,7 @@ class Range(object):
         }
 
 
-class Diagnostic(object):
+class Diagnostic:
     def __init__(self, message: str, range: Range, severity: int,
                  source: 'Optional[str]', lsp_diagnostic: dict) -> None:
         self.message = message

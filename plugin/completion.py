@@ -21,7 +21,7 @@ from .core.edit import parse_text_edit
 NO_COMPLETION_SCOPES = 'comment, string'
 
 
-class CompletionState(object):
+class CompletionState:
     IDLE = 0
     REQUESTING = 1
     APPLYING = 2

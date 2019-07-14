@@ -33,7 +33,7 @@ def _run_timeout():
         callback()
 
 
-class Region(object):
+class Region:
     def __init__(self, a, b):
         self.a = a
         self.b = b

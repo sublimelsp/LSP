@@ -19,7 +19,7 @@ except ImportError:
     pass
 
 
-class MockSublimeSettings(object):
+class MockSublimeSettings:
     def __init__(self, values):
         self._values = values
 
@@ -30,7 +30,7 @@ class MockSublimeSettings(object):
         self._values[key] = value
 
 
-class MockView(object):
+class MockView:
     def __init__(self, file_name):
         self._file_name = file_name
         self._window = None
@@ -69,7 +69,7 @@ class MockView(object):
         return 1
 
 
-class MockHandlerDispatcher(object):
+class MockHandlerDispatcher:
     def __init__(self, can_start: bool = True) -> None:
         self._can_start = can_start
         self._initialized = set()  # type: Set[str]
@@ -81,7 +81,7 @@ class MockHandlerDispatcher(object):
         self._initialized.add(config_name)
 
 
-class MockWindow(object):
+class MockWindow:
     def __init__(self, files_in_groups: 'List[List[ViewLike]]' = []) -> None:
         self._files_in_groups = files_in_groups
         self._is_valid = True
@@ -153,12 +153,12 @@ class MockWindow(object):
         self.commands.append((command_name, command_args))
 
 
-class TestGlobalConfigs(object):
+class TestGlobalConfigs:
     def for_window(self, window):
         return MockConfigs()
 
 
-class MockConfigs(object):
+class MockConfigs:
     def __init__(self):
         self.all = [test_config]
 
@@ -195,7 +195,7 @@ class MockConfigs(object):
         pass
 
 
-class MockDocuments(object):
+class MockDocuments:
     def __init__(self):
         self._documents = []  # type: List[str]
         self._sessions = {}  # type: Dict[str, Session]
@@ -215,7 +215,7 @@ class MockDocuments(object):
         self._documents = []
 
 
-class TestDocumentHandlerFactory(object):
+class TestDocumentHandlerFactory:
     def for_window(self, window, configs):
         return MockDocuments()
 

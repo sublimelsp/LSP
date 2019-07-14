@@ -87,7 +87,7 @@ def parse_signature_information(signature: 'Dict') -> 'SignatureInformation':
     return SignatureInformation(signature_label, get_documentation(signature), paren_bounds, param_infos)
 
 
-class ParameterInformation(object):
+class ParameterInformation:
 
     def __init__(self, label: 'Optional[str]', label_range: 'Optional[Tuple[int, int]]',
                  documentation: 'Optional[str]') -> None:
@@ -96,7 +96,7 @@ class ParameterInformation(object):
         self.documentation = documentation
 
 
-class SignatureInformation(object):
+class SignatureInformation:
 
     def __init__(self, label: str, documentation: 'Optional[str]', paren_bounds: 'Tuple[int, int]',
                  parameters: 'List[ParameterInformation]' = []) -> None:
@@ -158,7 +158,7 @@ def render_signature_label(renderer: ScopeRenderer, sig_info: SignatureInformati
         return renderer.function(sig_info.label)
 
 
-class SignatureHelp(object):
+class SignatureHelp:
 
     def __init__(self, signatures: 'List[SignatureInformation]',
                  active_signature=0, active_parameter=0) -> None:

@@ -15,7 +15,7 @@ def json_rpc_message(payload: str) -> bytes:
         str(content_length), 'utf-8') + b'\r\n\r\n' + bytes(payload, 'utf-8')
 
 
-class FakeProcess(object):
+class FakeProcess:
     def __init__(self):
         self.stdin = io.BytesIO(b'')  # io.BufferedReader()
         self.stdout = io.BytesIO(
@@ -30,7 +30,7 @@ class FakeProcess(object):
         self.returncode = returncode
 
 
-class FakeSocket(object):
+class FakeSocket:
     def __init__(self, received: bytes) -> None:
         self.received = received
         self.sent = []  # type: List[str]

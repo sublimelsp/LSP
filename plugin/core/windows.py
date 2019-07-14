@@ -89,7 +89,7 @@ class DocumentState:
         return self.version
 
 
-class DocumentHandlerFactory(object):
+class DocumentHandlerFactory:
     def __init__(self, sublime, settings):
         self._sublime = sublime
         self._settings = settings
@@ -98,7 +98,7 @@ class DocumentHandlerFactory(object):
         return WindowDocumentHandler(self._sublime, self._settings, window, global_events, configs)
 
 
-class WindowDocumentHandler(object):
+class WindowDocumentHandler:
     def __init__(self, sublime, settings, window, events, configs):
         self._sublime = sublime
         self._settings = settings
@@ -300,7 +300,7 @@ class WindowDocumentHandler(object):
                         session.client.send_notification(Notification.didChange(params))
 
 
-class WindowManager(object):
+class WindowManager:
     def __init__(self, window: WindowLike, configs: ConfigRegistry, documents: DocumentHandler,
                  diagnostics: WindowDiagnostics, session_starter: 'Callable', sublime: 'Any',
                  handler_dispatcher, on_closed: 'Optional[Callable]' = None) -> None:
@@ -523,7 +523,7 @@ class WindowManager(object):
             self.restart_sessions()
 
 
-class WindowRegistry(object):
+class WindowRegistry:
     def __init__(self, configs: GlobalConfigs, documents: 'Any',
                  session_starter: 'Callable', sublime: 'Any', handler_dispatcher) -> None:
         self._windows = {}  # type: Dict[int, WindowManager]

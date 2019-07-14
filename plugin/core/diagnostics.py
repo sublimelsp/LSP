@@ -12,7 +12,7 @@ except ImportError:
     pass
 
 
-class DiagnosticsUpdate(object):
+class DiagnosticsUpdate:
     def __init__(self, window, client_name: str,
                  file_path: str, diagnostics: 'List[Diagnostic]') -> None:
         self.window = window
@@ -21,7 +21,7 @@ class DiagnosticsUpdate(object):
         self.diagnostics = diagnostics
 
 
-class WindowDiagnostics(object):
+class WindowDiagnostics:
 
     def __init__(self):
         self._diagnostics = {}  # type: Dict[str, Dict[str, List[Diagnostic]]]

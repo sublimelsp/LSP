@@ -157,7 +157,7 @@ def get_initialize_params(project_path: str, config: ClientConfig):
     return initializeParams
 
 
-class Session(object):
+class Session:
     def __init__(self, config: ClientConfig, project_path, client: Client,
                  on_created=None, on_ended: 'Optional[Callable[[str], None]]' = None) -> None:
         self.config = config

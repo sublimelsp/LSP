@@ -8,7 +8,7 @@ except ImportError:
     Protocol = object  # type: ignore
 
 
-class Settings(object):
+class Settings:
 
     def __init__(self) -> None:
         self.show_status_messages = True
@@ -41,7 +41,7 @@ class Settings(object):
         self.log_payloads = False
 
 
-class ClientStates(object):
+class ClientStates:
     STARTING = 0
     READY = 1
     STOPPING = 2
@@ -54,14 +54,14 @@ def config_supports_syntax(config: 'ClientConfig', syntax: str) -> bool:
     return False
 
 
-class LanguageConfig(object):
+class LanguageConfig:
     def __init__(self, language_id: str, scopes: 'List[str]', syntaxes: 'List[str]') -> None:
         self.id = language_id
         self.scopes = scopes
         self.syntaxes = syntaxes
 
 
-class ClientConfig(object):
+class ClientConfig:
     def __init__(self, name: str, binary_args: 'List[str]', tcp_port: 'Optional[int]', scopes=[],
                  syntaxes=[], languageId: 'Optional[str]' = None,
                  languages: 'List[LanguageConfig]' = [], enabled: bool = True, init_options={},

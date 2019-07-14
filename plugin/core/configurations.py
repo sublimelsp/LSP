@@ -99,7 +99,7 @@ def syntax_language(config: 'ClientConfig', syntax: str) -> 'Optional[LanguageCo
     return None
 
 
-class ConfigManager(object):
+class ConfigManager:
 
     def __init__(self, global_configs: 'List[ClientConfig]') -> None:
         self._configs = global_configs
@@ -108,7 +108,7 @@ class ConfigManager(object):
         return WindowConfigManager(create_window_configs(window, self._configs))
 
 
-class WindowConfigManager(object):
+class WindowConfigManager:
     def __init__(self, configs: 'List[ClientConfig]') -> None:
         self.all = configs
 

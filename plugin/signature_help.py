@@ -21,7 +21,7 @@ from .core.signature_help import create_signature_help, SignatureHelp
 assert SignatureHelp
 
 
-class ColorSchemeScopeRenderer(object):
+class ColorSchemeScopeRenderer:
     def __init__(self, view) -> None:
         self._scope_styles = {}  # type: dict
         for scope in ("entity.name.function", "variable.parameter", "punctuation"):

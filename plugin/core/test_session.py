@@ -18,7 +18,7 @@ completion_provider = {
 }
 
 
-class MockClient():
+class MockClient:
     def __init__(self, async_response=None) -> None:
         self.responses = {
             'initialize': {

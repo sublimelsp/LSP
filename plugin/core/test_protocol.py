@@ -6,10 +6,7 @@ import unittest
 LSP_START_POSITION = {'line': 10, 'character': 4}
 LSP_END_POSITION = {'line': 11, 'character': 3}
 LSP_RANGE = {'start': LSP_START_POSITION, 'end': LSP_END_POSITION}
-LSP_MINIMAL_DIAGNOSTIC = {
-    'message': 'message',
-    'range': LSP_RANGE
-}
+LSP_MINIMAL_DIAGNOSTIC = {'message': 'message', 'range': LSP_RANGE}
 
 LSP_FULL_DIAGNOSTIC = {
     'message': 'message',

@@ -49,24 +49,19 @@ class CompletionFormattingTests(unittest.TestCase):
         updated_settings = Settings()
         updated_settings.prefer_label_over_filter_text = True
         result = format_completion(
-            {"label": "asdf", "insertText": "asdf", "filterText": "filterText"},
-            0, updated_settings)
+            {"label": "asdf", "insertText": "asdf", "filterText": "filterText"}, 0, updated_settings)
         self.assertEqual(len(result), 2)
         self.assertEqual("asdf", result[0])
         self.assertEqual("asdf", result[1])
 
     def test_prefers_insert_text(self):
-        result = format_completion(
-            {"label": "asdf", "insertText": "Asdf", "filterText": "asdf"},
-            0, settings)
+        result = format_completion({"label": "asdf", "insertText": "Asdf", "filterText": "asdf"}, 0, settings)
         self.assertEqual(len(result), 2)
         self.assertEqual("asdf", result[0])
         self.assertEqual("Asdf", result[1])
 
     def test_null_filter_text(self):
-        result = format_completion(
-            {"label": "asdf", "insertText": None, "filterText": None},
-            0, settings)
+        result = format_completion({"label": "asdf", "insertText": None, "filterText": None}, 0, settings)
         self.assertEqual(len(result), 2)
         self.assertEqual("asdf", result[0])
         self.assertEqual("asdf", result[1])

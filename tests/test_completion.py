@@ -164,8 +164,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         yield 100
         self.view.run_command('append', {'characters': '$'})
         self.view.run_command('move_to', {'to': 'eol'})
-        self.client.responses[
-            'textDocument/completion'] = var_completion_using_label
+        self.client.responses['textDocument/completion'] = var_completion_using_label
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
@@ -176,16 +175,12 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
     def test_var_prefix_added_in_insertText(self):
-        """
+        """Powershell: label='true', insertText='$true' (see https://github.com/tomv564/LSP/issues/294)"""
 
-        Powershell: label='true', insertText='$true' (see https://github.com/tomv564/LSP/issues/294)
-
-        """
         yield 100
         self.view.run_command('append', {'characters': '$'})
         self.view.run_command('move_to', {'to': 'eol'})
-        self.client.responses[
-            'textDocument/completion'] = var_prefix_added_in_insertText
+        self.client.responses['textDocument/completion'] = var_prefix_added_in_insertText
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
@@ -196,16 +191,12 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
     def test_var_prefix_added_in_label(self):
-        """
+        """PHP language server: label='$someParam', textEdit='someParam' (https://github.com/tomv564/LSP/issues/368)"""
 
-        PHP language server: label='$someParam', textEdit='someParam' (https://github.com/tomv564/LSP/issues/368)
-
-        """
         yield 100
         self.view.run_command('append', {'characters': '$'})
         self.view.run_command('move_to', {'to': 'eol'})
-        self.client.responses[
-            'textDocument/completion'] = var_prefix_added_in_label
+        self.client.responses['textDocument/completion'] = var_prefix_added_in_label
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
@@ -216,11 +207,8 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
     def test_space_added_in_label(self):
-        """
+        """Clangd: label=" const", insertText="const" (https://github.com/tomv564/LSP/issues/368)"""
 
-        Clangd: label=" const", insertText="const" (https://github.com/tomv564/LSP/issues/368)
-
-        """
         yield 100
         self.client.responses['textDocument/completion'] = space_added_in_label
         handler = self.get_view_event_listener("on_query_completions")
@@ -233,17 +221,13 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 self.view.substr(sublime.Region(0, self.view.size())), 'const')
 
     def test_dash_missing_from_label(self):
-        """
+        """Powershell: label="UniqueId", insertText="-UniqueId" (https://github.com/tomv564/LSP/issues/572)"""
 
-        Powershell: label="UniqueId", insertText="-UniqueId" (https://github.com/tomv564/LSP/issues/572)
-
-        """
         yield 100
         self.view.run_command('append', {'characters': '-'})
         self.view.run_command('move_to', {'to': 'eol'})
 
-        self.client.responses[
-            'textDocument/completion'] = dash_missing_from_label
+        self.client.responses['textDocument/completion'] = dash_missing_from_label
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
@@ -255,11 +239,8 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 '-UniqueId')
 
     def test_edit_before_cursor(self):
-        """
+        """Metals: label="override def myFunction(): Unit" """
 
-        Metals: label="override def myFunction(): Unit"
-
-        """
         yield 100
         self.view.run_command('append', {'characters': '  def myF'})
         self.view.run_command('move_to', {'to': 'eol'})
@@ -280,8 +261,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
     def test_additional_edits(self):
         yield 100
-        self.client.responses[
-            'textDocument/completion'] = completion_with_additional_edits
+        self.client.responses['textDocument/completion'] = completion_with_additional_edits
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
@@ -298,8 +278,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
     def test_resolve_for_additional_edits(self):
         yield 100
         self.client.responses['textDocument/completion'] = label_completions
-        self.client.responses[
-            'completionItem/resolve'] = completion_with_additional_edits[0]
+        self.client.responses['completionItem/resolve'] = completion_with_additional_edits[0]
 
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)

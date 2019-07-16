@@ -134,9 +134,7 @@ class ClientTest(unittest.TestCase):
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
         pongs = []
-        client.on_notification(
-            "pong",
-            lambda params: pongs.append(params))
+        client.on_notification("pong", lambda params: pongs.append(params))
         req = Notification("ping", {})
         client.send_notification(req)
         self.assertGreater(len(transport.messages), 0)
@@ -149,9 +147,7 @@ class ClientTest(unittest.TestCase):
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
         pings = []  # type: List[Tuple[int, Dict[str, Any]]]
-        client.on_request(
-            "ping",
-            lambda params, request_id: pings.append((request_id, params)))
+        client.on_request("ping", lambda params, request_id: pings.append((request_id, params)))
         transport.receive('{ "id": 42, "method": "ping"}')
         self.assertEqual(len(pings), 1)
         self.assertEqual(pings[0][0], 42)

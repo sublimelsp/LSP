@@ -11,8 +11,7 @@ except ImportError:
 
 def json_rpc_message(payload: str) -> bytes:
     content_length = len(payload)
-    return b'Content-Length: ' + bytes(
-        str(content_length), 'utf-8') + b'\r\n\r\n' + bytes(payload, 'utf-8')
+    return b'Content-Length: ' + bytes(str(content_length), 'utf-8') + b'\r\n\r\n' + bytes(payload, 'utf-8')
 
 
 class FakeProcess:

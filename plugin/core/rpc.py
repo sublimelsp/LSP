@@ -78,7 +78,7 @@ class Client(object):
         self.exiting = False
         self._crash_handler = None  # type: Optional[Callable]
         self._transport_fail_handler = None  # type: Optional[Callable]
-        self._error_display_handler = lambda msg: debug(msg)
+        self._error_display_handler = debug
         self.settings = settings
 
     def send_request(self, request: Request, handler: 'Callable[[Optional[Any]], None]',

@@ -232,11 +232,6 @@ def update_count_in_status_bar(view):
         update_diagnostics_in_status_bar(view)
 
 
-global_events.subscribe("document.diagnostics",
-                        lambda update: handle_diagnostics(update))
-global_events.subscribe("view.on_activated_async", update_count_in_status_bar)
-
-
 def handle_diagnostics(update: DiagnosticsUpdate):
     window = update.window
     view = window.find_open_file(update.file_path)
@@ -247,6 +242,10 @@ def handle_diagnostics(update: DiagnosticsUpdate):
     else:
         debug('view not found')
     update_diagnostics_panel(window)
+
+
+global_events.subscribe("document.diagnostics", handle_diagnostics)
+global_events.subscribe("view.on_activated_async", update_count_in_status_bar)
 
 
 class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):

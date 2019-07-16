@@ -177,9 +177,7 @@ class Session(object):
 
     def initialize(self):
         params = get_initialize_params(self.project_path, self.config)
-        self.client.send_request(
-            Request.initialize(params),
-            lambda result: self._handle_initialize_result(result))
+        self.client.send_request(Request.initialize(params), self._handle_initialize_result)
 
     def _handle_initialize_result(self, result):
         self.state = ClientStates.READY
@@ -192,7 +190,7 @@ class Session(object):
         self.client.send_request(
             Request.shutdown(),
             lambda result: self._handle_shutdown_result(),
-            lambda: self._handle_shutdown_result())
+            self._handle_shutdown_result)
 
     def _handle_shutdown_result(self):
         self.client.exit()

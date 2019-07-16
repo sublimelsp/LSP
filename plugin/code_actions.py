@@ -35,9 +35,7 @@ def send_code_action_request(view, on_response_recieved: 'Callable'):
             "diagnostics": [diagnostic.to_lsp() for diagnostic in point_diagnostics]
         }
     }
-    session.client.send_request(
-        Request.codeAction(params),
-        lambda response: on_response_recieved(response))
+    session.client.send_request(Request.codeAction(params), on_response_recieved)
 
 
 class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):

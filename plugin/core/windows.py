@@ -384,7 +384,7 @@ class WindowManager(object):
         try:
             session = self._start_session(self._window, project_path, config,
                                           lambda session: self._handle_session_started(session, project_path, config),
-                                          lambda config_name: self._handle_session_ended(config_name))
+                                          self._handle_session_ended)
         except Exception as e:
             message = "\n\n".join([
                 "Could not start {}",
@@ -449,7 +449,7 @@ class WindowManager(object):
     def _handle_session_started(self, session, project_path, config):
         client = session.client
         client.set_crash_handler(lambda: self._handle_server_crash(config))
-        client.set_error_display_handler(lambda msg: self._window.status_message(msg))
+        client.set_error_display_handler(self._window.status_message)
 
         # handle server requests and notifications
         client.on_request(
@@ -498,7 +498,7 @@ class WindowManager(object):
                     self._handle_window_closed()
                 else:
                     # in case the window is invalidated after the last view is closed
-                    self._sublime.set_timeout_async(lambda: self._check_window_closed(), 100)
+                    self._sublime.set_timeout_async(self._check_window_closed, 100)
 
     def _check_window_closed(self):
         # debug('window {} check window closed closing={}, valid={}'.format(

@@ -21,8 +21,14 @@ completion_provider = {
 class MockClient():
     def __init__(self, async_response=None) -> None:
         self.responses = {
-            'initialize': {"capabilities": dict(testing=True, hoverProvider=True,
-                                                completionProvider=completion_provider, textDocumentSync=True)},
+            'initialize': {
+                "capabilities": {
+                    'testing': True,
+                    'hoverProvider': True,
+                    'completionProvider': completion_provider,
+                    'textDocumentSync': True
+                }
+            },
         }  # type: dict
         self._notifications = []  # type: List[Notification]
         self._async_response_callback = async_response

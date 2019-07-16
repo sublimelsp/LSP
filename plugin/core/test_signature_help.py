@@ -86,7 +86,10 @@ JSON_STRINGIFY = """"""
 
 
 def create_signature(label: str, *param_labels, **kwargs) -> dict:
-    raw = dict(label=label, parameters=[dict(label=param_label) for param_label in param_labels])
+    raw = {
+        "label": label,
+        "parameters": [{"label": param_label} for param_label in param_labels]
+    }
     raw.update(kwargs)
     return raw
 
@@ -143,14 +146,14 @@ class RenderSignatureLabelTests(unittest.TestCase):
 
     def test_no_parameters(self):
         sig = create_signature("foobar()")
-        help = create_signature_help(dict(signatures=[sig]))
+        help = create_signature_help({'signatures': [sig]})
         if help:
             label = render_signature_label(renderer, help.active_signature(), 0)
             self.assertEqual(label, "\n<entity.name.function>foobar()</entity.name.function>")
 
     def test_params(self):
         sig = create_signature("foobar(foo, foo)", "foo", "foo", activeParameter=1)
-        help = create_signature_help(dict(signatures=[sig]))
+        help = create_signature_help({'signatures': [sig]})
         if help:
             label = render_signature_label(renderer, help.active_signature(), 1)
             self.assertEqual(label, """
@@ -162,7 +165,7 @@ class RenderSignatureLabelTests(unittest.TestCase):
 
     def test_params_are_substrings(self):
         sig = create_signature("foobar(self, foo: str, foo: i32)", "foo", "foo", activeParameter=1)
-        help = create_signature_help(dict(signatures=[sig]))
+        help = create_signature_help({'signatures': [sig]})
         if help:
             label = render_signature_label(renderer, help.active_signature(), 1)
             self.assertEqual(label, """
@@ -174,7 +177,7 @@ class RenderSignatureLabelTests(unittest.TestCase):
 
     def test_params_with_range(self):
         sig = create_signature("foobar(foo, foo)", [7, 10], [12, 15], activeParameter=1)
-        help = create_signature_help(dict(signatures=[sig]))
+        help = create_signature_help({'signatures': [sig]})
         if help:
             label = render_signature_label(renderer, help.active_signature(), 1)
             self.assertEqual(label, """
@@ -187,7 +190,7 @@ class RenderSignatureLabelTests(unittest.TestCase):
     def test_params_no_parens(self):
         # note: will not work without ranges: first "foo" param will match "foobar"
         sig = create_signature("foobar foo foo", [7, 10], [11, 14], activeParameter=1)
-        help = create_signature_help(dict(signatures=[sig]))
+        help = create_signature_help({'signatures': [sig]})
         if help:
             label = render_signature_label(renderer, help.active_signature(), 1)
             self.assertEqual(label, """

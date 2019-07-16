@@ -9,7 +9,7 @@ try:
 except ImportError:
     pass
 
-LSP_TEXT_EDIT = dict(newText='newText', range=LSP_RANGE)
+LSP_TEXT_EDIT = {'newText': 'newText', 'range': LSP_RANGE}
 
 LSP_EDIT_CHANGES = {
     'changes': {

@@ -10,78 +10,80 @@ try:
 except ImportError:
     pass
 
-label_completions = [dict(label='asdf'), dict(label='efgh')]
-completion_with_additional_edits = [
-    dict(label='asdf',
-         additionalTextEdits=[{
-             'range': {
-                 'start': {
-                     'line': 0,
-                     'character': 0
-                 },
-                 'end': {
-                     'line': 0,
-                     'character': 0
-                 }
-             },
-             'newText': 'import asdf;\n'
-         }])
-]
-insert_text_completions = [dict(label='asdf', insertText='asdf()')]
-var_completion_using_label = [dict(label='$what')]
-var_prefix_added_in_insertText = [dict(label='$what', insertText='what')]
-var_prefix_added_in_label = [
-    dict(label='$what',
-         textEdit={
-             'range': {
-                 'start': {
-                     'line': 0,
-                     'character': 1
-                 },
-                 'end': {
-                     'line': 0,
-                     'character': 1
-                 }
-             },
-             'newText': 'what'
-         })
-]
-space_added_in_label = [dict(label=' const', insertText='const')]
+label_completions = [{'label': 'asdf'}, {'label': 'efgh'}]
+completion_with_additional_edits = [{
+    'label': 'asdf',
+    'additionalTextEdits': [
+        {
+            'range': {
+                'start': {
+                    'line': 0,
+                    'character': 0
+                },
+                'end': {
+                    'line': 0,
+                    'character': 0
+                }
+            },
+            'newText': 'import asdf;\n'
+        }
+    ]
+}]
+insert_text_completions = [{'label': 'asdf', 'insertText': 'asdf()'}]
+var_completion_using_label = [{'label': '$what'}]
+var_prefix_added_in_insertText = [{'label': '$what', 'insertText': 'what'}]
+var_prefix_added_in_label = [{
+    "label": '$what',
+    "textEdit": {
+            'range': {
+                'start': {
+                    'line': 0,
+                    'character': 1
+                },
+                'end': {
+                    'line': 0,
+                    'character': 1
+                }
+            },
+            'newText': 'what'
+        }
+    }]
+space_added_in_label = [{'label': ' const', 'insertText': 'const'}]
 
-dash_missing_from_label = [
-    dict(label='UniqueId',
-         textEdit={
-             'range': {
-                 'start': {
-                     'character': 14,
-                     'line': 26
-                 },
-                 'end': {
-                     'character': 15,
-                     'line': 26
-                 }
-             },
-             'newText': '-UniqueId'
-         },
-         insertText='-UniqueId')
-]
+dash_missing_from_label = [{
+    'label': 'UniqueId',
+    'textEdit': {
+        'range': {
+            'start': {
+                'character': 14,
+                'line': 26
+            },
+            'end': {
+                'character': 15,
+                'line': 26
+            }
+        },
+        'newText': '-UniqueId'
+    },
+    'insertText': '-UniqueId'
+}]
 
-edit_before_cursor = [
-    dict(label='override def myFunction(): Unit',
-         textEdit={
-             'newText': 'override def myFunction(): Unit = ${0:???}',
-             'range': {
-                 'start': {
-                     'line': 0,
-                     'character': 2
-                 },
-                 'end': {
-                     'line': 0,
-                     'character': 18
-                 }
-             }
-         })
-]
+edit_before_cursor = [{
+    'label': 'override def myFunction(): Unit',
+    'textEdit': {
+        'newText': 'override def myFunction(): Unit = ${0:???}',
+        'range': {
+            'start': {
+                'line': 0,
+                'character': 2
+            },
+            'end': {
+                'line': 0,
+                'character': 18
+            }
+        }
+    }
+}]
 
 
 class InitializationTests(DeferrableTestCase):
@@ -94,7 +96,7 @@ class InitializationTests(DeferrableTestCase):
 
     def test_is_applicable(self):
         self.assertTrue(
-            CompletionHandler.is_applicable(dict(syntax=SUPPORTED_SYNTAX)))
+            CompletionHandler.is_applicable({"syntax": SUPPORTED_SYNTAX}))
 
     def test_not_enabled(self):
         handler = CompletionHandler(self.view)

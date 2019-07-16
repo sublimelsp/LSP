@@ -51,14 +51,14 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         view._text = "asdf jklm"
         events.publish("view.on_modified", view)
         changes = handler._pending_buffer_changes[view.buffer_id()]
-        self.assertEqual(changes, dict(view=view, version=1))
+        self.assertEqual(changes, {"view": view, "version": 1})
         self.assertEqual(len(client._notifications), 1)
 
         # change 2
         view._text = "asdf jklm qwer"
         events.publish("view.on_modified", view)
         changes = handler._pending_buffer_changes[view.buffer_id()]
-        self.assertEqual(changes, dict(view=view, version=2))
+        self.assertEqual(changes, {"view": view, "version": 2})
         self.assertEqual(len(client._notifications), 1)
 
         # purge

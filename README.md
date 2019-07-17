@@ -45,6 +45,7 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [JSON](https://lsp.readthedocs.io/en/latest/#json)
 * [Julia](https://lsp.readthedocs.io/en/latest/#julia)
 * [Kotlin](https://lsp.readthedocs.io/en/latest/#kotlin)
+* [Lua](https://lsp.readthedocs.io/en/latest/#lua)
 * [PHP](https://lsp.readthedocs.io/en/latest/#php)
 * [Polymer](https://lsp.readthedocs.io/en/latest/#polymer)
 * [Python](https://lsp.readthedocs.io/en/latest/#python)

@@ -407,7 +407,7 @@ class WindowManager:
 
     def end_sessions(self) -> None:
         self._documents.reset()
-        for config_name in self._sessions:
+        for config_name in list(self._sessions):
             self.end_session(config_name)
 
     def end_session(self, config_name: str) -> None:

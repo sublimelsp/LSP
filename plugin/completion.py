@@ -102,8 +102,9 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             self.view.settings().set('auto_complete_triggers', completion_triggers)
 
     def is_after_trigger_character(self, location):
-        prev_char = self.view.substr(location - 1)
-        return location > 0 and prev_char in self.trigger_chars
+        if location > 0:
+            prev_char = self.view.substr(location - 1)
+            return prev_char in self.trigger_chars
 
     def is_same_completion(self, prefix, locations):
         if self.response_incomplete:

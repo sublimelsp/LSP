@@ -233,11 +233,39 @@ Requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUI
 
 Additionally, install the [Kotlin sublime package](https://github.com/vkostyukov/kotlin-sublime-package) for syntax highlighting.
 
+
+### Lua<a name="lua">
+
+1. Download the [VSCode extension](https://marketplace.visualstudio.com/items?itemName=sumneko.lua)
+2. add these configurations:
+```json
+"lua-ls":
+{
+    "command":
+    [
+        "PATH/TO/sumneko.lua-#.#.#/extension/server/bin/lua-language-server",
+        "-E",
+        "PATH/TO/sumneko.lua-#.#.#/extension/server/main.lua"
+    ],
+    "enabled": true,
+    "languageId": "lua",
+    "scopes":
+    [
+        "source.lua",
+    ],
+    "syntaxes":
+    [
+        "Packages/Lua/Lua.sublime-syntax"
+    ]
+},
+```
+alternatively you can use the less maintained [lua-lsp](https://github.com/Alloyed/lua-lsp)
+
 ### Bash
 
 Install the [bash language server](https://github.com/mads-hartmann/bash-language-server)
 
-```npm i -g bash-language-server```
+`npm i -g bash-language-server`
 
 ### XML
 
@@ -296,6 +324,30 @@ Requires IntelliJ to be running.
   ]
 }
 ```
+
+### LaTeX<a name="latex"></a>
+
+Download a [precompiled binary](https://github.com/latex-lsp/texlab/releases) (Windows/Linux/macOS) of the [TexLab](https://texlab.netlify.com/) Language Server and place it in a directory that is in your `PATH`.
+
+Add to LSP settings' clients:
+```json
+"texlab": {
+  "command": ["texlab"],
+  "languages": [{
+    "scopes": ["text.tex.latex"],
+    "syntaxes": ["Packages/LaTeX/LaTeX.sublime-syntax"],
+    "languageId": "latex"
+  }, {
+    "scopes": ["text.bibtex"],
+    "syntaxes": ["Packages/LaTeX/Bibtex.sublime-syntax"],
+    "languageId": "bibtex"
+  }],
+  "enabled": true
+}
+```
+
+To enable code completions while typing, ensure to have `text.tex.latex` (for LaTeX files) and/or `text.bibtex` (for BibTeX files) included in the `auto_complete_selector` setting in your `Preferences.sublime-settings` file.
+For further requirements see the [TexLab Docs](https://texlab.netlify.com/docs#requirements).
 
 ### Other<a name="other"></a>
 
@@ -376,4 +428,3 @@ Any global language server settings can be overridden per project by adding an L
   }
 }
 ```
-

@@ -20,7 +20,7 @@ def get_project_path(window: 'Any') -> 'Optional[str]':
         view = window.active_view()
         if view:
             filename = view.file_name()
-            if filename:
+            if filename and os.path.exists(filename):  # https://github.com/tomv564/LSP/issues/644
                 project_path = os.path.dirname(filename)
                 debug("Couldn't determine project directory since no folders are open!",
                       "Using", project_path, "as a fallback.")

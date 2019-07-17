@@ -275,10 +275,12 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
     def handle_response(self, response: 'Optional[Union[Dict,List]]'):
         if self.state == CompletionState.REQUESTING:
 
-            # where does the current word start?
-            word = self.view.word(self.last_location)
-            last_start = word.begin()
-            _last_row, last_col = self.view.rowcol(last_start)
+            last_col = self.last_location
+            if is_at_word(self.view, None):
+                # if completion is requested in the middle of a word, where does it start?
+                word = self.view.word(self.last_location)
+                word_start = word.begin()
+                _last_row, last_col = self.view.rowcol(word_start)
 
             response_items, response_incomplete = parse_completion_response(response)
             self.response_items = response_items

@@ -325,6 +325,30 @@ Requires IntelliJ to be running.
 }
 ```
 
+### LaTeX<a name="latex"></a>
+
+Download a [precompiled binary](https://github.com/latex-lsp/texlab/releases) (Windows/Linux/macOS) of the [TexLab](https://texlab.netlify.com/) Language Server and place it in a directory that is in your `PATH`.
+
+Add to LSP settings' clients:
+```json
+"texlab": {
+  "command": ["texlab"],
+  "languages": [{
+    "scopes": ["text.tex.latex"],
+    "syntaxes": ["Packages/LaTeX/LaTeX.sublime-syntax"],
+    "languageId": "latex"
+  }, {
+    "scopes": ["text.bibtex"],
+    "syntaxes": ["Packages/LaTeX/Bibtex.sublime-syntax"],
+    "languageId": "bibtex"
+  }],
+  "enabled": true
+}
+```
+
+To enable code completions while typing, ensure to have `text.tex.latex` (for LaTeX files) and/or `text.bibtex` (for BibTeX files) included in the `auto_complete_selector` setting in your `Preferences.sublime-settings` file.
+For further requirements see the [TexLab Docs](https://texlab.netlify.com/docs#requirements).
+
 ### Other<a name="other"></a>
 
 Please create issues / pull requests so we can get support for more languages.

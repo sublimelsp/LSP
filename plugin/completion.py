@@ -14,7 +14,7 @@ from .core.logging import debug
 from .core.completion import parse_completion_response, format_completion
 from .core.registry import session_for_view, client_for_view
 from .core.configurations import is_supported_syntax
-from .core.documents import get_document_position
+from .core.documents import get_document_position, is_at_word
 from .core.sessions import Session
 from .core.edit import parse_text_edit
 
@@ -278,10 +278,12 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
     def handle_response(self, response: 'Optional[Union[Dict,List]]'):
         if self.state == CompletionState.REQUESTING:
 
-            # where does the current word start?
-            word = self.view.word(self.last_location)
-            last_start = word.begin()
-            _last_row, last_col = self.view.rowcol(last_start)
+            last_col = self.last_location
+            if is_at_word(self.view, None):
+                # if completion is requested in the middle of a word, where does it start?
+                word = self.view.word(self.last_location)
+                word_start = word.begin()
+                _last_row, last_col = self.view.rowcol(word_start)
 
             response_items, response_incomplete = parse_completion_response(response)
             self.response_items = response_items

@@ -112,12 +112,12 @@ class LspHoverCommand(LspTextCommand):
         by_severity = {}  # type: Dict[int, List[str]]
         for diagnostic in diagnostics:
             by_severity.setdefault(diagnostic.severity, []).append(self.format_diagnostic(diagnostic))
-        formatted = ""
+        formatted = []
         for severity, items in by_severity.items():
-            formatted += "<div class='{}'>{}<a href='code-actions'>Code Actions</a></div>".format(
-                            class_for_severity[severity], "".join(items))
+            formatted.append("<div class='{}'>{}<a href='code-actions'>Code Actions</a></div>".format(
+                                class_for_severity[severity], "".join(items)))
 
-        return formatted
+        return "".join(formatted)
 
     def hover_content(self, point, response: 'Optional[Any]') -> str:
         contents = ["No description available."]

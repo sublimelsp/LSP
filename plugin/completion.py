@@ -73,7 +73,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         if session:
             completionProvider = session.get_capability(
                 'completionProvider')
-            if completionProvider:
+            # A language server may have an empty dict as CompletionOptions. In that case,
+            # no trigger characters will be registered but we'll still respond to Sublime's
+            # usual query for completions. So the explicit check for None is necessary.
+            if completionProvider is not None:
                 self.enabled = True
                 self.resolve = completionProvider.get('resolveProvider') or False
                 self.trigger_chars = completionProvider.get(

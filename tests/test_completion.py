@@ -83,6 +83,23 @@ edit_before_cursor = [
          })
 ]
 
+edit_after_nonword = [
+    dict(label='apply[A](xs: A*): List[A]',
+         textEdit={
+             'newText': 'apply($0)',
+             'range': {
+                 'start': {
+                     'line': 0,
+                     'character': 6
+                 },
+                 'end': {
+                     'line': 0,
+                     'character': 6
+                 }
+             }
+         })
+]
+
 
 class InitializationTests(DeferrableTestCase):
     def setUp(self):
@@ -275,6 +292,31 @@ class QueryCompletionsTests(TextDocumentTestCase):
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 '  override def myFunction(): Unit = ???')
+
+    def test_edit_after_nonword(self):
+        """
+
+        Metals: List.| selects label instead of textedit
+        See https://github.com/tomv564/LSP/issues/645
+
+        """
+        yield 100
+        self.view.run_command('append', {'characters': 'List.'})
+        self.view.run_command('move_to', {'to': 'eol'})
+
+        self.client.responses['textDocument/completion'] = edit_after_nonword
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [6])
+            yield 100
+            # note: invoking on_text_command manually as sublime doesn't call it.
+            handler.on_text_command('insert_best_completion', {})
+            self.view.run_command("insert_best_completion", {})
+            yield 100
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())),
+                'List.apply()')
 
     def test_additional_edits(self):
         yield 100

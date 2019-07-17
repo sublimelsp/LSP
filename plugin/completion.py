@@ -14,7 +14,7 @@ from .core.logging import debug
 from .core.completion import parse_completion_response, format_completion
 from .core.registry import session_for_view, client_for_view
 from .core.configurations import is_supported_syntax
-from .core.documents import get_document_position
+from .core.documents import get_document_position, is_at_word
 from .core.sessions import Session
 from .core.edit import parse_text_edit
 

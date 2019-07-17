@@ -29,8 +29,27 @@ signature_overload = {
     }]
 }  # type: dict
 
+signature_missing_label = {
+    'documentation': '',
+    'parameters': [{
+        'documentation': None,
+        'label': 'verbose_name'
+    }, {
+        'documentation': None,
+        'label': 'name'
+    }, {
+        'documentation': None,
+        'label': 'primary_key'
+    }, {
+        'documentation': None,
+        'label': 'max_length'
+    }],
+    'label': ''
+}
+
 signature_information = parse_signature_information(signature)
 signature_overload_information = parse_signature_information(signature_overload)
+signature_missing_label_information = parse_signature_information(signature_missing_label)
 
 SINGLE_SIGNATURE = """<div class="highlight"><pre>
 
@@ -41,6 +60,11 @@ SINGLE_SIGNATURE = """<div class="highlight"><pre>
 </pre></div>
 <p>The default function for foobaring</p>
 <p><b>value</b>: A number to foobar on</p>"""
+
+MISSING_LABEL_SIGNATURE = """<div class="highlight"><pre>
+
+<entity.name.function></entity.name.function>
+</pre></div>"""
 
 OVERLOADS_FIRST = """**1** of **2** overloads (use the ↑ ↓ keys to navigate):
 
@@ -205,6 +229,14 @@ class SignatureHelpTests(unittest.TestCase):
             content = help.build_popup_content(renderer)
             self.assertFalse(help.has_multiple_signatures())
             self.assertEqual(content, SINGLE_SIGNATURE)
+
+    def test_signature_missing_label(self):
+        help = SignatureHelp([signature_missing_label_information])
+        self.assertIsNotNone(help)
+        if help:
+            content = help.build_popup_content(renderer)
+            self.assertFalse(help.has_multiple_signatures())
+            self.assertEqual(content, MISSING_LABEL_SIGNATURE)
 
     def test_overload(self):
         help = SignatureHelp([signature_information, signature_overload_information])

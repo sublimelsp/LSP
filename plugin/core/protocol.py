@@ -46,6 +46,9 @@ class SymbolKind(object):
     TypeParameter = 26
 
 
+symbol_kinds = list(range(SymbolKind.File, SymbolKind.TypeParameter + 1))
+
+
 class CompletionItemKind(object):
     Text = 1
     Method = 2
@@ -72,6 +75,9 @@ class CompletionItemKind(object):
     Event = 23
     Operator = 24
     TypeParameter = 25
+
+
+completion_item_kinds = list(range(CompletionItemKind.Text, CompletionItemKind.TypeParameter + 1))
 
 
 class DocumentHighlightKind(object):
@@ -265,6 +271,38 @@ class Range(object):
             'start': self.start.to_lsp(),
             'end': self.end.to_lsp()
         }
+
+
+class ContentChange(object):
+    def __init__(self, text: str, range: 'Optional[Range]'=None, range_length: 'Optional[int]'=None) -> None:
+        """
+
+        [description]
+
+        Arguments:
+            text {str} -- The new text of the range/document
+            range: 'Optional[Range]' {[type]} -- The range of the document that changed.
+            range_length: 'Optional[int]' {[type]} -- The length of the range that got replaced.
+        """
+        self.text = text
+        self.range = range
+        self.range_length = range_length
+
+    def to_lsp(self) -> 'Dict[str, Any]':
+        change = {
+            'text': self.text,
+        }  # type: Dict[str, Any]
+        if self.range:
+            change['range'] = self.range.to_lsp(),
+        if self.range_length:
+            change['rangeLength'] = self.range_length
+        return change
+
+    def __eq__(self, other) -> bool:
+        return self.text == other.text and self.range == other.range and self.range_length == other.range_length
+
+    def __repr__(self) -> str:
+        return "{} {} '{}'".format(self.range, self.range_length, self.text)
 
 
 class Diagnostic(object):

@@ -68,9 +68,8 @@ def get_initialize_params(project_path: str, config: ClientConfig):
                         "snippetSupport": True
                     },
                     "completionItemKind": {
-                        "valueSet": [
+                        "valueSet":
                            completion_item_kinds
-                        ]
                     }
                 },
                 "signatureHelp": {
@@ -85,9 +84,8 @@ def get_initialize_params(project_path: str, config: ClientConfig):
                 "documentHighlight": {},
                 "documentSymbol": {
                     "symbolKind": {
-                        "valueSet": [
+                        "valueSet":
                             symbol_kinds
-                        ]
                     }
                 },
                 "formatting": {},
@@ -108,9 +106,8 @@ def get_initialize_params(project_path: str, config: ClientConfig):
                 "executeCommand": {},
                 "symbol": {
                     "symbolKind": {
-                        "valueSet": [
+                        "valueSet":
                             symbol_kinds
-                        ]
                     }
                 }
             }

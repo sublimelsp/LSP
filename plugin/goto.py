@@ -43,9 +43,9 @@ class LspGotoCommand(LspTextCommand):
     def handle_response(self, response: 'Optional[Any]', position) -> None:
         window = sublime.active_window()
         if response:
-            # save to jump back history
+            # Save to jump back history.
             get_jump_history_for_view(self.view).push_selection(self.view)
-            # TODO: DocumentLink support
+            # TODO: DocumentLink support.
             location = response if isinstance(response, dict) else response[0]
             file_path = uri_to_filename(location.get("uri"))
             start = Point.from_lsp(location['range']['start'])

@@ -80,6 +80,8 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.view.window().show_quick_panel(symbols, self.on_symbol_selected)
 
     def on_symbol_selected(self, symbol_index):
+        if symbol_index == -1:
+            return
         selected_symbol = self.symbols[symbol_index]
         range = selected_symbol.get('location', selected_symbol.get('range'))
         range = range.get('range', range)

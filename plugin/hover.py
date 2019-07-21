@@ -112,10 +112,10 @@ class LspHoverCommand(LspTextCommand):
         for goto_kind in goto_kinds:
             if self.has_client_with_capability(goto_kind.lsp_name + "Provider"):
                 actions.append("<a href='{}'>{}</a>".format(goto_kind.lsp_name, goto_kind.label))
-
+        if self.has_client_with_capability('referencesProvider'):
+            actions.append("<a href='{}'>{}</a>".format('references', 'References'))
         if self.has_client_with_capability('renameProvider'):
             actions.append("<a href='{}'>{}</a>".format('rename', 'Rename'))
-
         return "<p>" + " | ".join(actions) + "</p>"
 
     def format_diagnostic(self, diagnostic):
@@ -183,7 +183,9 @@ class LspHoverCommand(LspTextCommand):
             if href == goto_kind.lsp_name:
                 self.run_command_from_point(point, "lsp_symbol_" + goto_kind.subl_cmd_name)
                 return
-        if href == 'rename':
+        if href == 'references':
+            self.run_command_from_point(point, "lsp_symbol_references")
+        elif href == 'rename':
             self.run_command_from_point(point, "lsp_symbol_rename")
         elif href == 'code-actions':
             self.run_command_from_point(point, "lsp_code_actions")

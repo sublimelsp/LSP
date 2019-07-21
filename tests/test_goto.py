@@ -39,7 +39,14 @@ class GotoTestCase(TextDocumentTestCase):
 
     def do_common_checks(self):
         view = sublime.active_window().active_view()
-        self.assertTrue(view.file_name().endswith("goto.txt"))
+        if not view:
+            self.assertTrue(False)
+            return
+        filename = view.file_name()
+        if not filename:
+            self.assertTrue(False)
+            return
+        self.assertTrue(filename.endswith("goto.txt"))
         line1, col1 = view.rowcol(view.sel()[0].a)
         line2, col2 = view.rowcol(view.sel()[0].b)
         self.assertEqual(line1, 0)

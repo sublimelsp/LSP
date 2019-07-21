@@ -37,36 +37,36 @@ class GotoTestCase(TextDocumentTestCase):
         close_test_view(self.goto_view)
         super().tearDown()
 
-
-class LspGotoCommandTests(GotoTestCase):
-
     def do_common_checks(self):
-        yield 100
         view = sublime.active_window().active_view()
-        self.checkTrue(view.file_name().endswith("goto.txt"))
+        self.assertTrue(view.file_name().endswith("goto.txt"))
         line1, col1 = view.rowcol(view.sel()[0].a)
         line2, col2 = view.rowcol(view.sel()[0].b)
-        self.checkEqual(line1, 0)
-        self.checkEqual(col1, 2)
-        self.checkEqual(line2, 0)
-        self.checkEqual(col2, 2)
+        self.assertEqual(line1, 0)
+        self.assertEqual(col1, 2)
+        self.assertEqual(line2, 0)
+        self.assertEqual(col2, 2)
 
     def test_definition(self):
         self.client.responses['textDocument/definition'] = RESPONSE
         self.view.run_command('lsp_symbol_definition')
+        yield 100
         self.do_common_checks()
 
     def test_type_definition(self):
         self.client.responses['textDocument/typeDefinition'] = RESPONSE
         self.view.run_command('lsp_symbol_type_definition')
+        yield 100
         self.do_common_checks()
 
     def test_declaration(self):
         self.client.responses['textDocument/declaration'] = RESPONSE
         self.view.run_command('lsp_symbol_declaration')
+        yield 100
         self.do_common_checks()
 
     def test_implementation(self):
         self.client.responses['textDocument/implementation'] = RESPONSE
         self.view.run_command('lsp_symbol_implementation')
+        yield 100
         self.do_common_checks()

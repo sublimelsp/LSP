@@ -393,12 +393,13 @@ or in multi-language form:
 * `tcp_port` - if not specified then stdin/out are used else sets the tcpport to connect to (if no command is specified then it is assumed that some process is listing on this port)
 * `scopes` - add language flavours, eg. `source.js`, `source.jsx`.
 * `syntaxes` - syntaxes that enable LSP features on a document, eg. `Packages/Babel/JavaScript (Babel).tmLanguage`
-* `languageId` - used both by the language servers and to select a syntax highlighter for sublime popups.
+* `languageId` - identifies the language for a document - see https://microsoft.github.io/language-server-protocol/specification#textdocumentitem
 * `languages` - group scope, syntax and languageId together for servers that support more than one language
 * `enabled` - enables a language server (default is disabled)
 * `settings` - per-project settings (equivalent to VS Code's Workspace Settings)
 * `env` - dict of environment variables to be injected into the language server's process (eg. PYTHONPATH)
 * `initializationOptions` - options to send to the server at startup (rarely used)
+
 
 ## Per-project overrides
 

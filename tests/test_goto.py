@@ -1,8 +1,10 @@
 from setup import TextDocumentTestCase, close_test_view
 import sublime
 from os.path import dirname, join
+from os import environ
 
 SELFDIR = dirname(__file__)
+
 TEST_FILE_PATH = join(SELFDIR, 'goto.txt')
 
 RESPONSE = [
@@ -20,14 +22,20 @@ RESPONSE = [
 ]
 
 
+def suitable_milliseconds() -> int:
+    if environ.get("TRAVIS", "false") == "true":
+        return 1000
+    return 100
+
+
 class GotoTestCase(TextDocumentTestCase):
 
     def setUp(self):
         super().setUp()
-        yield 100
+        yield suitable_milliseconds()
         self.view.run_command('insert', {'characters': 'hello there'})
         self.goto_view = sublime.active_window().open_file(TEST_FILE_PATH)
-        yield 100
+        yield suitable_milliseconds()
         self.goto_view.run_command('insert', {'characters': 'foo'})
         self.view.window().focus_view(self.view)  # go back to first view
 
@@ -62,20 +70,20 @@ class GotoTestCase(TextDocumentTestCase):
 
     def test_definition(self):
         self.do_run('definition', 'definition')
-        yield 100
+        yield suitable_milliseconds()
         self.do_common_checks()
 
     def test_type_definition(self):
         self.do_run('typeDefinition', 'type_definition')
-        yield 100
+        yield suitable_milliseconds()
         self.do_common_checks()
 
     def test_declaration(self):
         self.do_run('declaration', 'declaration')
-        yield 100
+        yield suitable_milliseconds()
         self.do_common_checks()
 
     def test_implementation(self):
         self.do_run('implementation', 'implementation')
-        yield 100
+        yield suitable_milliseconds()
         self.do_common_checks()

@@ -1,7 +1,7 @@
 ## Self-help instructions
 
 In LSP Settings enable the `log_debug` setting and `log_payloads` if needed.
-Restart Sublime and open the console (super+~) to see the additional logging.
+Restart Sublime and open the console (``ctrl+` ``) to see the additional logging.
 If you believe the issue is with this package, please include the output from the Sublime console in your issue report!
 
 > **NOTE:** `log_stderr` can also be set to `true` to see the language server's own logging.

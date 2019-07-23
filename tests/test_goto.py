@@ -1,7 +1,6 @@
-from setup import TextDocumentTestCase, close_test_view
+from setup import TextDocumentTestCase
 import sublime
 from os.path import dirname, join
-from os import environ
 
 SELFDIR = dirname(__file__)
 

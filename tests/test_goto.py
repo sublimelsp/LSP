@@ -5,7 +5,7 @@ from os import environ
 
 SELFDIR = dirname(__file__)
 
-TEST_FILE_PATH = join(SELFDIR, 'goto.txt')
+TEST_FILE_PATH = join(SELFDIR, 'testfile.txt')
 
 RESPONSE = [
     {
@@ -14,76 +14,68 @@ RESPONSE = [
         {
             'start':
             {
-                'character': 2,
-                'line': 0
+                # Put the cursor at the capital letter "F".
+                'character': 5,
+                'line': 1
             },
         }
     }
 ]
 
+CONTENT = r'''abcdefghijklmnopqrstuvwxyz
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+0123456789
+'''
 
-def suitable_milliseconds() -> int:
-    if environ.get("TRAVIS", "false") == "true":
-        return 1000
-    return 100
+
+def after_cursor(view) -> str:
+    first_region = view.sel()[0]
+    first = first_region.a
+    region = sublime.Region(first, first + 1)
+    return view.substr(region)
 
 
 class GotoTestCase(TextDocumentTestCase):
 
-    def setUp(self):
-        super().setUp()
-        yield suitable_milliseconds()
-        self.view.run_command('insert', {'characters': 'hello there'})
-        self.goto_view = sublime.active_window().open_file(TEST_FILE_PATH)
-        yield suitable_milliseconds()
-        self.goto_view.run_command('insert', {'characters': 'foo'})
-        self.view.window().focus_view(self.view)  # go back to first view
+    def do_run(self, text_document_request: str, subl_command_suffix: str) -> None:
+        self.view.run_command('insert', {'characters': CONTENT})
+        # Put the cursor back at the start of the buffer, otherwise is_at_word fails in goto.py.
+        self.view.sel().clear()
+        self.view.sel().add(sublime.Region(0, 0))
+        self.client.responses['textDocument/{}'.format(text_document_request)] = RESPONSE
+        self.view.run_command('lsp_symbol_{}'.format(subl_command_suffix))
 
-    def tearDown(self):
-        close_test_view(self.goto_view)
-        super().tearDown()
-
-    def do_common_checks(self):
-        view = sublime.active_window().active_view()
-        if not view:
-            # self.fail or self.skipTest?
-            # self.fail could become annoying when a pull-request sporadically
-            # fails for this reason. I (rwols) think we should use skipTest.
-            self.skipTest('invalid Sublime Text view :(')
-            return
-        filename = view.file_name()
+    def do_common_checks(self) -> None:
+        filename = self.view.file_name()
         if not filename:
             # self.fail or self.skipTest?
             self.skipTest('view.file_name() returned nothing :(')
             return
-        self.assertIn('goto.txt', filename)
-        line1, col1 = view.rowcol(view.sel()[0].a)
-        line2, col2 = view.rowcol(view.sel()[0].b)
-        self.assertEqual(line1, 0)
-        self.assertEqual(col1, 2)
-        self.assertEqual(line2, 0)
-        self.assertEqual(col2, 2)
-
-    def do_run(self, text_document_request: str, subl_command_suffix: str) -> None:
-        self.client.responses['textDocument/' + text_document_request] = RESPONSE
-        self.view.run_command('lsp_symbol_' + subl_command_suffix)
+        self.assertIn('testfile.txt', filename)
+        line1, col1 = self.view.rowcol(self.view.sel()[0].a)
+        line2, col2 = self.view.rowcol(self.view.sel()[0].b)
+        self.assertEqual(after_cursor(self.view), "F")
 
     def test_definition(self):
+        yield 100
         self.do_run('definition', 'definition')
-        yield suitable_milliseconds()
+        yield 100
         self.do_common_checks()
 
     def test_type_definition(self):
+        yield 100
         self.do_run('typeDefinition', 'type_definition')
-        yield suitable_milliseconds()
+        yield 100
         self.do_common_checks()
 
     def test_declaration(self):
+        yield 100
         self.do_run('declaration', 'declaration')
-        yield suitable_milliseconds()
+        yield 100
         self.do_common_checks()
 
     def test_implementation(self):
+        yield 100
         self.do_run('implementation', 'implementation')
-        yield suitable_milliseconds()
+        yield 100
         self.do_common_checks()

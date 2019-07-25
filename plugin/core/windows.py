@@ -1,7 +1,9 @@
+from .diagnostics import WindowDiagnostics, DiagnosticsUpdate
 from .events import global_events
 from .logging import debug, server_log
 from .types import ClientStates, ClientConfig, WindowLike, ViewLike, LanguageConfig, config_supports_syntax
 from .protocol import Notification, Response
+from .edit import parse_workspace_edit
 from .sessions import Session
 from .url import filename_to_uri
 from .workspace import get_project_path
@@ -24,7 +26,7 @@ class ConfigRegistry(Protocol):
     def is_supported(self, view: ViewLike) -> bool:
         ...
 
-    def scope_config(self, view: ViewLike, point: 'Optional[int]'=None) -> 'Optional[ClientConfig]':
+    def scope_config(self, view: ViewLike, point: 'Optional[int]' = None) -> 'Optional[ClientConfig]':
         ...
 
     def syntax_configs(self, view: ViewLike) -> 'List[ClientConfig]':
@@ -45,14 +47,6 @@ class ConfigRegistry(Protocol):
 
 class GlobalConfigs(Protocol):
     def for_window(self, window: WindowLike) -> ConfigRegistry:
-        ...
-
-
-class DiagnosticsHandler(Protocol):
-    def update(self, window: WindowLike, client_name: str, update: dict) -> None:
-        ...
-
-    def remove(self, view: ViewLike, client_name: str) -> None:
         ...
 
 
@@ -140,13 +134,31 @@ class WindowDocumentHandler(object):
     def has_document_state(self, path: str) -> bool:
         return path in self._document_states
 
-    def _get_applicable_sessions(self, view: ViewLike):
+    def _get_applicable_sessions(self, view: ViewLike, notification_type: 'Optional[str]'=None):
         sessions = []  # type: List[Session]
         syntax = view.settings().get("syntax")
         for config_name, session in self._sessions.items():
             if config_supports_syntax(session.config, syntax):
-                sessions.append(session)
+                if not notification_type or self._session_supports_notification(session, notification_type):
+                    sessions.append(session)
         return sessions
+
+    def _session_supports_notification(self, session: 'Session', notification_type: str) -> bool:
+        """
+            openClose: boolean
+            change: 0 (none), 1 (full), 2 (incremental)
+            willSave: boolean
+            willSaveWaitUntil: boolean
+            save: {includeText: boolean}
+        """
+        sync_options = session.capabilities.get('textDocumentSync')
+
+        # if a TextDocumentSyncOptions object was sent, we can disable some notifications
+        if isinstance(sync_options, dict):
+            return bool(sync_options.get(notification_type))
+
+        # otherwise we send them all.
+        return True
 
     def _notify_open_documents(self, session: Session) -> None:
         for file_name in self._document_states:
@@ -198,7 +210,8 @@ class WindowDocumentHandler(object):
                     sessions = self._get_applicable_sessions(view)
                     self._attach_view(view, sessions)
                     for session in sessions:
-                        self._notify_did_open(view, session)
+                        if self._session_supports_notification(session, 'openClose'):
+                            self._notify_did_open(view, session)
 
     def _notify_did_open(self, view: ViewLike, session: Session) -> None:
         file_name = view.file_name()
@@ -218,7 +231,7 @@ class WindowDocumentHandler(object):
         file_name = view.file_name()
         if file_name in self._document_states:
             del self._document_states[file_name]
-            for session in self._get_applicable_sessions(view):
+            for session in self._get_applicable_sessions(view, 'openClose'):
                 debug('closing', file_name, session.config.name)
                 if session.client:
                     params = {"textDocument": {"uri": filename_to_uri(file_name)}}
@@ -228,7 +241,7 @@ class WindowDocumentHandler(object):
         file_name = view.file_name()
         if view.window() == self._window:
             if file_name in self._document_states:
-                for session in self._get_applicable_sessions(view):
+                for session in self._get_applicable_sessions(view, 'save'):
                     if session.client:
                         params = {"textDocument": {"uri": filename_to_uri(file_name)}}
                         session.client.send_notification(Notification.didSave(params))
@@ -272,7 +285,7 @@ class WindowDocumentHandler(object):
             if view.buffer_id() in self._pending_buffer_changes:
                 del self._pending_buffer_changes[view.buffer_id()]
 
-                for session in self._get_applicable_sessions(view):
+                for session in self._get_applicable_sessions(view, 'change'):
                     if session.client:
                         document_state = self.get_document_state(file_name)
                         uri = filename_to_uri(file_name)
@@ -290,7 +303,7 @@ class WindowDocumentHandler(object):
 
 class WindowManager(object):
     def __init__(self, window: WindowLike, configs: ConfigRegistry, documents: DocumentHandler,
-                 diagnostics: DiagnosticsHandler, session_starter: 'Callable', sublime: 'Any',
+                 diagnostics: WindowDiagnostics, session_starter: 'Callable', sublime: 'Any',
                  handler_dispatcher, on_closed: 'Optional[Callable]' = None) -> None:
 
         # to move here:
@@ -305,6 +318,10 @@ class WindowManager(object):
         self._handlers = handler_dispatcher
         self._restarting = False
         self._project_path = get_project_path(self._window)
+        self._diagnostics.set_on_updated(
+            lambda file_path, client_name, diagnostics:
+                global_events.publish("document.diagnostics",
+                                      DiagnosticsUpdate(self._window, client_name, file_path, diagnostics)))
         self._on_closed = on_closed
         self._is_closing = False
 
@@ -422,8 +439,8 @@ class WindowManager(object):
 
     def _apply_workspace_edit(self, params: 'Dict[str, Any]', client: Client, request_id: int) -> None:
         edit = params.get('edit', dict())
-        self._window.run_command('lsp_apply_workspace_edit', {'changes': edit.get('changes'),
-                                                              'document_changes': edit.get('documentChanges')})
+        changes = parse_workspace_edit(edit)
+        self._window.run_command('lsp_apply_workspace_edit', {'changes': changes})
         # TODO: We should ideally wait for all changes to have been applied.
         # This however seems overly complicated, because we have to bring along a string representation of the
         # client through the sublime-command invocations (as well as the request ID, but that is easy), and then
@@ -446,7 +463,7 @@ class WindowManager(object):
 
         client.on_notification(
             "textDocument/publishDiagnostics",
-            lambda params: self._diagnostics.update(self._window, config.name, params))
+            lambda params: self._diagnostics.handle_client_diagnostics(config.name, params))
 
         client.on_notification(
             "window/showMessage",
@@ -454,7 +471,7 @@ class WindowManager(object):
 
         client.on_notification(
             "window/logMessage",
-            lambda params: server_log(params.get("message", "???") if params else "???"))
+            lambda params: server_log(config.name, params.get("message", "???") if params else "???"))
 
         self._handlers.on_initialized(config.name, self._window, client)
 
@@ -475,14 +492,14 @@ class WindowManager(object):
         self._window.status_message("{} initialized".format(config.name))
 
     def _handle_view_closed(self, view, session):
-        self._diagnostics.remove(view, session.config.name)
-        if not self._is_closing:
-            if not self._window.is_valid():
-                # try to detect close synchronously (for quitting)
-                self._handle_window_closed()
-            else:
-                # in case the window is invalidated after the last view is closed
-                self._sublime.set_timeout_async(lambda: self._check_window_closed(), 100)
+        if view.file_name():
+            if not self._is_closing:
+                if not self._window.is_valid():
+                    # try to detect close synchronously (for quitting)
+                    self._handle_window_closed()
+                else:
+                    # in case the window is invalidated after the last view is closed
+                    self._sublime.set_timeout_async(lambda: self._check_window_closed(), 100)
 
     def _check_window_closed(self):
         # debug('window {} check window closed closing={}, valid={}'.format(
@@ -511,7 +528,7 @@ class WindowManager(object):
         del self._sessions[config_name]
         for view in self._window.views():
             if view.file_name():
-                self._diagnostics.remove(view, config_name)
+                self._diagnostics.remove(view.file_name(), config_name)
 
         debug("session", config_name, "ended")
         if not self._sessions:
@@ -525,11 +542,10 @@ class WindowManager(object):
 
 
 class WindowRegistry(object):
-    def __init__(self, configs: GlobalConfigs, documents: 'Any', diagnostics: DiagnosticsHandler,
+    def __init__(self, configs: GlobalConfigs, documents: 'Any',
                  session_starter: 'Callable', sublime: 'Any', handler_dispatcher) -> None:
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs
-        self._diagnostics = diagnostics
         self._documents = documents
         self._session_starter = session_starter
         self._sublime = sublime
@@ -540,7 +556,7 @@ class WindowRegistry(object):
         if state is None:
             window_configs = self._configs.for_window(window)
             window_documents = self._documents.for_window(window, window_configs)
-            state = WindowManager(window, window_configs, window_documents, self._diagnostics, self._session_starter,
+            state = WindowManager(window, window_configs, window_documents, WindowDiagnostics(), self._session_starter,
                                   self._sublime, self._handler_dispatcher, lambda: self._on_closed(window))
             self._windows[window.id()] = state
         return state

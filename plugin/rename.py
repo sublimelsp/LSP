@@ -1,6 +1,7 @@
 import sublime_plugin
 from .core.registry import client_for_view, LspTextCommand
 from .core.protocol import Request
+from .core.edit import parse_workspace_edit
 from .core.documents import get_document_position, get_position, is_at_word
 try:
     from typing import List, Dict, Optional
@@ -64,9 +65,9 @@ class LspSymbolRenameCommand(LspTextCommand):
 
     def handle_response(self, response: 'Optional[Dict]') -> None:
         if response:
+            changes = parse_workspace_edit(response)
             self.view.window().run_command('lsp_apply_workspace_edit',
-                                           {'changes': response.get('changes'),
-                                            'document_changes': response.get('documentChanges')})
+                                           {'changes': changes})
         else:
             self.view.window().status_message('No rename edits returned')
 

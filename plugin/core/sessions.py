@@ -4,8 +4,9 @@ from .transports import start_tcp_transport
 from .rpc import Client, attach_stdio_client
 from .process import start_server
 from .url import filename_to_uri
+from .logging import debug
 import os
-from .protocol import CompletionItemKind, SymbolKind
+from .protocol import completion_item_kinds, symbol_kinds
 try:
     from typing import Callable, Dict, Any, Optional
     assert Callable and Dict and Any and Optional
@@ -14,7 +15,7 @@ except ImportError:
 
 
 def create_session(config: ClientConfig, project_path: str, env: dict, settings: Settings,
-                   on_created=None, on_ended: 'Optional[Callable[[str], None]]'=None,
+                   on_created=None, on_ended: 'Optional[Callable[[str], None]]' = None,
                    bootstrap_client=None) -> 'Optional[Session]':
     session = None
     if config.binary_args:
@@ -29,7 +30,7 @@ def create_session(config: ClientConfig, project_path: str, env: dict, settings:
                     # try to terminate the process
                     try:
                         process.terminate()
-                    except Exception as e:
+                    except Exception:
                         pass
             else:
                 client = attach_stdio_client(process, settings)
@@ -44,7 +45,7 @@ def create_session(config: ClientConfig, project_path: str, env: dict, settings:
             session = Session(config, project_path, bootstrap_client,
                               on_created, on_ended)
         else:
-            raise Exception("No way to start session")
+            debug("No way to start session")
 
     return session
 
@@ -67,76 +68,45 @@ def get_initialize_params(project_path: str, config: ClientConfig):
                         "snippetSupport": True
                     },
                     "completionItemKind": {
-                        "valueSet": [
-                            CompletionItemKind.Text,
-                            CompletionItemKind.Method,
-                            CompletionItemKind.Function,
-                            CompletionItemKind.Constructor,
-                            CompletionItemKind.Field,
-                            CompletionItemKind.Variable,
-                            CompletionItemKind.Class,
-                            CompletionItemKind.Interface,
-                            CompletionItemKind.Module,
-                            CompletionItemKind.Property,
-                            CompletionItemKind.Unit,
-                            CompletionItemKind.Value,
-                            CompletionItemKind.Enum,
-                            CompletionItemKind.Keyword,
-                            CompletionItemKind.Snippet,
-                            CompletionItemKind.Color,
-                            CompletionItemKind.File,
-                            CompletionItemKind.Reference
-                        ]
+                        "valueSet": completion_item_kinds
                     }
                 },
                 "signatureHelp": {
                     "signatureInformation": {
-                        "documentationFormat": ["markdown", "plaintext"]
+                        "documentationFormat": ["markdown", "plaintext"],
+                        "parameterInformation": {
+                            "labelOffsetSupport": True
+                        }
                     }
                 },
                 "references": {},
                 "documentHighlight": {},
                 "documentSymbol": {
                     "symbolKind": {
-                        "valueSet": [
-                            SymbolKind.File,
-                            SymbolKind.Module,
-                            SymbolKind.Namespace,
-                            SymbolKind.Package,
-                            SymbolKind.Class,
-                            SymbolKind.Method,
-                            SymbolKind.Property,
-                            SymbolKind.Field,
-                            SymbolKind.Constructor,
-                            SymbolKind.Enum,
-                            SymbolKind.Interface,
-                            SymbolKind.Function,
-                            SymbolKind.Variable,
-                            SymbolKind.Constant,
-                            SymbolKind.String,
-                            SymbolKind.Number,
-                            SymbolKind.Boolean,
-                            SymbolKind.Array,
-                            SymbolKind.Object,
-                            SymbolKind.Key,
-                            SymbolKind.Null,
-                            SymbolKind.EnumMember,
-                            SymbolKind.Struct,
-                            SymbolKind.Event,
-                            SymbolKind.Operator,
-                            SymbolKind.TypeParameter
-                        ]
+                        "valueSet": symbol_kinds
                     }
                 },
                 "formatting": {},
                 "rangeFormatting": {},
                 "definition": {},
-                "codeAction": {},
+                "codeAction": {
+                    "codeActionLiteralSupport": {
+                        "codeActionKind": {
+                            "valueSet": []
+                        }
+                    }
+                },
                 "rename": {}
             },
             "workspace": {
                 "applyEdit": True,
-                "didChangeConfiguration": {}
+                "didChangeConfiguration": {},
+                "executeCommand": {},
+                "symbol": {
+                    "symbolKind": {
+                        "valueSet": symbol_kinds
+                    }
+                }
             }
         }
     }
@@ -148,7 +118,7 @@ def get_initialize_params(project_path: str, config: ClientConfig):
 
 class Session(object):
     def __init__(self, config: ClientConfig, project_path, client: Client,
-                 on_created=None, on_ended: 'Optional[Callable[[str], None]]'=None) -> None:
+                 on_created=None, on_ended: 'Optional[Callable[[str], None]]' = None) -> None:
         self.config = config
         self.project_path = project_path
         self.state = ClientStates.STARTING

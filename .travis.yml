@@ -20,7 +20,7 @@ install:
     - sh travis.sh install_package_control
 script:
     - mypy -p plugin
-    - flake8 --exclude=./boot.py
+    - flake8 plugin tests
     - coverage run -m unittest discover
     - sh travis.sh run_tests
 after_success:

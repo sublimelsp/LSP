@@ -1,9 +1,8 @@
 import mdpopups
 import sublime
+import html
 import sublime_plugin
 import webbrowser
-import re
-import html
 
 try:
     from typing import Any, List, Dict, Optional
@@ -12,29 +11,36 @@ except ImportError:
     pass
 
 from .core.configurations import is_supported_syntax
-from .core.registry import config_for_scope, session_for_view, client_for_view
+from .core.registry import session_for_view, client_for_view
 from .core.documents import get_document_position
 from .core.events import global_events
 from .core.protocol import Request
-from .core.logging import debug
 from .core.popups import popup_css, popup_class
-from .core.settings import settings
+from .core.settings import client_configs
+from .core.signature_help import create_signature_help, SignatureHelp
+assert SignatureHelp
 
 
-def get_documentation(d: 'Dict[str, Any]') -> 'Optional[str]':
-    docs = d.get('documentation', None)
-    if docs is None:
-        return None
-    elif isinstance(docs, str):
-        # In older version of the protocol, documentation was just a string.
-        return docs
-    elif isinstance(docs, dict):
-        # This can be either "plaintext" or "markdown" format. For now, we can dump it into the popup box. It would
-        # be nice to handle the markdown in a special way.
-        return docs.get('value', None)
-    else:
-        debug('unknown documentation type:', str(d))
-        return None
+class ColorSchemeScopeRenderer(object):
+    def __init__(self, view) -> None:
+        self._scope_styles = {}  # type: dict
+        for scope in ["entity.name.function", "variable.parameter", "punctuation"]:
+            self._scope_styles[scope] = mdpopups.scope2style(view, scope)
+
+    def function(self, content: str, escape: bool = True) -> str:
+        return self._wrap_with_scope_style(content, "entity.name.function", escape=escape)
+
+    def punctuation(self, content: str) -> str:
+        return self._wrap_with_scope_style(content, "punctuation")
+
+    def parameter(self, content: str, emphasize: bool = False) -> str:
+        return self._wrap_with_scope_style(content, "variable.parameter", emphasize)
+
+    def _wrap_with_scope_style(self, content: str, scope: str, emphasize: bool = False, escape: bool = True) -> str:
+        color = self._scope_styles[scope]["color"]
+        additional_styles = 'font-weight: bold; text-decoration: underline;' if emphasize else ''
+        content = html.escape(content, quote=False) if escape else content
+        return '<span style="color: {};{}">{}</span>'.format(color, additional_styles, content)
 
 
 class SignatureHelpListener(sublime_plugin.ViewEventListener):
@@ -44,15 +50,13 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         self._initialized = False
         self._signature_help_triggers = []  # type: List[str]
         self._visible = False
-        self._language_id = ""
-        self._signatures = []  # type: List[Any]
-        self._active_signature = -1
-        self._active_parameter = -1
+        self._help = None  # type: Optional[SignatureHelp]
+        self._renderer = ColorSchemeScopeRenderer(self.view)
 
     @classmethod
     def is_applicable(cls, settings):
         syntax = settings.get('syntax')
-        return syntax and is_supported_syntax(syntax)
+        return syntax and is_supported_syntax(syntax, client_configs.all)
 
     def initialize(self):
         session = session_for_view(self.view)
@@ -62,10 +66,6 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             if signatureHelpProvider:
                 self._signature_help_triggers = signatureHelpProvider.get(
                     'triggerCharacters')
-
-        config = config_for_scope(self.view)
-        if config:
-            self._language_id = self._view_language(self.view, config.name)
 
         self._initialized = True
 
@@ -97,26 +97,13 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                     lambda response: self.handle_response(response, point))
 
     def handle_response(self, response: 'Optional[Dict]', point) -> None:
-        if response is not None:
-            self._signatures = response.get("signatures", [])
-            self._active_signature = response.get("activeSignature", -1)
-            self._active_parameter = response.get("activeParameter", -1)
-
-            if self._signatures:
-                if not 0 <= self._active_signature < len(self._signatures):
-                    debug("activeSignature {} not a valid index for signatures length {}".format(
-                        self._active_signature, len(self._signatures)))
-                    self._active_signature = 0
+        self._help = create_signature_help(response)
+        if self._help:
+            content = self._help.build_popup_content(self._renderer)
+            if self._visible:
+                self._update_popup(content)
             else:
-                if self._active_signature != -1:
-                    debug("activeSignature should be -1 or null when no signatures are returned")
-                    self._active_signature = -1
-
-            if len(self._signatures) > 0:
-                if self._visible:
-                    self._update_popup()
-                else:
-                    self._show_popup(point)
+                self._show_popup(content, point)
 
     def on_query_context(self, key, _, operand, __):
         if key != "lsp.signature_help":
@@ -127,25 +114,19 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 return True
             else:
                 return False  # Let someone else handle this keybinding.
-        elif len(self._signatures) < 2:
-            return False  # Let someone else handle this keybinding.
-        else:
+        elif self._help and self._help.has_multiple_signatures():
+
             # We use the "operand" for the number -1 or +1. See the keybindings.
-            new_index = self._active_signature + operand
-
-            # clamp signature index
-            new_index = max(0, min(new_index, len(self._signatures) - 1))
-
-            # only update when changed
-            if new_index != self._active_signature:
-                self._active_signature = new_index
-                self._update_popup()
+            self._help.select_signature(operand)
+            self._update_popup(self._help.build_popup_content(self._renderer))
 
             return True  # We handled this keybinding.
 
-    def _show_popup(self, point: int) -> None:
+        return False
+
+    def _show_popup(self, content: str, point: int) -> None:
         mdpopups.show_popup(self.view,
-                            self._build_popup_content(),
+                            content,
                             css=popup_css,
                             md=True,
                             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
@@ -156,110 +137,15 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                             on_navigate=self._on_hover_navigate)
         self._visible = True
 
-    def _update_popup(self) -> None:
+    def _update_popup(self, content: str) -> None:
         mdpopups.update_popup(self.view,
-                              self._build_popup_content(),
+                              content,
                               css=popup_css,
                               md=True,
                               wrapper_class=popup_class)
-
-    def _build_popup_content(self) -> str:
-        if settings.highlight_active_signature_parameter:
-            return self._build_popup_content_style_vscode()
-        else:
-            # Default to "sublime".
-            return self._build_popup_content_style_sublime()
-
-    def _view_language(self, view: sublime.View, config_name: str) -> 'Optional[str]':
-        languages = view.settings().get('lsp_language')
-        return languages.get(config_name) if languages else None
 
     def _on_hide(self):
         self._visible = False
 
     def _on_hover_navigate(self, href):
         webbrowser.open_new_tab(href)
-
-    def _build_overload_selector(self) -> str:
-        return "**{}** of **{}** overloads (use the ↑ ↓ keys to navigate):\n".format(
-            str(self._active_signature + 1), str(len(self._signatures)))
-
-    def _build_popup_content_style_sublime(self) -> str:
-        signature = self._signatures[self._active_signature]
-        formatted = []
-
-        if len(self._signatures) > 1:
-            formatted.append(self._build_overload_selector())
-
-        signature_label = signature.get('label')
-        if len(signature_label) > 400:
-            label = "```{} ...```".format(signature_label[0:400])  # long code blocks = hangs
-        else:
-            label = "```{}\n{}\n```\n".format(self._language_id, signature_label)
-        formatted.append(label)
-
-        params = signature.get('parameters')
-        if params:
-            for parameter in params:
-                param_docs = get_documentation(parameter)
-                if param_docs:
-                    formatted.append("**{}**\n".format(parameter.get('label')))
-                    formatted.append("* *{}*\n".format(param_docs))
-        sigDocs = signature.get('documentation', None)
-        if sigDocs:
-            formatted.append(sigDocs)
-        return "\n".join(formatted)
-
-    def _build_popup_content_style_vscode(self) -> str:
-        # Fetch all the relevant data.
-        signature_label = ""
-        signature_documentation = ""  # type: Optional[str]
-        parameter_label = ""
-        parameter_documentation = ""  # type: Optional[str]
-        if self._active_signature in range(0, len(self._signatures)):
-            signature = self._signatures[self._active_signature]
-            signature_label = html.escape(signature["label"], quote=False)
-            signature_documentation = get_documentation(signature)
-            parameters = signature.get("parameters", None)
-            if parameters and self._active_parameter in range(0, len(parameters)):
-                parameter = parameters[self._active_parameter]
-                parameter_label = html.escape(parameter["label"], quote=False)
-                parameter_documentation = get_documentation(parameter)
-
-        formatted = []
-
-        if len(self._signatures) > 1:
-            formatted.append(self._build_overload_selector())
-
-        # Write the active signature and give special treatment to the active parameter (if found).
-        # Note that this <div> class and the extra <pre> are copied from mdpopups' HTML output. When mdpopups changes
-        # its output style, we must update this literal string accordingly.
-        formatted.append('<div class="highlight"><pre>')
-        if parameter_label:
-            signature_label = self._replace_active_parameter(signature_label, parameter_label)
-        formatted.append(signature_label)
-        formatted.append("</pre></div>")
-
-        if parameter_documentation:
-            formatted.append(parameter_documentation)
-
-        if signature_documentation:
-            formatted.append(signature_documentation)
-
-        return "\n".join(formatted)
-
-    def _replace_active_parameter(self, signature: str, parameter: str) -> str:
-        if parameter[0].isalnum() and parameter[-1].isalnum():
-            pattern = r'\b{}\b'.format(re.escape(parameter))
-        else:
-            # If the left or right boundary of the parameter string is not an alphanumeric character, the \b check will
-            # never match. In this case, it's probably safe to assume the parameter string itself will be a good pattern
-            # to search for.
-            pattern = re.escape(parameter)
-        replacement = '<span style="font-weight: bold; text-decoration: underline">{}</span>'.format(parameter)
-        # FIXME: This is somewhat language-specific to look for an opening parenthesis. Most languages use parentheses
-        # for their parameter lists though.
-        start_of_param_list_pos = signature.find('(')
-        # Note that this works even when we don't find an opening parenthesis, because .find returns -1 in that case.
-        start_of_param_list = signature[start_of_param_list_pos + 1:]
-        return signature[:start_of_param_list_pos + 1] + re.sub(pattern, replacement, start_of_param_list, 1)

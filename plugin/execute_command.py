@@ -24,16 +24,17 @@ class LspExecuteCommand(LspTextCommand):
         msg = "command {} completed".format(command)
         if response:
             msg += "with response: {}".format(response)
+
         sublime.message_dialog(msg)
 
     def _handle_error(self, command: str, error: 'Dict[str, Any]') -> None:
         msg = "command {} failed. Reason: {}".format(command, error.get("message", "none provided by server :("))
         sublime.message_dialog(msg)
 
-    def _send_command(self, client: Client, command_name: str, command_args: 'Dict[str, Any]') -> None:
+    def _send_command(self, client: Client, command_name: str, command_args: 'Optional[List[Any]]') -> None:
         request = {
             "command": command_name,
-            "args": command_args
+            "arguments": command_args
         }
         client.send_request(Request.executeCommand(request),
                             lambda reponse: self._handle_response(command_name, reponse),

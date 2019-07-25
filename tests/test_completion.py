@@ -1,305 +1,360 @@
-import unittest
-from unittesting import DeferrableTestCase
-from unittest.mock import MagicMock
 import sublime
-import json
 from LSP.plugin.completion import CompletionHandler, CompletionState
-from LSP.plugin.core.settings import client_configs, ClientConfig
-from os.path import dirname, join
+from unittesting import DeferrableTestCase
+from setup import (SUPPORTED_SYNTAX, text_config, add_config, remove_config,
+                   TextDocumentTestCase)
 
 try:
-    from typing import Dict, Optional
-    assert Dict and Optional
+    from typing import Dict, Optional, List
+    assert Dict and Optional and List
 except ImportError:
     pass
 
+label_completions = [dict(label='asdf'), dict(label='efgh')]
+completion_with_additional_edits = [
+    dict(label='asdf',
+         additionalTextEdits=[{
+             'range': {
+                 'start': {
+                     'line': 0,
+                     'character': 0
+                 },
+                 'end': {
+                     'line': 0,
+                     'character': 0
+                 }
+             },
+             'newText': 'import asdf;\n'
+         }])
+]
+insert_text_completions = [dict(label='asdf', insertText='asdf()')]
+var_completion_using_label = [dict(label='$what')]
+var_prefix_added_in_insertText = [dict(label='$what', insertText='what')]
+var_prefix_added_in_label = [
+    dict(label='$what',
+         textEdit={
+             'range': {
+                 'start': {
+                     'line': 0,
+                     'character': 1
+                 },
+                 'end': {
+                     'line': 0,
+                     'character': 1
+                 }
+             },
+             'newText': 'what'
+         })
+]
+space_added_in_label = [dict(label=' const', insertText='const')]
 
-def load_completion_sample(name: str) -> 'Dict':
-    return json.load(open(join(dirname(__file__), name + ".json")))
+dash_missing_from_label = [
+    dict(label='UniqueId',
+         textEdit={
+             'range': {
+                 'start': {
+                     'character': 14,
+                     'line': 26
+                 },
+                 'end': {
+                     'character': 15,
+                     'line': 26
+                 }
+             },
+             'newText': '-UniqueId'
+         },
+         insertText='-UniqueId')
+]
+
+edit_before_cursor = [
+    dict(label='override def myFunction(): Unit',
+         textEdit={
+             'newText': 'override def myFunction(): Unit = ${0:???}',
+             'range': {
+                 'start': {
+                     'line': 0,
+                     'character': 2
+                 },
+                 'end': {
+                     'line': 0,
+                     'character': 18
+                 }
+             }
+         })
+]
+
+edit_after_nonword = [
+    dict(label='apply[A](xs: A*): List[A]',
+         textEdit={
+             'newText': 'apply($0)',
+             'range': {
+                 'start': {
+                     'line': 0,
+                     'character': 6
+                 },
+                 'end': {
+                     'line': 0,
+                     'character': 6
+                 }
+             }
+         })
+]
 
 
-pyls_completion_sample = load_completion_sample("pyls_completion_sample")
-clangd_completion_sample = load_completion_sample("clangd_completion_sample")
-intelephense_completion_sample = load_completion_sample("intelephense_completion_sample")
-
-
-def create_completion_item(item: str, insert_text: 'Optional[str]' = None) -> dict:
-    return {
-        "label": item,
-        "insertText": insert_text
-    }
-
-
-def create_completion_response(items):
-    return {
-        "items": list(map(create_completion_item, items))
-    }
-
-
-class FakeClient(object):
-
-    def __init__(self):
-        self.response = None
-        pass
-
-    def get_capability(self, capability_name: str):
-        return {
-            'triggerCharacters': ['.'],
-            'resolveProvider': False
-        }
-
-
-SUPPORTED_SCOPE = "text.plain"
-SUPPORTED_SYNTAX = "Lang.sublime-syntax"
-test_client_config = ClientConfig('langls', [], None, [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX], 'lang')
-test_file_path = dirname(__file__) + "/testfile.txt"
-
-
-@unittest.skip('asd')
 class InitializationTests(DeferrableTestCase):
-
     def setUp(self):
         self.view = sublime.active_window().new_file()
-        self.old_configs = client_configs.all
-        client_configs.all = [test_client_config]
+        add_config(text_config)
 
     def test_is_not_applicable(self):
         self.assertFalse(CompletionHandler.is_applicable(dict()))
 
     def test_is_applicable(self):
-        self.assertEquals(len(client_configs.all), 1)
-        self.assertTrue(CompletionHandler.is_applicable(dict(syntax=SUPPORTED_SYNTAX)))
+        self.assertTrue(
+            CompletionHandler.is_applicable(dict(syntax=SUPPORTED_SYNTAX)))
 
     def test_not_enabled(self):
         handler = CompletionHandler(self.view)
         self.assertFalse(handler.initialized)
         self.assertFalse(handler.enabled)
         result = handler.on_query_completions("", [0])
+        yield 100
         self.assertTrue(handler.initialized)
         self.assertFalse(handler.enabled)
         self.assertIsNone(result)
 
     def tearDown(self):
-        client_configs.all = self.old_configs
+        remove_config(text_config)
         if self.view:
             self.view.set_scratch(True)
             self.view.window().focus_view(self.view)
             self.view.window().run_command("close_file")
 
 
-@unittest.skip('asf')
-class QueryCompletionsTests(unittest.TestCase):
+class QueryCompletionsTests(TextDocumentTestCase):
+    def test_simple_label(self):
+        yield 100
+        self.client.responses['textDocument/completion'] = label_completions
 
-    def setUp(self):
-        self.view = sublime.active_window().open_file(test_file_path)
-        self.old_configs = client_configs.all
-        client_configs.all = [test_client_config]
-        self.client = FakeClient()
-        # add_window_client(sublime.active_window(), test_client_config.name, self.client)
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            # todo: want to test trigger chars instead?
+            # self.view.run_command('insert', {"characters": '.'})
+            result = handler.on_query_completions("", [1])
 
-    def test_enabled(self):
-        self.view.run_command('insert', {"characters": '.'})
+            # synchronous response
+            self.assertTrue(handler.initialized)
+            self.assertTrue(handler.enabled)
+            self.assertIsNotNone(result)
+            items, mask = result
+            self.assertEquals(len(items), 0)
+            # self.assertEquals(mask, 0)
 
-        self.client.send_request = MagicMock()
+            # now wait for server response
+            yield 100
+            self.assertEquals(handler.state, CompletionState.IDLE)
+            self.assertEquals(len(handler.completions), 2)
 
-        handler = CompletionHandler(self.view)
-        self.assertEquals(handler.state, CompletionState.IDLE)
+            # verify insertion works
+            self.view.run_command("insert_best_completion")
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())), 'asdf')
 
-        result = handler.on_query_completions("", [1])
-        self.assertIsNotNone(result)
-        items, mask = result
-        self.assertEquals(len(items), 0)
-        self.assertEquals(mask, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+    def test_simple_inserttext(self):
+        yield 100
+        self.client.responses[
+            'textDocument/completion'] = insert_text_completions
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [1])
+            yield 100
+            self.view.run_command("insert_best_completion")
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())),
+                insert_text_completions[0]["insertText"])
 
-        self.assertTrue(handler.initialized)
-        self.assertTrue(handler.enabled)
-        self.assertEquals(handler.state, CompletionState.REQUESTING)
+    def test_var_prefix_using_label(self):
+        yield 100
+        self.view.run_command('append', {'characters': '$'})
+        self.view.run_command('move_to', {'to': 'eol'})
+        self.client.responses[
+            'textDocument/completion'] = var_completion_using_label
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [1])
+            yield 100
+            self.view.run_command("insert_best_completion")
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
-        self.client.send_request.assert_called_once()
-        # time.sleep(1000)
-        # self.assertEquals(len(handler.completions), 2)
-        # self.assertEquals(handler.state, CompletionState.APPLYING)
+    def test_var_prefix_added_in_insertText(self):
+        """
 
-        # running auto_complete command does not work
-        # sublime does not know about the instance we registered here.
-        # we do it directly here
-        # items, mask = handler.on_query_completions("", [1])
+        Powershell: label='true', insertText='$true' (see https://github.com/tomv564/LSP/issues/294)
 
-        # self.assertEquals(len(items), 2)
-        # self.assertEquals(mask, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+        """
+        yield 100
+        self.view.run_command('append', {'characters': '$'})
+        self.view.run_command('move_to', {'to': 'eol'})
+        self.client.responses[
+            'textDocument/completion'] = var_prefix_added_in_insertText
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [1])
+            yield 100
+            self.view.run_command("insert_best_completion")
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
-    def tearDown(self):
-        client_configs.all = self.old_configs
-        if self.view:
-            self.view.window().run_command("close_file")
+    def test_var_prefix_added_in_label(self):
+        """
 
+        PHP language server: label='$someParam', textEdit='someParam' (https://github.com/tomv564/LSP/issues/368)
 
-class CompletionFormattingTests(DeferrableTestCase):
+        """
+        yield 100
+        self.view.run_command('append', {'characters': '$'})
+        self.view.run_command('move_to', {'to': 'eol'})
+        self.client.responses[
+            'textDocument/completion'] = var_prefix_added_in_label
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [1])
+            yield 100
+            self.view.run_command("insert_best_completion")
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
-    def setUp(self):
-        self.view = sublime.active_window().open_file(test_file_path)
+    def test_space_added_in_label(self):
+        """
 
-    def test_only_label_item(self):
-        handler = CompletionHandler(self.view)
-        result = handler.format_completion(create_completion_item("asdf"))
-        self.assertEqual(len(result), 2)
-        self.assertEqual("asdf", result[0])
-        self.assertEqual("asdf", result[1])
+        Clangd: label=" const", insertText="const" (https://github.com/tomv564/LSP/issues/368)
 
-    def test_prefers_insert_text(self):
-        handler = CompletionHandler(self.view)
-        result = handler.format_completion(create_completion_item("asdf", "Asdf"))
-        self.assertEqual(len(result), 2)
-        self.assertEqual("asdf", result[0])
-        self.assertEqual("Asdf", result[1])
+        """
+        yield 100
+        self.client.responses['textDocument/completion'] = space_added_in_label
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [1])
+            yield 100
+            self.view.run_command("insert_best_completion")
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())), 'const')
 
-    def test_ignores_text_edit(self):
-        handler = CompletionHandler(self.view)
+    def test_dash_missing_from_label(self):
+        """
 
-        # partial completion from cursor (instead of full word) causes issues.
-        item = {
-            'insertText': '$true',
-            'label': 'true',
-            'textEdit': {
-                'newText': 'rue',
-                'range': {
-                    'start': {'line': 0, 'character': 2},
-                    'end': {'line': 0, 'character': 2}
-                }
-            }
-        }
+        Powershell: label="UniqueId", insertText="-UniqueId" (https://github.com/tomv564/LSP/issues/572)
 
-        result = handler.format_completion(item)
-        self.assertEqual(len(result), 2)
-        self.assertEqual("true", result[0])
-        self.assertEqual("\\$true", result[1])
+        """
+        yield 100
+        self.view.run_command('append', {'characters': '-'})
+        self.view.run_command('move_to', {'to': 'eol'})
 
-    def test_ignore_label(self):
-        # issue #368
-        yield 100  # wait for file to be open
-        item = {
-            'insertTextFormat': 2,
-            # insertText is present, but we should prefer textEdit instead.
-            'insertText': 'const',
-            'sortText': '3f800000const',
-            'kind': 14,
-            # Note the extra space here. We should ignore this!
-            'label': ' const',
-            'filterText': 'const',
-            'textEdit': {
-                'newText': 'const',
-                'range': {
-                    # Replace the single character that triggered the completion request.
-                    'end': {'character': 13, 'line': 6},
-                    'start': {'character': 12, 'line': 6}
-                }
-            }
-        }
-        handler = CompletionHandler(self.view)
-        handler.last_location = 1
-        handler.last_prefix = ""
-        result = handler.format_completion(item)
-        self.assertEqual(result, ('const\t  Keyword', 'const'))
+        self.client.responses[
+            'textDocument/completion'] = dash_missing_from_label
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [1])
+            yield 100
+            self.view.run_command("insert_best_completion")
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())),
+                '-UniqueId')
 
-    def test_text_edit_intelephense(self):
-        yield 100  # wait for file to be open
-        handler = CompletionHandler(self.view)
-        handler.last_location = 1
-        handler.last_prefix = ""
-        result = [handler.format_completion(item) for item in intelephense_completion_sample]
-        self.assertEqual(
-            result,
-            [
-                ('$x\t  mixed', '\\$x'),
-                ('$_ENV\t  array', '\\$_ENV'),
-                ('$php_errormsg\t  string', '\\$php_errormsg'),
-                ('$_FILES\t  array', '\\$_FILES'),
-                ('$GLOBALS\t  array', '\\$GLOBALS'),
-                ('$argc\t  int', '\\$argc'),
-                ('$argv\t  array', '\\$argv'),
-                ('$_GET\t  array', '\\$_GET'),
-                ('$HTTP_RAW_POST_DATA\t  string', '\\$HTTP_RAW_POST_DATA'),
-                ('$http_response_header\t  array', '\\$http_response_header'),
-                ('$_POST\t  array', '\\$_POST'),
-                ('$_REQUEST\t  array', '\\$_REQUEST'),
-                ('$_SERVER\t  array', '\\$_SERVER'),
-                ('$_SESSION\t  array', '\\$_SESSION'),
-                ('$_COOKIE\t  array', '\\$_COOKIE'),
-                ('$this\t  Variable', '\\$this')
-            ]
-        )
+    def test_edit_before_cursor(self):
+        """
 
-    def test_text_edit_clangd(self):
-        yield 100  # wait for file to be open
-        handler = CompletionHandler(self.view)
-        handler.last_location = 1
-        handler.last_prefix = ""
-        result = [handler.format_completion(item) for item in clangd_completion_sample]
-        # We should prefer textEdit over insertText. This test covers that.
-        self.assertEqual(
-            result,
-            [
-                ('argc\t  int', 'argc'),
-                ('argv\t  const char **', 'argv'),
-                ('alignas\t  Snippet', 'alignas(${1:expression})'),
-                ('alignof\t  size_t', 'alignof(${1:type})'),
-                ('auto\t  Keyword', 'auto'),
-                ('static_assert\t  Snippet', 'static_assert(${1:expression}, ${2:message})'),
-                ('a64l\t  long', 'a64l(${1:const char *__s})'),
-                ('abort\t  void', 'abort()'),
-                ('abs\t  int', 'abs(${1:int __x})'),
-                ('aligned_alloc\t  void *', 'aligned_alloc(${1:size_t __alignment}, ${2:size_t __size})'),
-                ('alloca\t  void *', 'alloca(${1:size_t __size})'),
-                ('asctime\t  char *', 'asctime(${1:const struct tm *__tp})'),
-                ('asctime_r\t  char *',
-                 'asctime_r(${1:const struct tm *__restrict __tp}, ${2:char *__restrict __buf})'),
-                ('asprintf\t  int', 'asprintf(${1:char **__restrict __ptr}, ${2:const char *__restrict __fmt, ...})'),
-                ('at_quick_exit\t  int', 'at_quick_exit(${1:void (*__func)()})'),
-                ('atexit\t  int', 'atexit(${1:void (*__func)()})'),
-                ('atof\t  double', 'atof(${1:const char *__nptr})'),
-                ('atoi\t  int', 'atoi(${1:const char *__nptr})'),
-                ('atol\t  long', 'atol(${1:const char *__nptr})')
-            ]
-        )
+        Metals: label="override def myFunction(): Unit"
 
-    def test_missing_text_edit_but_we_do_have_insert_text_for_pyls(self):
-        yield 100  # wait for file to be open
-        handler = CompletionHandler(self.view)
-        handler.last_location = 1
-        handler.last_prefix = ""
-        result = [handler.format_completion(item) for item in pyls_completion_sample]
-        self.assertEqual(
-            result,
-            [
-                ('abc\t  os', 'abc'),
-                ('abort()\t  os', 'abort'),
-                ('access(path, mode, dir_fd, effective_ids, follow_symlinks)\t  os',
-                 'access(${1:path}, ${2:mode}, ${3:dir_fd}, ${4:effective_ids}, ${5:follow_symlinks})$0'),
-                ('altsep\t  os', 'altsep'),
-                ('chdir(path)\t  os', 'chdir(${1:path})$0'),
-                ('chmod(path, mode, dir_fd, follow_symlinks)\t  os',
-                 'chmod(${1:path}, ${2:mode}, ${3:dir_fd}, ${4:follow_symlinks})$0'),
-                ('chown(path, uid, gid, dir_fd, follow_symlinks)\t  os',
-                 'chown(${1:path}, ${2:uid}, ${3:gid}, ${4:dir_fd}, ${5:follow_symlinks})$0'),
-                ('chroot(path)\t  os', 'chroot(${1:path})$0'),
-                ('CLD_CONTINUED\t  os', 'CLD_CONTINUED'),
-                ('CLD_DUMPED\t  os', 'CLD_DUMPED'),
-                ('CLD_EXITED\t  os', 'CLD_EXITED'),
-                ('CLD_TRAPPED\t  os', 'CLD_TRAPPED'),
-                ('close(fd)\t  os', 'close(${1:fd})$0'),
-                ('closerange(fd_low, fd_high)\t  os', 'closerange(${1:fd_low}, ${2:fd_high})$0'),
-                ('confstr(name)\t  os', 'confstr(${1:name})$0'),
-                ('confstr_names\t  os', 'confstr_names'),
-                ('cpu_count()\t  os', 'cpu_count'),
-                ('ctermid()\t  os', 'ctermid'),
-                ('curdir\t  os', 'curdir'),
-                ('defpath\t  os', 'defpath'),
-                ('device_encoding(fd)\t  os', 'device_encoding(${1:fd})$0')
-            ]
-        )
+        """
+        yield 100
+        self.view.run_command('append', {'characters': '  def myF'})
+        self.view.run_command('move_to', {'to': 'eol'})
 
-    def tearDown(self):
-        if self.view:
-            self.view.set_scratch(True)
-            self.view.window().focus_view(self.view)
-            self.view.window().run_command("close_file")
+        self.client.responses['textDocument/completion'] = edit_before_cursor
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("myF", [7])
+            yield 100
+            # note: invoking on_text_command manually as sublime doesn't call it.
+            handler.on_text_command('insert_best_completion', {})
+            self.view.run_command("insert_best_completion", {})
+            yield 100
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())),
+                '  override def myFunction(): Unit = ???')
+
+    def test_edit_after_nonword(self):
+        """
+
+        Metals: List.| selects label instead of textedit
+        See https://github.com/tomv564/LSP/issues/645
+
+        """
+        yield 100
+        self.view.run_command('append', {'characters': 'List.'})
+        self.view.run_command('move_to', {'to': 'eol'})
+
+        self.client.responses['textDocument/completion'] = edit_after_nonword
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [6])
+            yield 100
+            # note: invoking on_text_command manually as sublime doesn't call it.
+            handler.on_text_command('insert_best_completion', {})
+            self.view.run_command("insert_best_completion", {})
+            yield 100
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())),
+                'List.apply()')
+
+    def test_additional_edits(self):
+        yield 100
+        self.client.responses[
+            'textDocument/completion'] = completion_with_additional_edits
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [1])
+            yield 100
+            # note: invoking on_text_command manually as sublime doesn't call it.
+            handler.on_text_command('insert_best_completion', {})
+            self.view.run_command("insert_best_completion", {})
+            yield 100
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())),
+                'import asdf;\nasdf')
+
+    def test_resolve_for_additional_edits(self):
+        yield 100
+        self.client.responses['textDocument/completion'] = label_completions
+        self.client.responses[
+            'completionItem/resolve'] = completion_with_additional_edits[0]
+
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [1])
+
+            # note: ideally the handler is initialized with resolveProvider capability
+            handler.resolve = True
+
+            yield 100
+            # note: invoking on_text_command manually as sublime doesn't call it.
+            handler.on_text_command('insert_best_completion', {})
+            self.view.run_command("insert_best_completion", {})
+            yield 100
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())),
+                'import asdf;\nasdf')
+            handler.resolve = False

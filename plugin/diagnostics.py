@@ -10,14 +10,17 @@ except ImportError:
     pass
 
 from .core.configurations import is_supported_syntax
-from .core.diagnostics import DiagnosticsUpdate, get_window_diagnostics, get_line_diagnostics
+from .core.diagnostics import (
+    DiagnosticsUpdate
+)
 from .core.events import global_events
 from .core.logging import debug
 from .core.panels import ensure_panel
 from .core.protocol import Diagnostic, DiagnosticSeverity
-from .core.settings import settings, PLUGIN_NAME
+from .core.settings import settings, PLUGIN_NAME, client_configs
 from .core.views import range_to_region
 from .core.workspace import get_project_path
+from .core.registry import windows
 
 
 diagnostic_severity_names = {
@@ -144,6 +147,14 @@ def update_diagnostics_phantoms(view: sublime.View, diagnostics: 'List[Diagnosti
         phantom_sets_by_buffer.pop(buffer_id, None)
 
 
+def get_point_diagnostics(view, point):
+    diagnostics = get_view_diagnostics(view)
+    return tuple(
+        diagnostic for diagnostic in diagnostics
+        if range_to_region(diagnostic.range, view).contains(point)
+    )
+
+
 def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic]', severity: int):
     region_name = "lsp_" + format_severity(severity)
     if settings.show_diagnostics_phantoms and not view.is_dirty():
@@ -167,6 +178,27 @@ def update_diagnostics_in_view(view: sublime.View, diagnostics: 'List[Diagnostic
                 DiagnosticSeverity.Error,
                 DiagnosticSeverity.Error + settings.show_diagnostics_severity_level):
             update_diagnostics_regions(view, diagnostics, severity)
+
+
+def get_view_diagnostics(view):
+    if view.window():
+        if view.file_name():
+            return windows.lookup(view.window())._diagnostics.get_by_path(view.file_name())
+        else:
+            return []
+
+
+def get_line_diagnostics(view, point):
+    row, _ = view.rowcol(point)
+    diagnostics = get_view_diagnostics(view)
+    return tuple(
+        diagnostic for diagnostic in diagnostics
+        if diagnostic.range.start.row <= row <= diagnostic.range.end.row
+    )
+
+
+def get_window_diagnostics(window):
+    return windows.lookup(window)._diagnostics.get()
 
 
 def update_diagnostics_in_status_bar(view: sublime.View):
@@ -213,6 +245,8 @@ def handle_diagnostics(update: DiagnosticsUpdate):
         update_diagnostics_in_view(view, update.diagnostics)
         if settings.show_diagnostics_count_in_view_status:
             update_diagnostics_in_status_bar(view)
+    else:
+        debug('view not found')
     update_diagnostics_panel(window)
 
 
@@ -224,7 +258,7 @@ class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, view_settings):
         syntax = view_settings.get('syntax')
-        return settings.show_diagnostics_in_view_status and syntax and is_supported_syntax(syntax)
+        return settings.show_diagnostics_in_view_status and syntax and is_supported_syntax(syntax, client_configs.all)
 
     def on_selection_modified_async(self):
         selections = self.view.sel()
@@ -255,6 +289,11 @@ class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
             self.window.run_command("hide_panel", {"panel": "output.diagnostics"})
         else:
             self.window.run_command("show_panel", {"panel": "output.diagnostics"})
+
+
+class LspClearDiagnosticsCommand(sublime_plugin.WindowCommand):
+    def run(self):
+        windows.lookup(self.window)._diagnostics.clear()
 
 
 def ensure_diagnostics_panel(window: sublime.Window) -> 'Optional[sublime.View]':
@@ -317,7 +356,7 @@ def update_diagnostics_panel(window: sublime.Window):
 def has_relevant_diagnostics(origin_diagnostics):
     for origin, diagnostics in origin_diagnostics.items():
         for diagnostic in diagnostics:
-            debug('severity check', diagnostic.severity, '<=', settings.auto_show_diagnostics_panel_level)
+            # debug('severity check', diagnostic.severity, '<=', settings.auto_show_diagnostics_panel_level)
             if diagnostic.severity <= settings.auto_show_diagnostics_panel_level:
                 return True
 

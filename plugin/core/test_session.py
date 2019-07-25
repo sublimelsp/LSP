@@ -1,6 +1,7 @@
 from .types import ClientConfig, LanguageConfig, ClientStates, Settings
 from .sessions import create_session, Session
 from .protocol import Request, Notification
+from .logging import debug
 
 import unittest
 import unittest.mock
@@ -11,17 +12,28 @@ except ImportError:
     pass
 
 
+completion_provider = {
+    'triggerCharacters': ['.'],
+    'resolveProvider': False
+}
+
+
 class MockClient():
-    def __init__(self) -> None:
+    def __init__(self, async_response=None) -> None:
         self.responses = {
-            'initialize': {"capabilities": dict(testing=True, hoverProvider=True, textDocumentSync=True)},
-            'textDocument/hover': {"contents": "greeting"}
+            'initialize': {"capabilities": dict(testing=True, hoverProvider=True,
+                                                completionProvider=completion_provider, textDocumentSync=True)},
         }  # type: dict
         self._notifications = []  # type: List[Notification]
+        self._async_response_callback = async_response
 
-    def send_request(self, request: Request, on_success: 'Callable', on_error: 'Callable'=None) -> None:
+    def send_request(self, request: Request, on_success: 'Callable', on_error: 'Callable' = None) -> None:
         response = self.responses.get(request.method)
-        on_success(response)
+        debug("TEST: responding to", request.method, "with", response)
+        if self._async_response_callback:
+            self._async_response_callback(lambda: on_success(response))
+        else:
+            on_success(response)
 
     def send_notification(self, notification: Notification) -> None:
         self._notifications.append(notification)
@@ -62,6 +74,7 @@ class SessionTest(unittest.TestCase):
 
         self.assertEqual(session.state, ClientStates.STARTING)
         self.assertEqual(session.project_path, project_path)
+        session.end()
         # self.assertIsNone(session.capabilities) -- empty dict
 
     def test_can_get_started_session(self):

@@ -31,9 +31,9 @@ def exception_log(message: str, ex) -> None:
             print(''.join(traceback.format_exception(ex.__class__, ex, ex_traceback)))
 
 
-def server_log(*args) -> None:
+def server_log(server_name, *args) -> None:
     with mutex:
-        printf(*args, prefix="server")
+        printf(*args, prefix=server_name)
 
 
 def printf(*args, prefix='LSP'):

@@ -1,6 +1,5 @@
 import sublime
 import sublime_plugin
-from .diagnostics import GlobalDiagnostics
 from .windows import WindowRegistry, DocumentHandlerFactory
 from .configurations import (
     ConfigManager
@@ -58,7 +57,7 @@ def client_for_view(view: sublime.View) -> 'Optional[Client]':
     return _client_for_view_and_window(view, view.window())
 
 
-def session_for_view(view: sublime.View, point: 'Optional[int]'=None) -> 'Optional[Session]':
+def session_for_view(view: sublime.View, point: 'Optional[int]' = None) -> 'Optional[Session]':
     return _session_for_view_and_window(view, view.window(), point)
 
 
@@ -101,11 +100,10 @@ def unload_sessions():
         wm.end_sessions()
 
 
-configs = ConfigManager()
-diagnostics = GlobalDiagnostics()
+configs = ConfigManager(client_configs.all)
 documents = DocumentHandlerFactory(sublime, settings)
 handlers_dispatcher = LanguageHandlerDispatcher()
-windows = WindowRegistry(configs, documents, diagnostics, start_window_config, sublime, handlers_dispatcher)
+windows = WindowRegistry(configs, documents, start_window_config, sublime, handlers_dispatcher)
 
 
 def config_for_scope(view: 'Any', point=None) -> 'Optional[ClientConfig]':

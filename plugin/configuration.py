@@ -22,7 +22,7 @@ except ImportError:
 def detect_supportable_view(view: sublime.View):
     config = config_for_scope(view)
     if not config:
-        available_config = get_global_client_config(view)
+        available_config = get_global_client_config(view, client_configs.all)
         if available_config:
             show_enable_config(view, available_config)
 
@@ -67,8 +67,7 @@ class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
             # too much work
             client_configs.enable(config_name)
             wm = windows.lookup(self.window)
-            wm.update_configs(create_window_configs(self.window))
-
+            wm.update_configs(create_window_configs(self.window, client_configs.all))
             sublime.set_timeout_async(lambda: wm.start_active_views(), 500)
             self.window.status_message("{} enabled, starting server...".format(config_name))
 
@@ -95,7 +94,7 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
             config_name = self._items[index][0]
             wm = windows.lookup(self.window)
             enable_in_project(self.window, config_name)
-            wm.update_configs(create_window_configs(self.window))
+            wm.update_configs(create_window_configs(self.window, client_configs.all))
             sublime.set_timeout_async(lambda: wm.start_active_views(), 500)
             self.window.status_message("{} enabled, starting server...".format(config_name))
 
@@ -120,7 +119,7 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
             config_name = self._items[index][0]
             client_configs.disable(config_name)
             wm = windows.lookup(self.window)
-            wm.update_configs(create_window_configs(self.window))
+            wm.update_configs(create_window_configs(self.window, client_configs.all))
             sublime.set_timeout_async(lambda: wm.end_session(config_name), 500)
             self.window.status_message("{} disabled, shutting down server...".format(config_name))
 
@@ -146,7 +145,7 @@ class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
             config_name = self._items[index][0]
             wm = windows.lookup(self.window)
             disable_in_project(self.window, config_name)
-            wm.update_configs(create_window_configs(self.window))
+            wm.update_configs(create_window_configs(self.window, client_configs.all))
             wm.end_session(config_name)
 
 
@@ -171,7 +170,7 @@ class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
     def run(self):
         view = self.window.active_view()
         syntax = view.settings().get("syntax")
-        available_config = get_global_client_config(view)
+        available_config = get_global_client_config(view, client_configs.all)
 
         syntax_name = extract_syntax_name(syntax)
         title = "# Language Server for {}\n".format(syntax_name)

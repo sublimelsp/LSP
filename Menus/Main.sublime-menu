@@ -9,6 +9,7 @@
         "children": [
           {
             "caption": "LSP",
+            "id": "lsp-settings",
             "children": [
               {
                 "caption": "Settings",

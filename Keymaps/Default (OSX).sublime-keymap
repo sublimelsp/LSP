@@ -1,4 +1,14 @@
 [
+    // Show a list of available LSP commands
+    // {
+    //     "keys": ["f1"],
+    //     "command": "show_overlay",
+    //     "args": {
+    //         "overlay": "command_palette",
+    //         "text": "LSP: ",
+    //     }
+    // },
+
     // Show Code Actions
     { "keys": ["super+."], "command": "lsp_code_actions" },
 
@@ -22,6 +32,15 @@
     // Go To Definition
     // {"keys": ["UNBOUND"], "command": "lsp_symbol_definition"},
 
+    // Go To Type Definition
+    // {"keys": ["UNBOUND"], "command": "lsp_symbol_type_definition"},
+
+    // Go To Declaration
+    // {"keys": ["UNBOUND"], "command": "lsp_symbol_declaration"},
+
+    // Go To Implementation
+    // {"keys": ["UNBOUND"], "command": "lsp_symbol_implementation"},
+
     // Rename Symbol
     // { "keys": ["UNBOUND"], "command": "lsp_symbol_rename" },
 
@@ -36,5 +55,4 @@
 
     // Symbol Hover
     // {"keys": ["UNBOUND"], "command": "lsp_hover"},
-
 ]

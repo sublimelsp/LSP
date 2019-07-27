@@ -14,7 +14,7 @@ from .core.logging import debug
 from .core.completion import parse_completion_response, format_completion
 from .core.registry import session_for_view, client_for_view
 from .core.configurations import is_supported_syntax
-from .core.documents import get_document_position
+from .core.documents import get_document_position, is_at_word
 from .core.sessions import Session
 from .core.edit import parse_text_edit
 
@@ -59,7 +59,8 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         self.last_prefix = ""
         self.last_location = 0
         self.committing = False
-        self.response = []  # type: List[dict]
+        self.response_items = []  # type: List[dict]
+        self.response_incomplete = False
 
     @classmethod
     def is_applicable(cls, settings):
@@ -72,7 +73,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         if session:
             completionProvider = session.get_capability(
                 'completionProvider')
-            if completionProvider:
+            # A language server may have an empty dict as CompletionOptions. In that case,
+            # no trigger characters will be registered but we'll still respond to Sublime's
+            # usual query for completions. So the explicit check for None is necessary.
+            if completionProvider is not None:
                 self.enabled = True
                 self.resolve = completionProvider.get('resolveProvider') or False
                 self.trigger_chars = completionProvider.get(
@@ -112,6 +116,9 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             return prev_char in self.trigger_chars
 
     def is_same_completion(self, prefix, locations):
+        if self.response_incomplete:
+            return False
+
         # completion requests from the same location with the same prefix are cached.
         current_start = locations[0] - len(prefix)
         last_start = self.last_location - len(self.last_prefix)
@@ -132,10 +139,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 snippet_offset = replacement.find('$', 2)
                 if snippet_offset > -1:
                     if inserted.startswith(replacement[:snippet_offset]):
-                        return self.response[index]
+                        return self.response_items[index]
                 else:
                     if replacement == inserted:
-                        return self.response[index]
+                        return self.response_items[index]
         return None
 
     def on_modified(self):
@@ -153,6 +160,12 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         if self.committing:
             self.committing = False
             self.on_completion_inserted()
+        else:
+            if self.view.is_auto_complete_visible():
+                if self.response_incomplete:
+                    # debug('incomplete, triggering new completions')
+                    self.view.run_command("hide_auto_complete")
+                    sublime.set_timeout(self.run_auto_complete, 0)
 
     def on_completion_inserted(self):
         # get text inserted from last completion
@@ -265,13 +278,17 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
     def handle_response(self, response: 'Optional[Union[Dict,List]]'):
         if self.state == CompletionState.REQUESTING:
 
-            # where does the current word start?
-            word = self.view.word(self.last_location)
-            last_start = word.begin()
-            _last_row, last_col = self.view.rowcol(last_start)
+            last_col = self.last_location
+            if is_at_word(self.view, None):
+                # if completion is requested in the middle of a word, where does it start?
+                word = self.view.word(self.last_location)
+                word_start = word.begin()
+                _last_row, last_col = self.view.rowcol(word_start)
 
-            self.response = parse_completion_response(response)
-            self.completions = list(format_completion(item, last_col, settings) for item in self.response)
+            response_items, response_incomplete = parse_completion_response(response)
+            self.response_items = response_items
+            self.response_incomplete = response_incomplete
+            self.completions = list(format_completion(item, last_col, settings) for item in self.response_items)
 
             # if insert_best_completion was just ran, undo it before presenting new completions.
             prev_char = self.view.substr(self.view.sel()[0].begin() - 1)

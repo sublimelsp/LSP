@@ -52,8 +52,9 @@ def parse_signature_label(signature_label: str, parameters: 'List[ParameterInfor
 
         if parameter.label:
             range_start = signature_label.find(parameter.label, current_index)
-            range_end = range_start + len(parameter.label)
-            parameter.range = (range_start, range_end)
+            if range_start > -1:
+                range_end = range_start + len(parameter.label)
+                parameter.range = (range_start, range_end)
         elif parameter.range:
             parameter.label = signature_label[parameter.range[0]:parameter.range[1]]
 

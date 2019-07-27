@@ -14,7 +14,7 @@
 * Symbol References: `shift+f12`
 * Rename Symbol: UNBOUND
     * Recommendation: Override `F2` (next bookmark)
-* Go to definition: UNBOUND
+* Go to definition / type definition / declaration / implementation: UNBOUND
     * Recommendation: Override `f12` (built-in goto definition),
     * LSP falls back to ST3's built-in goto definition command in case LSP fails.
 * Format Document: UNBOUND

@@ -10,7 +10,7 @@ from .plugin.diagnostics import *
 from .plugin.configuration import *
 from .plugin.formatting import *
 from .plugin.highlights import *
-from .plugin.definition import *
+from .plugin.goto import *
 from .plugin.hover import *
 from .plugin.references import *
 from .plugin.signature_help import *

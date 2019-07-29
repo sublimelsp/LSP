@@ -35,6 +35,7 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [Bash](https://lsp.readthedocs.io/en/latest/#bash)
 * [C/C++](https://lsp.readthedocs.io/en/latest/#clangd)
 * [CSS/LESS/SASS (SCSS only)](https://lsp.readthedocs.io/en/latest/#css)
+* [D](https://lsp.readthedocs.io/en/latest/#d)
 * [Dart](https://lsp.readthedocs.io/en/latest/#dart)
 * [Flow (JavaScript)](https://lsp.readthedocs.io/en/latest/#flow)
 * [Go](https://lsp.readthedocs.io/en/latest/#go)
@@ -44,6 +45,8 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [JSON](https://lsp.readthedocs.io/en/latest/#json)
 * [Julia](https://lsp.readthedocs.io/en/latest/#julia)
 * [Kotlin](https://lsp.readthedocs.io/en/latest/#kotlin)
+* [LaTeX](https://lsp.readthedocs.io/en/latest/#latex)
+* [Lua](https://lsp.readthedocs.io/en/latest/#lua)
 * [PHP](https://lsp.readthedocs.io/en/latest/#php)
 * [Polymer](https://lsp.readthedocs.io/en/latest/#polymer)
 * [Python](https://lsp.readthedocs.io/en/latest/#python)
@@ -53,6 +56,7 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [Rust](https://lsp.readthedocs.io/en/latest/#rust)
 * [Scala](https://lsp.readthedocs.io/en/latest/#scala)
 * [Vue (JavaScript)](https://lsp.readthedocs.io/en/latest/#vue)
+* [XML](https://lsp.readthedocs.io/en/latest/#xml)
 
 See [Language Server Protocol](https://microsoft.github.io/language-server-protocol/implementors/servers/) for more available implementations. Please create issues/pull requests so we can get support for more languages.
 

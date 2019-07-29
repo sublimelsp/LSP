@@ -57,6 +57,11 @@
         "args": {}
     },
     {
+        "caption": "LSP: Clear Diagnostics",
+        "command": "lsp_clear_diagnostics",
+        "args": {}
+    },
+    {
         "caption": "LSP: Workspace Symbol",
         "command": "lsp_workspace_symbols"
     },

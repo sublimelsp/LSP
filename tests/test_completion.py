@@ -1,6 +1,6 @@
-from unittesting import DeferrableTestCase
 import sublime
 from LSP.plugin.completion import CompletionHandler, CompletionState
+from unittesting import DeferrableTestCase
 from setup import (SUPPORTED_SYNTAX, text_config, add_config, remove_config,
                    TextDocumentTestCase)
 
@@ -11,6 +11,22 @@ except ImportError:
     pass
 
 label_completions = [dict(label='asdf'), dict(label='efgh')]
+completion_with_additional_edits = [
+    dict(label='asdf',
+         additionalTextEdits=[{
+             'range': {
+                 'start': {
+                     'line': 0,
+                     'character': 0
+                 },
+                 'end': {
+                     'line': 0,
+                     'character': 0
+                 }
+             },
+             'newText': 'import asdf;\n'
+         }])
+]
 insert_text_completions = [dict(label='asdf', insertText='asdf()')]
 var_completion_using_label = [dict(label='$what')]
 var_prefix_added_in_insertText = [dict(label='$what', insertText='what')]
@@ -50,6 +66,40 @@ dash_missing_from_label = [
          insertText='-UniqueId')
 ]
 
+edit_before_cursor = [
+    dict(label='override def myFunction(): Unit',
+         textEdit={
+             'newText': 'override def myFunction(): Unit = ${0:???}',
+             'range': {
+                 'start': {
+                     'line': 0,
+                     'character': 2
+                 },
+                 'end': {
+                     'line': 0,
+                     'character': 18
+                 }
+             }
+         })
+]
+
+edit_after_nonword = [
+    dict(label='apply[A](xs: A*): List[A]',
+         textEdit={
+             'newText': 'apply($0)',
+             'range': {
+                 'start': {
+                     'line': 0,
+                     'character': 6
+                 },
+                 'end': {
+                     'line': 0,
+                     'character': 6
+                 }
+             }
+         })
+]
+
 
 class InitializationTests(DeferrableTestCase):
     def setUp(self):
@@ -82,35 +132,6 @@ class InitializationTests(DeferrableTestCase):
 
 
 class QueryCompletionsTests(TextDocumentTestCase):
-    def _verify_completes_to(self, completions: 'List[Dict]', result: str):
-        yield 100
-        self.client.responses['textDocument/completion'] = completions
-
-        handler = self.get_view_event_listener("on_query_completions")
-        self.assertIsNotNone(handler)
-        if handler:
-            # todo: want to test trigger chars instead?
-            # self.view.run_command('insert', {"characters": '.'})
-            result = handler.on_query_completions("", [1])
-
-            # synchronous response
-            self.assertTrue(handler.initialized)
-            self.assertTrue(handler.enabled)
-            self.assertIsNotNone(result)
-            items, mask = result
-            self.assertEquals(len(items), 0)
-            self.assertEquals(mask, 0)
-
-            # now wait for server response
-            yield 100
-            self.assertEquals(handler.state, CompletionState.IDLE)
-            self.assertEquals(len(handler.completions), 2)
-
-            # verify insertion works
-            self.view.run_command("insert_best_completion")
-            self.assertEquals(
-                self.view.substr(sublime.Region(0, self.view.size())), result)
-
     def test_simple_label(self):
         yield 100
         self.client.responses['textDocument/completion'] = label_completions
@@ -236,7 +257,8 @@ class QueryCompletionsTests(TextDocumentTestCase):
         self.view.run_command('append', {'characters': '-'})
         self.view.run_command('move_to', {'to': 'eol'})
 
-        self.client.responses['textDocument/completion'] = dash_missing_from_label
+        self.client.responses[
+            'textDocument/completion'] = dash_missing_from_label
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
@@ -244,4 +266,95 @@ class QueryCompletionsTests(TextDocumentTestCase):
             yield 100
             self.view.run_command("insert_best_completion")
             self.assertEquals(
-                self.view.substr(sublime.Region(0, self.view.size())), '-UniqueId')
+                self.view.substr(sublime.Region(0, self.view.size())),
+                '-UniqueId')
+
+    def test_edit_before_cursor(self):
+        """
+
+        Metals: label="override def myFunction(): Unit"
+
+        """
+        yield 100
+        self.view.run_command('append', {'characters': '  def myF'})
+        self.view.run_command('move_to', {'to': 'eol'})
+
+        self.client.responses['textDocument/completion'] = edit_before_cursor
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("myF", [7])
+            yield 100
+            # note: invoking on_text_command manually as sublime doesn't call it.
+            handler.on_text_command('insert_best_completion', {})
+            self.view.run_command("insert_best_completion", {})
+            yield 100
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())),
+                '  override def myFunction(): Unit = ???')
+
+    def test_edit_after_nonword(self):
+        """
+
+        Metals: List.| selects label instead of textedit
+        See https://github.com/tomv564/LSP/issues/645
+
+        """
+        yield 100
+        self.view.run_command('append', {'characters': 'List.'})
+        self.view.run_command('move_to', {'to': 'eol'})
+
+        self.client.responses['textDocument/completion'] = edit_after_nonword
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [6])
+            yield 100
+            # note: invoking on_text_command manually as sublime doesn't call it.
+            handler.on_text_command('insert_best_completion', {})
+            self.view.run_command("insert_best_completion", {})
+            yield 100
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())),
+                'List.apply()')
+
+    def test_additional_edits(self):
+        yield 100
+        self.client.responses[
+            'textDocument/completion'] = completion_with_additional_edits
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [1])
+            yield 100
+            # note: invoking on_text_command manually as sublime doesn't call it.
+            handler.on_text_command('insert_best_completion', {})
+            self.view.run_command("insert_best_completion", {})
+            yield 100
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())),
+                'import asdf;\nasdf')
+
+    def test_resolve_for_additional_edits(self):
+        yield 100
+        self.client.responses['textDocument/completion'] = label_completions
+        self.client.responses[
+            'completionItem/resolve'] = completion_with_additional_edits[0]
+
+        handler = self.get_view_event_listener("on_query_completions")
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [1])
+
+            # note: ideally the handler is initialized with resolveProvider capability
+            handler.resolve = True
+
+            yield 100
+            # note: invoking on_text_command manually as sublime doesn't call it.
+            handler.on_text_command('insert_best_completion', {})
+            self.view.run_command("insert_best_completion", {})
+            yield 100
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())),
+                'import asdf;\nasdf')
+            handler.resolve = False

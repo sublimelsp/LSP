@@ -6,7 +6,7 @@ from .process import start_server
 from .url import filename_to_uri
 from .logging import debug
 import os
-from .protocol import CompletionItemKind, SymbolKind
+from .protocol import completion_item_kinds, symbol_kinds
 try:
     from typing import Callable, Dict, Any, Optional
     assert Callable and Dict and Any and Optional
@@ -68,26 +68,7 @@ def get_initialize_params(project_path: str, config: ClientConfig):
                         "snippetSupport": True
                     },
                     "completionItemKind": {
-                        "valueSet": [
-                            CompletionItemKind.Text,
-                            CompletionItemKind.Method,
-                            CompletionItemKind.Function,
-                            CompletionItemKind.Constructor,
-                            CompletionItemKind.Field,
-                            CompletionItemKind.Variable,
-                            CompletionItemKind.Class,
-                            CompletionItemKind.Interface,
-                            CompletionItemKind.Module,
-                            CompletionItemKind.Property,
-                            CompletionItemKind.Unit,
-                            CompletionItemKind.Value,
-                            CompletionItemKind.Enum,
-                            CompletionItemKind.Keyword,
-                            CompletionItemKind.Snippet,
-                            CompletionItemKind.Color,
-                            CompletionItemKind.File,
-                            CompletionItemKind.Reference
-                        ]
+                        "valueSet": completion_item_kinds
                     }
                 },
                 "signatureHelp": {
@@ -102,45 +83,30 @@ def get_initialize_params(project_path: str, config: ClientConfig):
                 "documentHighlight": {},
                 "documentSymbol": {
                     "symbolKind": {
-                        "valueSet": [
-                            SymbolKind.File,
-                            SymbolKind.Module,
-                            SymbolKind.Namespace,
-                            SymbolKind.Package,
-                            SymbolKind.Class,
-                            SymbolKind.Method,
-                            SymbolKind.Property,
-                            SymbolKind.Field,
-                            SymbolKind.Constructor,
-                            SymbolKind.Enum,
-                            SymbolKind.Interface,
-                            SymbolKind.Function,
-                            SymbolKind.Variable,
-                            SymbolKind.Constant,
-                            SymbolKind.String,
-                            SymbolKind.Number,
-                            SymbolKind.Boolean,
-                            SymbolKind.Array,
-                            SymbolKind.Object,
-                            SymbolKind.Key,
-                            SymbolKind.Null,
-                            SymbolKind.EnumMember,
-                            SymbolKind.Struct,
-                            SymbolKind.Event,
-                            SymbolKind.Operator,
-                            SymbolKind.TypeParameter
-                        ]
+                        "valueSet": symbol_kinds
                     }
                 },
                 "formatting": {},
                 "rangeFormatting": {},
                 "definition": {},
-                "codeAction": {},
+                "codeAction": {
+                    "codeActionLiteralSupport": {
+                        "codeActionKind": {
+                            "valueSet": []
+                        }
+                    }
+                },
                 "rename": {}
             },
             "workspace": {
                 "applyEdit": True,
-                "didChangeConfiguration": {}
+                "didChangeConfiguration": {},
+                "executeCommand": {},
+                "symbol": {
+                    "symbolKind": {
+                        "valueSet": symbol_kinds
+                    }
+                }
             }
         }
     }

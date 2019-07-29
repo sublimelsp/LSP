@@ -9,6 +9,18 @@
         "caption": "Go To Symbol Definition"
     },
     {
+        "command": "lsp_symbol_type_definition",
+        "caption": "Go To Symbol Type Definition"
+    },
+    {
+        "command": "lsp_symbol_declaration",
+        "caption": "Go To Symbol Declaration"
+    },
+    {
+        "command": "lsp_symbol_implementation",
+        "caption": "Go To Symbol Implementation"
+    },
+    {
         "command": "lsp_symbol_rename",
         "caption": "Rename Symbol"
     },

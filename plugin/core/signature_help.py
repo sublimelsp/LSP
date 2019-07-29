@@ -52,8 +52,9 @@ def parse_signature_label(signature_label: str, parameters: 'List[ParameterInfor
 
         if parameter.label:
             range_start = signature_label.find(parameter.label, current_index)
-            range_end = range_start + len(parameter.label)
-            parameter.range = (range_start, range_end)
+            if range_start > -1:
+                range_end = range_start + len(parameter.label)
+                parameter.range = (range_start, range_end)
         elif parameter.range:
             parameter.label = signature_label[parameter.range[0]:parameter.range[1]]
 
@@ -144,7 +145,7 @@ def render_signature_label(renderer: ScopeRenderer, sig_info: SignatureInformati
             if param.range:
                 start, end = param.range
                 is_current = active_parameter_index == max_param_index - index
-                rendered_param = renderer.parameter(html.escape(label[start:end], quote=False), is_current)
+                rendered_param = renderer.parameter(content=label[start:end], emphasize=is_current)
                 label = label[:start] + rendered_param + label[end:]
 
                 # todo: highlight commas between parameters as punctuation.

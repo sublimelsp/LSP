@@ -134,31 +134,13 @@ class WindowDocumentHandler(object):
     def has_document_state(self, path: str) -> bool:
         return path in self._document_states
 
-    def _get_applicable_sessions(self, view: ViewLike, notification_type: 'Optional[str]'=None):
+    def _get_applicable_sessions(self, view: ViewLike):
         sessions = []  # type: List[Session]
         syntax = view.settings().get("syntax")
         for config_name, session in self._sessions.items():
             if config_supports_syntax(session.config, syntax):
-                if not notification_type or self._session_supports_notification(session, notification_type):
-                    sessions.append(session)
+                sessions.append(session)
         return sessions
-
-    def _session_supports_notification(self, session: 'Session', notification_type: str) -> bool:
-        """
-            openClose: boolean
-            change: 0 (none), 1 (full), 2 (incremental)
-            willSave: boolean
-            willSaveWaitUntil: boolean
-            save: {includeText: boolean}
-        """
-        sync_options = session.capabilities.get('textDocumentSync')
-
-        # if a TextDocumentSyncOptions object was sent, we can disable some notifications
-        if isinstance(sync_options, dict):
-            return bool(sync_options.get(notification_type))
-
-        # otherwise we send them all.
-        return True
 
     def _notify_open_documents(self, session: Session) -> None:
         for file_name in self._document_states:
@@ -210,8 +192,7 @@ class WindowDocumentHandler(object):
                     sessions = self._get_applicable_sessions(view)
                     self._attach_view(view, sessions)
                     for session in sessions:
-                        if self._session_supports_notification(session, 'openClose'):
-                            self._notify_did_open(view, session)
+                        self._notify_did_open(view, session)
 
     def _notify_did_open(self, view: ViewLike, session: Session) -> None:
         file_name = view.file_name()
@@ -231,7 +212,7 @@ class WindowDocumentHandler(object):
         file_name = view.file_name()
         if file_name in self._document_states:
             del self._document_states[file_name]
-            for session in self._get_applicable_sessions(view, 'openClose'):
+            for session in self._get_applicable_sessions(view):
                 debug('closing', file_name, session.config.name)
                 if session.client:
                     params = {"textDocument": {"uri": filename_to_uri(file_name)}}
@@ -241,7 +222,7 @@ class WindowDocumentHandler(object):
         file_name = view.file_name()
         if view.window() == self._window:
             if file_name in self._document_states:
-                for session in self._get_applicable_sessions(view, 'save'):
+                for session in self._get_applicable_sessions(view):
                     if session.client:
                         params = {"textDocument": {"uri": filename_to_uri(file_name)}}
                         session.client.send_notification(Notification.didSave(params))
@@ -285,7 +266,7 @@ class WindowDocumentHandler(object):
             if view.buffer_id() in self._pending_buffer_changes:
                 del self._pending_buffer_changes[view.buffer_id()]
 
-                for session in self._get_applicable_sessions(view, 'change'):
+                for session in self._get_applicable_sessions(view):
                     if session.client:
                         document_state = self.get_document_state(file_name)
                         uri = filename_to_uri(file_name)
@@ -471,7 +452,7 @@ class WindowManager(object):
 
         client.on_notification(
             "window/logMessage",
-            lambda params: server_log(config.name, params.get("message", "???") if params else "???"))
+            lambda params: server_log(params.get("message", "???") if params else "???"))
 
         self._handlers.on_initialized(config.name, self._window, client)
 
@@ -493,6 +474,7 @@ class WindowManager(object):
 
     def _handle_view_closed(self, view, session):
         if view.file_name():
+            self._diagnostics.remove(view.file_name(), session.config.name)
             if not self._is_closing:
                 if not self._window.is_valid():
                     # try to detect close synchronously (for quitting)

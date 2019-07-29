@@ -291,11 +291,6 @@ class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
             self.window.run_command("show_panel", {"panel": "output.diagnostics"})
 
 
-class LspClearDiagnosticsCommand(sublime_plugin.WindowCommand):
-    def run(self):
-        windows.lookup(self.window)._diagnostics.clear()
-
-
 def ensure_diagnostics_panel(window: sublime.Window) -> 'Optional[sublime.View]':
     return ensure_panel(window, "diagnostics", r"^\s*\S\s+(\S.*):$", r"^\s+([0-9]+):?([0-9]+).*$",
                         "Packages/" + PLUGIN_NAME + "/Syntaxes/Diagnostics.sublime-syntax")

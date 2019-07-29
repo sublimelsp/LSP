@@ -55,12 +55,6 @@ class WindowDiagnostics(object):
                     del self._diagnostics[file_path]
         return updated
 
-    def clear(self):
-        for file_path in self._diagnostics:
-            for client_name in self._diagnostics[file_path]:
-                self.update(file_path, client_name, [])
-                self._on_updated(file_path, client_name, [])
-
     def handle_client_diagnostics(self, client_name: str, update: dict):
         maybe_file_uri = update.get('uri')
         if maybe_file_uri is not None:

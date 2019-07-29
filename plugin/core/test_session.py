@@ -12,28 +12,18 @@ except ImportError:
     pass
 
 
-basic_responses = {
-    'initialize': {
-        'capabilities': {
-            'testing': True,
-            'hoverProvider': True,
-            'completionProvider': {
-                'triggerCharacters': ['.'],
-                'resolveProvider': False
-            },
-            'textDocumentSync': True,
-            'definitionProvider': True,
-            'typeDefinitionProvider': True,
-            'declarationProvider': True,
-            'implementationProvider': True
-        }
-    }
+completion_provider = {
+    'triggerCharacters': ['.'],
+    'resolveProvider': False
 }
 
 
 class MockClient():
     def __init__(self, async_response=None) -> None:
-        self.responses = basic_responses
+        self.responses = {
+            'initialize': {"capabilities": dict(testing=True, hoverProvider=True,
+                                                completionProvider=completion_provider, textDocumentSync=True)},
+        }  # type: dict
         self._notifications = []  # type: List[Notification]
         self._async_response_callback = async_response
 

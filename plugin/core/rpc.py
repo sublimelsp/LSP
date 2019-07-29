@@ -186,10 +186,9 @@ class Client(object):
     def handle(self, typestr: str, message: 'Dict[str, Any]', handlers: 'Dict[str, Callable]', *args) -> None:
         method = message.get("method", "")
         params = message.get("params")
-        if method != "window/logMessage":
-            debug('<--  ' + method)
-            if self.settings.log_payloads and params:
-                debug('     ' + str(params))
+        debug('<--  ' + method)
+        if self.settings.log_payloads and params:
+            debug('     ' + str(params))
         handler = handlers.get(method)
         if handler:
             try:

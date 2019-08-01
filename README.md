@@ -37,6 +37,7 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [CSS/LESS/SASS (SCSS only)](https://lsp.readthedocs.io/en/latest/#css)
 * [D](https://lsp.readthedocs.io/en/latest/#d)
 * [Dart](https://lsp.readthedocs.io/en/latest/#dart)
+* [Elm](https://lsp.readthedocs.io/en/latest/#elm)
 * [Flow (JavaScript)](https://lsp.readthedocs.io/en/latest/#flow)
 * [Go](https://lsp.readthedocs.io/en/latest/#go)
 * [HTML](https://lsp.readthedocs.io/en/latest/#html)

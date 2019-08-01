@@ -167,6 +167,7 @@ class LspHoverCommand(LspTextCommand):
         return mdpopups.md2html(self.view, "\n".join(formatted))
 
     def show_hover(self, point, contents):
+        contents = contents.replace('\n', '<br>')
         mdpopups.show_popup(
             self.view,
             contents,

@@ -152,6 +152,37 @@ Add to LSP settings' clients:
 }
 ```
 
+### Elm<a name="elm"></a>
+
+See instructions for installing the [elm-language-server](https://github.com/elm-tooling/elm-language-server).
+Install [Elm Language Support](https://packagecontrol.io/packages/Elm%20Language%20Support) from Package Control for syntax highlighting.
+
+Add to LSP settings' clients:
+
+```json
+"elm": {
+    "command": [
+        "elm-language-server",
+        "--stdio"
+    ],
+    "enabled": true,
+    "languageId": "elm",
+    "scopes":
+    [
+        "source.elm"
+    ],
+    "syntaxes":
+    [
+        "Packages/Elm Language Support/Syntaxes/Elm.sublime-syntax"
+    ],
+    "initializationOptions": {
+        "elmPath": "elm",
+        "elmFormatPath": "elm-format",
+        "elmTestPath": "elm-test"
+    }
+}
+```
+
 
 ### Ocaml/Reason<a name="reason"></a>
 

@@ -37,11 +37,11 @@ def inject_session(wm, config, client):
     # session.state = ClientStates.READY
     wm.update_configs(client_configs.all)
     wm._sessions[config.name] = session
-    wm._handle_session_started(session, "", config)
+    wm._handle_post_initialize(session)
 
 
 def remove_session(wm, config_name):
-    wm._handle_session_ended(config_name)
+    wm._handle_post_exit(config_name)
 
 
 def close_test_view(view):

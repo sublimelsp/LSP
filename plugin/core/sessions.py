@@ -8,8 +8,8 @@ from .logging import debug
 import os
 from .protocol import completion_item_kinds, symbol_kinds
 try:
-    from typing import Callable, Dict, Any, Optional
-    assert Callable and Dict and Any and Optional
+    from typing import Callable, Dict, Any, Optional, List, Union
+    assert Callable and Dict and Any and Optional and List and Union
 except ImportError:
     pass
 
@@ -19,7 +19,6 @@ def create_session(config: ClientConfig, project_path: str, env: dict, settings:
                    bootstrap_client=None) -> 'Optional[Session]':
     session = None
     if config.binary_args:
-
         process = start_server(config.binary_args, project_path, env, settings.log_stderr)
         if process:
             if config.tcp_port:
@@ -46,69 +45,103 @@ def create_session(config: ClientConfig, project_path: str, env: dict, settings:
                               on_created, on_ended)
         else:
             debug("No way to start session")
-
     return session
 
 
-def get_initialize_params(project_path: str, config: ClientConfig):
+def basic_capability() -> 'Dict[str, Any]':
+    return {"dynamicRegistration": False}
+
+
+def supported_content_formats() -> 'List[str]':
+    return ["markdown", "plaintext"]
+
+
+def value_set(items: 'List[int]') -> 'Dict[str, List[int]]':
+    return {"valueSet": items}
+
+
+def symbol_kind_value_set() -> 'Dict[str, List[int]]':
+    return value_set(symbol_kinds)
+
+
+def code_action_kind_value_set() -> 'Dict[str, List[int]]':
+    return value_set([])
+
+
+def completion_item_kind_value_set() -> 'Dict[str, List[int]]':
+    return value_set(completion_item_kinds)
+
+
+def text_document_capabilities() -> 'Dict[str, dict]':
+    return {
+        "synchronization": {
+            "dynamicRegistration": False,
+            "didSave": True
+        },
+        "hover": {
+            "dynamicRegistration": False,
+            "contentFormat": supported_content_formats()
+        },
+        "completion": {
+            "dynamicRegistration": False,
+            "completionItem": {"snippetSupport": True},
+            "completionItemKind": completion_item_kind_value_set()
+        },
+        "signatureHelp": {
+            "dynamicRegistration": False,
+            "signatureInformation": {
+                "documentationFormat": supported_content_formats(),
+                "parameterInformation": {"labelOffsetSupport": True}
+            }
+        },
+        "documentSymbol": {
+            "dynamicRegistration": False,
+            "symbolKind": symbol_kind_value_set()
+        },
+        "codeAction": {
+            "dynamicRegistration": False,
+            "codeActionLiteralSupport": {
+                "codeActionKind": code_action_kind_value_set()
+            }
+        },
+        "publishDiagnostics": {"relatedInformation": False},
+        "documentHighlight": basic_capability(),
+        "references": basic_capability(),
+        "formatting": basic_capability(),
+        "rangeFormatting": basic_capability(),
+        "definition": basic_capability(),
+        "typeDefinition": basic_capability(),
+        "declaration": basic_capability(),
+        "implementation": basic_capability(),
+        "rename": basic_capability()
+    }
+
+
+def workspace_capabilities() -> 'Dict[str, Union[bool, dict]]':
+    return {
+        "applyEdit": True,
+        "didChangeConfiguration": basic_capability(),
+        "executeCommand": basic_capability(),
+        "symbol": {
+            "dynamicRegistration": False,
+            "symbolKind": symbol_kind_value_set()
+        }
+    }
+
+
+def capabilities() -> 'Dict[str, dict]':
+    return {
+        "textDocument": text_document_capabilities(),
+        "workspace": workspace_capabilities()
+    }
+
+
+def get_initialize_params(project_path: str, config: ClientConfig) -> 'Dict[str, Any]':
     initializeParams = {
         "processId": os.getpid(),
         "rootUri": filename_to_uri(project_path),
         "rootPath": project_path,
-        "capabilities": {
-            "textDocument": {
-                "synchronization": {
-                    "didSave": True
-                },
-                "hover": {
-                    "contentFormat": ["markdown", "plaintext"]
-                },
-                "completion": {
-                    "completionItem": {
-                        "snippetSupport": True
-                    },
-                    "completionItemKind": {
-                        "valueSet": completion_item_kinds
-                    }
-                },
-                "signatureHelp": {
-                    "signatureInformation": {
-                        "documentationFormat": ["markdown", "plaintext"],
-                        "parameterInformation": {
-                            "labelOffsetSupport": True
-                        }
-                    }
-                },
-                "references": {},
-                "documentHighlight": {},
-                "documentSymbol": {
-                    "symbolKind": {
-                        "valueSet": symbol_kinds
-                    }
-                },
-                "formatting": {},
-                "rangeFormatting": {},
-                "definition": {},
-                "codeAction": {
-                    "codeActionLiteralSupport": {
-                        "codeActionKind": {
-                            "valueSet": []
-                        }
-                    }
-                },
-                "rename": {}
-            },
-            "workspace": {
-                "applyEdit": True,
-                "didChangeConfiguration": {},
-                "executeCommand": {},
-                "symbol": {
-                    "symbolKind": {
-                        "valueSet": symbol_kinds
-                    }
-                }
-            }
-        }
+        "capabilities": capabilities()
     }
     if config.init_options:
         initializeParams['initializationOptions'] = config.init_options

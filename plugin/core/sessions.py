@@ -22,21 +22,24 @@ def create_session(config: ClientConfig,
                    on_post_initialize: 'Optional[Callable[[Session], None]]' = None,
                    on_post_exit: 'Optional[Callable[[str], None]]' = None,
                    bootstrap_client=None) -> 'Optional[Session]':
+
+    def with_client(client) -> 'Session':
+        return Session(
+            config=config,
+            project_path=project_path,
+            client=client,
+            on_pre_initialize=on_pre_initialize,
+            on_post_initialize=on_post_initialize,
+            on_post_exit=on_post_exit)
+
     session = None
     if config.binary_args:
-
         process = start_server(config.binary_args, project_path, env, settings.log_stderr)
         if process:
             if config.tcp_port:
                 transport = start_tcp_transport(config.tcp_port, config.tcp_host)
                 if transport:
-                    session = Session(
-                        config=config,
-                        project_path=project_path,
-                        client=Client(transport, settings),
-                        on_pre_initialize=on_pre_initialize,
-                        on_post_initialize=on_post_initialize,
-                        on_post_exit=on_post_exit)
+                    session = with_client(Client(transport, settings))
                 else:
                     # try to terminate the process
                     try:
@@ -44,36 +47,15 @@ def create_session(config: ClientConfig,
                     except Exception:
                         pass
             else:
-                client = attach_stdio_client(process, settings)
-                session = Session(
-                    config=config,
-                    project_path=project_path,
-                    client=client,
-                    on_pre_initialize=on_pre_initialize,
-                    on_post_initialize=on_post_initialize,
-                    on_post_exit=on_post_exit)
+                session = with_client(attach_stdio_client(process, settings))
     else:
         if config.tcp_port:
             transport = start_tcp_transport(config.tcp_port)
-
-            session = Session(
-                config=config,
-                project_path=project_path,
-                client=Client(transport, settings),
-                on_post_initialize=on_post_initialize,
-                on_pre_initialize=on_pre_initialize,
-                on_post_exit=on_post_exit)
+            session = with_client(Client(transport, settings))
         elif bootstrap_client:
-            session = Session(
-                config=config,
-                project_path=project_path,
-                client=bootstrap_client,
-                on_pre_initialize=on_pre_initialize,
-                on_post_initialize=on_post_initialize,
-                on_post_exit=on_post_exit)
+            session = with_client(bootstrap_client)
         else:
             debug("No way to start session")
-
     return session
 
 

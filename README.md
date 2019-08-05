@@ -61,6 +61,14 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 
 See [Language Server Protocol](https://microsoft.github.io/language-server-protocol/implementors/servers/) for more available implementations. Please create issues/pull requests so we can get support for more languages.
 
+## Customisation of the popup
+
+LSP uses [mdpopups](https://github.com/facelessuser/sublime-markdown-popups) to display the popup. If you want to customise it, check the [doc](http://facelessuser.github.io/sublime-markdown-popups/).
+
+tl;dr?
+
+Create/modify the file `Packages/User/mdpopups.css` and put your own style.
+
 ## Getting help
 
 If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/en/latest/#troubleshooting) guide for tips and known limitations. If the documentation cannot solve your problem, help can be found in the [gitter chat](https://gitter.im/SublimeLSP) or by searching/creating [creating a new issue](https://github.com/tomv564/LSP/issues).

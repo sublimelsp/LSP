@@ -14,18 +14,32 @@ except ImportError:
     pass
 
 
-def create_session(config: ClientConfig, project_path: str, env: dict, settings: Settings,
-                   on_created=None, on_ended: 'Optional[Callable[[str], None]]' = None,
+def create_session(config: ClientConfig,
+                   project_path: str,
+                   env: dict,
+                   settings: Settings,
+                   on_pre_initialize: 'Optional[Callable[[Session], None]]' = None,
+                   on_post_initialize: 'Optional[Callable[[Session], None]]' = None,
+                   on_post_exit: 'Optional[Callable[[str], None]]' = None,
                    bootstrap_client=None) -> 'Optional[Session]':
+
+    def with_client(client) -> 'Session':
+        return Session(
+            config=config,
+            project_path=project_path,
+            client=client,
+            on_pre_initialize=on_pre_initialize,
+            on_post_initialize=on_post_initialize,
+            on_post_exit=on_post_exit)
+
     session = None
     if config.binary_args:
-
         process = start_server(config.binary_args, project_path, env, settings.log_stderr)
         if process:
             if config.tcp_port:
                 transport = start_tcp_transport(config.tcp_port, config.tcp_host)
                 if transport:
-                    session = Session(config, project_path, Client(transport, settings), on_created, on_ended)
+                    session = with_client(Client(transport, settings))
                 else:
                     # try to terminate the process
                     try:
@@ -33,20 +47,15 @@ def create_session(config: ClientConfig, project_path: str, env: dict, settings:
                     except Exception:
                         pass
             else:
-                client = attach_stdio_client(process, settings)
-                session = Session(config, project_path, client, on_created, on_ended)
+                session = with_client(attach_stdio_client(process, settings))
     else:
         if config.tcp_port:
             transport = start_tcp_transport(config.tcp_port)
-
-            session = Session(config, project_path, Client(transport, settings),
-                              on_created, on_ended)
+            session = with_client(Client(transport, settings))
         elif bootstrap_client:
-            session = Session(config, project_path, bootstrap_client,
-                              on_created, on_ended)
+            session = with_client(bootstrap_client)
         else:
             debug("No way to start session")
-
     return session
 
 
@@ -120,15 +129,22 @@ def get_initialize_params(project_path: str, config: ClientConfig):
 
 
 class Session(object):
-    def __init__(self, config: ClientConfig, project_path, client: Client,
-                 on_created=None, on_ended: 'Optional[Callable[[str], None]]' = None) -> None:
+    def __init__(self,
+                 config: ClientConfig,
+                 project_path: str,
+                 client: Client,
+                 on_pre_initialize: 'Optional[Callable[[Session], None]]' = None,
+                 on_post_initialize: 'Optional[Callable[[Session], None]]' = None,
+                 on_post_exit: 'Optional[Callable[[str], None]]' = None) -> None:
         self.config = config
         self.project_path = project_path
         self.state = ClientStates.STARTING
-        self._on_created = on_created
-        self._on_ended = on_ended
+        self._on_post_initialize = on_post_initialize
+        self._on_post_exit = on_post_exit
         self.capabilities = dict()  # type: Dict[str, Any]
         self.client = client
+        if on_pre_initialize:
+            on_pre_initialize(self)
         self.initialize()
 
     def has_capability(self, capability):
@@ -146,8 +162,8 @@ class Session(object):
     def _handle_initialize_result(self, result):
         self.state = ClientStates.READY
         self.capabilities = result.get('capabilities', dict())
-        if self._on_created:
-            self._on_created(self)
+        if self._on_post_initialize:
+            self._on_post_initialize(self)
 
     def end(self):
         self.state = ClientStates.STOPPING
@@ -160,5 +176,5 @@ class Session(object):
         self.client.exit()
         self.client = None
         self.capabilities = dict()
-        if self._on_ended:
-            self._on_ended(self.config.name)
+        if self._on_post_exit:
+            self._on_post_exit(self.config.name)

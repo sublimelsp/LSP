@@ -1,3 +1,4 @@
+dist: trusty
 env:
     global:
         - PACKAGE="LSP" # Package name

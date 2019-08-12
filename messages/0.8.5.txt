@@ -16,6 +16,6 @@ Deprecations:
 
 `highlight_active_signature_parameter` setting removed, this is now default behaviour.
 
-See https://github.com/tomv564/LSP/releases/tag/0.8.4 for full update details.
+See https://github.com/tomv564/LSP/releases/tag/0.8.5 for full update details.
 
 Thanks to all contributors & reporters!

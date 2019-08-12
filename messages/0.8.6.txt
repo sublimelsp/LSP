@@ -1,0 +1,10 @@
+=> 0.8.6
+
+Bug fixes:
+Server logging at startup now appears in the console (instead of "unhandled notfication: window/logMessage")
+Go to type definition/declaration/implementation capabilities properly advertised to servers.
+
+
+See https://github.com/tomv564/LSP/releases/tag/0.8.6 for full update details.
+
+Thanks to all contributors & reporters!

@@ -161,7 +161,7 @@ class WindowDocumentHandler(object):
         return True
 
     def _notify_open_documents(self, session: Session) -> None:
-        for file_name in self._document_states:
+        for file_name in list(self._document_states):
             view = self._window.find_open_file(file_name)
             if view:
                 syntax = view.settings().get("syntax")

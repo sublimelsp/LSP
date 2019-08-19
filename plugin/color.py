@@ -93,3 +93,7 @@ class LspColorListener(sublime_plugin.ViewEventListener):
             phantom_set.update(phantoms)
         else:
             color_phantom_sets_by_id.pop(id, None)
+
+
+def remove_color_boxes(view):
+    view.erase_phantoms('lsp_color')

@@ -24,16 +24,9 @@ _kind2name = {
 }
 
 
-def remove_all_highlights():
-    for window in sublime.windows():
-        remove_highlights(window)
-
-
-def remove_highlights(window: sublime.Window):
-    for view in window.views():
-        if view.file_name():
-            for kind in settings.document_highlight_scopes.keys():
-                view.erase_regions("lsp_highlight_{}".format(kind))
+def remove_highlights(view: sublime.View):
+    for kind in settings.document_highlight_scopes.keys():
+        view.erase_regions("lsp_highlight_{}".format(kind))
 
 
 class DocumentHighlightListener(sublime_plugin.ViewEventListener):

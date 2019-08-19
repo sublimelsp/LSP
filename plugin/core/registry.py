@@ -94,10 +94,9 @@ def _client_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Wi
         return None
 
 
-def unload_sessions():
-    for window in sublime.windows():
-        wm = windows.lookup(window)
-        wm.end_sessions()
+def unload_sessions(window):
+    wm = windows.lookup(window)
+    wm.end_sessions()
 
 
 configs = ConfigManager(client_configs.all)

@@ -199,18 +199,18 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             debug('could not find completion item for inserted "{}"'.format(inserted))
 
     def on_query_completions(self, prefix, locations):
-        if prefix != "" and self.view.match_selector(locations[0], NO_COMPLETION_SCOPES):
-            # debug('discarding completion because no completion scope with prefix {}'.format(prefix))
-            return (
-                [],
-                0 if not settings.only_show_lsp_completions
-                else sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
-            )
-
         if not self.initialized:
             self.initialize()
 
         if self.enabled:
+            if prefix != "" and self.view.match_selector(locations[0], NO_COMPLETION_SCOPES):
+                # debug('discarding completion because no completion scope with prefix {}'.format(prefix))
+                return (
+                    [],
+                    0 if not settings.only_show_lsp_completions
+                    else sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
+                )
+
             reuse_completion = self.is_same_completion(prefix, locations)
             if self.state == CompletionState.IDLE:
                 if not reuse_completion:

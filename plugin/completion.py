@@ -203,7 +203,8 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             # debug('discarding completion because no completion scope with prefix {}'.format(prefix))
             return (
                 [],
-                sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
+                0 if not settings.only_show_lsp_completions
+                else sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
             )
 
         if not self.initialized:

@@ -31,7 +31,7 @@ def send_color_request(view, on_response_recieved: 'Callable'):
         lambda response: on_response_recieved(response))
 
 
-color_phantom_sets_by_id = {}
+color_phantom_sets_by_id = {}  # type: Dict[int, sublime.PhantomSet]
 
 
 class LspColorListener(sublime_plugin.ViewEventListener):

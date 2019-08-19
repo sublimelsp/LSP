@@ -61,7 +61,7 @@ goto_kinds = [
     GotoKind("definition", "Definition", "definition"),
     GotoKind("typeDefinition", "Type Definition", "type_definition"),
     GotoKind("declaration", "Declaration", "declaration"),
-    GotoKind("implementation", "Implemenation", "implementation")
+    GotoKind("implementation", "Implementation", "implementation")
 ]
 
 

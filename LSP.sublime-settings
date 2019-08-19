@@ -57,6 +57,9 @@
   // Show a bulb in the gutter when code actions are available
   "show_code_actions_bulb": false,
 
+  // Show a color box if the language server provides color support.
+  "show_color_box": false,
+
   // Request completions for all characters if set to true,
   // or just after trigger characters only otherwise.
   "complete_all_chars": true,

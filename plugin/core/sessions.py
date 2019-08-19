@@ -108,7 +108,8 @@ def get_initialize_params(project_path: str, config: ClientConfig):
                         }
                     }
                 },
-                "rename": {}
+                "rename": {},
+                "colorProvider": {}
             },
             "workspace": {
                 "applyEdit": True,

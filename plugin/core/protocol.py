@@ -138,6 +138,10 @@ class Request:
         return Request("textDocument/codeAction", params)
 
     @classmethod
+    def color(cls, params: dict) -> 'Request':
+        return Request('textDocument/documentColor', params)
+
+    @classmethod
     def executeCommand(cls, params: dict) -> 'Request':
         return Request("workspace/executeCommand", params)
 

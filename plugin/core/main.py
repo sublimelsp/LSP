@@ -1,5 +1,5 @@
-from LSP.plugin.highlights import remove_highlights
-from LSP.plugin.color import remove_color_boxes
+from ..highlights import remove_highlights
+from ..color import remove_color_boxes
 
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional, Set

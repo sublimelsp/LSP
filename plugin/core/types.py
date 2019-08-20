@@ -30,7 +30,7 @@ class Settings(object):
         }
         self.diagnostics_gutter_marker = "dot"
         self.show_code_actions_bulb = False
-        self.show_color_box = False
+        self.show_color_box = True
         self.complete_all_chars = False
         self.completion_hint_type = "auto"
         self.prefer_label_over_filter_text = False

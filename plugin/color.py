@@ -34,7 +34,7 @@ def send_color_request(view, on_response_recieved: 'Callable'):
 class LspColorListener(sublime_plugin.ViewEventListener):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self.color_phantom_set = {}  # type: Optional[sublime.PhantomSet]
+        self.color_phantom_set = None  # type: Optional[sublime.PhantomSet]
         self._stored_point = -1
 
     @classmethod

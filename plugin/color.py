@@ -31,12 +31,10 @@ def send_color_request(view, on_response_recieved: 'Callable'):
         lambda response: on_response_recieved(response))
 
 
-color_phantom_sets_by_id = {}  # type: Dict[int, sublime.PhantomSet]
-
-
 class LspColorListener(sublime_plugin.ViewEventListener):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
+        self.color_phantom_set = {}  # type: Optional[sublime.PhantomSet]
         self._stored_point = -1
 
     @classmethod
@@ -62,9 +60,6 @@ class LspColorListener(sublime_plugin.ViewEventListener):
             send_color_request(self.view, self.handle_response)
 
     def handle_response(self, response) -> None:
-        global color_phantom_sets_by_id
-        id = self.view.id()
-
         phantoms = []
         for val in response:
             color = val['color']
@@ -86,13 +81,11 @@ class LspColorListener(sublime_plugin.ViewEventListener):
             phantoms.append(sublime.Phantom(region, content, sublime.LAYOUT_INLINE))
 
         if phantoms:
-            phantom_set = color_phantom_sets_by_id.get(id)
-            if not phantom_set:
-                phantom_set = sublime.PhantomSet(self.view, "lsp_color")
-                color_phantom_sets_by_id[id] = phantom_set
-            phantom_set.update(phantoms)
+            if not self.color_phantom_set:
+                self.color_phantom_set = sublime.PhantomSet(self.view, "lsp_color")
+            self.color_phantom_set.update(phantoms)
         else:
-            color_phantom_sets_by_id.pop(id, None)
+            self.color_phantom_set = None
 
 
 def remove_color_boxes(view):

@@ -129,6 +129,9 @@ class TestRenderer(ScopeRenderer):
     def _wrap_with_scope_style(self, content: str, scope: str, emphasize: bool = False) -> str:
         return '\n<{}{}>{}</{}>'.format(scope, " emphasize" if emphasize else "", content, scope)
 
+    def markdown(self, content: str) -> str:
+        return content
+
 
 renderer = TestRenderer()
 

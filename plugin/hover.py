@@ -18,7 +18,6 @@ from .core.popups import popup_css, popup_class
 from .core.settings import client_configs
 
 SUBLIME_WORD_MASK = 515
-NO_HOVER_SCOPES = 'comment, string'
 
 
 class HoverHandler(sublime_plugin.ViewEventListener):
@@ -71,7 +70,7 @@ class LspHoverCommand(LspTextCommand):
 
     def is_likely_at_symbol(self, point):
         word_at_sel = self.view.classify(point)
-        return word_at_sel & SUBLIME_WORD_MASK and not self.view.match_selector(point, NO_HOVER_SCOPES)
+        return word_at_sel & SUBLIME_WORD_MASK
 
     def run(self, edit, point=None):
         if point is None:
@@ -101,11 +100,14 @@ class LspHoverCommand(LspTextCommand):
             all_content += self.diagnostics_content(point_diagnostics)
 
         all_content += self.hover_content(point, response)
-        all_content += self.symbol_actions_content()
+        if all_content:
+            all_content += self.symbol_actions_content()
 
         _test_contents.clear()
         _test_contents.append(all_content)  # for testing only
-        self.show_hover(point, all_content)
+
+        if all_content:
+            self.show_hover(point, all_content)
 
     def symbol_actions_content(self):
         actions = []
@@ -139,10 +141,8 @@ class LspHoverCommand(LspTextCommand):
         return "".join(formatted)
 
     def hover_content(self, point, response: 'Optional[Any]') -> str:
-        contents = ["No description available."]
+        contents = []  # type: List[Any]
         if isinstance(response, dict):
-            # Flow returns None sometimes
-            # See: https://github.com/flowtype/flow-language-server/issues/51
             response_content = response.get('contents')
             if response_content:
                 if isinstance(response_content, list):
@@ -164,7 +164,10 @@ class LspHoverCommand(LspTextCommand):
             else:
                 formatted.append(value)
 
-        return mdpopups.md2html(self.view, "\n".join(formatted))
+        if formatted:
+            return mdpopups.md2html(self.view, "\n".join(formatted))
+
+        return ""
 
     def show_hover(self, point, contents):
         mdpopups.show_popup(

@@ -305,10 +305,16 @@
     },
     "intelephense-ls":
     {
-         "command": ["intelephense", "--stdio"],
-         "scopes": ["source.php", "embedding.php"],
-         "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
-         "languageId": "php"
+        "command": ["intelephense", "--stdio"],
+        "scopes": ["source.php", "embedding.php"],
+        "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
+        "languageId": "php",
+        // "initializationOptions": {
+        //   "clearCache": false,
+        //   "storagePath": "/tmp/intelephense",
+        //   "globalStoragePath": "/tmp/intelephense",
+        //   "licenceKey": "",
+        // },
     },
     "reason":
     {

@@ -27,7 +27,7 @@ def send_color_request(view, on_response_recieved: 'Callable'):
         }
     }
     session.client.send_request(
-        Request.color(params),
+        Request.documentColor(params),
         lambda response: on_response_recieved(response))
 
 

@@ -138,7 +138,7 @@ class Request:
         return Request("textDocument/codeAction", params)
 
     @classmethod
-    def color(cls, params: dict) -> 'Request':
+    def documentColor(cls, params: dict) -> 'Request':
         return Request('textDocument/documentColor', params)
 
     @classmethod

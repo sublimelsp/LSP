@@ -458,7 +458,11 @@
         "Packages/Rails/Ruby on Rails.sublime-syntax",
         "Packages/Rails/HTML (Rails).sublime-syntax"
       ],
-      "tcp_port": 7658
+      "tcp_port": 7658,
+      // Enable RuboCop linting
+      // "initializationOptions": {
+      //   "diagnostics": true
+      // },
     },
     "vscode-css":
       {

@@ -20,6 +20,9 @@ class ScopeRenderer(Protocol):
     def parameter(self, content: str, emphasize: bool = False) -> str:
         ...
 
+    def markdown(self, content: str) -> str:
+        ...
+
 
 def get_documentation(d: 'Dict[str, Any]') -> 'Optional[str]':
     docs = d.get('documentation', None)
@@ -187,14 +190,16 @@ class SignatureHelp(object):
         formatted.append("</pre></div>")
 
         if signature.documentation:
-            formatted.append("<p>{}</p>".format(signature.documentation))
+            formatted.append("<p>{}</p>".format(renderer.markdown(signature.documentation)))
 
         if signature.parameters and self._active_parameter_index in range(0, len(signature.parameters)):
             parameter = signature.parameters[self._active_parameter_index]
             parameter_label = html.escape(parameter.label, quote=False)
             parameter_documentation = parameter.documentation
             if parameter_documentation:
-                formatted.append("<p><b>{}</b>: {}</p>".format(parameter_label, parameter_documentation))
+                formatted.append("<p><b>{}</b>: {}</p>".format(
+                    parameter_label,
+                    renderer.markdown(parameter_documentation)))
 
         return "\n".join(formatted)
 

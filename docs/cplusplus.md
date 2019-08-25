@@ -10,6 +10,7 @@ Build and install from source, see (ccls wiki)[https://github.com/MaskRay/ccls/w
 ### Cquery
 
 Build and install from source, see (cquery wiki)[https://github.com/cquery-project/cquery/wiki/Building-cquery]
+Note that work on cquery has stopped. Prefer using ccls or clangd.
 
 ### Clangd
 
@@ -20,6 +21,14 @@ adjust your `"clients"` dictionary in your user preferences.
 
 To use clangd on Mac, use Homebrew: `brew install llvm`. The clangd executable
 will be present in /usr/local/Cellar/llvm/*version*/bin
+You probably need to install the Xcode developer command-line tools. Run the following in a terminal:
+```bash
+xcode-select --install
+```
+And if you're on macOS 10.14, also run the following to install essential headers like `wchar_t.h`:
+```bash
+open /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg
+```
 
 To use clangd on Windows, install LLVM with the [LLVM installer](http://releases.llvm.org/download.html),
 and then add C:\\Program Files\\LLVM\\bin to your %PATH%.
@@ -33,6 +42,8 @@ might include things like:
 * Include directories,
 * Define directives,
 * Compiler-specific flags.
+
+#### compile_commands.json
 
 Like any language server, clangd works on a per-file (or per-buffer) basis. But
 unlike most other language servers, it must also be aware of the exact compile
@@ -65,3 +76,10 @@ To generate headers with compdb, read [this closed issue](https://github.com/Sar
 
 You can also read about attempts to address this [on the CMake issue tracker](https://gitlab.kitware.com/cmake/cmake/issues/16285), along with the problem
 of treating header files as translation units.
+
+#### compile_flags.txt
+
+Another way to let your language server know what the include dirs are is by hand-writing a compile_flags.txt file in
+your source root. Each line is one flag. This can be useful for projects that e.g. only have a Visual Studio solution
+file. For more information, see [these instructions](https://releases.llvm.org/8.0.0/tools/clang/tools/extra/docs/clangd/Installation.html#compile-flags-txt). Creating this file by hand is a reasonable place to start if your project is quite
+simple.

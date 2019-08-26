@@ -144,6 +144,30 @@ Then the LSP plugin should launch as configured in `LSP.sublime-settings` using 
 
 See the dedicated <a href="cplusplus"/>C/C++</a> guide for using ccls, cquery or clangd.
 
+
+### C#
+
+Omnisharp [omnisharp-roslyn](https://github.com/OmniSharp/omnisharp-roslyn)
+
+Download or build according to instructions above, then add this client config to your LSP settings under clients:
+
+```jsonc
+"omnisharp": {
+  "command":
+  [
+    "/home/tb/prebuilt/omnisharp/OmniSharp.exe", // or eg. /usr/local/opt/omnisharp/run
+    "-lsp"
+  ],
+  "enabled": true,
+  "languageId": "csharp",
+  "syntaxes": ["Packages/C#/C#.sublime-syntax"],
+  "scopes":
+  [
+    "source.cs"
+  ]
+}
+```
+
 ### D<a name="d"></a>
 
 See instructions for [d-language-server](https://github.com/d-language-server/dls).

@@ -272,7 +272,8 @@
     },
     "dart": {
       "command": [
-        "dart_language_server"
+        // Specify a dart command like the below in your LSP User settings.
+        // "dart", "/usr/local/opt/dart/libexec/bin/snapshots/analysis_server.dart.snapshot", "--lsp"
       ],
       "languageId": "dart",
       "scopes": [

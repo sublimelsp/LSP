@@ -230,11 +230,11 @@ More info: https://github.com/Polymer/polymer-editor-service
 
 ### Dart<a name="dart"></a>
 
-`pub global activate dart_language_server`
+Install the Dart Sublime package and the [Dart SDK](https://dart.dev/get-dart)
 
-Make sure the pub bin directory is part of your path.
+Then locate the "snapshots/bin" directory of the SDK, and specify the path to `analysis_server.dart.snapshot` in the LSP user settings under "clients", "dart", then "command".
 
-See: [natebosch/dart_language_server](https://github.com/natebosch/dart_language_server)
+The older [natebosch/dart_language_server](https://github.com/natebosch/dart_language_server) is now deprecated
 
 ### Kotlin
 

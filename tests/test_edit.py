@@ -1,4 +1,5 @@
 from unittesting import DeferrableTestCase
+from unittest import skip
 
 import sublime
 
@@ -43,16 +44,91 @@ class ApplyDocumentEditTests(DeferrableTestCase):
         # Note that (1, 2) comes before (0, 1) in the text.
         file_changes = [
             ((1, 2), (1, 2), '4'),  # insert after the g
-            ((1, 2), (1, 2), '5'),
-            ((1, 2), (1, 3), '6'),  # replace the h
-            ((0, 1), (0, 1), '1'),  # insert after a
-            ((0, 1), (0, 1), '2'),
-            ((0, 1), (0, 1), '3'),
+            ((1, 2), (1, 2), '5'),  # then insert after the g again
+            ((1, 2), (1, 3), '6'),  # replace the just-inserted "5" with a "6"
+            ((0, 1), (0, 1), '1'),  # insert "1" after "a"
+            ((0, 1), (0, 1), '2'),  # insert "2" after "a"
+            ((0, 1), (0, 1), '3'),  # insert "3" after "a"
         ]
         expected = (
-            'a123bcde\n'
-            'fg456ij\n'
+            'a321bcde\n'
+            'fg64hij\n'
         )
+        self.run_test(original, expected, file_changes)
+
+    def test_remove_line_and_then_insert_at_that_line_not_at_end(self):
+        original = (
+            'a\n'
+            'b\n'
+            'c'
+        )
+        file_changes = [
+            ((1,0), (2,0), ''),
+            ((2,0), (2,0), 'x\n')
+        ]
+        expected = (
+            'a\n'
+            'x\n'
+            'c'
+        )
+        self.run_test(original, expected, file_changes)
+
+    @skip("point is out-of-bounds")
+    def test_remove_line_and_then_insert_at_that_line_at_end(self):
+        original = (
+            'a\n'
+            'b\n'
+            'c'
+        )
+        file_changes = [
+            ((2, 0), (3, 0), ''),  # note out-of-bounds end position
+            ((3, 0), (3, 0), 'c\n')  # note out-of-bounds end position
+        ]
+        expected = (
+            'a\n',
+            'b\n',
+            'c\n'
+        )
+        # The chain of events is like this:
+        # 1) first we end up with ('a\n', 'b\n', 'cc\n')
+        # 2) then we end up with ('a\n', 'b\n', '')
+        self.run_test(original, expected, file_changes)
+
+    # Quoting the spec:
+    # However, it is possible that multiple edits have the same start position: multiple inserts, or any number of
+    # inserts followed by a single remove or replace edit. If multiple inserts have the same position, the order in
+    # the array defines the order in which the inserted strings appear in the resulting text.
+
+    def test_insertions_at_same_location(self):
+        original = ('')
+        file_changes = [
+            ((0, 0), (0, 0), 'c'),
+            ((0, 0), (0, 0), 'b'),
+            ((0, 0), (0, 0), 'a')
+        ]
+        expected = ('abc')
+        self.run_test(original, expected, file_changes)
+
+    def test_insertions_followed_by_single_remove(self):
+        original = ('def')
+        file_changes = [
+            ((0, 0), (0, 0), 'c'),
+            ((0, 0), (0, 0), 'b'),
+            ((0, 0), (0, 0), 'a'),
+            ((0, 0), (0, 3), '')
+        ]
+        expected = ('def')
+        self.run_test(original, expected, file_changes)
+
+    def test_insertions_followed_by_single_replace(self):
+        original = ('def')
+        file_changes = [
+            ((0, 0), (0, 0), 'c'),
+            ((0, 0), (0, 0), 'b'),
+            ((0, 0), (0, 0), 'a'),
+            ((0, 0), (0, 4), 'hello')
+        ]
+        expected = ('helloef')
         self.run_test(original, expected, file_changes)
 
     def run_test(self, original: str, expected: str, file_changes):

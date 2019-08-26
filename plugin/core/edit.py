@@ -35,7 +35,7 @@ def sort_by_application_order(changes: 'Iterable[TextEdit]') -> 'List[TextEdit]'
 
     def get_start_position(pair: 'Tuple[int, TextEdit]'):
         index, change = pair
-        return change[0][0], change[0][1], index
+        return change[0][0], change[0][1], -index
 
     # The spec reads:
     # > However, it is possible that multiple edits have the same start position: multiple

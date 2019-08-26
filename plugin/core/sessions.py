@@ -100,9 +100,9 @@ def hover() -> 'Dict[str, Any]':
 def completion() -> 'Dict[str, Any]':
     result = basic_capability()
     result["completionItem"] = {
-        "snippetSupport": True,
+        "snippetSupport": True
         # missing: commitCharacterSupport
-        "documentationFormat": supported_content_formats()
+        # missing: documentationFormat
         # missing: deprecatedSupport
         # missing: preselectSupport
     }

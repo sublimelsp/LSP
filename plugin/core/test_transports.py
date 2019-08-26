@@ -17,6 +17,7 @@ def json_rpc_message(payload: str) -> bytes:
 
 class FakeProcess(object):
     def __init__(self):
+        self.pid = 12345
         self.stdin = io.BytesIO(b'')  # io.BufferedReader()
         self.stdout = io.BytesIO(
             json_rpc_message("hello") +
@@ -28,6 +29,9 @@ class FakeProcess(object):
 
     def exit(self, returncode):
         self.returncode = returncode
+
+    def wait(self):
+        return self.returncode
 
 
 class FakeSocket(object):

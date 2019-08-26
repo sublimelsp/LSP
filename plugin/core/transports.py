@@ -176,6 +176,7 @@ class StdioTransport(Transport):
         Reads JSON responses from process and dispatch them to response_handler
         """
         running = True
+        pid = self.process.pid if self.process else "???"
         state = STATE_HEADERS
         content_length = 0
         while running and self.process and state != STATE_EOF:
@@ -210,7 +211,11 @@ class StdioTransport(Transport):
                 state = STATE_EOF
                 break
 
-        debug("LSP stdout process ended.")
+        debug("process {} stdout ended {}".format(pid, "(still alive)" if self.process else "(terminated)"))
+        if self.process:
+            # We use the stdout thread to block and wait on the exiting process, or zombie processes may be the result.
+            returncode = self.process.wait()
+            debug("process {} exited with code {}".format(pid, returncode))
 
     def send(self, content: str) -> None:
         self.send_queue.put(build_message(content))

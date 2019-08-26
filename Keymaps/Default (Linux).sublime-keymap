@@ -32,6 +32,15 @@
     // Go To Definition
     // {"keys": ["UNBOUND"], "command": "lsp_symbol_definition"},
 
+    // Go To Type Definition
+    // {"keys": ["UNBOUND"], "command": "lsp_symbol_type_definition"},
+
+    // Go To Declaration
+    // {"keys": ["UNBOUND"], "command": "lsp_symbol_declaration"},
+
+    // Go To Implementation
+    // {"keys": ["UNBOUND"], "command": "lsp_symbol_implementation"},
+
     // Rename Symbol
     // { "keys": ["UNBOUND"], "command": "lsp_symbol_rename" },
 
@@ -43,4 +52,7 @@
     
     // Document Symbols
     // {"keys": ["UNBOUND"], "command": "lsp_document_symbols"},
+
+    // Symbol Hover
+    // {"keys": ["UNBOUND"], "command": "lsp_hover"},
 ]

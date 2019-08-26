@@ -37,6 +37,7 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [CSS/LESS/SASS (SCSS only)](https://lsp.readthedocs.io/en/latest/#css)
 * [D](https://lsp.readthedocs.io/en/latest/#d)
 * [Dart](https://lsp.readthedocs.io/en/latest/#dart)
+* [Elm](https://lsp.readthedocs.io/en/latest/#elm)
 * [Flow (JavaScript)](https://lsp.readthedocs.io/en/latest/#flow)
 * [Go](https://lsp.readthedocs.io/en/latest/#go)
 * [HTML](https://lsp.readthedocs.io/en/latest/#html)
@@ -59,6 +60,14 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [XML](https://lsp.readthedocs.io/en/latest/#xml)
 
 See [Language Server Protocol](https://microsoft.github.io/language-server-protocol/implementors/servers/) for more available implementations. Please create issues/pull requests so we can get support for more languages.
+
+## Customisation of the popup
+
+LSP uses [mdpopups](https://github.com/facelessuser/sublime-markdown-popups) to display the popup. If you want to customise it, check the [doc](http://facelessuser.github.io/sublime-markdown-popups/).
+
+tl;dr?
+
+Create/modify the file `Packages/User/mdpopups.css` and put your own style.
 
 ## Getting help
 

@@ -36,14 +36,22 @@ def get_window_env(window: sublime.Window, config: ClientConfig) -> 'Tuple[List[
     return expanded_args, env
 
 
-def start_window_config(window: sublime.Window, project_path: str, config: ClientConfig,
-                        on_created: 'Callable', on_ended: 'Callable[[str], None]') -> 'Optional[Session]':
+def start_window_config(window: sublime.Window,
+                        project_path: str,
+                        config: ClientConfig,
+                        on_pre_initialize: 'Callable[[Session], None]',
+                        on_post_initialize: 'Callable[[Session], None]',
+                        on_post_exit: 'Callable[[str], None]') -> 'Optional[Session]':
     args, env = get_window_env(window, config)
     config.binary_args = args
-    return create_session(config, project_path, env, settings,
-                          on_created=on_created,
-                          on_ended=lambda config_name: on_session_ended(window, config.name, on_ended))
+    return create_session(config=config,
+                          project_path=project_path,
+                          env=env,
+                          settings=settings,
+                          on_pre_initialize=on_pre_initialize,
+                          on_post_initialize=on_post_initialize,
+                          on_post_exit=lambda config_name: on_session_ended(window, config_name, on_post_exit))
 
 
-def on_session_ended(window: sublime.Window, config_name: str, on_ended_handler: 'Callable[[str], None]') -> None:
-    on_ended_handler(config_name)
+def on_session_ended(window: sublime.Window, config_name: str, on_post_exit_handler: 'Callable[[str], None]') -> None:
+    on_post_exit_handler(config_name)

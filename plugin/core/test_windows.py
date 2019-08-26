@@ -220,11 +220,21 @@ class TestDocumentHandlerFactory(object):
         return MockDocuments()
 
 
-def mock_start_session(window, project_path, config, on_created: 'Callable', on_ended: 'Callable'):
-    return create_session(test_config, project_path, dict(), MockSettings(),
-                          bootstrap_client=MockClient(),
-                          on_created=on_created,
-                          on_ended=on_ended)
+def mock_start_session(window: MockWindow,
+                       project_path: str,
+                       config: ClientConfig,
+                       on_pre_initialize: 'Callable[[Session], None]',
+                       on_post_initialize: 'Callable[[Session], None]',
+                       on_post_exit: 'Callable[[str], None]') -> 'Optional[Session]':
+    return create_session(
+        config=test_config,
+        project_path=project_path,
+        env=dict(),
+        settings=MockSettings(),
+        bootstrap_client=MockClient(),
+        on_pre_initialize=on_pre_initialize,
+        on_post_initialize=on_post_initialize,
+        on_post_exit=on_post_exit)
 
 
 class WindowRegistryTests(unittest.TestCase):

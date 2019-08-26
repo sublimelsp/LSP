@@ -57,6 +57,9 @@
   // Show a bulb in the gutter when code actions are available
   "show_code_actions_bulb": false,
 
+  // Show a box next to the color if the language server provides color support.
+  "show_color_box": true,
+
   // Request completions for all characters if set to true,
   // or just after trigger characters only otherwise.
   "complete_all_chars": true,
@@ -269,7 +272,8 @@
     },
     "dart": {
       "command": [
-        "dart_language_server"
+        // Specify a dart command like the below in your LSP User settings.
+        // "dart", "/usr/local/opt/dart/libexec/bin/snapshots/analysis_server.dart.snapshot", "--lsp"
       ],
       "languageId": "dart",
       "scopes": [
@@ -305,10 +309,16 @@
     },
     "intelephense-ls":
     {
-         "command": ["intelephense", "--stdio"],
-         "scopes": ["source.php", "embedding.php"],
-         "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
-         "languageId": "php"
+        "command": ["intelephense", "--stdio"],
+        "scopes": ["source.php", "embedding.php"],
+        "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
+        "languageId": "php",
+        // "initializationOptions": {
+        //   "clearCache": false,
+        //   "storagePath": "/tmp/intelephense",
+        //   "globalStoragePath": "/tmp/intelephense",
+        //   "licenceKey": "",
+        // },
     },
     "reason":
     {
@@ -452,7 +462,11 @@
         "Packages/Rails/Ruby on Rails.sublime-syntax",
         "Packages/Rails/HTML (Rails).sublime-syntax"
       ],
-      "tcp_port": 7658
+      "tcp_port": 7658,
+      // Enable RuboCop linting
+      // "initializationOptions": {
+      //   "diagnostics": true
+      // },
     },
     "vscode-css":
       {

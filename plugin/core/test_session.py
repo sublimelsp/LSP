@@ -12,18 +12,28 @@ except ImportError:
     pass
 
 
-completion_provider = {
-    'triggerCharacters': ['.'],
-    'resolveProvider': False
+basic_responses = {
+    'initialize': {
+        'capabilities': {
+            'testing': True,
+            'hoverProvider': True,
+            'completionProvider': {
+                'triggerCharacters': ['.'],
+                'resolveProvider': False
+            },
+            'textDocumentSync': True,
+            'definitionProvider': True,
+            'typeDefinitionProvider': True,
+            'declarationProvider': True,
+            'implementationProvider': True
+        }
+    }
 }
 
 
 class MockClient():
     def __init__(self, async_response=None) -> None:
-        self.responses = {
-            'initialize': {"capabilities": dict(testing=True, hoverProvider=True,
-                                                completionProvider=completion_provider, textDocumentSync=True)},
-        }  # type: dict
+        self.responses = basic_responses
         self._notifications = []  # type: List[Notification]
         self._async_response_callback = async_response
 
@@ -79,39 +89,62 @@ class SessionTest(unittest.TestCase):
 
     def test_can_get_started_session(self):
         project_path = "/"
-        created_callback = unittest.mock.Mock()
+        post_initialize_callback = unittest.mock.Mock()
         session = self.assert_if_none(
-            create_session(test_config, project_path, dict(), Settings(),
+            create_session(config=test_config,
+                           project_path=project_path,
+                           env=dict(),
+                           settings=Settings(),
                            bootstrap_client=MockClient(),
-                           on_created=created_callback))
-
+                           on_post_initialize=post_initialize_callback))
         self.assertEqual(session.state, ClientStates.READY)
         self.assertIsNotNone(session.client)
         self.assertEqual(session.project_path, project_path)
         self.assertTrue(session.has_capability("testing"))
         self.assertTrue(session.get_capability("testing"))
-        created_callback.assert_called_once()
+        post_initialize_callback.assert_called_once()
 
-    def test_can_shutdown_session(self):
+    def test_pre_initialize_callback_is_invoked(self):
         project_path = "/"
-        created_callback = unittest.mock.Mock()
-        ended_callback = unittest.mock.Mock()
+        pre_initialize_callback = unittest.mock.Mock()
+        post_initialize_callback = unittest.mock.Mock()
         session = self.assert_if_none(
-            create_session(test_config, project_path, dict(), Settings(),
+            create_session(config=test_config,
+                           project_path=project_path,
+                           env=dict(),
+                           settings=Settings(),
                            bootstrap_client=MockClient(),
-                           on_created=created_callback,
-                           on_ended=ended_callback))
-
+                           on_pre_initialize=pre_initialize_callback,
+                           on_post_initialize=post_initialize_callback))
         self.assertEqual(session.state, ClientStates.READY)
         self.assertIsNotNone(session.client)
         self.assertEqual(session.project_path, project_path)
         self.assertTrue(session.has_capability("testing"))
-        created_callback.assert_called_once()
+        self.assertTrue(session.get_capability("testing"))
+        pre_initialize_callback.assert_called_once()
+        post_initialize_callback.assert_called_once()
 
+    def test_can_shutdown_session(self):
+        project_path = "/"
+        post_initialize_callback = unittest.mock.Mock()
+        post_exit_callback = unittest.mock.Mock()
+        session = self.assert_if_none(
+            create_session(config=test_config,
+                           project_path=project_path,
+                           env=dict(),
+                           settings=Settings(),
+                           bootstrap_client=MockClient(),
+                           on_post_initialize=post_initialize_callback,
+                           on_post_exit=post_exit_callback))
+        self.assertEqual(session.state, ClientStates.READY)
+        self.assertIsNotNone(session.client)
+        self.assertEqual(session.project_path, project_path)
+        self.assertTrue(session.has_capability("testing"))
+        post_initialize_callback.assert_called_once()
         session.end()
         self.assertEqual(session.state, ClientStates.STOPPING)
         self.assertEqual(session.project_path, project_path)
         self.assertIsNone(session.client)
         self.assertFalse(session.has_capability("testing"))
         self.assertIsNone(session.get_capability("testing"))
-        ended_callback.assert_called_once()
+        post_exit_callback.assert_called_once()

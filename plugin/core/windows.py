@@ -161,7 +161,7 @@ class WindowDocumentHandler(object):
         return True
 
     def _notify_open_documents(self, session: Session) -> None:
-        for file_name in self._document_states:
+        for file_name in list(self._document_states):
             view = self._window.find_open_file(file_name)
             if view:
                 syntax = view.settings().get("syntax")
@@ -383,9 +383,13 @@ class WindowManager(object):
         debug("starting in", project_path)
         session = None  # type: Optional[Session]
         try:
-            session = self._start_session(self._window, project_path, config,
-                                          lambda session: self._handle_session_started(session, project_path, config),
-                                          lambda config_name: self._handle_session_ended(config_name))
+            session = self._start_session(
+                window=self._window,
+                project_path=project_path,
+                config=config,
+                on_pre_initialize=self._handle_pre_initialize,
+                on_post_initialize=self._handle_post_initialize,
+                on_post_exit=self._handle_post_exit)
         except Exception as e:
             message = "\n\n".join([
                 "Could not start {}",
@@ -447,23 +451,14 @@ class WindowManager(object):
         # reconstruct/get the actual Client object back. Maybe we can (ab)use our homebrew event system for this?
         client.send_response(Response(request_id, {"applied": True}))
 
-    def _handle_session_started(self, session, project_path, config):
+    def _handle_pre_initialize(self, session: 'Session') -> None:
         client = session.client
-        client.set_crash_handler(lambda: self._handle_server_crash(config))
-        client.set_error_display_handler(lambda msg: self._window.status_message(msg))
-
-        # handle server requests and notifications
-        client.on_request(
-            "workspace/applyEdit",
-            lambda params, request_id: self._apply_workspace_edit(params, client, request_id))
+        client.set_crash_handler(lambda: self._handle_server_crash(session.config))
+        client.set_error_display_handler(self._window.status_message)
 
         client.on_request(
             "window/showMessageRequest",
             lambda params, request_id: self._handle_message_request(params, client, request_id))
-
-        client.on_notification(
-            "textDocument/publishDiagnostics",
-            lambda params: self._diagnostics.handle_client_diagnostics(config.name, params))
 
         client.on_notification(
             "window/showMessage",
@@ -471,9 +466,21 @@ class WindowManager(object):
 
         client.on_notification(
             "window/logMessage",
-            lambda params: server_log(config.name, params.get("message", "???") if params else "???"))
+            lambda params: server_log(session.config.name, params.get("message", "???") if params else "???"))
 
-        self._handlers.on_initialized(config.name, self._window, client)
+    def _handle_post_initialize(self, session: 'Session') -> None:
+        client = session.client
+
+        # handle server requests and notifications
+        client.on_request(
+            "workspace/applyEdit",
+            lambda params, request_id: self._apply_workspace_edit(params, client, request_id))
+
+        client.on_notification(
+            "textDocument/publishDiagnostics",
+            lambda params: self._diagnostics.handle_client_diagnostics(session.config.name, params))
+
+        self._handlers.on_initialized(session.config.name, self._window, client)
 
         client.send_notification(Notification.initialized())
 
@@ -483,13 +490,13 @@ class WindowManager(object):
 
         global_events.subscribe('view.on_close', lambda view: self._handle_view_closed(view, session))
 
-        if config.settings:
+        if session.config.settings:
             configParams = {
-                'settings': config.settings
+                'settings': session.config.settings
             }
             client.send_notification(Notification.didChangeConfiguration(configParams))
 
-        self._window.status_message("{} initialized".format(config.name))
+        self._window.status_message("{} initialized".format(session.config.name))
 
     def _handle_view_closed(self, view, session):
         if view.file_name():
@@ -523,12 +530,13 @@ class WindowManager(object):
             if self._on_closed:
                 self._on_closed()
 
-    def _handle_session_ended(self, config_name):
+    def _handle_post_exit(self, config_name: str) -> None:
         self._documents.remove_session(config_name)
         del self._sessions[config_name]
         for view in self._window.views():
-            if view.file_name():
-                self._diagnostics.remove(view.file_name(), config_name)
+            file_name = view.file_name()
+            if file_name:
+                self._diagnostics.remove(file_name, config_name)
 
         debug("session", config_name, "ended")
         if not self._sessions:

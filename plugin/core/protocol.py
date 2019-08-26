@@ -118,12 +118,28 @@ class Request:
         return Request("textDocument/definition", params)
 
     @classmethod
+    def typeDefinition(cls, params: dict) -> 'Request':
+        return Request("textDocument/typeDefinition", params)
+
+    @classmethod
+    def declaration(cls, params: dict) -> 'Request':
+        return Request("textDocument/declaration", params)
+
+    @classmethod
+    def implementation(cls, params: dict) -> 'Request':
+        return Request("textDocument/implementation", params)
+
+    @classmethod
     def rename(cls, params: dict) -> 'Request':
         return Request("textDocument/rename", params)
 
     @classmethod
     def codeAction(cls, params: dict) -> 'Request':
         return Request("textDocument/codeAction", params)
+
+    @classmethod
+    def documentColor(cls, params: dict) -> 'Request':
+        return Request('textDocument/documentColor', params)
 
     @classmethod
     def executeCommand(cls, params: dict) -> 'Request':

@@ -37,16 +37,23 @@ def inject_session(wm, config, client):
     # session.state = ClientStates.READY
     wm.update_configs(client_configs.all)
     wm._sessions[config.name] = session
-    wm._handle_session_started(session, "", config)
+    wm._handle_post_initialize(session)
 
 
 def remove_session(wm, config_name):
-    wm._handle_session_ended(config_name)
+    wm._handle_post_exit(config_name)
+
+
+def close_test_view(view):
+    if view:
+        view.set_scratch(True)
+        view.window().focus_view(view)
+        view.window().run_command("close_file")
 
 
 class TextDocumentTestCase(DeferrableTestCase):
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.view = sublime.active_window().open_file(test_file_path)
         self.wm = windows.lookup(self.view.window())
         self.client = MockClient(async_response=sublime_delayer(100))
@@ -59,11 +66,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             if unique_attribute in dir(listener):
                 return listener
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         remove_session(self.wm, text_config.name)
         remove_config(text_config)
-
-        if self.view:
-            self.view.set_scratch(True)
-            self.view.window().focus_view(self.view)
-            self.view.window().run_command("close_file")
+        close_test_view(self.view)

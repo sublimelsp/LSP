@@ -64,8 +64,8 @@ class SortByApplicationOrderTests(unittest.TestCase):
             ((0, 0), (0, 0), 'a'),
             ((0, 2), (0, 2), 'c')
         ]
-        # expect 'c' (higher start), 'a' now reverse order before 'b'
+        # expect 'c' (higher start), but 'b' still before 'a' because the array order is preserved.
         sorted = sort_by_application_order(edits)
         self.assertEqual(sorted[0][2], 'c')
-        self.assertEqual(sorted[1][2], 'a')
-        self.assertEqual(sorted[2][2], 'b')
+        self.assertEqual(sorted[1][2], 'b')
+        self.assertEqual(sorted[2][2], 'a')

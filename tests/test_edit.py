@@ -63,8 +63,8 @@ class ApplyDocumentEditTests(DeferrableTestCase):
             'c'
         )
         file_changes = [
-            ((1,0), (2,0), ''),
-            ((2,0), (2,0), 'x\n')
+            ((1, 0), (2, 0), ''),
+            ((2, 0), (2, 0), 'x\n')
         ]
         expected = (
             'a\n'

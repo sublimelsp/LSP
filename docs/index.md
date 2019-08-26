@@ -155,7 +155,7 @@ Add to LSP settings' clients:
 ### Elm<a name="elm"></a>
 
 See instructions for installing the [elm-language-server](https://github.com/elm-tooling/elm-language-server).
-Install [Elm Language Support](https://packagecontrol.io/packages/Elm%20Language%20Support) from Package Control for syntax highlighting.
+Install [Elm Syntax Higlighting](https://packagecontrol.io/packages/Elm%20Syntax%20Highlighting) from Package Control for syntax highlighting.
 
 Add to LSP settings' clients:
 

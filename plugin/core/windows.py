@@ -8,6 +8,7 @@ from .sessions import Session
 from .url import filename_to_uri
 from .workspace import get_project_path
 from .rpc import Client
+import threading
 try:
     from typing_extensions import Protocol
     from typing import Optional, List, Callable, Dict, Any
@@ -324,6 +325,7 @@ class WindowManager(object):
                                       DiagnosticsUpdate(self._window, client_name, file_path, diagnostics)))
         self._on_closed = on_closed
         self._is_closing = False
+        self._initialization_lock = threading.Lock()
 
     def get_session(self, config_name: str) -> 'Optional[Session]':
         return self._sessions.get(config_name)
@@ -359,12 +361,13 @@ class WindowManager(object):
 
     def _initialize_on_open(self, view: ViewLike):
         # have all sessions for this document been started?
-        startable_configs = filter(lambda c: c.enabled and c.name not in self._sessions,
-                                   self._configs.syntax_configs(view))
+        with self._initialization_lock:
+            startable_configs = filter(lambda c: c.enabled and c.name not in self._sessions,
+                                       self._configs.syntax_configs(view))
 
-        for config in startable_configs:
-            debug("window {} requests {} for {}".format(self._window.id(), config.name, view.file_name()))
-            self._start_client(config)
+            for config in startable_configs:
+                debug("window {} requests {} for {}".format(self._window.id(), config.name, view.file_name()))
+                self._start_client(config)
 
     def _start_client(self, config: ClientConfig):
         project_path = get_project_path(self._window)

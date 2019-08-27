@@ -195,6 +195,7 @@ class WindowDocumentHandler(object):
         for config_name, language in config_languages.items():
             languages[config_name] = language.id
         view.settings().set('lsp_language', languages)
+        view.settings().set('lsp_active', True)
 
     def handle_view_opened(self, view: ViewLike):
         file_name = view.file_name()

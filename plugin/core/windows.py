@@ -283,6 +283,10 @@ class WindowDocumentHandler(object):
     def notify_did_change(self, view: ViewLike):
         file_name = view.file_name()
         if file_name and view.window() == self._window:
+            # ensure view is opened.
+            if not self.has_document_state(file_name):
+                self.handle_view_opened(view)
+
             if view.buffer_id() in self._pending_buffer_changes:
                 del self._pending_buffer_changes[view.buffer_id()]
 

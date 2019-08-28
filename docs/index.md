@@ -211,12 +211,10 @@ Add to LSP settings' clients:
     ],
     "syntaxes":
     [
-        "Packages/Elm Language Support/Syntaxes/Elm.sublime-syntax"
+        "Packages/Elm Syntax Highlighting/src/elm.sublime-syntax"
     ],
     "initializationOptions": {
-        "elmPath": "elm",
-        "elmFormatPath": "elm-format",
-        "elmTestPath": "elm-test"
+        "elmAnalyseTrigger": "change"
     }
 }
 ```

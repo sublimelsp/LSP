@@ -32,8 +32,10 @@ def remove_highlights(view: sublime.View):
 class DocumentHighlightListener(sublime_plugin.ViewEventListener):
 
     @classmethod
-    def is_applicable(cls, settings):
-        syntax = settings.get('syntax')
+    def is_applicable(cls, view_settings):
+        if 'documentHighlight' in settings.disabled_capabilities:
+            return False
+        syntax = view_settings.get('syntax')
         return syntax and is_supported_syntax(syntax, client_configs.all)
 
     def __init__(self, view: sublime.View) -> None:

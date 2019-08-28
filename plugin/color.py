@@ -39,9 +39,11 @@ class LspColorListener(sublime_plugin.ViewEventListener):
 
     @classmethod
     def is_applicable(cls, _settings):
-        if settings.show_color_box:
-            return True
-        return False
+        if 'colorProvider' in settings.disabled_capabilities:
+            return False
+        elif not settings.show_color_box:
+            return False
+        return True
 
     def on_activated_async(self):
         self.schedule_request()

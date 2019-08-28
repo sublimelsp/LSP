@@ -36,6 +36,7 @@ class Settings(object):
         self.prefer_label_over_filter_text = False
         self.show_references_in_quick_panel = False
         self.quick_panel_monospace_font = False
+        self.disabled_capabilities = []  # type: List[str]
         self.log_debug = True
         self.log_server = True
         self.log_stderr = False

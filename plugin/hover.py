@@ -15,7 +15,7 @@ from .core.registry import session_for_view, LspTextCommand
 from .core.protocol import Request, DiagnosticSeverity
 from .core.documents import get_document_position
 from .core.popups import popup_css, popup_class
-from .core.settings import client_configs
+from .core.settings import client_configs, settings
 
 SUBLIME_WORD_MASK = 515
 
@@ -25,8 +25,10 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         self.view = view
 
     @classmethod
-    def is_applicable(cls, settings):
-        syntax = settings.get('syntax')
+    def is_applicable(cls, view_settings):
+        if 'hover' in settings.disabled_capabilities:
+            return False
+        syntax = view_settings.get('syntax')
         return syntax and is_supported_syntax(syntax, client_configs.all)
 
     def on_hover(self, point, hover_zone):

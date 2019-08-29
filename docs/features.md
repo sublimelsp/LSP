@@ -81,7 +81,6 @@ Global plugin settings and settings defined at project level are merged together
 * `document_highlight_scopes`: *customize your sublime text scopes for document highlighting*
 * `diagnostics_gutter_marker` `"dot"` *gutter marker for code diagnostics: "dot", "circle", "bookmark", "cross" or ""*
 * `show_code_actions_bulb` `false` *show a bulb in the gutter when code actions are available*
-* `show_color_box` `true` *Show a box next to the color if the language server provides color support*
 * `disabled_capabilities`, `[]` *Turn off client capabilities (features): "hover", "completion", "documentHighlight", "colorProvider"
 * `log_debug` `false` *show debug logging in the sublime console*
 * `log_server` `true` *show server/logMessage notifications from language servers in the console*

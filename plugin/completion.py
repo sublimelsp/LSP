@@ -63,8 +63,11 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         self.response_incomplete = False
 
     @classmethod
-    def is_applicable(cls, settings):
-        syntax = settings.get('syntax')
+    def is_applicable(cls, view_settings):
+        if 'completion' in settings.disabled_capabilities:
+            return False
+
+        syntax = view_settings.get('syntax')
         return is_supported_syntax(syntax, client_configs.all) if syntax else False
 
     def initialize(self):

@@ -16,7 +16,7 @@ from .core.documents import get_document_position
 from .core.events import global_events
 from .core.protocol import Request
 from .core.popups import popup_css, popup_class
-from .core.settings import client_configs
+from .core.settings import client_configs, settings
 from .core.signature_help import create_signature_help, SignatureHelp
 assert SignatureHelp
 
@@ -58,8 +58,10 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         self._renderer = ColorSchemeScopeRenderer(self.view)
 
     @classmethod
-    def is_applicable(cls, settings):
-        syntax = settings.get('syntax')
+    def is_applicable(cls, view_settings):
+        if 'signatureHelp' in settings.disabled_capabilities:
+            return False
+        syntax = view_settings.get('syntax')
         return syntax and is_supported_syntax(syntax, client_configs.all)
 
     def initialize(self):

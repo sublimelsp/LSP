@@ -57,9 +57,6 @@
   // Show a bulb in the gutter when code actions are available
   "show_code_actions_bulb": false,
 
-  // Show a box next to the color if the language server provides color support.
-  "show_color_box": true,
-
   // Request completions for all characters if set to true,
   // or just after trigger characters only otherwise.
   "complete_all_chars": true,
@@ -84,6 +81,10 @@
 
   // Use monospace font for the quick panel.
   "quick_panel_monospace_font": false,
+
+  // Disable language client capabilities. Supported values:
+  // "hover", "completion", "colorProvider", "documentHighlight", "signatureHelp"
+  "disabled_capabilities": [],
 
   // Show verbose debug messages in the sublime console.
   "log_debug": false,

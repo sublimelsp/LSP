@@ -35,6 +35,14 @@ def read_dict_setting(settings_obj: sublime.Settings, key: str, default: dict) -
         return default
 
 
+def read_array_setting(settings_obj: sublime.Settings, key: str, default: list) -> list:
+    val = settings_obj.get(key)
+    if isinstance(val, list):
+        return val
+    else:
+        return default
+
+
 def read_str_setting(settings_obj: sublime.Settings, key: str, default: str) -> str:
     val = settings_obj.get(key)
     if isinstance(val, str):
@@ -58,13 +66,13 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings):
                                                            settings.document_highlight_scopes)
     settings.diagnostics_gutter_marker = read_str_setting(settings_obj, "diagnostics_gutter_marker", "dot")
     settings.show_code_actions_bulb = read_bool_setting(settings_obj, "show_code_actions_bulb", False)
-    settings.show_color_box = read_bool_setting(settings_obj, "show_color_box", True)
     settings.only_show_lsp_completions = read_bool_setting(settings_obj, "only_show_lsp_completions", False)
     settings.complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
     settings.completion_hint_type = read_str_setting(settings_obj, "completion_hint_type", "auto")
     settings.prefer_label_over_filter_text = read_bool_setting(settings_obj, "prefer_label_over_filter_text", False)
     settings.show_references_in_quick_panel = read_bool_setting(settings_obj, "show_references_in_quick_panel", False)
     settings.quick_panel_monospace_font = read_bool_setting(settings_obj, "quick_panel_monospace_font", False)
+    settings.disabled_capabilities = read_array_setting(settings_obj, "disabled_capabilities", [])
     settings.log_debug = read_bool_setting(settings_obj, "log_debug", False)
     settings.log_server = read_bool_setting(settings_obj, "log_server", True)
     settings.log_stderr = read_bool_setting(settings_obj, "log_stderr", False)

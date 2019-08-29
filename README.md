@@ -44,7 +44,7 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [Java](https://lsp.readthedocs.io/en/latest/#java)
 * [JavaScript/TypeScript](https://lsp.readthedocs.io/en/latest/#typescript)
 * [JSON](https://lsp.readthedocs.io/en/latest/#json)
-* [Julia](https://github.com/randy3k/LSP-julia)
+* [Julia](https://lsp.readthedocs.io/en/latest/#julia)
 * [Kotlin](https://lsp.readthedocs.io/en/latest/#kotlin)
 * [LaTeX](https://lsp.readthedocs.io/en/latest/#latex)
 * [Lua](https://lsp.readthedocs.io/en/latest/#lua)

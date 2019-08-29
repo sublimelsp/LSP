@@ -82,7 +82,8 @@
   // Use monospace font for the quick panel.
   "quick_panel_monospace_font": false,
 
-  // Disable language client capabilities like "hover", "completion"
+  // Disable language client capabilities. Supported values:
+  // "hover", "completion", "colorProvider", "documentHighlight", "signatureHelp"
   "disabled_capabilities": [],
 
   // Show verbose debug messages in the sublime console.

@@ -100,6 +100,7 @@ def unload_sessions(window):
 
 
 configs = ConfigManager(client_configs.all)
+client_configs.set_listener(configs.update)
 documents = DocumentHandlerFactory(sublime, settings)
 handlers_dispatcher = LanguageHandlerDispatcher()
 windows = WindowRegistry(configs, documents, start_window_config, sublime, handlers_dispatcher)

@@ -100,12 +100,22 @@ def syntax_language(config: 'ClientConfig', syntax: str) -> 'Optional[LanguageCo
 
 
 class ConfigManager(object):
+    """Distributes language client configuration between windows"""
 
     def __init__(self, global_configs: 'List[ClientConfig]') -> None:
         self._configs = global_configs
+        self._managers = {}  # type: Dict[int, ConfigRegistry]
 
     def for_window(self, window: 'Any') -> 'ConfigRegistry':
-        return WindowConfigManager(create_window_configs(window, self._configs))
+        window_configs = WindowConfigManager(create_window_configs(window, self._configs))
+        self._managers[window.id()] = window_configs
+        return window_configs
+
+    def update(self) -> None:
+        for window in sublime.windows():
+            if window.id() in self._managers:
+                debug('Pushing global client configs to window', window.id())
+                self._managers[window.id()].update(create_window_configs(window, self._configs))
 
 
 class WindowConfigManager(object):

@@ -48,7 +48,11 @@ class LspColorListener(sublime_plugin.ViewEventListener):
         self.schedule_request()
 
     def schedule_request(self):
-        current_point = self.view.sel()[0].begin()
+        sel = self.view.sel()
+        if len(sel) < 1:
+            return
+
+        current_point = sel[0].begin()
         if self._stored_point != current_point:
             self._stored_point = current_point
             sublime.set_timeout_async(lambda: self.fire_request(current_point), 800)

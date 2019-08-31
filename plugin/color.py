@@ -10,9 +10,10 @@ except ImportError:
 from .core.protocol import Request
 from .core.url import filename_to_uri
 from .core.registry import session_for_view
-from .core.settings import settings
+from .core.settings import settings, client_configs
 from .core.views import range_to_region
 from .core.protocol import Range
+from .core.configurations import is_supported_syntax
 
 
 def send_color_request(view, on_response_recieved: 'Callable'):
@@ -39,7 +40,10 @@ class LspColorListener(sublime_plugin.ViewEventListener):
 
     @classmethod
     def is_applicable(cls, _settings):
-        return 'colorProvider' not in settings.disabled_capabilities
+        syntax = _settings.get('syntax')
+        is_supported = syntax and is_supported_syntax(syntax, client_configs.all)
+        disabled = 'colorProvider' in settings.disabled_capabilities
+        return is_supported and not disabled
 
     def on_activated_async(self):
         self.schedule_request()

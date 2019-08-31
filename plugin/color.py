@@ -17,16 +17,12 @@ from .core.configurations import is_supported_syntax
 
 
 def send_color_request(view, on_response_recieved: 'Callable'):
-    session = session_for_view(view)
-    if not session or not session.has_capability('colorProvider'):
-        # the server doesn't support colors, just return
-        return
-
     params = {
         "textDocument": {
             "uri": filename_to_uri(view.file_name())
         }
     }
+    session = session_for_view(view)
     session.client.send_request(
         Request.documentColor(params),
         lambda response: on_response_recieved(response))
@@ -37,6 +33,8 @@ class LspColorListener(sublime_plugin.ViewEventListener):
         super().__init__(view)
         self.color_phantom_set = None  # type: Optional[sublime.PhantomSet]
         self._stored_point = -1
+        self.initialized = False
+        self.enabled = False
 
     @classmethod
     def is_applicable(cls, _settings):
@@ -45,11 +43,26 @@ class LspColorListener(sublime_plugin.ViewEventListener):
         disabled = 'colorProvider' in settings.disabled_capabilities
         return is_supported and not disabled
 
+    def initialize(self):
+        session = session_for_view(self.view)
+        if session is None:
+            # not yet initialized, try again
+            sublime.set_timeout_async(self.initialize, 400)
+        else:
+            self.initialized = True
+            self.enabled = session.has_capability('colorProvider')
+            if self.enabled:
+                send_color_request(self.view, self.handle_response)
+
     def on_activated_async(self):
-        self.schedule_request()
+        if not self.initialized:
+            self.initialize()
+        if self.enabled:
+            self.schedule_request()
 
     def on_modified_async(self):
-        self.schedule_request()
+        if self.enabled:
+            self.schedule_request()
 
     def schedule_request(self):
         sel = self.view.sel()

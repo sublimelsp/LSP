@@ -1,5 +1,6 @@
 import sublime
 import os
+import tempfile
 from .sessions import create_session, Session
 
 # typing only
@@ -36,6 +37,26 @@ def get_window_env(window: sublime.Window, config: ClientConfig) -> 'Tuple[List[
     return expanded_args, env
 
 
+def get_expanding_variables(window: sublime.Window) -> dict:
+    variables = window.extract_variables()
+    variables.update({
+        "home": os.path.expanduser('~'),
+        "temp_dir": tempfile.gettempdir(),
+    })
+
+    return variables
+
+
+def expand_variables_for_dict(window: sublime.Window, dict_: dict) -> dict:
+    for key, value in dict_.items():
+        if isinstance(value, dict):
+            dict_[key] = expand_variables_for_dict(window, value)
+        elif isinstance(value, str):
+            dict_[key] = sublime.expand_variables(value, get_expanding_variables(window))
+
+    return dict_
+
+
 def start_window_config(window: sublime.Window,
                         project_path: str,
                         config: ClientConfig,
@@ -44,6 +65,7 @@ def start_window_config(window: sublime.Window,
                         on_post_exit: 'Callable[[str], None]') -> 'Optional[Session]':
     args, env = get_window_env(window, config)
     config.binary_args = args
+    config.init_options = expand_variables_for_dict(window, config.init_options)
     return create_session(config=config,
                           project_path=project_path,
                           env=env,

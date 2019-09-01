@@ -23,9 +23,10 @@ def send_color_request(view, on_response_recieved: 'Callable'):
         }
     }
     session = session_for_view(view)
-    session.client.send_request(
-        Request.documentColor(params),
-        lambda response: on_response_recieved(response))
+    if session:
+        session.client.send_request(
+            Request.documentColor(params),
+            lambda response: on_response_recieved(response))
 
 
 class LspColorListener(sublime_plugin.ViewEventListener):

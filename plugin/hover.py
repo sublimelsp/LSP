@@ -119,10 +119,11 @@ class LspHoverCommand(LspTextCommand):
         return "<p>" + " | ".join(actions) + "</p>"
 
     def format_diagnostic(self, diagnostic):
+        diagnostic_message = escape(diagnostic.message, False).replace('\n', '<br>')
         if diagnostic.source:
-            return "<pre>[{}] {}</pre>".format(diagnostic.source, escape(diagnostic.message, False))
+            return "<pre>[{}] {}</pre>".format(diagnostic.source, diagnostic_message)
         else:
-            return "<pre>{}</pre>".format(escape(diagnostic.message, False))
+            return "<pre>{}</pre>".format(diagnostic_message)
 
     def diagnostics_content(self, diagnostics):
         by_severity = {}  # type: Dict[int, List[str]]
@@ -167,7 +168,6 @@ class LspHoverCommand(LspTextCommand):
         return mdpopups.md2html(self.view, "\n".join(formatted))
 
     def show_hover(self, point, contents):
-        contents = contents.replace('\n', '<br>')
         mdpopups.show_popup(
             self.view,
             contents,

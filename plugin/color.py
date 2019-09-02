@@ -15,6 +15,7 @@ from .core.views import range_to_region
 from .core.protocol import Range
 from .core.configurations import is_supported_syntax
 from .core.events import global_events
+from .core.documents import is_transient_view
 
 
 class LspColorListener(sublime_plugin.ViewEventListener):
@@ -76,6 +77,9 @@ class LspColorListener(sublime_plugin.ViewEventListener):
             self.send_color_request()
 
     def send_color_request(self):
+        if is_transient_view(self.view):
+            return
+
         params = {
             "textDocument": {
                 "uri": filename_to_uri(self.view.file_name())

@@ -9,9 +9,11 @@ from .edit import parse_workspace_edit
 from .events import Events
 from .sessions import Session
 from .url import filename_to_uri
-from .workspace import maybe_get_first_workspace_from_window
-from .workspace import maybe_get_workspace_from_view
-from .workspace import WorkspaceFolder
+from .workspace import (
+    enable_in_project, disable_in_project, maybe_get_first_workspace_from_window,
+    maybe_get_workspace_from_view, WorkspaceFolder
+)
+
 from .rpc import Client
 import threading
 try:
@@ -348,8 +350,19 @@ class WindowManager(object):
     def _can_start_config(self, config_name: str) -> bool:
         return config_name not in self._sessions
 
-    def update_configs(self, configs: 'List[ClientConfig]') -> None:
-        self._configs.update(configs)
+    def update_configs(self) -> None:
+        self._configs.update()
+
+    def enable_config(self, config_name: str) -> None:
+        enable_in_project(self._window, config_name)
+        self.update_configs()
+        self._sublime.set_timeout_async(self.start_active_views, 500)
+        self._window.status_message("{} enabled, starting server...".format(config_name))
+
+    def disable_config(self, config_name: str) -> None:
+        disable_in_project(self._window, config_name)
+        self.update_configs()
+        self.end_session(config_name)
 
     def start_active_views(self) -> None:
         active_views = get_active_views(self._window)
@@ -408,7 +421,7 @@ class WindowManager(object):
                 "Server will be disabled for this window"
             ]).format(config.name, str(e))
 
-            self._configs.disable(config.name)
+            self._configs.disable_temporarily(config.name)
             self._sublime.message_dialog(message)
 
         if session:

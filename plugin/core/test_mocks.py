@@ -220,10 +220,16 @@ class MockConfigs(object):
         else:
             return {}
 
-    def update(self, configs: 'List[ClientConfig]') -> None:
+    def update(self) -> None:
         pass
 
-    def disable(self, config_name: str) -> None:
+    def enable_config(self, config_name: str) -> None:
+        pass
+
+    def disable_config(self, config_name: str) -> None:
+        pass
+
+    def disable_temporarily(self, config_name: str) -> None:
         pass
 
 

@@ -183,10 +183,10 @@ class ConfigRegistry(Protocol):
     def syntax_config_languages(self, view: ViewLike) -> 'Dict[str, LanguageConfig]':
         ...
 
-    def update(self, configs: 'List[ClientConfig]') -> None:
+    def update(self) -> None:
         ...
 
-    def disable(self, config_name: str) -> None:
+    def disable_temporarily(self, config_name: str) -> None:
         ...
 
 

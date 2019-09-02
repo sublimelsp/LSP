@@ -47,14 +47,15 @@ def get_expanding_variables(window: sublime.Window) -> dict:
     return variables
 
 
-def expand_variables_for_dict(window: sublime.Window, dict_: dict) -> dict:
-    for key, value in dict_.items():
+def expand_variables_for_dict(window: sublime.Window,
+                              d: Dict[str, Any]) -> Dict[str, Any]:
+    for key, value in d.items():
         if isinstance(value, dict):
-            dict_[key] = expand_variables_for_dict(window, value)
+            d[key] = expand_variables_for_dict(window, value)
         elif isinstance(value, str):
-            dict_[key] = sublime.expand_variables(value, get_expanding_variables(window))
+            d[key] = sublime.expand_variables(value, get_expanding_variables(window))
 
-    return dict_
+    return d
 
 
 def start_window_config(window: sublime.Window,

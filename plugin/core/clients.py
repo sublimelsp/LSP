@@ -10,9 +10,11 @@ assert Client and ClientConfig
 
 
 try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional, Set
-    assert Any and List and Dict and Tuple and Callable and Optional and Set
+    from typing import Any, List, Dict, Tuple, Callable, Optional, Set, TypeVar
+    assert Any and List and Dict and Tuple and Callable and Optional and Set and TypeVar
     assert Session
+
+    T = TypeVar('T')
 except ImportError:
     pass
 
@@ -47,15 +49,19 @@ def get_expanding_variables(window: sublime.Window) -> dict:
     return variables
 
 
-def expand_variables_for_dict(window: sublime.Window,
-                              d: Dict[str, Any]) -> Dict[str, Any]:
-    for key, value in d.items():
-        if isinstance(value, dict):
-            d[key] = expand_variables_for_dict(window, value)
-        elif isinstance(value, str):
-            d[key] = sublime.expand_variables(value, get_expanding_variables(window))
+def lsp_expand_variables(window: sublime.Window, var: 'T') -> 'T':
+    if isinstance(var, dict):
+        for key, value in var.items():
+            if isinstance(value, (dict, list, str)):
+                var[key] = lsp_expand_variables(window, value)
+    elif isinstance(var, list):
+        for idx, value in enumerate(var):
+            if isinstance(value, (dict, list, str)):
+                var[idx] = lsp_expand_variables(window, value)
+    elif isinstance(var, str):
+        var = sublime.expand_variables(var, get_expanding_variables(window))
 
-    return d
+    return var
 
 
 def start_window_config(window: sublime.Window,
@@ -66,7 +72,7 @@ def start_window_config(window: sublime.Window,
                         on_post_exit: 'Callable[[str], None]') -> 'Optional[Session]':
     args, env = get_window_env(window, config)
     config.binary_args = args
-    config.init_options = expand_variables_for_dict(window, config.init_options)
+    config.init_options = lsp_expand_variables(window, config.init_options)
     return create_session(config=config,
                           project_path=project_path,
                           env=env,

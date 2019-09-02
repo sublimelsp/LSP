@@ -22,7 +22,7 @@ except ImportError:
 def get_window_env(window: sublime.Window, config: ClientConfig) -> 'Tuple[List[str], Dict[str, str]]':
 
     # Create a dictionary of Sublime Text variables
-    variables = window.extract_variables()
+    variables = get_expanding_variables(window)
 
     # Expand language server command line environment variables
     expanded_args = list(

@@ -101,7 +101,7 @@ class LspColorListener(sublime_plugin.ViewEventListener):
 
             content = """
             <div style='padding: 0.4em;
-                        margin-top: 0.1em;
+                        margin-top: 0.2em;
                         border: 1px solid color(var(--foreground) alpha(0.25));
                         background-color: rgba({}, {}, {}, {})'>
             </div>""".format(red, green, blue, alpha)

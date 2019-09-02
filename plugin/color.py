@@ -41,7 +41,7 @@ class LspColorListener(sublime_plugin.ViewEventListener):
 
         self.enabled = self.session.has_capability('colorProvider')
         if self.enabled:
-            self.schedule_request()
+            self.send_color_request()
 
     def on_modified_async(self):
         if self.enabled:

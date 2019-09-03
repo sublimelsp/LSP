@@ -114,7 +114,6 @@ class ConfigManager(object):
     def update(self) -> None:
         for window in sublime.windows():
             if window.id() in self._managers:
-                debug('Pushing global client configs to window', window.id())
                 self._managers[window.id()].update(create_window_configs(window, self._configs))
 
 

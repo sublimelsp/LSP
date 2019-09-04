@@ -14,7 +14,6 @@ from .core.settings import settings, client_configs
 from .core.views import range_to_region
 from .core.protocol import Range
 from .core.configurations import is_supported_syntax
-from .core.events import global_events
 from .core.documents import is_transient_view
 
 

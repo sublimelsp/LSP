@@ -5,8 +5,8 @@ from .logging import debug
 PLUGIN_NAME = 'LSP'
 
 try:
-    from typing import List, Optional, Dict, Any
-    assert List and Optional and Dict and Any
+    from typing import List, Optional, Dict, Any, Callable
+    assert List and Optional and Dict and Any and Callable
 except ImportError:
     pass
 
@@ -86,6 +86,7 @@ class ClientConfigs(object):
         self._global_settings = dict()  # type: Dict[str, dict]
         self._external_configs = dict()  # type: Dict[str, ClientConfig]
         self.all = []  # type: List[ClientConfig]
+        self._listener = None  # type: Optional[Callable]
 
     def update(self, settings_obj: sublime.Settings):
         self._default_settings = read_dict_setting(settings_obj, "default_clients", {})
@@ -111,6 +112,8 @@ class ClientConfigs(object):
             self.all.append(read_client_config(config_name, merged_settings))
 
         debug('global configs', list('{}={}'.format(c.name, c.enabled) for c in self.all))
+        if self._listener:
+            self._listener()
 
     def _set_enabled(self, config_name: str, is_enabled: bool):
         if _settings_obj:
@@ -124,6 +127,9 @@ class ClientConfigs(object):
 
     def disable(self, config_name: str):
         self._set_enabled(config_name, False)
+
+    def set_listener(self, recipient: 'Callable') -> None:
+        self._listener = recipient
 
 
 _settings_obj = None  # type: Optional[sublime.Settings]

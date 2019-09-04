@@ -495,8 +495,6 @@ class WindowManager(object):
         document_sync = session.capabilities.get("textDocumentSync")
         if document_sync:
             self._documents.add_session(session)
-            print('publish', "initialized.{}".format(session.config.name))
-            global_events.publish("initialized.{}".format(session.config.name), session)
 
         global_events.subscribe('view.on_close', lambda view: self._handle_view_closed(view, session))
 

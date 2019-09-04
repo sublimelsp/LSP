@@ -24,7 +24,6 @@ class LspColorListener(sublime_plugin.ViewEventListener):
         self.color_phantom_set = None  # type: Optional[sublime.PhantomSet]
         self._stored_point = -1
         self.enabled = False
-        self.session = None
 
     @classmethod
     def is_applicable(cls, _settings):
@@ -34,12 +33,12 @@ class LspColorListener(sublime_plugin.ViewEventListener):
         return is_supported and not disabled
 
     def on_activated_async(self):
-        self.session = session_for_view(self.view)
-        if not self.session:
+        session = session_for_view(self.view)
+        if not session:
             self.initialize_session()
             return
 
-        self.enabled = self.session.has_capability('colorProvider')
+        self.enabled = session.has_capability('colorProvider')
         if self.enabled:
             self.send_color_request()
 
@@ -50,16 +49,15 @@ class LspColorListener(sublime_plugin.ViewEventListener):
     def initialize_session(self):
         config = config_for_scope(self.view)
         if config:
-            print('add listener', "initialized.{}".format(config.name))
-            global_events.subscribe("initialized.{}".format(config.name), self.on_session_initialized)
+            sublime.set_timeout_async(lambda: self.maybe_session_initialized(), 1000)
 
-    def on_session_initialized(self, session):
-        print('remove listener', 'initialized.{}'.format(session.config.name))
-        global_events.unsubscribe('initialized.{}'.format(session.config.name), self.on_session_initialized)
+    def maybe_session_initialized(self):
+        session = session_for_view(self.view)
+        if not session:
+            return
 
         self.enabled = session.has_capability('colorProvider')
         if self.enabled:
-            self.session = session
             self.send_color_request()
 
     def schedule_request(self):
@@ -80,12 +78,16 @@ class LspColorListener(sublime_plugin.ViewEventListener):
         if is_transient_view(self.view):
             return
 
+        session = session_for_view(self.view)
+        if not session:
+            return
+
         params = {
             "textDocument": {
                 "uri": filename_to_uri(self.view.file_name())
             }
         }
-        self.session.client.send_request(
+        session.client.send_request(
             Request.documentColor(params),
             self.handle_response
         )

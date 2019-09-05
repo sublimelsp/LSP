@@ -9,26 +9,12 @@ except ImportError:
 
 from .core.protocol import Request
 from .core.url import filename_to_uri
-from .core.registry import session_for_view
-from .core.settings import settings
+from .core.registry import session_for_view, config_for_scope
+from .core.settings import settings, client_configs
 from .core.views import range_to_region
 from .core.protocol import Range
-
-
-def send_color_request(view, on_response_recieved: 'Callable'):
-    session = session_for_view(view)
-    if not session or not session.has_capability('colorProvider'):
-        # the server doesn't support colors, just return
-        return
-
-    params = {
-        "textDocument": {
-            "uri": filename_to_uri(view.file_name())
-        }
-    }
-    session.client.send_request(
-        Request.documentColor(params),
-        lambda response: on_response_recieved(response))
+from .core.configurations import is_supported_syntax
+from .core.documents import is_transient_view
 
 
 class LspColorListener(sublime_plugin.ViewEventListener):
@@ -36,26 +22,72 @@ class LspColorListener(sublime_plugin.ViewEventListener):
         super().__init__(view)
         self.color_phantom_set = None  # type: Optional[sublime.PhantomSet]
         self._stored_point = -1
+        self.initialized = False
+        self.enabled = False
 
     @classmethod
     def is_applicable(cls, _settings):
-        return 'colorProvider' not in settings.disabled_capabilities
+        syntax = _settings.get('syntax')
+        is_supported = syntax and is_supported_syntax(syntax, client_configs.all)
+        disabled_by_user = 'colorProvider' in settings.disabled_capabilities
+        return is_supported and not disabled_by_user
 
     def on_activated_async(self):
-        self.schedule_request()
+        if not self.initialized:
+            self.initialize()
+
+    def initialize(self, is_retry=False):
+        config = config_for_scope(self.view)
+        if not config:
+            self.initialized = True  # no server enabled, re-open file to activate feature.
+
+        session = session_for_view(self.view)
+        if session:
+            self.initialized = True
+            self.enabled = session.has_capability('colorProvider')
+            if self.enabled:
+                self.send_color_request()
+        elif not is_retry:
+            # session may be starting, try again once in a second.
+            sublime.set_timeout_async(lambda: self.initialize(is_retry=True), 1000)
+        else:
+            self.initialized = True  # we retried but still no session available.
 
     def on_modified_async(self):
-        self.schedule_request()
+        if self.enabled:
+            self.schedule_request()
 
     def schedule_request(self):
-        current_point = self.view.sel()[0].begin()
+        sel = self.view.sel()
+        if len(sel) < 1:
+            return
+
+        current_point = sel[0].begin()
         if self._stored_point != current_point:
             self._stored_point = current_point
             sublime.set_timeout_async(lambda: self.fire_request(current_point), 800)
 
     def fire_request(self, current_point: int) -> None:
         if current_point == self._stored_point:
-            send_color_request(self.view, self.handle_response)
+            self.send_color_request()
+
+    def send_color_request(self):
+        if is_transient_view(self.view):
+            return
+
+        session = session_for_view(self.view)
+        if not session:
+            return
+
+        params = {
+            "textDocument": {
+                "uri": filename_to_uri(self.view.file_name())
+            }
+        }
+        session.client.send_request(
+            Request.documentColor(params),
+            self.handle_response
+        )
 
     def handle_response(self, response) -> None:
         phantoms = []
@@ -68,7 +100,7 @@ class LspColorListener(sublime_plugin.ViewEventListener):
 
             content = """
             <div style='padding: 0.4em;
-                        margin-top: 0.1em;
+                        margin-top: 0.2em;
                         border: 1px solid color(var(--foreground) alpha(0.25));
                         background-color: rgba({}, {}, {}, {})'>
             </div>""".format(red, green, blue, alpha)

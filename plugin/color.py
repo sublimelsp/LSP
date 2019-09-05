@@ -22,42 +22,40 @@ class LspColorListener(sublime_plugin.ViewEventListener):
         super().__init__(view)
         self.color_phantom_set = None  # type: Optional[sublime.PhantomSet]
         self._stored_point = -1
+        self.initialized = False
         self.enabled = False
 
     @classmethod
     def is_applicable(cls, _settings):
         syntax = _settings.get('syntax')
         is_supported = syntax and is_supported_syntax(syntax, client_configs.all)
-        disabled = 'colorProvider' in settings.disabled_capabilities
-        return is_supported and not disabled
+        disabled_by_user = 'colorProvider' in settings.disabled_capabilities
+        return is_supported and not disabled_by_user
 
     def on_activated_async(self):
-        session = session_for_view(self.view)
-        if not session:
-            self.initialize_session()
-            return
+        if not self.initialized:
+            self.initialize()
 
-        self.enabled = session.has_capability('colorProvider')
-        if self.enabled:
-            self.send_color_request()
+    def initialize(self, is_retry=False):
+        config = config_for_scope(self.view)
+        if not config:
+            self.initialized = True  # no server enabled, re-open file to activate feature.
+
+        session = session_for_view(self.view)
+        if session:
+            self.initialized = True
+            self.enabled = session.has_capability('colorProvider')
+            if self.enabled:
+                self.send_color_request()
+        elif not is_retry:
+            # session may be starting, try again once in a second.
+            sublime.set_timeout_async(lambda: self.initialize(is_retry=True), 1000)
+        else:
+            self.initialized = True  # we retried but still no session available.
 
     def on_modified_async(self):
         if self.enabled:
             self.schedule_request()
-
-    def initialize_session(self):
-        config = config_for_scope(self.view)
-        if config:
-            sublime.set_timeout_async(lambda: self.maybe_session_initialized(), 1000)
-
-    def maybe_session_initialized(self):
-        session = session_for_view(self.view)
-        if not session:
-            return
-
-        self.enabled = session.has_capability('colorProvider')
-        if self.enabled:
-            self.send_color_request()
 
     def schedule_request(self):
         sel = self.view.sel()

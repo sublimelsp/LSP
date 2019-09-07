@@ -1,6 +1,6 @@
 from .core.protocol import Request
 from .core.edit import parse_text_edit
-from .core.registry import client_for_view, LspTextCommand
+from .core.registry import LspTextCommand
 from .core.types import ViewLike
 from .core.url import filename_to_uri
 from .core.views import region_to_range
@@ -32,7 +32,7 @@ class LspFormatDocumentCommand(LspTextCommand):
         return self.has_client_with_capability('documentFormattingProvider')
 
     def run(self, edit):
-        client = client_for_view(self.view)
+        client = self.client_with_capability('documentFormattingProvider')
         if client:
             params = {
                 "textDocument": {
@@ -57,8 +57,8 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
                     return True
         return False
 
-    def run(self, _):
-        client = client_for_view(self.view)
+    def run(self, _) -> None:
+        client = self.client_with_capability('documentRangeFormattingProvider')
         if client:
             region = self.view.sel()[0]
             params = {

@@ -55,7 +55,7 @@ class WindowConfigManagerTests(unittest.TestCase):
         view = MockView(__file__)
         manager = WindowConfigManager([test_config])
         self.assertTrue(manager.is_supported(view))
-        self.assertEqual(manager.scope_config(view), test_config)
+        self.assertEqual(list(manager.scope_configs(view)), [test_config])
         self.assertTrue(manager.syntax_supported(view))
         self.assertEqual(manager.syntax_configs(view), [test_config])
         lang_configs = manager.syntax_config_languages(view)

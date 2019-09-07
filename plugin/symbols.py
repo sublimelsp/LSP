@@ -1,7 +1,7 @@
 from .core.logging import debug
 from .core.protocol import Request, Range
 from .core.protocol import SymbolKind
-from .core.registry import client_for_view, LspTextCommand
+from .core.registry import LspTextCommand
 from .core.url import filename_to_uri
 from .core.views import range_to_region
 
@@ -63,7 +63,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         return self.has_client_with_capability('documentSymbolProvider')
 
     def run(self, edit) -> None:
-        client = client_for_view(self.view)
+        client = self.client_with_capability('documentSymbolProvider')
         if client:
             params = {
                 "textDocument": {

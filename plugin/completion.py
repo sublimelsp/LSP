@@ -12,7 +12,7 @@ from .core.events import global_events
 from .core.settings import settings, client_configs
 from .core.logging import debug
 from .core.completion import parse_completion_response, format_completion
-from .core.registry import session_for_view, client_for_view
+from .core.registry import session_for_view, client_from_session
 from .core.configurations import is_supported_syntax
 from .core.documents import get_document_position, is_at_word
 from .core.sessions import Session
@@ -72,20 +72,18 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
     def initialize(self):
         self.initialized = True
-        session = session_for_view(self.view)
+        session = session_for_view(self.view, 'completionProvider')
         if session:
-            completionProvider = session.get_capability(
-                'completionProvider')
+            completionProvider = session.get_capability('completionProvider')
             # A language server may have an empty dict as CompletionOptions. In that case,
             # no trigger characters will be registered but we'll still respond to Sublime's
             # usual query for completions. So the explicit check for None is necessary.
-            if completionProvider is not None:
-                self.enabled = True
-                self.resolve = completionProvider.get('resolveProvider') or False
-                self.trigger_chars = completionProvider.get(
-                    'triggerCharacters') or []
-                if self.trigger_chars:
-                    self.register_trigger_chars(session)
+            self.enabled = True
+            self.resolve = completionProvider.get('resolveProvider') or False
+            self.trigger_chars = completionProvider.get(
+                'triggerCharacters') or []
+            if self.trigger_chars:
+                self.register_trigger_chars(session)
 
     def _view_language(self, config_name: str) -> 'Optional[str]':
         languages = self.view.settings().get('lsp_language')
@@ -243,14 +241,13 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         view = self.view
 
         # don't store client so we can handle restarts
-        client = client_for_view(view)
+        client = client_from_session(session_for_view(view, 'completionProvider', locations[0]))
         if not client:
             return
 
         if settings.complete_all_chars or self.is_after_trigger_character(locations[0]):
             global_events.publish("view.on_purge_changes", self.view)
             document_position = get_document_position(view, locations[0])
-            debug('getting completions, location', locations[0], 'prefix', prefix)
             if document_position:
                 client.send_request(
                     Request.complete(document_position),
@@ -261,7 +258,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
     def do_resolve(self, item) -> None:
         view = self.view
 
-        client = client_for_view(view)
+        client = client_from_session(session_for_view(view, 'completionProvider', self.last_location))
         if not client:
             return
 

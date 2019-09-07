@@ -1,6 +1,6 @@
 import sublime
 
-from .core.registry import client_for_view, LspTextCommand
+from .core.registry import LspTextCommand
 from .core.protocol import Request, Point
 from .core.documents import get_document_position, get_position, is_at_word
 from .core.url import uri_to_filename
@@ -27,7 +27,7 @@ class LspGotoCommand(LspTextCommand):
         return False
 
     def run(self, _, event=None) -> None:
-        client = client_for_view(self.view)
+        client = self.client_with_capability(self.goto_kind + "Provider")
         if client:
             pos = get_position(self.view, event)
             document_position = get_document_position(self.view, pos)

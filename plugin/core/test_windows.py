@@ -163,13 +163,13 @@ class MockConfigs(object):
         self.all = [test_config]
 
     def is_supported(self, view):
-        return self.scope_config(view) is not None
+        return any(self.scope_configs(view))
 
-    def scope_config(self, view, point=None):
+    def scope_configs(self, view, point=None):
         if view.file_name() is None:
-            return None
+            return [None]
         else:
-            return test_config
+            return [test_config]
 
     def syntax_configs(self, view):
         if view.settings().get("syntax") == "Plain Text":

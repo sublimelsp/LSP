@@ -7,7 +7,7 @@ try:
 except ImportError:
     pass
 
-from .core.registry import client_for_view, LspTextCommand
+from .core.registry import LspTextCommand
 from .core.protocol import Request
 from .diagnostics import get_point_diagnostics
 from .core.edit import parse_workspace_edit
@@ -17,9 +17,9 @@ from .core.registry import session_for_view
 from .core.settings import settings
 
 
-def send_code_action_request(view, on_response_recieved: 'Callable'):
-    session = session_for_view(view)
-    if not session or not session.has_capability('codeActionProvider'):
+def send_code_action_request(view, on_response_recieved: 'Callable') -> None:
+    session = session_for_view(view, 'codeActionProvider')
+    if not session:
         # the server doesn't support code actions, just return
         return
 
@@ -129,7 +129,7 @@ class LspCodeActionsCommand(LspTextCommand):
                     self.run_command(maybe_command)
 
     def run_command(self, command) -> None:
-        client = client_for_view(self.view)
+        client = self.client_with_capability('codeActionProvider')
         if client:
             client.send_request(
                 Request.executeCommand(command),

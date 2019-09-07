@@ -1,5 +1,5 @@
 import sublime
-from .core.registry import client_for_view, LspTextCommand
+from .core.registry import LspTextCommand
 from .core.protocol import Request
 from .core.rpc import Client
 
@@ -15,7 +15,7 @@ class LspExecuteCommand(LspTextCommand):
         super().__init__(view)
 
     def run(self, edit, command_name=None, command_args=None) -> None:
-        client = client_for_view(self.view)
+        client = self.client_with_capability('executeCommandProvider')
         if client and command_name:
             self.view.window().status_message("Running command {}".format(command_name))
             self._send_command(client, command_name, command_args)

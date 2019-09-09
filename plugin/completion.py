@@ -101,9 +101,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                             (trigger for trigger in completion_triggers if trigger.get('selector', None) == scope),
                             None
                         )
-                        if scope_trigger:
-                            scope_trigger['characters'] = "".join(self.trigger_chars)
-                        else:
+                        if not scope_trigger:  # do not override user's trigger settings.
                             completion_triggers.append({
                                 'characters': "".join(self.trigger_chars),
                                 'selector': scope

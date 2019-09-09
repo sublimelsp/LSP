@@ -84,15 +84,16 @@ class LspHoverCommand(LspTextCommand):
             self.show_hover(point, self.diagnostics_content(point_diagnostics))
 
     def request_symbol_hover(self, point) -> None:
-        session = session_for_view(self.view, point)
+        # todo: session_for_view looks up windowmanager twice (config and for sessions)
+        # can we memoize some part (eg. where no point is provided?)
+        session = session_for_view(self.view, 'hoverProvider', point)
         if session:
-            if session.has_capability('hoverProvider'):
-                document_position = get_document_position(self.view, point)
-                if document_position:
-                    if session.client:
-                        session.client.send_request(
-                            Request.hover(document_position),
-                            lambda response: self.handle_response(response, point))
+            document_position = get_document_position(self.view, point)
+            if document_position:
+                if session.client:
+                    session.client.send_request(
+                        Request.hover(document_position),
+                        lambda response: self.handle_response(response, point))
 
     def handle_response(self, response: 'Optional[Any]', point) -> None:
         all_content = ""

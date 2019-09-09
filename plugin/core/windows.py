@@ -11,9 +11,9 @@ from .rpc import Client
 import threading
 try:
     from typing_extensions import Protocol
-    from typing import Optional, List, Callable, Dict, Any
+    from typing import Optional, List, Callable, Dict, Any, Iterator
     from types import ModuleType
-    assert Optional and List and Callable and Dict and Session and Any and ModuleType
+    assert Optional and List and Callable and Dict and Session and Any and ModuleType and Iterator
     assert LanguageConfig
 except ImportError:
     pass
@@ -27,7 +27,7 @@ class ConfigRegistry(Protocol):
     def is_supported(self, view: ViewLike) -> bool:
         ...
 
-    def scope_config(self, view: ViewLike, point: 'Optional[int]' = None) -> 'Optional[ClientConfig]':
+    def scope_configs(self, view: ViewLike, point: 'Optional[int]' = None) -> 'Iterator[ClientConfig]':
         ...
 
     def syntax_configs(self, view: ViewLike) -> 'List[ClientConfig]':

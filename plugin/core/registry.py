@@ -15,8 +15,8 @@ from .clients import Client
 from .settings import settings, client_configs
 
 try:
-    from typing import Optional, List, Callable, Dict, Any
-    assert Optional and List and Callable and Dict and Any and ClientConfig and Client and Session
+    from typing import Optional, List, Callable, Dict, Any, Iterable
+    assert Optional and List and Callable and Dict and Any and ClientConfig and Client and Session and Iterable
 except ImportError:
     pass
 
@@ -53,45 +53,40 @@ def register_language_handler(handler: LanguageHandler) -> None:
         client_initialization_listeners[handler.name] = handler.on_initialized
 
 
-def client_for_view(view: sublime.View) -> 'Optional[Client]':
-    return _client_for_view_and_window(view, view.window())
-
-
-def session_for_view(view: sublime.View, point: 'Optional[int]' = None) -> 'Optional[Session]':
-    return _session_for_view_and_window(view, view.window(), point)
-
-
-def _session_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Window]',
-                                 point=None) -> 'Optional[Session]':
-    if not window:
-        debug("no window for view", view.file_name())
-        return None
-
-    config = config_for_scope(view, point)
-    if not config:
-        debug("no config found or enabled for view", view.file_name())
-        return None
-
-    session = windows.lookup(window).get_session(config.name)
-    if session:
-        if session.state == ClientStates.READY:
-            return session
-    return None
-
-
-def _client_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Window]') -> 'Optional[Client]':
-    session = _session_for_view_and_window(view, window)
-
+def client_from_session(session: 'Optional[Session]') -> 'Optional[Client]':
     if session:
         if session.client:
             return session.client
         else:
-            debug(session.config.name, "in state", session.state, " for view",
-                  view.file_name())
+            debug(session.config.name, "in state", session.state)
             return None
     else:
         debug('no session found')
         return None
+
+
+def sessions_for_view(view: sublime.View, point: 'Optional[int]' = None) -> 'Iterable[Session]':
+    return _sessions_for_view_and_window(view, view.window(), point)
+
+
+def session_for_view(view: sublime.View,
+                     capability: str,
+                     point: 'Optional[int]' = None) -> 'Optional[Session]':
+    return next((session for session in sessions_for_view(view, point)
+                 if session.has_capability(capability)), None)
+
+
+def _sessions_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Window]',
+                                  point=None) -> 'Iterable[Session]':
+    if not window:
+        debug("no window for view", view.file_name())
+        return []
+
+    manager = windows.lookup(window)
+    scope_configs = manager._configs.scope_configs(view, point)
+    sessions = (manager.get_session(config.name) for config in scope_configs)
+    ready_sessions = (session for session in sessions if session and session.state == ClientStates.READY)
+    return ready_sessions
 
 
 def unload_sessions(window):
@@ -106,17 +101,17 @@ handlers_dispatcher = LanguageHandlerDispatcher()
 windows = WindowRegistry(configs, documents, start_window_config, sublime, handlers_dispatcher)
 
 
-def config_for_scope(view: 'Any', point=None) -> 'Optional[ClientConfig]':
+def configs_for_scope(view: 'Any', point=None) -> 'Iterable[ClientConfig]':
     window = view.window()
     if window:
         # todo: don't expose _configs
-        return windows.lookup(window)._configs.scope_config(view, point)
-    return None
+        return windows.lookup(window)._configs.scope_configs(view, point)
+    return []
 
 
 def is_supported_view(view: sublime.View) -> bool:
     # TODO: perhaps make this check for a client instead of a config
-    if config_for_scope(view):
+    if configs_for_scope(view):
         return True
     else:
         return False
@@ -126,14 +121,14 @@ class LspTextCommand(sublime_plugin.TextCommand):
     def __init__(self, view):
         super().__init__(view)
 
-    def is_visible(self, event=None):
+    def is_visible(self, event=None) -> bool:
         return is_supported_view(self.view)
 
-    def has_client_with_capability(self, capability):
-        session = session_for_view(self.view)
-        if session and session.has_capability(capability):
-            return True
-        return False
+    def has_client_with_capability(self, capability) -> bool:
+        return session_for_view(self.view, capability) is not None
+
+    def client_with_capability(self, capability) -> 'Optional[Client]':
+        return client_from_session(session_for_view(self.view, capability))
 
 
 class LspRestartClientCommand(sublime_plugin.TextCommand):

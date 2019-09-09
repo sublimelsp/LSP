@@ -1,5 +1,7 @@
+import os
 import sublime
 from LSP.plugin.completion import CompletionHandler, CompletionState
+from LSP.plugin.core.registry import is_supported_view
 from unittesting import DeferrableTestCase
 from setup import (SUPPORTED_SYNTAX, text_config, add_config, remove_config,
                    TextDocumentTestCase)
@@ -9,6 +11,9 @@ try:
     assert Dict and Optional and List
 except ImportError:
     pass
+
+OPEN_DOCUMENT_DELAY = 100
+AFTER_INSERT_COMPLETION_DELAY = 1000 if os.getenv("TRAVIS") else 100
 
 label_completions = [dict(label='asdf'), dict(label='efgh')]
 completion_with_additional_edits = [
@@ -114,6 +119,7 @@ class InitializationTests(DeferrableTestCase):
             CompletionHandler.is_applicable(dict(syntax=SUPPORTED_SYNTAX)))
 
     def test_not_enabled(self):
+        self.assertTrue(is_supported_view(self.view))
         handler = CompletionHandler(self.view)
         self.assertFalse(handler.initialized)
         self.assertFalse(handler.enabled)
@@ -133,7 +139,7 @@ class InitializationTests(DeferrableTestCase):
 
 class QueryCompletionsTests(TextDocumentTestCase):
     def test_simple_label(self):
-        yield 100
+        yield OPEN_DOCUMENT_DELAY
         self.client.responses['textDocument/completion'] = label_completions
 
         handler = self.get_view_event_listener("on_query_completions")
@@ -162,7 +168,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 self.view.substr(sublime.Region(0, self.view.size())), 'asdf')
 
     def test_simple_inserttext(self):
-        yield 100
+        yield OPEN_DOCUMENT_DELAY
         self.client.responses[
             'textDocument/completion'] = insert_text_completions
         handler = self.get_view_event_listener("on_query_completions")
@@ -176,7 +182,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 insert_text_completions[0]["insertText"])
 
     def test_var_prefix_using_label(self):
-        yield 100
+        yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': '$'})
         self.view.run_command('move_to', {'to': 'eol'})
         self.client.responses[
@@ -196,7 +202,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Powershell: label='true', insertText='$true' (see https://github.com/tomv564/LSP/issues/294)
 
         """
-        yield 100
+        yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': '$'})
         self.view.run_command('move_to', {'to': 'eol'})
         self.client.responses[
@@ -216,7 +222,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         PHP language server: label='$someParam', textEdit='someParam' (https://github.com/tomv564/LSP/issues/368)
 
         """
-        yield 100
+        yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': '$'})
         self.view.run_command('move_to', {'to': 'eol'})
         self.client.responses[
@@ -236,7 +242,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Clangd: label=" const", insertText="const" (https://github.com/tomv564/LSP/issues/368)
 
         """
-        yield 100
+        yield OPEN_DOCUMENT_DELAY
         self.client.responses['textDocument/completion'] = space_added_in_label
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
@@ -253,7 +259,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Powershell: label="UniqueId", insertText="-UniqueId" (https://github.com/tomv564/LSP/issues/572)
 
         """
-        yield 100
+        yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': '-'})
         self.view.run_command('move_to', {'to': 'eol'})
 
@@ -275,7 +281,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Metals: label="override def myFunction(): Unit"
 
         """
-        yield 100
+        yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': '  def myF'})
         self.view.run_command('move_to', {'to': 'eol'})
 
@@ -288,7 +294,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('insert_best_completion', {})
             self.view.run_command("insert_best_completion", {})
-            yield 100
+            yield AFTER_INSERT_COMPLETION_DELAY
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 '  override def myFunction(): Unit = ???')
@@ -300,7 +306,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         See https://github.com/tomv564/LSP/issues/645
 
         """
-        yield 100
+        yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': 'List.'})
         self.view.run_command('move_to', {'to': 'eol'})
 
@@ -313,13 +319,13 @@ class QueryCompletionsTests(TextDocumentTestCase):
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('insert_best_completion', {})
             self.view.run_command("insert_best_completion", {})
-            yield 100
+            yield AFTER_INSERT_COMPLETION_DELAY
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'List.apply()')
 
     def test_additional_edits(self):
-        yield 100
+        yield OPEN_DOCUMENT_DELAY
         self.client.responses[
             'textDocument/completion'] = completion_with_additional_edits
         handler = self.get_view_event_listener("on_query_completions")
@@ -330,13 +336,13 @@ class QueryCompletionsTests(TextDocumentTestCase):
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('insert_best_completion', {})
             self.view.run_command("insert_best_completion", {})
-            yield 100
+            yield AFTER_INSERT_COMPLETION_DELAY
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'import asdf;\nasdf')
 
     def test_resolve_for_additional_edits(self):
-        yield 100
+        yield OPEN_DOCUMENT_DELAY
         self.client.responses['textDocument/completion'] = label_completions
         self.client.responses[
             'completionItem/resolve'] = completion_with_additional_edits[0]
@@ -353,7 +359,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('insert_best_completion', {})
             self.view.run_command("insert_best_completion", {})
-            yield 100
+            yield AFTER_INSERT_COMPLETION_DELAY
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'import asdf;\nasdf')

@@ -1,7 +1,7 @@
 import sublime_plugin
 import sublime
 from .core.protocol import Request
-from .core.registry import client_for_view, LspTextCommand
+from .core.registry import LspTextCommand
 from .core.url import uri_to_filename
 from .symbols import format_symbol_kind
 import os
@@ -63,7 +63,7 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
     def run(self, edit, symbol_query_input: str = "") -> None:
         if symbol_query_input:
             request = Request.workspaceSymbol({"query": symbol_query_input})
-            client = client_for_view(self.view)
+            client = self.client_with_capability('workspaceSymbolProvider')
             if client:
                 self.view.set_status("lsp_workspace_symbols", "Searching for '{}'...".format(symbol_query_input))
                 client.send_request(request, lambda r: self._handle_response(symbol_query_input, r), self._handle_error)

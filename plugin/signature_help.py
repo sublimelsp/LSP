@@ -11,7 +11,7 @@ except ImportError:
     pass
 
 from .core.configurations import is_supported_syntax
-from .core.registry import session_for_view, client_for_view
+from .core.registry import session_for_view, client_from_session
 from .core.documents import get_document_position
 from .core.events import global_events
 from .core.protocol import Request
@@ -65,7 +65,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         return syntax and is_supported_syntax(syntax, client_configs.all)
 
     def initialize(self):
-        session = session_for_view(self.view)
+        session = session_for_view(self.view, 'signatureHelpProvider')
         if session:
             signatureHelpProvider = session.get_capability(
                 'signatureHelpProvider')
@@ -93,7 +93,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                     self.view.hide_popup()
 
     def request_signature_help(self, point) -> None:
-        client = client_for_view(self.view)
+        client = client_from_session(session_for_view(self.view, 'signatureHelpProvider', point))
         if client:
             global_events.publish("view.on_purge_changes", self.view)
             document_position = get_document_position(self.view, point)

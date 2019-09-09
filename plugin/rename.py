@@ -1,5 +1,5 @@
 import sublime_plugin
-from .core.registry import client_for_view, LspTextCommand
+from .core.registry import LspTextCommand
 from .core.protocol import Request
 from .core.edit import parse_workspace_edit
 from .core.documents import get_document_position, get_position, is_at_word
@@ -58,7 +58,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         self.request_rename(params, new_name)
 
     def request_rename(self, params, new_name) -> None:
-        client = client_for_view(self.view)
+        client = self.client_with_capability('renameProvider')
         if client:
             params["newName"] = new_name
             client.send_request(Request.rename(params), self.handle_response)

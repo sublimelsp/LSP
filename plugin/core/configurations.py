@@ -11,9 +11,9 @@ assert ClientConfig
 
 try:
     import sublime
-    from typing import Any, List, Dict, Tuple, Callable, Optional
+    from typing import Any, List, Dict, Tuple, Callable, Optional, Iterator
     assert sublime
-    assert Any and List and Dict and Tuple and Callable and Optional
+    assert Any and List and Dict and Tuple and Callable and Optional and Iterator
     assert ViewLike and WindowLike and ConfigRegistry and LanguageConfig
 except ImportError:
     pass
@@ -21,33 +21,37 @@ except ImportError:
 
 def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]',
                             point: 'Optional[int]' = None) -> 'Optional[ClientConfig]':
+    return next(get_scope_client_configs(view, configs, point), None)
+
+
+def get_scope_client_configs(view: 'sublime.View', configs: 'List[ClientConfig]',
+                             point: 'Optional[int]' = None) -> 'Iterator[ClientConfig]':
     # When there are multiple server configurations, all of which are for
     # similar scopes (e.g. 'source.json', 'source.json.sublime.settings') the
     # configuration with the most specific scope (highest ranked selector)
     # in the current position is preferred.
-    scope_score = 0
-    scope_client_config = None
     if point is None:
         sel = view.sel()
         if len(sel) > 0:
             point = sel[0].begin()
 
     languages = view.settings().get('lsp_language', None)
+    scope_configs = []  # type: List[Tuple[ClientConfig, Optional[int]]]
 
     for config in configs:
         if config.enabled:
             if languages is None or config.name in languages:
                 for language in config.languages:
                     for scope in language.scopes:
+                        score = 0
                         if point is not None:
                             score = view.score_selector(point, scope)
-                            # if score > 0:
-                            #     debug('scope match score', scope, config.name, score)
-                            if score > scope_score:
-                                scope_score = score
-                                scope_client_config = config
-    # debug('chose ', scope_client_config.name if scope_client_config else None)
-    return scope_client_config
+                        if score > 0:
+                            scope_configs.append((config, score))
+                            # debug('scope {} score {}'.format(scope, score))
+
+    return (config_score[0] for config_score in sorted(
+        scope_configs, key=lambda config_score: config_score[1], reverse=True))
 
 
 def get_global_client_config(view: 'sublime.View', global_configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':
@@ -122,10 +126,10 @@ class WindowConfigManager(object):
         self.all = configs
 
     def is_supported(self, view: 'Any') -> bool:
-        return self.scope_config(view) is not None
+        return any(self.scope_configs(view))
 
-    def scope_config(self, view: 'Any', point=None) -> 'Optional[ClientConfig]':
-        return get_scope_client_config(view, self.all, point)
+    def scope_configs(self, view: 'Any', point=None) -> 'Iterator[ClientConfig]':
+        return get_scope_client_configs(view, self.all, point)
 
     def syntax_configs(self, view: 'Any') -> 'List[ClientConfig]':
         syntax = view.settings().get("syntax")

@@ -8,7 +8,7 @@ from .core.configurations import (
     create_window_configs,
     get_global_client_config
 )
-from .core.registry import config_for_scope, windows
+from .core.registry import configs_for_scope, windows
 from .core.events import global_events
 from .core.workspace import enable_in_project, disable_in_project
 
@@ -19,8 +19,9 @@ except ImportError:
     pass
 
 
+# todo: delete this feature
 def detect_supportable_view(view: sublime.View):
-    config = config_for_scope(view)
+    config = configs_for_scope(view)
     if not config:
         available_config = get_global_client_config(view, client_configs.all)
         if available_config:

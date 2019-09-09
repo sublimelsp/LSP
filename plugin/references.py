@@ -5,7 +5,7 @@ import linecache
 from .core.documents import is_at_word, get_position, get_document_position
 from .core.panels import ensure_panel
 from .core.protocol import Request, Point
-from .core.registry import client_for_view, LspTextCommand
+from .core.registry import LspTextCommand
 from .core.settings import PLUGIN_NAME, settings
 from .core.url import uri_to_filename
 from .core.workspace import get_project_path
@@ -33,7 +33,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         return False
 
     def run(self, edit, event=None):
-        client = client_for_view(self.view)
+        client = self.client_with_capability('referencesProvider')
         if client:
             pos = get_position(self.view, event)
             document_position = get_document_position(self.view, pos)

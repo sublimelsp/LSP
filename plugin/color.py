@@ -9,7 +9,7 @@ except ImportError:
 
 from .core.protocol import Request
 from .core.url import filename_to_uri
-from .core.registry import session_for_view, config_for_scope
+from .core.registry import session_for_view, sessions_for_view, client_from_session, configs_for_scope
 from .core.settings import settings, client_configs
 from .core.views import range_to_region
 from .core.protocol import Range
@@ -37,15 +37,14 @@ class LspColorListener(sublime_plugin.ViewEventListener):
             self.initialize()
 
     def initialize(self, is_retry=False):
-        config = config_for_scope(self.view)
-        if not config:
+        configs = configs_for_scope(self.view)
+        if not configs:
             self.initialized = True  # no server enabled, re-open file to activate feature.
-
-        session = session_for_view(self.view)
-        if session:
+        sessions = list(sessions_for_view(self.view))
+        if sessions:
             self.initialized = True
-            self.enabled = session.has_capability('colorProvider')
-            if self.enabled:
+            if any(session.has_capability('colorProvider') for session in sessions):
+                self.enabled = True
                 self.send_color_request()
         elif not is_retry:
             # session may be starting, try again once in a second.
@@ -75,19 +74,17 @@ class LspColorListener(sublime_plugin.ViewEventListener):
         if is_transient_view(self.view):
             return
 
-        session = session_for_view(self.view)
-        if not session:
-            return
-
-        params = {
-            "textDocument": {
-                "uri": filename_to_uri(self.view.file_name())
+        client = client_from_session(session_for_view(self.view, 'colorProvider'))
+        if client:
+            params = {
+                "textDocument": {
+                    "uri": filename_to_uri(self.view.file_name())
+                }
             }
-        }
-        session.client.send_request(
-            Request.documentColor(params),
-            self.handle_response
-        )
+            client.send_request(
+                Request.documentColor(params),
+                self.handle_response
+            )
 
     def handle_response(self, response) -> None:
         phantoms = []

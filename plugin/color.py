@@ -40,11 +40,10 @@ class LspColorListener(sublime_plugin.ViewEventListener):
         configs = configs_for_scope(self.view)
         if not configs:
             self.initialized = True  # no server enabled, re-open file to activate feature.
-
-        sessions = sessions_for_view(self.view)
+        sessions = list(sessions_for_view(self.view))
         if sessions:
             self.initialized = True
-            if next((session for session in sessions if session.has_capability('colorProvider')), None):
+            if any(session.has_capability('colorProvider') for session in sessions):
                 self.enabled = True
                 self.send_color_request()
         elif not is_retry:

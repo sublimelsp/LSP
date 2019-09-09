@@ -48,9 +48,10 @@ def get_scope_client_configs(view: 'sublime.View', configs: 'List[ClientConfig]'
                             score = view.score_selector(point, scope)
                         if score > 0:
                             scope_configs.append((config, score))
-                            debug('scope {} score {}'.format(scope, score))
+                            # debug('scope {} score {}'.format(scope, score))
 
-    return map(lambda pair: pair[0], sorted(scope_configs, key=lambda config_score: config_score[1], reverse=True))
+    return (config_score[0] for config_score in sorted(
+        scope_configs, key=lambda config_score: config_score[1], reverse=True))
 
 
 def get_global_client_config(view: 'sublime.View', global_configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':

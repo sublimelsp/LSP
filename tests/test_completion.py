@@ -1,5 +1,6 @@
 import sublime
 from LSP.plugin.completion import CompletionHandler, CompletionState
+from LSP.plugin.core.registry import is_supported_view
 from unittesting import DeferrableTestCase
 from setup import (SUPPORTED_SYNTAX, text_config, add_config, remove_config,
                    TextDocumentTestCase)
@@ -114,6 +115,7 @@ class InitializationTests(DeferrableTestCase):
             CompletionHandler.is_applicable(dict(syntax=SUPPORTED_SYNTAX)))
 
     def test_not_enabled(self):
+        self.assertTrue(is_supported_view(self.view))
         handler = CompletionHandler(self.view)
         self.assertFalse(handler.initialized)
         self.assertFalse(handler.enabled)

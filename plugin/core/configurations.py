@@ -43,11 +43,12 @@ def get_scope_client_configs(view: 'sublime.View', configs: 'List[ClientConfig]'
             if languages is None or config.name in languages:
                 for language in config.languages:
                     for scope in language.scopes:
-                        score = None
+                        score = 0
                         if point is not None:
                             score = view.score_selector(point, scope)
-                        scope_configs.append((config, score))
-                        debug('scope {} score {}'.format(scope, score))
+                        if score > 0:
+                            scope_configs.append((config, score))
+                            debug('scope {} score {}'.format(scope, score))
 
     return map(lambda pair: pair[0], sorted(scope_configs, key=lambda config_score: config_score[1], reverse=True))
 

@@ -5,10 +5,9 @@ import linecache
 from .core.documents import is_at_word, get_position, get_document_position
 from .core.panels import ensure_panel
 from .core.protocol import Request, Point
-from .core.registry import LspTextCommand
+from .core.registry import LspTextCommand, windows
 from .core.settings import PLUGIN_NAME, settings
 from .core.url import uri_to_filename
-from .core.workspace import get_project_path
 
 try:
     from typing import List, Dict, Optional
@@ -61,7 +60,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         word_region = self.view.word(pos)
         word = self.view.substr(word_region)
 
-        base_dir = get_project_path(window)
+        base_dir = windows.lookup(window).get_project_path()
         formatted_references = self._get_formatted_references(response, base_dir)
 
         if settings.show_references_in_quick_panel:

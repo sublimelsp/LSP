@@ -6,7 +6,7 @@ from .protocol import Notification, Response
 from .edit import parse_workspace_edit
 from .sessions import Session
 from .url import filename_to_uri
-from .workspace import get_project_path
+from .workspace import get_project_path, get_active_view_path
 from .rpc import Client
 import threading
 try:
@@ -324,6 +324,7 @@ class WindowManager(object):
         self._handlers = handler_dispatcher
         self._restarting = False
         self._project_path = get_project_path(self._window)
+        self._projectless_root_path = None  # type: Optional[str]
         self._diagnostics.set_on_updated(
             lambda file_path, client_name:
                 global_events.publish("document.diagnostics",
@@ -375,7 +376,8 @@ class WindowManager(object):
                 self._start_client(config)
 
     def _start_client(self, config: ClientConfig):
-        project_path = get_project_path(self._window)
+        project_path = self._ensure_project_path()
+
         if project_path is None:
             debug('Cannot start without a project folder')
             return
@@ -440,6 +442,17 @@ class WindowManager(object):
         if config_name in self._sessions:
             debug("unloading session", config_name)
             self._sessions[config_name].end()
+
+    def _ensure_project_path(self) -> 'Optional[str]':
+        if self._project_path is None:
+            self._project_path = get_project_path(self._window)
+            if self._project_path is None and self._projectless_root_path is None:
+                # the projectless fallback will only be set once per window.
+                self._projectless_root_path = get_active_view_path(self._window)
+        return self._project_path or self._projectless_root_path
+
+    def get_project_path(self) -> 'Optional[str]':
+        return self._project_path or self._projectless_root_path
 
     def _end_old_sessions(self):
         current_project_path = get_project_path(self._window)

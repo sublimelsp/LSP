@@ -327,7 +327,7 @@ class WindowManager(object):
         self._diagnostics.set_on_updated(
             lambda file_path, client_name, diagnostics:
                 global_events.publish("document.diagnostics",
-                                      DiagnosticsUpdate(self._window, client_name, file_path, diagnostics)))
+                                      DiagnosticsUpdate(self._window, client_name, file_path)))
         self._on_closed = on_closed
         self._is_closing = False
         self._initialization_lock = threading.Lock()

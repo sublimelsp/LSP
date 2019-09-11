@@ -128,7 +128,7 @@ def format_diagnostic(diagnostic: Diagnostic) -> str:
 phantom_sets_by_buffer = {}  # type: Dict[int, sublime.PhantomSet]
 
 
-def update_diagnostics_phantoms(view: sublime.View, diagnostics: 'List[Diagnostic]'):
+def update_diagnostics_phantoms(view: sublime.View, diagnostics: 'List[Diagnostic]') -> None:
     global phantom_sets_by_buffer
 
     buffer_id = view.buffer_id()
@@ -171,13 +171,20 @@ def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic
         view.erase_regions(region_name)
 
 
-def update_diagnostics_in_view(view: sublime.View, diagnostics: 'List[Diagnostic]'):
+def update_diagnostics_in_view(view: sublime.View):
     if view and view.is_valid():
-        update_diagnostics_phantoms(view, diagnostics)
-        for severity in range(
-                DiagnosticSeverity.Error,
-                DiagnosticSeverity.Error + settings.show_diagnostics_severity_level):
-            update_diagnostics_regions(view, diagnostics, severity)
+        file_diagnostics = get_view_diagnostics(view)
+        if file_diagnostics:
+            combined_diagnostics = []  # type: List[Diagnostic]
+            for origin, diagnostics in file_diagnostics.items():
+                combined_diagnostics.extend(diagnostics)
+
+            for severity in range(
+                    DiagnosticSeverity.Error,
+                    DiagnosticSeverity.Error + settings.show_diagnostics_severity_level):
+                update_diagnostics_regions(view, combined_diagnostics, severity)
+
+            update_diagnostics_phantoms(view, combined_diagnostics)
 
 
 def get_view_diagnostics(view):
@@ -242,7 +249,7 @@ def handle_diagnostics(update: DiagnosticsUpdate):
     window = update.window
     view = window.find_open_file(update.file_path)
     if view:
-        update_diagnostics_in_view(view, update.diagnostics)
+        update_diagnostics_in_view(view)
         if settings.show_diagnostics_count_in_view_status:
             update_diagnostics_in_status_bar(view)
     else:

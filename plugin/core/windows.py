@@ -325,7 +325,7 @@ class WindowManager(object):
         self._restarting = False
         self._project_path = get_project_path(self._window)
         self._diagnostics.set_on_updated(
-            lambda file_path, client_name, diagnostics:
+            lambda file_path, client_name:
                 global_events.publish("document.diagnostics",
                                       DiagnosticsUpdate(self._window, client_name, file_path)))
         self._on_closed = on_closed

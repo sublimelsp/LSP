@@ -175,16 +175,12 @@ def update_diagnostics_in_view(view: sublime.View):
     if view and view.is_valid():
         file_diagnostics = get_view_diagnostics(view)
         if file_diagnostics:
-            combined_diagnostics = []  # type: List[Diagnostic]
-            for origin, diagnostics in file_diagnostics.items():
-                combined_diagnostics.extend(diagnostics)
-
             for severity in range(
                     DiagnosticSeverity.Error,
                     DiagnosticSeverity.Error + settings.show_diagnostics_severity_level):
-                update_diagnostics_regions(view, combined_diagnostics, severity)
+                update_diagnostics_regions(view, file_diagnostics, severity)
 
-            update_diagnostics_phantoms(view, combined_diagnostics)
+            update_diagnostics_phantoms(view, file_diagnostics)
 
 
 def get_view_diagnostics(view):

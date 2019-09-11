@@ -39,25 +39,6 @@ def get_active_view_path(window: 'Any') -> 'Optional[str]':
         return None  # https://github.com/tomv564/LSP/issues/219
 
 
-def get_common_parent(paths: 'List[str]') -> str:
-    """
-    Get the common parent directory of multiple paths.
-
-    Python 3.5+ includes os.path.commonpath which does this, however Sublime
-    currently embeds Python 3.3.
-    """
-    return os.path.commonprefix([path + '/' for path in paths]).rstrip('/')
-
-
-def is_in_workspace(window: 'Any', file_path: str) -> bool:
-    workspace_path = get_project_path(window)
-    if workspace_path is None:
-        return False
-
-    common_dir = get_common_parent([workspace_path, file_path])
-    return workspace_path == common_dir
-
-
 def enable_in_project(window, config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):

@@ -19,7 +19,6 @@ from .core.panels import ensure_panel
 from .core.protocol import Diagnostic, DiagnosticSeverity
 from .core.settings import settings, PLUGIN_NAME, client_configs
 from .core.views import range_to_region
-from .core.workspace import get_project_path
 from .core.registry import windows
 
 
@@ -309,7 +308,7 @@ def update_diagnostics_panel(window: sublime.Window):
         debug('ignoring update to closed window')
         return
 
-    base_dir = get_project_path(window)
+    base_dir = windows.lookup(window).get_project_path()
 
     diagnostics_by_file = get_window_diagnostics(window)
     if diagnostics_by_file is not None:

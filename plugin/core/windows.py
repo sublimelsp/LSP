@@ -451,6 +451,9 @@ class WindowManager(object):
                 self._projectless_root_path = get_active_view_path(self._window)
         return self._project_path or self._projectless_root_path
 
+    def get_project_path(self) -> 'Optional[str]':
+        return self._project_path or self._projectless_root_path
+
     def _end_old_sessions(self):
         current_project_path = get_project_path(self._window)
         if current_project_path != self._project_path:

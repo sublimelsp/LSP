@@ -174,21 +174,19 @@ def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic
 def update_diagnostics_in_view(view: sublime.View):
     if view and view.is_valid():
         file_diagnostics = get_view_diagnostics(view)
-        if file_diagnostics:
-            for severity in range(
-                    DiagnosticSeverity.Error,
-                    DiagnosticSeverity.Error + settings.show_diagnostics_severity_level):
-                update_diagnostics_regions(view, file_diagnostics, severity)
+        for severity in range(
+                DiagnosticSeverity.Error,
+                DiagnosticSeverity.Error + settings.show_diagnostics_severity_level):
+            update_diagnostics_regions(view, file_diagnostics, severity)
 
-            update_diagnostics_phantoms(view, file_diagnostics)
+        update_diagnostics_phantoms(view, file_diagnostics)
 
 
-def get_view_diagnostics(view):
+def get_view_diagnostics(view) -> 'List[Diagnostic]':
     if view.window():
         if view.file_name():
             return windows.lookup(view.window())._diagnostics.get_by_path(view.file_name())
-        else:
-            return []
+    return []
 
 
 def get_line_diagnostics(view, point):

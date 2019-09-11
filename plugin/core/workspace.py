@@ -23,20 +23,19 @@ def get_active_view_path(window: 'Any') -> 'Optional[str]':
     """
     Returns the path containing the active view, if any.
     """
+    debug("couldn't determine project directory since no folders are open!")
     view = window.active_view()
     if view:
         filename = view.file_name()
         if filename and os.path.exists(filename):  # https://github.com/tomv564/LSP/issues/644
             project_path = os.path.dirname(filename)
-            debug("Couldn't determine project directory since no folders are open!",
-                  "Using", project_path, "as a fallback.")
+            debug("using", project_path, "as a fallback.")
             return project_path
         else:
-            debug("Couldn't determine project directory since no folders are open",
-                  "and the current file isn't saved on the disk.")
+            debug("no fallback path possible because the current file isn't saved to disk.")
             return None
     else:
-        debug("No view is active in current window")
+        debug("no view is active in current window")
         return None  # https://github.com/tomv564/LSP/issues/219
 
 

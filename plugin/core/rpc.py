@@ -72,7 +72,7 @@ class Client(object):
         self.transport = transport  # type: Optional[Transport]
         self.transport.start(self.receive_payload, self.on_transport_closed)
         self.request_id = 0
-        self._response_handlers = {}  # type: Dict[int, Tuple[Optional[Callable], Optional[Callable]]]
+        self._response_handlers = {}  # type: Dict[int, Tuple[Optional[Callable], Optional[Callable[[Any], None]]]]
         self._request_handlers = {}  # type: Dict[str, Callable]
         self._notification_handlers = {}  # type: Dict[str, Callable]
         self.exiting = False
@@ -82,7 +82,7 @@ class Client(object):
         self.settings = settings
 
     def send_request(self, request: Request, handler: 'Callable[[Optional[Any]], None]',
-                     error_handler: 'Optional[Callable]' = None) -> None:
+                     error_handler: 'Optional[Callable[[Any], None]]' = None) -> None:
         self.request_id += 1
         if self.transport is not None:
             debug(' --> ' + request.method)
@@ -91,7 +91,7 @@ class Client(object):
         else:
             debug('unable to send', request.method)
             if error_handler is not None:
-                error_handler()
+                error_handler(None)
 
     def send_notification(self, notification: Notification) -> None:
         if self.transport is not None:
@@ -170,6 +170,8 @@ class Client(object):
                 debug("No handler found for id", request_id)
         elif "result" not in response and "error" in response:
             error = response["error"]
+            if self.settings.log_payloads:
+                debug('ERR: ' + str(error))
             if error_handler:
                 error_handler(error)
             else:

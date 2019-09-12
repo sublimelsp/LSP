@@ -166,12 +166,12 @@ class Session(object):
         if self._on_post_initialize:
             self._on_post_initialize(self)
 
-    def end(self):
+    def end(self) -> None:
         self.state = ClientStates.STOPPING
         self.client.send_request(
             Request.shutdown(),
             lambda result: self._handle_shutdown_result(),
-            lambda: self._handle_shutdown_result())
+            lambda error: self._handle_shutdown_result())
 
     def _handle_shutdown_result(self):
         self.client.exit()

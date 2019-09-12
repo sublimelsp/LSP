@@ -2,6 +2,7 @@ import traceback
 
 log_debug = False
 log_exceptions = True
+log_server = True
 
 
 def set_debug_logging(logging_enabled: bool) -> None:
@@ -12,6 +13,11 @@ def set_debug_logging(logging_enabled: bool) -> None:
 def set_exception_logging(logging_enabled: bool) -> None:
     global log_exceptions
     log_exceptions = logging_enabled
+
+
+def set_server_logging(logging_enabled: bool) -> None:
+    global log_server
+    log_server = logging_enabled
 
 
 def debug(*args):
@@ -28,7 +34,8 @@ def exception_log(message: str, ex) -> None:
 
 
 def server_log(server_name, *args) -> None:
-    printf(*args, prefix=server_name)
+    if log_server:
+        printf(*args, prefix=server_name)
 
 
 def printf(*args, prefix='LSP'):

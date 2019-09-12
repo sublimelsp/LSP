@@ -28,44 +28,9 @@ Older flow-language-server: [github](https://github.com/flowtype/flow-language-s
 
 ### Vue (Javascript)<a name="vue"></a>
 
-See: [npm package](https://www.npmjs.com/package/vue-language-server)
+See: [LSP-vue](https://packagecontrol.io/packages/LSP-vue)
 
-Client configuration:
-```
-"vue-ls":{
-  "command": [
-    "vls"
-    // note: you may need to use the absolute path to the language server binary
-  ],
-  "enabled": true,
-  "languageId": "vue",
-  "scopes": ["text.html.vue"],
-  "syntaxes": ["Vue Component"],
-  "initializationOptions": {
-    "config": {
-      "vetur": {
-        "useWorkspaceDependencies": false,
-        "validation": { "template": true, "style": true, "script": true },
-        "completion": { "autoImport": false, "useScaffoldSnippets": false, "tagCasing": "kebab" },
-        "format": {
-          "defaultFormatter": {"js": "none", "ts": "none"},
-          "defaultFormatterOptions": {},
-          "scriptInitialIndent": false,
-          "styleInitialIndent": false
-        }
-      },
-      "css": {},
-      "html": {"suggest": {} },
-      "javascript": {"format": {} },
-      "typescript": {"format": {} },
-      "emmet": {},
-      "stylusSupremacy": {}
-    }
-  }
-}
-```
-
-Be sure to install "Vue Syntax Highlight" from Package Control.
+Be sure to install [Vue Syntax Highlight](https://packagecontrol.io/packages/Vue%20Syntax%20Highlight) from Package Control.
 
 ### Python<a name="python"></a>
 

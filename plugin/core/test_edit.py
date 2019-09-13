@@ -58,14 +58,14 @@ class SortByApplicationOrderTests(unittest.TestCase):
     def test_empty_sort(self):
         self.assertEqual(sort_by_application_order([]), [])
 
-    def test_sorts_backwards(self):
+    def test_sorts_in_application_order(self):
         edits = [
             ((0, 0), (0, 0), 'b'),
             ((0, 0), (0, 0), 'a'),
             ((0, 2), (0, 2), 'c')
         ]
         # expect 'c' (higher start), 'a' now reverse order before 'b'
-        sorted = sort_by_application_order(edits)
-        self.assertEqual(sorted[0][2], 'c')
-        self.assertEqual(sorted[1][2], 'a')
-        self.assertEqual(sorted[2][2], 'b')
+        sorted_edits = sort_by_application_order(edits)
+        self.assertEqual(sorted_edits[0][2], 'b')
+        self.assertEqual(sorted_edits[1][2], 'a')
+        self.assertEqual(sorted_edits[2][2], 'c')

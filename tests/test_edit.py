@@ -20,17 +20,20 @@ class ApplyDocumentEditTests(DeferrableTestCase):
             'c'
         )
         file_changes = [
-            ((2, 0), (3, 0), ''),  # note out-of-bounds end position
-            ((3, 0), (3, 0), 'c\n')  # note out-of-bounds end position
+            ((2, 0), (3, 0), ''),  # out-of-bounds end position, but this is fine
+            ((3, 0), (3, 0), 'c\n')  # out-of-bounds start and end, this line doesn't exist
         ]
         expected = (
             'a\n'
             'b\n'
             'c\n'
         )
-        # The chain of events is like this:
+        # Old behavior:
         # 1) first we end up with ('a\n', 'b\n', 'cc\n')
         # 2) then we end up with ('a\n', 'b\n', '')
+        # New behavior:
+        # 1) line index 3 is "created" ('a\n', 'b\n', 'c\n', c\n'))
+        # 2) deletes line index 2.
         self.run_test(original, expected, file_changes)
 
     def test_apply(self):

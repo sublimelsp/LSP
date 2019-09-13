@@ -32,7 +32,7 @@ def parse_text_edit(text_edit: 'Dict[str, Any]') -> 'TextEdit':
     )
 
 
-def sort_by_application_order(changes: 'Iterable[TextEdit]') -> 'Iterable[TextEdit]':
+def sort_by_application_order(changes: 'Iterable[TextEdit]') -> 'List[TextEdit]':
     # The spec reads:
     # > However, it is possible that multiple edits have the same start position: multiple
     # > inserts, or any number of inserts followed by a single remove or replace edit. If
@@ -41,4 +41,4 @@ def sort_by_application_order(changes: 'Iterable[TextEdit]') -> 'Iterable[TextEd
     # So we sort by start position. But if multiple text edits start at the same position,
     # we use the index in the array as the key.
 
-    return sorted(changes, key=operator.itemgetter(0))
+    return list(sorted(changes, key=operator.itemgetter(0)))

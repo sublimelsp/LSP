@@ -1,4 +1,5 @@
 from .url import uri_to_filename
+import operator
 try:
     from typing import List, Dict, Optional, Any, Iterable, Tuple
     TextEdit = Tuple[Tuple[int, int], Tuple[int, int], str]
@@ -32,11 +33,6 @@ def parse_text_edit(text_edit: 'Dict[str, Any]') -> 'TextEdit':
 
 
 def sort_by_application_order(changes: 'Iterable[TextEdit]') -> 'List[TextEdit]':
-
-    def get_start_position(pair: 'Tuple[int, TextEdit]'):
-        index, change = pair
-        return change[0][0], change[0][1], index
-
     # The spec reads:
     # > However, it is possible that multiple edits have the same start position: multiple
     # > inserts, or any number of inserts followed by a single remove or replace edit. If
@@ -45,4 +41,4 @@ def sort_by_application_order(changes: 'Iterable[TextEdit]') -> 'List[TextEdit]'
     # So we sort by start position. But if multiple text edits start at the same position,
     # we use the index in the array as the key.
 
-    return list(map(lambda pair: pair[1], sorted(enumerate(changes), key=get_start_position, reverse=True)))
+    return list(sorted(changes, key=operator.itemgetter(0)))

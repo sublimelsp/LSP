@@ -51,12 +51,14 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
                 start, end, newText = change
                 region = sublime.Region(self.view.text_point(*start), self.view.text_point(*end))
 
-                # Handle when a language server (eg gopls) inserts at a row beyond the document
-                # some editors create the line automatically, sublime needs to have the newline prepended.
                 if start[0] > last_row and newText[0] != '\n':
-                    newText = '\n' + newText
-
-                self.apply_change(region, newText, edit)
+                    # Handle when a language server (eg gopls) inserts at a row beyond the document
+                    # some editors create the line automatically, sublime needs to have the newline prepended.
+                    debug('adding new line for edit at line {}, document ended at line {}'.format(start[0], last_row))
+                    self.apply_change(region, '\n' + newText, edit)
+                    last_row, last_col = self.view.rowcol(self.view.size())
+                else:
+                    self.apply_change(region, newText, edit)
 
     def apply_change(self, region: 'sublime.Region', newText: str, edit):
         if region.empty():

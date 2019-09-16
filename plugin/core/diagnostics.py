@@ -58,7 +58,7 @@ class WindowDiagnostics(object):
         for file_path in list(self._diagnostics):
             for client_name in list(self._diagnostics[file_path]):
                 self.update(file_path, client_name, [])
-                self._on_updated(file_path, client_name, [])
+                self._on_updated(file_path, client_name)
 
     def handle_client_diagnostics(self, client_name: str, update: dict):
         maybe_file_uri = update.get('uri')

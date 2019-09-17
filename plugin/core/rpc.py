@@ -68,7 +68,7 @@ def try_terminate_process(process: 'subprocess.Popen') -> None:
 
 
 class Client(object):
-    def __init__(self, transport: Transport, settings) -> None:
+    def __init__(self, transport: Transport, settings: Settings) -> None:
         self.transport = transport  # type: Optional[Transport]
         self.transport.start(self.receive_payload, self.on_transport_closed)
         self.request_id = 0
@@ -185,7 +185,7 @@ class Client(object):
     def on_notification(self, notification_method: str, handler: 'Callable') -> None:
         self._notification_handlers[notification_method] = handler
 
-    def handle(self, typestr: str, message: 'Dict[str, Any]', handlers: 'Dict[str, Callable]', *args) -> None:
+    def handle(self, typestr: str, message: 'Dict[str, Any]', handlers: 'Dict[str, Callable]', *args: 'Any') -> None:
         method = message.get("method", "")
         params = message.get("params")
         if method != "window/logMessage":

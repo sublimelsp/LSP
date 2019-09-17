@@ -77,7 +77,7 @@ class SessionTest(unittest.TestCase):
     # @unittest.skip("need an example config")
     def test_can_create_session(self):
 
-        config = ClientConfig("test", ["ls"], None, [test_language])
+        config = ClientConfig("test", ["ls"], None, [], [], None, [test_language])
         project_path = "/"
         session = self.assert_if_none(
             create_session(config, project_path, dict(), Settings()))

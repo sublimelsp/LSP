@@ -1,11 +1,10 @@
 import re
 from copy import deepcopy
 
-from .types import ClientConfig, LanguageConfig
+from .types import ClientConfig, LanguageConfig, ViewLike, WindowLike, ConfigRegistry
 from .logging import debug
 from .types import config_supports_syntax
 from .workspace import get_project_config
-from .windows import ViewLike, WindowLike, ConfigRegistry
 
 assert ClientConfig
 
@@ -128,7 +127,7 @@ class WindowConfigManager(object):
     def is_supported(self, view: 'Any') -> bool:
         return any(self.scope_configs(view))
 
-    def scope_configs(self, view: 'Any', point=None) -> 'Iterator[ClientConfig]':
+    def scope_configs(self, view: 'Any', point: 'Optional[int]' = None) -> 'Iterator[ClientConfig]':
         return get_scope_client_configs(view, self.all, point)
 
     def syntax_configs(self, view: 'Any') -> 'List[ClientConfig]':

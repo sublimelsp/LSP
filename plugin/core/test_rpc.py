@@ -75,7 +75,7 @@ class ClientTest(unittest.TestCase):
 
     def test_can_create_client(self):
         transport = MockTransport()
-        client = Client(transport, dict())
+        client = Client(transport, Settings())
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
 

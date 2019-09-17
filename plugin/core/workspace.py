@@ -39,7 +39,7 @@ def get_active_view_path(window: 'Any') -> 'Optional[str]':
         return None  # https://github.com/tomv564/LSP/issues/219
 
 
-def enable_in_project(window, config_name: str) -> None:
+def enable_in_project(window: 'Any', config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
         project_settings = project_data.setdefault('settings', dict())
@@ -51,7 +51,7 @@ def enable_in_project(window, config_name: str) -> None:
         debug('non-dict returned in project_settings: ', project_data)
 
 
-def disable_in_project(window, config_name: str) -> None:
+def disable_in_project(window: 'Any', config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
         project_settings = project_data.setdefault('settings', dict())

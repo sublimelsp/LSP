@@ -18,7 +18,7 @@ from .registry import windows, load_handlers, unload_sessions
 from .panels import destroy_output_panels
 
 
-def startup():
+def startup() -> None:
     load_settings()
     set_debug_logging(settings.log_debug)
     set_server_logging(settings.log_server)
@@ -30,7 +30,7 @@ def startup():
     start_active_window()
 
 
-def shutdown():
+def shutdown() -> None:
     # Also needs to handle package being disabled or removed
     # https://github.com/tomv564/LSP/issues/375
     unload_settings()
@@ -45,13 +45,13 @@ def shutdown():
                 remove_color_boxes(view)
 
 
-def start_active_window():
+def start_active_window() -> None:
     window = sublime.active_window()
     if window:
         windows.lookup(window).start_active_views()
 
 
-def on_view_activated(view: sublime.View):
+def on_view_activated(view: sublime.View) -> None:
     window = view.window()
     if window:
         windows.lookup(window).activate_view(view)

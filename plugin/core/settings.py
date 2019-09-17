@@ -51,7 +51,7 @@ def read_str_setting(settings_obj: sublime.Settings, key: str, default: str) -> 
         return default
 
 
-def update_settings(settings: Settings, settings_obj: sublime.Settings):
+def update_settings(settings: Settings, settings_obj: sublime.Settings) -> None:
     settings.show_view_status = read_bool_setting(settings_obj, "show_view_status", True)
     settings.auto_show_diagnostics_panel = read_bool_setting(settings_obj, "auto_show_diagnostics_panel", True)
     settings.auto_show_diagnostics_panel_level = read_int_setting(settings_obj, "auto_show_diagnostics_panel_level", 3)
@@ -81,22 +81,22 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings):
 
 class ClientConfigs(object):
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._default_settings = dict()  # type: Dict[str, dict]
         self._global_settings = dict()  # type: Dict[str, dict]
         self._external_configs = dict()  # type: Dict[str, ClientConfig]
         self.all = []  # type: List[ClientConfig]
         self._listener = None  # type: Optional[Callable]
 
-    def update(self, settings_obj: sublime.Settings):
+    def update(self, settings_obj: sublime.Settings) -> None:
         self._default_settings = read_dict_setting(settings_obj, "default_clients", {})
         self._global_settings = read_dict_setting(settings_obj, "clients", {})
         self.update_configs()
 
-    def add_external_config(self, config: ClientConfig):
+    def add_external_config(self, config: ClientConfig) -> None:
         self._external_configs[config.name] = config
 
-    def update_configs(self):
+    def update_configs(self) -> None:
         del self.all[:]
 
         for config_name, config in self._external_configs.items():
@@ -115,17 +115,17 @@ class ClientConfigs(object):
         if self._listener:
             self._listener()
 
-    def _set_enabled(self, config_name: str, is_enabled: bool):
+    def _set_enabled(self, config_name: str, is_enabled: bool) -> None:
         if _settings_obj:
             client_settings = self._global_settings.setdefault(config_name, {})
             client_settings["enabled"] = is_enabled
             _settings_obj.set("clients", self._global_settings)
             sublime.save_settings("LSP.sublime-settings")
 
-    def enable(self, config_name: str):
+    def enable(self, config_name: str) -> None:
         self._set_enabled(config_name, True)
 
-    def disable(self, config_name: str):
+    def disable(self, config_name: str) -> None:
         self._set_enabled(config_name, False)
 
     def set_listener(self, recipient: 'Callable') -> None:
@@ -137,7 +137,7 @@ settings = Settings()
 client_configs = ClientConfigs()
 
 
-def load_settings():
+def load_settings() -> None:
     global _settings_obj
     loaded_settings_obj = sublime.load_settings("LSP.sublime-settings")
     _settings_obj = loaded_settings_obj
@@ -147,7 +147,7 @@ def load_settings():
     loaded_settings_obj.add_on_change("_on_new_client_settings", lambda: client_configs.update(loaded_settings_obj))
 
 
-def unload_settings():
+def unload_settings() -> None:
     if _settings_obj:
         _settings_obj.clear_on_change("_on_new_settings")
         _settings_obj.clear_on_change("_on_new_client_settings")

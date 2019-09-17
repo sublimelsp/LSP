@@ -176,7 +176,7 @@ class Request:
     def __repr__(self) -> str:
         return self.method + " " + str(self.params)
 
-    def to_payload(self, id) -> 'Dict[str, Any]':
+    def to_payload(self, id: int) -> 'Dict[str, Any]':
         r = {
             "jsonrpc": "2.0",
             "id": id,
@@ -314,7 +314,7 @@ class ContentChange(object):
             change['rangeLength'] = self.range_length
         return change
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: 'Any') -> bool:
         return self.text == other.text and self.range == other.range and self.range_length == other.range_length
 
     def __repr__(self) -> str:

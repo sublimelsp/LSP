@@ -21,9 +21,9 @@ def create_session(config: ClientConfig,
                    on_pre_initialize: 'Optional[Callable[[Session], None]]' = None,
                    on_post_initialize: 'Optional[Callable[[Session], None]]' = None,
                    on_post_exit: 'Optional[Callable[[str], None]]' = None,
-                   bootstrap_client=None) -> 'Optional[Session]':
+                   bootstrap_client: 'Optional[Any]' = None) -> 'Optional[Session]':
 
-    def with_client(client) -> 'Session':
+    def with_client(client: Client) -> 'Session':
         return Session(
             config=config,
             project_path=project_path,
@@ -59,7 +59,7 @@ def create_session(config: ClientConfig,
     return session
 
 
-def get_initialize_params(project_path: str, config: ClientConfig):
+def get_initialize_params(project_path: str, config: ClientConfig) -> dict:
     initializeParams = {
         "processId": os.getpid(),
         "rootUri": filename_to_uri(project_path),
@@ -148,19 +148,19 @@ class Session(object):
             on_pre_initialize(self)
         self.initialize()
 
-    def has_capability(self, capability):
+    def has_capability(self, capability: str) -> bool:
         return capability in self.capabilities and self.capabilities[capability] is not False
 
-    def get_capability(self, capability):
+    def get_capability(self, capability: str) -> 'Optional[Any]':
         return self.capabilities.get(capability)
 
-    def initialize(self):
+    def initialize(self) -> None:
         params = get_initialize_params(self.project_path, self.config)
         self.client.send_request(
             Request.initialize(params),
             lambda result: self._handle_initialize_result(result))
 
-    def _handle_initialize_result(self, result):
+    def _handle_initialize_result(self, result: 'Any') -> None:
         self.state = ClientStates.READY
         self.capabilities = result.get('capabilities', dict())
         if self._on_post_initialize:
@@ -173,9 +173,9 @@ class Session(object):
             lambda result: self._handle_shutdown_result(),
             lambda error: self._handle_shutdown_result())
 
-    def _handle_shutdown_result(self):
+    def _handle_shutdown_result(self) -> None:
         self.client.exit()
-        self.client = None
+        self.client = None  # type: ignore
         self.capabilities = dict()
         if self._on_post_exit:
             self._on_post_exit(self.config.name)

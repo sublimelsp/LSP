@@ -17,7 +17,7 @@ from .core.registry import session_for_view
 from .core.settings import settings
 
 
-def send_code_action_request(view, on_response_recieved: 'Callable') -> None:
+def send_code_action_request(view: sublime.View, on_response_recieved: 'Callable') -> None:
     session = session_for_view(view, 'codeActionProvider')
     if not session:
         # the server doesn't support code actions, just return
@@ -26,18 +26,20 @@ def send_code_action_request(view, on_response_recieved: 'Callable') -> None:
     region = view.sel()[0]
     pos = region.begin()
     point_diagnostics = get_point_diagnostics(view, pos)
-    params = {
-        "textDocument": {
-            "uri": filename_to_uri(view.file_name())
-        },
-        "range": region_to_range(view, region).to_lsp(),
-        "context": {
-            "diagnostics": list(diagnostic.to_lsp() for diagnostic in point_diagnostics)
+    file_name = view.file_name()
+    if file_name:
+        params = {
+            "textDocument": {
+                "uri": filename_to_uri(file_name)
+            },
+            "range": region_to_range(view, region).to_lsp(),
+            "context": {
+                "diagnostics": list(diagnostic.to_lsp() for diagnostic in point_diagnostics)
+            }
         }
-    }
-    session.client.send_request(
-        Request.codeAction(params),
-        lambda response: on_response_recieved(response))
+        session.client.send_request(
+            Request.codeAction(params),
+            lambda response: on_response_recieved(response))
 
 
 class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
@@ -46,16 +48,16 @@ class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
         self._stored_point = -1
 
     @classmethod
-    def is_applicable(cls, _settings):
+    def is_applicable(cls, _settings: 'Any') -> bool:
         if settings.show_code_actions_bulb:
             return True
         return False
 
-    def on_selection_modified_async(self):
+    def on_selection_modified_async(self) -> None:
         self.hide_bulb()
         self.schedule_request()
 
-    def schedule_request(self):
+    def schedule_request(self) -> None:
         current_point = self.view.sel()[0].begin()
         if self._stored_point != current_point:
             self._stored_point = current_point
@@ -65,7 +67,7 @@ class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
         if current_point == self._stored_point:
             send_code_action_request(self.view, self.handle_response)
 
-    def handle_response(self, response) -> None:
+    def handle_response(self, response: 'Any') -> None:
         if settings.show_code_actions_bulb:
             if len(response) > 0:
                 self.show_bulb()
@@ -87,19 +89,22 @@ def is_command(command_or_code_action: dict) -> bool:
 
 
 class LspCodeActionsCommand(LspTextCommand):
-    def is_enabled(self):
+    def is_enabled(self) -> bool:
         return self.has_client_with_capability('codeActionProvider')
 
-    def run(self, edit):
+    def run(self, edit: 'Any') -> None:
         self.commands = []  # type: List[Dict]
 
         send_code_action_request(self.view, self.handle_response)
 
-    def get_titles(self):
+    def get_titles(self) -> 'List[str]':
         ''' Return a list of all command titles. '''
         titles = []
         for command in self.commands:
-            titles.append(command.get('title'))  # TODO parse command and arguments
+            title = command['title']
+            if title:
+                titles.append(title)
+            # TODO parse command and arguments
         return titles
 
     def handle_response(self, response: 'Optional[List[Dict]]') -> None:
@@ -128,12 +133,12 @@ class LspCodeActionsCommand(LspTextCommand):
                 if maybe_command:
                     self.run_command(maybe_command)
 
-    def run_command(self, command) -> None:
+    def run_command(self, command: dict) -> None:
         client = self.client_with_capability('codeActionProvider')
         if client:
             client.send_request(
                 Request.executeCommand(command),
                 self.handle_command_response)
 
-    def handle_command_response(self, response):
+    def handle_command_response(self, response: 'Any') -> None:
         pass

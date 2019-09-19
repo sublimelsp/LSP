@@ -24,7 +24,7 @@ _kind2name = {
 }
 
 
-def remove_highlights(view: sublime.View):
+def remove_highlights(view: sublime.View) -> None:
     for kind in settings.document_highlight_scopes.keys():
         view.erase_regions("lsp_highlight_{}".format(kind))
 
@@ -32,11 +32,14 @@ def remove_highlights(view: sublime.View):
 class DocumentHighlightListener(sublime_plugin.ViewEventListener):
 
     @classmethod
-    def is_applicable(cls, view_settings):
+    def is_applicable(cls, view_settings: dict) -> bool:
         if 'documentHighlight' in settings.disabled_capabilities:
             return False
         syntax = view_settings.get('syntax')
-        return syntax and is_supported_syntax(syntax, client_configs.all)
+        if syntax:
+            return is_supported_syntax(syntax, client_configs.all)
+        else:
+            return False
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)

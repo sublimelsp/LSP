@@ -11,10 +11,13 @@ except ImportError:
 
 
 class LspExecuteCommand(LspTextCommand):
-    def __init__(self, view):
+    def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
 
-    def run(self, edit, command_name=None, command_args=None) -> None:
+    def run(self,
+            edit: sublime.Edit,
+            command_name: 'Optional[str]' = None,
+            command_args: 'Optional[Any]' = None) -> None:
         client = self.client_with_capability('executeCommandProvider')
         if client and command_name:
             self.view.window().status_message("Running command {}".format(command_name))

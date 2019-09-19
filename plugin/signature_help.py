@@ -22,7 +22,7 @@ assert SignatureHelp
 
 
 class ColorSchemeScopeRenderer(object):
-    def __init__(self, view) -> None:
+    def __init__(self, view: sublime.View) -> None:
         self._scope_styles = {}  # type: dict
         self._view = view
         for scope in ["entity.name.function", "variable.parameter", "punctuation"]:
@@ -49,7 +49,7 @@ class ColorSchemeScopeRenderer(object):
 
 class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
-    def __init__(self, view):
+    def __init__(self, view: sublime.View) -> None:
         self.view = view
         self._initialized = False
         self._signature_help_triggers = []  # type: List[str]
@@ -58,13 +58,16 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         self._renderer = ColorSchemeScopeRenderer(self.view)
 
     @classmethod
-    def is_applicable(cls, view_settings):
+    def is_applicable(cls, view_settings: dict) -> bool:
         if 'signatureHelp' in settings.disabled_capabilities:
             return False
         syntax = view_settings.get('syntax')
-        return syntax and is_supported_syntax(syntax, client_configs.all)
+        if syntax:
+            return is_supported_syntax(syntax, client_configs.all)
+        else:
+            return False
 
-    def initialize(self):
+    def initialize(self) -> None:
         session = session_for_view(self.view, 'signatureHelpProvider')
         if session:
             signatureHelpProvider = session.get_capability(
@@ -75,7 +78,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
 
         self._initialized = True
 
-    def on_modified_async(self):
+    def on_modified_async(self) -> None:
         pos = self.view.sel()[0].begin()
         # TODO: this will fire too often, narrow down using scopes or regex
         if not self._initialized:
@@ -92,7 +95,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                 if last_char not in self._signature_help_triggers:
                     self.view.hide_popup()
 
-    def request_signature_help(self, point) -> None:
+    def request_signature_help(self, point: int) -> None:
         client = client_from_session(session_for_view(self.view, 'signatureHelpProvider', point))
         if client:
             global_events.publish("view.on_purge_changes", self.view)
@@ -102,7 +105,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                     Request.signatureHelp(document_position),
                     lambda response: self.handle_response(response, point))
 
-    def handle_response(self, response: 'Optional[Dict]', point) -> None:
+    def handle_response(self, response: 'Optional[Dict]', point: int) -> None:
         self._help = create_signature_help(response)
         if self._help:
             content = self._help.build_popup_content(self._renderer)
@@ -111,7 +114,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             else:
                 self._show_popup(content, point)
 
-    def on_query_context(self, key, _, operand, __):
+    def on_query_context(self, key: str, _operator: int, operand: int, _match_all: bool) -> bool:
         if key != "lsp.signature_help":
             return False  # Let someone else handle this keybinding.
         elif not self._visible:
@@ -150,8 +153,8 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                               md=True,
                               wrapper_class=popup_class)
 
-    def _on_hide(self):
+    def _on_hide(self) -> None:
         self._visible = False
 
-    def _on_hover_navigate(self, href):
+    def _on_hover_navigate(self, href: str) -> None:
         webbrowser.open_new_tab(href)

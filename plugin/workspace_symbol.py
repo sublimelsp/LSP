@@ -15,15 +15,15 @@ except ImportError:
 
 class SymbolQueryInput(sublime_plugin.TextInputHandler):
 
-    def validate(self, txt) -> bool:
+    def validate(self, txt: str) -> bool:
         return txt != ""
 
-    def placeholder(self):
+    def placeholder(self) -> str:
         return "Symbol"
 
 
 class LspWorkspaceSymbolsCommand(LspTextCommand):
-    def __init__(self, view):
+    def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
 
     def _format(self, s: 'Dict[str, Any]') -> str:
@@ -54,13 +54,13 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
         msg = "command 'workspace/symbol' failed. Reason: {}".format(reason)
         sublime.error_message(msg)
 
-    def is_enabled(self, event=None):
+    def is_enabled(self) -> bool:
         return self.has_client_with_capability('workspaceSymbolProvider')
 
-    def input(self, args):
+    def input(self, _args: 'Any') -> sublime_plugin.TextInputHandler:
         return SymbolQueryInput()
 
-    def run(self, edit, symbol_query_input: str = "") -> None:
+    def run(self, edit: 'Any', symbol_query_input: str = "") -> None:
         if symbol_query_input:
             request = Request.workspaceSymbol({"query": symbol_query_input})
             client = self.client_with_capability('workspaceSymbolProvider')

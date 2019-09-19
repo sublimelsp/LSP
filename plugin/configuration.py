@@ -20,7 +20,7 @@ except ImportError:
 
 
 # todo: delete this feature
-def detect_supportable_view(view: sublime.View):
+def detect_supportable_view(view: sublime.View) -> None:
     config = configs_for_scope(view)
     if not config:
         available_config = get_global_client_config(view, client_configs.all)
@@ -36,7 +36,7 @@ def extract_syntax_name(syntax_file: str) -> str:
     return syntax_file.split('/')[-1].split('.')[0]
 
 
-def show_enable_config(view: sublime.View, config: ClientConfig):
+def show_enable_config(view: sublime.View, config: ClientConfig) -> None:
     syntax = str(view.settings().get("syntax", ""))
     message = "LSP has found a language server for {}. Run \"Setup Language Server\" to start using it".format(
         extract_syntax_name(syntax)
@@ -47,7 +47,7 @@ def show_enable_config(view: sublime.View, config: ClientConfig):
 
 
 class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
-    def run(self):
+    def run(self) -> None:
         self._items = []  # type: List[List[str]]
         for config in client_configs.all:
             if not config.enabled:
@@ -61,7 +61,7 @@ class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
         else:
             self.window.status_message("No config available to enable")
 
-    def _on_done(self, index):
+    def _on_done(self, index: int) -> None:
         if index > -1:
             config_name = self._items[index][0]
 
@@ -73,7 +73,7 @@ class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
 
 
 class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
-    def run(self):
+    def run(self) -> None:
         self._items = []  # type: List[List[str]]
         wm = windows.lookup(self.window)
         for config in wm._configs.all:
@@ -89,7 +89,7 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         else:
             self.window.status_message("No config available to enable")
 
-    def _on_done(self, index):
+    def _on_done(self, index: int) -> None:
         if index > -1:
             config_name = self._items[index][0]
             wm = windows.lookup(self.window)
@@ -100,7 +100,7 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
 
 
 class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
-    def run(self):
+    def run(self) -> None:
         self._items = []  # type: List[List[str]]
         for config in client_configs.all:
             if config.enabled:
@@ -114,7 +114,7 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
         else:
             self.window.status_message("No config available to disable")
 
-    def _on_done(self, index):
+    def _on_done(self, index: int) -> None:
         if index > -1:
             config_name = self._items[index][0]
             client_configs.disable(config_name)
@@ -124,7 +124,7 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
 
 
 class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
-    def run(self):
+    def run(self) -> None:
         wm = windows.lookup(self.window)
         self._items = []  # type: List[List[str]]
         for config in wm._configs.all:
@@ -139,7 +139,7 @@ class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         else:
             self.window.status_message("No config available to disable")
 
-    def _on_done(self, index):
+    def _on_done(self, index: int) -> None:
         if index > -1:
             config_name = self._items[index][0]
             wm = windows.lookup(self.window)
@@ -166,7 +166,7 @@ Visit [langserver.org](https://langserver.org) to find out if a language server 
 
 
 class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
-    def run(self):
+    def run(self) -> None:
         view = self.window.active_view()
         syntax = view.settings().get("syntax")
         available_config = get_global_client_config(view, client_configs.all)
@@ -200,7 +200,7 @@ class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
             on_navigate=self.on_hover_navigate
         )
 
-    def on_hover_navigate(self, href):
+    def on_hover_navigate(self, href: str) -> None:
         if href == "#enable_globally":
             self.window.run_command("lsp_enable_language_server_globally")
         elif href == "#enable_project":

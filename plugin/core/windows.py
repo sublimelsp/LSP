@@ -80,7 +80,7 @@ class DocumentState:
 
 
 class DocumentHandlerFactory(object):
-    def __init__(self, sublime: ModuleType, settings: Settings) -> None:
+    def __init__(self, sublime: 'Any', settings: Settings) -> None:
         self._sublime = sublime
         self._settings = settings
 

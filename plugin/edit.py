@@ -11,7 +11,7 @@ from .core.logging import debug
 
 
 class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
-    def run(self, changes: 'Optional[Dict[str, List[TextEdit]]]' = None):
+    def run(self, changes: 'Optional[Dict[str, List[TextEdit]]]' = None) -> None:
         documents_changed = 0
         if changes:
             for path, document_changes in changes.items():
@@ -24,7 +24,7 @@ class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
         else:
             self.window.status_message('No changes to apply to workspace')
 
-    def open_and_apply_edits(self, path, file_changes):
+    def open_and_apply_edits(self, path: str, file_changes: 'List[TextEdit]') -> None:
         view = self.window.open_file(path)
         if view:
             if view.is_loading():
@@ -42,7 +42,7 @@ class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
 
-    def run(self, edit, changes: 'Optional[List[TextEdit]]' = None):
+    def run(self, edit: 'Any', changes: 'Optional[List[TextEdit]]' = None) -> None:
         # Apply the changes in reverse, so that we don't invalidate the range
         # of any change that we haven't applied yet.
         if changes:
@@ -60,7 +60,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
                 else:
                     self.apply_change(region, newText, edit)
 
-    def apply_change(self, region: 'sublime.Region', newText: str, edit):
+    def apply_change(self, region: 'sublime.Region', newText: str, edit: 'Any') -> None:
         if region.empty():
             self.view.insert(edit, region.a, newText)
         else:

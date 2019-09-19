@@ -4,8 +4,8 @@ import sublime
 import sublime_plugin
 
 try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional
-    assert Any and List and Dict and Tuple and Callable and Optional
+    from typing import Any, List, Dict, Callable, Optional
+    assert Any and List and Dict and Callable and Optional
 except ImportError:
     pass
 
@@ -89,7 +89,7 @@ def create_phantom_html(text: str) -> str:
                 </body>""".format(stylesheet, formatted)
 
 
-def on_phantom_navigate(view: sublime.View, href: str, point: int):
+def on_phantom_navigate(view: sublime.View, href: str, point: int) -> None:
     # TODO: don't mess with the user's cursor.
     sel = view.sel()
     sel.clear()
@@ -146,15 +146,15 @@ def update_diagnostics_phantoms(view: sublime.View, diagnostics: 'List[Diagnosti
         phantom_sets_by_buffer.pop(buffer_id, None)
 
 
-def get_point_diagnostics(view, point):
+def get_point_diagnostics(view: sublime.View, point: int) -> 'List[Diagnostic]':
     diagnostics = get_view_diagnostics(view)
-    return tuple(
+    return [
         diagnostic for diagnostic in diagnostics
         if range_to_region(diagnostic.range, view).contains(point)
-    )
+    ]
 
 
-def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic]', severity: int):
+def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic]', severity: int) -> None:
     region_name = "lsp_" + format_severity(severity)
     if settings.show_diagnostics_phantoms and not view.is_dirty():
         regions = None
@@ -170,7 +170,7 @@ def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic
         view.erase_regions(region_name)
 
 
-def update_diagnostics_in_view(view: sublime.View):
+def update_diagnostics_in_view(view: sublime.View) -> None:
     if view and view.is_valid():
         file_diagnostics = get_view_diagnostics(view)
         for severity in range(
@@ -181,27 +181,28 @@ def update_diagnostics_in_view(view: sublime.View):
         update_diagnostics_phantoms(view, file_diagnostics)
 
 
-def get_view_diagnostics(view) -> 'List[Diagnostic]':
+def get_view_diagnostics(view: sublime.View) -> 'List[Diagnostic]':
     if view.window():
-        if view.file_name():
-            return windows.lookup(view.window())._diagnostics.get_by_path(view.file_name())
+        file_name = view.file_name()
+        if file_name:
+            return windows.lookup(view.window())._diagnostics.get_by_path(file_name)
     return []
 
 
-def get_line_diagnostics(view, point):
+def get_line_diagnostics(view: sublime.View, point: int) -> 'List[Diagnostic]':
     row, _ = view.rowcol(point)
     diagnostics = get_view_diagnostics(view)
-    return tuple(
+    return [
         diagnostic for diagnostic in diagnostics
         if diagnostic.range.start.row <= row <= diagnostic.range.end.row
-    )
+    ]
 
 
-def get_window_diagnostics(window):
+def get_window_diagnostics(window: sublime.Window) -> 'Dict[str, Dict[str, List[Diagnostic]]]':
     return windows.lookup(window)._diagnostics.get()
 
 
-def update_diagnostics_in_status_bar(view: sublime.View):
+def update_diagnostics_in_status_bar(view: sublime.View) -> None:
     errors = 0
     warnings = 0
 
@@ -228,7 +229,7 @@ def update_diagnostics_in_status_bar(view: sublime.View):
         view.set_status('lsp_errors_warning_count', count)
 
 
-def update_count_in_status_bar(view):
+def update_count_in_status_bar(view: sublime.View) -> None:
     if settings.show_diagnostics_count_in_view_status:
         update_diagnostics_in_status_bar(view)
 
@@ -238,7 +239,7 @@ global_events.subscribe("document.diagnostics",
 global_events.subscribe("view.on_activated_async", update_count_in_status_bar)
 
 
-def handle_diagnostics(update: DiagnosticsUpdate):
+def handle_diagnostics(update: DiagnosticsUpdate) -> None:
     window = update.window
     view = window.find_open_file(update.file_path)
     if view:
@@ -251,16 +252,21 @@ def handle_diagnostics(update: DiagnosticsUpdate):
 
 
 class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
-    def __init__(self, view):
+    def __init__(self, view: sublime.View) -> None:
         self.view = view
         self.has_status = False
 
     @classmethod
-    def is_applicable(cls, view_settings):
+    def is_applicable(cls, view_settings: dict) -> bool:
+        if not settings.show_diagnostics_in_view_status:
+            return False
         syntax = view_settings.get('syntax')
-        return settings.show_diagnostics_in_view_status and syntax and is_supported_syntax(syntax, client_configs.all)
+        if syntax:
+            return is_supported_syntax(syntax, client_configs.all)
+        else:
+            return False
 
-    def on_selection_modified_async(self):
+    def on_selection_modified_async(self) -> None:
         selections = self.view.sel()
         if len(selections) > 0:
             pos = selections[0].begin()
@@ -270,17 +276,17 @@ class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
             elif self.has_status:
                 self.clear_diagnostics_status()
 
-    def show_diagnostics_status(self, line_diagnostics):
+    def show_diagnostics_status(self, line_diagnostics: 'List[Diagnostic]') -> None:
         self.has_status = True
         self.view.set_status('lsp_diagnostics', line_diagnostics[0].message)
 
-    def clear_diagnostics_status(self):
+    def clear_diagnostics_status(self) -> None:
         self.view.erase_status('lsp_diagnostics')
         self.has_status = False
 
 
 class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
-    def run(self):
+    def run(self) -> None:
         ensure_diagnostics_panel(self.window)
         active_panel = self.window.active_panel()
         is_active_panel = (active_panel == "output.diagnostics")
@@ -292,7 +298,7 @@ class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
 
 
 class LspClearDiagnosticsCommand(sublime_plugin.WindowCommand):
-    def run(self):
+    def run(self) -> None:
         windows.lookup(self.window)._diagnostics.clear()
 
 
@@ -301,7 +307,7 @@ def ensure_diagnostics_panel(window: sublime.Window) -> 'Optional[sublime.View]'
                         "Packages/" + PLUGIN_NAME + "/Syntaxes/Diagnostics.sublime-syntax")
 
 
-def update_diagnostics_panel(window: sublime.Window):
+def update_diagnostics_panel(window: sublime.Window) -> None:
     assert window, "missing window!"
 
     if not window.is_valid():
@@ -353,7 +359,7 @@ def update_diagnostics_panel(window: sublime.Window):
                                        {"panel": "output.diagnostics"})
 
 
-def has_relevant_diagnostics(origin_diagnostics):
+def has_relevant_diagnostics(origin_diagnostics: 'Dict[str, List[Diagnostic]]') -> bool:
     for origin, diagnostics in origin_diagnostics.items():
         for diagnostic in diagnostics:
             # debug('severity check', diagnostic.severity, '<=', settings.auto_show_diagnostics_panel_level)
@@ -363,7 +369,7 @@ def has_relevant_diagnostics(origin_diagnostics):
     return False
 
 
-def format_diagnostics(file_path, origin_diagnostics):
+def format_diagnostics(file_path: str, origin_diagnostics: 'Dict[str, List[Diagnostic]]') -> 'Optional[str]':
     content = ""
     for origin, diagnostics in origin_diagnostics.items():
         for diagnostic in diagnostics:

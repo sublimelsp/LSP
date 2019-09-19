@@ -157,15 +157,17 @@ class LspSymbolReferencesCommand(LspTextCommand):
         grouped_references = {}  # type: Dict[str, List[Tuple[Point, str]]]
         for reference in references:
             file_path = uri_to_filename(reference["uri"])
-            relative_file_path = os.path.relpath(file_path, base_dir)
-
             point = Point.from_lsp(reference['range']['start'])
+
             # get line of the reference, to showcase its use
             reference_line = linecache.getline(file_path, point.row + 1).strip()
 
-            if grouped_references.get(relative_file_path) is None:
-                grouped_references[relative_file_path] = []
-            grouped_references[relative_file_path].append((point, reference_line))
+            if base_dir:
+                file_path = os.path.relpath(file_path, base_dir)
+
+            if grouped_references.get(file_path) is None:
+                grouped_references[file_path] = []
+            grouped_references[file_path].append((point, reference_line))
 
         # we don't want to cache the line, we always want to get fresh data
         linecache.clearcache()

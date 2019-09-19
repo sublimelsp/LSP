@@ -18,8 +18,6 @@ from .core.documents import get_document_position, is_at_word
 from .core.sessions import Session
 from .core.edit import parse_text_edit
 
-NO_COMPLETION_SCOPES = 'comment, string'
-
 
 class CompletionState(object):
     IDLE = 0
@@ -52,6 +50,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
+        self.auto_complete_selector = view.settings().get("auto_complete_selector")
         self.resolve = False
         self.state = CompletionState.IDLE
         self.completions = []  # type: List[Any]
@@ -202,8 +201,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             self.initialize()
 
         if self.enabled:
-            if prefix != "" and self.view.match_selector(locations[0], NO_COMPLETION_SCOPES):
-                # debug('discarding completion because no completion scope with prefix {}'.format(prefix))
+            if not self.view.match_selector(locations[0], self.auto_complete_selector):
                 return (
                     [],
                     0 if not settings.only_show_lsp_completions

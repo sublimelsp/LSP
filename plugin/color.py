@@ -17,26 +17,32 @@ from .core.configurations import is_supported_syntax
 from .core.documents import is_transient_view
 
 
+color_phantoms_by_view = dict()  # type: Dict[int, sublime.PhantomSet]
+
+
 class LspColorListener(sublime_plugin.ViewEventListener):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self.color_phantom_set = None  # type: Optional[sublime.PhantomSet]
         self._stored_point = -1
         self.initialized = False
         self.enabled = False
 
     @classmethod
-    def is_applicable(cls, _settings):
+    def is_applicable(cls, _settings: 'Any') -> bool:
         syntax = _settings.get('syntax')
         is_supported = syntax and is_supported_syntax(syntax, client_configs.all)
         disabled_by_user = 'colorProvider' in settings.disabled_capabilities
         return is_supported and not disabled_by_user
 
-    def on_activated_async(self):
+    @property
+    def phantom_set(self) -> sublime.PhantomSet:
+        return color_phantoms_by_view.setdefault(self.view.id(), sublime.PhantomSet(self.view, "lsp_color"))
+
+    def on_activated_async(self) -> None:
         if not self.initialized:
             self.initialize()
 
-    def initialize(self, is_retry=False):
+    def initialize(self, is_retry: bool = False) -> None:
         configs = configs_for_scope(self.view)
         if not configs:
             self.initialized = True  # no server enabled, re-open file to activate feature.
@@ -52,11 +58,11 @@ class LspColorListener(sublime_plugin.ViewEventListener):
         else:
             self.initialized = True  # we retried but still no session available.
 
-    def on_modified_async(self):
+    def on_modified_async(self) -> None:
         if self.enabled:
             self.schedule_request()
 
-    def schedule_request(self):
+    def schedule_request(self) -> None:
         sel = self.view.sel()
         if len(sel) < 1:
             return
@@ -70,7 +76,7 @@ class LspColorListener(sublime_plugin.ViewEventListener):
         if current_point == self._stored_point:
             self.send_color_request()
 
-    def send_color_request(self):
+    def send_color_request(self) -> None:
         if is_transient_view(self.view):
             return
 
@@ -86,10 +92,11 @@ class LspColorListener(sublime_plugin.ViewEventListener):
                 self.handle_response
             )
 
-    def handle_response(self, response) -> None:
+    def handle_response(self, response: 'Optional[List[dict]]') -> None:
+        color_infos = response if response else []
         phantoms = []
-        for val in response:
-            color = val['color']
+        for color_info in color_infos:
+            color = color_info['color']
             red = color['red'] * 255
             green = color['green'] * 255
             blue = color['blue'] * 255
@@ -102,18 +109,15 @@ class LspColorListener(sublime_plugin.ViewEventListener):
                         background-color: rgba({}, {}, {}, {})'>
             </div>""".format(red, green, blue, alpha)
 
-            range = Range.from_lsp(val['range'])
+            range = Range.from_lsp(color_info['range'])
             region = range_to_region(range, self.view)
 
             phantoms.append(sublime.Phantom(region, content, sublime.LAYOUT_INLINE))
 
-        if phantoms:
-            if not self.color_phantom_set:
-                self.color_phantom_set = sublime.PhantomSet(self.view, "lsp_color")
-            self.color_phantom_set.update(phantoms)
-        else:
-            self.color_phantom_set = None
+        self.phantom_set.update(phantoms)
 
 
-def remove_color_boxes(view):
-    view.erase_phantoms('lsp_color')
+def remove_color_boxes(view: sublime.View) -> None:
+    phantom_set = color_phantoms_by_view.get(view.id())
+    if phantom_set:
+        phantom_set.update([])

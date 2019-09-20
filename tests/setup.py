@@ -55,6 +55,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def setUp(self) -> None:
         self.view = sublime.active_window().open_file(test_file_path)
+        self.view.settings().set("auto_complete_selector", "text.plain")
         self.wm = windows.lookup(self.view.window())
         self.client = MockClient(async_response=sublime_delayer(100))
         add_config(text_config)

@@ -5,8 +5,8 @@ import shutil
 import threading
 
 try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional, Union
-    assert Any and List and Dict and Tuple and Callable and Optional and Union
+    from typing import Any, List, Dict, Tuple, Callable, Optional, Union, IO
+    assert Any and List and Dict and Tuple and Callable and Optional and Union and IO
 except ImportError:
     pass
 
@@ -54,11 +54,11 @@ def start_server(server_binary_args: 'List[str]', working_dir: str,
         startupinfo=si)
 
 
-def attach_logger(process: 'subprocess.Popen', stream) -> None:
+def attach_logger(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
     threading.Thread(target=log_stream, args=(process, stream)).start()
 
 
-def log_stream(process: 'subprocess.Popen', stream) -> None:
+def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
     """
     Reads any errors from the LSP process.
     """
@@ -73,7 +73,8 @@ def log_stream(process: 'subprocess.Popen', stream) -> None:
             try:
                 decoded = content.decode("UTF-8")
             except UnicodeDecodeError:
-                decoded = content
+                # todo: do we still need this ?
+                decoded = content  # type: ignore
             server_log(decoded.strip())
         except IOError as err:
             exception_log("Failure reading stream", err)

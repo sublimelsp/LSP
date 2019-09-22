@@ -13,7 +13,7 @@ except ImportError:
 
 
 class DiagnosticsUpdate(object):
-    def __init__(self, window, client_name: str,
+    def __init__(self, window: 'Any', client_name: str,
                  file_path: str) -> 'None':
         self.window = window
         self.client_name = client_name
@@ -22,14 +22,14 @@ class DiagnosticsUpdate(object):
 
 class WindowDiagnostics(object):
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._diagnostics = {}  # type: Dict[str, Dict[str, List[Diagnostic]]]
         self._on_updated = None  # type: Optional[Callable]
 
     def get(self) -> 'Dict[str, Dict[str, List[Diagnostic]]]':
         return self._diagnostics
 
-    def set_on_updated(self, update_handler: 'Callable'):
+    def set_on_updated(self, update_handler: 'Callable') -> None:
         self._on_updated = update_handler
 
     def get_by_path(self, file_path: str) -> 'List[Diagnostic]':
@@ -54,13 +54,14 @@ class WindowDiagnostics(object):
                     del self._diagnostics[file_path]
         return updated
 
-    def clear(self):
+    def clear(self) -> None:
         for file_path in list(self._diagnostics):
             for client_name in list(self._diagnostics[file_path]):
                 self.update(file_path, client_name, [])
-                self._on_updated(file_path, client_name)
+                if self._on_updated:
+                    self._on_updated(file_path, client_name)
 
-    def handle_client_diagnostics(self, client_name: str, update: dict):
+    def handle_client_diagnostics(self, client_name: str, update: dict) -> None:
         maybe_file_uri = update.get('uri')
         if maybe_file_uri is not None:
             file_path = uri_to_filename(maybe_file_uri)
@@ -74,5 +75,5 @@ class WindowDiagnostics(object):
         else:
             debug('missing uri in diagnostics update')
 
-    def remove(self, file_path: str, client_name: str):
+    def remove(self, file_path: str, client_name: str) -> None:
         self.update(file_path, client_name, [])

@@ -149,6 +149,9 @@ class MockWindow(object):
                     views.append(view)
         return views
 
+    def find_open_file(self, path: str) -> 'Optional[ViewLike]':
+        pass
+
     def run_command(self, command_name: str, command_args: 'Dict[str, Any]') -> None:
         self.commands.append((command_name, command_args))
 

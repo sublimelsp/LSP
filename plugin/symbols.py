@@ -1,3 +1,4 @@
+import sublime
 from .core.logging import debug
 from .core.protocol import Request, Range
 from .core.protocol import SymbolKind
@@ -6,8 +7,8 @@ from .core.url import filename_to_uri
 from .core.views import range_to_region
 
 try:
-    from typing import List, Optional, Any
-    assert List and Optional and Any
+    from typing import List, Optional, Any, Tuple
+    assert List and Optional and Any and Tuple
 except ImportError:
     pass
 
@@ -41,28 +42,28 @@ symbol_kind_names = {
 }
 
 
-def format_symbol_kind(kind):
+def format_symbol_kind(kind: int) -> str:
     return symbol_kind_names.get(kind, str(kind))
 
 
-def format_symbol(item):
+def format_symbol(item: dict) -> 'List[str]':
     """
     items may be a list of strings, or a list of string lists.
     In the latter case, each entry in the quick panel will show multiple rows
     """
     prefix = item.get("containerName", "")
     label = prefix + "." + item.get("name") if prefix else item.get("name")
-    return [label, format_symbol_kind(item.get("kind"))]
+    return [label, format_symbol_kind(item.get("kind") or 0)]
 
 
 class LspDocumentSymbolsCommand(LspTextCommand):
-    def __init__(self, view):
+    def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
 
-    def is_enabled(self, event=None):
+    def is_enabled(self, event: 'Optional[dict]' = None) -> bool:
         return self.has_client_with_capability('documentSymbolProvider')
 
-    def run(self, edit) -> None:
+    def run(self, edit: sublime.Edit) -> None:
         client = self.client_with_capability('documentSymbolProvider')
         if client:
             params = {
@@ -79,7 +80,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.symbols = response_list
         self.view.window().show_quick_panel(symbols, self.on_symbol_selected)
 
-    def on_symbol_selected(self, symbol_index):
+    def on_symbol_selected(self, symbol_index: int) -> None:
         if symbol_index == -1:
             return
         selected_symbol = self.symbols[symbol_index]

@@ -167,7 +167,7 @@ def render_signature_label(renderer: ScopeRenderer, sig_info: SignatureInformati
 class SignatureHelp(object):
 
     def __init__(self, signatures: 'List[SignatureInformation]',
-                 active_signature=0, active_parameter=0) -> None:
+                 active_signature: int = 0, active_parameter: int = 0) -> None:
         self._signatures = signatures
         self._active_signature_index = active_signature
         self._active_parameter_index = active_parameter
@@ -194,7 +194,7 @@ class SignatureHelp(object):
 
         if signature.parameters and self._active_parameter_index in range(0, len(signature.parameters)):
             parameter = signature.parameters[self._active_parameter_index]
-            parameter_label = html.escape(parameter.label, quote=False)
+            parameter_label = html.escape(parameter.label, quote=False) if parameter.label else ""
             parameter_documentation = parameter.documentation
             if parameter_documentation:
                 formatted.append("<p><b>{}</b>: {}</p>".format(

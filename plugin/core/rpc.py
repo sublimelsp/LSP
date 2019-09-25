@@ -16,6 +16,7 @@ from .protocol import Request, Notification, Response
 from .types import Settings
 
 TCP_CONNECT_TIMEOUT = 5
+DEFAULT_SYNC_REQUEST_TIMEOUT = 1
 
 # RequestDict = TypedDict('RequestDict', {'id': 'Union[str,int]', 'method': str, 'params': 'Optional[Any]'})
 
@@ -98,7 +99,10 @@ class Client(object):
                 error_handler(None)
             return None
 
-    def send_sync_request(self, request: Request) -> 'Optional[Any]':
+    def execute_request(self, request: Request, timeout: int = DEFAULT_SYNC_REQUEST_TIMEOUT) -> 'Optional[Any]':
+        """
+        Sends a request and waits for response up to timeout (default: 1 second), blocking the current thread.
+        """
         if self.transport is None:
             debug('unable to send', request.method)
             return None
@@ -109,7 +113,7 @@ class Client(object):
         self.send_payload(request.to_payload(self.request_id))
 
         current_time = start_time = time.time()
-        while current_time < start_time + 3:
+        while current_time < start_time + timeout:
             if request_id in self._sync_request_results:
                 return self._sync_request_results.pop(request_id)
             current_time = time.time()

@@ -47,7 +47,7 @@ class FormatOnSaveListener(sublime_plugin.ViewEventListener):
                     "options": options_for_view(self.view)
                 }
                 request = Request.formatting(params)
-                response = client.send_sync_request(request)
+                response = client.execute_request(request)
                 if response:
                     apply_response_to_view(response, self.view)
                     global_events.publish("view.on_purge_changes", self.view)

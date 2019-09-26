@@ -103,7 +103,7 @@ class LspHoverCommand(LspTextCommand):
             all_content += self.diagnostics_content(point_diagnostics)
 
         all_content += self.hover_content(point, response)
-        if all_content:
+        if all_content and settings.show_symbol_action_links:
             all_content += self.symbol_actions_content()
 
         _test_contents.clear()

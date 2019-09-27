@@ -49,6 +49,12 @@ class FormatOnSaveListener(sublime_plugin.ViewEventListener):
                         "options": options_for_view(self.view)
                     }
                     request = Request.formatting(params)
+                    # Make sure that the server sees the most recent document changes.
+                    # For this to work, the event listeners *must* run synchronously here (which they do at this
+                    # moment).
+                    global_events.publish("view.on_purge_changes", self.view)
+                    # At this point we can be sure that the textDocument/didChange notification was sent,
+                    # if there were any changes to account for.
                     response = client.execute_request(request)
                     if response:
                         apply_response_to_view(response, self.view)

@@ -37,20 +37,22 @@ class FormatOnSaveListener(sublime_plugin.ViewEventListener):
         return False
 
     def on_pre_save(self) -> None:
-        if self.view.settings().get("lsp_format_on_save"):
-            client = client_from_session(session_for_view(self.view, 'documentFormattingProvider'))
-            if client:
-                params = {
-                    "textDocument": {
-                        "uri": filename_to_uri(self.view.file_name())
-                    },
-                    "options": options_for_view(self.view)
-                }
-                request = Request.formatting(params)
-                response = client.execute_request(request)
-                if response:
-                    apply_response_to_view(response, self.view)
-                    global_events.publish("view.on_purge_changes", self.view)
+        file_path = self.view.file_name()
+        if file_path:
+            if self.view.settings().get("lsp_format_on_save"):
+                client = client_from_session(session_for_view(self.view, 'documentFormattingProvider'))
+                if client:
+                    params = {
+                        "textDocument": {
+                            "uri": filename_to_uri(file_path)
+                        },
+                        "options": options_for_view(self.view)
+                    }
+                    request = Request.formatting(params)
+                    response = client.execute_request(request)
+                    if response:
+                        apply_response_to_view(response, self.view)
+                        global_events.publish("view.on_purge_changes", self.view)
 
 
 class LspFormatDocumentCommand(LspTextCommand):

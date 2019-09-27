@@ -33,10 +33,11 @@ class LspFormatDocumentCommand(LspTextCommand):
 
     def run(self, edit: 'Any') -> None:
         client = self.client_with_capability('documentFormattingProvider')
-        if client:
+        file_path = self.view.file_name()
+        if client and file_path:
             params = {
                 "textDocument": {
-                    "uri": filename_to_uri(self.view.file_name())
+                    "uri": filename_to_uri(file_path)
                 },
                 "options": options_for_view(self.view)
             }
@@ -59,11 +60,12 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit) -> None:
         client = self.client_with_capability('documentRangeFormattingProvider')
-        if client:
+        file_path = self.view.file_name()
+        if client and file_path:
             region = self.view.sel()[0]
             params = {
                 "textDocument": {
-                    "uri": filename_to_uri(self.view.file_name())
+                    "uri": filename_to_uri(file_path)
                 },
                 "range": region_to_range(self.view, region).to_lsp(),
                 "options": options_for_view(self.view)

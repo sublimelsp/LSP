@@ -82,15 +82,17 @@ class LspColorListener(sublime_plugin.ViewEventListener):
 
         client = client_from_session(session_for_view(self.view, 'colorProvider'))
         if client:
-            params = {
-                "textDocument": {
-                    "uri": filename_to_uri(self.view.file_name())
+            file_path = self.view.file_name()
+            if file_path:
+                params = {
+                    "textDocument": {
+                        "uri": filename_to_uri(file_path)
+                    }
                 }
-            }
-            client.send_request(
-                Request.documentColor(params),
-                self.handle_response
-            )
+                client.send_request(
+                    Request.documentColor(params),
+                    self.handle_response
+                )
 
     def handle_response(self, response: 'Optional[List[dict]]') -> None:
         color_infos = response if response else []

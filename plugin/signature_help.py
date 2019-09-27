@@ -91,7 +91,8 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             elif self._visible:
                 if last_char.isspace():
                     # Peek behind to find the last non-whitespace character.
-                    last_char = self.view.substr(self.view.find_by_class(pos, False, ~0) - 1)
+                    last_non_white_space_region = self.view.find_by_class(pos, False, ~0)
+                    last_char = self.view.substr(last_non_white_space_region.begin() - 1)
                 if last_char not in self._signature_help_triggers:
                     self.view.hide_popup()
 

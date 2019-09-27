@@ -50,7 +50,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
-        self.auto_complete_selector = view.settings().get("auto_complete_selector")
+        self.auto_complete_selector = view.settings().get("auto_complete_selector", "") or ""  # type: str
         self.resolve = False
         self.state = CompletionState.IDLE
         self.completions = []  # type: List[Any]
@@ -89,7 +89,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         return languages.get(config_name) if languages else None
 
     def register_trigger_chars(self, session: Session) -> None:
-        completion_triggers = self.view.settings().get('auto_complete_triggers', [])
+        completion_triggers = self.view.settings().get('auto_complete_triggers', []) or []  # type: List[Dict[str, str]]
         view_language = self._view_language(session.config.name)
         if view_language:
             for language in session.config.languages:

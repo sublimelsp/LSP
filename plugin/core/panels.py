@@ -78,7 +78,7 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
         # Clear folds
         self.view.unfold(sublime.Region(0, self.view.size()))
 
-        self.view.replace(edit, sublime.Region(0, self.view.size()), characters)
+        self.view.replace(edit, sublime.Region(0, self.view.size()), characters or "")
 
         # Clear the selection
         selection = self.view.sel()

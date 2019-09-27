@@ -73,7 +73,7 @@ class LspHoverCommand(LspTextCommand):
 
     def is_likely_at_symbol(self, point: int) -> bool:
         word_at_sel = self.view.classify(point)
-        return word_at_sel & SUBLIME_WORD_MASK
+        return bool(word_at_sel & SUBLIME_WORD_MASK)
 
     def run(self, edit: 'Any', point: 'Optional[int]' = None) -> None:
         hover_point = point or self.view.sel()[0].begin()

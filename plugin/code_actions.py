@@ -128,7 +128,9 @@ class LspCodeActionsCommand(LspTextCommand):
                 maybe_edit = selected.get('edit')
                 if maybe_edit:
                     changes = parse_workspace_edit(maybe_edit)
-                    self.view.window().run_command("lsp_apply_workspace_edit", {'changes': changes})
+                    window = self.view.window()
+                    if window:
+                        window.run_command("lsp_apply_workspace_edit", {'changes': changes})
                 maybe_command = selected.get('command')
                 if maybe_command:
                     self.run_command(maybe_command)

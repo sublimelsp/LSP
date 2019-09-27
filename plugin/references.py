@@ -38,7 +38,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, event: 'Optional[dict]' = None) -> None:
         client = self.client_with_capability('referencesProvider')
-        if client:
+        file_path = self.view.file_name()
+        if client and file_path:
             pos = get_position(self.view, event)
             window = self.view.window()
             self.word_region = self.view.word(pos)
@@ -47,7 +48,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
             # use relative paths if file on the same root.
             base_dir = windows.lookup(window).get_project_path()
             if base_dir:
-                if os.path.commonprefix([base_dir, self.view.file_name()]):
+                if os.path.commonprefix([base_dir, file_path]):
                     self.base_dir = base_dir
 
             document_position = get_document_position(self.view, pos)
@@ -65,19 +66,20 @@ class LspSymbolReferencesCommand(LspTextCommand):
         if response is None:
             response = []
 
-        references_count = len(response)
-        # return if there are no references
-        if references_count < 1:
-            window.run_command("hide_panel", {"panel": "output.references"})
-            window.status_message("No references found")
-            return
+        if window:
+            references_count = len(response)
+            # return if there are no references
+            if references_count < 1:
+                window.run_command("hide_panel", {"panel": "output.references"})
+                window.status_message("No references found")
+                return
 
-        references_by_file = self._group_references_by_file(response)
+            references_by_file = self._group_references_by_file(response)
 
-        if settings.show_references_in_quick_panel:
-            self.show_quick_panel(references_by_file)
-        else:
-            self.show_references_panel(references_by_file)
+            if settings.show_references_in_quick_panel:
+                self.show_quick_panel(references_by_file)
+            else:
+                self.show_references_panel(references_by_file)
 
     def show_quick_panel(self, references_by_file: 'Dict[str, List[Tuple[Point, str]]]') -> None:
         selected_index = -1
@@ -96,13 +98,14 @@ class LspSymbolReferencesCommand(LspTextCommand):
         if settings.quick_panel_monospace_font:
             flags |= sublime.MONOSPACE_FONT
         window = self.view.window()
-        window.show_quick_panel(
-            self.reflist,
-            self.on_ref_choice,
-            flags,
-            selected_index,
-            self.on_ref_highlight
-        )
+        if window:
+            window.show_quick_panel(
+                self.reflist,
+                self.on_ref_choice,
+                flags,
+                selected_index,
+                self.on_ref_highlight
+            )
 
     def on_ref_choice(self, index: int) -> None:
         self.open_ref_index(index)
@@ -114,41 +117,43 @@ class LspSymbolReferencesCommand(LspTextCommand):
         if index != -1:
             flags = sublime.ENCODED_POSITION | sublime.TRANSIENT if transient else sublime.ENCODED_POSITION
             window = self.view.window()
-            window.open_file(self.get_selected_file_path(index), flags)
+            if window:
+                window.open_file(self.get_selected_file_path(index), flags)
 
     def show_references_panel(self, references_by_file: 'Dict[str, List[Tuple[Point, str]]]') -> None:
         window = self.view.window()
-        panel = ensure_references_panel(window)
-        if not panel:
-            return
+        if window:
+            panel = ensure_references_panel(window)
+            if not panel:
+                return
 
-        text = ''
-        references_count = 0
-        for file, references in references_by_file.items():
-            text += '◌ {}:\n'.format(self.get_relative_path(file))
-            for reference in references:
-                references_count += 1
-                point, line = reference
-                text += '\t{:>8}:{:<4} {}\n'.format(point.row + 1, point.col + 1, line)
-            # append a new line after each file name
-            text += '\n'
+            text = ''
+            references_count = 0
+            for file, references in references_by_file.items():
+                text += '◌ {}:\n'.format(self.get_relative_path(file))
+                for reference in references:
+                    references_count += 1
+                    point, line = reference
+                    text += '\t{:>8}:{:<4} {}\n'.format(point.row + 1, point.col + 1, line)
+                # append a new line after each file name
+                text += '\n'
 
-        base_dir = windows.lookup(window).get_project_path()
-        panel.settings().set("result_base_dir", base_dir)
+            base_dir = windows.lookup(window).get_project_path()
+            panel.settings().set("result_base_dir", base_dir)
 
-        panel.set_read_only(False)
-        panel.run_command("lsp_clear_panel")
-        window.run_command("show_panel", {"panel": "output.references"})
-        panel.run_command('append', {
-            'characters': "{} references for '{}'\n\n{}".format(references_count, self.word, text),
-            'force': True,
-            'scroll_to_end': False
-        })
+            panel.set_read_only(False)
+            panel.run_command("lsp_clear_panel")
+            window.run_command("show_panel", {"panel": "output.references"})
+            panel.run_command('append', {
+                'characters': "{} references for '{}'\n\n{}".format(references_count, self.word, text),
+                'force': True,
+                'scroll_to_end': False
+            })
 
-        # highlight all word occurrences
-        regions = panel.find_all(r"\b{}\b".format(self.word))
-        panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_OUTLINED)
-        panel.set_read_only(True)
+            # highlight all word occurrences
+            regions = panel.find_all(r"\b{}\b".format(self.word))
+            panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_OUTLINED)
+            panel.set_read_only(True)
 
     def get_selected_file_path(self, index: int) -> str:
         return self.get_full_path(self.reflist[index][0])

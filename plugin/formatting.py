@@ -4,8 +4,9 @@ from .core.protocol import Request
 from .core.configurations import is_supported_syntax
 from .core.settings import client_configs
 from .core.edit import parse_text_edit
-from .core.registry import LspTextCommand, session_for_view, client_from_session
+from .core.registry import LspTextCommand, session_for_view, client_from_session, sessions_for_view
 from .core.url import filename_to_uri
+from .core.sessions import Session
 from .core.views import region_to_range
 from .core.events import global_events
 
@@ -25,6 +26,50 @@ def apply_response_to_view(response: 'Optional[List[dict]]', view: sublime.View)
     view.run_command('lsp_apply_document_edit', {'changes': edits})
 
 
+def wants_will_save_wait_until(session: Session) -> bool:
+    sync_options = session.capabilities.get("textDocumentSync")
+    if isinstance(sync_options, dict):
+        if sync_options.get('willSaveWaitUntil'):
+            return True
+    return False
+
+
+def run_will_save_wait_until(view: sublime.View, file_path: str, session: Session) -> None:
+    client = client_from_session(session)
+    if client:
+        # Make sure that the server sees the most recent document changes.
+        global_events.publish("view.on_purge_changes", view)
+        params = {
+            "textDocument": {
+                "uri": filename_to_uri(file_path)
+            },
+            "reason": 1  # TextDocumentSaveReason.Manual
+        }
+        request = Request.willSaveWaitUntil(params)
+        response = client.execute_request(request)
+        if response:
+            apply_response_to_view(response, view)
+            global_events.publish("view.on_purge_changes", view)
+
+
+def run_format_on_save(view: sublime.View, file_path: str) -> None:
+    client = client_from_session(session_for_view(view, 'documentFormattingProvider'))
+    if client:
+        # Make sure that the server sees the most recent document changes.
+        global_events.publish("view.on_purge_changes", view)
+        params = {
+            "textDocument": {
+                "uri": filename_to_uri(file_path)
+            },
+            "options": options_for_view(view)
+        }
+        request = Request.formatting(params)
+        response = client.execute_request(request)
+        if response:
+            apply_response_to_view(response, view)
+            global_events.publish("view.on_purge_changes", view)
+
+
 class FormatOnSaveListener(sublime_plugin.ViewEventListener):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
@@ -39,26 +84,12 @@ class FormatOnSaveListener(sublime_plugin.ViewEventListener):
     def on_pre_save(self) -> None:
         file_path = self.view.file_name()
         if file_path:
+            for session in sessions_for_view(self.view):
+                if wants_will_save_wait_until(session):
+                    run_will_save_wait_until(self.view, file_path, session)
+
             if self.view.settings().get("lsp_format_on_save"):
-                client = client_from_session(session_for_view(self.view, 'documentFormattingProvider'))
-                if client:
-                    params = {
-                        "textDocument": {
-                            "uri": filename_to_uri(file_path)
-                        },
-                        "options": options_for_view(self.view)
-                    }
-                    request = Request.formatting(params)
-                    # Make sure that the server sees the most recent document changes.
-                    # For this to work, the event listeners *must* run synchronously here (which they do at this
-                    # moment).
-                    global_events.publish("view.on_purge_changes", self.view)
-                    # At this point we can be sure that the textDocument/didChange notification was sent,
-                    # if there were any changes to account for.
-                    response = client.execute_request(request)
-                    if response:
-                        apply_response_to_view(response, self.view)
-                        global_events.publish("view.on_purge_changes", self.view)
+                run_format_on_save(self.view, file_path)
 
 
 class LspFormatDocumentCommand(LspTextCommand):

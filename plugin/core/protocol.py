@@ -1,6 +1,6 @@
 try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional
-    assert Any and List and Dict and Tuple and Callable and Optional
+    from typing import Any, List, Dict, Tuple, Callable, Optional, Union
+    assert Any and List and Dict and Tuple and Callable and Optional and Union
 except ImportError:
     pass
 
@@ -154,6 +154,10 @@ class Request:
         return Request("textDocument/formatting", params)
 
     @classmethod
+    def willSaveWaitUntil(cls, params: dict) -> 'Request':
+        return Request("textDocument/willSaveWaitUntil", params)
+
+    @classmethod
     def rangeFormatting(cls, params: dict) -> 'Request':
         return Request("textDocument/rangeFormatting", params)
 
@@ -188,7 +192,7 @@ class Request:
 
 
 class Response:
-    def __init__(self, request_id: int, result: 'Optional[Dict[str, Any]]') -> None:
+    def __init__(self, request_id: int, result: 'Optional[Union[Dict[str, Any], List[Any]]]') -> None:
         self.request_id = request_id
         self.result = result
         self.jsonrpc = "2.0"

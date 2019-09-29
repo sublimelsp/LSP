@@ -83,13 +83,15 @@ class FormatOnSaveListener(sublime_plugin.ViewEventListener):
 
     def on_pre_save(self) -> None:
         file_path = self.view.file_name()
-        if file_path:
-            for session in sessions_for_view(self.view):
-                if wants_will_save_wait_until(session):
-                    run_will_save_wait_until(self.view, file_path, session)
+        if not file_path:
+            return
 
-            if self.view.settings().get("lsp_format_on_save"):
-                run_format_on_save(self.view, file_path)
+        for session in sessions_for_view(self.view):
+            if wants_will_save_wait_until(session):
+                run_will_save_wait_until(self.view, file_path, session)
+
+        if self.view.settings().get("lsp_format_on_save"):
+            run_format_on_save(self.view, file_path)
 
 
 class LspFormatDocumentCommand(LspTextCommand):

@@ -235,6 +235,7 @@ class WindowDocumentHandler(object):
         file_name = view.file_name()
         if view.window() == self._window:
             if file_name in self._document_states:
+                self.purge_changes(view)
                 for session in self._get_applicable_sessions(view, 'save'):
                     if session.client:
                         params = {"textDocument": {"uri": filename_to_uri(file_name)}}

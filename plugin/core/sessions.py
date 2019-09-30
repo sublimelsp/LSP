@@ -67,7 +67,8 @@ def get_initialize_params(project_path: str, config: ClientConfig) -> dict:
         "capabilities": {
             "textDocument": {
                 "synchronization": {
-                    "didSave": True
+                    "didSave": True,
+                    "willSaveWaitUntil": True
                 },
                 "hover": {
                     "contentFormat": ["markdown", "plaintext"]

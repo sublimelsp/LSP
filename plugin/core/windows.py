@@ -464,6 +464,14 @@ class WindowManager(object):
         # reconstruct/get the actual Client object back. Maybe we can (ab)use our homebrew event system for this?
         client.send_response(Response(request_id, {"applied": True}))
 
+    def _get_session_config(self, params: 'Dict[str, Any]', session: Session, client: Client, request_id: int) -> None:
+        items = []  # type: List[Any]
+        requested_items = params.get("items") or []
+        for requested_item in requested_items:
+            items.append(session.config.settings)
+
+        client.send_response(Response(request_id, items))
+
     def _handle_pre_initialize(self, session: 'Session') -> None:
         client = session.client
         client.set_crash_handler(lambda: self._handle_server_crash(session.config))
@@ -488,6 +496,10 @@ class WindowManager(object):
         client.on_request(
             "workspace/applyEdit",
             lambda params, request_id: self._apply_workspace_edit(params, client, request_id))
+
+        client.on_request(
+            "workspace/configuration",
+            lambda params, request_id: self._get_session_config(params, session, client, request_id))
 
         client.on_notification(
             "textDocument/publishDiagnostics",

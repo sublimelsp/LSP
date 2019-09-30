@@ -9,7 +9,10 @@ from .core.registry import session_for_view, LspTextCommand
 from .core.protocol import Request, DiagnosticSeverity, Diagnostic
 from .core.documents import get_document_position
 from .core.popups import popup_css, popup_class
+from .core.url import filename_to_uri
 from .core.settings import client_configs, settings
+from .core.logging import debug
+from .code_actions import run_code_action_or_command
 
 try:
     from typing import List, Optional, Any, Dict
@@ -77,11 +80,17 @@ class LspHoverCommand(LspTextCommand):
 
     def run(self, edit: 'Any', point: 'Optional[int]' = None) -> None:
         hover_point = point or self.view.sel()[0].begin()
+        self._hover_content = ""
+        self._actions_content = ""
+        self._actions = []  # type: List[dict]
+        self._diagnostics_content = ""
         if self.is_likely_at_symbol(hover_point):
             self.request_symbol_hover(hover_point)
         point_diagnostics = get_point_diagnostics(self.view, hover_point)
         if point_diagnostics:
-            self.show_hover(hover_point, self.diagnostics_content(point_diagnostics))
+            self._diagnostics_content = self.diagnostics_content(point_diagnostics)
+            self.request_code_actions(point_diagnostics, hover_point)
+            self.show_hover(hover_point)
 
     def request_symbol_hover(self, point: int) -> None:
         # todo: session_for_view looks up windowmanager twice (config and for sessions)
@@ -95,22 +104,39 @@ class LspHoverCommand(LspTextCommand):
                         Request.hover(document_position),
                         lambda response: self.handle_response(response, point))
 
+    def request_code_actions(self, point_diagnostics: 'List[Diagnostic]', point: int) -> None:
+        session = session_for_view(self.view, 'codeActionProvider', point)
+        if session:
+            file_name = self.view.file_name()
+            first_diagnostic_range = point_diagnostics[0].range
+            if file_name:
+                params = {
+                    "textDocument": {
+                        "uri": filename_to_uri(file_name)
+                    },
+                    "range": first_diagnostic_range.to_lsp(),
+                    "context": {
+                        "diagnostics": list(diagnostic.to_lsp() for diagnostic in point_diagnostics)
+                    }
+                }
+                if session.client:
+                    session.client.send_request(
+                        Request.codeAction(params),
+                        lambda response: self.handle_code_actions(response, point))
+
+    def handle_code_actions(self, response: 'Optional[List[dict]]', point: int) -> None:
+        self._actions = response or []
+        if self._actions:
+            titles = [command["title"] for command in self._actions]
+            links = ["<a href='run-action:{}'>{}</a><br>".format(index, title) for index, title in enumerate(titles)]
+            self._actions_content = "<p>" + "\n".join(links) + "</p>"
+        else:
+            self._actions_content = ""
+        self.show_hover(point)
+
     def handle_response(self, response: 'Optional[Any]', point: int) -> None:
-        all_content = ""
-
-        point_diagnostics = get_point_diagnostics(self.view, point)
-        if point_diagnostics:
-            all_content += self.diagnostics_content(point_diagnostics)
-
-        all_content += self.hover_content(point, response)
-        if all_content and settings.show_symbol_action_links:
-            all_content += self.symbol_actions_content()
-
-        _test_contents.clear()
-        _test_contents.append(all_content)  # for testing only
-
-        if all_content:
-            self.show_hover(point, all_content)
+        self._hover_content = self.hover_content(point, response)
+        self.show_hover(point)
 
     def symbol_actions_content(self) -> str:
         actions = []
@@ -138,8 +164,8 @@ class LspHoverCommand(LspTextCommand):
         for severity, items in by_severity.items():
             formatted.append("<div class='{}'>".format(class_for_severity[severity]))
             formatted.extend(items)
-            formatted.append("<a href='{}'>{}</a>".format('code-actions',
-                                                          'Code Actions'))
+            # formatted.append("<a href='{}'>{}</a>".format('code-actions',
+            #                                               'Code Actions'))
             formatted.append("</div>")
 
         return "".join(formatted)
@@ -173,7 +199,12 @@ class LspHoverCommand(LspTextCommand):
 
         return ""
 
-    def show_hover(self, point: int, contents: str) -> None:
+    def show_hover(self, point: int) -> None:
+        contents = self._diagnostics_content + self._actions_content + self._hover_content
+
+        _test_contents.clear()
+        _test_contents.append(contents)  # for testing only
+
         mdpopups.show_popup(
             self.view,
             contents,
@@ -186,6 +217,7 @@ class LspHoverCommand(LspTextCommand):
             on_navigate=lambda href: self.on_hover_navigate(href, point))
 
     def on_hover_navigate(self, href: str, point: int) -> None:
+        debug('href clicked', href)
         for goto_kind in goto_kinds:
             if href == goto_kind.lsp_name:
                 self.run_command_from_point(point, "lsp_symbol_" + goto_kind.subl_cmd_name)
@@ -196,6 +228,10 @@ class LspHoverCommand(LspTextCommand):
             self.run_command_from_point(point, "lsp_symbol_rename")
         elif href == 'code-actions':
             self.run_command_from_point(point, "lsp_code_actions")
+        elif href.startswith("run-action:"):
+            _, action_index = href.split(":")
+            debug('got index', action_index)
+            run_code_action_or_command(self.view, self._actions[int(action_index)])
         else:
             webbrowser.open_new_tab(href)
 

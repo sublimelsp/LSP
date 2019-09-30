@@ -13,7 +13,7 @@ from .diagnostics import get_point_diagnostics
 from .core.edit import parse_workspace_edit
 from .core.url import filename_to_uri
 from .core.views import region_to_range
-from .core.registry import session_for_view
+from .core.registry import session_for_view, client_from_session
 from .core.settings import settings
 
 
@@ -88,6 +88,34 @@ def is_command(command_or_code_action: dict) -> bool:
     return isinstance(command_field, str)
 
 
+def execute_server_command(view: sublime.View, command: dict) -> None:
+    client = client_from_session(session_for_view(view, 'codeActionProvider'))
+    if client:
+        client.send_request(
+            Request.executeCommand(command),
+            handle_command_response)
+
+
+def handle_command_response(response: 'Any') -> None:
+    pass
+
+
+def run_code_action_or_command(view: sublime.View, command_or_code_action: dict) -> None:
+    if is_command(command_or_code_action):
+        execute_server_command(view, command_or_code_action)
+    else:
+        # CodeAction can have an edit and/or command.
+        maybe_edit = command_or_code_action.get('edit')
+        if maybe_edit:
+            changes = parse_workspace_edit(maybe_edit)
+            window = view.window()
+            if window:
+                window.run_command("lsp_apply_workspace_edit", {'changes': changes})
+        maybe_command = command_or_code_action.get('command')
+        if maybe_command:
+            execute_server_command(view, maybe_command)
+
+
 class LspCodeActionsCommand(LspTextCommand):
     def is_enabled(self) -> bool:
         return self.has_client_with_capability('codeActionProvider')
@@ -119,28 +147,5 @@ class LspCodeActionsCommand(LspTextCommand):
 
     def handle_select(self, index: int) -> None:
         if index > -1:
-
             selected = self.commands[index]
-            if is_command(selected):
-                self.run_command(selected)
-            else:
-                # CodeAction can have an edit and/or command.
-                maybe_edit = selected.get('edit')
-                if maybe_edit:
-                    changes = parse_workspace_edit(maybe_edit)
-                    window = self.view.window()
-                    if window:
-                        window.run_command("lsp_apply_workspace_edit", {'changes': changes})
-                maybe_command = selected.get('command')
-                if maybe_command:
-                    self.run_command(maybe_command)
-
-    def run_command(self, command: dict) -> None:
-        client = self.client_with_capability('codeActionProvider')
-        if client:
-            client.send_request(
-                Request.executeCommand(command),
-                self.handle_command_response)
-
-    def handle_command_response(self, response: 'Any') -> None:
-        pass
+            run_code_action_or_command(self.view, selected)

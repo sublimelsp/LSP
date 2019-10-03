@@ -44,15 +44,15 @@ popup_css = '''
         padding: 0.5rem;
     }
     .lsp_popup .actions {
-        font-weight: bold;
+        /* font-weight: bold; */
         border-width: 0;
-        background-color: color(var(--accent) alpha(0.25));
+        background-color: color(var(--foreground) alpha(0.1));
         color: var(--whitish);
         padding: 0.5rem;
     }
     .lsp_popup .actions a {
         text-decoration: none;
-        color: var(--whitish);
+        color: var(--foreground);
     }
 
 '''

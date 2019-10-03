@@ -134,7 +134,7 @@ class LspHoverCommand(LspTextCommand):
             return "<pre class=\"{}\">[{}] {}</pre>".format(class_for_severity[diagnostic.severity], diagnostic.source,
                                                             diagnostic_message)
         else:
-            return "<pre class=\"{}\">{}</pre>".format(diagnostic_message)
+            return "<pre class=\"{}\">{}</pre>".format(class_for_severity[diagnostic.severity], diagnostic_message)
 
     def diagnostics_content(self) -> str:
         formatted = []
@@ -197,16 +197,17 @@ class LspHoverCommand(LspTextCommand):
         _test_contents.clear()
         _test_contents.append(contents)  # for testing only
 
-        mdpopups.show_popup(
-            self.view,
-            contents,
-            css=popup_css,
-            md=False,
-            flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
-            location=point,
-            wrapper_class=popup_class,
-            max_width=800,
-            on_navigate=lambda href: self.on_hover_navigate(href, point))
+        if contents:
+            mdpopups.show_popup(
+                self.view,
+                contents,
+                css=popup_css,
+                md=False,
+                flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+                location=point,
+                wrapper_class=popup_class,
+                max_width=800,
+                on_navigate=lambda href: self.on_hover_navigate(href, point))
 
     def on_hover_navigate(self, href: str, point: int) -> None:
         for goto_kind in goto_kinds:

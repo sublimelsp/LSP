@@ -24,6 +24,7 @@
 **Workspace actions**
 
 * Show Diagnostics Panel: `super+shift+M` / `ctr+alt+M`
+* Next/Previous Diagnostic From panel: `F4` / `shift+F4`
 * Workspace Symbol Search: via command Palette `LSP: workspace symbol`
 
 **Overriding keybindings**

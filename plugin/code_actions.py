@@ -63,6 +63,7 @@ class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self._stored_point = -1
+        self._actions = []  # type: List[Dict]
 
     @classmethod
     def is_applicable(cls, _settings: 'Any') -> bool:
@@ -82,14 +83,14 @@ class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
 
     def fire_request(self, current_point: int) -> None:
         if current_point == self._stored_point:
+            self._actions = []
             request_code_actions(self.view, current_point, self.handle_response)
 
     def handle_response(self, config_name: str, response: 'Any') -> None:
-        if settings.show_code_actions_bulb:
-            if len(response) > 0:
-                self.show_bulb()
-            else:
-                self.hide_bulb()
+        if response:
+            self._actions.extend(response)
+        if len(self._actions) > 0:
+            self.show_bulb()
 
     def show_bulb(self) -> None:
         region = self.view.sel()[0]

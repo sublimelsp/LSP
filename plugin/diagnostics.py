@@ -154,6 +154,24 @@ def get_point_diagnostics(view: sublime.View, point: int) -> 'List[Diagnostic]':
     ]
 
 
+def point_diagnostics_by_config(view: sublime.View, point: int) -> 'Dict[str, List[Diagnostic]]':
+    diagnostics_by_config = {}
+    if view.window():
+        file_name = view.file_name()
+        if file_name:
+            window_diagnostics = windows.lookup(view.window())._diagnostics.get()
+            file_diagnostics = window_diagnostics.get(file_name, {})
+            for config_name, diagnostics in file_diagnostics.items():
+                point_diagnostics = [
+                    diagnostic for diagnostic in diagnostics
+                    if range_to_region(diagnostic.range, view).contains(point)
+                ]
+                if point_diagnostics:
+                    diagnostics_by_config[config_name] = point_diagnostics
+
+    return diagnostics_by_config
+
+
 def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic]', severity: int) -> None:
     region_name = "lsp_" + format_severity(severity)
     if settings.show_diagnostics_phantoms and not view.is_dirty():

@@ -16,33 +16,43 @@ popup_css = '''
     .lsp_popup li {
         font-family: system;
     }
+    .lsp_popup .diagnostics {
+        margin-bottom: 0.5rem;
+    }
     .lsp_popup .errors {
         border-width: 0;
         background-color: color(var(--redish) alpha(0.25));
         color: var(--whitish);
-        margin-bottom: 0.5rem;
         padding: 0.5rem;
     }
     .lsp_popup .warnings {
         border-width: 0;
         background-color: color(var(--yellowish) alpha(0.25));
         color: var(--whitish);
-        margin-bottom: 0.5rem;
         padding: 0.5rem;
     }
     .lsp_popup .info {
         border-width: 0;
         background-color: color(var(--bluish) alpha(0.25));
         color: var(--whitish);
-        margin-bottom: 0.5rem;
         padding: 0.5rem;
     }
     .lsp_popup .hints {
         border-width: 0;
         background-color: color(var(--bluish) alpha(0.25));
         color: var(--whitish);
-        margin-bottom: 0.5rem;
         padding: 0.5rem;
+    }
+    .lsp_popup .actions {
+        font-weight: bold;
+        border-width: 0;
+        background-color: color(var(--accent) alpha(0.25));
+        color: var(--whitish);
+        padding: 0.5rem;
+    }
+    .lsp_popup .actions a {
+        text-decoration: none;
+        color: var(--whitish);
     }
 
 '''

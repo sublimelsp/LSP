@@ -678,7 +678,7 @@ class View:
     def classify(self, pt: int) -> int:
         ...
 
-    def find_by_class(self, pt: int, forward: bool, classes: int, separators: str = ...) -> Region:
+    def find_by_class(self, pt: int, forward: bool, classes: int, separators: str = ...) -> int:
         ...
 
     def expand_by_class(self, x: Union[Region, int], classes: int, separators: str = ...) -> Region:

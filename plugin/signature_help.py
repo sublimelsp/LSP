@@ -101,6 +101,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                     self.view.hide_popup()
 
     def request_signature_help(self, point: int) -> None:
+        self.requested_position = point
         client = client_from_session(session_for_view(self.view, 'signatureHelpProvider', point))
         if client:
             global_events.publish("view.on_purge_changes", self.view)
@@ -111,13 +112,14 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                     lambda response: self.handle_response(response, point))
 
     def handle_response(self, response: 'Optional[Dict]', point: int) -> None:
-        self._help = create_signature_help(response)
-        if self._help:
-            content = self._help.build_popup_content(self._renderer)
-            if self._visible:
-                self._update_popup(content)
-            else:
-                self._show_popup(content, point)
+        if self.view.sel()[0].begin() == self.requested_position:
+            self._help = create_signature_help(response)
+            if self._help:
+                content = self._help.build_popup_content(self._renderer)
+                if self._visible:
+                    self._update_popup(content)
+                else:
+                    self._show_popup(content, point)
 
     def on_query_context(self, key: str, _operator: int, operand: int, _match_all: bool) -> bool:
         if key != "lsp.signature_help":

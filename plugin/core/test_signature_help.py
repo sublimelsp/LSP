@@ -199,6 +199,18 @@ class RenderSignatureLabelTests(unittest.TestCase):
  \n<variable.parameter emphasize>foo</variable.parameter>: i32
 <punctuation>)</punctuation></entity.name.function>""")
 
+    def test_params_are_substrings_before_comma(self):
+        sig = create_signature("f(x: str, t)", "x", "t")
+        help = create_signature_help(dict(signatures=[sig]))
+        if help:
+            label = render_signature_label(renderer, help.active_signature(), 0)
+            self.assertEqual(label, """
+<entity.name.function>f
+<punctuation>(</punctuation>\
+\n<variable.parameter emphasize>x</variable.parameter>: str,\
+ \n<variable.parameter>t</variable.parameter>
+<punctuation>)</punctuation></entity.name.function>""")
+
     def test_params_with_range(self):
         sig = create_signature("foobar(foo, foo)", [7, 10], [12, 15], activeParameter=1)
         help = create_signature_help(dict(signatures=[sig]))

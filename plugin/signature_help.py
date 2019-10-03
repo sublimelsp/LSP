@@ -53,6 +53,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         self.view = view
         self._initialized = False
         self._signature_help_triggers = []  # type: List[str]
+        self._signature_help_selector = view.settings().get("auto_complete_selector", "") or ""  # type: str
         self._visible = False
         self._help = None  # type: Optional[SignatureHelp]
         self._renderer = ColorSchemeScopeRenderer(self.view)
@@ -83,6 +84,9 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         # TODO: this will fire too often, narrow down using scopes or regex
         if not self._initialized:
             self.initialize()
+
+        if not self.view.match_selector(pos, self._signature_help_selector):
+            return
 
         if self._signature_help_triggers:
             last_char = self.view.substr(pos - 1)

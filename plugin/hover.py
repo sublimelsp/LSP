@@ -134,7 +134,7 @@ class LspHoverCommand(LspTextCommand):
             return "<pre class=\"{}\">[{}] {}</pre>".format(class_for_severity[diagnostic.severity], diagnostic.source,
                                                             diagnostic_message)
         else:
-            return "<pre>{}</pre>".format(diagnostic_message)
+            return "<pre class=\"{}\">{}</pre>".format(diagnostic_message)
 
     def diagnostics_content(self) -> str:
         formatted = []

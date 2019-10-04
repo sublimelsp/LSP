@@ -319,6 +319,25 @@ Install the [bash language server](https://github.com/mads-hartmann/bash-languag
 
 `npm i -g bash-language-server`
 
+### Terraform<a name="terraform">
+
+1. Download [terraform-lsp](https://github.com/juliosueiras/terraform-lsp/releases) binary and make it available in PATH
+2. add these configurations:
+```json
+"terraform":
+{
+  "command":
+  [
+    "terraform-lsp"
+  ],
+  "enabled": true,
+  "scopes": ["source.terraform"],
+  "complete_all_chars": true,
+  "syntaxes":  ["Packages/Terraform/Terraform.sublime-syntax"],
+  "languageId": "terraform"
+}
+```
+
 ### XML
 
 Discussed in [this issue](https://github.com/tomv564/LSP/issues/578)

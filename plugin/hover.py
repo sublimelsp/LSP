@@ -9,7 +9,7 @@ from .core.registry import session_for_view, LspTextCommand
 from .core.protocol import Request, DiagnosticSeverity, Diagnostic
 from .core.documents import get_document_position
 from .core.popups import popup_css, popup_class
-from .code_actions import run_code_action_or_command, request_code_actions_with_diagnostics
+from .code_actions import actions_manager, run_code_action_or_command  # , request_code_actions_with_diagnostics
 from .core.settings import client_configs, settings
 
 try:
@@ -79,7 +79,6 @@ class LspHoverCommand(LspTextCommand):
     def run(self, edit: 'Any', point: 'Optional[int]' = None) -> None:
         hover_point = point or self.view.sel()[0].begin()
         self._hover = None  # type: Optional[Any]
-        self._requested_action_configs = []  # type: List[str]
         self._actions_by_config = {}  # type: Dict[str, List[dict]]
         self._diagnostics_by_config = {}  # type: Dict[str, List[Diagnostic]]
 
@@ -88,7 +87,7 @@ class LspHoverCommand(LspTextCommand):
 
         self._diagnostics_by_config = point_diagnostics_by_config(self.view, hover_point)
         if self._diagnostics_by_config:
-            self._requested_action_configs = self.request_code_actions(hover_point)
+            self.request_code_actions(hover_point)
             self.request_show_hover(hover_point)
 
     def request_symbol_hover(self, point: int) -> None:
@@ -103,15 +102,13 @@ class LspHoverCommand(LspTextCommand):
                         Request.hover(document_position),
                         lambda response: self.handle_response(response, point))
 
-    def request_code_actions(self, point: int) -> 'List[str]':
-        return request_code_actions_with_diagnostics(
-            self.view, self._diagnostics_by_config,
-            point, lambda config, response: self.handle_code_actions(response, config, point))
+    def request_code_actions(self, point: int) -> None:
+        actions_manager.request(self.view, point, lambda response: self.handle_code_actions(response, point),
+                                self._diagnostics_by_config)
 
-    def handle_code_actions(self, response: 'Optional[List[dict]]', config_name: str, point: int) -> None:
-        self._actions_by_config[config_name] = response or []
-        if len(self._requested_action_configs) == len(self._actions_by_config):
-            self.request_show_hover(point)
+    def handle_code_actions(self, responses: 'Dict[str, List[dict]]', point: int) -> None:
+        self._actions_by_config = responses
+        self.request_show_hover(point)
 
     def handle_response(self, response: 'Optional[Any]', point: int) -> None:
         self._hover = response

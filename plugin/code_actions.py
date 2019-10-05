@@ -5,6 +5,8 @@ try:
     from typing import Any, List, Dict, Callable, Optional, Tuple
     from .core.sessions import Session
     from .core.protocol import Diagnostic
+    CodeActionsResponse = Optional[List[Dict]]
+    CodeActionsByConfigName = Dict[str, List[Dict]]
     assert Any and List and Dict and Callable and Optional and Session and Tuple and Diagnostic
 except ImportError:
     pass
@@ -19,20 +21,63 @@ from .core.registry import sessions_for_view, client_from_session
 from .core.settings import settings
 
 
+class CodeActionsAtLocation(object):
+
+    def __init__(self, on_complete_handler: 'Callable[[CodeActionsByConfigName], None]') -> None:
+        self._commands_by_config = {}  # type: CodeActionsByConfigName
+        self._requested_configs = []  # type: List[str]
+        self._on_complete_handler = on_complete_handler
+
+    def collect(self, config_name: str) -> 'Callable[[CodeActionsResponse], None]':
+        self._requested_configs.append(config_name)
+        return lambda actions: self.store(config_name, actions)
+
+    def store(self, config_name: str, actions: 'CodeActionsResponse') -> None:
+        self._commands_by_config[config_name] = actions or []
+        if len(self._requested_configs) == len(self._commands_by_config):
+            self._on_complete_handler(self._commands_by_config)
+
+    def deliver(self, recipient_handler: 'Callable[[CodeActionsByConfigName], None]') -> None:
+        recipient_handler(self._commands_by_config)
+
+
+class CodeActionsManager(object):
+    """ Collects and caches code actions"""
+    def __init__(self) -> None:
+        self._requests = {}  # type: Dict[str, CodeActionsAtLocation]
+
+    def request(self, view: sublime.View, point: int, actions_handler: 'Callable[[CodeActionsByConfigName], None]',
+                diagnostics_by_config: 'Optional[Dict[str, List[Diagnostic]]]' = None) -> None:
+        current_location = self.get_location_key(view, point)
+        # debug("requesting actions for {}".format(current_location))
+        if current_location in self._requests:
+            self._requests[current_location].deliver(actions_handler)
+        else:
+            self._requests.clear()
+            if diagnostics_by_config is None:
+                diagnostics_by_config = point_diagnostics_by_config(view, point)
+            self._requests[current_location] = request_code_actions(view, point, actions_handler)
+
+    def get_location_key(self, view: sublime.View, point: int) -> str:
+        return "{}#{}:{}".format(view.file_name(), view.change_count(), point)
+
+
+actions_manager = CodeActionsManager()
+
+
 def request_code_actions(view: sublime.View, point: int,
-                         actions_handler: 'Callable[[str, Optional[List[Dict]]], None]') -> 'List[str]':
+                         actions_handler: 'Callable[[CodeActionsByConfigName], None]') -> 'CodeActionsAtLocation':
     diagnostics_by_config = point_diagnostics_by_config(view, point)
     return request_code_actions_with_diagnostics(view, diagnostics_by_config, point, actions_handler)
 
 
 def request_code_actions_with_diagnostics(view: sublime.View, diagnostics_by_config: 'Dict[str, List[Diagnostic]]',
-                                          point: int, actions_handler: 'Callable[[str, Optional[List[Dict]]], None]'
-                                          ) -> 'List[str]':
-    configs = []  # type: List[str]
-    for session in sessions_for_view(view, point):
+                                          point: int, actions_handler: 'Callable[[CodeActionsByConfigName], None]'
+                                          ) -> 'CodeActionsAtLocation':
 
-        def handle_response(response: 'Optional[List[Dict]]', config_name: str = session.config.name) -> None:
-            actions_handler(config_name, response)
+    actions_at_location = CodeActionsAtLocation(actions_handler)
+
+    for session in sessions_for_view(view, point):
 
         if session.has_capability('codeActionProvider'):
             if session.config.name in diagnostics_by_config:
@@ -42,7 +87,6 @@ def request_code_actions_with_diagnostics(view: sublime.View, diagnostics_by_con
                     view,
                     view.sel()[0])
                 if file_name:
-                    configs.append(session.config.name)
                     params = {
                         "textDocument": {
                             "uri": filename_to_uri(file_name)
@@ -55,8 +99,8 @@ def request_code_actions_with_diagnostics(view: sublime.View, diagnostics_by_con
                     if session.client:
                         session.client.send_request(
                             Request.codeAction(params),
-                            handle_response)
-    return configs
+                            actions_at_location.collect(session.config.name))
+    return actions_at_location
 
 
 class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
@@ -84,11 +128,11 @@ class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
     def fire_request(self, current_point: int) -> None:
         if current_point == self._stored_point:
             self._actions = []
-            request_code_actions(self.view, current_point, self.handle_response)
+            actions_manager.request(self.view, current_point, self.handle_responses)
 
-    def handle_response(self, config_name: str, response: 'Any') -> None:
-        if response:
-            self._actions.extend(response)
+    def handle_responses(self, responses: 'CodeActionsByConfigName') -> None:
+        for _, items in responses.items():
+            self._actions.extend(items)
         if len(self._actions) > 0:
             self.show_bulb()
 
@@ -142,8 +186,7 @@ class LspCodeActionsCommand(LspTextCommand):
     def run(self, edit: 'Any') -> None:
         self.commands = []  # type: List[Tuple[str, str, Dict]]
         self.commands_by_config = {}  # type: Dict[str, List[Dict]]
-        self.requested_server_configs = request_code_actions(self.view,
-                                                             self.view.sel()[0].begin(), self.handle_response)
+        actions_manager.request(self.view, self.view.sel()[0].begin(), self.handle_responses)
 
     def combine_commands(self) -> 'List[Tuple[str, str, Dict]]':
         results = []
@@ -152,11 +195,10 @@ class LspCodeActionsCommand(LspTextCommand):
                 results.append((config, command['title'], command))
         return results
 
-    def handle_response(self, config_name: str, response: 'Optional[List[Dict]]') -> None:
-        self.commands_by_config[config_name] = response or []
-        if len(self.requested_server_configs) == len(self.commands_by_config):
-            self.commands = self.combine_commands()
-            self.show_popup_menu()
+    def handle_responses(self, responses: 'CodeActionsByConfigName') -> None:
+        self.commands_by_config = responses
+        self.commands = self.combine_commands()
+        self.show_popup_menu()
 
     def show_popup_menu(self) -> None:
         if len(self.commands) > 0:

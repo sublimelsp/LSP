@@ -332,7 +332,6 @@ Install the [bash language server](https://github.com/mads-hartmann/bash-languag
   ],
   "enabled": true,
   "scopes": ["source.terraform"],
-  "complete_all_chars": true,
   "syntaxes":  ["Packages/Terraform/Terraform.sublime-syntax"],
   "languageId": "terraform"
 }

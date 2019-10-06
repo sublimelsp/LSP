@@ -9,12 +9,13 @@ from .core.registry import session_for_view, LspTextCommand
 from .core.protocol import Request, DiagnosticSeverity, Diagnostic
 from .core.documents import get_document_position
 from .core.popups import popup_css, popup_class
-from .code_actions import actions_manager, run_code_action_or_command  # , request_code_actions_with_diagnostics
+from .code_actions import actions_manager, run_code_action_or_command
 from .core.settings import client_configs, settings
 
 try:
     from typing import List, Optional, Any, Dict
-    assert List and Optional and Any and Dict and Diagnostic
+    from .code_actions import CodeActionOrCommand
+    assert List and Optional and Any and Dict and Diagnostic and CodeActionOrCommand
 except ImportError:
     pass
 
@@ -27,11 +28,14 @@ class HoverHandler(sublime_plugin.ViewEventListener):
         self.view = view
 
     @classmethod
-    def is_applicable(cls, view_settings: 'Any') -> bool:
+    def is_applicable(cls, view_settings: dict) -> bool:
         if 'hover' in settings.disabled_capabilities:
             return False
         syntax = view_settings.get('syntax')
-        return syntax and is_supported_syntax(syntax, client_configs.all)
+        if syntax:
+            return is_supported_syntax(syntax, client_configs.all)
+        else:
+            return False
 
     def on_hover(self, point: int, hover_zone: int) -> None:
         if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():
@@ -76,10 +80,10 @@ class LspHoverCommand(LspTextCommand):
         word_at_sel = self.view.classify(point)
         return bool(word_at_sel & SUBLIME_WORD_MASK)
 
-    def run(self, edit: 'Any', point: 'Optional[int]' = None) -> None:
+    def run(self, edit: sublime.Edit, point: 'Optional[int]' = None) -> None:
         hover_point = point or self.view.sel()[0].begin()
         self._hover = None  # type: Optional[Any]
-        self._actions_by_config = {}  # type: Dict[str, List[dict]]
+        self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
         self._diagnostics_by_config = {}  # type: Dict[str, List[Diagnostic]]
 
         if self.is_likely_at_symbol(hover_point):
@@ -106,7 +110,7 @@ class LspHoverCommand(LspTextCommand):
         actions_manager.request(self.view, point, lambda response: self.handle_code_actions(response, point),
                                 self._diagnostics_by_config)
 
-    def handle_code_actions(self, responses: 'Dict[str, List[dict]]', point: int) -> None:
+    def handle_code_actions(self, responses: 'Dict[str, List[CodeActionOrCommand]]', point: int) -> None:
         self._actions_by_config = responses
         self.request_show_hover(point)
 

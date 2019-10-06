@@ -2,12 +2,19 @@ import sublime_plugin
 import sublime
 
 try:
-    from typing import Any, List, Dict, Callable, Optional, Tuple
+    from typing import Any, List, Dict, Callable, Optional, Tuple, Union, Mapping
     from .core.sessions import Session
     from .core.protocol import Diagnostic
-    CodeActionsResponse = Optional[List[Dict]]
-    CodeActionsByConfigName = Dict[str, List[Dict]]
-    assert Any and List and Dict and Callable and Optional and Session and Tuple and Diagnostic
+    from mypy_extensions import TypedDict
+    CodeActionOrCommand = TypedDict('CodeActionOrCommand', {
+        'title': str,
+        'command': 'Union[dict, str]',
+        'edit': dict
+    },
+                                    total=False)
+    CodeActionsResponse = Optional[List[CodeActionOrCommand]]
+    CodeActionsByConfigName = Dict[str, List[CodeActionOrCommand]]
+    assert Any and List and Dict and Callable and Optional and Session and Tuple and Diagnostic and Union and Mapping
 except ImportError:
     pass
 
@@ -107,10 +114,10 @@ class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self._stored_point = -1
-        self._actions = []  # type: List[Dict]
+        self._actions = []  # type: List[CodeActionOrCommand]
 
     @classmethod
-    def is_applicable(cls, _settings: 'Any') -> bool:
+    def is_applicable(cls, _settings: dict) -> bool:
         if settings.show_code_actions_bulb:
             return True
         return False
@@ -145,12 +152,12 @@ class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
         self.view.erase_regions('lsp_bulb')
 
 
-def is_command(command_or_code_action: dict) -> bool:
+def is_command(command_or_code_action: 'CodeActionOrCommand') -> bool:
     command_field = command_or_code_action.get('command')
     return isinstance(command_field, str)
 
 
-def execute_server_command(view: sublime.View, config_name: str, command: dict) -> None:
+def execute_server_command(view: sublime.View, config_name: str, command: 'Mapping[str, Any]') -> None:
     session = next((session for session in sessions_for_view(view) if session.config.name == config_name), None)
     client = client_from_session(session)
     if client:
@@ -159,11 +166,12 @@ def execute_server_command(view: sublime.View, config_name: str, command: dict) 
             handle_command_response)
 
 
-def handle_command_response(response: 'Any') -> None:
+def handle_command_response(response: 'None') -> None:
     pass
 
 
-def run_code_action_or_command(view: sublime.View, config_name: str, command_or_code_action: dict) -> None:
+def run_code_action_or_command(view: sublime.View, config_name: str,
+                               command_or_code_action: 'CodeActionOrCommand') -> None:
     if is_command(command_or_code_action):
         execute_server_command(view, config_name, command_or_code_action)
     else:
@@ -175,7 +183,7 @@ def run_code_action_or_command(view: sublime.View, config_name: str, command_or_
             if window:
                 window.run_command("lsp_apply_workspace_edit", {'changes': changes})
         maybe_command = command_or_code_action.get('command')
-        if maybe_command:
+        if isinstance(maybe_command, dict):
             execute_server_command(view, config_name, maybe_command)
 
 
@@ -183,12 +191,12 @@ class LspCodeActionsCommand(LspTextCommand):
     def is_enabled(self) -> bool:
         return self.has_client_with_capability('codeActionProvider')
 
-    def run(self, edit: 'Any') -> None:
-        self.commands = []  # type: List[Tuple[str, str, Dict]]
-        self.commands_by_config = {}  # type: Dict[str, List[Dict]]
+    def run(self, edit: sublime.Edit) -> None:
+        self.commands = []  # type: List[Tuple[str, str, CodeActionOrCommand]]
+        self.commands_by_config = {}  # type: CodeActionsByConfigName
         actions_manager.request(self.view, self.view.sel()[0].begin(), self.handle_responses)
 
-    def combine_commands(self) -> 'List[Tuple[str, str, Dict]]':
+    def combine_commands(self) -> 'List[Tuple[str, str, CodeActionOrCommand]]':
         results = []
         for config, commands in self.commands_by_config.items():
             for command in commands:

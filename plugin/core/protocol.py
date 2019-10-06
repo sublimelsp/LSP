@@ -1,6 +1,6 @@
 try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional, Union
-    assert Any and List and Dict and Tuple and Callable and Optional and Union
+    from typing import Any, List, Dict, Tuple, Callable, Optional, Union, Mapping
+    assert Any and List and Dict and Tuple and Callable and Optional and Union and Mapping
 except ImportError:
     pass
 
@@ -88,7 +88,7 @@ class DocumentHighlightKind(object):
 
 
 class Request:
-    def __init__(self, method: str, params: 'Optional[dict]') -> None:
+    def __init__(self, method: str, params: 'Optional[Mapping[str, Any]]') -> None:
         self.method = method
         self.params = params
         self.jsonrpc = "2.0"
@@ -142,7 +142,7 @@ class Request:
         return Request('textDocument/documentColor', params)
 
     @classmethod
-    def executeCommand(cls, params: dict) -> 'Request':
+    def executeCommand(cls, params: 'Mapping[str, Any]') -> 'Request':
         return Request("workspace/executeCommand", params)
 
     @classmethod

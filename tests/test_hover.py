@@ -19,7 +19,7 @@ class LspHoverCommandTests(TextDocumentTestCase):
         self.view.run_command('insert', {"characters": ORIGINAL_CONTENT})
         self.view.run_command('lsp_hover', {'point': 3})
 
-        yield 100  # popup should be visible eventually
+        yield 200  # popup should be visible eventually
         self.assertTrue(self.view.is_popup_visible())
 
         last_content = _test_contents[-1]

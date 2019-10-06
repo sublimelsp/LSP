@@ -66,7 +66,7 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings) -> None:
                                                            settings.document_highlight_scopes)
     settings.diagnostics_gutter_marker = read_str_setting(settings_obj, "diagnostics_gutter_marker", "dot")
     settings.show_code_actions_bulb = read_bool_setting(settings_obj, "show_code_actions_bulb", False)
-    settings.show_symbol_action_links = read_bool_setting(settings_obj, "show_symbol_action_links", True)
+    settings.show_symbol_action_links = read_bool_setting(settings_obj, "show_symbol_action_links", False)
     settings.only_show_lsp_completions = read_bool_setting(settings_obj, "only_show_lsp_completions", False)
     settings.complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
     settings.completion_hint_type = read_str_setting(settings_obj, "completion_hint_type", "auto")

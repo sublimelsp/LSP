@@ -119,5 +119,6 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
         for kind_str, regions in kind2regions.items():
             if regions:
                 scope = settings.document_highlight_scopes.get(kind_str, None)
-                self.view.add_regions("lsp_highlight_{}".format(kind_str),
-                                      regions, scope=scope, flags=flags)
+                if scope:
+                    self.view.add_regions("lsp_highlight_{}".format(kind_str),
+                                          regions, scope=scope, flags=flags)

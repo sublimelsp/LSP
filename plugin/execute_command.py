@@ -20,7 +20,9 @@ class LspExecuteCommand(LspTextCommand):
             command_args: 'Optional[Any]' = None) -> None:
         client = self.client_with_capability('executeCommandProvider')
         if client and command_name:
-            self.view.window().status_message("Running command {}".format(command_name))
+            window = self.view.window()
+            if window:
+                window.status_message("Running command {}".format(command_name))
             self._send_command(client, command_name, command_args)
 
     def _handle_response(self, command: str, response: 'Optional[Any]') -> None:

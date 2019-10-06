@@ -168,37 +168,38 @@ Visit [langserver.org](https://langserver.org) to find out if a language server 
 class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:
         view = self.window.active_view()
-        syntax = view.settings().get("syntax")
-        available_config = get_global_client_config(view, client_configs.all)
+        if view:
+            syntax = view.settings().get("syntax") or ""
+            available_config = get_global_client_config(view, client_configs.all)
 
-        syntax_name = extract_syntax_name(syntax)
-        title = "# Language Server for {}\n".format(syntax_name)
+            syntax_name = extract_syntax_name(syntax)
+            title = "# Language Server for {}\n".format(syntax_name)
 
-        if available_config:
-            content = supported_syntax_template.format(syntax_name)
-        else:
-            title = "# No Language Server support"
-            content = unsupported_syntax_template.format(syntax_name)
+            if available_config:
+                content = supported_syntax_template.format(syntax_name)
+            else:
+                title = "# No Language Server support"
+                content = unsupported_syntax_template.format(syntax_name)
 
-        mdpopups.show_popup(
-            view,
-            "\n".join([title, content]),
-            css='''
-                .lsp_documentation {
-                    margin: 1rem 1rem 0.5rem 1rem;
-                    font-family: system;
-                }
-                .lsp_documentation h1,
-                .lsp_documentation p {
-                    margin: 0 0 0.5rem 0;
-                }
-            ''',
-            md=True,
-            wrapper_class="lsp_documentation",
-            max_width=800,
-            max_height=600,
-            on_navigate=self.on_hover_navigate
-        )
+            mdpopups.show_popup(
+                view,
+                "\n".join([title, content]),
+                css='''
+                    .lsp_documentation {
+                        margin: 1rem 1rem 0.5rem 1rem;
+                        font-family: system;
+                    }
+                    .lsp_documentation h1,
+                    .lsp_documentation p {
+                        margin: 0 0 0.5rem 0;
+                    }
+                ''',
+                md=True,
+                wrapper_class="lsp_documentation",
+                max_width=800,
+                max_height=600,
+                on_navigate=self.on_hover_navigate
+            )
 
     def on_hover_navigate(self, href: str) -> None:
         if href == "#enable_globally":

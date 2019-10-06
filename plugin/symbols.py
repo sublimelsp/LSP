@@ -65,10 +65,11 @@ class LspDocumentSymbolsCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit) -> None:
         client = self.client_with_capability('documentSymbolProvider')
-        if client:
+        file_path = self.view.file_name()
+        if client and file_path:
             params = {
                 "textDocument": {
-                    "uri": filename_to_uri(self.view.file_name())
+                    "uri": filename_to_uri(file_path)
                 }
             }
             request = Request.documentSymbols(params)
@@ -78,7 +79,9 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         response_list = response or []
         symbols = list(format_symbol(item) for item in response_list)
         self.symbols = response_list
-        self.view.window().show_quick_panel(symbols, self.on_symbol_selected)
+        window = self.view.window()
+        if window:
+            window.show_quick_panel(symbols, self.on_symbol_selected)
 
     def on_symbol_selected(self, symbol_index: int) -> None:
         if symbol_index == -1:

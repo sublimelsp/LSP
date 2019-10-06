@@ -15,10 +15,6 @@
     // Show/Hide Diagnostics Panel
     { "keys": ["super+alt+m"], "command": "lsp_show_diagnostics_panel" },
 
-    // Go To Next/Previous Diagnostics - THIS OVERRIDES DEFAULT SUBLIME KEYBINDINGS
-    // { "keys": ["f4"], "command": "next_result" },
-    // { "keys": ["shift+f4"], "command": "prev_result" },
-
     // Trigger Signature Help
     { "keys": ["super+alt+space"], "command": "noop", "context": [{ "key": "lsp.signature_help", "operator": "equal", "operand": 0}] },
 

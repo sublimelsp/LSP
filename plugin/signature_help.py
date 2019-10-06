@@ -53,6 +53,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         self.view = view
         self._initialized = False
         self._signature_help_triggers = []  # type: List[str]
+        self._signature_help_selector = view.settings().get("auto_complete_selector", "") or ""  # type: str
         self._visible = False
         self._help = None  # type: Optional[SignatureHelp]
         self._renderer = ColorSchemeScopeRenderer(self.view)
@@ -84,6 +85,9 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         if not self._initialized:
             self.initialize()
 
+        if not self.view.match_selector(pos, self._signature_help_selector):
+            return
+
         if self._signature_help_triggers:
             last_char = self.view.substr(pos - 1)
             if last_char in self._signature_help_triggers:
@@ -91,11 +95,13 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
             elif self._visible:
                 if last_char.isspace():
                     # Peek behind to find the last non-whitespace character.
-                    last_char = self.view.substr(self.view.find_by_class(pos, False, ~0) - 1)
+                    last_non_white_space_position = self.view.find_by_class(pos, False, ~0)
+                    last_char = self.view.substr(last_non_white_space_position - 1)
                 if last_char not in self._signature_help_triggers:
                     self.view.hide_popup()
 
     def request_signature_help(self, point: int) -> None:
+        self.requested_position = point
         client = client_from_session(session_for_view(self.view, 'signatureHelpProvider', point))
         if client:
             global_events.publish("view.on_purge_changes", self.view)
@@ -106,13 +112,14 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
                     lambda response: self.handle_response(response, point))
 
     def handle_response(self, response: 'Optional[Dict]', point: int) -> None:
-        self._help = create_signature_help(response)
-        if self._help:
-            content = self._help.build_popup_content(self._renderer)
-            if self._visible:
-                self._update_popup(content)
-            else:
-                self._show_popup(content, point)
+        if self.view.sel()[0].begin() == self.requested_position:
+            self._help = create_signature_help(response)
+            if self._help:
+                content = self._help.build_popup_content(self._renderer)
+                if self._visible:
+                    self._update_popup(content)
+                else:
+                    self._show_popup(content, point)
 
     def on_query_context(self, key: str, _operator: int, operand: int, _match_all: bool) -> bool:
         if key != "lsp.signature_help":

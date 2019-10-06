@@ -50,13 +50,13 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
-        self.auto_complete_selector = view.settings().get("auto_complete_selector")
+        self.auto_complete_selector = view.settings().get("auto_complete_selector", "") or ""  # type: str
         self.resolve = False
         self.state = CompletionState.IDLE
         self.completions = []  # type: List[Any]
         self.next_request = None  # type: Optional[Tuple[str, List[int]]]
         self.last_prefix = ""
-        self.last_location = 0
+        self.last_location = -1
         self.committing = False
         self.response_items = []  # type: List[dict]
         self.response_incomplete = False
@@ -89,7 +89,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         return languages.get(config_name) if languages else None
 
     def register_trigger_chars(self, session: Session) -> None:
-        completion_triggers = self.view.settings().get('auto_complete_triggers', [])
+        completion_triggers = self.view.settings().get('auto_complete_triggers', []) or []  # type: List[Dict[str, str]]
         view_language = self._view_language(session.config.name)
         if view_language:
             for language in session.config.languages:
@@ -117,6 +117,9 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
     def is_same_completion(self, prefix: str, locations: 'List[int]') -> bool:
         if self.response_incomplete:
+            return False
+
+        if self.last_location < 0:
             return False
 
         # completion requests from the same location with the same prefix are cached.
@@ -149,7 +152,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
         # hide completion when backspacing past last completion.
         if self.view.sel()[0].begin() < self.last_location:
-            self.last_location = 0
+            self.last_location = -1
             self.view.run_command("hide_auto_complete")
 
         # cancel current completion if the previous input is an space

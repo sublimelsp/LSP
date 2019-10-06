@@ -24,6 +24,7 @@
 **Workspace actions**
 
 * Show Diagnostics Panel: `super+shift+M` / `ctr+alt+M`
+* Next/Previous Diagnostic From panel: `F4` / `shift+F4`
 * Workspace Symbol Search: via command Palette `LSP: workspace symbol`
 
 **Overriding keybindings**
@@ -61,7 +62,13 @@ https://stackoverflow.com/questions/16235706/sublime-3-set-key-map-for-function-
 
 ## Configuring
 
-Global plugin settings and settings defined at project level are merged together.
+### Sublime settings
+
+Add these settings to your Sublime settings, Syntax-specific settings and/or in Project files.
+
+* `lsp_format_on_save` `false` *run the server's formatProvider (if supported) on a document before saving.*
+
+### Package settings (LSP)
 
 * `complete_all_chars` `true` *request completions for all characters, not just trigger characters*
 * `only_show_lsp_completions` `false` *disable sublime word completion and snippets from autocomplete lists*
@@ -86,5 +93,6 @@ Global plugin settings and settings defined at project level are merged together
 * `log_server` `true` *show server/logMessage notifications from language servers in the console*
 * `log_stderr` `false` *show language server stderr output in the console*
 * `log_payloads` `false` *show full JSON-RPC responses in the console*
+
 
 

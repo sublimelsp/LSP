@@ -154,7 +154,7 @@ class LspHoverCommand(LspTextCommand):
                 action_count = len(self._actions_by_config[config_name])
                 if action_count > 0:
                     formatted.append("<div class=\"actions\"><a href='{}:{}'>{} ({})</a></div>".format(
-                        'code-actions', config_name, ' -> Code Actions', action_count))
+                        'code-actions', config_name, 'Code Actions', action_count))
 
             formatted.append("</div>")
 

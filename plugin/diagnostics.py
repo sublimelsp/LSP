@@ -267,6 +267,69 @@ def handle_diagnostics(update: DiagnosticsUpdate) -> None:
     else:
         debug('view not found')
     update_diagnostics_panel(window)
+    if update.file_path in expecting_diagnostics:
+        debug('expecting diagnostics for', update.file_path)
+        handler = expecting_diagnostics.pop(update.file_path, None)
+        if handler:
+            debug('invoking diagnostics handler')
+            handler()
+
+
+expecting_diagnostics = {}  # type: Dict[str, Optional[Callable[[], None]]]
+
+
+class DiagnosticsOnSaveListener(sublime_plugin.ViewEventListener):
+    @classmethod
+    def is_applicable(cls, view_settings: dict) -> bool:
+        # if not settings.show_diagnostics_in_view_status:
+        #     return False
+        syntax = view_settings.get('syntax')
+        if syntax:
+            return is_supported_syntax(syntax, client_configs.all)
+        return False
+
+    def has_latest_diagnostics(self) -> bool:
+        return self.view.file_name() not in expecting_diagnostics
+
+    def on_modified_async(self) -> None:
+        file_name = self.view.file_name()
+        if file_name:
+            expecting_diagnostics[file_name] = None
+
+    def on_pre_save(self) -> None:
+        self._was_dirty = self.view.is_dirty()
+
+    def on_post_save_async(self) -> None:
+        debug('on_post_save_async', self.view.file_name())
+        if self._was_dirty:
+            file_name = self.view.file_name()
+            if file_name:
+                if self.has_latest_diagnostics():
+                    debug('latest diagnostics:', file_name)
+                    self.show_diagnostics_if_relevant()
+                else:
+                    debug('expecting diagnostics:', file_name)
+                    expecting_diagnostics[file_name] = lambda: self.show_diagnostics_if_relevant()
+
+    def has_relevant_diagnostics(self) -> bool:
+        file_name = self.view.file_name()
+        window = self.view.window()
+        if file_name and window:
+            diagnostics = get_window_diagnostics(window)
+            if file_name in diagnostics:
+                if has_relevant_diagnostics(diagnostics[file_name]):
+                    return True
+        return False
+
+    def show_diagnostics_if_relevant(self) -> None:
+        window = self.view.window()
+        if window:
+            if self.has_relevant_diagnostics():
+                window.run_command("show_panel",
+                                   {"panel": "output.diagnostics"})
+            else:
+                window.run_command("hide_panel",
+                                   {"panel": "output.diagnostics"})
 
 
 class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
@@ -372,7 +435,7 @@ def update_diagnostics_panel(window: sublime.Window) -> None:
             panel = window.find_output_panel("diagnostics")
             if panel:
                 panel.run_command("lsp_clear_panel")
-                if is_active_panel:
+                if settings.auto_show_diagnostics_panel and is_active_panel:
                     window.run_command("hide_panel",
                                        {"panel": "output.diagnostics"})
 

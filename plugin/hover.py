@@ -194,7 +194,7 @@ class LspHoverCommand(LspTextCommand):
 
     def show_hover(self, point: int) -> None:
         contents = self.diagnostics_content() + self.hover_content()
-        if settings.show_symbol_action_links:
+        if contents and settings.show_symbol_action_links:
             contents += self.symbol_actions_content()
 
         _test_contents.clear()

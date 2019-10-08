@@ -267,88 +267,84 @@ def handle_diagnostics(update: DiagnosticsUpdate) -> None:
     else:
         debug('view not found')
     update_diagnostics_panel(window)
-    if update.file_path in expecting_diagnostics:
-        debug('expecting diagnostics for', update.file_path)
-        handler = expecting_diagnostics.pop(update.file_path, None)
+    if window.id() in window_expecting_diagnostics:
+        debug('got diagnostics for', update.file_path)
+        handler = window_expecting_diagnostics.pop(window.id(), None)
         if handler:
-            debug('invoking diagnostics handler')
+            debug('invoking expecting diagnostics handler for window', window.id())
             handler()
 
 
-expecting_diagnostics = {}  # type: Dict[str, Optional[Callable[[], None]]]
+window_expecting_diagnostics = {}  # type: Dict[int, Optional[Callable[[], None]]]
 
 
-class DiagnosticsOnSaveListener(sublime_plugin.ViewEventListener):
-    def __init__(self, view: sublime.View) -> None:
-        self._received_first_diagnostics = False
-        super().__init__(view)
+def window_id_for_view(view: sublime.View) -> 'Optional[int]':
+    window = view.window()
+    if window:
+        return window.id()
+    return None
 
-    @classmethod
-    def is_applicable(cls, view_settings: dict) -> bool:
-        # if not settings.show_diagnostics_in_view_status:
-        #     return False
-        syntax = view_settings.get('syntax')
+
+class DiagnosticsOnSaveListener(sublime_plugin.EventListener):
+    def __init__(self) -> None:
+        self._received_first_diagnostics = []  # type: List[int]
+
+    def on_modified_async(self, view: sublime.View) -> None:
+        # todo: expensive on every modification. Hook up to document sync instead?
+        syntax = view.settings().get('syntax')
         if syntax:
-            return is_supported_syntax(syntax, client_configs.all)
-        return False
+            if is_supported_syntax(syntax, client_configs.all):
+                window = view.window()
+                if window:
+                    debug('modification in window ', window.id())
+                    window_expecting_diagnostics[window.id()] = None
 
-    def has_latest_diagnostics(self) -> bool:
-        return self.view.file_name() not in expecting_diagnostics
+    def on_load_async(self, view: sublime.View) -> None:
+        self.wait_for_initial_diagnostics(view)
 
-    def on_modified_async(self) -> None:
-        file_name = self.view.file_name()
-        if file_name:
-            expecting_diagnostics[file_name] = None
+    def on_activated_async(self, view: sublime.View) -> None:
+        self.wait_for_initial_diagnostics(view)
 
-    def on_load_async(self) -> None:
-        self.wait_for_initial_diagnostics()
+    def on_pre_save(self, view: sublime.View) -> None:
+        pass
+        # todo, fix me.
+        # self._was_dirty = self.view.is_dirty()
 
-    def on_activated_async(self) -> None:
-        self.wait_for_initial_diagnostics()
+    def has_latest_diagnostics(self, window_id: int) -> bool:
+        return window_id not in window_expecting_diagnostics
 
-    def wait_for_initial_diagnostics(self) -> None:
-        debug('initial diagnostics received:', self._received_first_diagnostics)
-        if not self._received_first_diagnostics:
-            self.show_or_wait_for_diagnostics()
+    def wait_for_initial_diagnostics(self, view: sublime.View) -> None:
+        window_id = window_id_for_view(view)
+        if window_id:
+            if window_id not in self._received_first_diagnostics:
+                debug('waiting for initial diagnostics for window', window_id)
+                self.show_or_wait_for_diagnostics(window_id)
 
-    def on_pre_save(self) -> None:
-        self._was_dirty = self.view.is_dirty()
+    def on_post_save_async(self, view: sublime.View) -> None:
+        debug('on_post_save_async', view.file_name())
+        # if self._was_dirty:
+        window_id = window_id_for_view(view)
+        if window_id:
+            self.show_or_wait_for_diagnostics(window_id)
 
-    def on_post_save_async(self) -> None:
-        debug('on_post_save_async', self.view.file_name())
-        if self._was_dirty:
-            self.show_or_wait_for_diagnostics()
+    def show_or_wait_for_diagnostics(self, window_id: int) -> None:
+        debug('show or wait has latest', self.has_latest_diagnostics(window_id), 'has received first',
+              window_id in self._received_first_diagnostics)
+        if self.has_latest_diagnostics(window_id) and window_id in self._received_first_diagnostics:
+            self.show_diagnostics_if_relevant(window_id)
+        else:
+            debug('expecting diagnostics in window', window_id)
+            window_expecting_diagnostics[window_id] = lambda: self.show_diagnostics_if_relevant(window_id)
 
-    def show_or_wait_for_diagnostics(self) -> None:
-        file_name = self.view.file_name()
-        if file_name:
+    def has_relevant_diagnostics(self, window: sublime.Window) -> bool:
+        return window_has_relevant_diagnostics(window)
 
-            if self.has_latest_diagnostics() and self._received_first_diagnostics:
-                debug('latest diagnostics:', file_name)
-                self.show_diagnostics_if_relevant()
-            else:
-                debug('expecting diagnostics:', file_name)
-                expecting_diagnostics[file_name] = lambda: self.show_diagnostics_if_relevant()
-
-            if not self._received_first_diagnostics:
-                self._received_first_diagnostics = True
-
-    def has_relevant_diagnostics(self) -> bool:
-        file_name = self.view.file_name()
-        window = self.view.window()
-        if file_name and window:
-            diagnostics = get_window_diagnostics(window)
-            if file_name in diagnostics:
-                if has_relevant_diagnostics(diagnostics[file_name]):
-                    return True
-        return False
-
-    def show_diagnostics_if_relevant(self) -> None:
-        window = self.view.window()
+    def show_diagnostics_if_relevant(self, window_id: int) -> None:
+        window = next((window for window in sublime.windows() if window.id() == window_id), None)
         if window:
-            if not self._received_first_diagnostics:
-                self._received_first_diagnostics = True
-            if self.has_relevant_diagnostics():
+            if window_id not in self._received_first_diagnostics:
+                self._received_first_diagnostics.append(window_id)
+            if self.has_relevant_diagnostics(window):
                 window.run_command("show_panel",
                                    {"panel": "output.diagnostics"})
             else:
@@ -471,6 +467,15 @@ def has_relevant_diagnostics(origin_diagnostics: 'Dict[str, List[Diagnostic]]') 
             if diagnostic.severity <= settings.auto_show_diagnostics_panel_level:
                 return True
 
+    return False
+
+
+def window_has_relevant_diagnostics(window: sublime.Window) -> bool:
+    diagnostics_by_file = get_window_diagnostics(window)
+    if diagnostics_by_file is not None:
+        for file_path, source_diagnostics in diagnostics_by_file.items():
+            if has_relevant_diagnostics(source_diagnostics):
+                return True
     return False
 
 

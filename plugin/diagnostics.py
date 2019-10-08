@@ -279,6 +279,10 @@ expecting_diagnostics = {}  # type: Dict[str, Optional[Callable[[], None]]]
 
 
 class DiagnosticsOnSaveListener(sublime_plugin.ViewEventListener):
+    def __init__(self, view: sublime.View) -> None:
+        self._received_first_diagnostics = False
+        super().__init__(view)
+
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:
         # if not settings.show_diagnostics_in_view_status:
@@ -296,20 +300,38 @@ class DiagnosticsOnSaveListener(sublime_plugin.ViewEventListener):
         if file_name:
             expecting_diagnostics[file_name] = None
 
+    def on_load_async(self) -> None:
+        self.wait_for_initial_diagnostics()
+
+    def on_activated_async(self) -> None:
+        self.wait_for_initial_diagnostics()
+
+    def wait_for_initial_diagnostics(self) -> None:
+        debug('initial diagnostics received:', self._received_first_diagnostics)
+        if not self._received_first_diagnostics:
+            self.show_or_wait_for_diagnostics()
+
     def on_pre_save(self) -> None:
         self._was_dirty = self.view.is_dirty()
 
     def on_post_save_async(self) -> None:
         debug('on_post_save_async', self.view.file_name())
         if self._was_dirty:
-            file_name = self.view.file_name()
-            if file_name:
-                if self.has_latest_diagnostics():
-                    debug('latest diagnostics:', file_name)
-                    self.show_diagnostics_if_relevant()
-                else:
-                    debug('expecting diagnostics:', file_name)
-                    expecting_diagnostics[file_name] = lambda: self.show_diagnostics_if_relevant()
+            self.show_or_wait_for_diagnostics()
+
+    def show_or_wait_for_diagnostics(self) -> None:
+        file_name = self.view.file_name()
+        if file_name:
+
+            if self.has_latest_diagnostics() and self._received_first_diagnostics:
+                debug('latest diagnostics:', file_name)
+                self.show_diagnostics_if_relevant()
+            else:
+                debug('expecting diagnostics:', file_name)
+                expecting_diagnostics[file_name] = lambda: self.show_diagnostics_if_relevant()
+
+            if not self._received_first_diagnostics:
+                self._received_first_diagnostics = True
 
     def has_relevant_diagnostics(self) -> bool:
         file_name = self.view.file_name()
@@ -324,6 +346,8 @@ class DiagnosticsOnSaveListener(sublime_plugin.ViewEventListener):
     def show_diagnostics_if_relevant(self) -> None:
         window = self.view.window()
         if window:
+            if not self._received_first_diagnostics:
+                self._received_first_diagnostics = True
             if self.has_relevant_diagnostics():
                 window.run_command("show_panel",
                                    {"panel": "output.diagnostics"})

@@ -122,6 +122,11 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         if self.last_location < 0:
             return False
 
+        # issue 745, some servers return nothing until some chars into a word are returned
+        # Don't cache these empty responses.
+        if prefix and self.last_prefix == "" and not self.completions:
+            return False
+
         # completion requests from the same location with the same prefix are cached.
         current_start = locations[0] - len(prefix)
         last_start = self.last_location - len(self.last_prefix)

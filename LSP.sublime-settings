@@ -317,12 +317,12 @@
         "scopes": ["source.php", "embedding.php"],
         "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
         "languageId": "php",
-        // "initializationOptions": {
+        "initializationOptions": {
         //   "clearCache": false,
-        //   "storagePath": "/tmp/intelephense",
+          "storagePath": null,
         //   "globalStoragePath": "/tmp/intelephense",
         //   "licenceKey": "",
-        // },
+        }
     },
     "reason":
     {

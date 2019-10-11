@@ -1,9 +1,8 @@
-import re
 from copy import deepcopy
 
 from .types import ClientConfig, LanguageConfig, ViewLike, WindowLike, ConfigRegistry
 from .logging import debug
-from .types import config_supports_syntax
+from .types import config_supports_syntax, syntax_language
 from .workspace import get_project_config
 
 assert ClientConfig
@@ -89,17 +88,9 @@ def apply_window_settings(client_config: 'ClientConfig', window: 'sublime.Window
 
 def is_supported_syntax(syntax: str, configs: 'List[ClientConfig]') -> bool:
     for config in configs:
-        for language in config.languages:
-            if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in language.syntaxes), syntax, re.IGNORECASE):
-                return True
+        if config_supports_syntax(config, syntax):
+            return True
     return False
-
-
-def syntax_language(config: 'ClientConfig', syntax: str) -> 'Optional[LanguageConfig]':
-    for language in config.languages:
-        if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in language.syntaxes), syntax, re.IGNORECASE):
-            return language
-    return None
 
 
 class ConfigManager(object):

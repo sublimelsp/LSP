@@ -1,4 +1,3 @@
-import re
 try:
     from typing_extensions import Protocol
     from typing import Optional, List, Callable, Dict, Any, Iterator
@@ -49,11 +48,16 @@ class ClientStates(object):
     STOPPING = 2
 
 
-def config_supports_syntax(config: 'ClientConfig', syntax: str) -> bool:
+def syntax_language(config: 'ClientConfig', syntax: str) -> 'Optional[LanguageConfig]':
     for language in config.languages:
-        if re.search(r'|'.join(r'\b%s\b' % re.escape(s) for s in language.syntaxes), syntax, re.IGNORECASE):
-            return True
-    return False
+        for lang_syntax in language.syntaxes:
+            if lang_syntax == syntax:
+                return language
+    return None
+
+
+def config_supports_syntax(config: 'ClientConfig', syntax: str) -> bool:
+    return bool(syntax_language(config, syntax))
 
 
 class LanguageConfig(object):

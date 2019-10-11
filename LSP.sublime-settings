@@ -357,7 +357,7 @@
         "languageId": "javascript"
       }, {
         "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Typescript"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
         "languageId": "typescript"
       }
       ]
@@ -378,7 +378,7 @@
         "languageId": "javascript"
       }, {
         "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Typescript"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
         "languageId": "typescript"
       }
       ]
@@ -388,7 +388,7 @@
       "command": ["typescript-language-server", "--stdio"],
       "languages": [{
         "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Typescript"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
         "languageId": "typescript"
       }]
     },

@@ -178,7 +178,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
     def on_completion_inserted(self) -> None:
         # get text inserted from last completion
         word = self.view.word(self.last_location)
-        region = sublime.Region(word.begin(), self.view.sel()[0].end())
+        begin = word.begin()
+        if self.view.substr(word) == '<<':  # issue 714
+            begin += 1
+        region = sublime.Region(begin, self.view.sel()[0].end())
         inserted = self.view.substr(region)
 
         item = self.find_completion_item(inserted)
@@ -191,8 +194,8 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 edit_start_loc = self.view.text_point(*start)
 
                 # if the edit started before the word, we need to trim back to the start of the edit.
-                if edit_start_loc < word.begin():
-                    trim_range = (edit_start_loc, word.begin())
+                if edit_start_loc < begin:
+                    trim_range = (edit_start_loc, begin)
                     debug('trimming between', trim_range, 'because textEdit', parsed_edit)
                     self.view.run_command("lsp_trim_completion", {'range': trim_range})
 

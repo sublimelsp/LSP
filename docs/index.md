@@ -324,7 +324,7 @@ Install the [bash language server](https://github.com/mads-hartmann/bash-languag
 1. Download and extract the [latest release](https://github.com/PowerShell/PowerShellEditorServices/releases) PowerShellEditorServices
 2. Install the [powershell plugin](https://packagecontrol.io/packages/PowerShell) for syntax highlighting
 3. add these configurations:
-```json
+```jsonc
 "powershell-ls":
 {
   "command":
@@ -360,6 +360,8 @@ Install the [bash language server](https://github.com/mads-hartmann/bash-languag
 }
 ```
 4. make sure powershell help files are up to date by running `Update-Help` in the powershell console (the one you're using in the command)
+
+For more details see this [issue](https://github.com/PowerShell/PowerShellEditorServices/issues/1057)
 
 
 ### Terraform<a name="terraform">

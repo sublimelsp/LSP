@@ -51,6 +51,16 @@ def state_to_string(state: int) -> str:
     return StateStrings.get(state, '<unknown state: %d>'.format(state))
 
 
+def start_tcp_listener(tcp_port: int) -> socket.socket:
+    sock = socket.socket()
+    sock.bind(('', tcp_port))
+    port = sock.getsockname()[1]
+    sock.settimeout(10)
+    debug('listening on {}:{}'.format('localhost', port))
+    sock.listen(1)
+    return sock
+
+
 def start_tcp_transport(port: int, host: 'Optional[str]' = None) -> 'Transport':
     start_time = time.time()
     debug('connecting to {}:{}'.format(host or "localhost", port))

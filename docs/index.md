@@ -313,11 +313,54 @@ Or instead of LSP-julia, add the following client configuration:
 ```
 alternatively you can use the less maintained [lua-lsp](https://github.com/Alloyed/lua-lsp)
 
-### Bash
+### Bash<a name="bash">
 
 Install the [bash language server](https://github.com/mads-hartmann/bash-language-server)
 
 `npm i -g bash-language-server`
+
+### PowerShell<a name="powershell">
+
+1. Download and extract the [latest release](https://github.com/PowerShell/PowerShellEditorServices/releases) PowerShellEditorServices
+2. Install the [powershell plugin](https://packagecontrol.io/packages/PowerShell) for syntax highlighting
+3. add these configurations:
+```json
+"powershell-ls":
+{
+  "command":
+  [
+    "PATH/TO/powershell or pwsh",
+    "-NoLogo",
+    "-NoProfile",
+    "-NonInteractive",
+    "-ExecutionPolicy", "Bypass",  // windows only
+    "-Command",
+    "PATH/TO/PowerShellEditorServices/PowerShellEditorServices/Start-EditorServices.ps1",
+    "-LogPath", "PATH/TO/pses.log",  // the path itself is not relevant
+    "-LogLevel", "Normal",
+    "-SessionDetailsPath", "PATH/TO/session.json",  // the path itself is not relevant
+    "-FeatureFlags", "@()",
+    "-HostName", "'Sublime Text'",
+    "-HostProfileId", "subl",
+    "-HostVersion", "1.0.0",
+    "-AdditionalModules", "@()",
+    "-BundledModulesPath", "D:/Amjad/PowerShellEditorServices",
+    "-Stdio"
+  ],
+  "enabled": true,
+  "languageId": "powershell",
+  "scopes":
+  [
+    "source.powershell"
+  ],
+  "syntaxes":
+  [
+    "Packages/PowerShell/Support/PowershellSyntax.tmLanguage"
+  ]
+}
+```
+4. make sure powershell help files are up to date by running `Update-Help` in the powershell console (the one you're using in the command)
+
 
 ### Terraform<a name="terraform">
 

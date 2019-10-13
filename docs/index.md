@@ -344,7 +344,7 @@ Install the [bash language server](https://github.com/mads-hartmann/bash-languag
     "-HostProfileId", "subl",
     "-HostVersion", "1.0.0",
     "-AdditionalModules", "@()",
-    "-BundledModulesPath", "D:/Amjad/PowerShellEditorServices",
+    "-BundledModulesPath", "PATH/TO/PowerShellEditorServices",
     "-Stdio"
   ],
   "enabled": true,

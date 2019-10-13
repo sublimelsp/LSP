@@ -55,6 +55,7 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [Reason](https://lsp.readthedocs.io/en/latest/#reason)
 * [Ruby](https://lsp.readthedocs.io/en/latest/#ruby)
 * [Rust](https://lsp.readthedocs.io/en/latest/#rust)
+* [PowerShell](https://lsp.readthedocs.io/en/latest/#powershell)
 * [Scala](https://lsp.readthedocs.io/en/latest/#scala)
 * [Terraform](https://lsp.readthedocs.io/en/latest/#terraform)
 * [Vue (JavaScript)](https://lsp.readthedocs.io/en/latest/#vue)

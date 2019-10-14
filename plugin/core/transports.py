@@ -55,7 +55,7 @@ def start_tcp_listener(tcp_port: int) -> socket.socket:
     sock = socket.socket()
     sock.bind(('', tcp_port))
     port = sock.getsockname()[1]
-    sock.settimeout(10)
+    sock.settimeout(TCP_CONNECT_TIMEOUT)
     debug('listening on {}:{}'.format('localhost', port))
     sock.listen(1)
     return sock

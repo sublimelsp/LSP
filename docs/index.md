@@ -459,17 +459,35 @@ or in multi-language form:
 }
 ```
 
-* `command` - specify a full paths, add arguments (if not specified then tcp_port must be specified)
-* `tcp_port` - if not specified then stdin/out are used else sets the tcpport to connect to (if no command is specified then it is assumed that some process is listing on this port)
+Most important:
+
+* `enabled` - enables a language server (default is disabled)
+
+Values that determine if a server should be started and queried for a given document:
+
 * `scopes` - add language flavours, eg. `source.js`, `source.jsx`.
 * `syntaxes` - syntaxes that enable LSP features on a document, eg. `Packages/Babel/JavaScript (Babel).tmLanguage`
 * `languageId` - identifies the language for a document - see https://microsoft.github.io/language-server-protocol/specification#textdocumentitem
 * `languages` - group scope, syntax and languageId together for servers that support more than one language
-* `enabled` - enables a language server (default is disabled)
-* `settings` - per-project settings (equivalent to VS Code's Workspace Settings)
+
+Settings used to start and configure a language server:
+
+* `command` - must be on PATH or specify a full path, add arguments (can be empty if starting manually, then TCP transport must be configured)
 * `env` - dict of environment variables to be injected into the language server's process (eg. PYTHONPATH)
+* `settings` - per-project settings (equivalent to VS Code's Workspace Settings)
 * `initializationOptions` - options to send to the server at startup (rarely used)
 
+The default transport is stdio, but TCP is also supported.
+The port number can be inserted into the server's arguments by adding a `{port}` placeholder in `command`.
+
+**Server-owned port**
+
+Set `tcp_port` and optionally `tcp_host` if server running on another host.
+
+**Editor-owned port** (servers based on vscode-languageserver-node):
+
+Set `tcp_mode` to "host", leave `tcp_port` unset for automatic port selection.
+`tcp_port` can be set if eg. debugging a server. You may want to check out the LSP source and extend the `TCP_CONNECT_TIMEOUT`.
 
 ## Per-project overrides
 

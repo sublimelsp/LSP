@@ -179,12 +179,17 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         # get text inserted from last completion
         word = self.view.word(self.last_location)
         begin = word.begin()
-        if self.view.substr(word) == '<<':  # issue 714
-            begin += 1
         region = sublime.Region(begin, self.view.sel()[0].end())
         inserted = self.view.substr(region)
 
         item = self.find_completion_item(inserted)
+        if not item:
+            # issues 714 and 720 - calling view.word() on last_location includes a trigger char that is not part of
+            # inserted completion.
+            debug('No match for inserted "{}", skipping first char'.format(inserted))
+            begin += 1
+            item = self.find_completion_item(inserted[1:])
+
         if item:
             # the newText is already inserted, now we need to check where it should start.
             edit = item.get('textEdit')

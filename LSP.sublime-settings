@@ -124,6 +124,18 @@
   //     // See: https://github.com/Microsoft/language-server-protocol/issues/213
   //     "languageId": "python",
   //
+  //     # TCP mode (off unless tcp_mode or tcp_port are set)
+  //
+  //     // Set to "host" if the server connects to the editor. Otherwise, LSP will connect to the server.
+  //     "tcp_mode": "",
+  //
+  //     // Port to connect to. If tcp_mode="host", you likely want to leave this empty so LSP selects a random port.
+  //     // The chosen port can be passed as a server argument using a {port} placeholder.
+  //     "tcp_port": 1234,
+  //
+  //     // Host to connect to if not localhost
+  //     "tcp_host": "",
+  //
   //     # Optional settings (key-value pairs):
   //
   //     // Sent to server once using workspace/didChangeConfiguration notification

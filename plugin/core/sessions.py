@@ -1,6 +1,6 @@
 from .types import ClientConfig, ClientStates, Settings
 from .protocol import Request
-from .transports import start_tcp_transport
+from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
 from .rpc import Client, attach_stdio_client
 from .process import start_server
 from .url import filename_to_uri
@@ -9,7 +9,7 @@ import os
 from .protocol import completion_item_kinds, symbol_kinds
 try:
     from typing import Callable, Dict, Any, Optional
-    assert Callable and Dict and Any and Optional
+    assert Callable and Dict and Any and Optional and Transport
 except ImportError:
     pass
 
@@ -34,10 +34,22 @@ def create_session(config: ClientConfig,
 
     session = None
     if config.binary_args:
-        process = start_server(config.binary_args, project_path, env, settings.log_stderr)
+        tcp_port = config.tcp_port
+        server_args = config.binary_args
+
+        if config.tcp_mode == "host":
+            socket = start_tcp_listener(tcp_port or 0)
+            tcp_port = socket.getsockname()[1]
+            server_args = list(s.replace("{port}", str(tcp_port)) for s in config.binary_args)
+
+        process = start_server(server_args, project_path, env, settings.log_stderr)
         if process:
-            if config.tcp_port:
-                transport = start_tcp_transport(config.tcp_port, config.tcp_host)
+            if config.tcp_mode == "host":
+                client_socket, address = socket.accept()
+                transport = TCPTransport(client_socket)  # type: Transport
+                session = with_client(Client(transport, settings))
+            elif tcp_port:
+                transport = start_tcp_transport(tcp_port, config.tcp_host)
                 if transport:
                     session = with_client(Client(transport, settings))
                 else:

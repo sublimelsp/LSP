@@ -68,14 +68,25 @@ class LanguageConfig(object):
 
 
 class ClientConfig(object):
-    def __init__(self, name: str, binary_args: 'List[str]', tcp_port: 'Optional[int]', scopes: 'List[str]' = [],
-                 syntaxes: 'List[str]' = [], languageId: 'Optional[str]' = None,
-                 languages: 'List[LanguageConfig]' = [], enabled: bool = True, init_options: dict = dict(),
-                 settings: dict = dict(), env: dict = dict(), tcp_host: 'Optional[str]' = None) -> None:
+    def __init__(self,
+                 name: str,
+                 binary_args: 'List[str]',
+                 tcp_port: 'Optional[int]',
+                 scopes: 'List[str]' = [],
+                 syntaxes: 'List[str]' = [],
+                 languageId: 'Optional[str]' = None,
+                 languages: 'List[LanguageConfig]' = [],
+                 enabled: bool = True,
+                 init_options: dict = dict(),
+                 settings: dict = dict(),
+                 env: dict = dict(),
+                 tcp_host: 'Optional[str]' = None,
+                 tcp_mode: 'Optional[str]' = None) -> None:
         self.name = name
         self.binary_args = binary_args
         self.tcp_port = tcp_port
         self.tcp_host = tcp_host
+        self.tcp_mode = tcp_mode
         if not languages:
             languages = [LanguageConfig(languageId, scopes, syntaxes)] if languageId else []
         self.languages = languages

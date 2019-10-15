@@ -313,6 +313,32 @@ Or instead of LSP-julia, add the following client configuration:
 ```
 alternatively you can use the less maintained [lua-lsp](https://github.com/Alloyed/lua-lsp)
 
+
+### Lisp<a name="lisp"
+
+1. Install [cc-lsp](https://github.com/cxxxr/cl-lsp) using Roswell
+2. Add this configuration to your clients in the LSP settings:
+```json
+"cc-lsp":
+{
+    "command":
+    [
+        "cl-lsp",
+        "stdio"
+    ],
+    "enabled": true,
+    "languageId": "lisp",
+    "scopes":
+    [
+        "source.lisp",
+    ],
+    "syntaxes":
+    [
+        "Packages/Lisp/Lisp.sublime-syntax""
+    ]
+}
+```
+
 ### Bash<a name="bash">
 
 Install the [bash language server](https://github.com/mads-hartmann/bash-language-server)

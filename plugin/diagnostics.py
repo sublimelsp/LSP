@@ -123,28 +123,6 @@ def format_diagnostic(diagnostic: Diagnostic) -> str:
     return formatted
 
 
-phantom_sets_by_buffer = {}  # type: Dict[int, sublime.PhantomSet]
-
-
-def update_diagnostics_phantoms(view: sublime.View, diagnostics: 'List[Diagnostic]') -> None:
-    global phantom_sets_by_buffer
-
-    buffer_id = view.buffer_id()
-    if not settings.show_diagnostics_phantoms or view.is_dirty():
-        phantoms = None
-    else:
-        phantoms = list(
-            create_phantom(view, diagnostic) for diagnostic in diagnostics)
-    if phantoms:
-        phantom_set = phantom_sets_by_buffer.get(buffer_id)
-        if not phantom_set:
-            phantom_set = sublime.PhantomSet(view, "lsp_diagnostics")
-            phantom_sets_by_buffer[buffer_id] = phantom_set
-        phantom_set.update(phantoms)
-    else:
-        phantom_sets_by_buffer.pop(buffer_id, None)
-
-
 def get_point_diagnostics(view: sublime.View, point: int) -> 'List[Diagnostic]':
     diagnostics = get_view_diagnostics(view)
     return [
@@ -173,11 +151,8 @@ def point_diagnostics_by_config(view: sublime.View, point: int) -> 'Dict[str, Li
 
 def update_diagnostics_regions(view: sublime.View, diagnostics: 'List[Diagnostic]', severity: int) -> None:
     region_name = "lsp_" + format_severity(severity)
-    if settings.show_diagnostics_phantoms and not view.is_dirty():
-        regions = None
-    else:
-        regions = list(range_to_region(diagnostic.range, view) for diagnostic in diagnostics
-                       if diagnostic.severity == severity)
+    regions = list(range_to_region(diagnostic.range, view) for diagnostic in diagnostics
+                   if diagnostic.severity == severity)
     if regions:
         scope_name = diagnostic_severity_scopes[severity]
         view.add_regions(
@@ -194,8 +169,6 @@ def update_diagnostics_in_view(view: sublime.View) -> None:
                 DiagnosticSeverity.Error,
                 DiagnosticSeverity.Error + settings.show_diagnostics_severity_level):
             update_diagnostics_regions(view, file_diagnostics, severity)
-
-        update_diagnostics_phantoms(view, file_diagnostics)
 
 
 def get_view_diagnostics(view: sublime.View) -> 'List[Diagnostic]':

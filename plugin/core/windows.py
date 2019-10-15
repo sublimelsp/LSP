@@ -1,4 +1,4 @@
-from .diagnostics import WindowDiagnostics, DiagnosticsUpdate
+from .diagnostics import WindowDiagnostics
 from .events import global_events
 from .logging import debug, server_log
 from .types import (ClientStates, ClientConfig, WindowLike, ViewLike,
@@ -318,10 +318,6 @@ class WindowManager(object):
         self._restarting = False
         self._project_path = get_project_path(self._window)
         self._projectless_root_path = None  # type: Optional[str]
-        self._diagnostics.set_on_updated(
-            lambda file_path, client_name:
-                global_events.publish("document.diagnostics",
-                                      DiagnosticsUpdate(self._window, client_name, file_path)))
         self._on_closed = on_closed
         self._is_closing = False
         self._initialization_lock = threading.Lock()
@@ -584,13 +580,19 @@ class WindowRegistry(object):
         self._session_starter = session_starter
         self._sublime = sublime
         self._handler_dispatcher = handler_dispatcher
+        self._diagnostics_ui_class = None  # type: Optional[Callable]
+
+    def set_diagnostics_ui(self, ui_class: 'Any') -> None:
+        self._diagnostics_ui_class = ui_class
 
     def lookup(self, window: 'Any') -> WindowManager:
         state = self._windows.get(window.id())
         if state is None:
             window_configs = self._configs.for_window(window)
             window_documents = self._documents.for_window(window, window_configs)
-            state = WindowManager(window, window_configs, window_documents, WindowDiagnostics(), self._session_starter,
+            diagnostics_ui = self._diagnostics_ui_class(window, None) if self._diagnostics_ui_class else None
+            state = WindowManager(window, window_configs, window_documents,
+                                  WindowDiagnostics(diagnostics_ui), self._session_starter,
                                   self._sublime, self._handler_dispatcher, lambda: self._on_closed(window))
             self._windows[window.id()] = state
         return state

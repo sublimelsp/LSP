@@ -3,16 +3,7 @@ import os
 import sublime
 import sublime_plugin
 
-try:
-    from typing import Any, List, Dict, Callable, Optional
-    assert Any and List and Dict and Callable and Optional
-except ImportError:
-    pass
-
 from .core.configurations import is_supported_syntax
-from .core.diagnostics import (
-    DiagnosticsUpdate
-)
 from .core.events import global_events
 from .core.logging import debug
 from .core.panels import ensure_panel
@@ -20,6 +11,14 @@ from .core.protocol import Diagnostic, DiagnosticSeverity
 from .core.settings import settings, PLUGIN_NAME, client_configs
 from .core.views import range_to_region
 from .core.registry import windows
+
+MYPY = False
+if MYPY:
+    from typing import Any, List, Dict, Callable, Optional
+    from typing_extensions import Protocol
+    assert Any and List and Dict and Callable and Optional
+else:
+    Protocol = object  # type: ignore
 
 
 diagnostic_severity_names = {
@@ -252,21 +251,7 @@ def update_count_in_status_bar(view: sublime.View) -> None:
         update_diagnostics_in_status_bar(view)
 
 
-global_events.subscribe("document.diagnostics",
-                        lambda update: handle_diagnostics(update))
 global_events.subscribe("view.on_activated_async", update_count_in_status_bar)
-
-
-def handle_diagnostics(update: DiagnosticsUpdate) -> None:
-    window = update.window
-    view = window.find_open_file(update.file_path)
-    if view:
-        update_diagnostics_in_view(view)
-        if settings.show_diagnostics_count_in_view_status:
-            update_diagnostics_in_status_bar(view)
-    else:
-        debug('view not found')
-    update_diagnostics_panel(window)
 
 
 class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
@@ -323,6 +308,32 @@ class LspClearDiagnosticsCommand(sublime_plugin.WindowCommand):
 def ensure_diagnostics_panel(window: sublime.Window) -> 'Optional[sublime.View]':
     return ensure_panel(window, "diagnostics", r"^\s*\S\s+(\S.*):$", r"^\s+([0-9]+):?([0-9]+).*$",
                         "Packages/" + PLUGIN_NAME + "/Syntaxes/Diagnostics.sublime-syntax")
+
+
+class DocumentsState(Protocol):
+
+    def dirtied(self) -> None:
+        ...
+
+    def synced(self) -> None:
+        ...
+
+
+class DiagnosticsUI(object):
+
+    def __init__(self, window: sublime.Window, documents_state: DocumentsState) -> None:
+        self._window = window
+
+    def update(self, file_path: str, config_name: str) -> None:
+        sublime.status_message("diagnostics changed for {} from {}".format(file_path, config_name))
+        view = self._window.find_open_file(file_path)
+        if view:
+            update_diagnostics_in_view(view)
+            if settings.show_diagnostics_count_in_view_status:
+                update_diagnostics_in_status_bar(view)
+        else:
+            debug('view not found')
+        update_diagnostics_panel(self._window)
 
 
 def update_diagnostics_panel(window: sublime.Window) -> None:

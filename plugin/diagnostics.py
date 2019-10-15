@@ -319,7 +319,7 @@ class DocumentsState(Protocol):
         ...
 
 
-class DiagnosticsUI(object):
+class DiagnosticsPresenter(object):
 
     def __init__(self, window: sublime.Window, documents_state: DocumentsState) -> None:
         self._window = window

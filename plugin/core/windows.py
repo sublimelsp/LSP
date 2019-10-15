@@ -1,4 +1,4 @@
-from .diagnostics import WindowDiagnostics
+from .diagnostics import DiagnosticsStorage
 from .events import global_events
 from .logging import debug, server_log
 from .types import (ClientStates, ClientConfig, WindowLike, ViewLike,
@@ -302,7 +302,7 @@ class WindowDocumentHandler(object):
 
 class WindowManager(object):
     def __init__(self, window: WindowLike, configs: ConfigRegistry, documents: DocumentHandler,
-                 diagnostics: WindowDiagnostics, session_starter: 'Callable', sublime: 'Any',
+                 diagnostics: DiagnosticsStorage, session_starter: 'Callable', sublime: 'Any',
                  handler_dispatcher: LanguageHandlerListener, on_closed: 'Optional[Callable]' = None) -> None:
 
         # to move here:
@@ -500,7 +500,7 @@ class WindowManager(object):
 
         client.on_notification(
             "textDocument/publishDiagnostics",
-            lambda params: self._diagnostics.handle_client_diagnostics(session.config.name, params))
+            lambda params: self._diagnostics.receive(session.config.name, params))
 
         self._handlers.on_initialized(session.config.name, self._window, client)
 
@@ -592,7 +592,7 @@ class WindowRegistry(object):
             window_documents = self._documents.for_window(window, window_configs)
             diagnostics_ui = self._diagnostics_ui_class(window, None) if self._diagnostics_ui_class else None
             state = WindowManager(window, window_configs, window_documents,
-                                  WindowDiagnostics(diagnostics_ui), self._session_starter,
+                                  DiagnosticsStorage(diagnostics_ui), self._session_starter,
                                   self._sublime, self._handler_dispatcher, lambda: self._on_closed(window))
             self._windows[window.id()] = state
         return state

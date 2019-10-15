@@ -20,9 +20,9 @@ class DiagnosticsUpdateable(Protocol):
         ...
 
 
-class WindowDiagnostics(object):
+class DiagnosticsStorage(object):
 
-    def __init__(self, updateable: 'DiagnosticsUpdateable') -> None:
+    def __init__(self, updateable: 'Optional[DiagnosticsUpdateable]') -> None:
         self._diagnostics = {}  # type: Dict[str, Dict[str, List[Diagnostic]]]
         self._updatable = updateable
 
@@ -55,9 +55,9 @@ class WindowDiagnostics(object):
         for file_path in list(self._diagnostics):
             for client_name in list(self._diagnostics[file_path]):
                 if self.update(file_path, client_name, []):
-                    self.publish_update(file_path, client_name)
+                    self.notify(file_path, client_name)
 
-    def handle_client_diagnostics(self, client_name: str, update: dict) -> None:
+    def receive(self, client_name: str, update: dict) -> None:
         maybe_file_uri = update.get('uri')
         if maybe_file_uri is not None:
             file_path = uri_to_filename(maybe_file_uri)
@@ -66,11 +66,11 @@ class WindowDiagnostics(object):
                 Diagnostic.from_lsp(item) for item in update.get('diagnostics', []))
 
             if self.update(file_path, client_name, diagnostics):
-                self.publish_update(file_path, client_name)
+                self.notify(file_path, client_name)
         else:
             debug('missing uri in diagnostics update')
 
-    def publish_update(self, file_path: str, client_name: str) -> None:
+    def notify(self, file_path: str, client_name: str) -> None:
         if self._updatable:
             self._updatable.update(file_path, client_name)
 

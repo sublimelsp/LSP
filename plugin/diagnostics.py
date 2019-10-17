@@ -285,10 +285,10 @@ def ensure_diagnostics_panel(window: sublime.Window) -> 'Optional[sublime.View]'
 
 class DocumentsState(Protocol):
 
-    def dirtied(self) -> None:
+    def changed(self) -> None:
         ...
 
-    def synced(self) -> None:
+    def saved(self) -> None:
         ...
 
 
@@ -296,9 +296,31 @@ class DiagnosticsPresenter(object):
 
     def __init__(self, window: sublime.Window, documents_state: DocumentsState) -> None:
         self._window = window
+        self._dirty = False
+        self._received_diagnostics_after_change = False
+        self._show_panel_on_diagnostics = False
+
+        documents_state.changed = self.on_document_changed
+        documents_state.saved = self.on_document_saved
+
+    def on_document_changed(self) -> None:
+        self._received_diagnostics_after_change = False
+
+    def on_document_saved(self) -> None:
+        if self._received_diagnostics_after_change:
+            self.show_panel_if_relevant()
+        else:
+            self._show_panel_on_diagnostics = True
+
+    def show_panel_if_relevant(self) -> None:
+        self._show_panel_on_diagnostics = False
+        if window_has_relevant_diagnostics(self._window):
+            self._window.run_command("show_panel", {"panel": "output.diagnostics"})
+        else:
+            self._window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
     def update(self, file_path: str, config_name: str) -> None:
-        sublime.status_message("diagnostics changed for {} from {}".format(file_path, config_name))
+        self._received_diagnostics_after_change = True
         view = self._window.find_open_file(file_path)
         if view:
             update_diagnostics_in_view(view)
@@ -307,6 +329,8 @@ class DiagnosticsPresenter(object):
         else:
             debug('view not found')
         update_diagnostics_panel(self._window)
+        if self._show_panel_on_diagnostics:
+            self.show_panel_if_relevant()
 
 
 def update_diagnostics_panel(window: sublime.Window) -> None:
@@ -359,6 +383,15 @@ def update_diagnostics_panel(window: sublime.Window) -> None:
                 if is_active_panel:
                     window.run_command("hide_panel",
                                        {"panel": "output.diagnostics"})
+
+
+def window_has_relevant_diagnostics(window: sublime.Window) -> bool:
+    diagnostics_by_file = get_window_diagnostics(window)
+    if diagnostics_by_file is not None:
+        for file_path, source_diagnostics in diagnostics_by_file.items():
+            if has_relevant_diagnostics(source_diagnostics):
+                return True
+    return False
 
 
 def has_relevant_diagnostics(origin_diagnostics: 'Dict[str, List[Diagnostic]]') -> bool:

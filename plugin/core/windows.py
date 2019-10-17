@@ -88,6 +88,10 @@ class DocumentHandlerFactory(object):
         return WindowDocumentHandler(self._sublime, self._settings, window, global_events, configs)
 
 
+def nop() -> None:
+    pass
+
+
 class WindowDocumentHandler(object):
     def __init__(self, sublime: 'Any', settings: Settings,
                  window: WindowLike, events: Events,
@@ -99,6 +103,8 @@ class WindowDocumentHandler(object):
         self._document_states = dict()  # type: Dict[str, DocumentState]
         self._pending_buffer_changes = dict()  # type: Dict[int, Dict]
         self._sessions = dict()  # type: Dict[str, Session]
+        self.changed = nop
+        self.saved = nop
         events.subscribe('view.on_load_async', self.handle_view_opened)
         events.subscribe('view.on_activated_async', self.handle_view_opened)
         events.subscribe('view.on_modified', self.handle_view_modified)
@@ -240,6 +246,7 @@ class WindowDocumentHandler(object):
                     if session.client:
                         params = {"textDocument": {"uri": filename_to_uri(file_name)}}
                         session.client.send_notification(Notification.didSave(params))
+                self.saved()
             else:
                 debug('document not tracked', file_name)
 
@@ -273,6 +280,7 @@ class WindowDocumentHandler(object):
         if pending_buffer:
             if buffer_version is None or buffer_version == pending_buffer["version"]:
                 self.notify_did_change(pending_buffer["view"])
+                self.changed()
 
     def notify_did_change(self, view: ViewLike) -> None:
         file_name = view.file_name()
@@ -590,10 +598,11 @@ class WindowRegistry(object):
         if state is None:
             window_configs = self._configs.for_window(window)
             window_documents = self._documents.for_window(window, window_configs)
-            diagnostics_ui = self._diagnostics_ui_class(window, None) if self._diagnostics_ui_class else None
-            state = WindowManager(window, window_configs, window_documents,
-                                  DiagnosticsStorage(diagnostics_ui), self._session_starter,
-                                  self._sublime, self._handler_dispatcher, lambda: self._on_closed(window))
+            diagnostics_ui = self._diagnostics_ui_class(window,
+                                                        window_documents) if self._diagnostics_ui_class else None
+            state = WindowManager(window, window_configs, window_documents, DiagnosticsStorage(diagnostics_ui),
+                                  self._session_starter, self._sublime,
+                                  self._handler_dispatcher, lambda: self._on_closed(window))
             self._windows[window.id()] = state
         return state
 

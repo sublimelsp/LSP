@@ -52,7 +52,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         else:
             return None
 
-    def run(self, edit: sublime.Edit, new_name: str = "", event: 'Optional[dict]' = None) -> None:
+    def run(self, edit: sublime.Edit, new_name: str, event: 'Optional[dict]' = None) -> None:
         pos = get_position(self.view, event)
         position = get_document_position(self.view, pos)
         if position:

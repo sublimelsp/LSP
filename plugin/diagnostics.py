@@ -111,14 +111,6 @@ def format_severity(severity: int) -> str:
     return diagnostic_severity_names.get(severity, "???")
 
 
-def get_point_diagnostics(view: sublime.View, point: int) -> 'List[Diagnostic]':
-    diagnostics = get_view_diagnostics(view)
-    return [
-        diagnostic for diagnostic in diagnostics
-        if range_to_region(diagnostic.range, view).contains(point)
-    ]
-
-
 def point_diagnostics_by_config(view: sublime.View, point: int) -> 'Dict[str, List[Diagnostic]]':
     diagnostics_by_config = {}
     if view.window():
@@ -287,17 +279,16 @@ class DiagnosticsWalker(object):
     def walk(self, diagnostics_by_file: 'Dict[str, Dict[str, List[Diagnostic]]]') -> None:
         self.invoke_each(lambda w: w.begin())
 
-        if diagnostics_by_file is not None:
-            if diagnostics_by_file:
-                for file_path, source_diagnostics in diagnostics_by_file.items():
+        if diagnostics_by_file:
+            for file_path, source_diagnostics in diagnostics_by_file.items():
 
-                    self.invoke_each(lambda w: w.begin_file(file_path))
+                self.invoke_each(lambda w: w.begin_file(file_path))
 
-                    for origin, diagnostics in source_diagnostics.items():
-                        for diagnostic in diagnostics:
-                            self.invoke_each(lambda w: w.diagnostic(diagnostic))
+                for origin, diagnostics in source_diagnostics.items():
+                    for diagnostic in diagnostics:
+                        self.invoke_each(lambda w: w.diagnostic(diagnostic))
 
-                    self.invoke_each(lambda w: w.end_file(file_path))
+                self.invoke_each(lambda w: w.end_file(file_path))
 
         self.invoke_each(lambda w: w.end())
 

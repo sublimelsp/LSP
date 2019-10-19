@@ -129,23 +129,6 @@ def point_diagnostics_by_config(view: sublime.View, point: int) -> 'Dict[str, Li
     return diagnostics_by_config
 
 
-def get_view_diagnostics(view: sublime.View) -> 'List[Diagnostic]':
-    if view.window():
-        file_name = view.file_name()
-        if file_name:
-            return windows.lookup(view.window())._diagnostics.get_by_path(file_name)
-    return []
-
-
-def get_line_diagnostics(view: sublime.View, point: int) -> 'List[Diagnostic]':
-    row, _ = view.rowcol(point)
-    diagnostics = get_view_diagnostics(view)
-    return [
-        diagnostic for diagnostic in diagnostics
-        if diagnostic.range.start.row <= row <= diagnostic.range.end.row
-    ]
-
-
 def get_window_diagnostics(window: sublime.Window) -> 'Dict[str, Dict[str, List[Diagnostic]]]':
     return windows.lookup(window)._diagnostics.get()
 
@@ -169,15 +152,18 @@ class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
         selections = self.view.sel()
         if len(selections) > 0:
             pos = selections[0].begin()
-            line_diagnostics = get_line_diagnostics(self.view, pos)
-            if len(line_diagnostics) > 0:
-                self.show_diagnostics_status(line_diagnostics)
+            diagnostics_by_config = point_diagnostics_by_config(self.view, pos)
+            if diagnostics_by_config:
+                flattened = (d for sublist in diagnostics_by_config.values() for d in sublist)
+                first_diagnostic = next(flattened, None)
+                if first_diagnostic:
+                    self.show_diagnostics_status(first_diagnostic)
             elif self.has_status:
                 self.clear_diagnostics_status()
 
-    def show_diagnostics_status(self, line_diagnostics: 'List[Diagnostic]') -> None:
+    def show_diagnostics_status(self, diagnostic: 'Diagnostic') -> None:
         self.has_status = True
-        self.view.set_status('lsp_diagnostics', line_diagnostics[0].message)
+        self.view.set_status('lsp_diagnostics', diagnostic.message)
 
     def clear_diagnostics_status(self) -> None:
         self.view.erase_status('lsp_diagnostics')

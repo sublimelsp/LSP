@@ -29,13 +29,6 @@ class DiagnosticsStorage(object):
     def get(self) -> 'Dict[str, Dict[str, List[Diagnostic]]]':
         return self._diagnostics
 
-    def get_by_path(self, file_path: str) -> 'List[Diagnostic]':
-        view_diagnostics = []
-        if file_path in self._diagnostics:
-            for origin in self._diagnostics[file_path]:
-                view_diagnostics.extend(self._diagnostics[file_path][origin])
-        return view_diagnostics
-
     def update(self, file_path: str, client_name: str, diagnostics: 'List[Diagnostic]') -> bool:
         updated = False
         if diagnostics:

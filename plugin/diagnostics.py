@@ -6,10 +6,11 @@ import sublime_plugin
 from .core.configurations import is_supported_syntax
 from .core.logging import debug
 from .core.panels import ensure_panel
-from .core.protocol import Diagnostic, DiagnosticSeverity
+from .core.protocol import Diagnostic, DiagnosticSeverity, Point, Range
 from .core.settings import settings, PLUGIN_NAME, client_configs
-from .core.views import range_to_region
+from .core.views import range_to_region, region_to_range
 from .core.registry import windows
+from .core.windows import WindowManager
 
 MYPY = False
 if MYPY:
@@ -111,21 +112,34 @@ def format_severity(severity: int) -> str:
     return diagnostic_severity_names.get(severity, "???")
 
 
-def point_diagnostics_by_config(view: sublime.View, point: int) -> 'Dict[str, List[Diagnostic]]':
-    diagnostics_by_config = {}
+def view_diagnostics(view: sublime.View) -> 'Dict[str, List[Diagnostic]]':
     if view.window():
         file_name = view.file_name()
         if file_name:
             window_diagnostics = windows.lookup(view.window())._diagnostics.get()
-            file_diagnostics = window_diagnostics.get(file_name, {})
-            for config_name, diagnostics in file_diagnostics.items():
-                point_diagnostics = [
-                    diagnostic for diagnostic in diagnostics
-                    if range_to_region(diagnostic.range, view).contains(point)
-                ]
-                if point_diagnostics:
-                    diagnostics_by_config[config_name] = point_diagnostics
+            return window_diagnostics.get(file_name, {})
+    return {}
 
+
+def filter_by_point(file_diagnostics: 'Dict[str, List[Diagnostic]]', point: Point) -> 'Dict[str, List[Diagnostic]]':
+    diagnostics_by_config = {}
+    for config_name, diagnostics in file_diagnostics.items():
+        point_diagnostics = [
+            diagnostic for diagnostic in diagnostics if diagnostic.range.contains(point)
+        ]
+        if point_diagnostics:
+            diagnostics_by_config[config_name] = point_diagnostics
+    return diagnostics_by_config
+
+
+def filter_by_range(file_diagnostics: 'Dict[str, List[Diagnostic]]', rge: Range) -> 'Dict[str, List[Diagnostic]]':
+    diagnostics_by_config = {}
+    for config_name, diagnostics in file_diagnostics.items():
+        point_diagnostics = [
+            diagnostic for diagnostic in diagnostics if diagnostic.range.intersects(rge)
+        ]
+        if point_diagnostics:
+            diagnostics_by_config[config_name] = point_diagnostics
     return diagnostics_by_config
 
 
@@ -152,7 +166,9 @@ class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
         selections = self.view.sel()
         if len(selections) > 0:
             pos = selections[0].begin()
-            diagnostics_by_config = point_diagnostics_by_config(self.view, pos)
+            region = self.view.line(pos)
+            line_range = region_to_range(self.view, region)
+            diagnostics_by_config = filter_by_range(view_diagnostics(self.view), line_range)
             if diagnostics_by_config:
                 flattened = (d for sublist in diagnostics_by_config.values() for d in sublist)
                 first_diagnostic = next(flattened, None)
@@ -294,6 +310,8 @@ class HasRelevantDiagnostics(DiagnosticsUpdateWalk):
 
 
 class StatusBarSummary(DiagnosticsUpdateWalk):
+    def __init__(self, window: sublime.Window) -> None:
+        self._window = window
 
     def begin(self) -> None:
         self._errors = 0
@@ -310,9 +328,11 @@ class StatusBarSummary(DiagnosticsUpdateWalk):
             count = 'E: {} W: {}'.format(self._errors, self._warnings)
         else:
             count = ""
+
         # todo: make a sticky status on active view.
-        # view.set_status('lsp_errors_warning_count', count
-        sublime.status_message(count)
+        active_view = self._window.active_view()
+        if active_view:
+            active_view.set_status('lsp_errors_warning_count', count)
 
 
 class DiagnosticOutputPanel(DiagnosticsUpdateWalk):
@@ -365,7 +385,7 @@ class DiagnosticsPresenter(object):
         self._received_diagnostics_after_change = False
         self._show_panel_on_diagnostics = True
         self._panel_update = DiagnosticOutputPanel(self._window)
-        self._bar_summary_update = StatusBarSummary()
+        self._bar_summary_update = StatusBarSummary(self._window)
         self._relevance_check = HasRelevantDiagnostics()
         setattr(documents_state, 'changed', self.on_document_changed)
         setattr(documents_state, 'saved', self.on_document_saved)

@@ -317,7 +317,7 @@ class WindowManager(object):
         # configurations.py: window_client_configs and all references
         self._window = window
         self._configs = configs
-        self._diagnostics = diagnostics
+        self.diagnostics = diagnostics
         self._documents = documents
         self._sessions = dict()  # type: Dict[str, Session]
         self._start_session = session_starter
@@ -508,7 +508,7 @@ class WindowManager(object):
 
         client.on_notification(
             "textDocument/publishDiagnostics",
-            lambda params: self._diagnostics.receive(session.config.name, params))
+            lambda params: self.diagnostics.receive(session.config.name, params))
 
         self._handlers.on_initialized(session.config.name, self._window, client)
 
@@ -566,7 +566,7 @@ class WindowManager(object):
         for view in self._window.views():
             file_name = view.file_name()
             if file_name:
-                self._diagnostics.remove(file_name, config_name)
+                self.diagnostics.remove(file_name, config_name)
 
         debug("session", config_name, "ended")
         if not self._sessions:

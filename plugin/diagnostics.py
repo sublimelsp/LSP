@@ -116,7 +116,7 @@ def view_diagnostics(view: sublime.View) -> 'Dict[str, List[Diagnostic]]':
     if view.window():
         file_name = view.file_name()
         if file_name:
-            window_diagnostics = windows.lookup(view.window())._diagnostics.get()
+            window_diagnostics = windows.lookup(view.window()).diagnostics.get()
             return window_diagnostics.get(file_name, {})
     return {}
 
@@ -143,24 +143,35 @@ def filter_by_range(file_diagnostics: 'Dict[str, List[Diagnostic]]', rge: Range)
     return diagnostics_by_config
 
 
-def get_window_diagnostics(window: sublime.Window) -> 'Dict[str, Dict[str, List[Diagnostic]]]':
-    return windows.lookup(window)._diagnostics.get()
+class LSPViewEventListener(sublime_plugin.ViewEventListener):
+    def __init__(self, view: sublime.View) -> None:
+        self._manager = None  # type: Optional[WindowManager]
+        super().__init__(view)
+
+    @classmethod
+    def has_supported_syntax(cls, view_settings: dict) -> bool:
+        syntax = view_settings.get('syntax')
+        if syntax:
+            return is_supported_syntax(syntax, client_configs.all)
+        else:
+            return False
+
+    @property
+    def manager(self) -> WindowManager:
+        if not self._manager:
+            self._manager = windows.lookup(self.view.window())
+
+        return self._manager
 
 
-class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
+class DiagnosticsCursorListener(LSPViewEventListener):
     def __init__(self, view: sublime.View) -> None:
         self.view = view
         self.has_status = False
 
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:
-        if not settings.show_diagnostics_in_view_status:
-            return False
-        syntax = view_settings.get('syntax')
-        if syntax:
-            return is_supported_syntax(syntax, client_configs.all)
-        else:
-            return False
+        return settings.show_diagnostics_in_view_status and cls.has_supported_syntax(view_settings)
 
     def on_selection_modified_async(self) -> None:
         selections = self.view.sel()
@@ -168,12 +179,14 @@ class DiagnosticsCursorListener(sublime_plugin.ViewEventListener):
             pos = selections[0].begin()
             region = self.view.line(pos)
             line_range = region_to_range(self.view, region)
-            diagnostics_by_config = filter_by_range(view_diagnostics(self.view), line_range)
-            if diagnostics_by_config:
-                flattened = (d for sublist in diagnostics_by_config.values() for d in sublist)
-                first_diagnostic = next(flattened, None)
-                if first_diagnostic:
-                    self.show_diagnostics_status(first_diagnostic)
+            file_path = self.view.file_name()
+            if file_path:
+                diagnostics = filter_by_range(self.manager.diagnostics.get_by_file(file_path), line_range)
+                if diagnostics:
+                    flattened = (d for sublist in diagnostics.values() for d in sublist)
+                    first_diagnostic = next(flattened, None)
+                    if first_diagnostic:
+                        self.show_diagnostics_status(first_diagnostic)
             elif self.has_status:
                 self.clear_diagnostics_status()
 
@@ -200,7 +213,7 @@ class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
 
 class LspClearDiagnosticsCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:
-        windows.lookup(self.window)._diagnostics.clear()
+        windows.lookup(self.window).diagnostics.clear()
 
 
 def ensure_diagnostics_panel(window: sublime.Window) -> 'Optional[sublime.View]':
@@ -411,17 +424,14 @@ class DiagnosticsPresenter(object):
         else:
             self._window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
-    def update(self, file_path: str, config_name: str) -> None:
+    def update(self, file_path: str, config_name: str, diagnostics: 'Dict[str, Dict[str, List[Diagnostic]]]') -> None:
         self._received_diagnostics_after_change = True
 
         if not self._window.is_valid():
             debug('ignoring update to closed window')
             return
 
-        # todo: improve relation with storage
-        diagnostics = get_window_diagnostics(self._window)
         updatables = [self._panel_update, self._relevance_check]
-
         if settings.show_diagnostics_count_in_view_status:
             updatables.append(self._bar_summary_update)
 

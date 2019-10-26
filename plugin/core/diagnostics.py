@@ -16,7 +16,7 @@ except ImportError:
 
 class DiagnosticsUpdateable(Protocol):
 
-    def update(self, file_name: str, config_name: str) -> None:
+    def update(self, file_name: str, config_name: str, diagnostics: 'Dict[str, Dict[str, List[Diagnostic]]]') -> None:
         ...
 
 
@@ -28,6 +28,9 @@ class DiagnosticsStorage(object):
 
     def get(self) -> 'Dict[str, Dict[str, List[Diagnostic]]]':
         return self._diagnostics
+
+    def get_by_file(self, file_path: str) -> 'Dict[str, List[Diagnostic]]':
+        return self._diagnostics.get(file_path, {})
 
     def update(self, file_path: str, client_name: str, diagnostics: 'List[Diagnostic]') -> bool:
         updated = False
@@ -65,7 +68,7 @@ class DiagnosticsStorage(object):
 
     def notify(self, file_path: str, client_name: str) -> None:
         if self._updatable:
-            self._updatable.update(file_path, client_name)
+            self._updatable.update(file_path, client_name, self._diagnostics)
 
     def remove(self, file_path: str, client_name: str) -> None:
         self.update(file_path, client_name, [])

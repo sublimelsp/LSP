@@ -99,8 +99,8 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
 
 class DiagnosticsCursorListener(LSPViewEventListener):
     def __init__(self, view: sublime.View) -> None:
-        self.view = view
         self.has_status = False
+        super().__init__(view)
 
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:

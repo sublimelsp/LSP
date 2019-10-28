@@ -5,7 +5,8 @@
 
   // Open and close the diagnostics panel automatically,
   // depending on available diagnostics.
-  "auto_show_diagnostics_panel": true,
+  // Valid values are "never", "always" and "saved"
+  "auto_show_diagnostics_panel": "saved",
 
   // Open the diagnostics panel automatically
   // when diagnostics level is equal to or less than:

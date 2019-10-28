@@ -329,12 +329,13 @@ class DiagnosticsPresenter(object):
         self._window = window
         self._dirty = False
         self._received_diagnostics_after_change = False
-        self._show_panel_on_diagnostics = True
+        self._show_panel_on_diagnostics = False if settings.auto_show_diagnostics_panel == 'never' else True
         self._panel_update = DiagnosticOutputPanel(self._window)
         self._bar_summary_update = StatusBarSummary(self._window)
         self._relevance_check = HasRelevantDiagnostics()
-        setattr(documents_state, 'changed', self.on_document_changed)
-        setattr(documents_state, 'saved', self.on_document_saved)
+        if settings.auto_show_diagnostics_panel == 'saved':
+            setattr(documents_state, 'changed', self.on_document_changed)
+            setattr(documents_state, 'saved', self.on_document_saved)
 
     def on_document_changed(self) -> None:
         self._received_diagnostics_after_change = False
@@ -347,10 +348,6 @@ class DiagnosticsPresenter(object):
 
     def show_panel_if_relevant(self) -> None:
         self._show_panel_on_diagnostics = False
-
-        # todo: worth checking before showing/hiding?
-        # active_panel = window.active_panel()
-        # is_active_panel = (active_panel == "output.diagnostics")
 
         if self._relevance_check.result:
             self._window.run_command("show_panel", {"panel": "output.diagnostics"})
@@ -378,5 +375,5 @@ class DiagnosticsPresenter(object):
         walker = DiagnosticsWalker(updatables)
         walker.walk(diagnostics)
 
-        if self._show_panel_on_diagnostics:
+        if settings.auto_show_diagnostics_panel == 'always' or self._show_panel_on_diagnostics:
             self.show_panel_if_relevant()

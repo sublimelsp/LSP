@@ -422,7 +422,10 @@
     {
       "command": ["gopls"],
       "scopes": ["source.go"],
-      "syntaxes": ["Packages/Go/Go.sublime-syntax"],
+      "syntaxes": [
+        "Packages/Go/Go.sublime-syntax",
+        "Packages/GoSublime/syntax/GoSublime-Go-Recommended.sublime-syntax",
+      ],
       "languageId": "go"
     },
     "jdtls":

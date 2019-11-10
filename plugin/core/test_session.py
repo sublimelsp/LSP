@@ -1,7 +1,11 @@
-from .types import ClientConfig, LanguageConfig, ClientStates, Settings
+from .types import ClientConfig, ClientStates, Settings
 from .sessions import create_session, Session
 from .protocol import Request, Notification
 from .logging import debug
+from .test_mocks import MockWindow
+from .test_mocks import test_config
+from .test_mocks import test_language
+from .test_mocks import test_workspaces
 
 import unittest
 import unittest.mock
@@ -54,6 +58,9 @@ class MockClient():
     def on_request(self, name, handler: 'Callable') -> None:
         pass
 
+    def send_response(self, request, request_id, params) -> None:
+        pass
+
     def set_error_display_handler(self, handler: 'Callable') -> None:
         pass
 
@@ -62,10 +69,6 @@ class MockClient():
 
     def exit(self) -> None:
         pass
-
-
-test_language = LanguageConfig("test", ["source.test"], ["Plain Text"])
-test_config = ClientConfig("test", [], None, languages=[test_language])
 
 
 class SessionTest(unittest.TestCase):
@@ -77,40 +80,41 @@ class SessionTest(unittest.TestCase):
     # @unittest.skip("need an example config")
     def test_can_create_session(self):
 
-        config = ClientConfig("test", ["ls"], None, [], [], None, [test_language])
-        project_path = "/"
+        config = ClientConfig(name="test", binary_args=["ls"], tcp_port=None, languages=[test_language])
         session = self.assert_if_none(
-            create_session(config, project_path, dict(), Settings()))
-
+            create_session(
+                window=MockWindow(),
+                config=config,
+                workspaces=test_workspaces,
+                env=dict(),
+                settings=Settings()))
         self.assertEqual(session.state, ClientStates.STARTING)
-        self.assertEqual(session.project_path, project_path)
         session.end()
         # self.assertIsNone(session.capabilities) -- empty dict
 
     def test_can_get_started_session(self):
-        project_path = "/"
         post_initialize_callback = unittest.mock.Mock()
         session = self.assert_if_none(
-            create_session(config=test_config,
-                           project_path=project_path,
+            create_session(window=MockWindow(),
+                           config=test_config,
+                           workspaces=test_workspaces,
                            env=dict(),
                            settings=Settings(),
                            bootstrap_client=MockClient(),
                            on_post_initialize=post_initialize_callback))
         self.assertEqual(session.state, ClientStates.READY)
         self.assertIsNotNone(session.client)
-        self.assertEqual(session.project_path, project_path)
         self.assertTrue(session.has_capability("testing"))
         self.assertTrue(session.get_capability("testing"))
         post_initialize_callback.assert_called_once()
 
     def test_pre_initialize_callback_is_invoked(self):
-        project_path = "/"
         pre_initialize_callback = unittest.mock.Mock()
         post_initialize_callback = unittest.mock.Mock()
         session = self.assert_if_none(
-            create_session(config=test_config,
-                           project_path=project_path,
+            create_session(window=MockWindow(),
+                           config=test_config,
+                           workspaces=test_workspaces,
                            env=dict(),
                            settings=Settings(),
                            bootstrap_client=MockClient(),
@@ -118,19 +122,18 @@ class SessionTest(unittest.TestCase):
                            on_post_initialize=post_initialize_callback))
         self.assertEqual(session.state, ClientStates.READY)
         self.assertIsNotNone(session.client)
-        self.assertEqual(session.project_path, project_path)
         self.assertTrue(session.has_capability("testing"))
         self.assertTrue(session.get_capability("testing"))
         pre_initialize_callback.assert_called_once()
         post_initialize_callback.assert_called_once()
 
     def test_can_shutdown_session(self):
-        project_path = "/"
         post_initialize_callback = unittest.mock.Mock()
         post_exit_callback = unittest.mock.Mock()
         session = self.assert_if_none(
-            create_session(config=test_config,
-                           project_path=project_path,
+            create_session(window=MockWindow(),
+                           config=test_config,
+                           workspaces=test_workspaces,
                            env=dict(),
                            settings=Settings(),
                            bootstrap_client=MockClient(),
@@ -138,12 +141,10 @@ class SessionTest(unittest.TestCase):
                            on_post_exit=post_exit_callback))
         self.assertEqual(session.state, ClientStates.READY)
         self.assertIsNotNone(session.client)
-        self.assertEqual(session.project_path, project_path)
         self.assertTrue(session.has_capability("testing"))
         post_initialize_callback.assert_called_once()
         session.end()
         self.assertEqual(session.state, ClientStates.STOPPING)
-        self.assertEqual(session.project_path, project_path)
         self.assertIsNone(session.client)
         self.assertFalse(session.has_capability("testing"))
         self.assertIsNone(session.get_capability("testing"))

@@ -3,19 +3,23 @@ from .protocol import Request
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
 from .rpc import Client, attach_stdio_client
 from .process import start_server
-from .url import filename_to_uri
 from .logging import debug
 import os
 from .protocol import completion_item_kinds, symbol_kinds
 try:
-    from typing import Callable, Dict, Any, Optional
-    assert Callable and Dict and Any and Optional and Transport
+    from typing import Callable, Dict, Any, Optional, Iterable, Union, List
+    from .workspace import Workspace
+    from .types import WindowLike
+    assert Callable and Dict and Any and Optional and Iterable and Transport and Union and List
+    assert Workspace
+    assert WindowLike
 except ImportError:
     pass
 
 
-def create_session(config: ClientConfig,
-                   project_path: str,
+def create_session(window: 'WindowLike',
+                   config: ClientConfig,
+                   workspaces: 'Optional[Iterable[Workspace]]',
                    env: dict,
                    settings: Settings,
                    on_pre_initialize: 'Optional[Callable[[Session], None]]' = None,
@@ -26,7 +30,7 @@ def create_session(config: ClientConfig,
     def with_client(client: Client) -> 'Session':
         return Session(
             config=config,
-            project_path=project_path,
+            workspaces=workspaces,
             client=client,
             on_pre_initialize=on_pre_initialize,
             on_post_initialize=on_post_initialize,
@@ -42,7 +46,7 @@ def create_session(config: ClientConfig,
             tcp_port = socket.getsockname()[1]
             server_args = list(s.replace("{port}", str(tcp_port)) for s in config.binary_args)
 
-        process = start_server(server_args, project_path, env, settings.log_stderr)
+        process = start_server(window, config, server_args, env, settings.log_stderr)
         if process:
             if config.tcp_mode == "host":
                 client_socket, address = socket.accept()
@@ -71,11 +75,17 @@ def create_session(config: ClientConfig,
     return session
 
 
-def get_initialize_params(project_path: str, config: ClientConfig) -> dict:
+def get_initialize_params(workspaces: 'Optional[Iterable[Workspace]]', config: ClientConfig) -> dict:
+    root_uri = None
+    lsp_workspaces = None
+    if workspaces is not None:
+        root_uri = next(iter(workspaces)).uri
+        lsp_workspaces = [workspace.to_dict() for workspace in workspaces]
+    debug("starting session in", lsp_workspaces)
     initializeParams = {
         "processId": os.getpid(),
-        "rootUri": filename_to_uri(project_path),
-        "rootPath": project_path,
+        "rootUri": root_uri,
+        "workspaceFolders": lsp_workspaces,
         "capabilities": {
             "textDocument": {
                 "synchronization": {
@@ -132,10 +142,11 @@ def get_initialize_params(project_path: str, config: ClientConfig) -> dict:
                     "symbolKind": {
                         "valueSet": symbol_kinds
                     }
-                }
+                },
+                "workspaceFolders": True
             }
         }
-    }
+    }  # type: Dict[str, Union[None, int, str, Dict[str, Any], List]]
     if config.init_options:
         initializeParams['initializationOptions'] = config.init_options
 
@@ -145,13 +156,12 @@ def get_initialize_params(project_path: str, config: ClientConfig) -> dict:
 class Session(object):
     def __init__(self,
                  config: ClientConfig,
-                 project_path: str,
+                 workspaces: 'Optional[Iterable[Workspace]]',
                  client: Client,
                  on_pre_initialize: 'Optional[Callable[[Session], None]]' = None,
                  on_post_initialize: 'Optional[Callable[[Session], None]]' = None,
                  on_post_exit: 'Optional[Callable[[str], None]]' = None) -> None:
         self.config = config
-        self.project_path = project_path
         self.state = ClientStates.STARTING
         self._on_post_initialize = on_post_initialize
         self._on_post_exit = on_post_exit
@@ -159,7 +169,7 @@ class Session(object):
         self.client = client
         if on_pre_initialize:
             on_pre_initialize(self)
-        self.initialize()
+        self.initialize(workspaces)
 
     def has_capability(self, capability: str) -> bool:
         return capability in self.capabilities and self.capabilities[capability] is not False
@@ -167,11 +177,9 @@ class Session(object):
     def get_capability(self, capability: str) -> 'Optional[Any]':
         return self.capabilities.get(capability)
 
-    def initialize(self) -> None:
-        params = get_initialize_params(self.project_path, self.config)
-        self.client.send_request(
-            Request.initialize(params),
-            lambda result: self._handle_initialize_result(result))
+    def initialize(self, workspaces: 'Optional[Iterable[Workspace]]') -> None:
+        params = get_initialize_params(workspaces, self.config)
+        self.client.send_request(Request.initialize(params), self._handle_initialize_result)
 
     def _handle_initialize_result(self, result: 'Any') -> None:
         self.state = ClientStates.READY

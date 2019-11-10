@@ -3,7 +3,8 @@ import sublime_plugin
 
 try:
     from typing import Optional, Any
-    assert Optional, Any
+    from .types import WindowLike, ViewLike
+    assert Optional and Any and WindowLike and ViewLike
 except ImportError:
     pass
 
@@ -25,7 +26,7 @@ OUTPUT_PANEL_SETTINGS = {
 }
 
 
-def create_output_panel(window: sublime.Window, name: str) -> 'Optional[sublime.View]':
+def create_output_panel(window: 'WindowLike', name: str) -> 'Optional[ViewLike]':
     panel = window.create_output_panel(name)
     settings = panel.settings()
     for key, value in OUTPUT_PANEL_SETTINGS.items():
@@ -33,13 +34,13 @@ def create_output_panel(window: sublime.Window, name: str) -> 'Optional[sublime.
     return panel
 
 
-def destroy_output_panels(window: sublime.Window) -> None:
+def destroy_output_panels(window: 'WindowLike') -> None:
     for panel_name in ["references", "diagnostics"]:
         window.destroy_output_panel(panel_name)
 
 
-def create_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
-                 syntax: str) -> 'Optional[sublime.View]':
+def create_panel(window: 'WindowLike', name: str, result_file_regex: str, result_line_regex: str,
+                 syntax: str) -> 'Optional[ViewLike]':
     panel = create_output_panel(window, name)
     if not panel:
         return None
@@ -53,8 +54,8 @@ def create_panel(window: sublime.Window, name: str, result_file_regex: str, resu
     return panel
 
 
-def ensure_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
-                 syntax: str) -> 'Optional[sublime.View]':
+def ensure_panel(window: 'WindowLike', name: str, result_file_regex: str, result_line_regex: str,
+                 syntax: str) -> 'Optional[ViewLike]':
     return window.find_output_panel(name) or create_panel(window, name, result_file_regex, result_line_regex, syntax)
 
 

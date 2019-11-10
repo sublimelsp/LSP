@@ -2,13 +2,14 @@ import unittest
 from .events import Events
 from .windows import WindowDocumentHandler
 from .sessions import create_session, Session
-from .test_windows import MockWindow, MockView, MockConfigs
+from .test_mocks import MockWindow, MockView, MockConfigs
 from .test_session import test_config, MockClient, test_language
 import unittest.mock
 from . import test_sublime as test_sublime
 from .test_rpc import MockSettings
 # from .logging import debug, set_debug_logging
 from .types import ClientConfig
+from .workspace import Workspace
 from os.path import basename
 
 try:
@@ -32,8 +33,13 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         handler = WindowDocumentHandler(test_sublime, MockSettings(), window, events, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
-            create_session(test_config, "", dict(), MockSettings(),
-                           bootstrap_client=client))
+            create_session(
+                window=window,
+                config=test_config,
+                workspaces=[Workspace("", "")],
+                env=dict(),
+                settings=MockSettings(),
+                bootstrap_client=client))
         handler.add_session(session)
 
         # open
@@ -92,8 +98,13 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         handler = WindowDocumentHandler(test_sublime, MockSettings(), window, events, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
-            create_session(test_config, "", dict(), MockSettings(),
-                           bootstrap_client=client))
+            create_session(
+                window=window,
+                config=test_config,
+                workspaces=[Workspace("", "")],
+                env=dict(),
+                settings=MockSettings(),
+                bootstrap_client=client))
         handler.add_session(session)
         events.publish("view.on_activated_async", view)
         self.assertFalse(handler.has_document_state(__file__))
@@ -107,14 +118,23 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         handler = WindowDocumentHandler(test_sublime, MockSettings(), window, events, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
-            create_session(test_config, "", dict(), MockSettings(),
-                           bootstrap_client=client))
+            create_session(
+                window=window,
+                config=test_config,
+                workspaces=[Workspace("", "")],
+                env=dict(),
+                settings=MockSettings(),
+                bootstrap_client=client))
         client2 = MockClient()
         test_config2 = ClientConfig("test2", [], None, languages=[test_language])
         session2 = self.assert_if_none(
-            create_session(test_config2, "", dict(), MockSettings(),
-                           bootstrap_client=client2))
-
+            create_session(
+                window=window,
+                config=test_config2,
+                workspaces=[Workspace("", "")],
+                env=dict(),
+                settings=MockSettings(),
+                bootstrap_client=client2))
         handler.add_session(session)
         handler.add_session(session2)
         events.publish("view.on_activated_async", view)

@@ -9,15 +9,28 @@ from .edit import parse_workspace_edit
 from .events import Events
 from .sessions import Session
 from .url import filename_to_uri
-from .workspace import get_project_path, get_active_view_path
+from .workspace import get_workspaces_from_window, Workspace
 from .rpc import Client
 import threading
 try:
     from typing_extensions import Protocol
-    from typing import Optional, List, Callable, Dict, Any, Iterator, Union
+    from typing import Optional, List, Callable, Dict, Any, Iterator, Iterable, Union
     from types import ModuleType
-    assert Optional and List and Callable and Dict and Session and Any and ModuleType and Iterator and Union
+    assert Optional and List and Dict and Session and Any and ModuleType and Iterator and Union
     assert LanguageConfig
+
+    SessionStarter = Callable[
+        [
+            WindowLike,
+            Optional[Iterable[Workspace]],
+            ClientConfig,
+            Callable[[Session], None],
+            Callable[[Session], None],
+            Callable[[str], None]
+        ],
+        Optional[Session]
+    ]
+
 except ImportError:
     pass
     Protocol = object  # type: ignore
@@ -301,10 +314,17 @@ class WindowDocumentHandler(object):
 
 
 class WindowManager(object):
-    def __init__(self, window: WindowLike, configs: ConfigRegistry, documents: DocumentHandler,
-                 diagnostics: WindowDiagnostics, session_starter: 'Callable', sublime: 'Any',
-                 handler_dispatcher: LanguageHandlerListener, on_closed: 'Optional[Callable]' = None) -> None:
-
+    def __init__(
+        self,
+        window: WindowLike,
+        configs: ConfigRegistry,
+        documents: DocumentHandler,
+        diagnostics: WindowDiagnostics,
+        session_starter: 'SessionStarter',
+        sublime: 'Any',
+        handler_dispatcher: LanguageHandlerListener,
+        on_closed: 'Optional[Callable]' = None
+    ) -> None:
         # to move here:
         # configurations.py: window_client_configs and all references
         self._window = window
@@ -316,8 +336,7 @@ class WindowManager(object):
         self._sublime = sublime
         self._handlers = handler_dispatcher
         self._restarting = False
-        self._project_path = get_project_path(self._window)
-        self._projectless_root_path = None  # type: Optional[str]
+        self._workspaces = get_workspaces_from_window(self._window)
         self._diagnostics.set_on_updated(
             lambda file_path, client_name:
                 global_events.publish("document.diagnostics",
@@ -325,6 +344,9 @@ class WindowManager(object):
         self._on_closed = on_closed
         self._is_closing = False
         self._initialization_lock = threading.Lock()
+
+    def get_workspaces(self) -> 'Optional[List[Workspace]]':
+        return self._workspaces
 
     def get_session(self, config_name: str) -> 'Optional[Session]':
         return self._sessions.get(config_name)
@@ -369,12 +391,6 @@ class WindowManager(object):
                 self._start_client(config)
 
     def _start_client(self, config: ClientConfig) -> None:
-        project_path = self._ensure_project_path()
-
-        if project_path is None:
-            debug('Cannot start without a project folder')
-            return
-
         if not self._can_start_config(config.name):
             debug('Already starting on this window:', config.name)
             return
@@ -382,17 +398,16 @@ class WindowManager(object):
         if not self._handlers.on_start(config.name, self._window):
             return
 
-        self._window.status_message("Starting " + config.name + "...")
-        debug("starting in", project_path)
+        self._window.status_message("Starting {} in {}".format(config.name, self._workspaces))
         session = None  # type: Optional[Session]
         try:
             session = self._start_session(
-                window=self._window,
-                project_path=project_path,
-                config=config,
-                on_pre_initialize=self._handle_pre_initialize,
-                on_post_initialize=self._handle_post_initialize,
-                on_post_exit=self._handle_post_exit)
+                self._window,
+                self._workspaces,
+                config,
+                self._handle_pre_initialize,
+                self._handle_post_initialize,
+                self._handle_post_exit)
         except Exception as e:
             message = "\n\n".join([
                 "Could not start {}",
@@ -402,6 +417,8 @@ class WindowManager(object):
 
             self._configs.disable(config.name)
             self._sublime.message_dialog(message)
+            # Also print the error message to the console in case we need to investigate it.
+            debug(str(e))
 
         if session:
             debug("window {} added session {}".format(self._window.id(), config.name))
@@ -436,24 +453,14 @@ class WindowManager(object):
             debug("unloading session", config_name)
             self._sessions[config_name].end()
 
-    def _ensure_project_path(self) -> 'Optional[str]':
-        if self._project_path is None:
-            self._project_path = get_project_path(self._window)
-            if self._project_path is None and self._projectless_root_path is None:
-                # the projectless fallback will only be set once per window.
-                self._projectless_root_path = get_active_view_path(self._window)
-        return self._project_path or self._projectless_root_path
-
-    def get_project_path(self) -> 'Optional[str]':
-        return self._project_path or self._projectless_root_path
-
     def _end_old_sessions(self) -> None:
-        current_project_path = get_project_path(self._window)
-        if current_project_path != self._project_path:
-            debug('project path changed, ending existing sessions')
-            debug('new path = {}'.format(current_project_path))
+        workspaces = get_workspaces_from_window(self._window)
+        if workspaces != self._workspaces:
+            debug('workspaces changed, ending existing sessions')
+            debug('old workspaces:', self._workspaces)
+            debug('new workspaces:', workspaces)
             self.end_sessions()
-            self._project_path = current_project_path
+            self._workspaces = workspaces
 
     def _apply_workspace_edit(self, params: 'Dict[str, Any]', client: Client, request_id: int) -> None:
         edit = params.get('edit', dict())
@@ -499,6 +506,10 @@ class WindowManager(object):
             lambda params, request_id: self._apply_workspace_edit(params, client, request_id))
 
         client.on_request(
+            "workspace/workspaceFolders",
+            lambda params, request_id: self._handle_workspace_folders_request(params, client, request_id))
+
+        client.on_request(
             "workspace/configuration",
             lambda params, request_id: self._get_session_config(params, session, client, request_id))
 
@@ -523,6 +534,13 @@ class WindowManager(object):
             client.send_notification(Notification.didChangeConfiguration(configParams))
 
         self._window.status_message("{} initialized".format(session.config.name))
+
+    def _handle_workspace_folders_request(self, params: 'Dict[str, Any]', client: 'Client', request_id: int) -> None:
+        if self._workspaces is None:
+            lsp_workspaces = None
+        else:
+            lsp_workspaces = [workspace.to_dict() for workspace in self._workspaces]
+        client.send_response(Response(request_id, lsp_workspaces))
 
     def _handle_view_closed(self, view: ViewLike, session: Session) -> None:
         if view.file_name():
@@ -576,8 +594,14 @@ class WindowManager(object):
 
 
 class WindowRegistry(object):
-    def __init__(self, configs: GlobalConfigs, documents: 'Any',
-                 session_starter: 'Callable', sublime: 'Any', handler_dispatcher: LanguageHandlerListener) -> None:
+    def __init__(
+        self,
+        configs: GlobalConfigs,
+        documents: 'Any',
+        session_starter: 'SessionStarter',
+        sublime: 'Any',
+        handler_dispatcher: LanguageHandlerListener
+    ) -> None:
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs
         self._documents = documents
@@ -590,8 +614,15 @@ class WindowRegistry(object):
         if state is None:
             window_configs = self._configs.for_window(window)
             window_documents = self._documents.for_window(window, window_configs)
-            state = WindowManager(window, window_configs, window_documents, WindowDiagnostics(), self._session_starter,
-                                  self._sublime, self._handler_dispatcher, lambda: self._on_closed(window))
+            state = WindowManager(
+                window=window,
+                configs=window_configs,
+                documents=window_documents,
+                diagnostics=WindowDiagnostics(),
+                session_starter=self._session_starter,
+                sublime=self._sublime,
+                handler_dispatcher=self._handler_dispatcher,
+                on_closed=lambda: self._on_closed(window))
             self._windows[window.id()] = state
         return state
 

@@ -8,17 +8,20 @@ from .core.protocol import Request, Point
 from .core.registry import LspTextCommand, windows
 from .core.settings import PLUGIN_NAME, settings
 from .core.url import uri_to_filename
+from .core.workspace import get_common_prefix_of_workspaces
 
 try:
     from typing import List, Dict, Optional, Callable, Tuple
     from mypy_extensions import TypedDict
+    from .core.types import WindowLike, ViewLike
     assert List and Dict and Optional and Callable and Tuple and TypedDict
+    assert WindowLike and ViewLike
     ReferenceDict = TypedDict('ReferenceDict', {'uri': str, 'range': dict})
 except ImportError:
     pass
 
 
-def ensure_references_panel(window: sublime.Window) -> 'Optional[sublime.View]':
+def ensure_references_panel(window: 'WindowLike') -> 'Optional[ViewLike]':
     return ensure_panel(window, "references", r"^\s*\S\s+(\S.*):$", r"^\s+([0-9]+):?([0-9]+).*$",
                         "Packages/" + PLUGIN_NAME + "/Syntaxes/References.sublime-syntax")
 
@@ -46,7 +49,10 @@ class LspSymbolReferencesCommand(LspTextCommand):
             self.word = self.view.substr(self.word_region)
 
             # use relative paths if file on the same root.
-            base_dir = windows.lookup(window).get_project_path()
+            window_manager = windows.lookup(window)
+            if not window_manager:
+                return
+            base_dir = get_common_prefix_of_workspaces(window_manager.get_workspaces())
             if base_dir:
                 if os.path.commonprefix([base_dir, file_path]):
                     self.base_dir = base_dir
@@ -138,8 +144,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 # append a new line after each file name
                 text += '\n'
 
-            base_dir = windows.lookup(window).get_project_path()
-            panel.settings().set("result_base_dir", base_dir)
+            panel.settings().set("result_base_dir", self.base_dir)
 
             panel.set_read_only(False)
             panel.run_command("lsp_clear_panel")

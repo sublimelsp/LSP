@@ -1,12 +1,15 @@
 from .logging import debug, exception_log, server_log
-import subprocess
+from .types import ClientConfig
 import os
 import shutil
+import subprocess
 import threading
 
 try:
+    from .types import WindowLike
     from typing import Any, List, Dict, Tuple, Callable, Optional, Union, IO
     assert Any and List and Dict and Tuple and Callable and Optional and Union and IO
+    assert WindowLike
 except ImportError:
     pass
 
@@ -32,26 +35,29 @@ def add_extension_if_missing(server_binary_args: 'List[str]') -> 'List[str]':
     return server_binary_args
 
 
-def start_server(server_binary_args: 'List[str]', working_dir: str,
-                 env: 'Dict[str,str]', attach_stderr: bool) -> 'Optional[subprocess.Popen]':
-    si = None
+def start_server(
+    window: 'WindowLike',
+    config: ClientConfig,
+    server_binary_args: 'List[str]',
+    env: 'Dict[str,str]',
+    attach_stderr: bool
+) -> 'Optional[subprocess.Popen]':
+    startupinfo = None
     if os.name == "nt":
-        server_binary_args = add_extension_if_missing(server_binary_args)
-        si = subprocess.STARTUPINFO()  # type: ignore
-        si.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW  # type: ignore
-
-    debug("starting " + str(server_binary_args))
-
+        server_binary_args = add_extension_if_missing(config.binary_args)
+        startupinfo = subprocess.STARTUPINFO()  # type: ignore
+        startupinfo.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW  # type: ignore
+    resolved_working_dir = config.resolve_working_dir(window)
+    debug("starting", str(server_binary_args), "in", resolved_working_dir)
     stderr_destination = subprocess.PIPE if attach_stderr else subprocess.DEVNULL
-
     return subprocess.Popen(
         server_binary_args,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=stderr_destination,
-        cwd=working_dir,
+        cwd=resolved_working_dir,
         env=env,
-        startupinfo=si)
+        startupinfo=startupinfo)
 
 
 def attach_logger(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:

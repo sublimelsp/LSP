@@ -13,8 +13,10 @@ from .core.events import global_events
 from .core.workspace import enable_in_project, disable_in_project
 
 try:
+    from .core.types import ViewLike
     from typing import List, Optional, Dict, Any
     assert List and Optional and Dict and Any
+    assert ViewLike
 except ImportError:
     pass
 

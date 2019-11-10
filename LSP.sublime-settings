@@ -146,6 +146,12 @@
   //
   //     // Extra variables to override/add to language server's environment.
   //     "env": { },
+  //
+  //     // The working directory of the language server (if started via the editor). One of:
+  //     // - "first_folder": Take the first folder of the current window. Reverts to "sublime_cache_path" if not found.
+  //     // - "project_path": Take the path to the sublime-project file. Reverts to "first_folder" if not found.
+  //     // - "sublime_cache_path": Use $sublime_cache_path/LSP/$server_name as the working directory of the server.
+  //     "working_dir": "first_folder"
   //   }
   // }
   "clients": {

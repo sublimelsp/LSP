@@ -9,14 +9,18 @@ assert Client and ClientConfig
 
 
 try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional, Set
-    assert Any and List and Dict and Tuple and Callable and Optional and Set
+    from .types import WindowLike
+    from typing import Any, List, Dict, Tuple, Callable, Optional, Set, Iterable
+    from .workspace import Workspace
+    assert Any and List and Dict and Tuple and Callable and Optional and Set and Iterable
     assert Session
+    assert WindowLike
+    assert Workspace
 except ImportError:
     pass
 
 
-def get_window_env(window: sublime.Window, config: ClientConfig) -> 'Tuple[List[str], Dict[str, str]]':
+def get_window_env(window: 'WindowLike', config: ClientConfig) -> 'Tuple[List[str], Dict[str, str]]':
 
     # Create a dictionary of Sublime Text variables
     variables = window.extract_variables()
@@ -36,16 +40,17 @@ def get_window_env(window: sublime.Window, config: ClientConfig) -> 'Tuple[List[
     return expanded_args, env
 
 
-def start_window_config(window: sublime.Window,
-                        project_path: str,
+def start_window_config(window: 'WindowLike',
+                        workspaces: 'Optional[Iterable[Workspace]]',
                         config: ClientConfig,
                         on_pre_initialize: 'Callable[[Session], None]',
                         on_post_initialize: 'Callable[[Session], None]',
                         on_post_exit: 'Callable[[str], None]') -> 'Optional[Session]':
     args, env = get_window_env(window, config)
     config.binary_args = args
-    return create_session(config=config,
-                          project_path=project_path,
+    return create_session(window=window,
+                          config=config,
+                          workspaces=workspaces,
                           env=env,
                           settings=settings,
                           on_pre_initialize=on_pre_initialize,
@@ -53,5 +58,5 @@ def start_window_config(window: sublime.Window,
                           on_post_exit=lambda config_name: on_session_ended(window, config_name, on_post_exit))
 
 
-def on_session_ended(window: sublime.Window, config_name: str, on_post_exit_handler: 'Callable[[str], None]') -> None:
+def on_session_ended(window: 'WindowLike', config_name: str, on_post_exit_handler: 'Callable[[str], None]') -> None:
     on_post_exit_handler(config_name)

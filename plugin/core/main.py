@@ -2,8 +2,10 @@ from ..highlights import remove_highlights
 from ..color import remove_color_boxes
 
 try:
+    from .types import ViewLike
     from typing import Any, List, Dict, Tuple, Callable, Optional, Set
     assert Any and List and Dict and Tuple and Callable and Optional and Set
+    assert ViewLike
 except ImportError:
     pass
 

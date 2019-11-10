@@ -1,5 +1,5 @@
 import sublime
-from .types import Settings, ClientConfig, LanguageConfig
+from .types import Settings, ClientConfig, LanguageConfig, ConfigWorkingDir
 from .logging import debug
 
 PLUGIN_NAME = 'LSP'
@@ -181,7 +181,8 @@ def read_client_config(name: str, client_config: 'Dict') -> ClientConfig:
         client_config.get("settings", dict()),
         client_config.get("env", dict()),
         client_config.get("tcp_host", None),
-        client_config.get("tcp_mode", None)
+        client_config.get("tcp_mode", None),
+        client_config.get("working_dir", ConfigWorkingDir.first_folder)
     )
 
 
@@ -200,5 +201,6 @@ def update_client_config(config: 'ClientConfig', settings: dict) -> 'ClientConfi
         settings.get("settings", config.settings),
         settings.get("env", config.env),
         settings.get("tcp_host", config.tcp_host),
-        settings.get("tcp_mode", config.tcp_mode)
+        settings.get("tcp_mode", config.tcp_mode),
+        settings.get("working_dir", config.working_dir)
     )

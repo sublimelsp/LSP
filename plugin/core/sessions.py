@@ -151,7 +151,6 @@ class Session(object):
                  on_post_initialize: 'Optional[Callable[[Session], None]]' = None,
                  on_post_exit: 'Optional[Callable[[str], None]]' = None) -> None:
         self.config = config
-        self.project_path = project_path
         self.state = ClientStates.STARTING
         self._on_post_initialize = on_post_initialize
         self._on_post_exit = on_post_exit
@@ -159,7 +158,7 @@ class Session(object):
         self.client = client
         if on_pre_initialize:
             on_pre_initialize(self)
-        self.initialize()
+        self._initialize(project_path)
 
     def has_capability(self, capability: str) -> bool:
         return capability in self.capabilities and self.capabilities[capability] is not False
@@ -167,8 +166,8 @@ class Session(object):
     def get_capability(self, capability: str) -> 'Optional[Any]':
         return self.capabilities.get(capability)
 
-    def initialize(self) -> None:
-        params = get_initialize_params(self.project_path, self.config)
+    def _initialize(self, project_path: str) -> None:
+        params = get_initialize_params(project_path, self.config)
         self.client.send_request(
             Request.initialize(params),
             lambda result: self._handle_initialize_result(result))

@@ -83,7 +83,6 @@ class SessionTest(unittest.TestCase):
             create_session(config, project_path, dict(), Settings()))
 
         self.assertEqual(session.state, ClientStates.STARTING)
-        self.assertEqual(session.project_path, project_path)
         session.end()
         # self.assertIsNone(session.capabilities) -- empty dict
 
@@ -99,7 +98,6 @@ class SessionTest(unittest.TestCase):
                            on_post_initialize=post_initialize_callback))
         self.assertEqual(session.state, ClientStates.READY)
         self.assertIsNotNone(session.client)
-        self.assertEqual(session.project_path, project_path)
         self.assertTrue(session.has_capability("testing"))
         self.assertTrue(session.get_capability("testing"))
         post_initialize_callback.assert_called_once()
@@ -118,7 +116,6 @@ class SessionTest(unittest.TestCase):
                            on_post_initialize=post_initialize_callback))
         self.assertEqual(session.state, ClientStates.READY)
         self.assertIsNotNone(session.client)
-        self.assertEqual(session.project_path, project_path)
         self.assertTrue(session.has_capability("testing"))
         self.assertTrue(session.get_capability("testing"))
         pre_initialize_callback.assert_called_once()
@@ -138,12 +135,10 @@ class SessionTest(unittest.TestCase):
                            on_post_exit=post_exit_callback))
         self.assertEqual(session.state, ClientStates.READY)
         self.assertIsNotNone(session.client)
-        self.assertEqual(session.project_path, project_path)
         self.assertTrue(session.has_capability("testing"))
         post_initialize_callback.assert_called_once()
         session.end()
         self.assertEqual(session.state, ClientStates.STOPPING)
-        self.assertEqual(session.project_path, project_path)
         self.assertIsNone(session.client)
         self.assertFalse(session.has_capability("testing"))
         self.assertIsNone(session.get_capability("testing"))

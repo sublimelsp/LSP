@@ -1,7 +1,6 @@
 from .handlers import LanguageHandler
-from .test_session import test_config
+from .test_mocks import TEST_CONFIG
 from .types import ClientConfig
-
 import unittest
 
 
@@ -15,7 +14,7 @@ class TestHandler(LanguageHandler):
 
     @property
     def config(self) -> ClientConfig:
-        return test_config
+        return TEST_CONFIG
 
 
 class LanguageHandlerTest(unittest.TestCase):
@@ -24,4 +23,4 @@ class LanguageHandlerTest(unittest.TestCase):
         self.assertEqual(len(handlers), 1)
         first_handler = handlers[0]
         self.assertEqual(first_handler.name, "test")
-        self.assertEqual(first_handler.config, test_config)
+        self.assertEqual(first_handler.config, TEST_CONFIG)

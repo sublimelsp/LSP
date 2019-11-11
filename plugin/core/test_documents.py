@@ -1,15 +1,19 @@
-import unittest
-from .events import Events
-from .windows import WindowDocumentHandler
-from .sessions import create_session, Session
-from .test_windows import MockWindow, MockView, MockConfigs
-from .test_session import test_config, MockClient, test_language
-import unittest.mock
 from . import test_sublime as test_sublime
-from .test_rpc import MockSettings
-# from .logging import debug, set_debug_logging
+from .events import Events
+from .sessions import create_session
+from .sessions import Session
+from .test_mocks import MockClient
+from .test_mocks import MockConfigs
+from .test_mocks import MockSettings
+from .test_mocks import MockView
+from .test_mocks import MockWindow
+from .test_mocks import TEST_CONFIG
+from .test_mocks import TEST_LANGUAGE
 from .types import ClientConfig
+from .windows import WindowDocumentHandler
 from os.path import basename
+import unittest
+import unittest.mock
 
 try:
     from typing import Any, Dict
@@ -32,7 +36,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         handler = WindowDocumentHandler(test_sublime, MockSettings(), window, events, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
-            create_session(test_config, "", dict(), MockSettings(),
+            create_session(TEST_CONFIG, "", dict(), MockSettings(),
                            bootstrap_client=client))
         handler.add_session(session)
 
@@ -92,7 +96,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         handler = WindowDocumentHandler(test_sublime, MockSettings(), window, events, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
-            create_session(test_config, "", dict(), MockSettings(),
+            create_session(TEST_CONFIG, "", dict(), MockSettings(),
                            bootstrap_client=client))
         handler.add_session(session)
         events.publish("view.on_activated_async", view)
@@ -107,10 +111,10 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         handler = WindowDocumentHandler(test_sublime, MockSettings(), window, events, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
-            create_session(test_config, "", dict(), MockSettings(),
+            create_session(TEST_CONFIG, "", dict(), MockSettings(),
                            bootstrap_client=client))
         client2 = MockClient()
-        test_config2 = ClientConfig("test2", [], None, languages=[test_language])
+        test_config2 = ClientConfig("test2", [], None, languages=[TEST_LANGUAGE])
         session2 = self.assert_if_none(
             create_session(test_config2, "", dict(), MockSettings(),
                            bootstrap_client=client2))

@@ -1,3 +1,7 @@
+from .url import filename_to_uri
+from .url import uri_to_filename
+import os
+
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional, Union, Mapping
     assert Any and List and Dict and Tuple and Callable and Optional and Union and Mapping
@@ -348,3 +352,36 @@ class Diagnostic(object):
 
     def to_lsp(self) -> 'Dict[str, Any]':
         return self._lsp_diagnostic
+
+
+class Workspace:
+
+    __slots__ = ('name', 'uri')
+
+    def __init__(self, name: str, uri: str) -> None:
+        self.name = name
+        self.uri = uri
+        assert self.name
+        assert self.uri
+
+    @classmethod
+    def from_path(cls, path: str) -> 'Workspace':
+        assert os.path.isdir(path)
+        return cls(os.path.basename(path), filename_to_uri(path))
+
+    def __repr__(self) -> str:
+        return "{}('{}', '{}')".format(self.__class__.__name__, self.name, self.uri)
+
+    def __str__(self) -> str:
+        return self.uri
+
+    def __eq__(self, other: 'Any') -> bool:
+        if isinstance(other, Workspace):
+            return self.name == other.name and self.uri == other.uri
+        return False
+
+    def to_dict(self) -> 'Dict[str, str]':
+        return {"name": self.name, "uri": self.uri}
+
+    def path(self) -> str:
+        return uri_to_filename(self.uri)

@@ -4,8 +4,7 @@ from .test_protocol import LSP_RANGE
 
 try:
     from typing import List, Dict, Optional, Any, Iterable, Tuple
-    from .edit import TextEdit
-    assert List and Dict and Optional and Any and Iterable and Tuple and TextEdit
+    assert List and Dict and Optional and Any and Iterable and Tuple
 except ImportError:
     pass
 

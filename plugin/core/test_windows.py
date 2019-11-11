@@ -99,6 +99,9 @@ class WindowManagerTests(unittest.TestCase):
         # session must be started (todo: verify session is ready)
         view = MockView(__file__)
 
+        # WindowManager will call window.active_view() at some point during wm.activate_view
+        window._files_in_groups = [[view]]
+
         wm.activate_view(view)
         self.assertIsNotNone(wm.get_session(TEST_CONFIG.name))
         self.assertEqual(len(docs._sessions), 1)
@@ -161,16 +164,18 @@ class WindowManagerTests(unittest.TestCase):
         # change project_path
         new_project_path = tempfile.gettempdir()
         test_window.set_folders([new_project_path])
+        test_window.set_project_data({"folders": [{"name": "foo", "path": new_project_path}]})
         # global_events.publish("view.on_close", MockView(__file__))
         another_view = MockView(None)
         another_view.settings().set("syntax", "Unsupported Syntax")
+        test_window._files_in_groups[0][0] = another_view
         wm.activate_view(another_view)
 
         self.assertEqual(len(wm._sessions), 0)
         self.assertEqual(len(docs._sessions), 0)
 
         # don't forget to check or we'll keep restarting sessions!
-        self.assertEqual(wm._project_path, new_project_path)
+        self.assertEqual(wm.get_project_path(), new_project_path)
 
     def test_offers_restart_on_crash(self):
         docs = MockDocuments()

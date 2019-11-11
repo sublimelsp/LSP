@@ -2,9 +2,11 @@ import sublime
 import sublime_plugin
 from .core.edit import sort_by_application_order
 try:
-    from typing import List, Dict, Optional, Any, Iterable, Tuple
+    from typing import List, Dict, Optional, Any, Iterable
     from .core.edit import TextEdit
-    assert List and Dict and Optional and Any and Iterable and Tuple and TextEdit
+    assert List and Dict and Optional and Any and Iterable
+    # plugin/edit.py:9: error: The type alias to Tuple is invalid in runtime context
+    assert TextEdit  # type: ignore
 except ImportError:
     pass
 from .core.logging import debug

@@ -9,7 +9,9 @@ from .edit import parse_workspace_edit
 from .events import Events
 from .sessions import Session
 from .url import filename_to_uri
-from .workspace import get_project_path, get_active_view_path
+from .workspace import maybe_get_first_workspace_from_window
+from .workspace import maybe_get_workspace_from_view
+from .workspace import Workspace
 from .rpc import Client
 import threading
 try:
@@ -18,6 +20,7 @@ try:
     from types import ModuleType
     assert Optional and List and Callable and Dict and Session and Any and ModuleType and Iterator and Union
     assert LanguageConfig
+    assert Workspace
 except ImportError:
     pass
     Protocol = object  # type: ignore
@@ -316,8 +319,8 @@ class WindowManager(object):
         self._sublime = sublime
         self._handlers = handler_dispatcher
         self._restarting = False
-        self._project_path = get_project_path(self._window)
-        self._projectless_root_path = None  # type: Optional[str]
+        self._workspace = maybe_get_first_workspace_from_window(self._window)  # type: ignore
+        self._projectless_workspace = None  # type: Optional[Workspace]
         self._diagnostics.set_on_updated(
             lambda file_path, client_name:
                 global_events.publish("document.diagnostics",
@@ -369,9 +372,9 @@ class WindowManager(object):
                 self._start_client(config)
 
     def _start_client(self, config: ClientConfig) -> None:
-        project_path = self._ensure_project_path()
+        workspace = self._ensure_workspace()
 
-        if project_path is None:
+        if workspace is None:
             debug('Cannot start without a project folder')
             return
 
@@ -382,17 +385,18 @@ class WindowManager(object):
         if not self._handlers.on_start(config.name, self._window):
             return
 
+        project_path = workspace.path()
         self._window.status_message("Starting " + config.name + "...")
         debug("starting in", project_path)
         session = None  # type: Optional[Session]
         try:
             session = self._start_session(
-                window=self._window,
-                project_path=project_path,
-                config=config,
-                on_pre_initialize=self._handle_pre_initialize,
-                on_post_initialize=self._handle_post_initialize,
-                on_post_exit=self._handle_post_exit)
+                self._window,                  # window
+                project_path,                  # project_path
+                config,                        # config
+                self._handle_pre_initialize,   # on_pre_initialize
+                self._handle_post_initialize,  # on_post_initialize
+                self._handle_post_exit)        # on_post_exit
         except Exception as e:
             message = "\n\n".join([
                 "Could not start {}",
@@ -436,24 +440,34 @@ class WindowManager(object):
             debug("unloading session", config_name)
             self._sessions[config_name].end()
 
-    def _ensure_project_path(self) -> 'Optional[str]':
-        if self._project_path is None:
-            self._project_path = get_project_path(self._window)
-            if self._project_path is None and self._projectless_root_path is None:
+    def _ensure_workspace(self) -> 'Optional[Workspace]':
+        if self._workspace is None:
+            self._workspace = maybe_get_first_workspace_from_window(self._window)
+            if self._workspace is None and self._projectless_workspace is None:
                 # the projectless fallback will only be set once per window.
-                self._projectless_root_path = get_active_view_path(self._window)
-        return self._project_path or self._projectless_root_path
+                view = self._window.active_view()
+                if not view:
+                    return None
+                self._projectless_workspace = maybe_get_workspace_from_view(view)
+        return self._workspace or self._projectless_workspace
+
+    def get_workspace(self) -> 'Optional[Workspace]':
+        return self._workspace or self._projectless_workspace
 
     def get_project_path(self) -> 'Optional[str]':
-        return self._project_path or self._projectless_root_path
+        if self._workspace:
+            return self._workspace.path()
+        if self._projectless_workspace:
+            return self._projectless_workspace.path()
+        return None
 
     def _end_old_sessions(self) -> None:
-        current_project_path = get_project_path(self._window)
-        if current_project_path != self._project_path:
-            debug('project path changed, ending existing sessions')
-            debug('new path = {}'.format(current_project_path))
+        current_workspace = maybe_get_first_workspace_from_window(self._window)
+        if current_workspace != self._workspace:
+            debug('workspace changed, ending existing sessions')
+            debug('new workspace is', current_workspace)
             self.end_sessions()
-            self._project_path = current_project_path
+            self._workspace = current_workspace
 
     def _apply_workspace_edit(self, params: 'Dict[str, Any]', client: Client, request_id: int) -> None:
         edit = params.get('edit', dict())

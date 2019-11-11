@@ -246,6 +246,8 @@ class DiagnosticsWalker(object):
 
 
 class HasRelevantDiagnostics(DiagnosticsUpdateWalk):
+    def __init__(self) -> None:
+        self.result = False
 
     def begin(self) -> None:
         self.result = False

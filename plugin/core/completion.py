@@ -55,7 +55,11 @@ def format_completion(item: dict, word_col: int, settings: 'Settings') -> 'Tuple
             trigger = trigger[1:]  # remove clangd insertion indicator
         else:
             debug("replacement prefix does not match trigger!")
-            replacement = item.get("insertText") or trigger
+            if trigger == "Implement all members":
+                # MetaLS workaround
+                replacement = item["textEdit"]["newText"]
+            else:
+                replacement = item.get("insertText") or trigger
 
     if len(replacement) > 0 and replacement[0] == '$':  # sublime needs leading '$' escaped.
         replacement = '\\$' + replacement[1:]

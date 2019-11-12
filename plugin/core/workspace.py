@@ -2,8 +2,6 @@ from .logging import debug
 from .protocol import Workspace
 from .types import ViewLike
 from .types import WindowLike
-from .url import filename_to_uri
-from .url import uri_to_filename
 import os
 
 try:
@@ -37,7 +35,7 @@ def workspace_from_sublime_project_data(project_base_path: str, folder: 'Dict[st
         raise ValueError("{} is not a directory".format(path))
     if not name:
         name = os.path.basename(path)
-    return Workspace(name, filename_to_uri(path))
+    return Workspace(name, path)
 
 
 def get_project_data_or_throw(window: WindowLike) -> 'Dict[str, Any]':
@@ -94,23 +92,6 @@ def get_workspaces_from_window(window: WindowLike) -> 'Optional[List[Workspace]]
     except AttributeError as error:
         debug(error)
     return None
-
-
-def get_common_prefix_of_workspaces(workspaces: 'Optional[List[Workspace]]') -> 'Optional[str]':
-    if workspaces is None:
-        return None
-    return get_common_parent(uri_to_filename(workspace.uri) for workspace in workspaces)
-
-
-def get_common_prefix_of_workspaces_for_window(window: WindowLike) -> 'Optional[str]':
-    return get_common_prefix_of_workspaces(get_workspaces_from_window(window))
-
-
-def get_common_parent(paths: 'Iterable[str]') -> str:
-    """
-    Returns the path containing the active view, if any.
-    """
-    return os.path.commonprefix([path + '/' for path in paths]).rstrip('/')
 
 
 def enable_in_project(window: 'Any', config_name: str) -> None:

@@ -1,5 +1,4 @@
 from .url import filename_to_uri
-from .url import uri_to_filename
 import os
 
 try:
@@ -356,32 +355,32 @@ class Diagnostic(object):
 
 class Workspace:
 
-    __slots__ = ('name', 'uri')
+    __slots__ = ('name', 'path')
 
-    def __init__(self, name: str, uri: str) -> None:
+    def __init__(self, name: str, path: str) -> None:
         self.name = name
-        self.uri = uri
+        self.path = path
         assert self.name
-        assert self.uri
+        assert self.path
 
     @classmethod
     def from_path(cls, path: str) -> 'Workspace':
         assert os.path.isdir(path)
-        return cls(os.path.basename(path), filename_to_uri(path))
+        return cls(os.path.basename(path), path)
 
     def __repr__(self) -> str:
-        return "{}('{}', '{}')".format(self.__class__.__name__, self.name, self.uri)
+        return "{}('{}', '{}')".format(self.__class__.__name__, self.name, self.path)
 
     def __str__(self) -> str:
-        return self.uri
+        return self.path
 
     def __eq__(self, other: 'Any') -> bool:
         if isinstance(other, Workspace):
-            return self.name == other.name and self.uri == other.uri
+            return self.name == other.name and self.path == other.path
         return False
 
     def to_dict(self) -> 'Dict[str, str]':
-        return {"name": self.name, "uri": self.uri}
+        return {"name": self.name, "uri": self.uri()}
 
-    def path(self) -> str:
-        return uri_to_filename(self.uri)
+    def uri(self) -> str:
+        return filename_to_uri(self.path)

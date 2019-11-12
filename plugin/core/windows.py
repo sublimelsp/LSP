@@ -385,7 +385,7 @@ class WindowManager(object):
         if not self._handlers.on_start(config.name, self._window):
             return
 
-        project_path = workspace.path()
+        project_path = workspace.path
         self._window.status_message("Starting " + config.name + "...")
         debug("starting in", project_path)
         session = None  # type: Optional[Session]
@@ -456,9 +456,9 @@ class WindowManager(object):
 
     def get_project_path(self) -> 'Optional[str]':
         if self._workspace:
-            return self._workspace.path()
+            return self._workspace.path
         if self._projectless_workspace:
-            return self._projectless_workspace.path()
+            return self._projectless_workspace.path
         return None
 
     def _end_old_sessions(self) -> None:

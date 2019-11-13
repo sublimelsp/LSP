@@ -45,31 +45,13 @@ class CompletionFormattingTests(unittest.TestCase):
         self.assertEqual("asdf", result[0])
         self.assertEqual("asdf", result[1])
 
-    def test_prefer_label_over_filter_text(self):
-        updated_settings = Settings()
-        updated_settings.prefer_label_over_filter_text = True
-        result = format_completion(
-            {"label": "asdf", "insertText": "asdf", "filterText": "filterText"},
-            0, updated_settings)
-        self.assertEqual(len(result), 2)
-        self.assertEqual("asdf", result[0])
-        self.assertEqual("asdf", result[1])
-
     def test_prefers_insert_text(self):
         result = format_completion(
-            {"label": "asdf", "insertText": "Asdf", "filterText": "asdf"},
+            {"label": "asdf", "insertText": "Asdf"},
             0, settings)
         self.assertEqual(len(result), 2)
         self.assertEqual("asdf", result[0])
         self.assertEqual("Asdf", result[1])
-
-    def test_null_filter_text(self):
-        result = format_completion(
-            {"label": "asdf", "insertText": None, "filterText": None},
-            0, settings)
-        self.assertEqual(len(result), 2)
-        self.assertEqual("asdf", result[0])
-        self.assertEqual("asdf", result[1])
 
     def test_ignores_text_edit(self):
 
@@ -91,7 +73,7 @@ class CompletionFormattingTests(unittest.TestCase):
         self.assertEqual("$true", result[0])
         self.assertEqual("\\$true", result[1])
 
-    def test_ignore_label(self):
+    def test_use_label_as_is(self):
         # issue #368
         item = {
             'insertTextFormat': 2,
@@ -99,9 +81,8 @@ class CompletionFormattingTests(unittest.TestCase):
             'insertText': 'const',
             'sortText': '3f800000const',
             'kind': 14,
-            # Note the extra space here. We should ignore this!
+            # Note the extra space here.
             'label': ' const',
-            'filterText': 'const',
             'textEdit': {
                 'newText': 'const',
                 'range': {
@@ -147,30 +128,25 @@ class CompletionFormattingTests(unittest.TestCase):
         result = [format_completion(item, last_col, settings) for item in clangd_completion_sample]
         # We should prefer textEdit over insertText. This test covers that.
         self.assertEqual(
-            result,
-            [
-                ('argc\t  int', 'argc'),
-                ('argv\t  const char **', 'argv'),
-                ('alignas\t  Snippet', 'alignas(${1:expression})'),
-                ('alignof\t  size_t', 'alignof(${1:type})'),
-                ('auto\t  Keyword', 'auto'),
-                ('static_assert\t  Snippet', 'static_assert(${1:expression}, ${2:message})'),
-                ('a64l\t  long', 'a64l(${1:const char *__s})'),
-                ('abort\t  void', 'abort()'),
-                ('abs\t  int', 'abs(${1:int __x})'),
-                ('aligned_alloc\t  void *', 'aligned_alloc(${1:size_t __alignment}, ${2:size_t __size})'),
-                ('alloca\t  void *', 'alloca(${1:size_t __size})'),
-                ('asctime\t  char *', 'asctime(${1:const struct tm *__tp})'),
-                ('asctime_r\t  char *',
-                 'asctime_r(${1:const struct tm *__restrict __tp}, ${2:char *__restrict __buf})'),
-                ('asprintf\t  int', 'asprintf(${1:char **__restrict __ptr}, ${2:const char *__restrict __fmt, ...})'),
-                ('at_quick_exit\t  int', 'at_quick_exit(${1:void (*__func)()})'),
-                ('atexit\t  int', 'atexit(${1:void (*__func)()})'),
-                ('atof\t  double', 'atof(${1:const char *__nptr})'),
-                ('atoi\t  int', 'atoi(${1:const char *__nptr})'),
-                ('atol\t  long', 'atol(${1:const char *__nptr})')
-            ]
-        )
+            result, [('argc\t  int', 'argc'), ('argv\t  const char **', 'argv'),
+                     ('alignas(expression)\t  Snippet', 'alignas(${1:expression})'),
+                     ('alignof(type)\t  size_t', 'alignof(${1:type})'), ('auto\t  Keyword', 'auto'),
+                     ('static_assert(expression, message)\t  Snippet', 'static_assert(${1:expression}, ${2:message})'),
+                     ('a64l(const char *__s)\t  long', 'a64l(${1:const char *__s})'), ('abort()\t  void', 'abort()'),
+                     ('abs(int __x)\t  int', 'abs(${1:int __x})'),
+                     ('aligned_alloc(size_t __alignment, size_t __size)\t  void *',
+                      'aligned_alloc(${1:size_t __alignment}, ${2:size_t __size})'),
+                     ('alloca(size_t __size)\t  void *', 'alloca(${1:size_t __size})'),
+                     ('asctime(const struct tm *__tp)\t  char *', 'asctime(${1:const struct tm *__tp})'),
+                     ('asctime_r(const struct tm *__restrict __tp, char *__restrict __buf)\t  char *',
+                      'asctime_r(${1:const struct tm *__restrict __tp}, ${2:char *__restrict __buf})'),
+                     ('asprintf(char **__restrict __ptr, const char *__restrict __fmt, ...)\t  int',
+                      'asprintf(${1:char **__restrict __ptr}, ${2:const char *__restrict __fmt, ...})'),
+                     ('at_quick_exit(void (*__func)())\t  int', 'at_quick_exit(${1:void (*__func)()})'),
+                     ('atexit(void (*__func)())\t  int', 'atexit(${1:void (*__func)()})'),
+                     ('atof(const char *__nptr)\t  double', 'atof(${1:const char *__nptr})'),
+                     ('atoi(const char *__nptr)\t  int', 'atoi(${1:const char *__nptr})'),
+                     ('atol(const char *__nptr)\t  long', 'atol(${1:const char *__nptr})')])
 
     def test_missing_text_edit_but_we_do_have_insert_text_for_pyls(self):
         last_col = 1

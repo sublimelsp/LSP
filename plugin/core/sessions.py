@@ -122,7 +122,10 @@ def get_initialize_params(project_path: str, config: ClientConfig) -> dict:
                     }
                 },
                 "rename": {},
-                "colorProvider": {}
+                "colorProvider": {},
+                "publishDiagnostics": {
+                    "relatedInformation": True
+                }
             },
             "workspace": {
                 "applyEdit": True,

@@ -1,3 +1,4 @@
+from .url import uri_to_filename
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional, Union, Mapping
     assert Any and List and Dict and Tuple and Callable and Optional and Union and Mapping
@@ -332,14 +333,41 @@ class ContentChange(object):
         return "{} {} '{}'".format(self.range, self.range_length, self.text)
 
 
+class Location(object):
+    def __init__(self, file_path: str, range: Range) -> None:
+        self.file_path = file_path
+        self.range = range
+
+    @classmethod
+    def from_lsp(cls, lsp_location: dict) -> 'Location':
+        return Location(
+            uri_to_filename(lsp_location["uri"]),
+            Range.from_lsp(lsp_location["range"])
+        )
+
+
+class DiagnosticRelatedInformation(object):
+
+    def __init__(self, location: Location, message: str) -> None:
+        self.location = location
+        self.message = message
+
+    @classmethod
+    def from_lsp(cls, lsp_related_information: dict) -> 'DiagnosticRelatedInformation':
+        return DiagnosticRelatedInformation(
+            Location.from_lsp(lsp_related_information["location"]),
+            lsp_related_information["message"])
+
+
 class Diagnostic(object):
-    def __init__(self, message: str, range: Range, severity: int,
-                 source: 'Optional[str]', lsp_diagnostic: dict) -> None:
+    def __init__(self, message: str, range: Range, severity: int, source: 'Optional[str]', lsp_diagnostic: dict,
+                 related_info: 'List[DiagnosticRelatedInformation]') -> None:
         self.message = message
         self.range = range
         self.severity = severity
         self.source = source
         self._lsp_diagnostic = lsp_diagnostic
+        self.related_info = related_info
 
     @classmethod
     def from_lsp(cls, lsp_diagnostic: dict) -> 'Diagnostic':
@@ -350,7 +378,8 @@ class Diagnostic(object):
             # optional keys
             lsp_diagnostic.get('severity', DiagnosticSeverity.Error),
             lsp_diagnostic.get('source'),
-            lsp_diagnostic
+            lsp_diagnostic,
+            [DiagnosticRelatedInformation.from_lsp(info) for info in lsp_diagnostic.get('relatedInformation', [])]
         )
 
     def to_lsp(self) -> 'Dict[str, Any]':

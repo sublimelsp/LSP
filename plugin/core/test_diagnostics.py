@@ -18,7 +18,7 @@ class DiagnosticsStorageTest(unittest.TestCase):
         wd = DiagnosticsStorage(None)
 
         test_file_path = "test.py"
-        diag = Diagnostic('message', Range(Point(0, 0), Point(1, 1)), 1, None, dict())
+        diag = Diagnostic('message', Range(Point(0, 0), Point(1, 1)), 1, None, dict(), [])
 
         wd.update(test_file_path, "test_server", [diag])
         view_diags = wd.get_by_file(test_file_path)
@@ -47,7 +47,7 @@ class DiagnosticsStorageTest(unittest.TestCase):
         wd = DiagnosticsStorage(None)
 
         test_file_path = "test.py"
-        diag = Diagnostic('message', Range(Point(0, 0), Point(1, 1)), 1, None, dict())
+        diag = Diagnostic('message', Range(Point(0, 0), Point(1, 1)), 1, None, dict(), [])
 
         wd.update(test_file_path, "test_server", [diag])
         view_diags = wd.get_by_file(test_file_path)

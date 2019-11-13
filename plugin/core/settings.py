@@ -51,7 +51,7 @@ def read_str_setting(settings_obj: sublime.Settings, key: str, default: str) -> 
         return default
 
 
-def read_auto_show_setting(settings_obj: sublime.Settings, key: str, default: str) -> str:
+def read_auto_show_diagnostics_panel_setting(settings_obj: sublime.Settings, key: str, default: str) -> str:
     val = settings_obj.get(key)
     if isinstance(val, bool):
         return 'always' if val else 'never'
@@ -63,7 +63,9 @@ def read_auto_show_setting(settings_obj: sublime.Settings, key: str, default: st
 
 def update_settings(settings: Settings, settings_obj: sublime.Settings) -> None:
     settings.show_view_status = read_bool_setting(settings_obj, "show_view_status", True)
-    settings.auto_show_diagnostics_panel = read_auto_show_setting(settings_obj, "auto_show_diagnostics_panel", 'always')
+    settings.auto_show_diagnostics_panel = read_auto_show_diagnostics_panel_setting(settings_obj,
+                                                                                    "auto_show_diagnostics_panel",
+                                                                                    'always')
     settings.auto_show_diagnostics_panel_level = read_int_setting(settings_obj, "auto_show_diagnostics_panel_level", 3)
     settings.show_diagnostics_count_in_view_status = read_bool_setting(settings_obj,
                                                                        "show_diagnostics_count_in_view_status", False)

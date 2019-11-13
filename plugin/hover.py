@@ -8,7 +8,7 @@ from .diagnostics import filter_by_point, view_diagnostics
 from .core.registry import session_for_view, LspTextCommand
 from .core.protocol import Request, DiagnosticSeverity, Diagnostic, Point
 from .core.documents import get_document_position
-from .core.popups import popup_css, popup_class
+from .core.popups import popups
 from .code_actions import actions_manager, run_code_action_or_command
 from .core.settings import client_configs, settings
 
@@ -205,11 +205,11 @@ class LspHoverCommand(LspTextCommand):
             mdpopups.show_popup(
                 self.view,
                 contents,
-                css=popup_css,
+                css=popups.stylesheet,
                 md=False,
                 flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
                 location=point,
-                wrapper_class=popup_class,
+                wrapper_class=popups.classname,
                 max_width=800,
                 on_navigate=lambda href: self.on_hover_navigate(href, point))
 

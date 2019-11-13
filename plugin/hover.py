@@ -138,7 +138,7 @@ class LspHoverCommand(LspTextCommand):
         file_path = os.path.relpath(info.location.file_path,
                                     self._base_dir) if self._base_dir else info.location.file_path
         location = "{}:{}:{}".format(file_path, info.location.range.start.row, info.location.range.start.col)
-        return "<a href='location:{}'>{}</a><br>{}".format(location, location, escape(info.message))
+        return "<a href='location:{}'>{}</a>: {}".format(location, location, escape(info.message))
 
     def format_diagnostic(self, diagnostic: 'Diagnostic') -> str:
         diagnostic_message = escape(diagnostic.message, False).replace('\n', '<br>')

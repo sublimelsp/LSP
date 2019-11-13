@@ -105,6 +105,23 @@ edit_after_nonword = [
          })
 ]
 
+metals_implement_all_members = [
+    dict(label='Implement all members',
+         textEdit={
+             'newText': 'def foo: Int \u003d ${0:???}\n   def boo: Int \u003d ${0:???}',
+             'range': {
+                 'start': {
+                     'line': 0,
+                     'character': 0
+                 },
+                 'end': {
+                     'line': 0,
+                     'character': 1
+                 }
+             }
+         })
+]
+
 
 class InitializationTests(DeferrableTestCase):
     def setUp(self):
@@ -323,6 +340,27 @@ class QueryCompletionsTests(TextDocumentTestCase):
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'List.apply()')
+
+    def test_implement_all_members_quirk(self):
+        """
+        Metals: "Implement all members" should just select the newText.
+        https://github.com/tomv564/LSP/issues/771
+        """
+        yield OPEN_DOCUMENT_DELAY
+        self.view.run_command('append', {'characters': 'I'})
+        self.view.run_command('move_to', {'to': 'eol'})
+        self.client.responses['textDocument/completion'] = metals_implement_all_members
+        handler = self.get_view_event_listener('on_query_completions')
+        self.assertIsNotNone(handler)
+        if handler:
+            handler.on_query_completions("", [1])
+            yield 100
+            handler.on_text_command('insert_best_completion', {})
+            self.view.run_command('insert_best_completion', {})
+            yield AFTER_INSERT_COMPLETION_DELAY
+            self.assertEquals(
+                self.view.substr(sublime.Region(0, self.view.size())),
+                'def foo: Int = ???\n   def boo: Int = ???')
 
     def test_additional_edits(self):
         yield OPEN_DOCUMENT_DELAY

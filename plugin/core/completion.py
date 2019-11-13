@@ -54,8 +54,7 @@ def format_completion(item: dict, word_col: int, settings: 'Settings') -> 'Tuple
         elif trigger[0] == ' ' or trigger[0] == '•':
             trigger = trigger[1:]  # remove clangd insertion indicator
         else:
-            debug("replacement prefix does not match trigger!")
-            replacement = item.get("insertText") or trigger
+            debug("WARNING: Replacement prefix does not match trigger '{}'".format(trigger))
 
     if len(replacement) > 0 and replacement[0] == '$':  # sublime needs leading '$' escaped.
         replacement = '\\$' + replacement[1:]

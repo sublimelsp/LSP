@@ -4,9 +4,9 @@ import sublime_plugin
 import webbrowser
 from html import escape
 from .core.configurations import is_supported_syntax
-from .diagnostics import point_diagnostics_by_config
+from .diagnostics import filter_by_point, view_diagnostics
 from .core.registry import session_for_view, LspTextCommand
-from .core.protocol import Request, DiagnosticSeverity, Diagnostic
+from .core.protocol import Request, DiagnosticSeverity, Diagnostic, Point
 from .core.documents import get_document_position
 from .core.popups import popup_css, popup_class
 from .code_actions import actions_manager, run_code_action_or_command
@@ -89,7 +89,8 @@ class LspHoverCommand(LspTextCommand):
         if self.is_likely_at_symbol(hover_point):
             self.request_symbol_hover(hover_point)
 
-        self._diagnostics_by_config = point_diagnostics_by_config(self.view, hover_point)
+        self._diagnostics_by_config = filter_by_point(view_diagnostics(self.view),
+                                                      Point(*self.view.rowcol(hover_point)))
         if self._diagnostics_by_config:
             self.request_code_actions(hover_point)
             self.request_show_hover(hover_point)

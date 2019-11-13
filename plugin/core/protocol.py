@@ -292,6 +292,13 @@ class Range(object):
             'end': self.end.to_lsp()
         }
 
+    def contains(self, point: Point) -> bool:
+        return self.start.row <= point.row <= self.end.row and self.start.col <= point.col <= self.end.col
+
+    def intersects(self, rge: 'Range') -> bool:
+        return rge.start.row <= self.end.row and rge.start.col <= self.end.col and \
+               rge.end.row >= self.start.row and rge.end.col >= self.start.col
+
 
 class ContentChange(object):
     def __init__(self, text: str, range: 'Optional[Range]'=None, range_length: 'Optional[int]'=None) -> None:

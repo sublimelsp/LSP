@@ -1,11 +1,10 @@
 from .url import uri_to_filename
 import operator
-try:
+TYPE_CHECKING = False
+if TYPE_CHECKING:
     from typing import List, Dict, Optional, Any, Iterable, Tuple
     TextEdit = Tuple[Tuple[int, int], Tuple[int, int], str]
     assert List and Dict and Optional and Any and Iterable and Tuple
-except ImportError:
-    pass
 
 
 def parse_workspace_edit(workspace_edit: 'Dict[str, Any]') -> 'Dict[str, List[TextEdit]]':

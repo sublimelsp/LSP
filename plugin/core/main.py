@@ -16,12 +16,14 @@ from .logging import set_debug_logging, set_server_logging
 from .events import global_events
 from .registry import windows, load_handlers, unload_sessions
 from .panels import destroy_output_panels
+from ..diagnostics import DiagnosticsPresenter
 
 
 def startup() -> None:
     load_settings()
     set_debug_logging(settings.log_debug)
     set_server_logging(settings.log_server)
+    windows.set_diagnostics_ui(DiagnosticsPresenter)
     load_handlers()
     global_events.subscribe("view.on_load_async", on_view_activated)
     global_events.subscribe("view.on_activated_async", on_view_activated)

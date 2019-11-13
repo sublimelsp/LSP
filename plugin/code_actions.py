@@ -19,8 +19,8 @@ except ImportError:
     pass
 
 from .core.registry import LspTextCommand
-from .core.protocol import Request
-from .diagnostics import point_diagnostics_by_config
+from .core.protocol import Request, Point
+from .diagnostics import filter_by_point, view_diagnostics
 from .core.edit import parse_workspace_edit
 from .core.url import filename_to_uri
 from .core.views import region_to_range
@@ -62,7 +62,7 @@ class CodeActionsManager(object):
         else:
             self._requests.clear()
             if diagnostics_by_config is None:
-                diagnostics_by_config = point_diagnostics_by_config(view, point)
+                diagnostics_by_config = filter_by_point(view_diagnostics(view), Point(*view.rowcol(point)))
             self._requests[current_location] = request_code_actions(view, point, actions_handler)
 
     def get_location_key(self, view: sublime.View, point: int) -> str:
@@ -74,7 +74,7 @@ actions_manager = CodeActionsManager()
 
 def request_code_actions(view: sublime.View, point: int,
                          actions_handler: 'Callable[[CodeActionsByConfigName], None]') -> 'CodeActionsAtLocation':
-    diagnostics_by_config = point_diagnostics_by_config(view, point)
+    diagnostics_by_config = filter_by_point(view_diagnostics(view), Point(*view.rowcol(point)))
     return request_code_actions_with_diagnostics(view, diagnostics_by_config, point, actions_handler)
 
 

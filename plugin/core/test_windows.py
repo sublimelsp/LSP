@@ -1,5 +1,5 @@
 from . import test_sublime as test_sublime
-from .diagnostics import WindowDiagnostics
+from .diagnostics import DiagnosticsStorage
 from .events import global_events
 from .sessions import create_session
 from .sessions import Session
@@ -79,7 +79,7 @@ class WindowManagerTests(unittest.TestCase):
     def test_can_start_active_views(self):
         docs = MockDocuments()
         wm = WindowManager(MockWindow([[MockView(__file__)]]), MockConfigs(), docs,
-                           WindowDiagnostics(), mock_start_session, test_sublime, MockHandlerDispatcher())
+                           DiagnosticsStorage(None), mock_start_session, test_sublime, MockHandlerDispatcher())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -89,7 +89,7 @@ class WindowManagerTests(unittest.TestCase):
     def test_can_open_supported_view(self):
         docs = MockDocuments()
         window = MockWindow([[]])
-        wm = WindowManager(window, MockConfigs(), docs, WindowDiagnostics(), mock_start_session, test_sublime,
+        wm = WindowManager(window, MockConfigs(), docs, DiagnosticsStorage(None), mock_start_session, test_sublime,
                            MockHandlerDispatcher())
 
         wm.start_active_views()
@@ -106,7 +106,7 @@ class WindowManagerTests(unittest.TestCase):
     def test_can_restart_sessions(self):
         docs = MockDocuments()
         wm = WindowManager(MockWindow([[MockView(__file__)]]), MockConfigs(), docs,
-                           WindowDiagnostics(), mock_start_session, test_sublime, MockHandlerDispatcher())
+                           DiagnosticsStorage(None), mock_start_session, test_sublime, MockHandlerDispatcher())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -128,7 +128,7 @@ class WindowManagerTests(unittest.TestCase):
         docs = MockDocuments()
         test_window = MockWindow([[MockView(__file__)]])
         wm = WindowManager(test_window, MockConfigs(), docs,
-                           WindowDiagnostics(), mock_start_session, test_sublime, MockHandlerDispatcher())
+                           DiagnosticsStorage(None), mock_start_session, test_sublime, MockHandlerDispatcher())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -149,7 +149,7 @@ class WindowManagerTests(unittest.TestCase):
         docs = MockDocuments()
         test_window = MockWindow([[MockView(__file__)]])
         wm = WindowManager(test_window, MockConfigs(), docs,
-                           WindowDiagnostics(), mock_start_session, test_sublime, MockHandlerDispatcher())
+                           DiagnosticsStorage(None), mock_start_session, test_sublime, MockHandlerDispatcher())
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
@@ -175,7 +175,7 @@ class WindowManagerTests(unittest.TestCase):
     def test_offers_restart_on_crash(self):
         docs = MockDocuments()
         wm = WindowManager(MockWindow([[MockView(__file__)]]), MockConfigs(), docs,
-                           WindowDiagnostics(), mock_start_session, test_sublime,
+                           DiagnosticsStorage(None), mock_start_session, test_sublime,
                            MockHandlerDispatcher())
         wm.start_active_views()
 
@@ -197,7 +197,7 @@ class WindowManagerTests(unittest.TestCase):
         docs = MockDocuments()
         dispatcher = MockHandlerDispatcher()
         wm = WindowManager(MockWindow([[MockView(__file__)]]), MockConfigs(), docs,
-                           WindowDiagnostics(), mock_start_session, test_sublime,
+                           DiagnosticsStorage(None), mock_start_session, test_sublime,
                            dispatcher)
         wm.start_active_views()
 

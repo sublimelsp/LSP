@@ -135,20 +135,22 @@ class LspHoverCommand(LspTextCommand):
         return "<p>" + " | ".join(actions) + "</p>"
 
     def format_diagnostic_related_info(self, info: DiagnosticRelatedInformation) -> str:
-        file_path = os.path.relpath(info.location.file_path,
-                                    self._base_dir) if self._base_dir else info.location.file_path
+        file_path = info.location.file_path
+        if self._base_dir and file_path.startswith(self._base_dir):
+            file_path = os.path.relpath(file_path, self._base_dir)
         location = "{}:{}:{}".format(file_path, info.location.range.start.row, info.location.range.start.col)
         return "<a href='location:{}'>{}</a>: {}".format(location, location, escape(info.message))
 
     def format_diagnostic(self, diagnostic: 'Diagnostic') -> str:
         diagnostic_message = escape(diagnostic.message, False).replace('\n', '<br>')
         related_infos = [self.format_diagnostic_related_info(info) for info in diagnostic.related_info]
-        related_content = "<br><br>" + "<br>".join(related_infos) if related_infos else ""
+        related_content = "<pre class='related_info'>" + "<br>".join(related_infos) + "</pre>" if related_infos else ""
+
         if diagnostic.source:
-            return "<pre class=\"{}\">[{}] {}{}</pre>".format(class_for_severity[diagnostic.severity],
+            return "<pre class=\"{}\">[{}] {}</pre>{}".format(class_for_severity[diagnostic.severity],
                                                               diagnostic.source, diagnostic_message, related_content)
         else:
-            return "<pre class=\"{}\">{}{}</pre>".format(class_for_severity[diagnostic.severity], diagnostic_message,
+            return "<pre class=\"{}\">{}</pre>{}".format(class_for_severity[diagnostic.severity], diagnostic_message,
                                                          related_content)
 
     def diagnostics_content(self) -> str:

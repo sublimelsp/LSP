@@ -31,7 +31,6 @@ class Settings(object):
         self.show_symbol_action_links = False
         self.complete_all_chars = False
         self.completion_hint_type = "auto"
-        self.prefer_label_over_filter_text = False
         self.show_references_in_quick_panel = False
         self.quick_panel_monospace_font = False
         self.disabled_capabilities = []  # type: List[str]

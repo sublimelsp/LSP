@@ -136,9 +136,6 @@ class WindowLike(Protocol):
     def folders(self) -> 'List[str]':
         ...
 
-    def project_file_name(self) -> str:
-        ...
-
     def find_open_file(self, path: str) -> 'Optional[ViewLike]':
         ...
 

@@ -2,11 +2,12 @@ import mdpopups
 import sublime
 import sublime_plugin
 import webbrowser
+import os
 from html import escape
 from .core.configurations import is_supported_syntax
 from .diagnostics import filter_by_point, view_diagnostics
-from .core.registry import session_for_view, LspTextCommand
-from .core.protocol import Request, DiagnosticSeverity, Diagnostic, Point
+from .core.registry import session_for_view, LspTextCommand, windows
+from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation, Point
 from .core.documents import get_document_position
 from .core.popups import popups
 from .code_actions import actions_manager, run_code_action_or_command
@@ -75,6 +76,7 @@ goto_kinds = [
 class LspHoverCommand(LspTextCommand):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
+        self._base_dir = None   # type: Optional[str]
 
     def is_likely_at_symbol(self, point: int) -> bool:
         word_at_sel = self.view.classify(point)
@@ -82,6 +84,8 @@ class LspHoverCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, point: 'Optional[int]' = None) -> None:
         hover_point = point or self.view.sel()[0].begin()
+        self._base_dir = windows.lookup(self.view.window()).get_project_path()
+
         self._hover = None  # type: Optional[Any]
         self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
         self._diagnostics_by_config = {}  # type: Dict[str, List[Diagnostic]]
@@ -130,13 +134,24 @@ class LspHoverCommand(LspTextCommand):
             actions.append("<a href='{}'>{}</a>".format('rename', 'Rename'))
         return "<p>" + " | ".join(actions) + "</p>"
 
+    def format_diagnostic_related_info(self, info: DiagnosticRelatedInformation) -> str:
+        file_path = info.location.file_path
+        if self._base_dir and file_path.startswith(self._base_dir):
+            file_path = os.path.relpath(file_path, self._base_dir)
+        location = "{}:{}:{}".format(file_path, info.location.range.start.row, info.location.range.start.col)
+        return "<a href='location:{}'>{}</a>: {}".format(location, location, escape(info.message))
+
     def format_diagnostic(self, diagnostic: 'Diagnostic') -> str:
         diagnostic_message = escape(diagnostic.message, False).replace('\n', '<br>')
+        related_infos = [self.format_diagnostic_related_info(info) for info in diagnostic.related_info]
+        related_content = "<pre class='related_info'>" + "<br>".join(related_infos) + "</pre>" if related_infos else ""
+
         if diagnostic.source:
-            return "<pre class=\"{}\">[{}] {}</pre>".format(class_for_severity[diagnostic.severity], diagnostic.source,
-                                                            diagnostic_message)
+            return "<pre class=\"{}\">[{}] {}</pre>{}".format(class_for_severity[diagnostic.severity],
+                                                              diagnostic.source, diagnostic_message, related_content)
         else:
-            return "<pre class=\"{}\">{}</pre>".format(class_for_severity[diagnostic.severity], diagnostic_message)
+            return "<pre class=\"{}\">{}</pre>{}".format(class_for_severity[diagnostic.severity], diagnostic_message,
+                                                         related_content)
 
     def diagnostics_content(self) -> str:
         formatted = []
@@ -230,6 +245,12 @@ class LspHoverCommand(LspTextCommand):
             sel.add(sublime.Region(point, point))
 
             self.view.show_popup_menu(titles, lambda i: self.handle_code_action_select(config_name, i))
+        elif href.startswith('location'):
+            _, file_path, location = href.split(":", 2)
+            file_path = os.path.join(self._base_dir, file_path) if self._base_dir else file_path
+            window = self.view.window()
+            if window:
+                window.open_file(file_path + ":" + location, sublime.ENCODED_POSITION | sublime.TRANSIENT)
         else:
             webbrowser.open_new_tab(href)
 

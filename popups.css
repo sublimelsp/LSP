@@ -51,3 +51,9 @@
     text-decoration: none;
     color: var(--foreground);
 }
+.lsp_popup .related_info {
+    border-width: 0;
+    background-color: color(var(--foreground) alpha(0.25));
+    color: var(--whitish);
+    padding: 0.5rem;
+}

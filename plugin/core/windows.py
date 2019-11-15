@@ -11,7 +11,7 @@ from .sessions import Session
 from .url import filename_to_uri
 from .workspace import maybe_get_first_workspace_from_window
 from .workspace import maybe_get_workspace_from_view
-from .workspace import Workspace
+from .workspace import WorkspaceFolder
 from .rpc import Client
 import threading
 try:
@@ -20,7 +20,7 @@ try:
     from types import ModuleType
     assert Optional and List and Callable and Dict and Session and Any and ModuleType and Iterator and Union
     assert LanguageConfig
-    assert Workspace
+    assert WorkspaceFolder
 except ImportError:
     pass
     Protocol = object  # type: ignore
@@ -328,7 +328,7 @@ class WindowManager(object):
         self._handlers = handler_dispatcher
         self._restarting = False
         self._workspace = maybe_get_first_workspace_from_window(self._window)  # type: ignore
-        self._projectless_workspace = None  # type: Optional[Workspace]
+        self._projectless_workspace = None  # type: Optional[WorkspaceFolder]
         self._on_closed = on_closed
         self._is_closing = False
         self._initialization_lock = threading.Lock()
@@ -444,7 +444,7 @@ class WindowManager(object):
             debug("unloading session", config_name)
             self._sessions[config_name].end()
 
-    def _ensure_workspace(self) -> 'Optional[Workspace]':
+    def _ensure_workspace(self) -> 'Optional[WorkspaceFolder]':
         if self._workspace is None:
             self._workspace = maybe_get_first_workspace_from_window(self._window)
             if self._workspace is None and self._projectless_workspace is None:
@@ -455,7 +455,7 @@ class WindowManager(object):
                 self._projectless_workspace = maybe_get_workspace_from_view(view)
         return self._workspace or self._projectless_workspace
 
-    def get_workspace(self) -> 'Optional[Workspace]':
+    def get_workspace(self) -> 'Optional[WorkspaceFolder]':
         return self._workspace or self._projectless_workspace
 
     def get_project_path(self) -> 'Optional[str]':

@@ -389,7 +389,7 @@ class Diagnostic(object):
         return self._lsp_diagnostic
 
 
-class Workspace:
+class WorkspaceFolder:
 
     __slots__ = ('name', 'path')
 
@@ -400,7 +400,7 @@ class Workspace:
         assert self.path
 
     @classmethod
-    def from_path(cls, path: str) -> 'Workspace':
+    def from_path(cls, path: str) -> 'WorkspaceFolder':
         assert os.path.isdir(path)
         return cls(os.path.basename(path), path)
 
@@ -411,7 +411,7 @@ class Workspace:
         return self.path
 
     def __eq__(self, other: 'Any') -> bool:
-        if isinstance(other, Workspace):
+        if isinstance(other, WorkspaceFolder):
             return self.name == other.name and self.path == other.path
         return False
 

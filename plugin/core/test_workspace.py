@@ -1,6 +1,6 @@
 from .test_mocks import MockWindow
 from .workspace import get_workspaces_from_window
-from .workspace import Workspace
+from .workspace import WorkspaceFolder
 from os.path import basename
 from os.path import dirname
 from os.path import join
@@ -69,15 +69,15 @@ class WorkspaceTest(TestCase):
         self.assertEqual(workspaces[3].path, join(BASE_DIR, "Menus"))
 
     def test_workspace_str(self) -> None:
-        workspace = Workspace("LSP", "/foo/bar/baz")
+        workspace = WorkspaceFolder("LSP", "/foo/bar/baz")
         self.assertEqual(str(workspace), "/foo/bar/baz")
 
     def test_workspace_repr(self) -> None:
-        workspace = Workspace("LSP", "/foo/bar/baz")
+        workspace = WorkspaceFolder("LSP", "/foo/bar/baz")
         # This also tests the equality operator
         self.assertEqual(workspace, eval(repr(workspace)))
 
     def test_workspace_to_dict(self) -> None:
-        workspace = Workspace("LSP", "/foo/bar/baz")
+        workspace = WorkspaceFolder("LSP", "/foo/bar/baz")
         lsp_dict = workspace.to_dict()
         self.assertEqual(lsp_dict, {"name": "LSP", "uri": "file:///foo/bar/baz"})

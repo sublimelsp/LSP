@@ -1,5 +1,5 @@
 from .logging import debug
-from .protocol import Workspace
+from .protocol import WorkspaceFolder
 from .types import ViewLike
 from .types import WindowLike
 import os
@@ -25,7 +25,7 @@ def absolute_project_base_path(window: WindowLike) -> str:
     return os.path.dirname(os.path.abspath(project_file_name))
 
 
-def workspace_from_sublime_project_data(project_base_path: str, folder: 'Dict[str, Any]') -> Workspace:
+def workspace_from_sublime_project_data(project_base_path: str, folder: 'Dict[str, Any]') -> WorkspaceFolder:
     name = folder.get("name")  # type: Optional[str]
     path = folder.get("path")  # type: Optional[str]
     if not path:
@@ -35,7 +35,7 @@ def workspace_from_sublime_project_data(project_base_path: str, folder: 'Dict[st
         raise ValueError("{} is not a directory".format(path))
     if not name:
         name = os.path.basename(path)
-    return Workspace(name, path)
+    return WorkspaceFolder(name, path)
 
 
 def get_project_data_or_throw(window: WindowLike) -> 'Dict[str, Any]':
@@ -45,7 +45,7 @@ def get_project_data_or_throw(window: WindowLike) -> 'Dict[str, Any]':
     return data
 
 
-def get_first_workspace_from_window(window: WindowLike) -> Workspace:
+def get_first_workspace_from_window(window: WindowLike) -> WorkspaceFolder:
     data = get_project_data_or_throw(window)
     folder = data["folders"][0]
     path = folder.get("path")  # type: str
@@ -55,26 +55,26 @@ def get_first_workspace_from_window(window: WindowLike) -> Workspace:
         path = ensure_absolute_path(project_base_path, path)
     if not os.path.isdir(path):
         raise ValueError("{} is not a directory".format(path))
-    return Workspace.from_path(path)
+    return WorkspaceFolder.from_path(path)
 
 
-def maybe_get_first_workspace_from_window(window: WindowLike) -> 'Optional[Workspace]':
+def maybe_get_first_workspace_from_window(window: WindowLike) -> 'Optional[WorkspaceFolder]':
     try:
         return get_first_workspace_from_window(window)
     except Exception:
         return None
 
 
-def maybe_get_workspace_from_view(view: ViewLike) -> 'Optional[Workspace]':
+def maybe_get_workspace_from_view(view: ViewLike) -> 'Optional[WorkspaceFolder]':
     filename = view.file_name()
     if filename and os.path.exists(filename):  # https://github.com/tomv564/LSP/issues/644
         path = os.path.dirname(filename)
-        return Workspace.from_path(path)
+        return WorkspaceFolder.from_path(path)
     debug("the current file isn't saved to disk.")
     return None
 
 
-def get_workspaces_from_project_data(window: WindowLike) -> 'Optional[List[Workspace]]':
+def get_workspaces_from_project_data(window: WindowLike) -> 'Optional[List[WorkspaceFolder]]':
     data = get_project_data_or_throw(window)
     project_base_path = absolute_project_base_path(window)
     folders = data.get("folders")
@@ -83,7 +83,7 @@ def get_workspaces_from_project_data(window: WindowLike) -> 'Optional[List[Works
     return [workspace_from_sublime_project_data(project_base_path, folder) for folder in folders]
 
 
-def get_workspaces_from_window(window: WindowLike) -> 'Optional[List[Workspace]]':
+def get_workspaces_from_window(window: WindowLike) -> 'Optional[List[WorkspaceFolder]]':
     project_file_name = window.project_file_name()
     if project_file_name:
         return get_workspaces_from_project_data(window)

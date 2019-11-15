@@ -11,58 +11,11 @@ except ImportError:
     pass
 
 
-def ensure_absolute_path(project_base_path: str, folder: str) -> str:
-    if os.path.isabs(folder):
-        return folder
-    else:
-        return os.path.abspath(os.path.join(project_base_path, folder))
-
-
-def absolute_project_base_path(window: WindowLike) -> str:
-    project_file_name = window.project_file_name()
-    if not project_file_name:
-        return ""
-    return os.path.dirname(os.path.abspath(project_file_name))
-
-
-def workspace_from_sublime_project_data(project_base_path: str, folder: 'Dict[str, Any]') -> WorkspaceFolder:
-    name = folder.get("name")  # type: Optional[str]
-    path = folder.get("path")  # type: Optional[str]
-    if not path:
-        raise KeyError('"path" should be present in Sublime Text folder project data')
-    path = ensure_absolute_path(project_base_path, path)
-    if not os.path.isdir(path):
-        raise ValueError("{} is not a directory".format(path))
-    if not name:
-        name = os.path.basename(path)
-    return WorkspaceFolder(name, path)
-
-
-def get_project_data_or_throw(window: WindowLike) -> 'Dict[str, Any]':
-    data = window.project_data()
-    if data is None:
-        raise AttributeError("window {} has no project data".format(window.id()))
-    return data
-
-
-def get_first_workspace_from_window(window: WindowLike) -> WorkspaceFolder:
-    data = get_project_data_or_throw(window)
-    folder = data["folders"][0]
-    path = folder.get("path")  # type: str
-    project_file_name = window.project_file_name()
-    if project_file_name:
-        project_base_path = absolute_project_base_path(window)
-        path = ensure_absolute_path(project_base_path, path)
-    if not os.path.isdir(path):
-        raise ValueError("{} is not a directory".format(path))
-    return WorkspaceFolder.from_path(path)
-
-
 def maybe_get_first_workspace_from_window(window: WindowLike) -> 'Optional[WorkspaceFolder]':
-    try:
-        return get_first_workspace_from_window(window)
-    except Exception:
+    folders = window.folders()
+    if not folders:
         return None
+    return WorkspaceFolder.from_path(folders[0])
 
 
 def maybe_get_workspace_from_view(view: ViewLike) -> 'Optional[WorkspaceFolder]':
@@ -71,26 +24,6 @@ def maybe_get_workspace_from_view(view: ViewLike) -> 'Optional[WorkspaceFolder]'
         path = os.path.dirname(filename)
         return WorkspaceFolder.from_path(path)
     debug("the current file isn't saved to disk.")
-    return None
-
-
-def get_workspaces_from_project_data(window: WindowLike) -> 'Optional[List[WorkspaceFolder]]':
-    data = get_project_data_or_throw(window)
-    project_base_path = absolute_project_base_path(window)
-    folders = data.get("folders")
-    if folders is None:
-        raise ValueError("window folders is None")
-    return [workspace_from_sublime_project_data(project_base_path, folder) for folder in folders]
-
-
-def get_workspaces_from_window(window: WindowLike) -> 'Optional[List[WorkspaceFolder]]':
-    project_file_name = window.project_file_name()
-    if project_file_name:
-        return get_workspaces_from_project_data(window)
-    try:
-        return [get_first_workspace_from_window(window)]
-    except AttributeError as error:
-        debug(error)
     return None
 
 

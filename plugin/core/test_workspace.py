@@ -1,5 +1,6 @@
 from .test_mocks import MockWindow
-from .workspace import get_workspaces_from_window
+from .workspace import maybe_get_first_workspace_from_window
+from .workspace import maybe_get_workspace_from_view
 from .workspace import WorkspaceFolder
 from os.path import basename
 from os.path import dirname
@@ -9,64 +10,30 @@ from unittest import TestCase
 import sys
 
 
-BASE_DIR = realpath(join(dirname(__file__), "..", ".."))
-# Cannot use "from .settings import PLUGIN_NAME" because it imports the sublime module
-PLUGIN_NAME = 'LSP'
-
-
 class WorkspaceTest(TestCase):
 
-    def test_sanity_check(self) -> None:
-        self.assertEqual(basename(BASE_DIR), PLUGIN_NAME)
+    def test_get_first_workspace_from_window_single_file(self) -> None:
+        workspace = maybe_get_first_workspace_from_window(MockWindow())
+        self.assertIsNone(workspace)
 
-    def test_get_workspaces_from_window_single_file(self) -> None:
-        window = MockWindow()
-        window._project_file_name = ""
-        window._project_data = None
-        workspaces = get_workspaces_from_window(window)
-        self.assertIsNone(workspaces)
+        workspace = maybe_get_first_workspace_from_window(MockWindow(folders=["/foo/bar"]))
+        self.assertIsNotNone(workspace)
+        self.assertEqual(workspace.path, "/foo/bar")
+        self.assertEqual(workspace.name, "bar")
+        self.assertEqual(workspace.uri(), "file:///foo/bar")
 
-    def test_get_workspaces_from_window_single_window(self) -> None:
-        window = MockWindow()
-        window._project_file_name = ""
-        window._project_data = {"folders": [{"path": BASE_DIR}]}
-        workspaces = get_workspaces_from_window(window)
-        self.assertIsNotNone(workspaces)
-        assert workspaces  # Help mypy deduce that this variable is not None.
-        workspaces = list(workspaces)
-        self.assertEqual(len(workspaces), 1)
-        self.assertEqual(workspaces[0].name, "LSP")
-        self.assertEqual(workspaces[0].path, BASE_DIR)
+    def test_get_workspace_from_view(self) -> None:
+        view = MockView()
+        view._file_name = "/foo/bar/baz.html"
+        workspace = maybe_get_workspace_from_view(view)
+        self.assertIsNotNone(workspace)
+        self.assertEqual(workspace.path, "/foo/bar")
+        self.assertEqual(workspace.name, "bar")
+        self.assertEqual(workspace.uri(), "file:///foo/bar")
 
-    def get_absolute_sample_path(self) -> str:
-        # This is /opt/sublime_text on Linux and I presume the Sublime Text
-        # installation path in general.
-        return sys.path[0]
-
-    def test_get_workspaces_from_window_project_file(self) -> None:
-        window = MockWindow()
-        window._project_file_name = join(BASE_DIR, "foo.sublime-project")
-        window._project_data = {
-            "folders": [
-                {"name": "first", "path": "docs"},
-                {"name": "second", "path": self.get_absolute_sample_path()},
-                {"name": "third", "path": "plugin/core/../core"},
-                {"path": "Menus"}
-            ]
-        }
-        workspaces = get_workspaces_from_window(window)
-        self.assertIsNotNone(workspaces)
-        assert workspaces  # Help mypy deduce that this variable is not None.
-        workspaces = list(workspaces)
-        self.assertEqual(len(workspaces), 4)
-        self.assertEqual(workspaces[0].name, "first")
-        self.assertEqual(workspaces[0].path, join(BASE_DIR, "docs"))
-        self.assertEqual(workspaces[1].name, "second")
-        self.assertEqual(workspaces[1].path, self.get_absolute_sample_path())
-        self.assertEqual(workspaces[2].name, "third")
-        self.assertEqual(workspaces[2].path, join(BASE_DIR, "plugin", "core"))
-        self.assertEqual(workspaces[3].name, "Menus")
-        self.assertEqual(workspaces[3].path, join(BASE_DIR, "Menus"))
+        view._file_name = None
+        workspace = maybe_get_workspace_from_view(view)
+        self.assertIsNone(workspace)
 
     def test_workspace_str(self) -> None:
         workspace = WorkspaceFolder("LSP", "/foo/bar/baz")

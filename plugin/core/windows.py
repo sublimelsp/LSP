@@ -1,4 +1,4 @@
-from .diagnostics import WindowDiagnostics, DiagnosticsUpdate
+from .diagnostics import DiagnosticsStorage
 from .events import global_events
 from .logging import debug, server_log
 from .types import (ClientStates, ClientConfig, WindowLike, ViewLike,
@@ -91,6 +91,10 @@ class DocumentHandlerFactory(object):
         return WindowDocumentHandler(self._sublime, self._settings, window, global_events, configs)
 
 
+def nop() -> None:
+    pass
+
+
 class WindowDocumentHandler(object):
     def __init__(self, sublime: 'Any', settings: Settings,
                  window: WindowLike, events: Events,
@@ -102,6 +106,8 @@ class WindowDocumentHandler(object):
         self._document_states = dict()  # type: Dict[str, DocumentState]
         self._pending_buffer_changes = dict()  # type: Dict[int, Dict]
         self._sessions = dict()  # type: Dict[str, Session]
+        self.changed = nop
+        self.saved = nop
         events.subscribe('view.on_load_async', self.handle_view_opened)
         events.subscribe('view.on_activated_async', self.handle_view_opened)
         events.subscribe('view.on_modified', self.handle_view_modified)
@@ -243,6 +249,7 @@ class WindowDocumentHandler(object):
                     if session.client:
                         params = {"textDocument": {"uri": filename_to_uri(file_name)}}
                         session.client.send_notification(Notification.didSave(params))
+                self.saved()
             else:
                 debug('document not tracked', file_name)
 
@@ -276,6 +283,7 @@ class WindowDocumentHandler(object):
         if pending_buffer:
             if buffer_version is None or buffer_version == pending_buffer["version"]:
                 self.notify_did_change(pending_buffer["view"])
+                self.changed()
 
     def notify_did_change(self, view: ViewLike) -> None:
         file_name = view.file_name()
@@ -305,14 +313,14 @@ class WindowDocumentHandler(object):
 
 class WindowManager(object):
     def __init__(self, window: WindowLike, configs: ConfigRegistry, documents: DocumentHandler,
-                 diagnostics: WindowDiagnostics, session_starter: 'Callable', sublime: 'Any',
+                 diagnostics: DiagnosticsStorage, session_starter: 'Callable', sublime: 'Any',
                  handler_dispatcher: LanguageHandlerListener, on_closed: 'Optional[Callable]' = None) -> None:
 
         # to move here:
         # configurations.py: window_client_configs and all references
         self._window = window
         self._configs = configs
-        self._diagnostics = diagnostics
+        self.diagnostics = diagnostics
         self._documents = documents
         self._sessions = dict()  # type: Dict[str, Session]
         self._start_session = session_starter
@@ -321,10 +329,6 @@ class WindowManager(object):
         self._restarting = False
         self._workspace = maybe_get_first_workspace_from_window(self._window)  # type: ignore
         self._projectless_workspace = None  # type: Optional[Workspace]
-        self._diagnostics.set_on_updated(
-            lambda file_path, client_name:
-                global_events.publish("document.diagnostics",
-                                      DiagnosticsUpdate(self._window, client_name, file_path)))
         self._on_closed = on_closed
         self._is_closing = False
         self._initialization_lock = threading.Lock()
@@ -518,7 +522,7 @@ class WindowManager(object):
 
         client.on_notification(
             "textDocument/publishDiagnostics",
-            lambda params: self._diagnostics.handle_client_diagnostics(session.config.name, params))
+            lambda params: self.diagnostics.receive(session.config.name, params))
 
         self._handlers.on_initialized(session.config.name, self._window, client)
 
@@ -576,7 +580,7 @@ class WindowManager(object):
         for view in self._window.views():
             file_name = view.file_name()
             if file_name:
-                self._diagnostics.remove(file_name, config_name)
+                self.diagnostics.remove(file_name, config_name)
 
         debug("session", config_name, "ended")
         if not self._sessions:
@@ -598,14 +602,21 @@ class WindowRegistry(object):
         self._session_starter = session_starter
         self._sublime = sublime
         self._handler_dispatcher = handler_dispatcher
+        self._diagnostics_ui_class = None  # type: Optional[Callable]
+
+    def set_diagnostics_ui(self, ui_class: 'Any') -> None:
+        self._diagnostics_ui_class = ui_class
 
     def lookup(self, window: 'Any') -> WindowManager:
         state = self._windows.get(window.id())
         if state is None:
             window_configs = self._configs.for_window(window)
             window_documents = self._documents.for_window(window, window_configs)
-            state = WindowManager(window, window_configs, window_documents, WindowDiagnostics(), self._session_starter,
-                                  self._sublime, self._handler_dispatcher, lambda: self._on_closed(window))
+            diagnostics_ui = self._diagnostics_ui_class(window,
+                                                        window_documents) if self._diagnostics_ui_class else None
+            state = WindowManager(window, window_configs, window_documents, DiagnosticsStorage(diagnostics_ui),
+                                  self._session_starter, self._sublime,
+                                  self._handler_dispatcher, lambda: self._on_closed(window))
             self._windows[window.id()] = state
         return state
 

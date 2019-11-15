@@ -5,7 +5,8 @@
 
   // Open and close the diagnostics panel automatically,
   // depending on available diagnostics.
-  "auto_show_diagnostics_panel": true,
+  // Valid values are "never", "always" and "saved"
+  "auto_show_diagnostics_panel": "saved",
 
   // Open the diagnostics panel automatically
   // when diagnostics level is equal to or less than:
@@ -14,9 +15,6 @@
   // info: 3
   // hint: 4
   "auto_show_diagnostics_panel_level": 3,
-
-  // Show in-line diagnostics using phantoms for unchanged files.
-  "show_diagnostics_phantoms": false,
 
   // Show errors and warnings count in the status bar
   "show_diagnostics_count_in_view_status": false,

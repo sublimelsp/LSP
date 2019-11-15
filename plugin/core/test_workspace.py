@@ -3,12 +3,8 @@ from .test_mocks import MockWindow
 from .workspace import maybe_get_first_workspace_from_window
 from .workspace import maybe_get_workspace_from_view
 from .workspace import WorkspaceFolder
-from os.path import basename
 from os.path import dirname
-from os.path import join
-from os.path import realpath
 from unittest import TestCase
-import sys
 
 
 class WorkspaceTest(TestCase):
@@ -17,21 +13,19 @@ class WorkspaceTest(TestCase):
         workspace = maybe_get_first_workspace_from_window(MockWindow())
         self.assertIsNone(workspace)
 
-        workspace = maybe_get_first_workspace_from_window(MockWindow(folders=["/foo/bar"]))
+        workspace = maybe_get_first_workspace_from_window(MockWindow(folders=[dirname(__file__)]))
         self.assertIsNotNone(workspace)
         assert workspace  # for mypy
-        self.assertEqual(workspace.path, "/foo/bar")
-        self.assertEqual(workspace.name, "bar")
-        self.assertEqual(workspace.uri(), "file:///foo/bar")
+        self.assertEqual(workspace.path, dirname(__file__))
+        self.assertEqual(workspace.name, "core")
 
     def test_get_workspace_from_view(self) -> None:
-        view = MockView("/foo/bar/baz.html")
+        view = MockView(__file__)
         workspace = maybe_get_workspace_from_view(view)
         self.assertIsNotNone(workspace)
         assert workspace  # for mypy
-        self.assertEqual(workspace.path, "/foo/bar")
-        self.assertEqual(workspace.name, "bar")
-        self.assertEqual(workspace.uri(), "file:///foo/bar")
+        self.assertEqual(workspace.path, dirname(__file__))
+        self.assertEqual(workspace.name, "core")
 
         view._file_name = None
         workspace = maybe_get_workspace_from_view(view)

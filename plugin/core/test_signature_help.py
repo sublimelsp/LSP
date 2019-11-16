@@ -237,7 +237,8 @@ class RenderSignatureLabelTests(unittest.TestCase):
     def test_long_signature(self):
         # self.maxDiff = None
         sig = create_signature(
-            "do_the_foo_bar_if_correct_with_optional_bar_and_uppercase_option(takes_a_mandatory_foo: int, bar_if_needed: Optional[str], in_uppercase: Optional[bool]) -> Optional[str]",
+            """do_the_foo_bar_if_correct_with_optional_bar_and_uppercase_option(takes_a_mandatory_foo: int, \
+bar_if_needed: Optional[str], in_uppercase: Optional[bool]) -> Optional[str]""",
             "takes_a_mandatory_foo",
             "bar_if_needed",
             "in_uppercase",

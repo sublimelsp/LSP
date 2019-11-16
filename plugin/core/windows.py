@@ -327,7 +327,7 @@ class WindowManager(object):
         self._sublime = sublime
         self._handlers = handler_dispatcher
         self._restarting = False
-        self._workspace = maybe_get_first_workspace_from_window(self._window)  # type: ignore
+        self._workspace = maybe_get_first_workspace_from_window(self._window)
         self._projectless_workspace = None  # type: Optional[WorkspaceFolder]
         self._on_closed = on_closed
         self._is_closing = False

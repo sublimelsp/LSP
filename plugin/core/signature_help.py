@@ -143,9 +143,33 @@ def create_signature_help(response: 'Optional[Dict]') -> 'Optional[SignatureHelp
 
 def render_signature_label(renderer: ScopeRenderer, sig_info: SignatureInformation,
                            active_parameter_index: int = -1) -> str:
-
     if sig_info.parameters:
         label = sig_info.label
+        params_to_newline_before = []
+        max_length = 80
+        if len(label) > max_length and '\n' not in label:
+            param_index = 0
+            start_offset = 0
+            line_offset = 0
+            while True:
+                comma_offset = label.find(',', start_offset)
+                if comma_offset == -1:
+                    if len(label) - line_offset > max_length:
+                        debug('chars left: {}, breaking at {}'.format(len(label) - line_offset, param_index))
+                        params_to_newline_before.append(param_index)
+                    break
+                param_index += 1
+                debug('found comma at ', comma_offset)
+                if comma_offset - line_offset > max_length:
+                    debug('line length {}, break at {}'.format(comma_offset - line_offset, param_index))
+                    params_to_newline_before.append(param_index)
+                    line_offset = start_offset
+                    if max_length == 80:
+                        max_length = 76  # account for 4-space indent.
+                start_offset = comma_offset + 1
+                debug('param now ', param_index)
+
+        debug('newline before params', params_to_newline_before)
 
         # replace with styled spans in reverse order
 
@@ -155,12 +179,14 @@ def render_signature_label(renderer: ScopeRenderer, sig_info: SignatureInformati
             label = label[:start] + renderer.punctuation(label[start:end]) + html.escape(label[end:], quote=False)
 
         max_param_index = len(sig_info.parameters) - 1
-        for index, param in enumerate(reversed(sig_info.parameters)):
+        for reverse_index, param in enumerate(reversed(sig_info.parameters)):
             if param.range:
                 start, end = param.range
-                is_current = active_parameter_index == max_param_index - index
+                forward_index = max_param_index - reverse_index
+                is_current = active_parameter_index == forward_index
                 rendered_param = renderer.parameter(content=label[start:end], emphasize=is_current)
-                label = label[:start] + rendered_param + label[end:]
+                maybe_newline = "<br>&nbsp;&nbsp;&nbsp;&nbsp;" if forward_index in params_to_newline_before else ""
+                label = label[:start] + maybe_newline + rendered_param + label[end:]
 
                 # todo: highlight commas between parameters as punctuation.
 

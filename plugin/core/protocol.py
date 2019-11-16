@@ -1,4 +1,7 @@
+from .url import filename_to_uri
 from .url import uri_to_filename
+import os
+
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional, Union, Mapping
     assert Any and List and Dict and Tuple and Callable and Optional and Union and Mapping
@@ -384,3 +387,37 @@ class Diagnostic(object):
 
     def to_lsp(self) -> 'Dict[str, Any]':
         return self._lsp_diagnostic
+
+
+class WorkspaceFolder:
+
+    __slots__ = ('name', 'path')
+
+    def __init__(self, name: str, path: str) -> None:
+        self.name = name
+        self.path = path
+        assert self.name
+        assert self.path
+
+    @classmethod
+    def from_path(cls, path: str) -> 'WorkspaceFolder':
+        assert os.path.isdir(path)
+        assert os.path.isabs(path)
+        return cls(os.path.basename(path), path)
+
+    def __repr__(self) -> str:
+        return "{}('{}', '{}')".format(self.__class__.__name__, self.name, self.path)
+
+    def __str__(self) -> str:
+        return self.path
+
+    def __eq__(self, other: 'Any') -> bool:
+        if isinstance(other, WorkspaceFolder):
+            return self.name == other.name and self.path == other.path
+        return False
+
+    def to_dict(self) -> 'Dict[str, str]':
+        return {"name": self.name, "uri": self.uri()}
+
+    def uri(self) -> str:
+        return filename_to_uri(self.path)

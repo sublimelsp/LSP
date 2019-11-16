@@ -1,42 +1,37 @@
+from .logging import debug
+from .protocol import WorkspaceFolder
+from .types import WindowLike
 import os
+
 try:
-    from typing import List, Optional, Any
-    assert List and Optional and Any
+    from typing import List, Optional, Any, Dict, Iterable, Union
+    assert List and Optional and Any and Dict and Iterable and Union
 except ImportError:
     pass
 
-from .logging import debug
-# from .types import WindowLike
+
+def maybe_get_first_workspace_from_window(window: WindowLike) -> 'Optional[WorkspaceFolder]':
+    folders = window.folders()
+    if not folders:
+        return None
+    return WorkspaceFolder.from_path(folders[0])
 
 
-def get_project_path(window: 'Any') -> 'Optional[str]':
-    """
-    Returns the first project folder
-    """
-    if len(window.folders()):
-        folder_paths = window.folders()
-        return folder_paths[0]
-    return None
-
-
-def get_active_view_path(window: 'Any') -> 'Optional[str]':
-    """
-    Returns the path containing the active view, if any.
-    """
-    debug("couldn't determine project directory since no folders are open!")
-    view = window.active_view()
-    if view:
-        filename = view.file_name()
-        if filename and os.path.exists(filename):  # https://github.com/tomv564/LSP/issues/644
-            project_path = os.path.dirname(filename)
-            debug("using", project_path, "as a fallback.")
-            return project_path
-        else:
-            debug("no fallback path possible because the current file isn't saved to disk.")
+def maybe_get_workspace_from_view(view_or_window: 'Any') -> 'Optional[WorkspaceFolder]':
+    if hasattr(view_or_window, 'file_name'):
+        filename = view_or_window.file_name()
+    elif hasattr(view_or_window, 'active_view'):
+        view = view_or_window.active_view()
+        if not view:
             return None
+        filename = view.file_name()
     else:
-        debug("no view is active in current window")
-        return None  # https://github.com/tomv564/LSP/issues/219
+        return None
+    if filename and os.path.exists(filename):  # https://github.com/tomv564/LSP/issues/644
+        path = os.path.dirname(filename)
+        return WorkspaceFolder.from_path(path)
+    debug("the current file isn't saved to disk.")
+    return None
 
 
 def enable_in_project(window: 'Any', config_name: str) -> None:

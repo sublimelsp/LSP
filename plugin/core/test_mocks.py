@@ -111,10 +111,10 @@ class MockHandlerDispatcher(object):
 
 
 class MockWindow(object):
-    def __init__(self, files_in_groups: 'List[List[ViewLike]]' = []) -> None:
+    def __init__(self, files_in_groups: 'List[List[ViewLike]]' = [], folders: 'List[str]' = []) -> None:
         self._files_in_groups = files_in_groups
         self._is_valid = True
-        self._folders = [os.path.dirname(__file__)]
+        self._folders = folders
         self._default_view = MockView(None)
         self._project_data = None  # type: Optional[Dict[str, Any]]
         self.commands = []  # type: List[Tuple[str, Dict[str, Any]]]

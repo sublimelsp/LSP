@@ -234,6 +234,25 @@ class RenderSignatureLabelTests(unittest.TestCase):
  \n<variable.parameter>foo</variable.parameter>\
  \n<variable.parameter emphasize>foo</variable.parameter></entity.name.function>""")
 
+    def test_long_signature(self):
+        # self.maxDiff = None
+        sig = create_signature(
+            "do_the_foo_bar_if_correct_with_optional_bar_and_uppercase_option(takes_a_mandatory_foo: int, bar_if_needed: Optional[str], in_uppercase: Optional[bool]) -> Optional[str]",
+            "takes_a_mandatory_foo",
+            "bar_if_needed",
+            "in_uppercase",
+            activeParameter=1)
+        help = create_signature_help(dict(signatures=[sig]))
+        if help:
+            label = render_signature_label(renderer, help.active_signature(), 1)
+            self.assertEqual(label, """
+<entity.name.function>do_the_foo_bar_if_correct_with_optional_bar_and_uppercase_option
+<punctuation>(</punctuation>
+<variable.parameter>takes_a_mandatory_foo</variable.parameter>: int,\
+ <br>&nbsp;&nbsp;&nbsp;&nbsp;\n<variable.parameter emphasize>bar_if_needed</variable.parameter>: Optional[str],\
+ <br>&nbsp;&nbsp;&nbsp;&nbsp;\n<variable.parameter>in_uppercase</variable.parameter>: Optional[bool]
+<punctuation>)</punctuation> -&gt; Optional[str]</entity.name.function>""")
+
 
 class SignatureHelpTests(unittest.TestCase):
 

@@ -164,7 +164,6 @@ class WindowManagerTests(unittest.TestCase):
         # change project_path
         new_project_path = tempfile.gettempdir()
         test_window.set_folders([new_project_path])
-        test_window.set_project_data({"folders": [{"name": "foo", "path": new_project_path}]})
         # global_events.publish("view.on_close", MockView(__file__))
         another_view = MockView(None)
         another_view.settings().set("syntax", "Unsupported Syntax")

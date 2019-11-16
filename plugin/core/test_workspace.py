@@ -21,7 +21,14 @@ class WorkspaceTest(TestCase):
 
     def test_get_workspace_from_view(self) -> None:
         view = MockView(__file__)
+        window = MockWindow(files_in_groups=[[view]])
         workspace = maybe_get_workspace_from_view(view)
+        self.assertIsNotNone(workspace)
+        assert workspace  # for mypy
+        self.assertEqual(workspace.path, dirname(__file__))
+        self.assertEqual(workspace.name, "core")
+
+        workspace = maybe_get_workspace_from_view(window)
         self.assertIsNotNone(workspace)
         assert workspace  # for mypy
         self.assertEqual(workspace.path, dirname(__file__))
@@ -29,6 +36,9 @@ class WorkspaceTest(TestCase):
 
         view._file_name = None
         workspace = maybe_get_workspace_from_view(view)
+        self.assertIsNone(workspace)
+
+        workspace = maybe_get_workspace_from_view(window)
         self.assertIsNone(workspace)
 
     def test_workspace_str(self) -> None:

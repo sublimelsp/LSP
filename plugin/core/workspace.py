@@ -5,8 +5,8 @@ from .types import WindowLike
 import os
 
 try:
-    from typing import List, Optional, Any, Dict, Iterable
-    assert List and Optional and Any and Dict and Iterable
+    from typing import List, Optional, Any, Dict, Iterable, Union
+    assert List and Optional and Any and Dict and Iterable and Union
 except ImportError:
     pass
 
@@ -18,8 +18,16 @@ def maybe_get_first_workspace_from_window(window: WindowLike) -> 'Optional[Works
     return WorkspaceFolder.from_path(folders[0])
 
 
-def maybe_get_workspace_from_view(view: ViewLike) -> 'Optional[WorkspaceFolder]':
-    filename = view.file_name()
+def maybe_get_workspace_from_view(view_or_window: 'Any') -> 'Optional[WorkspaceFolder]':
+    if hasattr(view_or_window, 'file_name'):
+        filename = view_or_window.file_name()
+    elif hasattr(view_or_window, 'active_view'):
+        view = view_or_window.active_view()
+        if not view:
+            return None
+        filename = view.file_name()
+    else:
+        return None
     if filename and os.path.exists(filename):  # https://github.com/tomv564/LSP/issues/644
         path = os.path.dirname(filename)
         return WorkspaceFolder.from_path(path)

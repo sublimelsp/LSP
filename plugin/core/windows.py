@@ -449,10 +449,7 @@ class WindowManager(object):
             self._workspace = maybe_get_first_workspace_from_window(self._window)
             if self._workspace is None and self._projectless_workspace is None:
                 # the projectless fallback will only be set once per window.
-                view = self._window.active_view()
-                if not view:
-                    return None
-                self._projectless_workspace = maybe_get_workspace_from_view(view)
+                self._projectless_workspace = maybe_get_workspace_from_view(self._window)
         return self._workspace or self._projectless_workspace
 
     def get_workspace(self) -> 'Optional[WorkspaceFolder]':

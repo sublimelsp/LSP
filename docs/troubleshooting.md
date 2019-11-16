@@ -33,7 +33,7 @@ Have you added multiple folders to your Sublime workspace? LSP may not handle yo
 
 ### 4. [TypeScript] Disable auto-import out of scope autocompletions
 
-![typescript-auto-import](https://user-images.githubusercontent.com/1457327/68996892-42e5c280-086e-11ea-98e5-fffb003a1261.gif "TypeScript Auto Import")
+<img src="https://user-images.githubusercontent.com/1457327/68996892-42e5c280-086e-11ea-98e5-fffb003a1261.gif" alt="TypeScript Auto Import" width="256 />
 
 Find and comment out the following line in your prefered typescript language server:
 ```ts

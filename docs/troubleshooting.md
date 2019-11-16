@@ -31,6 +31,23 @@ This issue can be solved in a few ways:
 
 Have you added multiple folders to your Sublime workspace? LSP may not handle your second folder as expected, see [this issue](https://github.com/tomv564/LSP/issues/81) for more details.
 
+### 4. [TypeScript] Disable auto-import out of scope autocompletions
+
+![typescript-auto-import](docs/images/typescript-auto-import.gif "TypeScript Auto Import")
+
+Find and comment out the following line in your prefered typescript language server:
+```ts
+includeExternalModuleExports: true,
+```
+
+#### Example for `typescript-language-server`
+```sh
+$ cd $(npm root -g)
+$ grep -Rn includeExternalModuleExports typescript-language-server
+typescript-language-server/lib/lsp-server.js:392:                    includeExternalModuleExports: true,
+```
+Comment out the line identified, restart sublime text, proceed with life. 👍
+
 ## Known Issues
 
 ### Completions not shown after certain keywords

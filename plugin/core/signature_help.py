@@ -141,35 +141,35 @@ def create_signature_help(response: 'Optional[Dict]') -> 'Optional[SignatureHelp
         return None
 
 
+def find_params_to_split_at(label: str) -> 'List[int]':
+    max_length = 80
+    params_to_newline_before = []  # type: List[int]
+    if len(label) > max_length and '\n' not in label:
+        param_index = 0
+        last_comma_offset = 0
+        line_offset = 0
+        while True:
+            comma_offset = label.find(',', last_comma_offset)
+            if comma_offset == -1:
+                if len(label) - line_offset > max_length:
+                    # If no more commas, but remainder is too long, add a split
+                    params_to_newline_before.append(param_index)
+                break
+            param_index += 1
+            if comma_offset - line_offset > max_length:
+                params_to_newline_before.append(param_index)
+                line_offset = last_comma_offset
+                if max_length == 80:
+                    max_length = 76  # account for 4-space indent.
+            last_comma_offset = comma_offset + 1
+    return params_to_newline_before
+
+
 def render_signature_label(renderer: ScopeRenderer, sig_info: SignatureInformation,
                            active_parameter_index: int = -1) -> str:
     if sig_info.parameters:
         label = sig_info.label
-        params_to_newline_before = []
-        max_length = 80
-        if len(label) > max_length and '\n' not in label:
-            param_index = 0
-            start_offset = 0
-            line_offset = 0
-            while True:
-                comma_offset = label.find(',', start_offset)
-                if comma_offset == -1:
-                    if len(label) - line_offset > max_length:
-                        debug('chars left: {}, breaking at {}'.format(len(label) - line_offset, param_index))
-                        params_to_newline_before.append(param_index)
-                    break
-                param_index += 1
-                debug('found comma at ', comma_offset)
-                if comma_offset - line_offset > max_length:
-                    debug('line length {}, break at {}'.format(comma_offset - line_offset, param_index))
-                    params_to_newline_before.append(param_index)
-                    line_offset = start_offset
-                    if max_length == 80:
-                        max_length = 76  # account for 4-space indent.
-                start_offset = comma_offset + 1
-                debug('param now ', param_index)
-
-        debug('newline before params', params_to_newline_before)
+        params_to_newline_before = find_params_to_split_at(label)
 
         # replace with styled spans in reverse order
 

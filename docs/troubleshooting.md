@@ -48,7 +48,7 @@ $ cd $(npm root -g)
 $ grep -Rn includeExternalModuleExports typescript-language-server
 typescript-language-server/lib/lsp-server.js:392:                    includeExternalModuleExports: true,
 ```
-Comment out the line identified, restart sublime text, proceed with life. 👍
+Comment out the line identified, `lsp-server.js:392`, restart sublime text, proceed with life. 👍
 
 ## Known Issues
 

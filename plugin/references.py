@@ -181,7 +181,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
             point = Point.from_lsp(reference['range']['start'])
 
             # get line of the reference, to showcase its use
-            reference_line = linecache.getline(file_path, point.row + 1).strip()
+            reference_line = get_line(file_path, point.row + 1)
 
             if grouped_references.get(file_path) is None:
                 grouped_references[file_path] = []
@@ -191,3 +191,19 @@ class LspSymbolReferencesCommand(LspTextCommand):
         linecache.clearcache()
 
         return grouped_references
+
+
+def get_line(file_name: str, row: int) -> str:
+    '''
+    Get the line from the buffer if the view is open, else fallback to linecache.
+    '''
+    view = sublime.active_window().find_open_file(file_name)
+
+    if view:
+        # get from buffer
+        # normalize the row
+        point = view.text_point(row - 1, 0)
+        return view.substr(view.line(point)).strip()
+    else:
+        # get from linecache
+        return linecache.getline(file_name, row).strip()

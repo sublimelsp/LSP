@@ -35,6 +35,8 @@ Have you added multiple folders to your Sublime workspace? LSP may not handle yo
 
 <img src="https://user-images.githubusercontent.com/1457327/68996892-42e5c280-086e-11ea-98e5-fffb003a1261.gif" alt="TypeScript Auto Import" width="512" />
 
+> As you type `pos` in hopes to get the `position` variable autocomplete, `posix` appears and added auto import statment.
+
 Find and comment out the following line in your prefered typescript language server:
 ```ts
 includeExternalModuleExports: true,

@@ -37,7 +37,7 @@ Have you added multiple folders to your Sublime workspace? LSP may not handle yo
 
 > As you type `pos` in hopes to get the `position` variable autocomplete, `posix` appears and added auto import statment.
 
-Find and comment out the following line in your prefered typescript language server:
+Find and comment out the following line in your prefered typescript language server module:
 ```ts
 includeExternalModuleExports: true,
 ```

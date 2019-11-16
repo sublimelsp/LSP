@@ -1,6 +1,5 @@
 from .logging import debug
 from .protocol import WorkspaceFolder
-from .types import ViewLike
 from .types import WindowLike
 import os
 

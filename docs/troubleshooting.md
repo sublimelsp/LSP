@@ -31,7 +31,7 @@ This issue can be solved in a few ways:
 
 Have you added multiple folders to your Sublime workspace? LSP may not handle your second folder as expected, see [this issue](https://github.com/tomv564/LSP/issues/81) for more details.
 
-### 4. [TypeScript] Disable auto-import out of scope autocompletions
+### 4. TypeScript - Disable auto-import out of scope autocompletions
 
 <img src="https://user-images.githubusercontent.com/1457327/68996892-42e5c280-086e-11ea-98e5-fffb003a1261.gif" alt="TypeScript Auto Import" width="512" />
 

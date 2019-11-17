@@ -3,7 +3,6 @@
 [![GitHub release](https://img.shields.io/github/release/tomv564/LSP.svg)](https://github.com/tomv564/LSP/releases)
 [![Build Status](https://travis-ci.org/tomv564/LSP.svg?branch=master)](https://travis-ci.org/tomv564/LSP)
 [![Coverage Status](https://coveralls.io/repos/github/tomv564/LSP/badge.svg?branch=master)](https://coveralls.io/github/tomv564/LSP?branch=master)
-[![Join the chat at https://gitter.im/SublimeLSP/Lobby](https://badges.gitter.im/SublimeLSP/Lobby.svg)](https://gitter.im/SublimeLSP/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 Language Server Protocol support for Sublime Text 3 that gives you IDE [features](https://lsp.readthedocs.io/en/latest/#features).
 
@@ -74,5 +73,4 @@ Create/modify the file `Packages/User/mdpopups.css` and put your own style.
 
 ## Getting help
 
-If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/en/latest/#troubleshooting) guide for tips and known limitations. If the documentation cannot solve your problem, help can be found in the [gitter chat](https://gitter.im/SublimeLSP) or by searching/creating [creating a new issue](https://github.com/tomv564/LSP/issues).
-
+If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/en/latest/#troubleshooting) guide for tips and known limitations. If the documentation cannot solve your problem, help can be found in the [Discord chat](https://discordapp.com/channels/280102180189634562/645268178397560865) or by searching/creating [creating a new issue](https://github.com/tomv564/LSP/issues).

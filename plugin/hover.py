@@ -3,6 +3,7 @@ import sublime
 import sublime_plugin
 import webbrowser
 import os
+import textwrap
 from html import escape
 from .core.configurations import is_supported_syntax
 from .diagnostics import filter_by_point, view_diagnostics
@@ -198,6 +199,8 @@ class LspHoverCommand(LspTextCommand):
             if language:
                 formatted.append("```{}\n{}\n```\n".format(language, value))
             else:
+                if '\n' not in value:
+                    value = "\n".join(textwrap.wrap(value, 80))
                 formatted.append(value)
 
         if formatted:

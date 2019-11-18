@@ -74,4 +74,7 @@ Create/modify the file `Packages/User/mdpopups.css` and put your own style.
 
 ## Getting help
 
-If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/en/latest/#troubleshooting) guide for tips and known limitations. If the documentation cannot solve your problem, help can be found in the [Discord chat](https://discordapp.com/channels/280102180189634562/645268178397560865) or by searching/creating [creating a new issue](https://github.com/tomv564/LSP/issues).
+If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/en/latest/#troubleshooting) guide for tips and known limitations. If the documentation cannot solve your problem, you can look for help in:
+ - [Discord chat](https://discordapp.com/channels/280102180189634562/645268178397560865) (requires [joining the Sublime server first](https://discord.gg/D43Pecu))
+ - By [searching or creating a new issue](https://github.com/tomv564/LSP/issues)
+ - [Gitter chat](https://gitter.im/SublimeLSP) (deprecated, consider using Discord instead)

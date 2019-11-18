@@ -1,3 +1,4 @@
+import html
 import os
 import sublime
 import sublime_plugin
@@ -13,9 +14,9 @@ from .core.windows import WindowManager
 
 MYPY = False
 if MYPY:
-    from typing import Any, List, Dict, Callable, Optional
+    from typing import Any, List, Dict, Callable, Optional, Tuple
     from typing_extensions import Protocol
-    assert Any and List and Dict and Callable and Optional
+    assert Any and List and Dict and Callable and Optional and Tuple
 else:
     Protocol = object  # type: ignore
 
@@ -34,6 +35,66 @@ diagnostic_severity_scopes = {
     DiagnosticSeverity.Hint: 'markup.inserted.lsp sublimelinter.gutter-mark markup.info.suggestion.lsp'
 }
 
+stylesheet = '''
+    <style>
+        div.error-arrow {
+            border-top: 0.4rem solid transparent;
+            border-left: 0.5rem solid color(var(--redish) blend(var(--background) 30%));
+            width: 0;
+            height: 0;
+        }
+        div.error {
+            padding: 0.4rem 0 0.4rem 0.7rem;
+            margin: 0 0 0.2rem;
+            border-radius: 0 0.2rem 0.2rem 0.2rem;
+        }
+        div.error span.message {
+            padding-right: 0.7rem;
+        }
+        div.error a {
+            text-decoration: inherit;
+            padding: 0.35rem 0.7rem 0.45rem 0.8rem;
+            position: relative;
+            bottom: 0.05rem;
+            border-radius: 0 0.2rem 0.2rem 0;
+            font-weight: bold;
+        }
+        html.dark div.error a {
+            background-color: #00000018;
+        }
+        html.light div.error a {
+            background-color: #ffffff18;
+        }
+        div.warning-arrow {
+            border-top: 0.4rem solid transparent;
+            border-left: 0.5rem solid color(var(--yellowish) blend(var(--background) 30%));
+            width: 0;
+            height: 0;
+        }
+        div.warning {
+            padding: 0.4rem 0 0.4rem 0.7rem;
+            margin: 0 0 0.2rem;
+            border-radius: 0 0.2rem 0.2rem 0.2rem;
+        }
+        div.warning span.message {
+            padding-right: 0.7rem;
+        }
+        div.warning a {
+            text-decoration: inherit;
+            padding: 0.35rem 0.7rem 0.45rem 0.8rem;
+            position: relative;
+            bottom: 0.05rem;
+            border-radius: 0 0.2rem 0.2rem 0;
+            font-weight: bold;
+        }
+        html.dark div.warning a {
+            background-color: #00000018;
+        }
+        html.light div.warning a {
+            background-color: #ffffff18;
+        }
+    </style>
+'''
 
 UNDERLINE_FLAGS = (sublime.DRAW_SQUIGGLY_UNDERLINE | sublime.DRAW_NO_OUTLINE | sublime.DRAW_NO_FILL |
                    sublime.DRAW_EMPTY_AS_OVERWRITE)
@@ -154,6 +215,90 @@ def ensure_diagnostics_panel(window: sublime.Window) -> 'Optional[sublime.View]'
                         "Packages/" + PLUGIN_NAME + "/Syntaxes/Diagnostics.sublime-syntax")
 
 
+def create_phantom_html(text: str, severity: str) -> str:
+    global stylesheet
+    formatted = "<br>".join(html.escape(line, quote=False) for line in text.splitlines())
+    return """<body id=inline-error>{}
+                <div class="{}-arrow"></div>
+                <div class="{}">
+                    <span class="message">{}</span>
+                    <a href="code-actions">Code Actions</a>
+                </div>
+                </body>""".format(stylesheet, severity, severity, formatted)
+
+
+def on_phantom_navigate(view: sublime.View, href: str, point: int) -> None:
+    # TODO: don't mess with the user's cursor.
+    sel = view.sel()
+    sel.clear()
+    sel.add(sublime.Region(point))
+    view.run_command("lsp_code_actions")
+
+
+def create_phantom(view: sublime.View, diagnostic: Diagnostic) -> sublime.Phantom:
+    region = range_to_region(diagnostic.range, view)
+    # TODO: hook up hide phantom (if keeping them)
+    line = "[{}] {}".format(diagnostic.source, diagnostic.message) if diagnostic.source else diagnostic.message
+    severity = "error" if diagnostic.severity == DiagnosticSeverity.Error else "warning"
+    content = create_phantom_html(line, severity)
+    return sublime.Phantom(
+        region,
+        '<p>' + content + '</p>',
+        sublime.LAYOUT_BELOW,
+        lambda href: on_phantom_navigate(view, href, region.begin())
+    )
+
+class LspNextDiagnosticCommand(sublime_plugin.WindowCommand):
+
+    def run(self) -> None:
+        windows.lookup(self.window).diagnostics.select_next()
+
+
+class LspPreviousDiagnosticCommand(sublime_plugin.WindowCommand):
+
+    def run(self) -> None:
+        windows.lookup(self.window).diagnostics.select_previous()
+
+
+
+class DiagnosticsPhantoms(object):
+
+    def __init__(self, window: sublime.Window):
+        self._window = window
+        self._last_phantom_set = None  # type: 'Optional[sublime.PhantomSet]'
+
+    def set_diagnostic(self, file_diagnostic: 'Optional[Tuple[str, Diagnostic]]') -> None:
+        self.clear()
+
+        if file_diagnostic:
+            file_path, diagnostic = file_diagnostic
+            view = self._window.open_file(file_path, sublime.TRANSIENT)
+            if view.is_loading():
+                sublime.set_timeout(lambda: self.apply_phantom(view, diagnostic), 500)
+            else:
+                self.apply_phantom(view, diagnostic)
+
+    def apply_phantom(self, view: sublime.View, diagnostic: Diagnostic) -> None:
+        phantom_set = sublime.PhantomSet(view, "lsp_diagnostics")
+        phantom = create_phantom(view, diagnostic)
+        phantom_set.update([phantom])
+        view.show_at_center(phantom.region)
+        self._last_phantom_set = phantom_set
+
+
+    def clear(self) -> None:
+        if self._last_phantom_set:
+            self._last_phantom_set.update([])
+
+
+
+
+
+
+
+
+
+
 class DocumentsState(Protocol):
 
     def changed(self) -> None:
@@ -179,6 +324,67 @@ class DiagnosticsUpdateWalk(object):
 
     def end(self) -> None:
         pass
+
+
+
+class DiagnosticsCursor(DiagnosticsUpdateWalk):
+    def __init__(self) -> None:
+        self.file_diagnostic = None  # type: 'Optional[Tuple[str, Diagnostic]]'
+        self._first_file_diagnostic = None  # type: 'Optional[Tuple[str, Diagnostic]]'
+        self._last_file_diagnostic = None  # type: 'Optional[Tuple[str, Diagnostic]]'
+        self._previous_file_diagnostic = None  # type: 'Optional[Tuple[str, Diagnostic]]'
+        self._select_offset = 0
+        self._debug_index = -1
+
+    def select_offset(self, offset: int) -> None:
+        self._select_offset = offset
+
+    def begin(self) -> None:
+        self._found = False
+        self._debug_index = -1
+        self._first_file_diagnostic = None
+        self._last_file_diagnostic = None
+        self._previous_file_diagnostic = self.file_diagnostic
+        self.file_diagnostic = None
+
+    def begin_file(self, file_path: str) -> None:
+        self._current_file_path = file_path
+
+    def diagnostic(self, diagnostic: 'Diagnostic') -> None:
+        if not self._found:
+            self._debug_index += 1
+
+            if not self._first_file_diagnostic:
+                self._first_file_diagnostic = self._current_file_path, diagnostic
+
+            if self._select_offset == -1:
+                debug('previous {} matches? diagnostic {}, pick last: {}'.format(
+                    self._previous_file_diagnostic[1] if self._previous_file_diagnostic else None, diagnostic,
+                    self._last_file_diagnostic[1] if self._last_file_diagnostic else None))
+                if self._previous_file_diagnostic and diagnostic == self._previous_file_diagnostic[1]:
+                    debug('picked backwards at ', self._debug_index)
+                    if self._last_file_diagnostic:
+                        self.file_diagnostic = self._last_file_diagnostic
+                        self._found = True
+            elif self._select_offset == 1:
+                if self._last_file_diagnostic and self._previous_file_diagnostic and self._previous_file_diagnostic[
+                        1] == self._last_file_diagnostic[1]:
+                    debug('picked forwards at ', self._debug_index)
+                    self.file_diagnostic = self._current_file_path, diagnostic
+                    self._found = True
+
+            self._last_file_diagnostic = self._current_file_path, diagnostic
+
+    def end(self) -> None:
+        if not self.file_diagnostic:
+            if self._select_offset == -1:
+                debug('fallback backwards')
+                self.file_diagnostic = self._last_file_diagnostic
+            elif self._select_offset == 1:
+                debug('fallback forwards')
+                self.file_diagnostic = self._first_file_diagnostic
+
+        self._select_offset = 0
 
 
 class DiagnosticViewRegions(DiagnosticsUpdateWalk):
@@ -335,6 +541,8 @@ class DiagnosticsPresenter(object):
         self._panel_update = DiagnosticOutputPanel(self._window)
         self._bar_summary_update = StatusBarSummary(self._window)
         self._relevance_check = HasRelevantDiagnostics()
+        self._cursor = DiagnosticsCursor()
+        self._phantoms = DiagnosticsPhantoms(self._window)
         if settings.auto_show_diagnostics_panel == 'saved':
             setattr(documents_state, 'changed', self.on_document_changed)
             setattr(documents_state, 'saved', self.on_document_saved)
@@ -357,6 +565,7 @@ class DiagnosticsPresenter(object):
             self._window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
     def update(self, file_path: str, config_name: str, diagnostics: 'Dict[str, Dict[str, List[Diagnostic]]]') -> None:
+        self._diagnostics = diagnostics
         self._received_diagnostics_after_change = True
 
         if not self._window.is_valid():
@@ -374,8 +583,21 @@ class DiagnosticsPresenter(object):
         else:
             debug('view not found for', file_path)
 
+        # had_cursor_value = self._cursor.file_diagnostic is not None
+        # if had_cursor_value:
+        #     updatables.append(self._cursor)
+
         walker = DiagnosticsWalker(updatables)
         walker.walk(diagnostics)
 
+        # if had_cursor_value:
+        #     self._phantoms.set_diagnostic(self._cursor.file_diagnostic)
+
         if settings.auto_show_diagnostics_panel == 'always' or self._show_panel_on_diagnostics:
             self.show_panel_if_relevant()
+
+    def select(self, offset: int) -> None:
+        self._cursor.select_offset(offset)
+        walker = DiagnosticsWalker([self._cursor])
+        walker.walk(self._diagnostics)
+        self._phantoms.set_diagnostic(self._cursor.file_diagnostic)

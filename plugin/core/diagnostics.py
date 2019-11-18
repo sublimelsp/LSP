@@ -14,15 +14,18 @@ except ImportError:
     Protocol = object  # type: ignore
 
 
-class DiagnosticsUpdateable(Protocol):
+class DiagnosticsUI(Protocol):
 
     def update(self, file_name: str, config_name: str, diagnostics: 'Dict[str, Dict[str, List[Diagnostic]]]') -> None:
+        ...
+
+    def select(self, index: int) -> None:
         ...
 
 
 class DiagnosticsStorage(object):
 
-    def __init__(self, updateable: 'Optional[DiagnosticsUpdateable]') -> None:
+    def __init__(self, updateable: 'Optional[DiagnosticsUI]') -> None:
         self._diagnostics = {}  # type: Dict[str, Dict[str, List[Diagnostic]]]
         self._updatable = updateable
 
@@ -72,3 +75,11 @@ class DiagnosticsStorage(object):
 
     def remove(self, file_path: str, client_name: str) -> None:
         self.update(file_path, client_name, [])
+
+    def select_next(self) -> None:
+        if self._updatable:
+            self._updatable.select(1)
+
+    def select_previous(self) -> None:
+        if self._updatable:
+            self._updatable.select(-1)

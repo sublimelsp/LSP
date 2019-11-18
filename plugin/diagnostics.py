@@ -238,6 +238,7 @@ def on_phantom_navigate(view: sublime.View, href: str, point: int) -> None:
 def create_phantom(view: sublime.View, diagnostic: Diagnostic) -> sublime.Phantom:
     region = range_to_region(diagnostic.range, view)
     # TODO: hook up hide phantom (if keeping them)
+    # TODO: return related info phantoms as well?
     line = "[{}] {}".format(diagnostic.source, diagnostic.message) if diagnostic.source else diagnostic.message
     severity = "error" if diagnostic.severity == DiagnosticSeverity.Error else "warning"
     content = create_phantom_html(line, severity)
@@ -247,6 +248,7 @@ def create_phantom(view: sublime.View, diagnostic: Diagnostic) -> sublime.Phanto
         sublime.LAYOUT_BELOW,
         lambda href: on_phantom_navigate(view, href, region.begin())
     )
+
 
 class LspNextDiagnosticCommand(sublime_plugin.WindowCommand):
 
@@ -258,7 +260,6 @@ class LspPreviousDiagnosticCommand(sublime_plugin.WindowCommand):
 
     def run(self) -> None:
         windows.lookup(self.window).diagnostics.select_previous()
-
 
 
 class DiagnosticsPhantoms(object):
@@ -285,18 +286,9 @@ class DiagnosticsPhantoms(object):
         view.show_at_center(phantom.region)
         self._last_phantom_set = phantom_set
 
-
     def clear(self) -> None:
         if self._last_phantom_set:
             self._last_phantom_set.update([])
-
-
-
-
-
-
-
-
 
 
 class DocumentsState(Protocol):
@@ -326,7 +318,6 @@ class DiagnosticsUpdateWalk(object):
         pass
 
 
-
 class DiagnosticsCursor(DiagnosticsUpdateWalk):
     def __init__(self) -> None:
         self.file_diagnostic = None  # type: 'Optional[Tuple[str, Diagnostic]]'
@@ -336,14 +327,17 @@ class DiagnosticsCursor(DiagnosticsUpdateWalk):
         self._select_offset = 0
         self._debug_index = -1
 
-    def select_offset(self, offset: int) -> None:
+    def select_offset(self, offset: int, file_path: 'Optional[str]' = None, point: 'Optional[Point]' = None) -> None:
         self._select_offset = offset
+        self._select_file_path = file_path
+        self._select_point = point
 
     def begin(self) -> None:
         self._found = False
         self._debug_index = -1
         self._first_file_diagnostic = None
         self._last_file_diagnostic = None
+        self._nearest_file_diagnostic = None  # type: Optional[Tuple[str, Diagnostic]]
         self._previous_file_diagnostic = self.file_diagnostic
         self.file_diagnostic = None
 
@@ -352,37 +346,48 @@ class DiagnosticsCursor(DiagnosticsUpdateWalk):
 
     def diagnostic(self, diagnostic: 'Diagnostic') -> None:
         if not self._found:
-            self._debug_index += 1
-
             if not self._first_file_diagnostic:
                 self._first_file_diagnostic = self._current_file_path, diagnostic
 
             if self._select_offset == -1:
-                debug('previous {} matches? diagnostic {}, pick last: {}'.format(
-                    self._previous_file_diagnostic[1] if self._previous_file_diagnostic else None, diagnostic,
-                    self._last_file_diagnostic[1] if self._last_file_diagnostic else None))
                 if self._previous_file_diagnostic and diagnostic == self._previous_file_diagnostic[1]:
-                    debug('picked backwards at ', self._debug_index)
                     if self._last_file_diagnostic:
                         self.file_diagnostic = self._last_file_diagnostic
                         self._found = True
+
             elif self._select_offset == 1:
                 if self._last_file_diagnostic and self._previous_file_diagnostic and self._previous_file_diagnostic[
                         1] == self._last_file_diagnostic[1]:
-                    debug('picked forwards at ', self._debug_index)
                     self.file_diagnostic = self._current_file_path, diagnostic
                     self._found = True
 
+            # update nearest candidate
+            if not self._found and self._select_file_path and self._select_point and\
+                    self._current_file_path == self._select_file_path:
+                self._update_nearest_candidate(diagnostic, self._select_point)
+
             self._last_file_diagnostic = self._current_file_path, diagnostic
+
+    def _update_nearest_candidate(self, diagnostic: Diagnostic, point: Point) -> None:
+        if self._select_offset == -1:
+            if diagnostic.range.start.row < point.row:
+                if not self._nearest_file_diagnostic or diagnostic.range.start.row > self._nearest_file_diagnostic[
+                        1].range.start.row:
+                    self._nearest_file_diagnostic = self._current_file_path, diagnostic
+        elif self._select_offset == 1:
+            if diagnostic.range.start.row > point.row:
+                if not self._nearest_file_diagnostic or diagnostic.range.start.row < self._nearest_file_diagnostic[
+                        1].range.start.row:
+                    self._nearest_file_diagnostic = self._current_file_path, diagnostic
 
     def end(self) -> None:
         if not self.file_diagnostic:
-            if self._select_offset == -1:
-                debug('fallback backwards')
+            if self._select_offset == -1 and self._previous_file_diagnostic == self._first_file_diagnostic:
                 self.file_diagnostic = self._last_file_diagnostic
-            elif self._select_offset == 1:
-                debug('fallback forwards')
+            elif self._select_offset == 1 and self._previous_file_diagnostic == self._last_file_diagnostic:
                 self.file_diagnostic = self._first_file_diagnostic
+            elif self._nearest_file_diagnostic:  # a match before/after in the current file
+                self.file_diagnostic = self._nearest_file_diagnostic
 
         self._select_offset = 0
 
@@ -583,21 +588,24 @@ class DiagnosticsPresenter(object):
         else:
             debug('view not found for', file_path)
 
-        # had_cursor_value = self._cursor.file_diagnostic is not None
-        # if had_cursor_value:
-        #     updatables.append(self._cursor)
-
         walker = DiagnosticsWalker(updatables)
         walker.walk(diagnostics)
 
-        # if had_cursor_value:
-        #     self._phantoms.set_diagnostic(self._cursor.file_diagnostic)
+        # TODO: if a diagnostic is gone, clear it from the cursor.
 
         if settings.auto_show_diagnostics_panel == 'always' or self._show_panel_on_diagnostics:
             self.show_panel_if_relevant()
 
     def select(self, offset: int) -> None:
-        self._cursor.select_offset(offset)
+        file_path = None
+        point = None
+        # select nearest with optional path and point params.
+        if not self._cursor.file_diagnostic:
+            active_view = self._window.active_view()
+            if active_view:
+                file_path = active_view.file_name()
+                point = Point(*active_view.rowcol(active_view.sel()[0].begin()))
+        self._cursor.select_offset(offset, file_path, point)
         walker = DiagnosticsWalker([self._cursor])
         walker.walk(self._diagnostics)
         self._phantoms.set_diagnostic(self._cursor.file_diagnostic)

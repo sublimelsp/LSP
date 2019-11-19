@@ -3,7 +3,7 @@
 [![GitHub release](https://img.shields.io/github/release/tomv564/LSP.svg)](https://github.com/tomv564/LSP/releases)
 [![Build Status](https://travis-ci.org/tomv564/LSP.svg?branch=master)](https://travis-ci.org/tomv564/LSP)
 [![Coverage Status](https://coveralls.io/repos/github/tomv564/LSP/badge.svg?branch=master)](https://coveralls.io/github/tomv564/LSP?branch=master)
-[![Join the chat at Discord](https://img.shields.io/discord/280102180189634562)](https://discordapp.com/channels/280102180189634562/645268178397560865)
+[![SublimeHQ Discord](https://img.shields.io/discord/280102180189634562?label=SublimeHQ%20Discord&logo=discord&style=flat-square)](#chat)
 
 Language Server Protocol support for Sublime Text 3 that gives you IDE [features](https://lsp.readthedocs.io/en/latest/#features).
 
@@ -64,17 +64,15 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 
 See [Language Server Protocol](https://microsoft.github.io/language-server-protocol/implementors/servers/) for more available implementations. Please create issues/pull requests so we can get support for more languages.
 
-## Customisation of the popup
+## Customisation of the popups
 
-LSP uses [mdpopups](https://github.com/facelessuser/sublime-markdown-popups) to display the popup. If you want to customise it, check the [doc](http://facelessuser.github.io/sublime-markdown-popups/).
-
-tl;dr?
-
-Create/modify the file `Packages/User/mdpopups.css` and put your own style.
+LSP uses [mdpopups](https://github.com/facelessuser/sublime-markdown-popups) to display the popup. You can override its style by creating a `Packages/User/mdpopups.css` file. See the [mdpopups documentation](http://facelessuser.github.io/sublime-markdown-popups/) for more details.
 
 ## Getting help
 
 If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/en/latest/#troubleshooting) guide for tips and known limitations. If the documentation cannot solve your problem, you can look for help in:
- - [Discord chat](https://discordapp.com/channels/280102180189634562/645268178397560865) (requires [joining the Sublime server first](https://discord.gg/D43Pecu))
- - By [searching or creating a new issue](https://github.com/tomv564/LSP/issues)
- - [Gitter chat](https://gitter.im/SublimeLSP) (deprecated, consider using Discord instead)
+<a name="chat"></a>
+
+* The [#lsp](https://discordapp.com/channels/280102180189634562/645268178397560865) channel (join the [SublimeHQ Discord](https://discord.gg/RMkk5MR) first!)
+* By [searching or creating a new issue](https://github.com/tomv564/LSP/issues)
+* Search the [old Gitter chat](https://gitter.im/SublimeLSP) (for live chat join Discord instead)

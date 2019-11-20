@@ -6,7 +6,7 @@ import sublime_plugin
 from .core.configurations import is_supported_syntax
 from .core.logging import debug
 from .core.panels import ensure_panel
-from .core.protocol import Diagnostic, DiagnosticSeverity, Point, Range
+from .core.protocol import Diagnostic, DiagnosticSeverity, DiagnosticRelatedInformation, Point, Range
 from .core.settings import settings, PLUGIN_NAME, client_configs
 from .core.views import range_to_region, region_to_range
 from .core.registry import windows
@@ -34,67 +34,6 @@ diagnostic_severity_scopes = {
     DiagnosticSeverity.Information: 'markup.inserted.lsp sublimelinter.gutter-mark markup.info.lsp',
     DiagnosticSeverity.Hint: 'markup.inserted.lsp sublimelinter.gutter-mark markup.info.suggestion.lsp'
 }
-
-stylesheet = '''
-    <style>
-        div.error-arrow {
-            border-top: 0.4rem solid transparent;
-            border-left: 0.5rem solid color(var(--redish) blend(var(--background) 30%));
-            width: 0;
-            height: 0;
-        }
-        div.error {
-            padding: 0.4rem 0 0.4rem 0.7rem;
-            margin: 0 0 0.2rem;
-            border-radius: 0 0.2rem 0.2rem 0.2rem;
-        }
-        div.error span.message {
-            padding-right: 0.7rem;
-        }
-        div.error a {
-            text-decoration: inherit;
-            padding: 0.35rem 0.7rem 0.45rem 0.8rem;
-            position: relative;
-            bottom: 0.05rem;
-            border-radius: 0 0.2rem 0.2rem 0;
-            font-weight: bold;
-        }
-        html.dark div.error a {
-            background-color: #00000018;
-        }
-        html.light div.error a {
-            background-color: #ffffff18;
-        }
-        div.warning-arrow {
-            border-top: 0.4rem solid transparent;
-            border-left: 0.5rem solid color(var(--yellowish) blend(var(--background) 30%));
-            width: 0;
-            height: 0;
-        }
-        div.warning {
-            padding: 0.4rem 0 0.4rem 0.7rem;
-            margin: 0 0 0.2rem;
-            border-radius: 0 0.2rem 0.2rem 0.2rem;
-        }
-        div.warning span.message {
-            padding-right: 0.7rem;
-        }
-        div.warning a {
-            text-decoration: inherit;
-            padding: 0.35rem 0.7rem 0.45rem 0.8rem;
-            position: relative;
-            bottom: 0.05rem;
-            border-radius: 0 0.2rem 0.2rem 0;
-            font-weight: bold;
-        }
-        html.dark div.warning a {
-            background-color: #00000018;
-        }
-        html.light div.warning a {
-            background-color: #ffffff18;
-        }
-    </style>
-'''
 
 UNDERLINE_FLAGS = (sublime.DRAW_SQUIGGLY_UNDERLINE | sublime.DRAW_NO_OUTLINE | sublime.DRAW_NO_FILL |
                    sublime.DRAW_EMPTY_AS_OVERWRITE)
@@ -215,41 +154,6 @@ def ensure_diagnostics_panel(window: sublime.Window) -> 'Optional[sublime.View]'
                         "Packages/" + PLUGIN_NAME + "/Syntaxes/Diagnostics.sublime-syntax")
 
 
-def create_phantom_html(text: str, severity: str) -> str:
-    global stylesheet
-    formatted = "<br>".join(html.escape(line, quote=False) for line in text.splitlines())
-    return """<body id=inline-error>{}
-                <div class="{}-arrow"></div>
-                <div class="{}">
-                    <span class="message">{}</span>
-                    <a href="code-actions">Code Actions</a>
-                </div>
-                </body>""".format(stylesheet, severity, severity, formatted)
-
-
-def on_phantom_navigate(view: sublime.View, href: str, point: int) -> None:
-    # TODO: don't mess with the user's cursor.
-    sel = view.sel()
-    sel.clear()
-    sel.add(sublime.Region(point))
-    view.run_command("lsp_code_actions")
-
-
-def create_phantom(view: sublime.View, diagnostic: Diagnostic) -> sublime.Phantom:
-    region = range_to_region(diagnostic.range, view)
-    # TODO: hook up hide phantom (if keeping them)
-    # TODO: return related info phantoms as well?
-    line = "[{}] {}".format(diagnostic.source, diagnostic.message) if diagnostic.source else diagnostic.message
-    severity = "error" if diagnostic.severity == DiagnosticSeverity.Error else "warning"
-    content = create_phantom_html(line, severity)
-    return sublime.Phantom(
-        region,
-        '<p>' + content + '</p>',
-        sublime.LAYOUT_BELOW,
-        lambda href: on_phantom_navigate(view, href, region.begin())
-    )
-
-
 class LspNextDiagnosticCommand(sublime_plugin.WindowCommand):
 
     def run(self) -> None:
@@ -262,6 +166,12 @@ class LspPreviousDiagnosticCommand(sublime_plugin.WindowCommand):
         windows.lookup(self.window).diagnostics.select_previous()
 
 
+class LspHideDiagnosticCommand(sublime_plugin.WindowCommand):
+
+    def run(self) -> None:
+        windows.lookup(self.window).diagnostics.select_none()
+
+
 class DiagnosticsPhantoms(object):
 
     def __init__(self, window: sublime.Window):
@@ -271,6 +181,7 @@ class DiagnosticsPhantoms(object):
     def set_diagnostic(self, file_diagnostic: 'Optional[Tuple[str, Diagnostic]]') -> None:
         self.clear()
 
+        self._base_dir = windows.lookup(self._window).get_project_path()
         if file_diagnostic:
             file_path, diagnostic = file_diagnostic
             view = self._window.open_file(file_path, sublime.TRANSIENT)
@@ -278,13 +189,64 @@ class DiagnosticsPhantoms(object):
                 sublime.set_timeout(lambda: self.apply_phantom(view, diagnostic), 500)
             else:
                 self.apply_phantom(view, diagnostic)
+        else:
+            if self._last_phantom_set:
+                has_phantom = view.settings().get('lsp_diagnostic_phantom')
+                if not has_phantom:
+                    self._last_phantom_set.view.settings().set('lsp_diagnostic_phantom', False)
 
     def apply_phantom(self, view: sublime.View, diagnostic: Diagnostic) -> None:
         phantom_set = sublime.PhantomSet(view, "lsp_diagnostics")
-        phantom = create_phantom(view, diagnostic)
+        phantom = self.create_phantom(view, diagnostic)
         phantom_set.update([phantom])
         view.show_at_center(phantom.region)
         self._last_phantom_set = phantom_set
+        has_phantom = view.settings().get('lsp_diagnostic_phantom')
+        if not has_phantom:
+            view.settings().set('lsp_diagnostic_phantom', True)
+
+    def create_phantom(self, view: sublime.View, diagnostic: Diagnostic) -> sublime.Phantom:
+        region = range_to_region(diagnostic.range, view)
+        line = "[{}] {}".format(diagnostic.source, diagnostic.message) if diagnostic.source else diagnostic.message
+        message = "<br>".join(html.escape(line, quote=False) for line in line.splitlines())
+
+        additional_infos = "<br>".join([self.format_diagnostic_related_info(info) for info in diagnostic.related_info])
+        severity = "error" if diagnostic.severity == DiagnosticSeverity.Error else "warning"
+        content = message + "<br>" + additional_infos if additional_infos else message
+        markup = self.create_phantom_html(content, severity)
+        return sublime.Phantom(
+            region,
+            markup,
+            sublime.LAYOUT_BELOW,
+            self.navigate
+        )
+
+    def format_diagnostic_related_info(self, info: DiagnosticRelatedInformation) -> str:
+        file_path = info.location.file_path
+        if self._base_dir and file_path.startswith(self._base_dir):
+            file_path = os.path.relpath(file_path, self._base_dir)
+        location = "{}:{}:{}".format(file_path, info.location.range.start.row+1, info.location.range.start.col+1)
+        return "<a href='location:{}'>{}</a>: {}".format(location, location, html.escape(info.message))
+
+    def navigate(self, href: str) -> None:
+        if href == "hide":
+            self.clear()
+        elif href.startswith("location"):
+            _, file_path, location = href.split(":", 2)
+            file_path = os.path.join(self._base_dir, file_path) if self._base_dir else file_path
+            self._window.open_file(file_path + ":" + location, sublime.ENCODED_POSITION | sublime.TRANSIENT)
+
+    def create_phantom_html(self, content: str, severity: str) -> str:
+        stylesheet = sublime.load_resource("Packages/LSP/phantoms.css")
+        return """<body id=inline-error>
+                    <style>{}</style>
+                    <div class="{} container">
+                        <div class="toolbar">
+                            <a href="hide">×</a>
+                        </div>
+                        <div class="content">{}</div>
+                    </div>
+                </body>""".format(stylesheet, severity, content)
 
     def clear(self) -> None:
         if self._last_phantom_set:
@@ -609,3 +571,6 @@ class DiagnosticsPresenter(object):
         walker = DiagnosticsWalker([self._cursor])
         walker.walk(self._diagnostics)
         self._phantoms.set_diagnostic(self._cursor.file_diagnostic)
+
+    def deselect(self) -> None:
+        self._phantoms.set_diagnostic(None)

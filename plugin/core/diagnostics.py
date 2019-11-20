@@ -22,6 +22,9 @@ class DiagnosticsUI(Protocol):
     def select(self, index: int) -> None:
         ...
 
+    def deselect(self) -> None:
+        ...
+
 
 class DiagnosticsStorage(object):
 
@@ -83,3 +86,7 @@ class DiagnosticsStorage(object):
     def select_previous(self) -> None:
         if self._updatable:
             self._updatable.select(-1)
+
+    def select_none(self) -> None:
+        if self._updatable:
+            self._updatable.deselect()

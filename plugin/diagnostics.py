@@ -191,9 +191,10 @@ class DiagnosticsPhantoms(object):
                 self.apply_phantom(view, diagnostic)
         else:
             if self._last_phantom_set:
+                view = self._last_phantom_set.view
                 has_phantom = view.settings().get('lsp_diagnostic_phantom')
                 if not has_phantom:
-                    self._last_phantom_set.view.settings().set('lsp_diagnostic_phantom', False)
+                    view.settings().set('lsp_diagnostic_phantom', False)
 
     def apply_phantom(self, view: sublime.View, diagnostic: Diagnostic) -> None:
         phantom_set = sublime.PhantomSet(view, "lsp_diagnostics")

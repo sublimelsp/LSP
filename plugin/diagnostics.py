@@ -232,6 +232,10 @@ class DiagnosticsPhantoms(object):
     def navigate(self, href: str) -> None:
         if href == "hide":
             self.clear()
+        elif href == "next":
+            self._window.run_command("lsp_next_diagnostic")
+        elif href == "previous":
+            self._window.run_command("lsp_previous_diagnostic")
         elif href.startswith("location"):
             _, file_path, location = href.split(":", 2)
             file_path = os.path.join(self._base_dir, file_path) if self._base_dir else file_path
@@ -244,6 +248,8 @@ class DiagnosticsPhantoms(object):
                     <div class="{} container">
                         <div class="toolbar">
                             <a href="hide">×</a>
+                            <a href="previous">↑</a>
+                            <a href="next">↓</a>
                         </div>
                         <div class="content">{}</div>
                     </div>

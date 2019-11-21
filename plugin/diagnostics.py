@@ -308,28 +308,29 @@ class DiagnosticsCursor(DiagnosticsUpdateWalk):
         self._current_file_path = file_path
 
     def diagnostic(self, diagnostic: 'Diagnostic') -> None:
-        if not self._found:
-            if not self._first_file_diagnostic:
-                self._first_file_diagnostic = self._current_file_path, diagnostic
+        if diagnostic.severity <= DiagnosticSeverity.Warning:
+            if not self._found:
+                if not self._first_file_diagnostic:
+                    self._first_file_diagnostic = self._current_file_path, diagnostic
 
-            if self._select_offset == -1:
-                if self._previous_file_diagnostic and diagnostic == self._previous_file_diagnostic[1]:
-                    if self._last_file_diagnostic:
-                        self.file_diagnostic = self._last_file_diagnostic
+                if self._select_offset == -1:
+                    if self._previous_file_diagnostic and diagnostic == self._previous_file_diagnostic[1]:
+                        if self._last_file_diagnostic:
+                            self.file_diagnostic = self._last_file_diagnostic
+                            self._found = True
+
+                elif self._select_offset == 1:
+                    if self._last_file_diagnostic and self._previous_file_diagnostic and self._previous_file_diagnostic[
+                            1] == self._last_file_diagnostic[1]:
+                        self.file_diagnostic = self._current_file_path, diagnostic
                         self._found = True
 
-            elif self._select_offset == 1:
-                if self._last_file_diagnostic and self._previous_file_diagnostic and self._previous_file_diagnostic[
-                        1] == self._last_file_diagnostic[1]:
-                    self.file_diagnostic = self._current_file_path, diagnostic
-                    self._found = True
+                # update nearest candidate
+                if not self._found and self._select_file_path and self._select_point and\
+                        self._current_file_path == self._select_file_path:
+                    self._update_nearest_candidate(diagnostic, self._select_point)
 
-            # update nearest candidate
-            if not self._found and self._select_file_path and self._select_point and\
-                    self._current_file_path == self._select_file_path:
-                self._update_nearest_candidate(diagnostic, self._select_point)
-
-            self._last_file_diagnostic = self._current_file_path, diagnostic
+                self._last_file_diagnostic = self._current_file_path, diagnostic
 
     def _update_nearest_candidate(self, diagnostic: Diagnostic, point: Point) -> None:
         if self._select_offset == -1:

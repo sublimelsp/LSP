@@ -174,7 +174,7 @@ class LspHideDiagnosticCommand(sublime_plugin.WindowCommand):
 
 class DiagnosticsPhantoms(object):
 
-    def __init__(self, window: sublime.Window):
+    def __init__(self, window: sublime.Window) -> None:
         self._window = window
         self._last_phantom_set = None  # type: 'Optional[sublime.PhantomSet]'
 

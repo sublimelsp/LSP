@@ -1,4 +1,6 @@
 import sublime
+import linecache
+
 from .protocol import Point, Range
 
 

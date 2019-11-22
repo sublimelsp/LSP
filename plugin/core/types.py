@@ -12,9 +12,8 @@ class Settings(object):
     def __init__(self) -> None:
         self.show_status_messages = True
         self.show_view_status = True
-        self.auto_show_diagnostics_panel = True
+        self.auto_show_diagnostics_panel = 'always'
         self.auto_show_diagnostics_panel_level = 3
-        self.show_diagnostics_phantoms = False
         self.show_diagnostics_count_in_view_status = False
         self.show_diagnostics_in_view_status = True
         self.show_diagnostics_severity_level = 3
@@ -32,7 +31,6 @@ class Settings(object):
         self.show_symbol_action_links = False
         self.complete_all_chars = False
         self.completion_hint_type = "auto"
-        self.prefer_label_over_filter_text = False
         self.show_references_in_quick_panel = False
         self.quick_panel_monospace_font = False
         self.disabled_capabilities = []  # type: List[str]

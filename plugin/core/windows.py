@@ -1,4 +1,4 @@
-from .diagnostics import WindowDiagnostics, DiagnosticsUpdate
+from .diagnostics import DiagnosticsStorage
 from .events import global_events
 from .logging import debug, server_log
 from .types import (ClientStates, ClientConfig, WindowLike, ViewLike,
@@ -9,7 +9,9 @@ from .edit import parse_workspace_edit
 from .events import Events
 from .sessions import Session
 from .url import filename_to_uri
-from .workspace import get_project_path, get_active_view_path
+from .workspace import maybe_get_first_workspace_from_window
+from .workspace import maybe_get_workspace_from_view
+from .workspace import WorkspaceFolder
 from .rpc import Client
 import threading
 try:
@@ -18,6 +20,7 @@ try:
     from types import ModuleType
     assert Optional and List and Callable and Dict and Session and Any and ModuleType and Iterator and Union
     assert LanguageConfig
+    assert WorkspaceFolder
 except ImportError:
     pass
     Protocol = object  # type: ignore
@@ -88,6 +91,10 @@ class DocumentHandlerFactory(object):
         return WindowDocumentHandler(self._sublime, self._settings, window, global_events, configs)
 
 
+def nop() -> None:
+    pass
+
+
 class WindowDocumentHandler(object):
     def __init__(self, sublime: 'Any', settings: Settings,
                  window: WindowLike, events: Events,
@@ -99,6 +106,8 @@ class WindowDocumentHandler(object):
         self._document_states = dict()  # type: Dict[str, DocumentState]
         self._pending_buffer_changes = dict()  # type: Dict[int, Dict]
         self._sessions = dict()  # type: Dict[str, Session]
+        self.changed = nop
+        self.saved = nop
         events.subscribe('view.on_load_async', self.handle_view_opened)
         events.subscribe('view.on_activated_async', self.handle_view_opened)
         events.subscribe('view.on_modified', self.handle_view_modified)
@@ -240,6 +249,7 @@ class WindowDocumentHandler(object):
                     if session.client:
                         params = {"textDocument": {"uri": filename_to_uri(file_name)}}
                         session.client.send_notification(Notification.didSave(params))
+                self.saved()
             else:
                 debug('document not tracked', file_name)
 
@@ -273,6 +283,7 @@ class WindowDocumentHandler(object):
         if pending_buffer:
             if buffer_version is None or buffer_version == pending_buffer["version"]:
                 self.notify_did_change(pending_buffer["view"])
+                self.changed()
 
     def notify_did_change(self, view: ViewLike) -> None:
         file_name = view.file_name()
@@ -302,26 +313,22 @@ class WindowDocumentHandler(object):
 
 class WindowManager(object):
     def __init__(self, window: WindowLike, configs: ConfigRegistry, documents: DocumentHandler,
-                 diagnostics: WindowDiagnostics, session_starter: 'Callable', sublime: 'Any',
+                 diagnostics: DiagnosticsStorage, session_starter: 'Callable', sublime: 'Any',
                  handler_dispatcher: LanguageHandlerListener, on_closed: 'Optional[Callable]' = None) -> None:
 
         # to move here:
         # configurations.py: window_client_configs and all references
         self._window = window
         self._configs = configs
-        self._diagnostics = diagnostics
+        self.diagnostics = diagnostics
         self._documents = documents
         self._sessions = dict()  # type: Dict[str, Session]
         self._start_session = session_starter
         self._sublime = sublime
         self._handlers = handler_dispatcher
         self._restarting = False
-        self._project_path = get_project_path(self._window)
-        self._projectless_root_path = None  # type: Optional[str]
-        self._diagnostics.set_on_updated(
-            lambda file_path, client_name:
-                global_events.publish("document.diagnostics",
-                                      DiagnosticsUpdate(self._window, client_name, file_path)))
+        self._workspace = maybe_get_first_workspace_from_window(self._window)
+        self._projectless_workspace = None  # type: Optional[WorkspaceFolder]
         self._on_closed = on_closed
         self._is_closing = False
         self._initialization_lock = threading.Lock()
@@ -369,9 +376,9 @@ class WindowManager(object):
                 self._start_client(config)
 
     def _start_client(self, config: ClientConfig) -> None:
-        project_path = self._ensure_project_path()
+        workspace = self._ensure_workspace()
 
-        if project_path is None:
+        if workspace is None:
             debug('Cannot start without a project folder')
             return
 
@@ -382,17 +389,18 @@ class WindowManager(object):
         if not self._handlers.on_start(config.name, self._window):
             return
 
+        project_path = workspace.path
         self._window.status_message("Starting " + config.name + "...")
         debug("starting in", project_path)
         session = None  # type: Optional[Session]
         try:
             session = self._start_session(
-                window=self._window,
-                project_path=project_path,
-                config=config,
-                on_pre_initialize=self._handle_pre_initialize,
-                on_post_initialize=self._handle_post_initialize,
-                on_post_exit=self._handle_post_exit)
+                self._window,                  # window
+                project_path,                  # project_path
+                config,                        # config
+                self._handle_pre_initialize,   # on_pre_initialize
+                self._handle_post_initialize,  # on_post_initialize
+                self._handle_post_exit)        # on_post_exit
         except Exception as e:
             message = "\n\n".join([
                 "Could not start {}",
@@ -436,24 +444,31 @@ class WindowManager(object):
             debug("unloading session", config_name)
             self._sessions[config_name].end()
 
-    def _ensure_project_path(self) -> 'Optional[str]':
-        if self._project_path is None:
-            self._project_path = get_project_path(self._window)
-            if self._project_path is None and self._projectless_root_path is None:
+    def _ensure_workspace(self) -> 'Optional[WorkspaceFolder]':
+        if self._workspace is None:
+            self._workspace = maybe_get_first_workspace_from_window(self._window)
+            if self._workspace is None and self._projectless_workspace is None:
                 # the projectless fallback will only be set once per window.
-                self._projectless_root_path = get_active_view_path(self._window)
-        return self._project_path or self._projectless_root_path
+                self._projectless_workspace = maybe_get_workspace_from_view(self._window)
+        return self._workspace or self._projectless_workspace
+
+    def get_workspace(self) -> 'Optional[WorkspaceFolder]':
+        return self._workspace or self._projectless_workspace
 
     def get_project_path(self) -> 'Optional[str]':
-        return self._project_path or self._projectless_root_path
+        if self._workspace:
+            return self._workspace.path
+        if self._projectless_workspace:
+            return self._projectless_workspace.path
+        return None
 
     def _end_old_sessions(self) -> None:
-        current_project_path = get_project_path(self._window)
-        if current_project_path != self._project_path:
-            debug('project path changed, ending existing sessions')
-            debug('new path = {}'.format(current_project_path))
+        current_workspace = maybe_get_first_workspace_from_window(self._window)
+        if current_workspace != self._workspace:
+            debug('workspace changed, ending existing sessions')
+            debug('new workspace is', current_workspace)
             self.end_sessions()
-            self._project_path = current_project_path
+            self._workspace = current_workspace
 
     def _apply_workspace_edit(self, params: 'Dict[str, Any]', client: Client, request_id: int) -> None:
         edit = params.get('edit', dict())
@@ -504,7 +519,7 @@ class WindowManager(object):
 
         client.on_notification(
             "textDocument/publishDiagnostics",
-            lambda params: self._diagnostics.handle_client_diagnostics(session.config.name, params))
+            lambda params: self.diagnostics.receive(session.config.name, params))
 
         self._handlers.on_initialized(session.config.name, self._window, client)
 
@@ -562,7 +577,7 @@ class WindowManager(object):
         for view in self._window.views():
             file_name = view.file_name()
             if file_name:
-                self._diagnostics.remove(file_name, config_name)
+                self.diagnostics.remove(file_name, config_name)
 
         debug("session", config_name, "ended")
         if not self._sessions:
@@ -584,14 +599,21 @@ class WindowRegistry(object):
         self._session_starter = session_starter
         self._sublime = sublime
         self._handler_dispatcher = handler_dispatcher
+        self._diagnostics_ui_class = None  # type: Optional[Callable]
+
+    def set_diagnostics_ui(self, ui_class: 'Any') -> None:
+        self._diagnostics_ui_class = ui_class
 
     def lookup(self, window: 'Any') -> WindowManager:
         state = self._windows.get(window.id())
         if state is None:
             window_configs = self._configs.for_window(window)
             window_documents = self._documents.for_window(window, window_configs)
-            state = WindowManager(window, window_configs, window_documents, WindowDiagnostics(), self._session_starter,
-                                  self._sublime, self._handler_dispatcher, lambda: self._on_closed(window))
+            diagnostics_ui = self._diagnostics_ui_class(window,
+                                                        window_documents) if self._diagnostics_ui_class else None
+            state = WindowManager(window, window_configs, window_documents, DiagnosticsStorage(diagnostics_ui),
+                                  self._session_starter, self._sublime,
+                                  self._handler_dispatcher, lambda: self._on_closed(window))
             self._windows[window.id()] = state
         return state
 

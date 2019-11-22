@@ -2,12 +2,10 @@ import unittest
 from .edit import sort_by_application_order, parse_workspace_edit, parse_text_edit
 from .test_protocol import LSP_RANGE
 
-try:
-    from typing import List, Dict, Optional, Any, Iterable, Tuple
-    from .edit import TextEdit
-    assert List and Dict and Optional and Any and Iterable and Tuple and TextEdit
-except ImportError:
-    pass
+TYPE_CHECKING = False
+if TYPE_CHECKING:
+    from typing import List, Dict, Optional, Any, Iterable
+    assert List and Dict and Optional and Any and Iterable
 
 LSP_TEXT_EDIT = dict(newText='newText', range=LSP_RANGE)
 

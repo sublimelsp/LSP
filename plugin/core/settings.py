@@ -51,11 +51,22 @@ def read_str_setting(settings_obj: sublime.Settings, key: str, default: str) -> 
         return default
 
 
+def read_auto_show_diagnostics_panel_setting(settings_obj: sublime.Settings, key: str, default: str) -> str:
+    val = settings_obj.get(key)
+    if isinstance(val, bool):
+        return 'always' if val else 'never'
+    if isinstance(val, str):
+        return val
+    else:
+        return default
+
+
 def update_settings(settings: Settings, settings_obj: sublime.Settings) -> None:
     settings.show_view_status = read_bool_setting(settings_obj, "show_view_status", True)
-    settings.auto_show_diagnostics_panel = read_bool_setting(settings_obj, "auto_show_diagnostics_panel", True)
+    settings.auto_show_diagnostics_panel = read_auto_show_diagnostics_panel_setting(settings_obj,
+                                                                                    "auto_show_diagnostics_panel",
+                                                                                    'always')
     settings.auto_show_diagnostics_panel_level = read_int_setting(settings_obj, "auto_show_diagnostics_panel_level", 3)
-    settings.show_diagnostics_phantoms = read_bool_setting(settings_obj, "show_diagnostics_phantoms", False)
     settings.show_diagnostics_count_in_view_status = read_bool_setting(settings_obj,
                                                                        "show_diagnostics_count_in_view_status", False)
     settings.show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
@@ -70,7 +81,6 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings) -> None:
     settings.only_show_lsp_completions = read_bool_setting(settings_obj, "only_show_lsp_completions", False)
     settings.complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
     settings.completion_hint_type = read_str_setting(settings_obj, "completion_hint_type", "auto")
-    settings.prefer_label_over_filter_text = read_bool_setting(settings_obj, "prefer_label_over_filter_text", False)
     settings.show_references_in_quick_panel = read_bool_setting(settings_obj, "show_references_in_quick_panel", False)
     settings.quick_panel_monospace_font = read_bool_setting(settings_obj, "quick_panel_monospace_font", False)
     settings.disabled_capabilities = read_array_setting(settings_obj, "disabled_capabilities", [])

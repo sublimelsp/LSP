@@ -1,13 +1,13 @@
 import sublime
 import sublime_plugin
 from .core.edit import sort_by_application_order
-try:
-    from typing import List, Dict, Optional, Any, Iterable, Tuple
-    from .core.edit import TextEdit
-    assert List and Dict and Optional and Any and Iterable and Tuple and TextEdit
-except ImportError:
-    pass
 from .core.logging import debug
+
+TYPE_CHECKING = False
+if TYPE_CHECKING:
+    from typing import List, Dict, Optional, Any, Iterable, Tuple
+    TextEdit = Tuple[Tuple[int, int], Tuple[int, int], str]
+    assert List and Dict and Optional and Any and Iterable
 
 
 class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):

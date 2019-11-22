@@ -15,7 +15,7 @@ from .core.registry import session_for_view, client_from_session
 from .core.documents import get_document_position
 from .core.events import global_events
 from .core.protocol import Request
-from .core.popups import popup_css, popup_class
+from .core.popups import popups
 from .core.settings import client_configs, settings
 from .core.signature_help import create_signature_help, SignatureHelp
 assert SignatureHelp
@@ -143,11 +143,11 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
     def _show_popup(self, content: str, point: int) -> None:
         mdpopups.show_popup(self.view,
                             content,
-                            css=popup_css,
+                            css=popups.stylesheet,
                             md=True,
                             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
                             location=point,
-                            wrapper_class=popup_class,
+                            wrapper_class=popups.classname,
                             max_width=800,
                             on_hide=self._on_hide,
                             on_navigate=self._on_hover_navigate)
@@ -156,9 +156,9 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
     def _update_popup(self, content: str) -> None:
         mdpopups.update_popup(self.view,
                               content,
-                              css=popup_css,
+                              css=popups.stylesheet,
                               md=True,
-                              wrapper_class=popup_class)
+                              wrapper_class=popups.classname)
 
     def _on_hide(self) -> None:
         self._visible = False

@@ -4,8 +4,8 @@ import sublime
 import sublime_plugin
 
 try:
-    from typing import Any, List, Dict, Callable, Optional, Union
-    assert Any and List and Dict and Callable and Optional and Union
+    from typing import Any, List, Dict, Callable, Optional
+    assert Any and List and Dict and Callable and Optional
 except ImportError:
     pass
 
@@ -154,7 +154,7 @@ def get_point_diagnostics(view: sublime.View, point: int) -> 'List[Diagnostic]':
     ]
 
 
-def point_diagnostics_by_config(view: sublime.View, x: 'Union[int, sublime.Region]') -> 'Dict[str, List[Diagnostic]]':
+def point_diagnostics_by_config(view: sublime.View, point: int) -> 'Dict[str, List[Diagnostic]]':
     diagnostics_by_config = {}
     if view.window():
         file_name = view.file_name()
@@ -162,21 +162,12 @@ def point_diagnostics_by_config(view: sublime.View, x: 'Union[int, sublime.Regio
             window_diagnostics = windows.lookup(view.window())._diagnostics.get()
             file_diagnostics = window_diagnostics.get(file_name, {})
             for config_name, diagnostics in file_diagnostics.items():
-                point_diagnostics = []  # type: List[Diagnostic]
-                if isinstance(x, sublime.Region) and x.begin() != x.end():
-                    point_diagnostics = [
-                        diagnostic for diagnostic in diagnostics
-                        if x.intersects(range_to_region(diagnostic.range, view))
-                    ]
-                else:
-                    point_diagnostics = [
-                        diagnostic for diagnostic in diagnostics
-                        if range_to_region(diagnostic.range, view).contains(x)
-                    ]
-
+                point_diagnostics = [
+                    diagnostic for diagnostic in diagnostics
+                    if range_to_region(diagnostic.range, view).contains(point)
+                ]
                 if point_diagnostics:
                     diagnostics_by_config[config_name] = point_diagnostics
-                    print('diagnostics count is', len(point_diagnostics), 'for', config_name)
 
     return diagnostics_by_config
 

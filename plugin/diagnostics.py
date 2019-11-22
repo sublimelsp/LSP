@@ -209,11 +209,11 @@ class DiagnosticsPhantoms(object):
     def create_phantom(self, view: sublime.View, diagnostic: Diagnostic) -> sublime.Phantom:
         region = range_to_region(diagnostic.range, view)
         line = "[{}] {}".format(diagnostic.source, diagnostic.message) if diagnostic.source else diagnostic.message
-        message = "<br>".join(html.escape(line, quote=False) for line in line.splitlines())
+        message = "<p>" + "<br>".join(html.escape(line, quote=False) for line in line.splitlines()) + "</p>"
 
         additional_infos = "<br>".join([self.format_diagnostic_related_info(info) for info in diagnostic.related_info])
         severity = "error" if diagnostic.severity == DiagnosticSeverity.Error else "warning"
-        content = message + "<br>" + additional_infos if additional_infos else message
+        content = message + "<p>" + additional_infos + "</p>" if additional_infos else message
         markup = self.create_phantom_html(content, severity)
         return sublime.Phantom(
             region,
@@ -245,6 +245,7 @@ class DiagnosticsPhantoms(object):
         stylesheet = sublime.load_resource("Packages/LSP/phantoms.css")
         return """<body id=inline-error>
                     <style>{}</style>
+                    <div class="{}-arrow"></div>
                     <div class="{} container">
                         <div class="toolbar">
                             <a href="hide">×</a>
@@ -253,7 +254,7 @@ class DiagnosticsPhantoms(object):
                         </div>
                         <div class="content">{}</div>
                     </div>
-                </body>""".format(stylesheet, severity, content)
+                </body>""".format(stylesheet, severity, severity, content)
 
     def clear(self) -> None:
         if self._last_phantom_set:

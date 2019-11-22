@@ -213,7 +213,7 @@ class DiagnosticsPhantoms(object):
 
         additional_infos = "<br>".join([self.format_diagnostic_related_info(info) for info in diagnostic.related_info])
         severity = "error" if diagnostic.severity == DiagnosticSeverity.Error else "warning"
-        content = message + "<p>" + additional_infos + "</p>" if additional_infos else message
+        content = message + "<p class='additional'>" + additional_infos + "</p>" if additional_infos else message
         markup = self.create_phantom_html(content, severity)
         return sublime.Phantom(
             region,

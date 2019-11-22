@@ -12,9 +12,16 @@ div.warning-arrow {
 }
 div.container {
     margin: 0;
+    border-radius: 0 0.2rem 0.2rem 0.2rem;
 }
 div.content {
     padding: 0.4rem 0.4rem 0.4rem 0.7rem;
+}
+div.content p {
+    margin: 0.2rem;
+}
+div.content p.additional {
+    margin-top: 0.7rem;
 }
 div.toolbar {
     padding: 0.2rem 0.7rem 0.2rem 0.7rem;

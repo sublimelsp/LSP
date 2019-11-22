@@ -63,8 +63,9 @@ class CodeActionsManager(object):
         else:
             self._requests.clear()
             if diagnostics_by_config is None:
-                diagnostics_by_config = point_diagnostics_by_config(view, point)
-            self._requests[current_location] = request_code_actions(view, point, actions_handler)
+                diagnostics_by_config = point_diagnostics_by_config(view, view.sel()[0])
+                print('here are diagnostics', diagnostics_by_config)
+            self._requests[current_location] = request_code_actions(view, diagnostics_by_config, point, actions_handler)
 
     def get_location_key(self, view: sublime.View, point: int) -> str:
         return "{}#{}:{}".format(view.file_name(), view.change_count(), point)
@@ -73,13 +74,7 @@ class CodeActionsManager(object):
 actions_manager = CodeActionsManager()
 
 
-def request_code_actions(view: sublime.View, point: int,
-                         actions_handler: 'Callable[[CodeActionsByConfigName], None]') -> 'CodeActionsAtLocation':
-    diagnostics_by_config = point_diagnostics_by_config(view, point)
-    return request_code_actions_with_diagnostics(view, diagnostics_by_config, point, actions_handler)
-
-
-def request_code_actions_with_diagnostics(view: sublime.View, diagnostics_by_config: 'Dict[str, List[Diagnostic]]',
+def request_code_actions(view: sublime.View, diagnostics_by_config: 'Dict[str, List[Diagnostic]]',
                                           point: int, actions_handler: 'Callable[[CodeActionsByConfigName], None]'
                                           ) -> 'CodeActionsAtLocation':
 
@@ -88,26 +83,37 @@ def request_code_actions_with_diagnostics(view: sublime.View, diagnostics_by_con
     for session in sessions_for_view(view, point):
 
         if session.has_capability('codeActionProvider'):
+            point_diagnostics = None
             if session.config.name in diagnostics_by_config:
                 point_diagnostics = diagnostics_by_config[session.config.name]
-                file_name = view.file_name()
-                relevant_range = point_diagnostics[0].range if point_diagnostics else region_to_range(
-                    view,
-                    view.sel()[0])
-                if file_name:
-                    params = {
-                        "textDocument": {
-                            "uri": filename_to_uri(file_name)
-                        },
-                        "range": relevant_range.to_lsp(),
-                        "context": {
-                            "diagnostics": list(diagnostic.to_lsp() for diagnostic in point_diagnostics)
-                        }
+                print('point diagnostics for', session.config.name, point_diagnostics)
+
+            file_name = view.file_name()
+
+            range = region_to_range(
+                view,
+                view.sel()[0]
+            )
+
+            diagnostics = []  # type: 'List[Dict[str, Any]]'
+            if point_diagnostics:
+                diagnostics = list(diagnostic.to_lsp() for diagnostic in point_diagnostics)
+
+            print('send len diagnostics', len(diagnostics))
+            if file_name:
+                params = {
+                    "textDocument": {
+                        "uri": filename_to_uri(file_name)
+                    },
+                    "range": range.to_lsp(),
+                    "context": {
+                        "diagnostics": diagnostics
                     }
-                    if session.client:
-                        session.client.send_request(
-                            Request.codeAction(params),
-                            actions_at_location.collect(session.config.name))
+                }
+                if session.client:
+                    session.client.send_request(
+                        Request.codeAction(params),
+                        actions_at_location.collect(session.config.name))
     return actions_at_location
 
 

@@ -1,12 +1,18 @@
 import unittest
 from .diagnostics import DiagnosticsStorage, DiagnosticsWalker
-from .protocol import Diagnostic, Range, Point
+from .protocol import Diagnostic
 from .test_protocol import LSP_MINIMAL_DIAGNOSTIC
+
+TYPE_CHECKING = False
+if TYPE_CHECKING:
+    from typing import List, Dict
+    assert List and Dict
 
 
 test_file_path = "/test.py"
 test_file_uri = "file:///test.py"
 minimal_diagnostic = Diagnostic.from_lsp(LSP_MINIMAL_DIAGNOSTIC)
+
 
 def make_update(diagnostics: 'List[dict]') -> dict:
     return {
@@ -96,7 +102,7 @@ class DiagnosticsWalkerTests(unittest.TestCase):
 
         walk = unittest.mock.Mock()
         walker = DiagnosticsWalker([walk])
-        diags = {}
+        diags = {}  # type: Dict[str, Dict[str, List[Diagnostic]]]
         diags[test_file_path] = {}
         diags[test_file_path]["test_server"] = [minimal_diagnostic]
         walker.walk(diags)
@@ -105,4 +111,3 @@ class DiagnosticsWalkerTests(unittest.TestCase):
         walk.begin_file.assert_called_with(test_file_path)
         walk.diagnostic.assert_called_with(minimal_diagnostic)
         walk.end.assert_called_once()
-

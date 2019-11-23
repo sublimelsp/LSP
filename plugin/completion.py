@@ -218,13 +218,14 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         if not self.initialized:
             self.initialize()
 
+        flags = 0
+        if settings.only_show_lsp_completions:
+            flags |= sublime.INHIBIT_WORD_COMPLETIONS
+            flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
+
         if self.enabled:
             if not self.view.match_selector(locations[0], self.auto_complete_selector):
-                return (
-                    [],
-                    0 if not settings.only_show_lsp_completions
-                    else sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
-                )
+                return ([], flags)
 
             reuse_completion = self.is_same_completion(prefix, locations)
             if self.state == CompletionState.IDLE:
@@ -241,11 +242,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             elif self.state == CompletionState.APPLYING:
                 self.state = CompletionState.IDLE
 
-            return (
-                self.completions,
-                0 if not settings.only_show_lsp_completions
-                else sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
-            )
+            return (self.completions, flags)
 
         return None
 
@@ -287,10 +284,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 self.apply_additional_edits(additional_edits)
 
     def apply_additional_edits(self, additional_edits: 'List[Dict]') -> None:
-            edits = list(parse_text_edit(additional_edit) for additional_edit in additional_edits)
-            debug('applying additional edits:', edits)
-            self.view.run_command("lsp_apply_document_edit", {'changes': edits})
-            sublime.status_message('Applied additional edits for completion')
+        edits = list(parse_text_edit(additional_edit) for additional_edit in additional_edits)
+        debug('applying additional edits:', edits)
+        self.view.run_command("lsp_apply_document_edit", {'changes': edits})
+        sublime.status_message('Applied additional edits for completion')
 
     def handle_response(self, response: 'Optional[Union[Dict,List]]') -> None:
         if self.state == CompletionState.REQUESTING:

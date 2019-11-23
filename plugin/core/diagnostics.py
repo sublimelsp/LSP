@@ -38,7 +38,7 @@ class DiagnosticsStorage(object):
     def get_by_file(self, file_path: str) -> 'Dict[str, List[Diagnostic]]':
         return self._diagnostics.get(file_path, {})
 
-    def update(self, file_path: str, client_name: str, diagnostics: 'List[Diagnostic]') -> bool:
+    def _update(self, file_path: str, client_name: str, diagnostics: 'List[Diagnostic]') -> bool:
         updated = False
         if diagnostics:
             file_diagnostics = self._diagnostics.setdefault(file_path, dict())
@@ -56,8 +56,8 @@ class DiagnosticsStorage(object):
     def clear(self) -> None:
         for file_path in list(self._diagnostics):
             for client_name in list(self._diagnostics[file_path]):
-                if self.update(file_path, client_name, []):
-                    self.notify(file_path, client_name)
+                if self._update(file_path, client_name, []):
+                    self._notify(file_path, client_name)
 
     def receive(self, client_name: str, update: dict) -> None:
         maybe_file_uri = update.get('uri')
@@ -67,17 +67,17 @@ class DiagnosticsStorage(object):
             diagnostics = list(
                 Diagnostic.from_lsp(item) for item in update.get('diagnostics', []))
 
-            if self.update(file_path, client_name, diagnostics):
-                self.notify(file_path, client_name)
+            if self._update(file_path, client_name, diagnostics):
+                self._notify(file_path, client_name)
         else:
             debug('missing uri in diagnostics update')
 
-    def notify(self, file_path: str, client_name: str) -> None:
+    def _notify(self, file_path: str, client_name: str) -> None:
         if self._updatable:
             self._updatable.update(file_path, client_name, self._diagnostics)
 
     def remove(self, file_path: str, client_name: str) -> None:
-        self.update(file_path, client_name, [])
+        self._update(file_path, client_name, [])
 
     def select_next(self) -> None:
         if self._updatable:

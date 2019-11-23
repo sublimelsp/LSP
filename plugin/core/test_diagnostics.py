@@ -1,9 +1,18 @@
 import unittest
 from .diagnostics import DiagnosticsStorage
 from .protocol import Diagnostic, Range, Point
-# from .configurations import WindowConfigManager, _merge_dicts, ConfigManager, is_supported_syntax
-# from .test_session import test_config, test_language
 from .test_protocol import LSP_MINIMAL_DIAGNOSTIC
+
+
+test_file_path = "/test.py"
+test_file_uri = "file:///test.py"
+minimal_diagnostic = Diagnostic.from_lsp(LSP_MINIMAL_DIAGNOSTIC)
+
+def make_update(diagnostics: 'List[dict]') -> dict:
+    return {
+        'uri': 'file:///test.py',
+        'diagnostics': diagnostics
+    }
 
 
 class DiagnosticsStorageTest(unittest.TestCase):
@@ -11,45 +20,30 @@ class DiagnosticsStorageTest(unittest.TestCase):
     def test_empty_diagnostics(self):
         wd = DiagnosticsStorage(None)
         self.assertEqual(wd.get_by_file(__file__), {})
+        self.assertEqual(wd.get(), {})
 
-        # todo: remove
+    def test_receive_diagnostics(self):
+        ui = unittest.mock.Mock()
+        wd = DiagnosticsStorage(ui)
 
-    def test_updated_diagnostics(self):
-        wd = DiagnosticsStorage(None)
-
-        test_file_path = "test.py"
-        diag = Diagnostic('message', Range(Point(0, 0), Point(1, 1)), 1, None, dict(), [])
-
-        wd.update(test_file_path, "test_server", [diag])
+        wd.receive("test_server", make_update([LSP_MINIMAL_DIAGNOSTIC]))
         view_diags = wd.get_by_file(test_file_path)
         self.assertEqual(len(view_diags["test_server"]), 1)
-        self.assertEqual(view_diags["test_server"][0], diag)
+        self.assertEqual(view_diags["test_server"][0].message, LSP_MINIMAL_DIAGNOSTIC['message'])
+        self.assertIn(test_file_path, wd.get())
+        ui.update.assert_called_with(test_file_path, "test_server", {'/test.py': {'test_server': [minimal_diagnostic]}})
 
-        wd.update(test_file_path, "test_server", [])
+        wd.receive("test_server", make_update([]))
         view_diags = wd.get_by_file(test_file_path)
         self.assertEqual(len(view_diags), 0)
-
-    def test_handle_diagnostics_update(self):
-        wd = DiagnosticsStorage(None)
-
-        test_file_path = "/test.py"
-        update = {
-            'uri': 'file:///test.py',
-            'diagnostics': [LSP_MINIMAL_DIAGNOSTIC]
-        }
-
-        wd.receive("test_server", update)
-
-        view_diags = wd.get_by_file(test_file_path)
-        self.assertEqual(len(view_diags["test_server"]), 1)
+        self.assertEqual(wd.get(), {})
+        ui.update.assert_called_with(test_file_path, "test_server", {})
 
     def test_remove_diagnostics(self):
-        wd = DiagnosticsStorage(None)
+        ui = unittest.mock.Mock()
+        wd = DiagnosticsStorage(ui)
 
-        test_file_path = "test.py"
-        diag = Diagnostic('message', Range(Point(0, 0), Point(1, 1)), 1, None, dict(), [])
-
-        wd.update(test_file_path, "test_server", [diag])
+        wd.receive("test_server", make_update([LSP_MINIMAL_DIAGNOSTIC]))
         view_diags = wd.get_by_file(test_file_path)
         self.assertEqual(len(view_diags["test_server"]), 1)
 
@@ -57,3 +51,31 @@ class DiagnosticsStorageTest(unittest.TestCase):
 
         view_diags = wd.get_by_file(test_file_path)
         self.assertEqual(len(view_diags), 0)
+        self.assertEqual(wd.get(), {})
+        ui.update.assert_called_with(test_file_path, "test_server", {})
+
+    def test_clear_diagnostics(self):
+        ui = unittest.mock.Mock()
+        wd = DiagnosticsStorage(ui)
+
+        wd.receive("test_server", make_update([LSP_MINIMAL_DIAGNOSTIC]))
+        wd.clear()
+
+        view_diags = wd.get_by_file(test_file_path)
+        self.assertEqual(len(view_diags), 0)
+        self.assertEqual(wd.get(), {})
+        ui.update.assert_called_with(test_file_path, "test_server", {})
+
+    def test_select(self):
+        ui = unittest.mock.Mock()
+        wd = DiagnosticsStorage(ui)
+
+        wd.select_next()
+        ui.select.assert_called_with(1)
+
+        wd.select_previous()
+        ui.select.assert_called_with(-1)
+
+        wd.select_none()
+        ui.deselect.assert_called()
+

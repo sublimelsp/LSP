@@ -1,11 +1,10 @@
 import sublime
 
-from .core.registry import client_for_view, LspTextCommand
+from .core.registry import LspTextCommand
 from .core.protocol import Request, Point
 from .core.documents import get_document_position, get_position, is_at_word
 from .core.url import uri_to_filename
 from .core.logging import debug
-from .core.types import ViewLike
 from Default.history_list import get_jump_history_for_view
 
 try:
@@ -17,17 +16,17 @@ except ImportError:
 
 class LspGotoCommand(LspTextCommand):
 
-    def __init__(self, view: ViewLike) -> None:
+    def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self.goto_kind = "definition"
 
-    def is_enabled(self, event=None):
+    def is_enabled(self, event: 'Optional[dict]' = None) -> bool:
         if self.has_client_with_capability(self.goto_kind + "Provider"):
             return is_at_word(self.view, event)
         return False
 
-    def run(self, _, event=None) -> None:
-        client = client_for_view(self.view)
+    def run(self, edit: sublime.Edit, event: 'Optional[dict]' = None) -> None:
+        client = self.client_with_capability(self.goto_kind + "Provider")
         if client:
             pos = get_position(self.view, event)
             document_position = get_document_position(self.view, pos)
@@ -40,7 +39,7 @@ class LspGotoCommand(LspTextCommand):
                 client.send_request(
                     request, lambda response: self.handle_response(response, pos))
 
-    def handle_response(self, response: 'Optional[Any]', position) -> None:
+    def handle_response(self, response: 'Optional[Any]', position: int) -> None:
         window = sublime.active_window()
         if response:
             # Save to jump back history.
@@ -58,33 +57,33 @@ class LspGotoCommand(LspTextCommand):
                                    "reverting to Sublime's built-in Goto Definition")
             window.run_command("goto_definition")
 
-    def want_event(self):
+    def want_event(self) -> bool:
         return True
 
 
 class LspSymbolDefinitionCommand(LspGotoCommand):
 
-    def __init__(self, view: ViewLike) -> None:
+    def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self.goto_kind = "definition"
 
 
 class LspSymbolTypeDefinitionCommand(LspGotoCommand):
 
-    def __init__(self, view: ViewLike) -> None:
+    def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self.goto_kind = "typeDefinition"
 
 
 class LspSymbolDeclarationCommand(LspGotoCommand):
 
-    def __init__(self, view: ViewLike) -> None:
+    def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self.goto_kind = "declaration"
 
 
 class LspSymbolImplementationCommand(LspGotoCommand):
 
-    def __init__(self, view: ViewLike) -> None:
+    def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self.goto_kind = "implementation"

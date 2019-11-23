@@ -1,23 +1,18 @@
-from .rpc import (format_request, Client)
-from .transports import Transport
-from .protocol import (Request, Notification)
-from .types import Settings
 from .logging import set_exception_logging
-import unittest
+from .protocol import Notification
+from .protocol import Request
+from .rpc import Client
+from .rpc import format_request
+from .test_mocks import MockSettings
+from .transports import Transport
+from .types import Settings
 import json
+import unittest
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
     assert Any and List and Dict and Tuple and Callable and Optional
 except ImportError:
     pass
-
-
-class MockSettings(Settings):
-
-    def __init__(self):
-        Settings.__init__(self)
-        self.log_payloads = False
-        self.show_view_status = True
 
 
 def return_empty_dict_result(message):
@@ -75,7 +70,7 @@ class ClientTest(unittest.TestCase):
 
     def test_can_create_client(self):
         transport = MockTransport()
-        client = Client(transport, dict())
+        client = Client(transport, Settings())
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
 

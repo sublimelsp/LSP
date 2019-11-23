@@ -1,0 +1,29 @@
+=> 0.9.0
+
+Features:
+
+* Color highlighting! (eg. in CSS files) (@predragnikolic)
+* Improved documentation and/or built-in settings for c++, ruby, elm, omnisharp, php/intelephense, python, julia, vue.
+* Hover is now enabled on any word, including strings and comments
+* Set boolean 'lsp_active' setting on views to allow LSP-enabled key bindings (@frou, #651)
+* A `disabled_capabilities` setting to disable features like "hover", "completion", "documentHighlight", "colorProvider", "signatureHelp".
+
+Fixes:
+
+* Fix RuntimeError when opening views while starting session (#682)
+* Typo in "Implementation" in hover popup (@kud)
+* Stop blocking sublime's completions within strings (#686)
+* Render signature help documentation with markdown (#670)
+* Reduce package size from 725kb to 120kb (@jfcherng)
+* Prevent zombie server processes with extra locking/waiting at startup and shutdown.
+* Render newlines in diagnosics content shown in hover popup (@predragnikolic)
+* Stop overriding user's completion trigger chars.
+* Pick the first server with a capability when running multiple servers in a document (#562)
+* Fix accidental server restarts when running without a project folder by never updating the initial folder (#668)
+* Restore log_server setting (@simonklb)
+* Handle document edits after the last line by "creating" a next line (#690)
+
+
+See https://github.com/tomv564/LSP/releases/tag/0.9.0 for full update details.
+
+Thanks to all contributors & reporters!

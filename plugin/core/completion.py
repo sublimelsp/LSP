@@ -31,10 +31,7 @@ def get_completion_hint(item: dict, settings: 'Settings') -> 'Optional[str]':
 
 def format_completion(item: dict, word_col: int, settings: 'Settings') -> 'Tuple[str, str]':
     # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
-    if settings.prefer_label_over_filter_text:
-        trigger = item["label"]
-    else:
-        trigger = item.get("filterText") or item["label"]
+    trigger = item["label"]
 
     hint = get_completion_hint(item, settings)
 
@@ -54,8 +51,7 @@ def format_completion(item: dict, word_col: int, settings: 'Settings') -> 'Tuple
         elif trigger[0] == ' ' or trigger[0] == '•':
             trigger = trigger[1:]  # remove clangd insertion indicator
         else:
-            debug("replacement prefix does not match trigger!")
-            replacement = item.get("insertText") or trigger
+            debug("WARNING: Replacement prefix does not match trigger '{}'".format(trigger))
 
     if len(replacement) > 0 and replacement[0] == '$':  # sublime needs leading '$' escaped.
         replacement = '\\$' + replacement[1:]
@@ -70,8 +66,8 @@ def text_edit_text(item: dict, word_col: int) -> 'Optional[str]':
         if edit_range and edit_text:
             edit_range = Range.from_lsp(edit_range)
 
-            debug('textEdit from col {}, {} applied at col {}'.format(
-                edit_range.start.col, edit_range.end.col, word_col))
+            # debug('textEdit from col {}, {} applied at col {}'.format(
+            #     edit_range.start.col, edit_range.end.col, word_col))
 
             if edit_range.start.col <= word_col:
                 # if edit starts at current word, we can use it.

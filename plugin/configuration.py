@@ -8,7 +8,7 @@ from .core.configurations import (
     create_window_configs,
     get_global_client_config
 )
-from .core.registry import config_for_scope, windows
+from .core.registry import configs_for_scope, windows
 from .core.events import global_events
 from .core.workspace import enable_in_project, disable_in_project
 
@@ -19,8 +19,9 @@ except ImportError:
     pass
 
 
-def detect_supportable_view(view: sublime.View):
-    config = config_for_scope(view)
+# todo: delete this feature
+def detect_supportable_view(view: sublime.View) -> None:
+    config = configs_for_scope(view)
     if not config:
         available_config = get_global_client_config(view, client_configs.all)
         if available_config:
@@ -35,7 +36,7 @@ def extract_syntax_name(syntax_file: str) -> str:
     return syntax_file.split('/')[-1].split('.')[0]
 
 
-def show_enable_config(view: sublime.View, config: ClientConfig):
+def show_enable_config(view: sublime.View, config: ClientConfig) -> None:
     syntax = str(view.settings().get("syntax", ""))
     message = "LSP has found a language server for {}. Run \"Setup Language Server\" to start using it".format(
         extract_syntax_name(syntax)
@@ -46,7 +47,7 @@ def show_enable_config(view: sublime.View, config: ClientConfig):
 
 
 class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
-    def run(self):
+    def run(self) -> None:
         self._items = []  # type: List[List[str]]
         for config in client_configs.all:
             if not config.enabled:
@@ -60,20 +61,19 @@ class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
         else:
             self.window.status_message("No config available to enable")
 
-    def _on_done(self, index):
+    def _on_done(self, index: int) -> None:
         if index > -1:
             config_name = self._items[index][0]
 
             # too much work
             client_configs.enable(config_name)
             wm = windows.lookup(self.window)
-            wm.update_configs(create_window_configs(self.window, client_configs.all))
             sublime.set_timeout_async(lambda: wm.start_active_views(), 500)
             self.window.status_message("{} enabled, starting server...".format(config_name))
 
 
 class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
-    def run(self):
+    def run(self) -> None:
         self._items = []  # type: List[List[str]]
         wm = windows.lookup(self.window)
         for config in wm._configs.all:
@@ -89,7 +89,7 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         else:
             self.window.status_message("No config available to enable")
 
-    def _on_done(self, index):
+    def _on_done(self, index: int) -> None:
         if index > -1:
             config_name = self._items[index][0]
             wm = windows.lookup(self.window)
@@ -100,7 +100,7 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
 
 
 class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
-    def run(self):
+    def run(self) -> None:
         self._items = []  # type: List[List[str]]
         for config in client_configs.all:
             if config.enabled:
@@ -114,18 +114,17 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
         else:
             self.window.status_message("No config available to disable")
 
-    def _on_done(self, index):
+    def _on_done(self, index: int) -> None:
         if index > -1:
             config_name = self._items[index][0]
             client_configs.disable(config_name)
             wm = windows.lookup(self.window)
-            wm.update_configs(create_window_configs(self.window, client_configs.all))
             sublime.set_timeout_async(lambda: wm.end_session(config_name), 500)
             self.window.status_message("{} disabled, shutting down server...".format(config_name))
 
 
 class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
-    def run(self):
+    def run(self) -> None:
         wm = windows.lookup(self.window)
         self._items = []  # type: List[List[str]]
         for config in wm._configs.all:
@@ -140,7 +139,7 @@ class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         else:
             self.window.status_message("No config available to disable")
 
-    def _on_done(self, index):
+    def _on_done(self, index: int) -> None:
         if index > -1:
             config_name = self._items[index][0]
             wm = windows.lookup(self.window)
@@ -167,41 +166,42 @@ Visit [langserver.org](https://langserver.org) to find out if a language server 
 
 
 class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
-    def run(self):
+    def run(self) -> None:
         view = self.window.active_view()
-        syntax = view.settings().get("syntax")
-        available_config = get_global_client_config(view, client_configs.all)
+        if view:
+            syntax = view.settings().get("syntax") or ""
+            available_config = get_global_client_config(view, client_configs.all)
 
-        syntax_name = extract_syntax_name(syntax)
-        title = "# Language Server for {}\n".format(syntax_name)
+            syntax_name = extract_syntax_name(syntax)
+            title = "# Language Server for {}\n".format(syntax_name)
 
-        if available_config:
-            content = supported_syntax_template.format(syntax_name)
-        else:
-            title = "# No Language Server support"
-            content = unsupported_syntax_template.format(syntax_name)
+            if available_config:
+                content = supported_syntax_template.format(syntax_name)
+            else:
+                title = "# No Language Server support"
+                content = unsupported_syntax_template.format(syntax_name)
 
-        mdpopups.show_popup(
-            view,
-            "\n".join([title, content]),
-            css='''
-                .lsp_documentation {
-                    margin: 1rem 1rem 0.5rem 1rem;
-                    font-family: system;
-                }
-                .lsp_documentation h1,
-                .lsp_documentation p {
-                    margin: 0 0 0.5rem 0;
-                }
-            ''',
-            md=True,
-            wrapper_class="lsp_documentation",
-            max_width=800,
-            max_height=600,
-            on_navigate=self.on_hover_navigate
-        )
+            mdpopups.show_popup(
+                view,
+                "\n".join([title, content]),
+                css='''
+                    .lsp_documentation {
+                        margin: 1rem 1rem 0.5rem 1rem;
+                        font-family: system;
+                    }
+                    .lsp_documentation h1,
+                    .lsp_documentation p {
+                        margin: 0 0 0.5rem 0;
+                    }
+                ''',
+                md=True,
+                wrapper_class="lsp_documentation",
+                max_width=800,
+                max_height=600,
+                on_navigate=self.on_hover_navigate
+            )
 
-    def on_hover_navigate(self, href):
+    def on_hover_navigate(self, href: str) -> None:
         if href == "#enable_globally":
             self.window.run_command("lsp_enable_language_server_globally")
         elif href == "#enable_project":

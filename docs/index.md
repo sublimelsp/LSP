@@ -28,44 +28,9 @@ Older flow-language-server: [github](https://github.com/flowtype/flow-language-s
 
 ### Vue (Javascript)<a name="vue"></a>
 
-See: [npm package](https://www.npmjs.com/package/vue-language-server)
+See: [LSP-vue](https://packagecontrol.io/packages/LSP-vue)
 
-Client configuration:
-```
-"vue-ls":{
-  "command": [
-    "vls"
-    // note: you may need to use the absolute path to the language server binary
-  ],
-  "enabled": true,
-  "languageId": "vue",
-  "scopes": ["text.html.vue"],
-  "syntaxes": ["Vue Component"],
-  "initializationOptions": {
-    "config": {
-      "vetur": {
-        "useWorkspaceDependencies": false,
-        "validation": { "template": true, "style": true, "script": true },
-        "completion": { "autoImport": false, "useScaffoldSnippets": false, "tagCasing": "kebab" },
-        "format": {
-          "defaultFormatter": {"js": "none", "ts": "none"},
-          "defaultFormatterOptions": {},
-          "scriptInitialIndent": false,
-          "styleInitialIndent": false
-        }
-      },
-      "css": {},
-      "html": {"suggest": {} },
-      "javascript": {"format": {} },
-      "typescript": {"format": {} },
-      "emmet": {},
-      "stylusSupremacy": {}
-    }
-  }
-}
-```
-
-Be sure to install "Vue Syntax Highlight" from Package Control.
+Be sure to install [Vue Syntax Highlight](https://packagecontrol.io/packages/Vue%20Syntax%20Highlight) from Package Control.
 
 ### Python<a name="python"></a>
 
@@ -211,12 +176,10 @@ Add to LSP settings' clients:
     ],
     "syntaxes":
     [
-        "Packages/Elm Language Support/Syntaxes/Elm.sublime-syntax"
+        "Packages/Elm Syntax Highlighting/src/elm.sublime-syntax"
     ],
     "initializationOptions": {
-        "elmPath": "elm",
-        "elmFormatPath": "elm-format",
-        "elmTestPath": "elm-test"
+        "elmAnalyseTrigger": "change"
     }
 }
 ```
@@ -303,6 +266,26 @@ Requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUI
 Additionally, install the [Kotlin sublime package](https://github.com/vkostyukov/kotlin-sublime-package) for syntax highlighting.
 
 
+### Julia<a name="julia">
+
+
+Install the LanguageServer package from the Julia repl.
+
+Install the [LSP-julia](https://github.com/randy3k/LSP-julia) sublime package from package control.
+
+Or instead of LSP-julia, add the following client configuration:
+
+```json
+"julials":
+{
+  "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"],
+  "languageId": "julia",
+  "scopes": ["source.julia"],
+  "syntaxes": ["Packages/Julia/Julia.sublime-syntax"],
+  "settings": {"runlinter": true}
+}
+```
+
 ### Lua<a name="lua">
 
 1. Download the [VSCode extension](https://marketplace.visualstudio.com/items?itemName=sumneko.lua)
@@ -330,11 +313,100 @@ Additionally, install the [Kotlin sublime package](https://github.com/vkostyukov
 ```
 alternatively you can use the less maintained [lua-lsp](https://github.com/Alloyed/lua-lsp)
 
-### Bash
+
+### Lisp<a name="lisp"
+
+1. Install [cc-lsp](https://github.com/cxxxr/cl-lsp) using Roswell
+2. Add this configuration to your clients in the LSP settings:
+```json
+"cc-lsp":
+{
+    "command":
+    [
+        "cl-lsp",
+        "stdio"
+    ],
+    "enabled": true,
+    "languageId": "lisp",
+    "scopes":
+    [
+        "source.lisp",
+    ],
+    "syntaxes":
+    [
+        "Packages/Lisp/Lisp.sublime-syntax""
+    ]
+}
+```
+
+### Bash<a name="bash">
 
 Install the [bash language server](https://github.com/mads-hartmann/bash-language-server)
 
 `npm i -g bash-language-server`
+
+### PowerShell<a name="powershell">
+
+1. Download and extract the [latest release](https://github.com/PowerShell/PowerShellEditorServices/releases) PowerShellEditorServices
+2. Install the [powershell plugin](https://packagecontrol.io/packages/PowerShell) for syntax highlighting
+3. add these configurations:
+```jsonc
+"powershell-ls":
+{
+  "command":
+  [
+    "PATH/TO/powershell or pwsh",
+    "-NoLogo",
+    "-NoProfile",
+    "-NonInteractive",
+    "-ExecutionPolicy", "Bypass",  // windows only
+    "-Command",
+    "PATH/TO/PowerShellEditorServices/PowerShellEditorServices/Start-EditorServices.ps1",
+    "-LogPath", "PATH/TO/pses.log",  // the path itself is not relevant
+    "-LogLevel", "Normal",
+    "-SessionDetailsPath", "PATH/TO/session.json",  // the path itself is not relevant
+    "-FeatureFlags", "@()",
+    "-HostName", "'Sublime Text'",
+    "-HostProfileId", "subl",
+    "-HostVersion", "1.0.0",
+    "-AdditionalModules", "@()",
+    "-BundledModulesPath", "PATH/TO/PowerShellEditorServices",
+    "-Stdio"
+  ],
+  "enabled": true,
+  "languageId": "powershell",
+  "scopes":
+  [
+    "source.powershell"
+  ],
+  "syntaxes":
+  [
+    "Packages/PowerShell/Support/PowershellSyntax.tmLanguage"
+  ]
+}
+```
+4. make sure powershell help files are up to date by running `Update-Help` in the powershell console (the one you're using in the command)
+
+For more details see this [issue](https://github.com/PowerShell/PowerShellEditorServices/issues/1057)
+
+
+### Terraform<a name="terraform">
+
+1. Download [terraform-lsp](https://github.com/juliosueiras/terraform-lsp/releases) binary and make it available in PATH
+2. add these configurations:
+```json
+"terraform":
+{
+  "command":
+  [
+    "terraform-lsp"
+  ],
+  "enabled": true,
+  "scopes": ["source.terraform"],
+  "syntaxes":  ["Packages/Terraform/Terraform.sublime-syntax"],
+  "languageId": "terraform"
+}
+```
 
 ### XML
 
@@ -458,17 +530,35 @@ or in multi-language form:
 }
 ```
 
-* `command` - specify a full paths, add arguments (if not specified then tcp_port must be specified)
-* `tcp_port` - if not specified then stdin/out are used else sets the tcpport to connect to (if no command is specified then it is assumed that some process is listing on this port)
+Most important:
+
+* `enabled` - enables a language server (default is disabled)
+
+Values that determine if a server should be started and queried for a given document:
+
 * `scopes` - add language flavours, eg. `source.js`, `source.jsx`.
 * `syntaxes` - syntaxes that enable LSP features on a document, eg. `Packages/Babel/JavaScript (Babel).tmLanguage`
 * `languageId` - identifies the language for a document - see https://microsoft.github.io/language-server-protocol/specification#textdocumentitem
 * `languages` - group scope, syntax and languageId together for servers that support more than one language
-* `enabled` - enables a language server (default is disabled)
-* `settings` - per-project settings (equivalent to VS Code's Workspace Settings)
+
+Settings used to start and configure a language server:
+
+* `command` - must be on PATH or specify a full path, add arguments (can be empty if starting manually, then TCP transport must be configured)
 * `env` - dict of environment variables to be injected into the language server's process (eg. PYTHONPATH)
+* `settings` - per-project settings (equivalent to VS Code's Workspace Settings)
 * `initializationOptions` - options to send to the server at startup (rarely used)
 
+The default transport is stdio, but TCP is also supported.
+The port number can be inserted into the server's arguments by adding a `{port}` placeholder in `command`.
+
+**Server-owned port**
+
+Set `tcp_port` and optionally `tcp_host` if server running on another host.
+
+**Editor-owned port** (servers based on vscode-languageserver-node):
+
+Set `tcp_mode` to "host", leave `tcp_port` unset for automatic port selection.
+`tcp_port` can be set if eg. debugging a server. You may want to check out the LSP source and extend the `TCP_CONNECT_TIMEOUT`.
 
 ## Per-project overrides
 

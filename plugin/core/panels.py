@@ -2,8 +2,8 @@ import sublime
 import sublime_plugin
 
 try:
-    from typing import Optional
-    assert Optional
+    from typing import Optional, Any
+    assert Optional, Any
 except ImportError:
     pass
 
@@ -63,7 +63,7 @@ class LspClearPanelCommand(sublime_plugin.TextCommand):
     A clear_panel command to clear the error panel.
     """
 
-    def run(self, edit):
+    def run(self, edit: sublime.Edit) -> None:
         self.view.set_read_only(False)
         self.view.erase(edit, sublime.Region(0, self.view.size()))
         self.view.set_read_only(True)
@@ -74,11 +74,11 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
     A update_panel command to update the error panel with new text.
     """
 
-    def run(self, edit, characters):
+    def run(self, edit: sublime.Edit, characters: 'Optional[str]' = "") -> None:
         # Clear folds
         self.view.unfold(sublime.Region(0, self.view.size()))
 
-        self.view.replace(edit, sublime.Region(0, self.view.size()), characters)
+        self.view.replace(edit, sublime.Region(0, self.view.size()), characters or "")
 
         # Clear the selection
         selection = self.view.sel()

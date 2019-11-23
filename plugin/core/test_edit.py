@@ -2,12 +2,10 @@ import unittest
 from .edit import sort_by_application_order, parse_workspace_edit, parse_text_edit
 from .test_protocol import LSP_RANGE
 
-try:
-    from typing import List, Dict, Optional, Any, Iterable, Tuple
-    from .edit import TextEdit
-    assert List and Dict and Optional and Any and Iterable and Tuple and TextEdit
-except ImportError:
-    pass
+TYPE_CHECKING = False
+if TYPE_CHECKING:
+    from typing import List, Dict, Optional, Any, Iterable
+    assert List and Dict and Optional and Any and Iterable
 
 LSP_TEXT_EDIT = dict(newText='newText', range=LSP_RANGE)
 
@@ -58,14 +56,14 @@ class SortByApplicationOrderTests(unittest.TestCase):
     def test_empty_sort(self):
         self.assertEqual(sort_by_application_order([]), [])
 
-    def test_sorts_backwards(self):
+    def test_sorts_in_application_order(self):
         edits = [
             ((0, 0), (0, 0), 'b'),
             ((0, 0), (0, 0), 'a'),
             ((0, 2), (0, 2), 'c')
         ]
         # expect 'c' (higher start), 'a' now reverse order before 'b'
-        sorted = sort_by_application_order(edits)
-        self.assertEqual(sorted[0][2], 'c')
-        self.assertEqual(sorted[1][2], 'a')
-        self.assertEqual(sorted[2][2], 'b')
+        sorted_edits = sort_by_application_order(edits)
+        self.assertEqual(sorted_edits[0][2], 'b')
+        self.assertEqual(sorted_edits[1][2], 'a')
+        self.assertEqual(sorted_edits[2][2], 'c')

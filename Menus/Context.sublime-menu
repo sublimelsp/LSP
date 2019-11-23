@@ -1,40 +1,44 @@
 [
-    { "caption": "-", "id": "lsp" },
     {
-        "command": "lsp_symbol_references",
-        "caption": "Find Symbol References"
-    },
-    {
-        "command": "lsp_symbol_definition",
-        "caption": "Go To Symbol Definition"
-    },
-    {
-        "command": "lsp_symbol_type_definition",
-        "caption": "Go To Symbol Type Definition"
-    },
-    {
-        "command": "lsp_symbol_declaration",
-        "caption": "Go To Symbol Declaration"
-    },
-    {
-        "command": "lsp_symbol_implementation",
-        "caption": "Go To Symbol Implementation"
-    },
-    {
-        "command": "lsp_symbol_rename",
-        "caption": "Rename Symbol"
-    },
-    {
-        "command": "lsp_code_actions",
-        "caption": "Code Actions"
-    },
-    {
-        "command": "lsp_format_document",
-        "caption": "Format Document"
-    },
-    {
-        "command": "lsp_format_document_range",
-        "caption": "Format Selection"
-    },
-    { "caption": "-", "id": "lsp_end"}
+        "caption": "LSP",
+        "children":
+        [
+            {
+                "command": "lsp_symbol_references",
+                "caption": "Find Symbol References"
+            },
+            {
+                "command": "lsp_symbol_definition",
+                "caption": "Go To Symbol Definition"
+            },
+            {
+                "command": "lsp_symbol_type_definition",
+                "caption": "Go To Symbol Type Definition"
+            },
+            {
+                "command": "lsp_symbol_declaration",
+                "caption": "Go To Symbol Declaration"
+            },
+            {
+                "command": "lsp_symbol_implementation",
+                "caption": "Go To Symbol Implementation"
+            },
+            {
+                "command": "lsp_symbol_rename",
+                "caption": "Rename Symbol"
+            },
+            {
+                "command": "lsp_code_actions",
+                "caption": "Code Actions"
+            },
+            {
+                "command": "lsp_format_document",
+                "caption": "Format Document"
+            },
+            {
+                "command": "lsp_format_document_range",
+                "caption": "Format Selection"
+            }
+        ]
+    }
 ]

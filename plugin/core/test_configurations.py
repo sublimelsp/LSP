@@ -1,7 +1,12 @@
+from .configurations import _merge_dicts
+from .configurations import ConfigManager
+from .configurations import is_supported_syntax
+from .configurations import WindowConfigManager
+from .test_mocks import MockView
+from .test_mocks import MockWindow
+from .test_mocks import TEST_CONFIG
+from .test_mocks import TEST_LANGUAGE
 import unittest
-from .configurations import WindowConfigManager, _merge_dicts, ConfigManager, is_supported_syntax
-from .test_session import test_config, test_language
-from .test_windows import MockView, MockWindow
 
 
 class GlobalConfigManagerTests(unittest.TestCase):
@@ -12,15 +17,15 @@ class GlobalConfigManagerTests(unittest.TestCase):
         self.assertEqual(window_mgr.all, [])
 
     def test_global_config(self):
-        manager = ConfigManager([test_config])
+        manager = ConfigManager([TEST_CONFIG])
         window_mgr = manager.for_window(MockWindow())
-        self.assertEqual(window_mgr.all, [test_config])
+        self.assertEqual(window_mgr.all, [TEST_CONFIG])
 
     def test_override_config(self):
-        manager = ConfigManager([test_config])
-        self.assertTrue(test_config.enabled)
+        manager = ConfigManager([TEST_CONFIG])
+        self.assertTrue(TEST_CONFIG.enabled)
         win = MockWindow()
-        win.set_project_data({'settings': {'LSP': {test_config.name: {"enabled": False}}}})
+        win.set_project_data({'settings': {'LSP': {TEST_CONFIG.name: {"enabled": False}}}})
         window_mgr = manager.for_window(win)
         self.assertFalse(window_mgr.all[0].enabled)
 
@@ -53,14 +58,14 @@ class WindowConfigManagerTests(unittest.TestCase):
 
     def test_with_single_config(self):
         view = MockView(__file__)
-        manager = WindowConfigManager([test_config])
+        manager = WindowConfigManager([TEST_CONFIG])
         self.assertTrue(manager.is_supported(view))
-        self.assertEqual(manager.scope_config(view), test_config)
+        self.assertEqual(list(manager.scope_configs(view)), [TEST_CONFIG])
         self.assertTrue(manager.syntax_supported(view))
-        self.assertEqual(manager.syntax_configs(view), [test_config])
+        self.assertEqual(manager.syntax_configs(view), [TEST_CONFIG])
         lang_configs = manager.syntax_config_languages(view)
         self.assertEqual(len(lang_configs), 1)
-        self.assertEqual(lang_configs[test_config.name].id, test_config.languages[0].id)
+        self.assertEqual(lang_configs[TEST_CONFIG.name].id, TEST_CONFIG.languages[0].id)
 
 
 class IsSupportedSyntaxTests(unittest.TestCase):
@@ -69,5 +74,5 @@ class IsSupportedSyntaxTests(unittest.TestCase):
         self.assertFalse(is_supported_syntax('asdf', []))
 
     def test_single_config(self):
-        self.assertEqual(test_language.syntaxes[0], test_config.languages[0].syntaxes[0])
-        self.assertTrue(is_supported_syntax(test_language.syntaxes[0], [test_config]))
+        self.assertEqual(TEST_LANGUAGE.syntaxes[0], TEST_CONFIG.languages[0].syntaxes[0])
+        self.assertTrue(is_supported_syntax(TEST_LANGUAGE.syntaxes[0], [TEST_CONFIG]))

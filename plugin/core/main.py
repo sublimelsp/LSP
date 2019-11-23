@@ -12,15 +12,20 @@ import sublime
 from .settings import (
     settings, load_settings, unload_settings
 )
-from .logging import set_debug_logging
+from .logging import set_debug_logging, set_server_logging
 from .events import global_events
 from .registry import windows, load_handlers, unload_sessions
 from .panels import destroy_output_panels
+from .popups import popups
+from ..diagnostics import DiagnosticsPresenter
 
 
-def startup():
+def startup() -> None:
     load_settings()
     set_debug_logging(settings.log_debug)
+    set_server_logging(settings.log_server)
+    popups.load_css()
+    windows.set_diagnostics_ui(DiagnosticsPresenter)
     load_handlers()
     global_events.subscribe("view.on_load_async", on_view_activated)
     global_events.subscribe("view.on_activated_async", on_view_activated)
@@ -29,7 +34,7 @@ def startup():
     start_active_window()
 
 
-def shutdown():
+def shutdown() -> None:
     # Also needs to handle package being disabled or removed
     # https://github.com/tomv564/LSP/issues/375
     unload_settings()
@@ -44,13 +49,13 @@ def shutdown():
                 remove_color_boxes(view)
 
 
-def start_active_window():
+def start_active_window() -> None:
     window = sublime.active_window()
     if window:
         windows.lookup(window).start_active_views()
 
 
-def on_view_activated(view: sublime.View):
+def on_view_activated(view: sublime.View) -> None:
     window = view.window()
     if window:
         windows.lookup(window).activate_view(view)

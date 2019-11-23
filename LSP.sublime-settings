@@ -5,7 +5,8 @@
 
   // Open and close the diagnostics panel automatically,
   // depending on available diagnostics.
-  "auto_show_diagnostics_panel": true,
+  // Valid values are "never", "always" and "saved"
+  "auto_show_diagnostics_panel": "saved",
 
   // Open the diagnostics panel automatically
   // when diagnostics level is equal to or less than:
@@ -14,9 +15,6 @@
   // info: 3
   // hint: 4
   "auto_show_diagnostics_panel_level": 3,
-
-  // Show in-line diagnostics using phantoms for unchanged files.
-  "show_diagnostics_phantoms": false,
 
   // Show errors and warnings count in the status bar
   "show_diagnostics_count_in_view_status": false,
@@ -57,8 +55,8 @@
   // Show a bulb in the gutter when code actions are available
   "show_code_actions_bulb": false,
 
-  // Show a box next to the color if the language server provides color support.
-  "show_color_box": true,
+  // Show symbol action links in hover popup if available
+  "show_symbol_action_links": false,
 
   // Request completions for all characters if set to true,
   // or just after trigger characters only otherwise.
@@ -84,6 +82,10 @@
 
   // Use monospace font for the quick panel.
   "quick_panel_monospace_font": false,
+
+  // Disable language client capabilities. Supported values:
+  // "hover", "completion", "colorProvider", "documentHighlight", "signatureHelp"
+  "disabled_capabilities": [],
 
   // Show verbose debug messages in the sublime console.
   "log_debug": false,
@@ -119,6 +121,18 @@
   //
   //     // See: https://github.com/Microsoft/language-server-protocol/issues/213
   //     "languageId": "python",
+  //
+  //     # TCP mode (off unless tcp_mode or tcp_port are set)
+  //
+  //     // Set to "host" if the server connects to the editor. Otherwise, LSP will connect to the server.
+  //     "tcp_mode": "",
+  //
+  //     // Port to connect to. If tcp_mode="host", you likely want to leave this empty so LSP selects a random port.
+  //     // The chosen port can be passed as a server argument using a {port} placeholder.
+  //     "tcp_port": 1234,
+  //
+  //     // Host to connect to if not localhost
+  //     "tcp_host": "",
   //
   //     # Optional settings (key-value pairs):
   //
@@ -313,12 +327,12 @@
         "scopes": ["source.php", "embedding.php"],
         "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
         "languageId": "php",
-        // "initializationOptions": {
+        "initializationOptions": {
         //   "clearCache": false,
-        //   "storagePath": "/tmp/intelephense",
+          "storagePath": null,
         //   "globalStoragePath": "/tmp/intelephense",
         //   "licenceKey": "",
-        // },
+        }
     },
     "reason":
     {
@@ -353,7 +367,7 @@
         "languageId": "javascript"
       }, {
         "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Typescript"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
         "languageId": "typescript"
       }
       ]
@@ -374,7 +388,7 @@
         "languageId": "javascript"
       }, {
         "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Typescript"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
         "languageId": "typescript"
       }
       ]
@@ -384,7 +398,7 @@
       "command": ["typescript-language-server", "--stdio"],
       "languages": [{
         "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Typescript"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
         "languageId": "typescript"
       }]
     },
@@ -406,7 +420,10 @@
     {
       "command": ["gopls"],
       "scopes": ["source.go"],
-      "syntaxes": ["Packages/Go/Go.sublime-syntax"],
+      "syntaxes": [
+        "Packages/Go/Go.sublime-syntax",
+        "Packages/GoSublime/syntax/GoSublime-Go-Recommended.sublime-syntax",
+      ],
       "languageId": "go"
     },
     "jdtls":

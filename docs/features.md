@@ -24,6 +24,7 @@
 **Workspace actions**
 
 * Show Diagnostics Panel: `super+shift+M` / `ctr+alt+M`
+* Next/Previous Diagnostic From panel: `F4` / `shift+F4`
 * Workspace Symbol Search: via command Palette `LSP: workspace symbol`
 
 **Overriding keybindings**
@@ -61,18 +62,22 @@ https://stackoverflow.com/questions/16235706/sublime-3-set-key-map-for-function-
 
 ## Configuring
 
-Global plugin settings and settings defined at project level are merged together.
+### Sublime settings
+
+Add these settings to your Sublime settings, Syntax-specific settings and/or in Project files.
+
+* `lsp_format_on_save` `false` *run the server's formatProvider (if supported) on a document before saving.*
+
+### Package settings (LSP)
 
 * `complete_all_chars` `true` *request completions for all characters, not just trigger characters*
 * `only_show_lsp_completions` `false` *disable sublime word completion and snippets from autocomplete lists*
 * `completion_hint_type` `"auto"` *override automatic completion hints with "detail", "kind" or "none"*
-* `prefer_label_over_filter_text` `false` *always use the "label" key instead of the "filterText" key in CompletionItems*
 * `show_references_in_quick_panel` `false` *show symbol references in Sublime's quick panel instead of the bottom panel*
 * `quick_panel_monospace_font` `false` *use monospace font for the quick panel*
 * `show_status_messages` `true` *show messages in the status bar for a few seconds*
 * `show_view_status` `true` *show permanent language server status in the status bar*
-* `auto_show_diagnostics_panel` `true` *open the diagnostics panel automatically if there are diagnostics*
-* `show_diagnostics_phantoms` `false` *show diagnostics as phantoms while the file has no changes*
+* `auto_show_diagnostics_panel` `always` (`never`, `saved`) *open the diagnostics panel automatically if there are diagnostics*
 * `show_diagnostics_count_in_view_status` `false` *show errors and warnings count in the status bar*
 * `show_diagnostics_in_view_status` `true` *when on a diagnostic with the cursor, show the text in the status bar*
 * `diagnostics_highlight_style` `"underline"` *highlight style of code diagnostics, `"underline"` or `"box"`*
@@ -81,10 +86,12 @@ Global plugin settings and settings defined at project level are merged together
 * `document_highlight_scopes`: *customize your sublime text scopes for document highlighting*
 * `diagnostics_gutter_marker` `"dot"` *gutter marker for code diagnostics: "dot", "circle", "bookmark", "cross" or ""*
 * `show_code_actions_bulb` `false` *show a bulb in the gutter when code actions are available*
-* `show_color_box` `true` *Show a box next to the color if the language server provides color support*
+* `show_symbol_action_links` `false` *show links to symbol actions like go to, references and rename in the hover popup*
+* `disabled_capabilities`, `[]` *Turn off client capabilities (features): "hover", "completion", "documentHighlight", "colorProvider", "signatureHelp"
 * `log_debug` `false` *show debug logging in the sublime console*
 * `log_server` `true` *show server/logMessage notifications from language servers in the console*
 * `log_stderr` `false` *show language server stderr output in the console*
 * `log_payloads` `false` *show full JSON-RPC responses in the console*
+
 
 

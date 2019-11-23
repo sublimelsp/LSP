@@ -3,7 +3,7 @@ import sublime_plugin
 
 from .core.configurations import is_supported_syntax
 from .core.protocol import Request, Range, DocumentHighlightKind
-from .core.registry import session_for_view, client_for_view
+from .core.registry import session_for_view, client_from_session
 from .core.documents import get_document_position
 from .core.settings import settings, client_configs
 from .core.views import range_to_region
@@ -24,7 +24,7 @@ _kind2name = {
 }
 
 
-def remove_highlights(view: sublime.View):
+def remove_highlights(view: sublime.View) -> None:
     for kind in settings.document_highlight_scopes.keys():
         view.erase_regions("lsp_highlight_{}".format(kind))
 
@@ -32,9 +32,14 @@ def remove_highlights(view: sublime.View):
 class DocumentHighlightListener(sublime_plugin.ViewEventListener):
 
     @classmethod
-    def is_applicable(cls, settings):
-        syntax = settings.get('syntax')
-        return syntax and is_supported_syntax(syntax, client_configs.all)
+    def is_applicable(cls, view_settings: dict) -> bool:
+        if 'documentHighlight' in settings.disabled_capabilities:
+            return False
+        syntax = view_settings.get('syntax')
+        if syntax:
+            return is_supported_syntax(syntax, client_configs.all)
+        else:
+            return False
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
@@ -51,9 +56,9 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
 
     def _initialize(self) -> None:
         self._initialized = True
-        session = session_for_view(self.view)
+        session = session_for_view(self.view, "documentHighlightProvider")
         if session:
-            self._enabled = session.get_capability("documentHighlightProvider")
+            self._enabled = True
 
     def _queue(self) -> None:
         current_point = self.view.sel()[0].begin()
@@ -79,7 +84,7 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
         if word_at_sel & SUBLIME_WORD_MASK:
             if self.view.match_selector(point, NO_HIGHLIGHT_SCOPES):
                 return
-            client = client_for_view(self.view)
+            client = client_from_session(session_for_view(self.view, "documentHighlightProvider"))
             if client:
                 params = get_document_position(self.view, point)
                 if params:
@@ -114,5 +119,6 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
         for kind_str, regions in kind2regions.items():
             if regions:
                 scope = settings.document_highlight_scopes.get(kind_str, None)
-                self.view.add_regions("lsp_highlight_{}".format(kind_str),
-                                      regions, scope=scope, flags=flags)
+                if scope:
+                    self.view.add_regions("lsp_highlight_{}".format(kind_str),
+                                          regions, scope=scope, flags=flags)

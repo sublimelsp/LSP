@@ -51,6 +51,16 @@ def state_to_string(state: int) -> str:
     return StateStrings.get(state, '<unknown state: %d>'.format(state))
 
 
+def start_tcp_listener(tcp_port: int) -> socket.socket:
+    sock = socket.socket()
+    sock.bind(('', tcp_port))
+    port = sock.getsockname()[1]
+    sock.settimeout(TCP_CONNECT_TIMEOUT)
+    debug('listening on {}:{}'.format('localhost', port))
+    sock.listen(1)
+    return sock
+
+
 def start_tcp_transport(port: int, host: 'Optional[str]' = None) -> 'Transport':
     start_time = time.time()
     debug('connecting to {}:{}'.format(host or "localhost", port))
@@ -176,6 +186,7 @@ class StdioTransport(Transport):
         Reads JSON responses from process and dispatch them to response_handler
         """
         running = True
+        pid = self.process.pid if self.process else "???"
         state = STATE_HEADERS
         content_length = 0
         while running and self.process and state != STATE_EOF:
@@ -210,7 +221,11 @@ class StdioTransport(Transport):
                 state = STATE_EOF
                 break
 
-        debug("LSP stdout process ended.")
+        debug("process {} stdout ended {}".format(pid, "(still alive)" if self.process else "(terminated)"))
+        if self.process:
+            # We use the stdout thread to block and wait on the exiting process, or zombie processes may be the result.
+            returncode = self.process.wait()
+            debug("process {} exited with code {}".format(pid, returncode))
 
     def send(self, content: str) -> None:
         self.send_queue.put(build_message(content))

@@ -15,10 +15,6 @@
     // Show/Hide Diagnostics Panel
     { "keys": ["super+alt+m"], "command": "lsp_show_diagnostics_panel" },
 
-    // Go To Next/Previous Diagnostics - THIS OVERRIDES DEFAULT SUBLIME KEYBINDINGS
-    // { "keys": ["f4"], "command": "next_result" },
-    // { "keys": ["shift+f4"], "command": "prev_result" },
-
     // Trigger Signature Help
     { "keys": ["super+alt+space"], "command": "noop", "context": [{ "key": "lsp.signature_help", "operator": "equal", "operand": 0}] },
 
@@ -52,6 +48,9 @@
 
     // Document Symbols
     // {"keys": ["UNBOUND"], "command": "lsp_document_symbols"},
+
+    // Workspace Symbols
+    // {"keys": ["UNBOUND"], "command": "lsp_workspace_symbols"},
 
     // Symbol Hover
     // {"keys": ["UNBOUND"], "command": "lsp_hover"},

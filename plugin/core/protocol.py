@@ -1,6 +1,10 @@
+from .url import filename_to_uri
+from .url import uri_to_filename
+import os
+
 try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional
-    assert Any and List and Dict and Tuple and Callable and Optional
+    from typing import Any, List, Dict, Tuple, Callable, Optional, Union, Mapping
+    assert Any and List and Dict and Tuple and Callable and Optional and Union and Mapping
 except ImportError:
     pass
 
@@ -88,7 +92,7 @@ class DocumentHighlightKind(object):
 
 
 class Request:
-    def __init__(self, method: str, params: 'Optional[dict]') -> None:
+    def __init__(self, method: str, params: 'Optional[Mapping[str, Any]]') -> None:
         self.method = method
         self.params = params
         self.jsonrpc = "2.0"
@@ -142,7 +146,7 @@ class Request:
         return Request('textDocument/documentColor', params)
 
     @classmethod
-    def executeCommand(cls, params: dict) -> 'Request':
+    def executeCommand(cls, params: 'Mapping[str, Any]') -> 'Request':
         return Request("workspace/executeCommand", params)
 
     @classmethod
@@ -152,6 +156,10 @@ class Request:
     @classmethod
     def formatting(cls, params: dict) -> 'Request':
         return Request("textDocument/formatting", params)
+
+    @classmethod
+    def willSaveWaitUntil(cls, params: dict) -> 'Request':
+        return Request("textDocument/willSaveWaitUntil", params)
 
     @classmethod
     def rangeFormatting(cls, params: dict) -> 'Request':
@@ -176,7 +184,7 @@ class Request:
     def __repr__(self) -> str:
         return self.method + " " + str(self.params)
 
-    def to_payload(self, id) -> 'Dict[str, Any]':
+    def to_payload(self, id: int) -> 'Dict[str, Any]':
         r = {
             "jsonrpc": "2.0",
             "id": id,
@@ -188,7 +196,7 @@ class Request:
 
 
 class Response:
-    def __init__(self, request_id: int, result: 'Optional[Dict[str, Any]]') -> None:
+    def __init__(self, request_id: int, result: 'Optional[Union[Dict[str, Any], List[Any]]]') -> None:
         self.request_id = request_id
         self.result = result
         self.jsonrpc = "2.0"
@@ -288,6 +296,13 @@ class Range(object):
             'end': self.end.to_lsp()
         }
 
+    def contains(self, point: Point) -> bool:
+        return self.start.row <= point.row <= self.end.row and self.start.col <= point.col <= self.end.col
+
+    def intersects(self, rge: 'Range') -> bool:
+        return rge.start.row <= self.end.row and rge.start.col <= self.end.col and \
+               rge.end.row >= self.start.row and rge.end.col >= self.start.col
+
 
 class ContentChange(object):
     def __init__(self, text: str, range: 'Optional[Range]'=None, range_length: 'Optional[int]'=None) -> None:
@@ -314,21 +329,48 @@ class ContentChange(object):
             change['rangeLength'] = self.range_length
         return change
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: 'Any') -> bool:
         return self.text == other.text and self.range == other.range and self.range_length == other.range_length
 
     def __repr__(self) -> str:
         return "{} {} '{}'".format(self.range, self.range_length, self.text)
 
 
+class Location(object):
+    def __init__(self, file_path: str, range: Range) -> None:
+        self.file_path = file_path
+        self.range = range
+
+    @classmethod
+    def from_lsp(cls, lsp_location: dict) -> 'Location':
+        return Location(
+            uri_to_filename(lsp_location["uri"]),
+            Range.from_lsp(lsp_location["range"])
+        )
+
+
+class DiagnosticRelatedInformation(object):
+
+    def __init__(self, location: Location, message: str) -> None:
+        self.location = location
+        self.message = message
+
+    @classmethod
+    def from_lsp(cls, lsp_related_information: dict) -> 'DiagnosticRelatedInformation':
+        return DiagnosticRelatedInformation(
+            Location.from_lsp(lsp_related_information["location"]),
+            lsp_related_information["message"])
+
+
 class Diagnostic(object):
-    def __init__(self, message: str, range: Range, severity: int,
-                 source: 'Optional[str]', lsp_diagnostic: dict) -> None:
+    def __init__(self, message: str, range: Range, severity: int, source: 'Optional[str]', lsp_diagnostic: dict,
+                 related_info: 'List[DiagnosticRelatedInformation]') -> None:
         self.message = message
         self.range = range
         self.severity = severity
         self.source = source
         self._lsp_diagnostic = lsp_diagnostic
+        self.related_info = related_info
 
     @classmethod
     def from_lsp(cls, lsp_diagnostic: dict) -> 'Diagnostic':
@@ -339,8 +381,43 @@ class Diagnostic(object):
             # optional keys
             lsp_diagnostic.get('severity', DiagnosticSeverity.Error),
             lsp_diagnostic.get('source'),
-            lsp_diagnostic
+            lsp_diagnostic,
+            [DiagnosticRelatedInformation.from_lsp(info) for info in lsp_diagnostic.get('relatedInformation', [])]
         )
 
     def to_lsp(self) -> 'Dict[str, Any]':
         return self._lsp_diagnostic
+
+
+class WorkspaceFolder:
+
+    __slots__ = ('name', 'path')
+
+    def __init__(self, name: str, path: str) -> None:
+        self.name = name
+        self.path = path
+        assert self.name
+        assert self.path
+
+    @classmethod
+    def from_path(cls, path: str) -> 'WorkspaceFolder':
+        assert os.path.isdir(path)
+        assert os.path.isabs(path)
+        return cls(os.path.basename(path), path)
+
+    def __repr__(self) -> str:
+        return "{}('{}', '{}')".format(self.__class__.__name__, self.name, self.path)
+
+    def __str__(self) -> str:
+        return self.path
+
+    def __eq__(self, other: 'Any') -> bool:
+        if isinstance(other, WorkspaceFolder):
+            return self.name == other.name and self.path == other.path
+        return False
+
+    def to_dict(self) -> 'Dict[str, str]':
+        return {"name": self.name, "uri": self.uri()}
+
+    def uri(self) -> str:
+        return filename_to_uri(self.path)

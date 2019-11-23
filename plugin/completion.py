@@ -12,13 +12,11 @@ from .core.events import global_events
 from .core.settings import settings, client_configs
 from .core.logging import debug
 from .core.completion import parse_completion_response, format_completion
-from .core.registry import session_for_view, client_for_view
+from .core.registry import session_for_view, client_from_session
 from .core.configurations import is_supported_syntax
 from .core.documents import get_document_position, is_at_word
 from .core.sessions import Session
 from .core.edit import parse_text_edit
-
-NO_COMPLETION_SCOPES = 'comment, string'
 
 
 class CompletionState(object):
@@ -32,14 +30,14 @@ last_text_command = None
 
 
 class CompletionHelper(sublime_plugin.EventListener):
-    def on_text_command(self, view, command_name, args):
+    def on_text_command(self, view: sublime.View, command_name: str, args: 'Optional[Any]') -> None:
         global last_text_command
         last_text_command = command_name
 
 
 class LspTrimCompletionCommand(sublime_plugin.TextCommand):
 
-    def run(self, edit, range: 'Optional[Tuple[int, int]]'=None):
+    def run(self, edit: sublime.Edit, range: 'Optional[Tuple[int, int]]'=None) -> None:
         if range:
             start, end = range
             region = sublime.Region(start, end)
@@ -47,49 +45,51 @@ class LspTrimCompletionCommand(sublime_plugin.TextCommand):
 
 
 class CompletionHandler(sublime_plugin.ViewEventListener):
-    def __init__(self, view):
+    def __init__(self, view: sublime.View) -> None:
         self.view = view
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
+        self.auto_complete_selector = view.settings().get("auto_complete_selector", "") or ""  # type: str
         self.resolve = False
         self.state = CompletionState.IDLE
         self.completions = []  # type: List[Any]
         self.next_request = None  # type: Optional[Tuple[str, List[int]]]
         self.last_prefix = ""
-        self.last_location = 0
+        self.last_location = -1
         self.committing = False
         self.response_items = []  # type: List[dict]
         self.response_incomplete = False
 
     @classmethod
-    def is_applicable(cls, settings):
-        syntax = settings.get('syntax')
+    def is_applicable(cls, view_settings: dict) -> bool:
+        if 'completion' in settings.disabled_capabilities:
+            return False
+
+        syntax = view_settings.get('syntax')
         return is_supported_syntax(syntax, client_configs.all) if syntax else False
 
-    def initialize(self):
+    def initialize(self) -> None:
         self.initialized = True
-        session = session_for_view(self.view)
+        session = session_for_view(self.view, 'completionProvider')
         if session:
-            completionProvider = session.get_capability(
-                'completionProvider')
+            completionProvider = session.get_capability('completionProvider') or dict()  # type: dict
             # A language server may have an empty dict as CompletionOptions. In that case,
             # no trigger characters will be registered but we'll still respond to Sublime's
             # usual query for completions. So the explicit check for None is necessary.
-            if completionProvider is not None:
-                self.enabled = True
-                self.resolve = completionProvider.get('resolveProvider') or False
-                self.trigger_chars = completionProvider.get(
-                    'triggerCharacters') or []
-                if self.trigger_chars:
-                    self.register_trigger_chars(session)
+            self.enabled = True
+            self.resolve = completionProvider.get('resolveProvider') or False
+            self.trigger_chars = completionProvider.get(
+                'triggerCharacters') or []
+            if self.trigger_chars:
+                self.register_trigger_chars(session)
 
     def _view_language(self, config_name: str) -> 'Optional[str]':
         languages = self.view.settings().get('lsp_language')
         return languages.get(config_name) if languages else None
 
     def register_trigger_chars(self, session: Session) -> None:
-        completion_triggers = self.view.settings().get('auto_complete_triggers', [])
+        completion_triggers = self.view.settings().get('auto_complete_triggers', []) or []  # type: List[Dict[str, str]]
         view_language = self._view_language(session.config.name)
         if view_language:
             for language in session.config.languages:
@@ -100,9 +100,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                             (trigger for trigger in completion_triggers if trigger.get('selector', None) == scope),
                             None
                         )
-                        if scope_trigger:
-                            scope_trigger['characters'] = "".join(self.trigger_chars)
-                        else:
+                        if not scope_trigger:  # do not override user's trigger settings.
                             completion_triggers.append({
                                 'characters': "".join(self.trigger_chars),
                                 'selector': scope
@@ -110,13 +108,23 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
 
             self.view.settings().set('auto_complete_triggers', completion_triggers)
 
-    def is_after_trigger_character(self, location):
+    def is_after_trigger_character(self, location: int) -> bool:
         if location > 0:
             prev_char = self.view.substr(location - 1)
             return prev_char in self.trigger_chars
+        else:
+            return False
 
-    def is_same_completion(self, prefix, locations):
+    def is_same_completion(self, prefix: str, locations: 'List[int]') -> bool:
         if self.response_incomplete:
+            return False
+
+        if self.last_location < 0:
+            return False
+
+        # issue 745, some servers return nothing until some chars into a word are returned
+        # Don't cache these empty responses.
+        if prefix and self.last_prefix == "" and not self.completions:
             return False
 
         # completion requests from the same location with the same prefix are cached.
@@ -124,7 +132,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         last_start = self.last_location - len(self.last_prefix)
         return prefix.startswith(self.last_prefix) and current_start == last_start
 
-    def find_completion_item(self, inserted: str):
+    def find_completion_item(self, inserted: str) -> 'Optional[dict]':
         """
 
         Returns the completionItem for a given replacement string.
@@ -145,11 +153,11 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                         return self.response_items[index]
         return None
 
-    def on_modified(self):
+    def on_modified(self) -> None:
 
         # hide completion when backspacing past last completion.
         if self.view.sel()[0].begin() < self.last_location:
-            self.last_location = 0
+            self.last_location = -1
             self.view.run_command("hide_auto_complete")
 
         # cancel current completion if the previous input is an space
@@ -167,13 +175,21 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                     self.view.run_command("hide_auto_complete")
                     sublime.set_timeout(self.run_auto_complete, 0)
 
-    def on_completion_inserted(self):
+    def on_completion_inserted(self) -> None:
         # get text inserted from last completion
         word = self.view.word(self.last_location)
-        region = sublime.Region(word.begin(), self.view.sel()[0].end())
+        begin = word.begin()
+        region = sublime.Region(begin, self.view.sel()[0].end())
         inserted = self.view.substr(region)
 
         item = self.find_completion_item(inserted)
+        if not item:
+            # issues 714 and 720 - calling view.word() on last_location includes a trigger char that is not part of
+            # inserted completion.
+            debug('No match for inserted "{}", skipping first char'.format(inserted))
+            begin += 1
+            item = self.find_completion_item(inserted[1:])
+
         if item:
             # the newText is already inserted, now we need to check where it should start.
             edit = item.get('textEdit')
@@ -183,8 +199,8 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 edit_start_loc = self.view.text_point(*start)
 
                 # if the edit started before the word, we need to trim back to the start of the edit.
-                if edit_start_loc < word.begin():
-                    trim_range = (edit_start_loc, word.begin())
+                if edit_start_loc < begin:
+                    trim_range = (edit_start_loc, begin)
                     debug('trimming between', trim_range, 'because textEdit', parsed_edit)
                     self.view.run_command("lsp_trim_completion", {'range': trim_range})
 
@@ -198,13 +214,12 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         else:
             debug('could not find completion item for inserted "{}"'.format(inserted))
 
-    def on_query_completions(self, prefix, locations):
+    def on_query_completions(self, prefix: str, locations: 'List[int]') -> 'Optional[Tuple[List[Tuple[str,str]], int]]':
         if not self.initialized:
             self.initialize()
 
         if self.enabled:
-            if prefix != "" and self.view.match_selector(locations[0], NO_COMPLETION_SCOPES):
-                # debug('discarding completion because no completion scope with prefix {}'.format(prefix))
+            if not self.view.match_selector(locations[0], self.auto_complete_selector):
                 return (
                     [],
                     0 if not settings.only_show_lsp_completions
@@ -232,22 +247,23 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 else sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
             )
 
-    def on_text_command(self, command_name, args):
+        return None
+
+    def on_text_command(self, command_name: str, args: 'Optional[Any]') -> None:
         self.committing = command_name in ('commit_completion', 'insert_best_completion', 'auto_complete')
 
-    def do_request(self, prefix: str, locations: 'List[int]'):
+    def do_request(self, prefix: str, locations: 'List[int]') -> None:
         self.next_request = None
         view = self.view
 
         # don't store client so we can handle restarts
-        client = client_for_view(view)
+        client = client_from_session(session_for_view(view, 'completionProvider', locations[0]))
         if not client:
             return
 
         if settings.complete_all_chars or self.is_after_trigger_character(locations[0]):
             global_events.publish("view.on_purge_changes", self.view)
             document_position = get_document_position(view, locations[0])
-            debug('getting completions, location', locations[0], 'prefix', prefix)
             if document_position:
                 client.send_request(
                     Request.complete(document_position),
@@ -255,10 +271,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                     self.handle_error)
                 self.state = CompletionState.REQUESTING
 
-    def do_resolve(self, item) -> None:
+    def do_resolve(self, item: dict) -> None:
         view = self.view
 
-        client = client_for_view(view)
+        client = client_from_session(session_for_view(view, 'completionProvider', self.last_location))
         if not client:
             return
 
@@ -276,7 +292,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             self.view.run_command("lsp_apply_document_edit", {'changes': edits})
             sublime.status_message('Applied additional edits for completion')
 
-    def handle_response(self, response: 'Optional[Union[Dict,List]]'):
+    def handle_response(self, response: 'Optional[Union[Dict,List]]') -> None:
         if self.state == CompletionState.REQUESTING:
 
             last_col = self.last_location
@@ -308,11 +324,11 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         else:
             debug('Got unexpected response while in state {}'.format(self.state))
 
-    def handle_error(self, error: dict):
+    def handle_error(self, error: dict) -> None:
         sublime.status_message('Completion error: ' + str(error.get('message')))
         self.state = CompletionState.IDLE
 
-    def run_auto_complete(self):
+    def run_auto_complete(self) -> None:
         self.view.run_command(
             "auto_complete", {
                 'disable_auto_insert': True,

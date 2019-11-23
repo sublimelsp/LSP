@@ -1,5 +1,5 @@
 import unittest
-from .diagnostics import DiagnosticsStorage
+from .diagnostics import DiagnosticsStorage, DiagnosticsWalker
 from .protocol import Diagnostic, Range, Point
 from .test_protocol import LSP_MINIMAL_DIAGNOSTIC
 
@@ -78,4 +78,31 @@ class DiagnosticsStorageTest(unittest.TestCase):
 
         wd.select_none()
         ui.deselect.assert_called()
+
+
+class DiagnosticsWalkerTests(unittest.TestCase):
+
+    def test_empty(self):
+        walk = unittest.mock.Mock()
+        walker = DiagnosticsWalker([walk])
+        walker.walk({})
+
+        walk.begin.assert_called_once()
+        walk.begin_file.assert_not_called()
+        walk.diagnostic.assert_not_called()
+        walk.end.assert_called_once()
+
+    def test_one_diagnosic(self):
+
+        walk = unittest.mock.Mock()
+        walker = DiagnosticsWalker([walk])
+        diags = {}
+        diags[test_file_path] = {}
+        diags[test_file_path]["test_server"] = [minimal_diagnostic]
+        walker.walk(diags)
+
+        walk.begin.assert_called_once()
+        walk.begin_file.assert_called_with(test_file_path)
+        walk.diagnostic.assert_called_with(minimal_diagnostic)
+        walk.end.assert_called_once()
 

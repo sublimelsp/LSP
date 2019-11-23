@@ -1,4 +1,5 @@
 import unittest
+from unittest import mock
 from .diagnostics import DiagnosticsStorage, DiagnosticsWalker
 from .protocol import Diagnostic
 from .test_protocol import LSP_MINIMAL_DIAGNOSTIC
@@ -29,7 +30,7 @@ class DiagnosticsStorageTest(unittest.TestCase):
         self.assertEqual(wd.get(), {})
 
     def test_receive_diagnostics(self):
-        ui = unittest.mock.Mock()
+        ui = mock.Mock()
         wd = DiagnosticsStorage(ui)
 
         wd.receive("test_server", make_update([LSP_MINIMAL_DIAGNOSTIC]))
@@ -46,7 +47,7 @@ class DiagnosticsStorageTest(unittest.TestCase):
         ui.update.assert_called_with(test_file_path, "test_server", {})
 
     def test_remove_diagnostics(self):
-        ui = unittest.mock.Mock()
+        ui = mock.Mock()
         wd = DiagnosticsStorage(ui)
 
         wd.receive("test_server", make_update([LSP_MINIMAL_DIAGNOSTIC]))
@@ -61,7 +62,7 @@ class DiagnosticsStorageTest(unittest.TestCase):
         ui.update.assert_called_with(test_file_path, "test_server", {})
 
     def test_clear_diagnostics(self):
-        ui = unittest.mock.Mock()
+        ui = mock.Mock()
         wd = DiagnosticsStorage(ui)
 
         wd.receive("test_server", make_update([LSP_MINIMAL_DIAGNOSTIC]))
@@ -73,7 +74,7 @@ class DiagnosticsStorageTest(unittest.TestCase):
         ui.update.assert_called_with(test_file_path, "test_server", {})
 
     def test_select(self):
-        ui = unittest.mock.Mock()
+        ui = mock.Mock()
         wd = DiagnosticsStorage(ui)
 
         wd.select_next()
@@ -89,7 +90,7 @@ class DiagnosticsStorageTest(unittest.TestCase):
 class DiagnosticsWalkerTests(unittest.TestCase):
 
     def test_empty(self):
-        walk = unittest.mock.Mock()
+        walk = mock.Mock()
         walker = DiagnosticsWalker([walk])
         walker.walk({})
 
@@ -100,7 +101,7 @@ class DiagnosticsWalkerTests(unittest.TestCase):
 
     def test_one_diagnosic(self):
 
-        walk = unittest.mock.Mock()
+        walk = mock.Mock()
         walker = DiagnosticsWalker([walk])
         diags = {}  # type: Dict[str, Dict[str, List[Diagnostic]]]
         diags[test_file_path] = {}

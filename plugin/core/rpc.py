@@ -245,7 +245,10 @@ class Client(object):
             message = format_request(payload)
             self.transport.send(message)
 
-    def deduce_payload(self, payload: 'Dict[str, Any]') -> 'Tuple[Optional[Callable], Any, Optional[int]]':
+    def deduce_payload(
+        self,
+        payload: 'Dict[str, Any]'
+    ) -> 'Tuple[Optional[Callable], Any, Optional[int], Optional[str], Optional[str]]':
         if "method" in payload:
             method = payload["method"]
             result = payload.get("params")
@@ -253,27 +256,27 @@ class Client(object):
                 req_id = int(payload["id"])
                 debug('<--  {}({})'.format(method, req_id))
                 if self.settings.log_payloads:
-                    debug('<<< {}:'.format(req_id), result)
-                return (self._request_handlers.get(method), result, req_id)
+                    debug('<<<  {}:'.format(req_id), result)
+                return (self._request_handlers.get(method), result, req_id, "request", method)
             else:
                 if method != "window/logMessage":
                     debug('<-- ', method)
                 if self.settings.log_payloads:
                     debug('<<< ', payload)
                 if self._sync_request_result.is_idle():
-                    return (self._notification_handlers.get(method), result, None)
+                    return (self._notification_handlers.get(method), result, None, "notification", method)
                 else:
                     self._deferred_notifications.append(payload)
         elif "id" in payload:
             try:
                 response_id = int(payload["id"])
                 handler, result = self.response_handler(response_id, payload)
-                return (handler, result, None)
+                return (handler, result, None, None, None)
             except AssertionError as err:
                 exception_log("Programmer error", err)
         else:
             debug("Unknown payload type: ", payload)
-        return (None, None, None)
+        return (None, None, None, None, None)
 
     def receive_payload(self, message: str) -> None:
         payload = None
@@ -286,7 +289,7 @@ class Client(object):
             return
 
         with self._sync_request_cvar:
-            handler, result, req_id = self.deduce_payload(payload)
+            handler, result, req_id, typestr, method = self.deduce_payload(payload)
         if handler:
             try:
                 if req_id is None:
@@ -297,6 +300,8 @@ class Client(object):
                     handler(result, req_id)
             except Exception as err:
                 exception_log("Error handling server payload", err)
+        elif typestr is not None and method is not None:
+            debug("Unhandled", typestr, method)
 
     def on_transport_closed(self) -> None:
         self._error_display_handler("Communication to server closed, exiting")
@@ -305,8 +310,6 @@ class Client(object):
             self.handle_transport_failure()
 
     def response_handler(self, response_id: int, response: 'Dict[str, Any]') -> 'Tuple[Optional[Callable], Any]':
-        if self.settings.log_payloads:
-            debug('<<<  {}:'.format(response_id), response.get("result", None))
         handler, error_handler = self._response_handlers.pop(response_id, (None, None))
         if "result" in response and "error" not in response:
             return self.handle_response_result(response_id, handler, response["result"])

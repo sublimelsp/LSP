@@ -301,7 +301,7 @@ class Client(object):
             except Exception as err:
                 exception_log("Error handling server payload", err)
         elif typestr is not None and method is not None:
-            debug("Unhandled", typestr, method)
+            debug("     unhandled", typestr, method)
 
     def on_transport_closed(self) -> None:
         self._error_display_handler("Communication to server closed, exiting")

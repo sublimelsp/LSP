@@ -15,7 +15,6 @@ from .logging import debug, exception_log
 from .protocol import Request, Notification, Response
 from .types import Settings
 from threading import Condition
-from threading import Lock
 
 TCP_CONNECT_TIMEOUT = 5
 DEFAULT_SYNC_REQUEST_TIMEOUT = 1.0
@@ -69,6 +68,59 @@ def try_terminate_process(process: 'subprocess.Popen') -> None:
         pass  # process can be terminated already
 
 
+class SyncRequestStatus(object):
+
+    IDLE = 0
+    REQUESTING = 1
+    READY = 2
+
+    __slots__ = ('__state', '__payload', '__request_id', '__response_id')
+
+    def __init__(self) -> None:
+        self.__state = self.IDLE
+        self.__payload = None  # type: Any
+        self.__request_id = -1
+        self.__response_id = -1
+
+    def prepare(self, request_id: int) -> None:
+        assert self.__state == self.IDLE
+        assert self.__payload is None
+        assert self.__request_id == -1
+        self.__state = self.REQUESTING
+        self.__request_id = request_id
+
+    def request_id(self) -> int:
+        assert self.__request_id != -1
+        return self.__request_id
+
+    def set(self, response_id: int, payload: 'Any') -> None:
+        assert self.__state == self.REQUESTING
+        self.__state = self.READY
+        self.__payload = payload
+        self.__response_id = response_id
+
+    def is_ready(self) -> bool:
+        return self.__state == self.READY
+
+    def is_requesting(self) -> bool:
+        return self.__state == self.REQUESTING
+
+    def is_idle(self) -> bool:
+        return self.__state == self.IDLE
+
+    def flush(self) -> 'Tuple[int, Any]':
+        assert self.__state == self.READY
+        result = (self.__response_id, self.__payload)
+        self.reset()
+        return result
+
+    def reset(self) -> None:
+        self.__state = self.IDLE
+        self.__payload = None
+        self.__request_id = -1
+        self.__response_id = -1
+
+
 class Client(object):
     def __init__(self, transport: Transport, settings: Settings) -> None:
         self.transport = transport  # type: Optional[Transport]
@@ -77,9 +129,10 @@ class Client(object):
         self._response_handlers = {}  # type: Dict[int, Tuple[Optional[Callable], Optional[Callable[[Any], None]]]]
         self._request_handlers = {}  # type: Dict[str, Callable]
         self._notification_handlers = {}  # type: Dict[str, Callable]
-        self._sync_request_results = {}  # type: Dict[int, Optional[Any]]
-        self._sync_request_lock = Lock()
-        self._sync_request_cvar = Condition(self._sync_request_lock)
+        self._sync_request_result = SyncRequestStatus()
+        self._sync_request_cvar = Condition()
+        self._deferred_notifications = []  # type: List[Any]
+        self._deferred_responses = []  # type: List[Tuple[Optional[Callable], Any]]
         self.exiting = False
         self._crash_handler = None  # type: Optional[Callable]
         self._transport_fail_handler = None  # type: Optional[Callable]
@@ -92,11 +145,12 @@ class Client(object):
             handler: 'Callable[[Optional[Any]], None]',
             error_handler: 'Optional[Callable[[Any], None]]' = None,
     ) -> 'None':
-        self.request_id += 1
         if self.transport is not None:
-            debug(' --> ' + request.method)
-            self._response_handlers[self.request_id] = (handler, error_handler)
-            self.send_payload(request.to_payload(self.request_id))
+            with self._sync_request_cvar:
+                self.request_id += 1
+                debug(' --> {}({})'.format(request.method, self.request_id))
+                self._response_handlers[self.request_id] = (handler, error_handler)
+                self.send_payload(request.to_payload(self.request_id), use_lock=False)
         else:
             debug('unable to send', request.method)
             if error_handler is not None:
@@ -111,24 +165,44 @@ class Client(object):
             debug('unable to send', request.method)
             return None
 
-        debug(' ==> ' + request.method)
-        self.request_id += 1
-        request_id = self.request_id
-        self.send_payload(request.to_payload(request_id))
-        result = None
-        try:
-            with self._sync_request_cvar:
+        with self._sync_request_cvar:
+            try:
+                self.request_id += 1
+                request_id = self.request_id
+                debug(' ==> {}({})'.format(request.method, request_id))
+                self._sync_request_result.prepare(request_id)  # After this, is_requesting() returns True.
+                self.send_payload(request.to_payload(request_id), use_lock=False)
                 # We go to sleep. We wake up once another thread calls .notify() on this condition variable.
-                self._sync_request_cvar.wait_for(lambda: request_id in self._sync_request_results, timeout)
-                result = self._sync_request_results.pop(request_id)
-        except KeyError as e:
-            debug('timeout on', request.method)
-            return None
-        return result
+                self._sync_request_cvar.wait_for(self._sync_request_result.is_ready, timeout)
+                response_id, result = self._sync_request_result.flush()
+                assert response_id == request_id
+                return result
+            except KeyError:
+                debug('timeout on', request.method)
+                self._sync_request_result.reset()
+            except AssertionError as ex:
+                debug(str(ex))
+                self._sync_request_result.reset()
+            finally:
+                for payload in self._deferred_notifications:
+                    try:
+                        self.handle("notification", payload, self._notification_handlers)
+                    except Exception as err:
+                        exception_log("Error handling server payload", err)
+                self._deferred_notifications.clear()
+                for tup in self._deferred_responses:
+                    handler, result = tup
+                    if handler:
+                        try:
+                            handler(response_id)
+                        except Exception as err:
+                            exception_log("Error handling server payload", err)
+                self._deferred_responses.clear()
+        return None
 
     def send_notification(self, notification: Notification) -> None:
         if self.transport is not None:
-            debug(' --> ' + notification.method)
+            debug(' -->', notification.method)
             self.send_payload(notification.to_payload())
         else:
             debug('unable to send', notification.method)
@@ -157,10 +231,16 @@ class Client(object):
         if self._crash_handler is not None:
             self._crash_handler()
 
-    def send_payload(self, payload: 'Dict[str, Any]') -> None:
+    def send_payload(self, payload: 'Dict[str, Any]', use_lock: bool = True) -> None:
         if self.transport:
             message = format_request(payload)
-            self.transport.send(message)
+            if use_lock:
+                with self._sync_request_cvar:
+                    if self.settings.log_payloads:
+                        debug(' >>>', payload)
+                    self.transport.send(message)
+            else:
+                self.transport.send(message)
 
     def receive_payload(self, message: str) -> None:
         payload = None
@@ -177,7 +257,13 @@ class Client(object):
                 if "id" in payload:
                     self.handle("request", payload, self._request_handlers, payload.get("id"))
                 else:
-                    self.handle("notification", payload, self._notification_handlers)
+                    self._sync_request_cvar.acquire()
+                    if self._sync_request_result.is_idle():
+                        self._sync_request_cvar.release()
+                        self.handle("notification", payload, self._notification_handlers)
+                    else:
+                        self._deferred_notifications.append(payload)
+                        self._sync_request_cvar.release()
             elif "id" in payload:
                 self.response_handler(payload)
             else:
@@ -194,28 +280,40 @@ class Client(object):
     def response_handler(self, response: 'Dict[str, Any]') -> None:
         # This response handler *must not* run from the same thread that does a sync request
         # because of the usage of the condition variable below.
-        request_id = int(response["id"])
+        response_id = int(response["id"])
         if self.settings.log_payloads:
-            debug('     ' + str(response.get("result", None)))
-        handler, error_handler = self._response_handlers.pop(request_id, (None, None))
+            debug(' <<< {}:'.format(response_id), response.get("result", None))
+        handler, error_handler = self._response_handlers.pop(response_id, (None, None))
         if "result" in response and "error" not in response:
-            if handler:
-                handler(response["result"])
-            else:
-                with self._sync_request_cvar:
-                    self._sync_request_results[request_id] = response["result"]
-                    # At most one thread is waiting on the result.
-                    self._sync_request_cvar.notify()
+            self.handle_response_result(response_id, handler, response["result"])
         elif "result" not in response and "error" in response:
-            error = response["error"]
-            if self.settings.log_payloads:
-                debug('ERR: ' + str(error))
-            if error_handler:
-                error_handler(error)
-            else:
-                self._error_display_handler(error.get("message"))
+            self.handle_response_error(error_handler, response["error"])
         else:
             debug('invalid response payload', response)
+
+    def handle_response_result(self, response_id: int, handler: 'Optional[Callable]', result: 'Any') -> None:
+        self._sync_request_cvar.acquire()
+        if self._sync_request_result.is_requesting():
+            if self._sync_request_result.request_id() == response_id:
+                self._sync_request_result.set(response_id, result)
+                self._sync_request_cvar.notify()
+            else:
+                self._deferred_responses.append((handler, result))
+            self._sync_request_cvar.release()
+        else:
+            self._sync_request_cvar.release()
+            if handler:
+                handler(result)
+            else:
+                debug("dropping response with ID", response_id)
+
+    def handle_response_error(self, error_handler: 'Optional[Callable]', error: 'Any') -> None:
+        if self.settings.log_payloads:
+            debug('ERR: ' + str(error))
+        if error_handler:
+            error_handler(error)
+        else:
+            self._error_display_handler(error.get("message"))
 
     def on_request(self, request_method: str, handler: 'Callable') -> None:
         self._request_handlers[request_method] = handler
@@ -227,7 +325,10 @@ class Client(object):
         method = message.get("method", "")
         params = message.get("params")
         if method != "window/logMessage":
-            debug('<--  ' + method)
+            if len(args) != 0:
+                debug('<--  {}({})'.format(method, args[0]))
+            else:
+                debug('<-- ', method)
             if self.settings.log_payloads and params:
                 debug('     ' + str(params))
         handler = handlers.get(method)

@@ -215,7 +215,7 @@ class StdioTransport(Transport):
                         content_length = 0
                     state = STATE_HEADERS
 
-            except IOError as err:
+            except (AttributeError, IOError) as err:
                 self.close()
                 exception_log("Failure reading stdout", err)
                 state = STATE_EOF

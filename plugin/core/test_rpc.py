@@ -2,6 +2,7 @@ from .logging import set_exception_logging
 from .protocol import Notification
 from .protocol import Request
 from .rpc import Client
+from .rpc import SyncRequestStatus
 from .rpc import format_request
 from .test_mocks import MockSettings
 from .transports import Transport
@@ -64,6 +65,40 @@ class FormatTests(unittest.TestCase):
 
     def test_converts_payload_to_string(self):
         self.assertEqual("{}", format_request(dict()))
+
+
+class SyncRequestStatusTest(unittest.TestCase):
+
+    def test_tiny_state_machine(self):
+        sync = SyncRequestStatus()
+        self.assertFalse(sync.is_requesting())
+        self.assertFalse(sync.is_ready())
+
+        sync.prepare(1)
+        self.assertTrue(sync.is_requesting())
+        self.assertFalse(sync.is_ready())
+
+        sync.set(1234, {"foo": "bar"})
+        self.assertFalse(sync.is_requesting())
+        self.assertTrue(sync.is_ready())
+
+        response_id, payload = sync.flush()
+        self.assertFalse(sync.is_requesting())
+        self.assertFalse(sync.is_ready())
+        self.assertEqual(response_id, 1234)
+        self.assertDictEqual(payload, {"foo": "bar"})
+
+    def test_exception_during_requesting(self):
+        sync = SyncRequestStatus()
+        sync.prepare(1)
+        try:
+            raise RuntimeError("oops")
+            sync.set(1234, {"foo": "bar"})  # never reached
+        except Exception:
+            sync.reset()
+        # sync should be usable again
+        self.assertFalse(sync.is_requesting())
+        self.assertFalse(sync.is_ready())
 
 
 class ClientTest(unittest.TestCase):

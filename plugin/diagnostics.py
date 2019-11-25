@@ -433,27 +433,30 @@ class DiagnosticsPresenter(object):
         else:
             debug('view not found for', file_path)
 
+        if self._cursor.has_value:
+            updatables.append(self._cursor.update())
+
         walker = DiagnosticsWalker(updatables)
         walker.walk(diagnostics)
-
-        # TODO: if a diagnostic is gone, clear it from the cursor.
 
         if settings.auto_show_diagnostics_panel == 'always' or self._show_panel_on_diagnostics:
             self.show_panel_if_relevant()
 
-    def select(self, offset: int) -> None:
-        file_path = None
-        point = None
-        # select nearest with optional path and point params.
-        if not self._cursor.file_diagnostic:
+    def select(self, direction: int) -> None:
+        file_path = None  # type: Optional[str]
+        point = None  # type: Optional[Point]
+
+        if not self._cursor.has_value:
             active_view = self._window.active_view()
             if active_view:
                 file_path = active_view.file_name()
                 point = Point(*active_view.rowcol(active_view.sel()[0].begin()))
-        self._cursor.select_offset(offset, file_path, point)
-        walker = DiagnosticsWalker([self._cursor])
+
+        walk = self._cursor.from_diagnostic(direction) if self._cursor.has_value else self._cursor.from_position(
+            direction, file_path, point)
+        walker = DiagnosticsWalker([walk])
         walker.walk(self._diagnostics)
-        self._phantoms.set_diagnostic(self._cursor.file_diagnostic)
+        self._phantoms.set_diagnostic(self._cursor.value)
 
     def deselect(self) -> None:
         self._phantoms.set_diagnostic(None)

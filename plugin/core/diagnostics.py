@@ -119,79 +119,161 @@ class DiagnosticsUpdateWalk(object):
         pass
 
 
-class DiagnosticsCursor(DiagnosticsUpdateWalk):
-    def __init__(self) -> None:
-        self.file_diagnostic = None  # type: 'Optional[Tuple[str, Diagnostic]]'
-        self._first_file_diagnostic = None  # type: 'Optional[Tuple[str, Diagnostic]]'
-        self._last_file_diagnostic = None  # type: 'Optional[Tuple[str, Diagnostic]]'
-        self._previous_file_diagnostic = None  # type: 'Optional[Tuple[str, Diagnostic]]'
-        self._select_offset = 0
-        self._debug_index = -1
+CURSOR_FORWARD = 1
+CURSOR_BACKWARD = -1
 
-    def select_offset(self, offset: int, file_path: 'Optional[str]' = None, point: 'Optional[Point]' = None) -> None:
-        self._select_offset = offset
-        self._select_file_path = file_path
-        self._select_point = point
 
-    def begin(self) -> None:
-        self._found = False
-        self._debug_index = -1
-        self._first_file_diagnostic = None
-        self._last_file_diagnostic = None
+class FromPositionWalk(DiagnosticsUpdateWalk):
+    def __init__(self, cursor: 'DiagnosticsCursor', file_path: str, point: Point, direction: int) -> None:
+        self.file_path = file_path
+        self.point = point
+        self._cursor = cursor
+        self._direction = direction
+        self.file_diagnostic = None  # type: Optional[Tuple[str, Diagnostic]]
+        self._first_file_diagnostic = None  # type: Optional[Tuple[str, Diagnostic]]
         self._nearest_file_diagnostic = None  # type: Optional[Tuple[str, Diagnostic]]
-        self._previous_file_diagnostic = self.file_diagnostic
-        self.file_diagnostic = None
+        self._previous_file_diagnostic = None  # type: Optional[Tuple[str, Diagnostic]]
 
     def begin_file(self, file_path: str) -> None:
         self._current_file_path = file_path
 
     def diagnostic(self, diagnostic: 'Diagnostic') -> None:
-        if diagnostic.severity <= DiagnosticSeverity.Warning:
-            if not self._found:
-                if not self._first_file_diagnostic:
-                    self._first_file_diagnostic = self._current_file_path, diagnostic
+        if not self._first_file_diagnostic:
+            self._first_file_diagnostic = self._current_file_path, diagnostic
 
-                if self._select_offset == -1:
-                    if self._previous_file_diagnostic and diagnostic == self._previous_file_diagnostic[1]:
-                        if self._last_file_diagnostic:
-                            self.file_diagnostic = self._last_file_diagnostic
-                            self._found = True
-
-                elif self._select_offset == 1:
-                    if self._last_file_diagnostic and self._previous_file_diagnostic and self._previous_file_diagnostic[
-                            1] == self._last_file_diagnostic[1]:
-                        self.file_diagnostic = self._current_file_path, diagnostic
-                        self._found = True
-
-                # update nearest candidate
-                if not self._found and self._select_file_path and self._select_point and\
-                        self._current_file_path == self._select_file_path:
-                    self._update_nearest_candidate(diagnostic, self._select_point)
-
-                self._last_file_diagnostic = self._current_file_path, diagnostic
-
-    def _update_nearest_candidate(self, diagnostic: Diagnostic, point: Point) -> None:
-        if self._select_offset == -1:
-            if diagnostic.range.start.row < point.row:
-                if not self._nearest_file_diagnostic or diagnostic.range.start.row > self._nearest_file_diagnostic[
-                        1].range.start.row:
-                    self._nearest_file_diagnostic = self._current_file_path, diagnostic
-        elif self._select_offset == 1:
-            if diagnostic.range.start.row > point.row:
-                if not self._nearest_file_diagnostic or diagnostic.range.start.row < self._nearest_file_diagnostic[
-                        1].range.start.row:
-                    self._nearest_file_diagnostic = self._current_file_path, diagnostic
+        if self._direction == CURSOR_FORWARD:
+            if self._current_file_path == self.file_path:
+                if diagnostic.range.start.row > self.point.row:
+                    if not self._nearest_file_diagnostic or diagnostic.range.start.row < self._nearest_file_diagnostic[
+                            1].range.start.row:
+                        self._nearest_file_diagnostic = self._current_file_path, diagnostic
+        else:
+            if self._current_file_path == self.file_path:
+                self._last_before_file_diagnostic = self._previous_file_diagnostic
+                if diagnostic.range.start.row < self.point.row:
+                    if not self._nearest_file_diagnostic or diagnostic.range.start.row > self._nearest_file_diagnostic[
+                            1].range.start.row:
+                        self._nearest_file_diagnostic = self._current_file_path, diagnostic
+            self._previous_file_diagnostic = self._current_file_path, diagnostic
 
     def end(self) -> None:
-        if not self.file_diagnostic:
-            if self._select_offset == -1 and self._previous_file_diagnostic == self._first_file_diagnostic:
-                self.file_diagnostic = self._last_file_diagnostic
-            elif self._select_offset == 1 and self._previous_file_diagnostic == self._last_file_diagnostic:
-                self.file_diagnostic = self._first_file_diagnostic
-            elif self._nearest_file_diagnostic:  # a match before/after in the current file
-                self.file_diagnostic = self._nearest_file_diagnostic
+        if self._nearest_file_diagnostic:
+            self._cursor.set_value(self._nearest_file_diagnostic)
+        else:
+            if self._direction == CURSOR_FORWARD:
+                self._cursor.set_value(self._first_file_diagnostic)
+            else:
+                self._cursor.set_value(self._last_before_file_diagnostic)
 
-        self._select_offset = 0
+
+class DiagnosticsUpdatedWalk(DiagnosticsUpdateWalk):
+
+    def __init__(self, cursor: 'DiagnosticsCursor', file_path: str, diagnostic: Diagnostic) -> None:
+        self._file_path = file_path
+        self._diagnostic = diagnostic
+        self._cursor = cursor
+        self.file_diagnostic = None  # type: Optional[Tuple[str, Diagnostic]]
+
+    def begin_file(self, file_path: str) -> None:
+        self._is_same_file = self._file_path == file_path
+
+    def diagnostic(self, diagnostic: 'Diagnostic') -> None:
+        if self._is_same_file:
+            if diagnostic == self._diagnostic:
+                self.file_diagnostic = self._file_path, diagnostic
+
+    def end(self) -> None:
+        self._cursor.set_value(self.file_diagnostic)
+
+
+class FromDiagnosticWalk(DiagnosticsUpdateWalk):
+    def __init__(self, cursor: 'DiagnosticsCursor', direction: int, file_path: str, diagnostic: Diagnostic) -> None:
+        self._file_path = file_path
+        self._diagnostic = diagnostic
+        self._direction = direction
+        self.file_diagnostic = None  # type: Optional[Tuple[str, Diagnostic]]
+        self._cursor = cursor
+        self._first_file_diagnostic = None  # type: Optional[Tuple[str, Diagnostic]]
+        self._previous_file_diagnostic = None  # type: Optional[Tuple[str, Diagnostic]]
+        self._take_next = False
+
+    def begin_file(self, file_path: str) -> None:
+        self._current_file_path = file_path
+
+    def diagnostic(self, diagnostic: 'Diagnostic') -> None:
+        if self._direction == CURSOR_FORWARD:
+            if self._take_next:
+                self.file_diagnostic = self._current_file_path, diagnostic
+                self._take_next = False
+            elif diagnostic == self._diagnostic and self._current_file_path == self._file_path:
+                self._take_next = True
+        else:
+            if self._current_file_path == self._file_path and self._diagnostic == diagnostic:
+                if self._previous_file_diagnostic:
+                    self.file_diagnostic = self._previous_file_diagnostic
+            self._previous_file_diagnostic = self._current_file_path, diagnostic
+
+    def end(self) -> None:
+        if self.file_diagnostic:
+            self._cursor.set_value(self.file_diagnostic)
+        else:
+            if self._direction == CURSOR_BACKWARD:
+                self._cursor.set_value(self._previous_file_diagnostic)
+            else:
+                self._cursor.set_value((self._file_path, self._diagnostic))
+
+
+class TakeFirstDiagnosticWalk(DiagnosticsUpdateWalk):
+
+    def __init__(self, cursor: 'DiagnosticsCursor', direction: int) -> None:
+        self._cursor = cursor
+        self._file_diagnostic = None  # type: 'Optional[Tuple[str, Diagnostic]]'
+        self._direction = direction
+
+    def begin_file(self, file_path: str) -> None:
+        self._current_file_path = file_path
+
+    def diagnostic(self, diagnostic: Diagnostic) -> None:
+        if self._direction == CURSOR_FORWARD:
+            if self._file_diagnostic is None:
+                self._file_diagnostic = self._current_file_path, diagnostic
+        else:
+            self._file_diagnostic = self._current_file_path, diagnostic
+
+    def end(self) -> None:
+        self._cursor.set_value(self._file_diagnostic)
+
+
+class DiagnosticsCursor(DiagnosticsUpdateWalk):
+
+    def __init__(self) -> None:
+        self._file_diagnostic = None  # type: 'Optional[Tuple[str, Diagnostic]]'
+
+    @property
+    def has_value(self) -> bool:
+        return self._file_diagnostic is not None
+
+    def set_value(self, file_diagnostic: 'Optional[Tuple[str, Diagnostic]]') -> None:
+        self._file_diagnostic = file_diagnostic
+
+    @property
+    def value(self) -> 'Optional[Tuple[str, Diagnostic]]':
+        return self._file_diagnostic
+
+    def from_position(self, direction: int, file_path: 'Optional[str]' = None,
+                      point: 'Optional[Point]' = None) -> DiagnosticsUpdateWalk:
+        if file_path and point:
+            return FromPositionWalk(self, file_path, point, direction)
+        else:
+            return TakeFirstDiagnosticWalk(self, direction)
+
+    def from_diagnostic(self, direction: int) -> DiagnosticsUpdateWalk:
+        assert self._file_diagnostic
+        return FromDiagnosticWalk(self, direction, *self._file_diagnostic)
+
+    def update(self) -> DiagnosticsUpdateWalk:
+        assert self._file_diagnostic
+        return DiagnosticsUpdatedWalk(self, *self._file_diagnostic)
 
 
 class DiagnosticsWalker(object):

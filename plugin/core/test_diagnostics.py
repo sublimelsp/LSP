@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
-from .diagnostics import DiagnosticsStorage, DiagnosticsWalker
-from .protocol import Diagnostic
+from .diagnostics import DiagnosticsStorage, DiagnosticsWalker, DiagnosticsCursor, CURSOR_FORWARD, CURSOR_BACKWARD
+from .protocol import Diagnostic, Point, Range, DiagnosticSeverity
 from .test_protocol import LSP_MINIMAL_DIAGNOSTIC
 
 TYPE_CHECKING = False
@@ -12,7 +12,28 @@ if TYPE_CHECKING:
 
 test_file_path = "/test.py"
 test_file_uri = "file:///test.py"
+second_file_path = "/test2.py"
+second_file_uri = "file:///test2.py"
+test_server_name = "test_server"
 minimal_diagnostic = Diagnostic.from_lsp(LSP_MINIMAL_DIAGNOSTIC)
+
+
+def at_row(row: int) -> Diagnostic:
+    return Diagnostic('message', Range(Point(row, 0), Point(row, 1)), DiagnosticSeverity.Error, None, dict(), [])
+
+
+def diagnostics(test_file_diags: 'List[Diagnostic]',
+                second_file_diags: 'List[Diagnostic]' = []) -> 'Dict[str, Dict[str, List[Diagnostic]]]':
+    diags = {}
+    if test_file_diags:
+        source_diags = {}
+        source_diags[test_server_name] = test_file_diags
+        diags[test_file_path] = source_diags
+    if second_file_diags:
+        source_diags = {}
+        source_diags[test_server_name] = second_file_diags
+        diags[second_file_path] = source_diags
+    return diags
 
 
 def make_update(diagnostics: 'List[dict]') -> dict:
@@ -112,3 +133,144 @@ class DiagnosticsWalkerTests(unittest.TestCase):
         walk.begin_file.assert_called_with(test_file_path)
         walk.diagnostic.assert_called_with(minimal_diagnostic)
         walk.end.assert_called_once()
+
+
+row1 = at_row(1)
+row5 = at_row(5)
+row3 = at_row(3)
+test_diagnostics = diagnostics([row1, row5], [row3])
+
+
+class DiagnosticsCursorTest(unittest.TestCase):
+
+    def test_empty(self) -> None:
+        cursor = DiagnosticsCursor()
+
+        walker = DiagnosticsWalker([cursor.from_position(CURSOR_FORWARD, test_file_path, Point(0, 0))])
+        walker.walk({})
+        self.assertIsNone(cursor.value)
+
+    def test_from_no_position(self) -> None:
+        cursor = DiagnosticsCursor()
+
+        walker = DiagnosticsWalker([cursor.from_position(CURSOR_FORWARD)])
+        walker.walk(test_diagnostics)
+        self.assertEqual((test_file_path, row1), cursor.value)
+
+    def test_from_no_position_backwards(self) -> None:
+        cursor = DiagnosticsCursor()
+
+        walker = DiagnosticsWalker([cursor.from_position(CURSOR_BACKWARD)])
+        walker.walk(test_diagnostics)
+        self.assertEqual((second_file_path, row3), cursor.value)
+
+    def test_from_file_position(self) -> None:
+        cursor = DiagnosticsCursor()
+
+        walker = DiagnosticsWalker([cursor.from_position(CURSOR_FORWARD, test_file_path, Point(0, 0))])
+        walker.walk(test_diagnostics)
+        self.assertEqual((test_file_path, row1), cursor.value)
+
+    def test_from_file_position_backward(self) -> None:
+        cursor = DiagnosticsCursor()
+
+        walker = DiagnosticsWalker([cursor.from_position(CURSOR_BACKWARD, test_file_path, Point(10, 0))])
+        walker.walk(test_diagnostics)
+        self.assertEqual((test_file_path, row5), cursor.value)
+
+    def test_from_other_file_position(self) -> None:
+        cursor = DiagnosticsCursor()
+
+        walker = DiagnosticsWalker([cursor.from_position(CURSOR_FORWARD, second_file_path, Point(5, 0))])
+        walker.walk(test_diagnostics)
+        self.assertEqual((test_file_path, row1), cursor.value)
+
+    def test_from_other_file_position_backwards(self) -> None:
+        cursor = DiagnosticsCursor()
+
+        walker = DiagnosticsWalker([cursor.from_position(CURSOR_BACKWARD, second_file_path, Point(1, 0))])
+        walker.walk(test_diagnostics)
+        self.assertEqual((test_file_path, row5), cursor.value)
+
+    def test_updated_diagnostic_remains(self) -> None:
+
+        cursor = DiagnosticsCursor()
+        walker = DiagnosticsWalker([cursor.from_position(CURSOR_FORWARD)])
+
+        walker.walk(test_diagnostics)
+        self.assertEqual((test_file_path, row1), cursor.value)
+
+        walker = DiagnosticsWalker([cursor.update()])
+        walker.walk(test_diagnostics)
+
+        self.assertEqual((test_file_path, row1), cursor.value)
+
+    def test_updated_diagnostic_gone(self) -> None:
+        cursor = DiagnosticsCursor()
+        walker = DiagnosticsWalker([cursor.from_position(CURSOR_FORWARD)])
+
+        walker.walk(test_diagnostics)
+        self.assertEqual((test_file_path, row1), cursor.value)
+
+        walker = DiagnosticsWalker([cursor.update()])
+        walker.walk({})
+
+        self.assertEqual(None, cursor.value)
+
+    def test_from_diagnostic_to_same(self) -> None:
+        cursor = DiagnosticsCursor()
+
+        diags = diagnostics([row1])
+
+        walker = DiagnosticsWalker([cursor.from_position(CURSOR_FORWARD)])
+        walker.walk(diags)
+        self.assertEqual((test_file_path, row1), cursor.value)
+
+        walker = DiagnosticsWalker([cursor.from_diagnostic(CURSOR_FORWARD)])
+        walker.walk(diags)
+        self.assertEqual((test_file_path, row1), cursor.value)
+
+        walker = DiagnosticsWalker([cursor.from_diagnostic(CURSOR_BACKWARD)])
+        walker.walk(diags)
+        self.assertEqual((test_file_path, row1), cursor.value)
+
+    def test_from_diagnostic_forward(self) -> None:
+
+        cursor = DiagnosticsCursor()
+
+        walker = DiagnosticsWalker([cursor.from_position(CURSOR_FORWARD)])
+        walker.walk(test_diagnostics)
+        self.assertEqual((test_file_path, row1), cursor.value)
+
+        walker = DiagnosticsWalker([cursor.from_diagnostic(CURSOR_FORWARD)])
+        walker.walk(test_diagnostics)
+        self.assertEqual((test_file_path, row5), cursor.value)
+
+        walker = DiagnosticsWalker([cursor.from_diagnostic(CURSOR_FORWARD)])
+        walker.walk(test_diagnostics)
+        self.assertEqual((second_file_path, row3), cursor.value)
+
+        # TODO: do we need to wrap?
+        # walker = DiagnosticsWalker([cursor.from_diagnostic(CURSOR_FORWARD)])
+        # walker.walk(test_diagnostics)
+        # self.assertEqual((test_file_path, row1), cursor.value)
+
+    def test_from_diagnostic_backward(self) -> None:
+
+        cursor = DiagnosticsCursor()
+
+        walker = DiagnosticsWalker([cursor.from_position(CURSOR_BACKWARD)])
+        walker.walk(test_diagnostics)
+        self.assertEqual((second_file_path, row3), cursor.value)
+
+        walker = DiagnosticsWalker([cursor.from_diagnostic(CURSOR_BACKWARD)])
+        walker.walk(test_diagnostics)
+        self.assertEqual((test_file_path, row5), cursor.value)
+
+        walker = DiagnosticsWalker([cursor.from_diagnostic(CURSOR_BACKWARD)])
+        walker.walk(test_diagnostics)
+        self.assertEqual((test_file_path, row1), cursor.value)
+
+        walker = DiagnosticsWalker([cursor.from_diagnostic(CURSOR_BACKWARD)])
+        walker.walk(test_diagnostics)
+        self.assertEqual((second_file_path, row3), cursor.value)

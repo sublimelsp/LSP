@@ -5,11 +5,11 @@ The below was written for clangd, but much applies to cquery and ccls as well.
 ### CCLS
 
 A newer project emerged from cquery.
-Build and install from source, see (ccls wiki)[https://github.com/MaskRay/ccls/wiki/Build]
+Build and install from source, see [ccls wiki](https://github.com/MaskRay/ccls/wiki/Build)
 
 ### Cquery
 
-Build and install from source, see (cquery wiki)[https://github.com/cquery-project/cquery/wiki/Building-cquery]
+Build and install from source, see [cquery wiki](https://github.com/cquery-project/cquery/wiki/Building-cquery)
 Note that work on cquery has stopped. Prefer using ccls or clangd.
 
 ### Clangd

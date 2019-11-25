@@ -82,10 +82,9 @@ class SyncRequestStatusTest(unittest.TestCase):
         self.assertFalse(sync.is_requesting())
         self.assertTrue(sync.is_ready())
 
-        response_id, payload = sync.flush()
+        payload = sync.flush()
         self.assertFalse(sync.is_requesting())
         self.assertFalse(sync.is_ready())
-        self.assertEqual(response_id, 1)
         self.assertDictEqual(payload, {"foo": "bar"})
 
     def test_exception_during_requesting(self):

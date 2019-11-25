@@ -11,6 +11,12 @@ try:
 except ImportError:
     pass
 
+try:
+    from sublime import set_timeout_async
+except ImportError:
+    def set_timeout_async(f: 'Callable', timeout_ms: int = 0) -> None:
+        f()
+
 from .logging import debug, exception_log
 from .protocol import Request, Notification, Response
 from .types import Settings
@@ -18,8 +24,6 @@ from threading import Condition
 
 TCP_CONNECT_TIMEOUT = 5
 DEFAULT_SYNC_REQUEST_TIMEOUT = 1.0
-
-# RequestDict = TypedDict('RequestDict', {'id': 'Union[str,int]', 'method': str, 'params': 'Optional[Any]'})
 
 
 def format_request(payload: 'Dict[str, Any]') -> str:
@@ -70,53 +74,45 @@ def try_terminate_process(process: 'subprocess.Popen') -> None:
 
 class SyncRequestStatus(object):
 
-    IDLE = 0
-    REQUESTING = 1
-    READY = 2
-
-    __slots__ = ('__state', '__payload', '__request_id', '__response_id')
+    __slots__ = ('__payload', '__request_id', '__response_id')
 
     def __init__(self) -> None:
-        self.__state = self.IDLE
         self.__payload = None  # type: Any
         self.__request_id = -1
         self.__response_id = -1
 
     def prepare(self, request_id: int) -> None:
-        assert self.__state == self.IDLE
+        assert self.is_idle()
         assert self.__payload is None
-        assert self.__request_id == -1
-        self.__state = self.REQUESTING
         self.__request_id = request_id
 
     def request_id(self) -> int:
-        assert self.__request_id != -1
+        assert not self.is_idle()
         return self.__request_id
 
     def set(self, response_id: int, payload: 'Any') -> None:
-        assert self.__state == self.REQUESTING
+        assert self.is_requesting()
         assert self.__request_id == response_id
-        self.__state = self.READY
         self.__payload = payload
         self.__response_id = response_id
+        assert self.is_ready()
 
     def is_ready(self) -> bool:
-        return self.__state == self.READY
+        return self.__request_id != -1 and self.__request_id == self.__response_id
 
     def is_requesting(self) -> bool:
-        return self.__state == self.REQUESTING
+        return self.__request_id != -1 and self.__response_id == -1
 
     def is_idle(self) -> bool:
-        return self.__state == self.IDLE
+        return self.__request_id == -1
 
-    def flush(self) -> 'Tuple[int, Any]':
-        # assert self.__state == self.READY
-        result = (self.__response_id, self.__payload)
+    def flush(self) -> 'Any':
+        assert self.is_ready()
+        result = self.__payload
         self.reset()
         return result
 
     def reset(self) -> None:
-        self.__state = self.IDLE
         self.__payload = None
         self.__request_id = -1
         self.__response_id = -1
@@ -175,8 +171,7 @@ class Client(object):
                 self.send_payload(request.to_payload(request_id))
                 # We go to sleep. We wake up once another thread calls .notify() on this condition variable.
                 self._sync_request_cvar.wait_for(self._sync_request_result.is_ready, timeout)
-                response_id, result = self._sync_request_result.flush()
-                assert response_id == request_id
+                result = self._sync_request_result.flush()
                 debug('     {}({}): end'.format(request.method, request_id))
                 return result
             except KeyError:
@@ -268,12 +263,9 @@ class Client(object):
                 else:
                     self._deferred_notifications.append(payload)
         elif "id" in payload:
-            try:
-                response_id = int(payload["id"])
-                handler, result = self.response_handler(response_id, payload)
-                return (handler, result, None, None, None)
-            except AssertionError as err:
-                exception_log("Programmer error", err)
+            response_id = int(payload["id"])
+            handler, result = self.response_handler(response_id, payload)
+            return (handler, result, None, None, None)
         else:
             debug("Unknown payload type: ", payload)
         return (None, None, None, None, None)
@@ -290,16 +282,23 @@ class Client(object):
 
         with self._sync_request_cvar:
             handler, result, req_id, typestr, method = self.deduce_payload(payload)
+
         if handler:
-            try:
-                if req_id is None:
-                    # notification or response
-                    handler(result)
-                else:
-                    # request
-                    handler(result, req_id)
-            except Exception as err:
-                exception_log("Error handling server payload", err)
+
+            def run_handler() -> None:
+                try:
+                    assert handler
+                    if req_id is None:
+                        # notification or response
+                        handler(result)
+                    else:
+                        # request
+                        handler(result, req_id)
+                except Exception as err:
+                    exception_log("Error handling server payload", err)
+
+            set_timeout_async(run_handler, 0)
+
         elif typestr is not None and method is not None:
             debug("     unhandled", typestr, method)
 

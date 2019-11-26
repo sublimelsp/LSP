@@ -180,12 +180,20 @@ class DiagnosticsCursorTest(unittest.TestCase):
         walker.walk(test_diagnostics)
         self.assertEqual((test_file_path, row5), cursor.value)
 
-    def test_from_other_file_position(self) -> None:
+    def test_from_other_file_position_wrap(self) -> None:
         cursor = DiagnosticsCursor()
 
         walker = DiagnosticsWalker([cursor.from_position(CURSOR_FORWARD, second_file_path, Point(5, 0))])
         walker.walk(test_diagnostics)
+
         self.assertEqual((test_file_path, row1), cursor.value)
+
+    def test_from_file_position_backward_wrap(self) -> None:
+        cursor = DiagnosticsCursor()
+
+        walker = DiagnosticsWalker([cursor.from_position(CURSOR_BACKWARD, test_file_path, Point(0, 0))])
+        walker.walk(test_diagnostics)
+        self.assertEqual((second_file_path, row3), cursor.value)
 
     def test_from_other_file_position_backwards(self) -> None:
         cursor = DiagnosticsCursor()

@@ -221,7 +221,11 @@ class FromDiagnosticWalk(DiagnosticCursorWalk):
 
     def diagnostic(self, diagnostic: 'Diagnostic') -> None:
         if diagnostic.severity <= DiagnosticSeverity.Warning:
+
             if self._direction == CURSOR_FORWARD:
+                if not self._first:
+                    self._first = self._current_file_path, diagnostic
+
                 if self._take_next:
                     self._take_candidate(diagnostic)
                     self._take_next = False
@@ -237,10 +241,10 @@ class FromDiagnosticWalk(DiagnosticCursorWalk):
         if self._candidate:
             self._cursor.set_value(self._candidate)
         else:
-            if self._direction == CURSOR_BACKWARD:
-                self._cursor.set_value(self._previous)
+            if self._direction == CURSOR_FORWARD:
+                self._cursor.set_value(self._first)
             else:
-                self._cursor.set_value((self._file_path, self._diagnostic))
+                self._cursor.set_value(self._previous)
 
 
 class TakeFirstDiagnosticWalk(DiagnosticCursorWalk):

@@ -146,14 +146,6 @@ test_diagnostics = diagnostics([row1, info, row5], [row3])
 
 class DiagnosticsCursorTest(unittest.TestCase):
 
-    def test_debug_walk_order(self) -> None:
-        for file_path, server_diagnostics in test_diagnostics.items():
-            print(file_path)
-            for server_name, diagnostics in server_diagnostics.items():
-                print(server_name)
-                for diagnostic in diagnostics:
-                    print(diagnostic)
-
     def test_empty(self) -> None:
         cursor = DiagnosticsCursor()
 
@@ -269,10 +261,9 @@ class DiagnosticsCursorTest(unittest.TestCase):
         walker.walk(test_diagnostics)
         self.assertEqual((second_file_path, row3), cursor.value)
 
-        # TODO: do we need to wrap?
-        # walker = DiagnosticsWalker([cursor.from_diagnostic(CURSOR_FORWARD)])
-        # walker.walk(test_diagnostics)
-        # self.assertEqual((test_file_path, row1), cursor.value)
+        walker = DiagnosticsWalker([cursor.from_diagnostic(CURSOR_FORWARD)])
+        walker.walk(test_diagnostics)
+        self.assertEqual((test_file_path, row1), cursor.value)
 
     def test_from_diagnostic_backward(self) -> None:
 

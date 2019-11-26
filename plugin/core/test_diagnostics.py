@@ -145,6 +145,14 @@ test_diagnostics = diagnostics([row1, info, row5], [row3])
 
 class DiagnosticsCursorTest(unittest.TestCase):
 
+    def test_debug_walk_order(self) -> None:
+        for file_path, server_diagnostics in test_diagnostics.items():
+            print(file_path)
+            for server_name, diagnostics in server_diagnostics.items():
+                print(server_name)
+                for diagnostic in diagnostics:
+                    print(diagnostic)
+
     def test_empty(self) -> None:
         cursor = DiagnosticsCursor()
 

@@ -1,4 +1,5 @@
 import unittest
+from collections import OrderedDict
 from unittest import mock
 from .diagnostics import DiagnosticsStorage, DiagnosticsWalker, DiagnosticsCursor, CURSOR_FORWARD, CURSOR_BACKWARD
 from .protocol import Diagnostic, Point, Range, DiagnosticSeverity
@@ -24,7 +25,7 @@ def at_row(row: int) -> Diagnostic:
 
 def diagnostics(test_file_diags: 'List[Diagnostic]',
                 second_file_diags: 'List[Diagnostic]' = []) -> 'Dict[str, Dict[str, List[Diagnostic]]]':
-    diags = {}
+    diags = OrderedDict()  # type: Dict[str, Dict[str, List[Diagnostic]]]
     if test_file_diags:
         source_diags = {}
         source_diags[test_server_name] = test_file_diags

@@ -466,6 +466,51 @@ Requires IntelliJ to be running.
 }
 ```
 
+
+### Java<a name="java"></a>
+
+1. download and extract eclipse's [jdt-ls](https://download.eclipse.org/jdtls/snapshots/jdt-language-server-latest.tar.gz).
+2. add these configurations:
+```jsonc
+"jdtls":
+{
+    "command":
+    [
+        "java",
+        "--add-modules=ALL-SYSTEM",
+        "--add-opens",
+        "java.base/java.util=ALL-UNNAMED",
+        "--add-opens",
+        "java.base/java.lang=ALL-UNNAMED",
+        "-Declipse.application=org.eclipse.jdt.ls.core.id1",
+        "-Dosgi.bundles.defaultStartLevel=4",
+        "-Declipse.product=org.eclipse.jdt.ls.core.product",
+        "-Dfile.encoding=UTF-8",
+        "-DwatchParentProcess={true|false}",  // false on windows, true other OSs
+        "-noverify",
+        "-Xmx1G",
+        "-XX:+UseG1GC",
+        "-XX:+UseStringDeduplication",
+        "-jar",
+        "PATH/TO/jdt-language-server-latest/plugins/org.eclipse.equinox.launcher_*.jar"
+        "-configuration",
+        "PATH/TO/jdt-language-server-latest/config_{win|mac|linux}", // depending on the OS
+        "-data",
+        "<TEMP_DIR>/${project_base_name}/jdt_ws"
+    ],
+    "enabled": true,
+    "languageId": "java",
+    "scopes":
+    [
+        "source.java"
+    ],
+    "syntaxes":
+    [
+        "Packages/Java/Java.sublime-syntax"
+    ]
+}
+```
+
 ### LaTeX<a name="latex"></a>
 
 Download a [precompiled binary](https://github.com/latex-lsp/texlab/releases) (Windows/Linux/macOS) of the [TexLab](https://texlab.netlify.com/) Language Server and place it in a directory that is in your `PATH`.

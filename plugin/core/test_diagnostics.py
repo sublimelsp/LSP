@@ -138,7 +138,9 @@ class DiagnosticsWalkerTests(unittest.TestCase):
 row1 = at_row(1)
 row5 = at_row(5)
 row3 = at_row(3)
-test_diagnostics = diagnostics([row1, row5], [row3])
+info = at_row(4)
+info.severity = DiagnosticSeverity.Information
+test_diagnostics = diagnostics([row1, info, row5], [row3])
 
 
 class DiagnosticsCursorTest(unittest.TestCase):

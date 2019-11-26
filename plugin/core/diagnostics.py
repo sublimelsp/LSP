@@ -138,23 +138,30 @@ class FromPositionWalk(DiagnosticsUpdateWalk):
         self._current_file_path = file_path
 
     def diagnostic(self, diagnostic: 'Diagnostic') -> None:
-        if not self._first_file_diagnostic:
-            self._first_file_diagnostic = self._current_file_path, diagnostic
+        if diagnostic.severity <= DiagnosticSeverity.Warning:
+            if not self._first_file_diagnostic:
+                self._first_file_diagnostic = self._current_file_path, diagnostic
 
-        if self._direction == CURSOR_FORWARD:
-            if self._current_file_path == self.file_path:
-                if diagnostic.range.start.row > self.point.row:
-                    if not self._nearest_file_diagnostic or diagnostic.range.start.row < self._nearest_file_diagnostic[
-                            1].range.start.row:
-                        self._nearest_file_diagnostic = self._current_file_path, diagnostic
-        else:
-            if self._current_file_path == self.file_path:
-                self._last_before_file_diagnostic = self._previous_file_diagnostic
-                if diagnostic.range.start.row < self.point.row:
-                    if not self._nearest_file_diagnostic or diagnostic.range.start.row > self._nearest_file_diagnostic[
-                            1].range.start.row:
-                        self._nearest_file_diagnostic = self._current_file_path, diagnostic
-            self._previous_file_diagnostic = self._current_file_path, diagnostic
+            if self._direction == CURSOR_FORWARD:
+                if self._current_file_path == self.file_path:
+                    self._take_if_nearer_forward(diagnostic)
+            else:
+                if self._current_file_path == self.file_path:
+                    self._take_if_nearer_backward(diagnostic)
+                    self._last_before_file_diagnostic = self._previous_file_diagnostic
+                self._previous_file_diagnostic = self._current_file_path, diagnostic
+
+    def _take_if_nearer_forward(self, diagnostic: Diagnostic) -> None:
+        if diagnostic.range.start.row > self.point.row:
+            if not self._nearest_file_diagnostic or diagnostic.range.start.row < self._nearest_file_diagnostic[
+                    1].range.start.row:
+                self._nearest_file_diagnostic = self._current_file_path, diagnostic
+
+    def _take_if_nearer_backward(self, diagnostic: Diagnostic) -> None:
+        if diagnostic.range.start.row < self.point.row:
+            if not self._nearest_file_diagnostic or diagnostic.range.start.row > self._nearest_file_diagnostic[
+                    1].range.start.row:
+                self._nearest_file_diagnostic = self._current_file_path, diagnostic
 
     def end(self) -> None:
         if self._nearest_file_diagnostic:
@@ -201,17 +208,18 @@ class FromDiagnosticWalk(DiagnosticsUpdateWalk):
         self._current_file_path = file_path
 
     def diagnostic(self, diagnostic: 'Diagnostic') -> None:
-        if self._direction == CURSOR_FORWARD:
-            if self._take_next:
-                self.file_diagnostic = self._current_file_path, diagnostic
-                self._take_next = False
-            elif diagnostic == self._diagnostic and self._current_file_path == self._file_path:
-                self._take_next = True
-        else:
-            if self._current_file_path == self._file_path and self._diagnostic == diagnostic:
-                if self._previous_file_diagnostic:
-                    self.file_diagnostic = self._previous_file_diagnostic
-            self._previous_file_diagnostic = self._current_file_path, diagnostic
+        if diagnostic.severity <= DiagnosticSeverity.Warning:
+            if self._direction == CURSOR_FORWARD:
+                if self._take_next:
+                    self.file_diagnostic = self._current_file_path, diagnostic
+                    self._take_next = False
+                elif diagnostic == self._diagnostic and self._current_file_path == self._file_path:
+                    self._take_next = True
+            else:
+                if self._current_file_path == self._file_path and self._diagnostic == diagnostic:
+                    if self._previous_file_diagnostic:
+                        self.file_diagnostic = self._previous_file_diagnostic
+                self._previous_file_diagnostic = self._current_file_path, diagnostic
 
     def end(self) -> None:
         if self.file_diagnostic:
@@ -234,11 +242,12 @@ class TakeFirstDiagnosticWalk(DiagnosticsUpdateWalk):
         self._current_file_path = file_path
 
     def diagnostic(self, diagnostic: Diagnostic) -> None:
-        if self._direction == CURSOR_FORWARD:
-            if self._file_diagnostic is None:
+        if diagnostic.severity <= DiagnosticSeverity.Warning:
+            if self._direction == CURSOR_FORWARD:
+                if self._file_diagnostic is None:
+                    self._file_diagnostic = self._current_file_path, diagnostic
+            else:
                 self._file_diagnostic = self._current_file_path, diagnostic
-        else:
-            self._file_diagnostic = self._current_file_path, diagnostic
 
     def end(self) -> None:
         self._cursor.set_value(self._file_diagnostic)

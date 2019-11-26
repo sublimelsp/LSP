@@ -214,8 +214,9 @@ class DiagnosticsPhantoms(object):
 
         additional_infos = "<br>".join([self.format_diagnostic_related_info(info) for info in diagnostic.related_info])
         severity = "error" if diagnostic.severity == DiagnosticSeverity.Error else "warning"
-        content = message + "<p class='additional'>" + additional_infos + "</p>" if additional_infos else message
-        markup = self.create_phantom_html(content, severity)
+        additional_content = "<p>" + additional_infos + "</p>" if additional_infos else ""
+
+        markup = self.create_phantom_html(message, severity, additional_content)
         return sublime.Phantom(
             region,
             markup,
@@ -244,8 +245,12 @@ class DiagnosticsPhantoms(object):
             file_path = os.path.join(self._base_dir, file_path) if self._base_dir else file_path
             self._window.open_file(file_path + ":" + location, sublime.ENCODED_POSITION | sublime.TRANSIENT)
 
-    def create_phantom_html(self, content: str, severity: str) -> str:
+    def create_phantom_html(self, content: str, severity: str, additional: str = "") -> str:
         stylesheet = sublime.load_resource("Packages/LSP/phantoms.css")
+        additional_markup = """<div class="content-additional">
+                            <div class="content-additional-inner">{}</div>
+                        </div>""".format(additional) if additional else ""
+
         return """<body id=inline-error>
                     <style>{}</style>
                     <div class="{}-arrow"></div>
@@ -256,8 +261,9 @@ class DiagnosticsPhantoms(object):
                             <a href="next">↓</a>
                         </div>
                         <div class="content">{}</div>
+                        {}
                     </div>
-                </body>""".format(stylesheet, severity, severity, content)
+                </body>""".format(stylesheet, severity, severity, content, additional_markup)
 
     def clear(self) -> None:
         if self._last_phantom_set:

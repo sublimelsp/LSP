@@ -203,7 +203,7 @@ class MockConfigs(object):
         else:
             return [TEST_CONFIG]
 
-    def syntax_configs(self, view):
+    def syntax_configs(self, view, include_disabled: bool=False):
         if view.settings().get("syntax") == "Plain Text":
             return [TEST_CONFIG]
         else:
@@ -220,10 +220,16 @@ class MockConfigs(object):
         else:
             return {}
 
-    def update(self, configs: 'List[ClientConfig]') -> None:
+    def update(self) -> None:
         pass
 
-    def disable(self, config_name: str) -> None:
+    def enable_config(self, config_name: str) -> None:
+        pass
+
+    def disable_config(self, config_name: str) -> None:
+        pass
+
+    def disable_temporarily(self, config_name: str) -> None:
         pass
 
 

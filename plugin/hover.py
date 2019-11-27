@@ -148,10 +148,10 @@ class LspHoverCommand(LspTextCommand):
         related_content = "<pre class='related_info'>" + "<br>".join(related_infos) + "</pre>" if related_infos else ""
 
         if diagnostic.source:
-            return "<pre class=\"{}\">[{}] {}</pre>{}".format(class_for_severity[diagnostic.severity],
+            return "<pre class=\"{}\">[{}] {}{}</pre>".format(class_for_severity[diagnostic.severity],
                                                               diagnostic.source, diagnostic_message, related_content)
         else:
-            return "<pre class=\"{}\">{}</pre>{}".format(class_for_severity[diagnostic.severity], diagnostic_message,
+            return "<pre class=\"{}\">{}{}</pre>".format(class_for_severity[diagnostic.severity], diagnostic_message,
                                                          related_content)
 
     def diagnostics_content(self) -> str:

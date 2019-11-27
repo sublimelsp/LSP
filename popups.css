@@ -41,7 +41,6 @@
     padding: 0.5rem;
 }
 .lsp_popup .actions {
-    /* font-weight: bold; */
     border-width: 0;
     background-color: color(var(--foreground) alpha(0.1));
     color: var(--whitish);
@@ -51,9 +50,8 @@
     text-decoration: none;
     color: var(--foreground);
 }
-.lsp_popup .related_info {
-    border-width: 0;
-    background-color: color(var(--foreground) alpha(0.25));
-    color: var(--whitish);
-    padding: 0.5rem;
+pre.related_info {
+    border-top: 1px solid color(var(--background) alpha(0.25));
+    margin-top: 0.7rem;
+    padding-top: 0.7rem;
 }

@@ -35,7 +35,7 @@ def inject_session(wm, config, client):
 
     session = Session(config, "", client)
     # session.state = ClientStates.READY
-    wm.update_configs(client_configs.all)
+    wm.update_configs()
     wm._sessions[config.name] = session
     wm._handle_post_initialize(session)
 

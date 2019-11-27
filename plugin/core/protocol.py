@@ -267,6 +267,11 @@ class Point(object):
     def __repr__(self) -> str:
         return "{}:{}".format(self.row, self.col)
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Point):
+            raise NotImplementedError()
+        return self.row == other.row and self.col == other.col
+
     @classmethod
     def from_lsp(cls, point: dict) -> 'Point':
         return Point(point['line'], point['character'])
@@ -285,6 +290,12 @@ class Range(object):
 
     def __repr__(self) -> str:
         return "({} {})".format(self.start, self.end)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Range):
+            raise NotImplementedError()
+
+        return self.start == other.start and self.end == other.end
 
     @classmethod
     def from_lsp(cls, range: dict) -> 'Range':
@@ -387,6 +398,15 @@ class Diagnostic(object):
 
     def to_lsp(self) -> 'Dict[str, Any]':
         return self._lsp_diagnostic
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Diagnostic):
+            raise NotImplementedError()
+
+        return self.message == other.message and self.range == other.range
+
+    def __repr__(self) -> str:
+        return str(self.range) + ":" + self.message
 
 
 class WorkspaceFolder:

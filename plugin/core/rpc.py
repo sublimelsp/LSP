@@ -74,16 +74,18 @@ def try_terminate_process(process: 'subprocess.Popen') -> None:
 
 class SyncRequestStatus(object):
 
-    __slots__ = ('__payload', '__request_id', '__response_id')
+    __slots__ = ('__payload', '__error', '__request_id', '__response_id')
 
     def __init__(self) -> None:
         self.__payload = None  # type: Any
+        self.__error = None  # type: Optional[Dict[str, Any]]
         self.__request_id = -1
         self.__response_id = -1
 
     def prepare(self, request_id: int) -> None:
         assert self.is_idle()
         assert self.__payload is None
+        assert self.__error is None
         self.__request_id = request_id
 
     def request_id(self) -> int:
@@ -97,6 +99,13 @@ class SyncRequestStatus(object):
         self.__response_id = response_id
         assert self.is_ready()
 
+    def set_error(self, response_id: int, error: 'Dict[str, Any]') -> None:
+        assert self.is_requesting()
+        assert self.__request_id == response_id
+        self.__error = error
+        self.__response_id = response_id
+        assert self.is_ready()
+
     def is_ready(self) -> bool:
         return self.__request_id != -1 and self.__request_id == self.__response_id
 
@@ -106,9 +115,20 @@ class SyncRequestStatus(object):
     def is_idle(self) -> bool:
         return self.__request_id == -1
 
+    def has_error(self) -> bool:
+        return self.__error is not None
+
     def flush(self) -> 'Any':
+        assert not self.has_error()
         assert self.is_ready()
         result = self.__payload
+        self.reset()
+        return result
+
+    def flush_error(self) -> 'Dict[str, Any]':
+        assert self.__error is not None
+        assert self.is_ready()
+        result = self.__error
         self.reset()
         return result
 
@@ -158,6 +178,7 @@ class Client(object):
             self,
             request: Request,
             handler: 'Callable[[Optional[Any]], None]',
+            error_handler: 'Optional[Callable[[Any], None]]' = None,
             timeout: float = DEFAULT_SYNC_REQUEST_TIMEOUT
     ) -> None:
         """
@@ -168,6 +189,7 @@ class Client(object):
             return None
 
         result = None  # type: Any
+        error = None  # type: Optional[Dict[str, Any]]
         exception = None  # type: Optional[Exception]
         with self._sync_request_cvar:
             try:
@@ -178,7 +200,10 @@ class Client(object):
                 self.send_payload(request.to_payload(request_id))
                 # We go to sleep. We wake up once another thread calls .notify() on this condition variable.
                 self._sync_request_cvar.wait_for(self._sync_request_result.is_ready, timeout)
-                result = self._sync_request_result.flush()
+                if self._sync_request_result.has_error():
+                    error = self._sync_request_result.flush_error()
+                else:
+                    result = self._sync_request_result.flush()
                 debug('     {}({}): end'.format(request.method, request_id))
             except KeyError as ex:
                 exception = ex
@@ -191,7 +216,13 @@ class Client(object):
             self.flush_deferred_notifications()
             self.flush_deferred_responses()
         if exception is None:
-            handler(result)
+            if error is not None:
+                if error_handler is None:
+                    self._error_display_handler(error["message"])
+                else:
+                    error_handler(error)
+            else:
+                handler(result)
 
     def flush_deferred_notifications(self) -> None:
         for payload in self._deferred_notifications:
@@ -321,7 +352,7 @@ class Client(object):
         if "result" in response and "error" not in response:
             return self.handle_response_result(response_id, handler, response["result"])
         elif "result" not in response and "error" in response:
-            return self.handle_response_error(error_handler, response["error"])
+            return self.handle_response_error(response_id, error_handler, response["error"])
         else:
             debug('invalid response payload', response)
             return (None, None)
@@ -346,8 +377,20 @@ class Client(object):
             debug("dropping response with ID", response_id)
             return (None, None)
 
-    def handle_response_error(self, error_handler: 'Optional[Callable]',
+    def handle_response_error(self, response_id: int, error_handler: 'Optional[Callable]',
                               error: 'Any') -> 'Tuple[Optional[Callable], Any]':
+        if self._sync_request_result.is_idle():
+            pass
+        elif self._sync_request_result.is_requesting():
+            if self._sync_request_result.request_id() == response_id:
+                self._sync_request_result.set_error(response_id, error)
+                self._sync_request_cvar.notify()
+            else:
+                self._deferred_responses.append((error_handler, error))
+            return (None, None)
+        else:  # self._sync_request_result.is_ready()
+            self._deferred_responses.append((error_handler, error))
+            return (None, None)
         if self.settings.log_payloads:
             debug('ERR: ' + str(error))
         if error_handler:

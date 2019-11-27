@@ -456,7 +456,7 @@ class Region:
     def size(self) -> int:
         ...
 
-    def contains(self, x: int) -> bool:
+    def contains(self, x: 'Union[Region, int]') -> bool:
         ...
 
     def cover(self, rhs: 'Region') -> 'Region':

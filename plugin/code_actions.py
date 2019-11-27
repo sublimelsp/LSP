@@ -50,6 +50,7 @@ class CodeActionsAtLocation(object):
 
 class CodeActionsManager(object):
     """ Collects and caches code actions"""
+
     def __init__(self) -> None:
         self._requests = {}  # type: Dict[str, CodeActionsAtLocation]
 
@@ -113,7 +114,7 @@ def request_code_actions_with_diagnostics(view: sublime.View, diagnostics_by_con
 class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self._stored_point = -1
+        self._stored_region = sublime.Region(-1, -1)
         self._actions = []  # type: List[CodeActionOrCommand]
 
     @classmethod
@@ -127,15 +128,15 @@ class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
         self.schedule_request()
 
     def schedule_request(self) -> None:
-        current_point = self.view.sel()[0].begin()
-        if self._stored_point != current_point:
-            self._stored_point = current_point
-            sublime.set_timeout_async(lambda: self.fire_request(current_point), 800)
+        current_region = self.view.sel()[0]
+        if self._stored_region != current_region:
+            self._stored_region = current_region
+            sublime.set_timeout_async(lambda: self.fire_request(current_region), 800)
 
-    def fire_request(self, current_point: int) -> None:
-        if current_point == self._stored_point:
+    def fire_request(self, current_region: 'sublime.Region') -> None:
+        if current_region == self._stored_region:
             self._actions = []
-            actions_manager.request(self.view, current_point, self.handle_responses)
+            actions_manager.request(self.view, current_region.begin(), self.handle_responses)
 
     def handle_responses(self, responses: 'CodeActionsByConfigName') -> None:
         for _, items in responses.items():

@@ -20,17 +20,8 @@ div.content {
 div.content p {
     margin: 0.2rem;
 }
-div.content-additional {
-    background-color: var(--background);
-    color: var(--whitish);
-    margin-bottom: 0.4rem;
-}
-div.content-additional-inner {
-    padding: 0.4rem 0.4rem 0.4rem 0.7rem;
-    background-color: color(var(--foreground) alpha(0.25));
-}
-div.content-additional p {
-    margin: 0.2rem 0.2rem 0.2rem 0.2rem;
+div.content p.additional {
+    margin-top: 0.7rem;
 }
 div.toolbar {
     padding: 0.2rem 0.7rem 0.2rem 0.7rem;

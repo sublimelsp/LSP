@@ -57,15 +57,14 @@ def get_global_client_config(view: 'sublime.View', global_configs: 'List[ClientC
 
 
 def create_window_configs(window: 'WindowLike', global_configs: 'List[ClientConfig]') -> 'List[ClientConfig]':
-    return list(map(lambda c: apply_project_overrides(c, window), global_configs))
-
-
-def apply_project_overrides(client_config: 'ClientConfig', window: 'WindowLike') -> 'ClientConfig':
     window_config = get_project_config(window)
+    return list(map(lambda c: apply_project_overrides(c, window_config), global_configs))
 
-    if client_config.name in window_config:
-        overrides = window_config[client_config.name]
-        debug('window {} has override for {}'.format(window.id(), client_config.name), overrides)
+
+def apply_project_overrides(client_config: 'ClientConfig', lsp_project_settings: dict) -> 'ClientConfig':
+    if client_config.name in lsp_project_settings:
+        overrides = lsp_project_settings[client_config.name]
+        debug('window has override for {}'.format(client_config.name), overrides)
         client_settings = _merge_dicts(client_config.settings, overrides.get("settings", {}))
         client_env = _merge_dicts(client_config.env, overrides.get("env", {}))
         return ClientConfig(

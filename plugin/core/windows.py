@@ -381,12 +381,20 @@ class WindowManager(object):
     def _initialize_on_open(self, view: ViewLike) -> None:
         # have all sessions for this document been started?
         with self._initialization_lock:
-            startable_configs = filter(lambda c: c.enabled and c.name not in self._sessions,
-                                       self._configs.syntax_configs(view))
+            new_configs = filter(lambda c: c.name not in self._sessions,
+                                 self._configs.syntax_configs(view, include_disabled=True))
 
-            for config in startable_configs:
-                debug("window {} requests {} for {}".format(self._window.id(), config.name, view.file_name()))
-                self._start_client(config)
+            if any(new_configs):
+                # TODO: cannot observe project setting changes
+                # have to check project overrides every session request
+                self.update_configs()
+
+                startable_configs = filter(lambda c: c.name not in self._sessions,
+                                           self._configs.syntax_configs(view))
+
+                for config in startable_configs:
+                    debug("window {} requests {} for {}".format(self._window.id(), config.name, view.file_name()))
+                    self._start_client(config)
 
     def _start_client(self, config: ClientConfig) -> None:
         workspace = self._ensure_workspace()

@@ -203,7 +203,7 @@ class MockConfigs(object):
         else:
             return [TEST_CONFIG]
 
-    def syntax_configs(self, view):
+    def syntax_configs(self, view, include_disabled: bool=False):
         if view.settings().get("syntax") == "Plain Text":
             return [TEST_CONFIG]
         else:

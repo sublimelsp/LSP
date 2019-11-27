@@ -174,7 +174,7 @@ class ConfigRegistry(Protocol):
     def scope_configs(self, view: ViewLike, point: 'Optional[int]' = None) -> 'Iterator[ClientConfig]':
         ...
 
-    def syntax_configs(self, view: ViewLike) -> 'List[ClientConfig]':
+    def syntax_configs(self, view: ViewLike, include_disabled: bool=False) -> 'List[ClientConfig]':
         ...
 
     def syntax_supported(self, view: ViewLike) -> bool:

@@ -141,7 +141,7 @@ class Client(object):
             request: Request,
             handler: 'Callable[[Optional[Any]], None]',
             error_handler: 'Optional[Callable[[Any], None]]' = None,
-    ) -> 'None':
+    ) -> None:
         if self.transport is not None:
             with self._sync_request_cvar:
                 self.request_id += 1
@@ -154,7 +154,12 @@ class Client(object):
                 error_handler(None)
             return None
 
-    def execute_request(self, request: Request, timeout: float = DEFAULT_SYNC_REQUEST_TIMEOUT) -> 'Optional[Any]':
+    def execute_request(
+            self,
+            request: Request,
+            handler: 'Callable[[Optional[Any]], None]',
+            timeout: float = DEFAULT_SYNC_REQUEST_TIMEOUT
+    ) -> None:
         """
         Sends a request and waits for response up to timeout (default: 1 second), blocking the current thread.
         """
@@ -162,6 +167,8 @@ class Client(object):
             debug('unable to send', request.method)
             return None
 
+        result = None  # type: Any
+        exception = None  # type: Optional[Exception]
         with self._sync_request_cvar:
             try:
                 self.request_id += 1
@@ -173,17 +180,18 @@ class Client(object):
                 self._sync_request_cvar.wait_for(self._sync_request_result.is_ready, timeout)
                 result = self._sync_request_result.flush()
                 debug('     {}({}): end'.format(request.method, request_id))
-                return result
-            except KeyError:
+            except KeyError as ex:
+                exception = ex
                 debug('     {}({}): TIMEOUT'.format(request.method, request_id))
                 self._sync_request_result.reset()
             except Exception as ex:
+                exception = ex
                 exception_log('          {}({}): ERROR'.format(request.method, request_id), ex)
                 self._sync_request_result.reset()
-            finally:
-                self.flush_deferred_notifications()
-                self.flush_deferred_responses()
-        return None
+            self.flush_deferred_notifications()
+            self.flush_deferred_responses()
+        if exception is None:
+            handler(result)
 
     def flush_deferred_notifications(self) -> None:
         for payload in self._deferred_notifications:

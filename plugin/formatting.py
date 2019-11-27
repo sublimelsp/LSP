@@ -34,6 +34,12 @@ def wants_will_save_wait_until(session: Session) -> bool:
     return False
 
 
+def apply_and_purge(view: sublime.View, response: 'Optional[List[dict]]') -> None:
+    if response:
+        apply_response_to_view(response, view)
+        global_events.publish("view.on_purge_changes", view)
+
+
 def run_will_save_wait_until(view: sublime.View, file_path: str, session: Session) -> None:
     client = client_from_session(session)
     if client:
@@ -46,10 +52,7 @@ def run_will_save_wait_until(view: sublime.View, file_path: str, session: Sessio
             "reason": 1  # TextDocumentSaveReason.Manual
         }
         request = Request.willSaveWaitUntil(params)
-        response = client.execute_request(request)
-        if response:
-            apply_response_to_view(response, view)
-            global_events.publish("view.on_purge_changes", view)
+        client.execute_request(request, lambda response: apply_and_purge(view, response))
 
 
 def run_format_on_save(view: sublime.View, file_path: str) -> None:
@@ -64,10 +67,7 @@ def run_format_on_save(view: sublime.View, file_path: str) -> None:
             "options": options_for_view(view)
         }
         request = Request.formatting(params)
-        response = client.execute_request(request)
-        if response:
-            apply_response_to_view(response, view)
-            global_events.publish("view.on_purge_changes", view)
+        client.execute_request(request, lambda response: apply_and_purge(view, response))
 
 
 class FormatOnSaveListener(sublime_plugin.ViewEventListener):

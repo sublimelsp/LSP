@@ -71,18 +71,22 @@ class SyncRequestStatusTest(unittest.TestCase):
 
     def test_tiny_state_machine(self):
         sync = SyncRequestStatus()
+        self.assertTrue(sync.is_idle())
         self.assertFalse(sync.is_requesting())
         self.assertFalse(sync.is_ready())
 
         sync.prepare(1)
+        self.assertFalse(sync.is_idle())
         self.assertTrue(sync.is_requesting())
         self.assertFalse(sync.is_ready())
 
         sync.set(1, {"foo": "bar"})
+        self.assertFalse(sync.is_idle())
         self.assertFalse(sync.is_requesting())
         self.assertTrue(sync.is_ready())
 
         payload = sync.flush()
+        self.assertTrue(sync.is_idle())
         self.assertFalse(sync.is_requesting())
         self.assertFalse(sync.is_ready())
         self.assertDictEqual(payload, {"foo": "bar"})
@@ -96,6 +100,7 @@ class SyncRequestStatusTest(unittest.TestCase):
         except Exception:
             sync.reset()
         # sync should be usable again
+        self.assertTrue(sync.is_idle())
         self.assertFalse(sync.is_requesting())
         self.assertFalse(sync.is_ready())
 

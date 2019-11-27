@@ -144,8 +144,6 @@ class WindowConfigManager(object):
 
     def update(self) -> None:
         self.all = create_window_configs(self._window, self._global_configs)
-        # debug('window {} client configs'.format(self._window.id()), list('{}={}'.format(c.name, c.enabled)
-        # for c in self.all))
 
     def enable_config(self, config_name: str) -> None:
         enable_in_project(self._window, config_name)

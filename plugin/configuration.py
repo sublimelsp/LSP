@@ -1,45 +1,15 @@
-import mdpopups
 import sublime
 import sublime_plugin
-import webbrowser
 
 from .core.settings import ClientConfig, client_configs
-from .core.configurations import get_global_client_config
-from .core.registry import configs_for_scope, windows
-from .core.events import global_events
+from .core.registry import windows
 
 try:
     from typing import List, Optional, Dict, Any
     assert List and Optional and Dict and Any
+    assert ClientConfig
 except ImportError:
     pass
-
-
-# todo: delete this feature
-def detect_supportable_view(view: sublime.View) -> None:
-    config = configs_for_scope(view)
-    if not config:
-        available_config = get_global_client_config(view, client_configs.all)
-        if available_config:
-            show_enable_config(view, available_config)
-
-
-global_events.subscribe("view.on_load_async", detect_supportable_view)
-global_events.subscribe("view.on_activated_async", detect_supportable_view)
-
-
-def extract_syntax_name(syntax_file: str) -> str:
-    return syntax_file.split('/')[-1].split('.')[0]
-
-
-def show_enable_config(view: sublime.View, config: ClientConfig) -> None:
-    syntax = str(view.settings().get("syntax", ""))
-    message = "LSP has found a language server for {}. Run \"Setup Language Server\" to start using it".format(
-        extract_syntax_name(syntax)
-    )
-    window = view.window()
-    if window:
-        window.status_message(message)
 
 
 def create_config_items(configs: 'List[ClientConfig]') -> 'List[List[str]]':
@@ -115,65 +85,3 @@ class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
             config_name = self._items[index][0]
             wm = windows.lookup(self.window)
             wm.disable_config(config_name)
-
-
-supported_syntax_template = '''
-Installation steps:
-
-* Open the [LSP documentation](https://lsp.readthedocs.io)
-* Read the instructions for {}
-* Install the language server on your system
-* Choose an option below to start the server
-
-Enable: [Globally](#enable_globally) | [This Project Only](#enable_project)
-'''
-
-unsupported_syntax_template = """
-*LSP has no built-in configuration for a {} language server*
-
-Visit [langserver.org](https://langserver.org) to find out if a language server exists for this language."""
-
-
-class LspSetupLanguageServerCommand(sublime_plugin.WindowCommand):
-    def run(self) -> None:
-        view = self.window.active_view()
-        if view:
-            syntax = view.settings().get("syntax") or ""
-            available_config = get_global_client_config(view, client_configs.all)
-
-            syntax_name = extract_syntax_name(syntax)
-            title = "# Language Server for {}\n".format(syntax_name)
-
-            if available_config:
-                content = supported_syntax_template.format(syntax_name)
-            else:
-                title = "# No Language Server support"
-                content = unsupported_syntax_template.format(syntax_name)
-
-            mdpopups.show_popup(
-                view,
-                "\n".join([title, content]),
-                css='''
-                    .lsp_documentation {
-                        margin: 1rem 1rem 0.5rem 1rem;
-                        font-family: system;
-                    }
-                    .lsp_documentation h1,
-                    .lsp_documentation p {
-                        margin: 0 0 0.5rem 0;
-                    }
-                ''',
-                md=True,
-                wrapper_class="lsp_documentation",
-                max_width=800,
-                max_height=600,
-                on_navigate=self.on_hover_navigate
-            )
-
-    def on_hover_navigate(self, href: str) -> None:
-        if href == "#enable_globally":
-            self.window.run_command("lsp_enable_language_server_globally")
-        elif href == "#enable_project":
-            self.window.run_command("lsp_enable_language_server_in_project")
-        else:
-            webbrowser.open_new_tab(href)

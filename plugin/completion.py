@@ -45,7 +45,7 @@ class LspTrimCompletionCommand(sublime_plugin.TextCommand):
 
 class CompletionHandler(LSPViewEventListener):
     def __init__(self, view: sublime.View) -> None:
-        self.view = view
+        super().__init__(view)
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]

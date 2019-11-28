@@ -48,7 +48,7 @@ class ColorSchemeScopeRenderer(object):
 class SignatureHelpListener(LSPViewEventListener):
 
     def __init__(self, view: sublime.View) -> None:
-        self.view = view
+        super().__init__(view)
         self._initialized = False
         self._signature_help_triggers = []  # type: List[str]
         self._signature_help_selector = view.settings().get("auto_complete_selector", "") or ""  # type: str

@@ -1,12 +1,11 @@
 import sublime
-import sublime_plugin
 
 from .url import filename_to_uri
 from .configurations import is_supported_syntax
-from .events import global_events
 from .views import offset_to_point
 from .windows import ViewLike, WindowLike
 from .settings import client_configs
+from .registry import LSPViewEventListener
 
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
@@ -58,9 +57,9 @@ def is_transient_view(view: sublime.View) -> bool:
         return True
 
 
-class DocumentSyncListener(sublime_plugin.ViewEventListener):
+class DocumentSyncListener(LSPViewEventListener):
     def __init__(self, view: 'sublime.View') -> None:
-        self.view = view
+        super().__init__(view)
 
     @classmethod
     def is_applicable(cls, settings: dict) -> bool:
@@ -79,19 +78,22 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener):
     def on_load_async(self) -> None:
         # skip transient views:
         if not is_transient_view(self.view):
-            global_events.publish("view.on_load_async", self.view)
+            self.manager.activate_view(self.view)
+            self.manager.documents.handle_view_opened(self.view)
 
     def on_activated_async(self) -> None:
         if self.view.file_name() and not is_transient_view(self.view):
-            global_events.publish("view.on_activated_async", self.view)
+            self.manager.activate_view(self.view)
+            self.manager.documents.handle_view_opened(self.view)
 
     def on_modified(self) -> None:
         if self.view.file_name():
-            global_events.publish("view.on_modified", self.view)
+            self.manager.documents.handle_view_modified(self.view)
 
     def on_post_save_async(self) -> None:
-        global_events.publish("view.on_post_save_async", self.view)
+        self.manager.documents.handle_view_saved(self.view)
 
     def on_close(self) -> None:
         if self.view.file_name() and self.view.is_primary():
-            global_events.publish("view.on_close", self.view)
+            self.manager.handle_view_closed(self.view)
+            self.manager.documents.handle_view_closed(self.view)

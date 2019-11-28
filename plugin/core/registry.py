@@ -43,6 +43,7 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
         if not self._manager:
             self._manager = windows.lookup(self.view.window())
 
+        assert self._manager
         return self._manager
 
 

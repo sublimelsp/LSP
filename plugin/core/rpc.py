@@ -350,20 +350,23 @@ class Client(object):
     def response_handler(self, response_id: int, response: 'Dict[str, Any]') -> 'Tuple[Optional[Callable], Any]':
         handler, error_handler = self._response_handlers.pop(response_id, (None, None))
         if "result" in response and "error" not in response:
-            return self.handle_response_result(response_id, handler, response["result"])
+            return self.handle_response(response_id, handler, response["result"], False)
         elif "result" not in response and "error" in response:
-            return self.handle_response_error(response_id, error_handler, response["error"])
+            return self.handle_response(response_id, error_handler, response["error"], True)
         else:
             debug('invalid response payload', response)
             return (None, None)
 
-    def handle_response_result(self, response_id: int, handler: 'Optional[Callable]',
-                               result: 'Any') -> 'Tuple[Optional[Callable], Any]':
+    def handle_response(self, response_id: int, handler: 'Optional[Callable]',
+                        result: 'Any', is_error: bool) -> 'Tuple[Optional[Callable], Any]':
         if self._sync_request_result.is_idle():
             pass
         elif self._sync_request_result.is_requesting():
             if self._sync_request_result.request_id() == response_id:
-                self._sync_request_result.set(response_id, result)
+                if is_error:
+                    self._sync_request_result.set_error(response_id, result)
+                else:
+                    self._sync_request_result.set(response_id, result)
                 self._sync_request_cvar.notify()
             else:
                 self._deferred_responses.append((handler, result))
@@ -373,30 +376,11 @@ class Client(object):
             return (None, None)
         if handler:
             return (handler, result)
+        elif is_error:
+            return (self._error_display_handler, result.get("message"))
         else:
             debug("dropping response with ID", response_id)
             return (None, None)
-
-    def handle_response_error(self, response_id: int, error_handler: 'Optional[Callable]',
-                              error: 'Any') -> 'Tuple[Optional[Callable], Any]':
-        if self._sync_request_result.is_idle():
-            pass
-        elif self._sync_request_result.is_requesting():
-            if self._sync_request_result.request_id() == response_id:
-                self._sync_request_result.set_error(response_id, error)
-                self._sync_request_cvar.notify()
-            else:
-                self._deferred_responses.append((error_handler, error))
-            return (None, None)
-        else:  # self._sync_request_result.is_ready()
-            self._deferred_responses.append((error_handler, error))
-            return (None, None)
-        if self.settings.log_payloads:
-            debug('ERR: ' + str(error))
-        if error_handler:
-            return (error_handler, error)
-        else:
-            return (self._error_display_handler, error.get("message"))
 
     def on_request(self, request_method: str, handler: 'Callable') -> None:
         self._request_handlers[request_method] = handler

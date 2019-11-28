@@ -59,6 +59,9 @@ class DocumentHandler(Protocol):
     def reset(self) -> None:
         ...
 
+    def purge_changes(self, view: ViewLike) -> None:
+        ...
+
 
 def get_active_views(window: WindowLike) -> 'List[ViewLike]':
     views = list()  # type: List[ViewLike]

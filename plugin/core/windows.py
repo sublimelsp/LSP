@@ -53,13 +53,22 @@ class DocumentHandler(Protocol):
     def remove_session(self, config_name: str) -> None:
         ...
 
-    def handle_view_opened(self, view: ViewLike) -> None:
-        ...
-
     def reset(self) -> None:
         ...
 
+    def handle_view_opened(self, view: ViewLike) -> None:
+        ...
+
+    def handle_view_modified(self, view: ViewLike) -> None:
+        ...
+
     def purge_changes(self, view: ViewLike) -> None:
+        ...
+
+    def handle_view_saved(self, view: ViewLike) -> None:
+        ...
+
+    def handle_view_closed(self, view: ViewLike) -> None:
         ...
 
 
@@ -113,12 +122,6 @@ class WindowDocumentHandler(object):
         self._sessions = dict()  # type: Dict[str, Session]
         self.changed = nop
         self.saved = nop
-        events.subscribe('view.on_load_async', self.handle_view_opened)
-        events.subscribe('view.on_activated_async', self.handle_view_opened)
-        events.subscribe('view.on_modified', self.handle_view_modified)
-        events.subscribe('view.on_purge_changes', self.purge_changes)
-        events.subscribe('view.on_post_save_async', self.handle_view_saved)
-        events.subscribe('view.on_close', self.handle_view_closed)
 
     def add_session(self, session: Session) -> None:
         self._sessions[session.config.name] = session
@@ -205,7 +208,7 @@ class WindowDocumentHandler(object):
 
     def handle_view_opened(self, view: ViewLike) -> None:
         file_name = view.file_name()
-        if file_name and view.window() == self._window:
+        if file_name:
             if not self.has_document_state(file_name):
                 config_languages = self._config_languages(view)
                 if len(config_languages) > 0:
@@ -247,34 +250,32 @@ class WindowDocumentHandler(object):
 
     def handle_view_saved(self, view: ViewLike) -> None:
         file_name = view.file_name()
-        if view.window() == self._window:
-            if file_name in self._document_states:
-                self.purge_changes(view)
-                for session in self._get_applicable_sessions(view, 'save'):
-                    if session.client:
-                        params = {"textDocument": {"uri": filename_to_uri(file_name)}}
-                        session.client.send_notification(Notification.didSave(params))
-                self.saved()
-            else:
-                debug('document not tracked', file_name)
+        if file_name in self._document_states:
+            self.purge_changes(view)
+            for session in self._get_applicable_sessions(view, 'save'):
+                if session.client:
+                    params = {"textDocument": {"uri": filename_to_uri(file_name)}}
+                    session.client.send_notification(Notification.didSave(params))
+            self.saved()
+        else:
+            debug('document not tracked', file_name)
 
     def handle_view_modified(self, view: ViewLike) -> None:
-        if view.window() == self._window:
-            buffer_id = view.buffer_id()
-            buffer_version = 1
-            pending_buffer = None
-            if buffer_id in self._pending_buffer_changes:
-                pending_buffer = self._pending_buffer_changes[buffer_id]
-                buffer_version = pending_buffer["version"] + 1
-                pending_buffer["version"] = buffer_version
-            else:
-                self._pending_buffer_changes[buffer_id] = {
-                    "view": view,
-                    "version": buffer_version
-                }
+        buffer_id = view.buffer_id()
+        buffer_version = 1
+        pending_buffer = None
+        if buffer_id in self._pending_buffer_changes:
+            pending_buffer = self._pending_buffer_changes[buffer_id]
+            buffer_version = pending_buffer["version"] + 1
+            pending_buffer["version"] = buffer_version
+        else:
+            self._pending_buffer_changes[buffer_id] = {
+                "view": view,
+                "version": buffer_version
+            }
 
-            self._sublime.set_timeout_async(
-                lambda: self.purge_did_change(buffer_id, buffer_version), 500)
+        self._sublime.set_timeout_async(
+            lambda: self.purge_did_change(buffer_id, buffer_version), 500)
 
     def purge_changes(self, view: ViewLike) -> None:
         self.purge_did_change(view.buffer_id())

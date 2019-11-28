@@ -41,7 +41,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         handler.add_session(session)
 
         # open
-        events.publish("view.on_activated_async", view)
+        handler.handle_view_opened(view)
         self.assertTrue(handler.has_document_state(__file__))
         self.assertEqual(len(client._notifications), 1)
         did_open = client._notifications[0]
@@ -53,14 +53,14 @@ class WindowDocumentHandlerTests(unittest.TestCase):
 
         # change 1
         view._text = "asdf jklm"
-        events.publish("view.on_modified", view)
+        handler.handle_view_modified(view)
         changes = handler._pending_buffer_changes[view.buffer_id()]
         self.assertEqual(changes, dict(view=view, version=1))
         self.assertEqual(len(client._notifications), 1)
 
         # change 2
         view._text = "asdf jklm qwer"
-        events.publish("view.on_modified", view)
+        handler.handle_view_modified(view)
         changes = handler._pending_buffer_changes[view.buffer_id()]
         self.assertEqual(changes, dict(view=view, version=2))
         self.assertEqual(len(client._notifications), 1)
@@ -75,33 +75,19 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         self.assertEqual(purged_changes[0].get("text"), view._text)
 
         # save
-        events.publish('view.on_post_save_async', view)
+        handler.handle_view_saved(view)
         self.assertEqual(len(client._notifications), 3)
         did_save = client._notifications[2]
         document = did_save.params.get("textDocument")
         self.assertIn(basename(__file__), document.get("uri"))
 
         # close
-        events.publish('view.on_close', view)
+        handler.handle_view_closed(view)
         self.assertEqual(len(client._notifications), 4)
         did_close = client._notifications[3]
         document = did_close.params.get("textDocument")
         self.assertIn(basename(__file__), document.get("uri"))
         self.assertFalse(__file__ in handler._document_states)
-
-    def test_ignores_views_from_other_window(self):
-        events = Events()
-        window = MockWindow()
-        view = MockView(__file__)
-        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, events, MockConfigs())
-        client = MockClient()
-        session = self.assert_if_none(
-            create_session(TEST_CONFIG, "", dict(), MockSettings(),
-                           bootstrap_client=client))
-        handler.add_session(session)
-        events.publish("view.on_activated_async", view)
-        self.assertFalse(handler.has_document_state(__file__))
-        self.assertEqual(len(client._notifications), 0)
 
     def test_sends_did_open_to_multiple_sessions(self):
         events = Events()
@@ -121,7 +107,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
 
         handler.add_session(session)
         handler.add_session(session2)
-        events.publish("view.on_activated_async", view)
+        handler.handle_view_opened(view)
         self.assertTrue(handler.has_document_state(__file__))
         self.assertEqual(len(client._notifications), 1)
         self.assertEqual(len(client2._notifications), 1)

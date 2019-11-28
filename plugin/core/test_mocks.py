@@ -255,6 +255,15 @@ class MockDocuments(object):
     def purge_changes(self, view: ViewLike) -> None:
         pass
 
+    def handle_view_modified(self, view: ViewLike) -> None:
+        pass
+
+    def handle_view_saved(self, view: ViewLike) -> None:
+        pass
+
+    def handle_view_closed(self, view: ViewLike) -> None:
+        pass
+
 
 class TestDocumentHandlerFactory(object):
     def for_window(self, window, configs):

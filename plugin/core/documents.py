@@ -78,10 +78,12 @@ class DocumentSyncListener(LSPViewEventListener):
     def on_load_async(self) -> None:
         # skip transient views:
         if not is_transient_view(self.view):
+            self.manager.activate_view(self.view)
             self.manager.documents.handle_view_opened(self.view)
 
     def on_activated_async(self) -> None:
         if self.view.file_name() and not is_transient_view(self.view):
+            self.manager.activate_view(self.view)
             self.manager.documents.handle_view_opened(self.view)
 
     def on_modified(self) -> None:
@@ -93,4 +95,5 @@ class DocumentSyncListener(LSPViewEventListener):
 
     def on_close(self) -> None:
         if self.view.file_name() and self.view.is_primary():
+            self.manager.handle_view_closed(self.view)
             self.manager.documents.handle_view_closed(self.view)

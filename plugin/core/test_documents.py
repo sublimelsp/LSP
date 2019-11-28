@@ -1,5 +1,4 @@
 from . import test_sublime as test_sublime
-from .events import Events
 from .sessions import create_session
 from .sessions import Session
 from .test_mocks import MockClient
@@ -29,11 +28,10 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         return session
 
     def test_sends_did_open_to_session(self):
-        events = Events()
         view = MockView(__file__)
         window = MockWindow([[view]])
         view.set_window(window)
-        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, events, MockConfigs())
+        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
             create_session(TEST_CONFIG, "", dict(), MockSettings(),
@@ -90,11 +88,10 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         self.assertFalse(__file__ in handler._document_states)
 
     def test_sends_did_open_to_multiple_sessions(self):
-        events = Events()
         view = MockView(__file__)
         window = MockWindow([[view]])
         view.set_window(window)
-        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, events, MockConfigs())
+        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
             create_session(TEST_CONFIG, "", dict(), MockSettings(),

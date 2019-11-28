@@ -1,12 +1,10 @@
 from .diagnostics import DiagnosticsStorage
-from .events import global_events
 from .logging import debug, server_log
 from .types import (ClientStates, ClientConfig, WindowLike, ViewLike,
                     LanguageConfig, config_supports_syntax, ConfigRegistry,
                     GlobalConfigs, Settings)
 from .protocol import Notification, Response
 from .edit import parse_workspace_edit
-from .events import Events
 from .sessions import Session
 from .url import filename_to_uri
 from .workspace import (
@@ -102,7 +100,7 @@ class DocumentHandlerFactory(object):
         self._settings = settings
 
     def for_window(self, window: 'WindowLike', configs: 'ConfigRegistry') -> DocumentHandler:
-        return WindowDocumentHandler(self._sublime, self._settings, window, global_events, configs)
+        return WindowDocumentHandler(self._sublime, self._settings, window, configs)
 
 
 def nop() -> None:
@@ -110,9 +108,7 @@ def nop() -> None:
 
 
 class WindowDocumentHandler(object):
-    def __init__(self, sublime: 'Any', settings: Settings,
-                 window: WindowLike, events: Events,
-                 configs: ConfigRegistry) -> None:
+    def __init__(self, sublime: 'Any', settings: Settings, window: WindowLike, configs: ConfigRegistry) -> None:
         self._sublime = sublime
         self._settings = settings
         self._configs = configs
@@ -554,8 +550,6 @@ class WindowManager(object):
         if document_sync:
             self.documents.add_session(session)
 
-        global_events.subscribe('view.on_close', lambda view: self._handle_view_closed(view, session))
-
         if session.config.settings:
             configParams = {
                 'settings': session.config.settings
@@ -564,7 +558,7 @@ class WindowManager(object):
 
         self._window.status_message("{} initialized".format(session.config.name))
 
-    def _handle_view_closed(self, view: ViewLike, session: Session) -> None:
+    def handle_view_closed(self, view: ViewLike) -> None:
         if view.file_name():
             if not self._is_closing:
                 if not self._window.is_valid():

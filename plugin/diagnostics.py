@@ -3,14 +3,12 @@ import os
 import sublime
 import sublime_plugin
 
-from .core.configurations import is_supported_syntax
 from .core.logging import debug
 from .core.panels import ensure_panel
 from .core.protocol import Diagnostic, DiagnosticSeverity, DiagnosticRelatedInformation, Point, Range
-from .core.settings import settings, PLUGIN_NAME, client_configs
+from .core.settings import settings, PLUGIN_NAME
 from .core.views import range_to_region, region_to_range
-from .core.registry import windows
-from .core.windows import WindowManager
+from .core.registry import windows, LSPViewEventListener
 from .core.diagnostics import DiagnosticsWalker, DiagnosticsUpdateWalk, DiagnosticsCursor, DocumentsState
 
 MYPY = False
@@ -75,27 +73,6 @@ def filter_by_range(file_diagnostics: 'Dict[str, List[Diagnostic]]', rge: Range)
         if point_diagnostics:
             diagnostics_by_config[config_name] = point_diagnostics
     return diagnostics_by_config
-
-
-class LSPViewEventListener(sublime_plugin.ViewEventListener):
-    def __init__(self, view: sublime.View) -> None:
-        self._manager = None  # type: Optional[WindowManager]
-        super().__init__(view)
-
-    @classmethod
-    def has_supported_syntax(cls, view_settings: dict) -> bool:
-        syntax = view_settings.get('syntax')
-        if syntax:
-            return is_supported_syntax(syntax, client_configs.all)
-        else:
-            return False
-
-    @property
-    def manager(self) -> WindowManager:
-        if not self._manager:
-            self._manager = windows.lookup(self.view.window())
-
-        return self._manager
 
 
 class DiagnosticsCursorListener(LSPViewEventListener):

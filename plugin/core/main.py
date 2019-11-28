@@ -13,7 +13,6 @@ from .settings import (
     settings, load_settings, unload_settings
 )
 from .logging import set_debug_logging, set_server_logging
-from .events import global_events
 from .registry import windows, load_handlers, unload_sessions
 from .panels import destroy_output_panels
 from .popups import popups
@@ -27,8 +26,6 @@ def startup() -> None:
     popups.load_css()
     windows.set_diagnostics_ui(DiagnosticsPresenter)
     load_handlers()
-    global_events.subscribe("view.on_load_async", on_view_activated)
-    global_events.subscribe("view.on_activated_async", on_view_activated)
     if settings.show_status_messages:
         sublime.status_message("LSP initialized")
     start_active_window()
@@ -53,9 +50,3 @@ def start_active_window() -> None:
     window = sublime.active_window()
     if window:
         windows.lookup(window).start_active_views()
-
-
-def on_view_activated(view: sublime.View) -> None:
-    window = view.window()
-    if window:
-        windows.lookup(window).activate_view(view)

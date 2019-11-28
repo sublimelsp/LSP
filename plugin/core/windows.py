@@ -1,12 +1,10 @@
 from .diagnostics import DiagnosticsStorage
-from .events import global_events
 from .logging import debug, server_log
 from .types import (ClientStates, ClientConfig, WindowLike, ViewLike,
                     LanguageConfig, config_supports_syntax, ConfigRegistry,
                     GlobalConfigs, Settings)
 from .protocol import Notification, Response
 from .edit import parse_workspace_edit
-from .events import Events
 from .sessions import Session
 from .url import filename_to_uri
 from .workspace import (
@@ -53,10 +51,22 @@ class DocumentHandler(Protocol):
     def remove_session(self, config_name: str) -> None:
         ...
 
+    def reset(self) -> None:
+        ...
+
     def handle_view_opened(self, view: ViewLike) -> None:
         ...
 
-    def reset(self) -> None:
+    def handle_view_modified(self, view: ViewLike) -> None:
+        ...
+
+    def purge_changes(self, view: ViewLike) -> None:
+        ...
+
+    def handle_view_saved(self, view: ViewLike) -> None:
+        ...
+
+    def handle_view_closed(self, view: ViewLike) -> None:
         ...
 
 
@@ -90,7 +100,7 @@ class DocumentHandlerFactory(object):
         self._settings = settings
 
     def for_window(self, window: 'WindowLike', configs: 'ConfigRegistry') -> DocumentHandler:
-        return WindowDocumentHandler(self._sublime, self._settings, window, global_events, configs)
+        return WindowDocumentHandler(self._sublime, self._settings, window, configs)
 
 
 def nop() -> None:
@@ -98,9 +108,7 @@ def nop() -> None:
 
 
 class WindowDocumentHandler(object):
-    def __init__(self, sublime: 'Any', settings: Settings,
-                 window: WindowLike, events: Events,
-                 configs: ConfigRegistry) -> None:
+    def __init__(self, sublime: 'Any', settings: Settings, window: WindowLike, configs: ConfigRegistry) -> None:
         self._sublime = sublime
         self._settings = settings
         self._configs = configs
@@ -110,12 +118,6 @@ class WindowDocumentHandler(object):
         self._sessions = dict()  # type: Dict[str, Session]
         self.changed = nop
         self.saved = nop
-        events.subscribe('view.on_load_async', self.handle_view_opened)
-        events.subscribe('view.on_activated_async', self.handle_view_opened)
-        events.subscribe('view.on_modified', self.handle_view_modified)
-        events.subscribe('view.on_purge_changes', self.purge_changes)
-        events.subscribe('view.on_post_save_async', self.handle_view_saved)
-        events.subscribe('view.on_close', self.handle_view_closed)
 
     def add_session(self, session: Session) -> None:
         self._sessions[session.config.name] = session
@@ -202,7 +204,7 @@ class WindowDocumentHandler(object):
 
     def handle_view_opened(self, view: ViewLike) -> None:
         file_name = view.file_name()
-        if file_name and view.window() == self._window:
+        if file_name:
             if not self.has_document_state(file_name):
                 config_languages = self._config_languages(view)
                 if len(config_languages) > 0:
@@ -244,34 +246,32 @@ class WindowDocumentHandler(object):
 
     def handle_view_saved(self, view: ViewLike) -> None:
         file_name = view.file_name()
-        if view.window() == self._window:
-            if file_name in self._document_states:
-                self.purge_changes(view)
-                for session in self._get_applicable_sessions(view, 'save'):
-                    if session.client:
-                        params = {"textDocument": {"uri": filename_to_uri(file_name)}}
-                        session.client.send_notification(Notification.didSave(params))
-                self.saved()
-            else:
-                debug('document not tracked', file_name)
+        if file_name in self._document_states:
+            self.purge_changes(view)
+            for session in self._get_applicable_sessions(view, 'save'):
+                if session.client:
+                    params = {"textDocument": {"uri": filename_to_uri(file_name)}}
+                    session.client.send_notification(Notification.didSave(params))
+            self.saved()
+        else:
+            debug('document not tracked', file_name)
 
     def handle_view_modified(self, view: ViewLike) -> None:
-        if view.window() == self._window:
-            buffer_id = view.buffer_id()
-            buffer_version = 1
-            pending_buffer = None
-            if buffer_id in self._pending_buffer_changes:
-                pending_buffer = self._pending_buffer_changes[buffer_id]
-                buffer_version = pending_buffer["version"] + 1
-                pending_buffer["version"] = buffer_version
-            else:
-                self._pending_buffer_changes[buffer_id] = {
-                    "view": view,
-                    "version": buffer_version
-                }
+        buffer_id = view.buffer_id()
+        buffer_version = 1
+        pending_buffer = None
+        if buffer_id in self._pending_buffer_changes:
+            pending_buffer = self._pending_buffer_changes[buffer_id]
+            buffer_version = pending_buffer["version"] + 1
+            pending_buffer["version"] = buffer_version
+        else:
+            self._pending_buffer_changes[buffer_id] = {
+                "view": view,
+                "version": buffer_version
+            }
 
-            self._sublime.set_timeout_async(
-                lambda: self.purge_did_change(buffer_id, buffer_version), 500)
+        self._sublime.set_timeout_async(
+            lambda: self.purge_did_change(buffer_id, buffer_version), 500)
 
     def purge_changes(self, view: ViewLike) -> None:
         self.purge_did_change(view.buffer_id())
@@ -323,7 +323,7 @@ class WindowManager(object):
         self._window = window
         self._configs = configs
         self.diagnostics = diagnostics
-        self._documents = documents
+        self.documents = documents
         self._sessions = dict()  # type: Dict[str, Session]
         self._start_session = session_starter
         self._sublime = sublime
@@ -370,7 +370,7 @@ class WindowManager(object):
         for view in active_views:
             if view.file_name():
                 self._initialize_on_open(view)
-                self._documents.handle_view_opened(view)
+                self.documents.handle_view_opened(view)
 
     def activate_view(self, view: ViewLike) -> None:
         # TODO: we can shortcut here by checking documentstate.
@@ -456,7 +456,7 @@ class WindowManager(object):
         self.end_sessions()
 
     def end_sessions(self) -> None:
-        self._documents.reset()
+        self.documents.reset()
         for config_name in list(self._sessions):
             self.end_session(config_name)
 
@@ -548,9 +548,7 @@ class WindowManager(object):
 
         document_sync = session.capabilities.get("textDocumentSync")
         if document_sync:
-            self._documents.add_session(session)
-
-        global_events.subscribe('view.on_close', lambda view: self._handle_view_closed(view, session))
+            self.documents.add_session(session)
 
         if session.config.settings:
             configParams = {
@@ -560,7 +558,7 @@ class WindowManager(object):
 
         self._window.status_message("{} initialized".format(session.config.name))
 
-    def _handle_view_closed(self, view: ViewLike, session: Session) -> None:
+    def handle_view_closed(self, view: ViewLike) -> None:
         if view.file_name():
             if not self._is_closing:
                 if not self._window.is_valid():
@@ -593,7 +591,7 @@ class WindowManager(object):
                 self._on_closed()
 
     def _handle_post_exit(self, config_name: str) -> None:
-        self._documents.remove_session(config_name)
+        self.documents.remove_session(config_name)
         del self._sessions[config_name]
         for view in self._window.views():
             file_name = view.file_name()

@@ -1,6 +1,5 @@
 from . import test_sublime as test_sublime
 from .diagnostics import DiagnosticsStorage
-from .events import global_events
 from .sessions import create_session
 from .sessions import Session
 from .test_mocks import MockClient
@@ -56,7 +55,6 @@ class WindowRegistryTests(unittest.TestCase):
         self.assertIsNotNone(wm)
 
     def test_removes_window_state(self):
-        global_events.reset()
         test_window = MockWindow([[MockView(__file__)]])
         windows = WindowRegistry(TestGlobalConfigs(), TestDocumentHandlerFactory(),
                                  mock_start_session,
@@ -68,7 +66,7 @@ class WindowRegistryTests(unittest.TestCase):
 
         # closing views triggers window unload detection
         test_window.close()
-        global_events.publish("view.on_close", MockView(__file__))
+        wm.handle_view_closed(MockView(__file__))
         test_sublime._run_timeout()
 
         self.assertEqual(len(windows._windows), 0)
@@ -127,7 +125,6 @@ class WindowManagerTests(unittest.TestCase):
         self.assertListEqual(docs._documents, [__file__])
 
     def test_ends_sessions_when_closed(self):
-        global_events.reset()
         docs = MockDocuments()
         test_window = MockWindow([[MockView(__file__)]])
         wm = WindowManager(test_window, MockConfigs(), docs,
@@ -142,13 +139,12 @@ class WindowManagerTests(unittest.TestCase):
 
         # closing views triggers window unload detection
         test_window.close()
-        global_events.publish("view.on_close", MockView(__file__))
+        wm.handle_view_closed(MockView(__file__))
         test_sublime._run_timeout()
         self.assertEqual(len(wm._sessions), 0)
         self.assertEqual(len(docs._sessions), 0)
 
     def test_ends_sessions_when_quick_switching(self):
-        global_events.reset()
         docs = MockDocuments()
         test_window = MockWindow([[MockView(__file__)]])
         wm = WindowManager(test_window, MockConfigs(), docs,
@@ -164,7 +160,6 @@ class WindowManagerTests(unittest.TestCase):
         # change project_path
         new_project_path = tempfile.gettempdir()
         test_window.set_folders([new_project_path])
-        # global_events.publish("view.on_close", MockView(__file__))
         another_view = MockView(None)
         another_view.settings().set("syntax", "Unsupported Syntax")
         test_window._files_in_groups[0][0] = another_view

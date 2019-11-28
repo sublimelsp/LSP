@@ -326,7 +326,7 @@ class WindowManager(object):
         self._window = window
         self._configs = configs
         self.diagnostics = diagnostics
-        self._documents = documents
+        self.documents = documents
         self._sessions = dict()  # type: Dict[str, Session]
         self._start_session = session_starter
         self._sublime = sublime
@@ -373,7 +373,7 @@ class WindowManager(object):
         for view in active_views:
             if view.file_name():
                 self._initialize_on_open(view)
-                self._documents.handle_view_opened(view)
+                self.documents.handle_view_opened(view)
 
     def activate_view(self, view: ViewLike) -> None:
         # TODO: we can shortcut here by checking documentstate.
@@ -459,7 +459,7 @@ class WindowManager(object):
         self.end_sessions()
 
     def end_sessions(self) -> None:
-        self._documents.reset()
+        self.documents.reset()
         for config_name in list(self._sessions):
             self.end_session(config_name)
 
@@ -551,7 +551,7 @@ class WindowManager(object):
 
         document_sync = session.capabilities.get("textDocumentSync")
         if document_sync:
-            self._documents.add_session(session)
+            self.documents.add_session(session)
 
         global_events.subscribe('view.on_close', lambda view: self._handle_view_closed(view, session))
 
@@ -596,7 +596,7 @@ class WindowManager(object):
                 self._on_closed()
 
     def _handle_post_exit(self, config_name: str) -> None:
-        self._documents.remove_session(config_name)
+        self.documents.remove_session(config_name)
         del self._sessions[config_name]
         for view in self._window.views():
             file_name = view.file_name()

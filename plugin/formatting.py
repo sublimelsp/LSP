@@ -3,7 +3,9 @@ from .core.protocol import Request
 from .core.configurations import is_supported_syntax
 from .core.settings import client_configs
 from .core.edit import parse_text_edit
-from .core.registry import LspTextCommand, LSPViewEventListener, session_for_view, client_from_session, sessions_for_view
+from .core.registry import (
+    LspTextCommand, LSPViewEventListener, session_for_view, client_from_session, sessions_for_view
+)
 from .core.url import filename_to_uri
 from .core.sessions import Session
 from .core.views import region_to_range
@@ -60,7 +62,7 @@ class FormatOnSaveListener(LSPViewEventListener):
 
     def _purge_changes_if_needed(self) -> None:
         if self._view_maybe_dirty:
-            self.manager._documents.purge_changes(self.view)
+            self.manager.documents.purge_changes(self.view)
             self._view_maybe_dirty = False
 
     def _will_save_wait_until(self, file_path: str, session: Session) -> None:

@@ -1,7 +1,6 @@
 import mdpopups
 import sublime
 import html
-import sublime_plugin
 import webbrowser
 
 try:
@@ -11,9 +10,8 @@ except ImportError:
     pass
 
 from .core.configurations import is_supported_syntax
-from .core.registry import session_for_view, client_from_session
+from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.documents import get_document_position
-from .core.events import global_events
 from .core.protocol import Request
 from .core.popups import popups
 from .core.settings import client_configs, settings
@@ -47,7 +45,7 @@ class ColorSchemeScopeRenderer(object):
         return '<span style="color: {};{}">{}</span>'.format(color, additional_styles, content)
 
 
-class SignatureHelpListener(sublime_plugin.ViewEventListener):
+class SignatureHelpListener(LSPViewEventListener):
 
     def __init__(self, view: sublime.View) -> None:
         self.view = view
@@ -104,7 +102,7 @@ class SignatureHelpListener(sublime_plugin.ViewEventListener):
         self.requested_position = point
         client = client_from_session(session_for_view(self.view, 'signatureHelpProvider', point))
         if client:
-            global_events.publish("view.on_purge_changes", self.view)
+            self.manager.documents.purge_changes(self.view)
             document_position = get_document_position(self.view, point)
             if document_position:
                 client.send_request(

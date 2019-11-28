@@ -252,6 +252,9 @@ class MockDocuments(object):
     def reset(self):
         self._documents = []
 
+    def purge_changes(self, view: ViewLike) -> None:
+        pass
+
 
 class TestDocumentHandlerFactory(object):
     def for_window(self, window, configs):

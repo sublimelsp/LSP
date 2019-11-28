@@ -8,11 +8,10 @@ except ImportError:
     pass
 
 from .core.protocol import Request
-from .core.events import global_events
 from .core.settings import settings, client_configs
 from .core.logging import debug
 from .core.completion import parse_completion_response, format_completion
-from .core.registry import session_for_view, client_from_session
+from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.configurations import is_supported_syntax
 from .core.documents import get_document_position, is_at_word
 from .core.sessions import Session
@@ -44,7 +43,7 @@ class LspTrimCompletionCommand(sublime_plugin.TextCommand):
             self.view.erase(edit, region)
 
 
-class CompletionHandler(sublime_plugin.ViewEventListener):
+class CompletionHandler(LSPViewEventListener):
     def __init__(self, view: sublime.View) -> None:
         self.view = view
         self.initialized = False
@@ -259,7 +258,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             return
 
         if settings.complete_all_chars or self.is_after_trigger_character(locations[0]):
-            global_events.publish("view.on_purge_changes", self.view)
+            self.manager.documents.purge_changes(self.view)
             document_position = get_document_position(view, locations[0])
             if document_position:
                 client.send_request(

@@ -297,6 +297,19 @@
         "Packages/Dart/Dart.tmLanguage"
       ]
     },
+    "elixir-ls": {
+      "command": [
+        // Specify path to language_server.sh from https://github.com/elixir-lsp/elixir-ls here
+        // "/home/someUser/somePlace/elixir-ls/release/language_server.sh"
+      ],
+      "languageId": "elixir",
+      "scopes": ["source.elixir"],
+      "settings": {
+      },
+      "syntaxes": [
+        "Packages/Elixir/Syntaxes/Elixir.tmLanguage",
+      ]
+    },
     "flow":
     {
       "command": ["flow", "lsp"],

@@ -368,7 +368,7 @@ class DiagnosticsPresenter(object):
         self._panel_update = DiagnosticOutputPanel(self._window)
         self._bar_summary_update = StatusBarSummary(self._window)
         self._relevance_check = HasRelevantDiagnostics()
-        self._cursor = DiagnosticsCursor()
+        self._cursor = DiagnosticsCursor(settings.show_diagnostics_severity_level)
         self._phantoms = DiagnosticsPhantoms(self._window)
         if settings.auto_show_diagnostics_panel == 'saved':
             setattr(documents_state, 'changed', self.on_document_changed)

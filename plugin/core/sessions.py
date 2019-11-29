@@ -110,10 +110,10 @@ def get_initialize_params(project_path: str, config: ClientConfig) -> dict:
                 },
                 "formatting": {},
                 "rangeFormatting": {},
-                "declaration": {},
-                "definition": {},
-                "typeDefinition": {},
-                "implementation": {},
+                "declaration": {"linkSupport": True},
+                "definition": {"linkSupport": True},
+                "typeDefinition": {"linkSupport": True},
+                "implementation": {"linkSupport": True},
                 "codeAction": {
                     "codeActionLiteralSupport": {
                         "codeActionKind": {

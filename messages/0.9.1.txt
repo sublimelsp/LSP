@@ -1,0 +1,63 @@
+=> 0.9.1
+
+Since 0.9.0, discussion about this package is now in the #lsp channel on the official Sublime Discord server. Come stop by!
+
+Features:
+
+* Format on save (https://github.com/tomv564/LSP/pull/731)
+  * Support for servers that can do it (see their configuration)
+  * Support for LSP running the format for you (Default off, enable by setting `lsp_format_on_save` to true in sublime or project settings)
+
+* Shortcut and phantoms for previous/next diagnostic (eg. F8/shift-F8, see https://github.com/tomv564/LSP/pull/783)
+
+* Context menu items moved to "LSP" sub menu (@rwols)
+
+* Completion respects Sublime's `auto_complete_selector` setting before showing completions.
+
+* Support `workspace/configuration` request (needed for eslint server)
+
+* Support related info in diagnostics (https://github.com/tomv564/LSP/pull/773)
+
+* Support for LSP to own the port when running TCP servers (https://github.com/tomv564/LSP/pull/751)
+  * Set `tcp_mode` to "host" in client configuration.
+
+
+Fixes:
+
+* Error showing references on Windows (https://github.com/tomv564/LSP/issues/727)
+* Show line of a reference's usage from actual document (instead of disk) (@predragnikolic)
+
+* Stop requesting Signature Help in comment blocks etc. (https://github.com/tomv564/LSP/issues/743)
+* Don't show signature help if the user has continued typing
+* Signature help label rendered incorrectly (https://github.com/tomv564/LSP/issues/742)
+
+* Hide links in hover popup (@jwortmann, https://github.com/tomv564/LSP/pull/735)
+* Prevent scroll bars in hover/signature popups (https://github.com/tomv564/LSP/pull/776)
+
+* Completions would never fire at first character in document.
+* Completions should not cache empty responses (from intelephense) at some locations (https://github.com/tomv564/LSP/issues/745)
+* Completions should not insert an extra `<` (https://github.com/tomv564/LSP/issues/714)
+* Completions could sometimes not insert additionalEdits (https://github.com/tomv564/LSP/issues/720)
+* Completions should handle "special" completions items from Metals (@rwols, https://github.com/tomv564/LSP/pull/772)
+
+* Fix Code Actions sometimes not showing up when selection changes (@predragnikolic)
+
+* Fix servers not starting when quick switching projects (https://github.com/tomv564/LSP/pull/708)
+
+New server support or documentation:
+
+* Terraform (@juliosueiras)
+* Powershell (@AmjadHD)
+* Lisp
+* Java (@AmjadHD)
+* Elixir (@dvcrn)
+
+Deprecations:
+
+* No longer using regexes to allow short-hand syntax names in client configuration
+* `prefer_label_over_filter_text` setting for completions
+* "Setup Language Server" detection and command (https://github.com/tomv564/LSP/pull/793)
+
+See https://github.com/tomv564/LSP/releases/tag/0.9.1 for full update details.
+
+Thanks to all contributors & reporters!

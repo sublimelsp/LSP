@@ -62,6 +62,16 @@
         "args": {}
     },
     {
+        "caption": "LSP: Next Diagnostic",
+        "command": "lsp_next_diagnostic",
+        "args": {}
+    },
+    {
+        "caption": "LSP: Previous Diagnostic",
+        "command": "lsp_previous_diagnostic",
+        "args": {}
+    },
+    {
         "caption": "LSP: Workspace Symbol",
         "command": "lsp_workspace_symbols"
     },

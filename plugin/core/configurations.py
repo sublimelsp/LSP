@@ -3,7 +3,7 @@ from copy import deepcopy
 from .types import ClientConfig, LanguageConfig, ViewLike, WindowLike, ConfigRegistry
 from .logging import debug
 from .types import config_supports_syntax, syntax_language
-from .workspace import get_project_config
+from .workspace import get_project_config, enable_in_project, disable_in_project
 
 assert ClientConfig
 
@@ -56,16 +56,15 @@ def get_global_client_config(view: 'sublime.View', global_configs: 'List[ClientC
     return get_scope_client_config(view, global_configs)
 
 
-def create_window_configs(window: 'sublime.Window', global_configs: 'List[ClientConfig]') -> 'List[ClientConfig]':
-    return list(map(lambda c: apply_window_settings(c, window), global_configs))
-
-
-def apply_window_settings(client_config: 'ClientConfig', window: 'sublime.Window') -> 'ClientConfig':
+def create_window_configs(window: 'WindowLike', global_configs: 'List[ClientConfig]') -> 'List[ClientConfig]':
     window_config = get_project_config(window)
+    return list(map(lambda c: apply_project_overrides(c, window_config), global_configs))
 
-    if client_config.name in window_config:
-        overrides = window_config[client_config.name]
-        debug('window {} has override for {}'.format(window.id(), client_config.name), overrides)
+
+def apply_project_overrides(client_config: 'ClientConfig', lsp_project_settings: dict) -> 'ClientConfig':
+    if client_config.name in lsp_project_settings:
+        overrides = lsp_project_settings[client_config.name]
+        debug('window has override for {}'.format(client_config.name), overrides)
         client_settings = _merge_dicts(client_config.settings, overrides.get("settings", {}))
         client_env = _merge_dicts(client_config.env, overrides.get("env", {}))
         return ClientConfig(
@@ -100,20 +99,22 @@ class ConfigManager(object):
         self._configs = global_configs
         self._managers = {}  # type: Dict[int, ConfigRegistry]
 
-    def for_window(self, window: 'Any') -> 'ConfigRegistry':
-        window_configs = WindowConfigManager(create_window_configs(window, self._configs))
+    def for_window(self, window: 'WindowLike') -> 'ConfigRegistry':
+        window_configs = WindowConfigManager(window, self._configs)
         self._managers[window.id()] = window_configs
         return window_configs
 
     def update(self) -> None:
         for window in sublime.windows():
             if window.id() in self._managers:
-                self._managers[window.id()].update(create_window_configs(window, self._configs))
+                self._managers[window.id()].update()
 
 
 class WindowConfigManager(object):
-    def __init__(self, configs: 'List[ClientConfig]') -> None:
-        self.all = configs
+    def __init__(self, window: 'WindowLike', global_configs: 'List[ClientConfig]') -> None:
+        self._window = window
+        self._global_configs = global_configs
+        self.all = create_window_configs(window, global_configs)
 
     def is_supported(self, view: 'Any') -> bool:
         return any(self.scope_configs(view))
@@ -121,9 +122,9 @@ class WindowConfigManager(object):
     def scope_configs(self, view: 'Any', point: 'Optional[int]' = None) -> 'Iterator[ClientConfig]':
         return get_scope_client_configs(view, self.all, point)
 
-    def syntax_configs(self, view: 'Any') -> 'List[ClientConfig]':
+    def syntax_configs(self, view: 'Any', include_disabled: bool=False) -> 'List[ClientConfig]':
         syntax = view.settings().get("syntax")
-        return list(filter(lambda c: config_supports_syntax(c, syntax) and c.enabled, self.all))
+        return list(filter(lambda c: config_supports_syntax(c, syntax) and (c.enabled or include_disabled), self.all))
 
     def syntax_supported(self, view: ViewLike) -> bool:
         syntax = view.settings().get("syntax")
@@ -141,10 +142,18 @@ class WindowConfigManager(object):
                     config_languages[config.name] = language
         return config_languages
 
-    def update(self, configs: 'List[ClientConfig]') -> None:
-        self.all = configs
+    def update(self) -> None:
+        self.all = create_window_configs(self._window, self._global_configs)
 
-    def disable(self, config_name: str) -> None:
+    def enable_config(self, config_name: str) -> None:
+        enable_in_project(self._window, config_name)
+        self.update()
+
+    def disable_config(self, config_name: str) -> None:
+        disable_in_project(self._window, config_name)
+        self.update()
+
+    def disable_temporarily(self, config_name: str) -> None:
         for config in self.all:
             if config.name == config_name:
                 config.enabled = False

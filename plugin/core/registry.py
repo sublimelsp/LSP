@@ -1,8 +1,8 @@
 import sublime
 import sublime_plugin
-from .windows import WindowRegistry, DocumentHandlerFactory
+from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
 from .configurations import (
-    ConfigManager
+    ConfigManager, is_supported_syntax
 )
 from .clients import (
     start_window_config
@@ -23,6 +23,28 @@ except ImportError:
 
 client_start_listeners = {}  # type: Dict[str, Callable]
 client_initialization_listeners = {}  # type: Dict[str, Callable]
+
+
+class LSPViewEventListener(sublime_plugin.ViewEventListener):
+    def __init__(self, view: sublime.View) -> None:
+        self._manager = None  # type: Optional[WindowManager]
+        super().__init__(view)
+
+    @classmethod
+    def has_supported_syntax(cls, view_settings: dict) -> bool:
+        syntax = view_settings.get('syntax')
+        if syntax:
+            return is_supported_syntax(syntax, client_configs.all)
+        else:
+            return False
+
+    @property
+    def manager(self) -> WindowManager:
+        if not self._manager:
+            self._manager = windows.lookup(self.view.window())
+
+        assert self._manager
+        return self._manager
 
 
 class LanguageHandlerDispatcher(object):

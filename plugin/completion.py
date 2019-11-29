@@ -8,11 +8,10 @@ except ImportError:
     pass
 
 from .core.protocol import Request
-from .core.events import global_events
 from .core.settings import settings, client_configs
 from .core.logging import debug
 from .core.completion import parse_completion_response, format_completion
-from .core.registry import session_for_view, client_from_session
+from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.configurations import is_supported_syntax
 from .core.documents import get_document_position, is_at_word
 from .core.sessions import Session
@@ -44,9 +43,9 @@ class LspTrimCompletionCommand(sublime_plugin.TextCommand):
             self.view.erase(edit, region)
 
 
-class CompletionHandler(sublime_plugin.ViewEventListener):
+class CompletionHandler(LSPViewEventListener):
     def __init__(self, view: sublime.View) -> None:
-        self.view = view
+        super().__init__(view)
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
@@ -218,13 +217,14 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
         if not self.initialized:
             self.initialize()
 
+        flags = 0
+        if settings.only_show_lsp_completions:
+            flags |= sublime.INHIBIT_WORD_COMPLETIONS
+            flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
+
         if self.enabled:
             if not self.view.match_selector(locations[0], self.auto_complete_selector):
-                return (
-                    [],
-                    0 if not settings.only_show_lsp_completions
-                    else sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
-                )
+                return ([], flags)
 
             reuse_completion = self.is_same_completion(prefix, locations)
             if self.state == CompletionState.IDLE:
@@ -241,11 +241,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             elif self.state == CompletionState.APPLYING:
                 self.state = CompletionState.IDLE
 
-            return (
-                self.completions,
-                0 if not settings.only_show_lsp_completions
-                else sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
-            )
+            return (self.completions, flags)
 
         return None
 
@@ -262,7 +258,7 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
             return
 
         if settings.complete_all_chars or self.is_after_trigger_character(locations[0]):
-            global_events.publish("view.on_purge_changes", self.view)
+            self.manager.documents.purge_changes(self.view)
             document_position = get_document_position(view, locations[0])
             if document_position:
                 client.send_request(
@@ -287,10 +283,10 @@ class CompletionHandler(sublime_plugin.ViewEventListener):
                 self.apply_additional_edits(additional_edits)
 
     def apply_additional_edits(self, additional_edits: 'List[Dict]') -> None:
-            edits = list(parse_text_edit(additional_edit) for additional_edit in additional_edits)
-            debug('applying additional edits:', edits)
-            self.view.run_command("lsp_apply_document_edit", {'changes': edits})
-            sublime.status_message('Applied additional edits for completion')
+        edits = list(parse_text_edit(additional_edit) for additional_edit in additional_edits)
+        debug('applying additional edits:', edits)
+        self.view.run_command("lsp_apply_document_edit", {'changes': edits})
+        sublime.status_message('Applied additional edits for completion')
 
     def handle_response(self, response: 'Optional[Union[Dict,List]]') -> None:
         if self.state == CompletionState.REQUESTING:

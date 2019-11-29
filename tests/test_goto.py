@@ -21,6 +21,16 @@ RESPONSE = [
     }
 ]
 
+RESPONSE_LOCATION_LINK = [
+    {
+        'originSelectionRange': {'start': {'line': 0, 'character': 0}},
+        'targetUri': RESPONSE[0]['uri'],
+        'targetRange': RESPONSE[0]['range'],
+        'targetSelectionRange': RESPONSE[0]['range']
+    }
+]
+
+
 CONTENT = r'''abcdefghijklmnopqrstuvwxyz
 ABCDEFGHIJKLMNOPQRSTUVWXYZ
 0123456789
@@ -36,12 +46,12 @@ def after_cursor(view) -> str:
 
 class GotoTestCase(TextDocumentTestCase):
 
-    def do_run(self, text_document_request: str, subl_command_suffix: str) -> None:
+    def do_run(self, response: dict, text_document_request: str, subl_command_suffix: str) -> None:
         self.view.run_command('insert', {'characters': CONTENT})
         # Put the cursor back at the start of the buffer, otherwise is_at_word fails in goto.py.
         self.view.sel().clear()
         self.view.sel().add(sublime.Region(0, 0))
-        self.client.responses['textDocument/{}'.format(text_document_request)] = RESPONSE
+        self.client.responses['textDocument/{}'.format(text_document_request)] = response
         self.view.run_command('lsp_symbol_{}'.format(subl_command_suffix))
 
     def do_common_checks(self) -> None:
@@ -57,24 +67,48 @@ class GotoTestCase(TextDocumentTestCase):
 
     def test_definition(self):
         yield 100
-        self.do_run('definition', 'definition')
+        self.do_run(RESPONSE, 'definition', 'definition')
+        yield 100
+        self.do_common_checks()
+
+    def test_definition_location_link(self):
+        yield 100
+        self.do_run(RESPONSE_LOCATION_LINK, 'definition', 'definition')
         yield 100
         self.do_common_checks()
 
     def test_type_definition(self):
         yield 100
-        self.do_run('typeDefinition', 'type_definition')
+        self.do_run(RESPONSE, 'typeDefinition', 'type_definition')
+        yield 100
+        self.do_common_checks()
+
+    def test_type_definition_location_link(self):
+        yield 100
+        self.do_run(RESPONSE_LOCATION_LINK, 'typeDefinition', 'type_definition')
         yield 100
         self.do_common_checks()
 
     def test_declaration(self):
         yield 100
-        self.do_run('declaration', 'declaration')
+        self.do_run(RESPONSE, 'declaration', 'declaration')
+        yield 100
+        self.do_common_checks()
+
+    def test_declaration_location_link(self):
+        yield 100
+        self.do_run(RESPONSE_LOCATION_LINK, 'declaration', 'declaration')
         yield 100
         self.do_common_checks()
 
     def test_implementation(self):
         yield 100
-        self.do_run('implementation', 'implementation')
+        self.do_run(RESPONSE, 'implementation', 'implementation')
+        yield 100
+        self.do_common_checks()
+
+    def test_implementation_location_link(self):
+        yield 100
+        self.do_run(RESPONSE_LOCATION_LINK, 'implementation', 'implementation')
         yield 100
         self.do_common_checks()

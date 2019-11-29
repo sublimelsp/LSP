@@ -46,8 +46,13 @@ class LspGotoCommand(LspTextCommand):
             get_jump_history_for_view(self.view).push_selection(self.view)
             # TODO: DocumentLink support.
             location = response if isinstance(response, dict) else response[0]
-            file_path = uri_to_filename(location.get("uri"))
-            start = Point.from_lsp(location['range']['start'])
+            if "targetUri" in location:
+                # TODO: Do something clever with originSelectionRange and targetRange.
+                file_path = uri_to_filename(location["targetUri"])
+                start = Point.from_lsp(location["targetSelectionRange"]["start"])
+            else:
+                file_path = uri_to_filename(location["uri"])
+                start = Point.from_lsp(location["range"]["start"])
             file_location = "{}:{}:{}".format(file_path, start.row + 1, start.col + 1)
             debug("opening location", location)
             window.open_file(file_location, sublime.ENCODED_POSITION)

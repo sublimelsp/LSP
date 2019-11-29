@@ -408,6 +408,26 @@ For more details see this [issue](https://github.com/PowerShell/PowerShellEditor
 }
 ```
 
+### Elixir
+
+1. Download the prebuilt binaries or compile [elixir-ls](https://github.com/elixir-lsp/elixir-ls). This will get you a folder containing `language_server.sh` among other things
+2. Download the official [Elixir package](https://packagecontrol.io/packages/Elixir) for syntax definitions
+3. Update the elixir-ls configuration to point to your `language_server.sh`
+
+```
+    "elixir-ls": {
+      "command": ["/home/someUser/somePlace/elixir-ls/release/language_server.sh"],
+      "enabled": true,
+      "languageId": "elixir",
+      "scopes": ["source.elixir"],
+      "settings": {
+      },
+      "syntaxes": [
+        "Packages/Elixir/Syntaxes/Elixir.tmLanguage",
+      ]
+    },
+```
+
 ### XML
 
 Discussed in [this issue](https://github.com/tomv564/LSP/issues/578)

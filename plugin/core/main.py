@@ -1,3 +1,11 @@
+import sublime
+
+from .settings import settings, load_settings, unload_settings
+from .logging import set_debug_logging, set_server_logging
+from .registry import windows, load_handlers, unload_sessions
+from .panels import destroy_output_panels
+from .popups import popups
+from ..diagnostics import DiagnosticsPresenter
 from ..highlights import remove_highlights
 from ..color import remove_color_boxes
 
@@ -6,17 +14,6 @@ try:
     assert Any and List and Dict and Tuple and Callable and Optional and Set
 except ImportError:
     pass
-
-import sublime
-
-from .settings import (
-    settings, load_settings, unload_settings
-)
-from .logging import set_debug_logging, set_server_logging
-from .registry import windows, load_handlers, unload_sessions
-from .panels import destroy_output_panels
-from .popups import popups
-from ..diagnostics import DiagnosticsPresenter
 
 
 def startup() -> None:

@@ -7,6 +7,13 @@
           "default": "// Settings in here override those in \"LSP/LSP.sublime-settings\",\n\n{\n\t$0\n}\n"}
     },
     {
+        "caption": "Preferences: LSP Keybindings",
+        "command": "edit_settings",
+        "args": {
+            "base_file": "${packages}/LSP/Keymaps/Default (${platform}).sublime-keymap",
+            "default": "// Settings in here override those in \"LSP/Keymaps/Default (${platform}).sublime-keymap\",\n\n{\n\t$0\n}\n"}
+    },
+    {
         "caption": "LSP: Setup Language Server",
         "command": "lsp_setup_language_server",
         "args": {}

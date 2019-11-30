@@ -53,11 +53,17 @@ def close_test_view(view):
 
 class TextDocumentTestCase(DeferrableTestCase):
 
+    def __init__(self, view):
+        super().__init__(view)
+        self.test_file_path = test_file_path
+        self.client = None
+
     def setUp(self) -> None:
-        self.view = sublime.active_window().open_file(test_file_path)
+        self.view = sublime.active_window().open_file(self.test_file_path)
         self.view.settings().set("auto_complete_selector", "text.plain")
         self.wm = windows.lookup(self.view.window())
-        self.client = MockClient(async_response=sublime_delayer(100))
+        if self.client is None:
+            self.client = MockClient(async_response=sublime_delayer(100))
         add_config(text_config)
         inject_session(self.wm, text_config, self.client)
         # from LSP import rpdb; rpdb.set_trace()

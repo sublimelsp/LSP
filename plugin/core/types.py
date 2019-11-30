@@ -13,10 +13,10 @@ class Settings(object):
         self.show_status_messages = True
         self.show_view_status = True
         self.auto_show_diagnostics_panel = 'always'
-        self.auto_show_diagnostics_panel_level = 3
+        self.auto_show_diagnostics_panel_level = 2
         self.show_diagnostics_count_in_view_status = False
         self.show_diagnostics_in_view_status = True
-        self.show_diagnostics_severity_level = 3
+        self.show_diagnostics_severity_level = 2
         self.only_show_lsp_completions = False
         self.diagnostics_highlight_style = "underline"
         self.document_highlight_style = "stippled"

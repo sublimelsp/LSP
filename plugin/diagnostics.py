@@ -259,14 +259,13 @@ class DiagnosticViewRegions(DiagnosticsUpdateWalk):
 
     def diagnostic(self, diagnostic: Diagnostic) -> None:
         if self._relevant_file:
-            if diagnostic.severity <= settings.show_diagnostics_severity_level:
-                self._regions.setdefault(diagnostic.severity, []).append(range_to_region(diagnostic.range, self._view))
+            self._regions.setdefault(diagnostic.severity, []).append(range_to_region(diagnostic.range, self._view))
 
     def end_file(self, file_name: str) -> None:
         self._relevant_file = False
 
     def end(self) -> None:
-        for severity in range(DiagnosticSeverity.Error, settings.show_diagnostics_severity_level):
+        for severity in range(DiagnosticSeverity.Error, DiagnosticSeverity.Hint):
             region_name = "lsp_" + format_severity(severity)
             if severity in self._regions:
                 regions = self._regions[severity]
@@ -368,7 +367,7 @@ class DiagnosticsPresenter(object):
         self._panel_update = DiagnosticOutputPanel(self._window)
         self._bar_summary_update = StatusBarSummary(self._window)
         self._relevance_check = HasRelevantDiagnostics()
-        self._cursor = DiagnosticsCursor()
+        self._cursor = DiagnosticsCursor(settings.show_diagnostics_severity_level)
         self._phantoms = DiagnosticsPhantoms(self._window)
         if settings.auto_show_diagnostics_panel == 'saved':
             setattr(documents_state, 'changed', self.on_document_changed)

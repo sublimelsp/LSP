@@ -104,9 +104,14 @@ def _sessions_for_view_and_window(view: sublime.View, window: 'Optional[sublime.
         debug("no window for view", view.file_name())
         return []
 
+    file_path = view.file_name()
+    if not file_path:
+        debug("no session for unsaved file")
+        return []
+
     manager = windows.lookup(window)
     scope_configs = manager._configs.scope_configs(view, point)
-    sessions = (manager.get_session(config.name) for config in scope_configs)
+    sessions = (manager.get_session(config.name, file_path) for config in scope_configs)
     ready_sessions = (session for session in sessions if session and session.state == ClientStates.READY)
     return ready_sessions
 

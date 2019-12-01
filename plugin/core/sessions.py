@@ -160,6 +160,7 @@ class Session(object):
         self._on_post_exit = on_post_exit
         self.capabilities = dict()  # type: Dict[str, Any]
         self.client = client
+        self._workspace_folders = [project_path]
         if on_pre_initialize:
             on_pre_initialize(self)
         self._initialize(project_path)
@@ -169,6 +170,16 @@ class Session(object):
 
     def get_capability(self, capability: str) -> 'Optional[Any]':
         return self.capabilities.get(capability)
+
+    def handles_path(self, file_path: 'Optional[str]') -> bool:
+        if not file_path:
+            return False
+
+        for folder in self._workspace_folders:
+            if file_path.startswith(folder):
+                return True
+
+        return False
 
     def _initialize(self, project_path: str) -> None:
         params = get_initialize_params(project_path, self.config)

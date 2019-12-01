@@ -3,13 +3,12 @@ from .protocol import Request
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
 from .rpc import Client, attach_stdio_client
 from .process import start_server
-from .url import filename_to_uri
 from .logging import debug
 import os
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder
 try:
     from typing import Callable, Dict, Any, Optional, List
-    assert Callable and Dict and Any and Optional and Transport and List
+    assert Callable and Dict and Any and Optional and Transport and List and WorkspaceFolder
 except ImportError:
     pass
 

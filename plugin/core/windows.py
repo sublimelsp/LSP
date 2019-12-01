@@ -399,7 +399,8 @@ class WindowManager(object):
                         debug("window {} requests {} for {}".format(self._window.id(), config.name, view.file_name()))
                         self._start_client(config)
                 else:
-                    debug("no startable configs found in window {} for file {} with syntax {}".format(self._window.id(), view.file_name(), view.settings().get("syntax")))
+                    debug("no startable configs found in window {} for file {} with syntax {}"
+                        .format(self._window.id(), view.file_name(), view.settings().get("syntax")))
 
     def _start_client(self, config: ClientConfig) -> None:
         workspace = self._ensure_workspace()

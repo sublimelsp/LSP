@@ -392,9 +392,14 @@ class WindowManager(object):
                 startable_configs = filter(lambda c: c.name not in self._sessions,
                                            self._configs.syntax_configs(view))
 
-                for config in startable_configs:
-                    debug("window {} requests {} for {}".format(self._window.id(), config.name, view.file_name()))
-                    self._start_client(config)
+                config_list = list(startable_configs);
+
+                if any(config_list):
+                    for config in config_list:
+                        debug("window {} requests {} for {}".format(self._window.id(), config.name, view.file_name()))
+                        self._start_client(config)
+                else:
+                    debug("no startable configs found in window {} for file {} with syntax {}".format(self._window.id(), view.file_name(), view.settings().get("syntax")))
 
     def _start_client(self, config: ClientConfig) -> None:
         workspace = self._ensure_workspace()

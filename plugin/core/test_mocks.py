@@ -286,14 +286,7 @@ class MockClient():
             on_success(response)
 
     def execute_request(self, request: Request) -> 'Any':
-        response = None
-
-        def save_response(x):
-            nonlocal response
-            response = x
-
-        self.send_request(request, save_response)
-        return response
+        return self.responses.get(request.method)
 
     def send_notification(self, notification: Notification) -> None:
         self._notifications.append(notification)

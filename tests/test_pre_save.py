@@ -1,4 +1,3 @@
-from LSP.plugin.core.test_mocks import MockClient
 from os import remove
 from os.path import dirname
 from os.path import join
@@ -9,7 +8,6 @@ from sublime import Region
 class OnPreSaveTests(TextDocumentTestCase):
 
     def setUp(self):
-        self.client = MockClient()
         self.test_file_path = join(dirname(__file__), "on_pre_save.txt")
         super().setUp()
 
@@ -23,10 +21,10 @@ class OnPreSaveTests(TextDocumentTestCase):
         The test language server should remove the 'a' character.
         """
         yield 100
-        setup = self.view.settings().set
-        setup("ensure_newline_at_eof_on_save", False)
-        setup("trim_trailing_white_space_on_save", False)
-        setup("lsp_format_on_save", True)
+        settings = self.view.settings()
+        settings.set("ensure_newline_at_eof_on_save", False)
+        settings.set("trim_trailing_white_space_on_save", False)
+        settings.set("lsp_format_on_save", True)
         self.client.responses['textDocument/formatting'] = [{
             "newText": "",
             "range": {
@@ -34,9 +32,8 @@ class OnPreSaveTests(TextDocumentTestCase):
                 "end":   {"line": 0, "character": 1}
             }
         }]
-        run = self.view.run_command
-        run("insert", {"characters": "a"})
-        run("save")
+        self.view.run_command("insert", {"characters": "a"})
+        self.view.run_command("save")
         yield 100
         text = self.view.substr(Region(0, self.view.size()))
         self.assertEqual(text, "")

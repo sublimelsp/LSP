@@ -14,6 +14,7 @@ from .workspace import (
 
 from .rpc import Client
 import threading
+import os
 try:
     from typing_extensions import Protocol
     from typing import Optional, List, Callable, Dict, Any, Iterator, Union
@@ -175,7 +176,6 @@ class WindowDocumentHandler(object):
                 if view:
                     syntax = view.settings().get("syntax")
                     if config_supports_syntax(session.config, syntax):
-                        debug('attaching ', file_name)
                         sessions = self._get_applicable_sessions(view)
                         self._attach_view(view, sessions)
                         self._notify_did_open(view, session)
@@ -387,18 +387,28 @@ class WindowManager(object):
     def _initialize_on_open(self, view: ViewLike) -> None:
         file_path = view.file_name() or ""
 
+        def needed_configs(configs: 'List[ClientConfig]') -> 'List[ClientConfig]':
+            new_configs = []
+            for c in configs:
+                if c.name not in self._sessions:
+                    new_configs.append(c)
+                elif all(not s.handles_path(file_path) for s in self._sessions[c.name]):
+                    debug('path not in existing {} session: {}'.format(c.name, file_path))
+                    new_configs.append(c)
+            return new_configs
+
         # have all sessions for this document been started?
         with self._initialization_lock:
-            new_configs = filter(lambda c: c.name not in self._sessions,
-                                 self._configs.syntax_configs(view, include_disabled=True))
+            new_configs = needed_configs(self._configs.syntax_configs(view, include_disabled=True))
+            # filter(lambda c: c.name not in self._sessions,
+            #                  self._configs.syntax_configs(view, include_disabled=True))
 
             if any(new_configs):
                 # TODO: cannot observe project setting changes
                 # have to check project overrides every session request
                 self.update_configs()
 
-                startable_configs = filter(lambda c: c.name not in self._sessions,
-                                           self._configs.syntax_configs(view))
+                startable_configs = needed_configs(self._configs.syntax_configs(view))
 
                 for config in startable_configs:
 
@@ -406,11 +416,6 @@ class WindowManager(object):
                     self._start_client(config, file_path)
 
     def _start_client(self, config: ClientConfig, file_path: str) -> None:
-        workspace = self._ensure_workspace()
-
-        if workspace is None:
-            debug('Cannot start without a project folder')
-            return
 
         if not self._can_start_config(config.name, file_path):
             debug('Already starting on this window:', config.name)
@@ -419,14 +424,31 @@ class WindowManager(object):
         if not self._handlers.on_start(config.name, self._window):
             return
 
-        project_path = workspace.path
+        # workspace = self._ensure_workspace()
+
+        # if workspace is None:
+        #     debug('Cannot start without a project folder')
+        #     return
+
+        # project_path = workspace.path
+        folders = self._window.folders()
+        sorted_folders = []  # type: List[str]
+        if not folders:
+            sorted_folders.append(os.path.basename(file_path))
+        else:
+            for folder in folders:
+                if file_path.startswith(folder):
+                    sorted_folders.insert(0, folder)
+                else:
+                    sorted_folders.append(folder)
+
         self._window.status_message("Starting " + config.name + "...")
-        debug("starting in", project_path)
+        debug("starting in", sorted_folders[0])
         session = None  # type: Optional[Session]
         try:
             session = self._start_session(
                 self._window,                  # window
-                project_path,                  # project_path
+                sorted_folders,                # workspace_folders
                 config,                        # config
                 self._handle_pre_initialize,   # on_pre_initialize
                 self._handle_post_initialize,  # on_post_initialize

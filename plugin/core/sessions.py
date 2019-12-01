@@ -8,14 +8,14 @@ from .logging import debug
 import os
 from .protocol import completion_item_kinds, symbol_kinds
 try:
-    from typing import Callable, Dict, Any, Optional
-    assert Callable and Dict and Any and Optional and Transport
+    from typing import Callable, Dict, Any, Optional, List
+    assert Callable and Dict and Any and Optional and Transport and List
 except ImportError:
     pass
 
 
 def create_session(config: ClientConfig,
-                   project_path: str,
+                   workspace_folders: 'List[str]',
                    env: dict,
                    settings: Settings,
                    on_pre_initialize: 'Optional[Callable[[Session], None]]' = None,
@@ -26,7 +26,7 @@ def create_session(config: ClientConfig,
     def with_client(client: Client) -> 'Session':
         return Session(
             config=config,
-            project_path=project_path,
+            workspace_folders=workspace_folders,
             client=client,
             on_pre_initialize=on_pre_initialize,
             on_post_initialize=on_post_initialize,
@@ -42,7 +42,7 @@ def create_session(config: ClientConfig,
             tcp_port = socket.getsockname()[1]
             server_args = list(s.replace("{port}", str(tcp_port)) for s in config.binary_args)
 
-        process = start_server(server_args, project_path, env, settings.log_stderr)
+        process = start_server(server_args, workspace_folders[0], env, settings.log_stderr)
         if process:
             if config.tcp_mode == "host":
                 client_socket, address = socket.accept()
@@ -71,11 +71,14 @@ def create_session(config: ClientConfig,
     return session
 
 
-def get_initialize_params(project_path: str, config: ClientConfig) -> dict:
+def get_initialize_params(workspace_folders: 'List[str]', config: ClientConfig) -> dict:
+    lsp_folders = [{"uri": filename_to_uri(f), "name": os.path.basename(f)} for f in workspace_folders]
+
     initializeParams = {
         "processId": os.getpid(),
-        "rootUri": filename_to_uri(project_path),
-        "rootPath": project_path,
+        "rootUri": filename_to_uri(workspace_folders[0]),
+        "rootPath": workspace_folders[0],
+        "workspaceFolders": lsp_folders,
         "capabilities": {
             "textDocument": {
                 "synchronization": {
@@ -131,6 +134,7 @@ def get_initialize_params(project_path: str, config: ClientConfig) -> dict:
                 "applyEdit": True,
                 "didChangeConfiguration": {},
                 "executeCommand": {},
+                "workspaceFolders": True,
                 "symbol": {
                     "symbolKind": {
                         "valueSet": symbol_kinds
@@ -149,7 +153,7 @@ def get_initialize_params(project_path: str, config: ClientConfig) -> dict:
 class Session(object):
     def __init__(self,
                  config: ClientConfig,
-                 project_path: str,
+                 workspace_folders: 'List[str]',
                  client: Client,
                  on_pre_initialize: 'Optional[Callable[[Session], None]]' = None,
                  on_post_initialize: 'Optional[Callable[[Session], None]]' = None,
@@ -160,10 +164,10 @@ class Session(object):
         self._on_post_exit = on_post_exit
         self.capabilities = dict()  # type: Dict[str, Any]
         self.client = client
-        self._workspace_folders = [project_path]
+        self._workspace_folders = workspace_folders  # TODO: perhaps not until initialized?
         if on_pre_initialize:
             on_pre_initialize(self)
-        self._initialize(project_path)
+        self._initialize()
 
     def has_capability(self, capability: str) -> bool:
         return capability in self.capabilities and self.capabilities[capability] is not False
@@ -181,15 +185,24 @@ class Session(object):
 
         return False
 
-    def _initialize(self, project_path: str) -> None:
-        params = get_initialize_params(project_path, self.config)
+    def _initialize(self) -> None:
+        params = get_initialize_params(self._workspace_folders, self.config)
         self.client.send_request(
             Request.initialize(params),
             lambda result: self._handle_initialize_result(result))
 
     def _handle_initialize_result(self, result: 'Any') -> None:
-        self.state = ClientStates.READY
+        # only keep supported amount of folders
         self.capabilities = result.get('capabilities', dict())
+        # 'capabilities': {'workspace': {'workspaceFolders': {'supported': True
+        workspace_cap = self.capabilities.get("workspace", {})
+        workspace_folder_cap = workspace_cap.get("workspaceFolders", {})
+        if not workspace_folder_cap.get("supported"):
+            self._workspace_folders = self._workspace_folders[:1]
+            debug('single folder session:', self._workspace_folders[0])
+        else:
+            debug('multi folder session:', self._workspace_folders)
+        self.state = ClientStates.READY
         if self._on_post_initialize:
             self._on_post_initialize(self)
 

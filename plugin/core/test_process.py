@@ -58,6 +58,11 @@ class ProcessTests(TestCase):
     def test_log_stream_encoding_utf16(self):
         # Here we encode U+10000 as something that can't be decoded by UTF-8, so log_stream should try to decode it as
         # UTF-16 instead.
-        encoded_input = bytes((0x00, 0xD8, 0x00, 0xDC))
+        encoded_input = bytes((0x00, 0xD8, 0x00, 0xDC))  # little endian...
         expected_output = '\U00010000'
+        self.do_test(encoded_input, expected_output)
+
+    def test_log_stream_encoding_failure(self):
+        encoded_input = bytes((0x00, 0xD8, 0x00))
+        expected_output = 'Unable to decode bytes! (tried UTF-8 and UTF-16)'
         self.do_test(encoded_input, expected_output)

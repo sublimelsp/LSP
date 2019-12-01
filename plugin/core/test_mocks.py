@@ -34,7 +34,8 @@ basic_responses = {
             'definitionProvider': True,
             'typeDefinitionProvider': True,
             'declarationProvider': True,
-            'implementationProvider': True
+            'implementationProvider': True,
+            'documentFormattingProvider': True
         }
     }
 }
@@ -283,6 +284,9 @@ class MockClient():
             self._async_response_callback(lambda: on_success(response))
         else:
             on_success(response)
+
+    def execute_request(self, request: Request) -> 'Any':
+        return self.responses.get(request.method)
 
     def send_notification(self, notification: Notification) -> None:
         self._notifications.append(notification)

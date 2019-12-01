@@ -6,7 +6,7 @@ from .process import start_server
 from .url import filename_to_uri
 from .logging import debug
 import os
-from .protocol import completion_item_kinds, symbol_kinds
+from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder
 try:
     from typing import Callable, Dict, Any, Optional, List
     assert Callable and Dict and Any and Optional and Transport and List
@@ -15,7 +15,7 @@ except ImportError:
 
 
 def create_session(config: ClientConfig,
-                   workspace_folders: 'List[str]',
+                   workspace_folders: 'List[WorkspaceFolder]',
                    env: dict,
                    settings: Settings,
                    on_pre_initialize: 'Optional[Callable[[Session], None]]' = None,
@@ -42,7 +42,8 @@ def create_session(config: ClientConfig,
             tcp_port = socket.getsockname()[1]
             server_args = list(s.replace("{port}", str(tcp_port)) for s in config.binary_args)
 
-        process = start_server(server_args, workspace_folders[0], env, settings.log_stderr)
+        first_folder = workspace_folders[0].path
+        process = start_server(server_args, first_folder, env, settings.log_stderr)
         if process:
             if config.tcp_mode == "host":
                 client_socket, address = socket.accept()
@@ -71,14 +72,13 @@ def create_session(config: ClientConfig,
     return session
 
 
-def get_initialize_params(workspace_folders: 'List[str]', config: ClientConfig) -> dict:
-    lsp_folders = [{"uri": filename_to_uri(f), "name": os.path.basename(f)} for f in workspace_folders]
-
+def get_initialize_params(workspace_folders: 'List[WorkspaceFolder]', config: ClientConfig) -> dict:
+    first_folder = workspace_folders[0]
     initializeParams = {
         "processId": os.getpid(),
-        "rootUri": filename_to_uri(workspace_folders[0]),
-        "rootPath": workspace_folders[0],
-        "workspaceFolders": lsp_folders,
+        "rootUri": first_folder.uri(),
+        "rootPath": first_folder.path,
+        "workspaceFolders": [folder.to_dict() for folder in workspace_folders],
         "capabilities": {
             "textDocument": {
                 "synchronization": {
@@ -153,7 +153,7 @@ def get_initialize_params(workspace_folders: 'List[str]', config: ClientConfig) 
 class Session(object):
     def __init__(self,
                  config: ClientConfig,
-                 workspace_folders: 'List[str]',
+                 workspace_folders: 'List[WorkspaceFolder]',
                  client: Client,
                  on_pre_initialize: 'Optional[Callable[[Session], None]]' = None,
                  on_post_initialize: 'Optional[Callable[[Session], None]]' = None,
@@ -180,7 +180,7 @@ class Session(object):
             return False
 
         for folder in self._workspace_folders:
-            if file_path.startswith(folder):
+            if file_path.startswith(folder.path):
                 return True
 
         return False

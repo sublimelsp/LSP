@@ -9,7 +9,7 @@ from .sessions import Session
 from .url import filename_to_uri
 from .workspace import (
     enable_in_project, disable_in_project, maybe_get_first_workspace_from_window,
-    maybe_get_workspace_from_view, WorkspaceFolder
+    maybe_get_workspace_from_view, WorkspaceFolder, get_workspace_folders
 )
 
 from .rpc import Client
@@ -424,31 +424,22 @@ class WindowManager(object):
         if not self._handlers.on_start(config.name, self._window):
             return
 
-        # workspace = self._ensure_workspace()
+        workspace_folders = get_workspace_folders(self._window, file_path)
+
+        # TODO: fix
+        workspace = self._ensure_workspace()
 
         # if workspace is None:
         #     debug('Cannot start without a project folder')
         #     return
 
-        # project_path = workspace.path
-        folders = self._window.folders()
-        sorted_folders = []  # type: List[str]
-        if not folders:
-            sorted_folders.append(os.path.basename(file_path))
-        else:
-            for folder in folders:
-                if file_path.startswith(folder):
-                    sorted_folders.insert(0, folder)
-                else:
-                    sorted_folders.append(folder)
-
         self._window.status_message("Starting " + config.name + "...")
-        debug("starting in", sorted_folders[0])
+        debug("starting in", workspace_folders[0].path)
         session = None  # type: Optional[Session]
         try:
             session = self._start_session(
                 self._window,                  # window
-                sorted_folders,                # workspace_folders
+                workspace_folders,                # workspace_folders
                 config,                        # config
                 self._handle_pre_initialize,   # on_pre_initialize
                 self._handle_post_initialize,  # on_post_initialize

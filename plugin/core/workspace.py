@@ -34,6 +34,21 @@ def maybe_get_workspace_from_view(view_or_window: 'Any') -> 'Optional[WorkspaceF
     return None
 
 
+def get_workspace_folders(window: 'WindowLike', file_path: str) -> 'List[WorkspaceFolder]':
+    folders = window.folders()
+    sorted_folders = []  # type: List[str]
+    if not folders:
+        sorted_folders.append(os.path.basename(file_path))
+    else:
+        for folder in folders:
+            if file_path.startswith(folder):
+                sorted_folders.insert(0, folder)
+            else:
+                sorted_folders.append(folder)
+
+    return [WorkspaceFolder.from_path(folder) for folder in sorted_folders]
+
+
 def enable_in_project(window: 'Any', config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):

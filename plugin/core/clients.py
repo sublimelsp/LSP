@@ -4,8 +4,9 @@ from .sessions import create_session, Session
 
 # typing only
 from .rpc import Client
+from .protocol import WorkspaceFolder
 from .settings import ClientConfig, settings
-assert Client and ClientConfig
+assert Client and ClientConfig and WorkspaceFolder
 
 
 try:
@@ -37,7 +38,7 @@ def get_window_env(window: sublime.Window, config: ClientConfig) -> 'Tuple[List[
 
 
 def start_window_config(window: sublime.Window,
-                        workspace_folders: 'List[str]',
+                        workspace_folders: 'List[WorkspaceFolder]',
                         config: ClientConfig,
                         on_pre_initialize: 'Callable[[Session], None]',
                         on_post_initialize: 'Callable[[Session], None]',

@@ -196,11 +196,13 @@ class LspHoverCommand(LspTextCommand):
             else:
                 value = item.get("value")
                 language = item.get("language")
+
+            if '\n' not in value:
+                value = "\n".join(textwrap.wrap(value, 80))
+
             if language:
                 formatted.append("```{}\n{}\n```\n".format(language, value))
             else:
-                if '\n' not in value:
-                    value = "\n".join(textwrap.wrap(value, 80))
                 formatted.append(value)
 
         if formatted:

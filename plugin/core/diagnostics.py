@@ -124,8 +124,7 @@ CURSOR_BACKWARD = -1
 
 
 class DiagnosticCursorWalk(DiagnosticsUpdateWalk):
-
-    def __init__(self, cursor: 'DiagnosticsCursor', direction: int=0) -> None:
+    def __init__(self, cursor: 'DiagnosticsCursor', direction: int = 0) -> None:
         self._cursor = cursor
         self._direction = direction
         self._current_file_path = ""
@@ -133,6 +132,9 @@ class DiagnosticCursorWalk(DiagnosticsUpdateWalk):
 
     def begin_file(self, file_path: str) -> None:
         self._current_file_path = file_path
+
+    def _meets_max_severity(self, diagnostic: 'Diagnostic') -> bool:
+        return diagnostic.severity <= self._cursor.max_severity_level
 
     def _take_candidate(self, diagnostic: 'Diagnostic') -> None:
         self._candidate = self._current_file_path, diagnostic
@@ -154,7 +156,7 @@ class FromPositionWalk(DiagnosticCursorWalk):
         self._last_before_file = None  # type: Optional[Tuple[str, Diagnostic]]
 
     def diagnostic(self, diagnostic: 'Diagnostic') -> None:
-        if diagnostic.severity <= DiagnosticSeverity.Warning:
+        if self._meets_max_severity(diagnostic):
             if not self._first:
                 self._first = self._current_file_path, diagnostic
 
@@ -220,7 +222,7 @@ class FromDiagnosticWalk(DiagnosticCursorWalk):
         self._take_next = False
 
     def diagnostic(self, diagnostic: 'Diagnostic') -> None:
-        if diagnostic.severity <= DiagnosticSeverity.Warning:
+        if self._meets_max_severity(diagnostic):
 
             if self._direction == CURSOR_FORWARD:
                 if not self._first:
@@ -248,9 +250,8 @@ class FromDiagnosticWalk(DiagnosticCursorWalk):
 
 
 class TakeFirstDiagnosticWalk(DiagnosticCursorWalk):
-
     def diagnostic(self, diagnostic: Diagnostic) -> None:
-        if diagnostic.severity <= DiagnosticSeverity.Warning:
+        if self._meets_max_severity(diagnostic):
             if self._direction == CURSOR_FORWARD:
                 if self._candidate is None:
                     self._take_candidate(diagnostic)
@@ -259,7 +260,6 @@ class TakeFirstDiagnosticWalk(DiagnosticCursorWalk):
 
 
 class DiagnosticsUpdatedWalk(DiagnosticCursorWalk):
-
     def diagnostic(self, diagnostic: 'Diagnostic') -> None:
         if self._cursor.value:
             if self._current_file_path == self._cursor.value[0]:
@@ -268,9 +268,9 @@ class DiagnosticsUpdatedWalk(DiagnosticCursorWalk):
 
 
 class DiagnosticsCursor(object):
-
-    def __init__(self) -> None:
+    def __init__(self, show_diagnostics_severity_level: int = DiagnosticSeverity.Warning) -> None:
         self._file_diagnostic = None  # type: 'Optional[Tuple[str, Diagnostic]]'
+        self.max_severity_level = show_diagnostics_severity_level
 
     @property
     def has_value(self) -> bool:

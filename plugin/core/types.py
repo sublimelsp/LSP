@@ -43,6 +43,7 @@ class ClientStates(object):
     STARTING = 0
     READY = 1
     STOPPING = 2
+    STOPPED = 3
 
 
 def syntax_language(config: 'ClientConfig', syntax: str) -> 'Optional[LanguageConfig]':

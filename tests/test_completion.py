@@ -1,14 +1,16 @@
+from LSP.plugin.completion import CompletionHandler
+from LSP.plugin.completion import CompletionState
+from LSP.plugin.core.registry import is_supported_view
+from setup import TextDocumentTestCase
 import os
 import sublime
-from LSP.plugin.completion import CompletionHandler, CompletionState
-from LSP.plugin.core.registry import is_supported_view
-from unittesting import DeferrableTestCase
-from setup import (SUPPORTED_SYNTAX, text_config, add_config, remove_config,
-                   TextDocumentTestCase)
+# from unittesting import DeferrableTestCase
+# from setup import (SUPPORTED_SYNTAX, text_config, add_config, remove_config,
+#                    TextDocumentTestCase)
 
 try:
-    from typing import Dict, Optional, List
-    assert Dict and Optional and List
+    from typing import Dict, Optional, List, Generator
+    assert Dict and Optional and List and Generator
 except ImportError:
     pass
 
@@ -123,19 +125,18 @@ metals_implement_all_members = [
 ]
 
 
-class InitializationTests(DeferrableTestCase):
-    def setUp(self):
-        self.view = sublime.active_window().new_file()
-        add_config(text_config)
+class InitializationTests(TextDocumentTestCase):
+    # def setUp(self) -> 'Generator':
+    #     self.view = sublime.active_window().new_file()
+    #     add_config(text_config)
 
-    def test_is_not_applicable(self):
+    def test_is_not_applicable(self) -> None:
         self.assertFalse(CompletionHandler.is_applicable(dict()))
 
-    def test_is_applicable(self):
-        self.assertTrue(
-            CompletionHandler.is_applicable(dict(syntax=SUPPORTED_SYNTAX)))
+    def test_is_applicable(self) -> None:
+        self.assertTrue(CompletionHandler.is_applicable(dict(syntax=SUPPORTED_SYNTAX)))
 
-    def test_not_enabled(self):
+    def test_not_enabled(self) -> 'Generator':
         self.assertTrue(is_supported_view(self.view))
         handler = CompletionHandler(self.view)
         self.assertFalse(handler.initialized)
@@ -146,16 +147,16 @@ class InitializationTests(DeferrableTestCase):
         self.assertFalse(handler.enabled)
         self.assertIsNone(result)
 
-    def tearDown(self):
-        remove_config(text_config)
-        if self.view:
-            self.view.set_scratch(True)
-            self.view.window().focus_view(self.view)
-            self.view.window().run_command("close_file")
+    # def tearDown(self) -> 'Generator':
+    #     remove_config(text_config)
+    #     if self.view:
+    #         self.view.set_scratch(True)
+    #         self.view.window().focus_view(self.view)
+    #         self.view.window().run_command("close_file")
 
 
 class QueryCompletionsTests(TextDocumentTestCase):
-    def test_simple_label(self):
+    def test_simple_label(self) -> 'Generator':
         yield OPEN_DOCUMENT_DELAY
         self.transport.responses['textDocument/completion'] = label_completions
 
@@ -184,7 +185,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), 'asdf')
 
-    def test_simple_inserttext(self):
+    def test_simple_inserttext(self) -> 'Generator':
         yield OPEN_DOCUMENT_DELAY
         self.transport.responses[
             'textDocument/completion'] = insert_text_completions
@@ -198,7 +199,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 self.view.substr(sublime.Region(0, self.view.size())),
                 insert_text_completions[0]["insertText"])
 
-    def test_var_prefix_using_label(self):
+    def test_var_prefix_using_label(self) -> 'Generator':
         yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': '$'})
         self.view.run_command('move_to', {'to': 'eol'})
@@ -213,7 +214,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
-    def test_var_prefix_added_in_insertText(self):
+    def test_var_prefix_added_in_insertText(self) -> 'Generator':
         """
 
         Powershell: label='true', insertText='$true' (see https://github.com/tomv564/LSP/issues/294)
@@ -233,7 +234,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
-    def test_var_prefix_added_in_label(self):
+    def test_var_prefix_added_in_label(self) -> 'Generator':
         """
 
         PHP language server: label='$someParam', textEdit='someParam' (https://github.com/tomv564/LSP/issues/368)
@@ -253,7 +254,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
-    def test_space_added_in_label(self):
+    def test_space_added_in_label(self) -> 'Generator':
         """
 
         Clangd: label=" const", insertText="const" (https://github.com/tomv564/LSP/issues/368)
@@ -270,7 +271,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), 'const')
 
-    def test_dash_missing_from_label(self):
+    def test_dash_missing_from_label(self) -> 'Generator':
         """
 
         Powershell: label="UniqueId", insertText="-UniqueId" (https://github.com/tomv564/LSP/issues/572)
@@ -292,7 +293,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 self.view.substr(sublime.Region(0, self.view.size())),
                 '-UniqueId')
 
-    def test_edit_before_cursor(self):
+    def test_edit_before_cursor(self) -> 'Generator':
         """
 
         Metals: label="override def myFunction(): Unit"
@@ -316,7 +317,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 self.view.substr(sublime.Region(0, self.view.size())),
                 '  override def myFunction(): Unit = ???')
 
-    def test_edit_after_nonword(self):
+    def test_edit_after_nonword(self) -> 'Generator':
         """
 
         Metals: List.| selects label instead of textedit
@@ -341,7 +342,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'List.apply()')
 
-    def test_implement_all_members_quirk(self):
+    def test_implement_all_members_quirk(self) -> 'Generator':
         """
         Metals: "Implement all members" should just select the newText.
         https://github.com/tomv564/LSP/issues/771
@@ -362,7 +363,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'def foo: Int = ???\n   def boo: Int = ???')
 
-    def test_additional_edits(self):
+    def test_additional_edits(self) -> 'Generator':
         yield OPEN_DOCUMENT_DELAY
         self.transport.responses[
             'textDocument/completion'] = completion_with_additional_edits
@@ -379,7 +380,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'import asdf;\nasdf')
 
-    def test_resolve_for_additional_edits(self):
+    def test_resolve_for_additional_edits(self) -> 'Generator':
         yield OPEN_DOCUMENT_DELAY
         self.transport.responses['textDocument/completion'] = label_completions
         self.transport.responses[

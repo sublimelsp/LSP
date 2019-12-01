@@ -70,12 +70,19 @@ def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
             content = stream.readline()
             if not content:
                 break
+            decoded = None  # type: Optional[str]
             try:
+                # There's nothing in the specification about what the encoding should be of stderr (or, in the case of a
+                # TCP transport, the encoding of stdout). Let's assume UTF-8.
                 decoded = content.decode("UTF-8")
             except UnicodeDecodeError:
-                # todo: do we still need this ?
-                decoded = content  # type: ignore
-            server_log(decoded.strip())
+                # Guess it wasn't UTF-8. Let's try UTF-16 as a last resort.
+                try:
+                    decoded = content.decode("UTF-16")
+                except UnicodeDecodeError:
+                    decoded = None
+            message = decoded.strip() if decoded is not None else "Unable to decode bytes! (tried UTF-8 and UTF-16)"
+            server_log('server', message)
         except IOError as err:
             exception_log("Failure reading stream", err)
             return

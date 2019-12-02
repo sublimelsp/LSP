@@ -1,6 +1,7 @@
 from .core.windows import ensure_server_panel
 from .diagnostics import ensure_diagnostics_panel
 from sublime import error_message
+from sublime_lib import Panel
 from sublime_plugin import WindowCommand
 
 assert ensure_server_panel
@@ -16,6 +17,4 @@ class LspTogglePanel(WindowCommand):
             error_message('There is no panel of type "{}"'.format(panel_type))
             return
         ensure_func(self.window)
-        panel_name = "output.{}".format(panel_type)
-        command = "{}_panel".format("hide" if self.window.active_panel() == panel_name else "show")
-        self.window.run_command(command, {"panel": panel_name})
+        Panel(self.window, "output.{}".format(panel_type)).toggle_visibility()

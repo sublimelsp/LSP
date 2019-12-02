@@ -58,19 +58,3 @@ def create_panel(window: sublime.Window, name: str, result_file_regex: str, resu
 def ensure_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
                  syntax: str) -> 'Optional[sublime.View]':
     return window.find_output_panel(name) or create_panel(window, name, result_file_regex, result_line_regex, syntax)
-
-
-class LspUpdatePanelCommand(sublime_plugin.TextCommand):
-    """
-    A update_panel command to update the error panel with new text.
-    """
-
-    def run(self, edit: sublime.Edit, characters: 'Optional[str]' = "") -> None:
-        # Clear folds
-        self.view.unfold(sublime.Region(0, self.view.size()))
-
-        self.view.replace(edit, sublime.Region(0, self.view.size()), characters or "")
-
-        # Clear the selection
-        selection = self.view.sel()
-        selection.clear()

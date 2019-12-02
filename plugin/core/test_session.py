@@ -1,3 +1,4 @@
+from .protocol import WorkspaceFolder
 from .sessions import create_session, Session
 from .test_mocks import MockClient
 from .test_mocks import TEST_CONFIG
@@ -26,8 +27,9 @@ class SessionTest(unittest.TestCase):
 
         config = ClientConfig("test", ["ls"], None, [], [], None, [TEST_LANGUAGE])
         project_path = "/"
+        folders = [WorkspaceFolder.from_path(project_path)]
         session = self.assert_if_none(
-            create_session(config, project_path, dict(), Settings()))
+            create_session(config, folders, dict(), Settings()))
 
         self.assertEqual(session.state, ClientStates.STARTING)
         session.end()
@@ -35,10 +37,11 @@ class SessionTest(unittest.TestCase):
 
     def test_can_get_started_session(self):
         project_path = "/"
+        folders = [WorkspaceFolder.from_path(project_path)]
         post_initialize_callback = unittest.mock.Mock()
         session = self.assert_if_none(
             create_session(config=TEST_CONFIG,
-                           project_path=project_path,
+                           workspace_folders=folders,
                            env=dict(),
                            settings=Settings(),
                            bootstrap_client=MockClient(),
@@ -51,11 +54,12 @@ class SessionTest(unittest.TestCase):
 
     def test_pre_initialize_callback_is_invoked(self):
         project_path = "/"
+        folders = [WorkspaceFolder.from_path(project_path)]
         pre_initialize_callback = unittest.mock.Mock()
         post_initialize_callback = unittest.mock.Mock()
         session = self.assert_if_none(
             create_session(config=TEST_CONFIG,
-                           project_path=project_path,
+                           workspace_folders=folders,
                            env=dict(),
                            settings=Settings(),
                            bootstrap_client=MockClient(),
@@ -70,11 +74,12 @@ class SessionTest(unittest.TestCase):
 
     def test_can_shutdown_session(self):
         project_path = "/"
+        folders = [WorkspaceFolder.from_path(project_path)]
         post_initialize_callback = unittest.mock.Mock()
         post_exit_callback = unittest.mock.Mock()
         session = self.assert_if_none(
             create_session(config=TEST_CONFIG,
-                           project_path=project_path,
+                           workspace_folders=folders,
                            env=dict(),
                            settings=Settings(),
                            bootstrap_client=MockClient(),

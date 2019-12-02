@@ -1,45 +1,32 @@
-from .test_mocks import MockView
 from .test_mocks import MockWindow
-from .workspace import maybe_get_first_workspace_from_window
-from .workspace import maybe_get_workspace_from_view
-from .workspace import WorkspaceFolder
+from .workspace import WorkspaceFolder, get_workspace_folders
 from os.path import dirname
 from unittest import TestCase
+import tempfile
 
 
 class WorkspaceTest(TestCase):
 
-    def test_get_first_workspace_from_window_single_file(self) -> None:
-        workspace = maybe_get_first_workspace_from_window(MockWindow())
-        self.assertIsNone(workspace)
+    def test_get_workspace_from_single_folder_project(self) -> None:
+        project_folder = dirname(__file__)
+        folders = get_workspace_folders(MockWindow(folders=[project_folder]), __file__)
+        folder = WorkspaceFolder.from_path(project_folder)
+        self.assertEqual(folders[0], folder)
 
-        workspace = maybe_get_first_workspace_from_window(MockWindow(folders=[dirname(__file__)]))
-        self.assertIsNotNone(workspace)
-        assert workspace  # for mypy
-        self.assertEqual(workspace.path, dirname(__file__))
-        self.assertEqual(workspace.name, "core")
+    def test_get_workspace_from_multi_folder_project(self) -> None:
+        first_project_path = dirname(__file__)
+        second_project_path = tempfile.gettempdir()
+        folders = get_workspace_folders(MockWindow(folders=[second_project_path, first_project_path]), __file__)
+        first_folder = WorkspaceFolder.from_path(first_project_path)
+        second_folder = WorkspaceFolder.from_path(second_project_path)
+        self.assertEqual(folders[0], first_folder)
+        self.assertEqual(folders[1], second_folder)
 
-    def test_get_workspace_from_view(self) -> None:
-        view = MockView(__file__)
-        window = MockWindow(files_in_groups=[[view]])
-        workspace = maybe_get_workspace_from_view(view)
-        self.assertIsNotNone(workspace)
-        assert workspace  # for mypy
-        self.assertEqual(workspace.path, dirname(__file__))
-        self.assertEqual(workspace.name, "core")
-
-        workspace = maybe_get_workspace_from_view(window)
-        self.assertIsNotNone(workspace)
-        assert workspace  # for mypy
-        self.assertEqual(workspace.path, dirname(__file__))
-        self.assertEqual(workspace.name, "core")
-
-        view._file_name = None
-        workspace = maybe_get_workspace_from_view(view)
-        self.assertIsNone(workspace)
-
-        workspace = maybe_get_workspace_from_view(window)
-        self.assertIsNone(workspace)
+    def test_get_workspace_without_folders(self) -> None:
+        project_folder = dirname(__file__)
+        folders = get_workspace_folders(MockWindow(), __file__)
+        folder = WorkspaceFolder.from_path(project_folder)
+        self.assertEqual(folders[0], folder)
 
     def test_workspace_str(self) -> None:
         workspace = WorkspaceFolder("LSP", "/foo/bar/baz")

@@ -18,24 +18,26 @@ from .windows import WindowManager
 from .windows import WindowRegistry
 import tempfile
 import unittest
+import os
 
 try:
+    from .protocol import WorkspaceFolder
     from typing import Callable, List, Optional, Set, Dict, Any, Tuple
     assert Callable and List and Optional and Set and Session and Dict and Any and Tuple
-    assert ClientConfig and LanguageConfig
+    assert ClientConfig and LanguageConfig and WorkspaceFolder
 except ImportError:
     pass
 
 
 def mock_start_session(window: MockWindow,
-                       project_path: str,
+                       workspace_folders: 'List[WorkspaceFolder]',
                        config: ClientConfig,
                        on_pre_initialize: 'Callable[[Session], None]',
                        on_post_initialize: 'Callable[[Session], None]',
                        on_post_exit: 'Callable[[str], None]') -> 'Optional[Session]':
     return create_session(
         config=TEST_CONFIG,
-        project_path=project_path,
+        workspace_folders=workspace_folders,
         env=dict(),
         settings=MockSettings(),
         bootstrap_client=MockClient(),
@@ -56,6 +58,7 @@ class WindowRegistryTests(unittest.TestCase):
 
     def test_removes_window_state(self):
         test_window = MockWindow([[MockView(__file__)]])
+        print(__file__)
         windows = WindowRegistry(TestGlobalConfigs(), TestDocumentHandlerFactory(),
                                  mock_start_session,
                                  test_sublime, MockHandlerDispatcher())
@@ -81,7 +84,7 @@ class WindowManagerTests(unittest.TestCase):
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
-        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name))
+        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
         self.assertListEqual(docs._documents, [__file__])
 
     def test_can_open_supported_view(self):
@@ -91,7 +94,7 @@ class WindowManagerTests(unittest.TestCase):
                            MockHandlerDispatcher())
 
         wm.start_active_views()
-        self.assertIsNone(wm.get_session(TEST_CONFIG.name))
+        self.assertIsNone(wm.get_session(TEST_CONFIG.name, __file__))
         self.assertListEqual(docs._documents, [])
 
         # session must be started (todo: verify session is ready)
@@ -101,7 +104,7 @@ class WindowManagerTests(unittest.TestCase):
         window._files_in_groups = [[view]]
 
         wm.activate_view(view)
-        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name))
+        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
         self.assertEqual(len(docs._sessions), 1)
 
     def test_can_restart_sessions(self):
@@ -111,7 +114,7 @@ class WindowManagerTests(unittest.TestCase):
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
-        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name))
+        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
 
         # our starting document must be loaded
         self.assertListEqual(docs._documents, [__file__])
@@ -119,7 +122,7 @@ class WindowManagerTests(unittest.TestCase):
         wm.restart_sessions()
 
         # session must be started (todo: verify session is ready)
-        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name))
+        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
 
         # our starting document must be loaded
         self.assertListEqual(docs._documents, [__file__])
@@ -132,7 +135,7 @@ class WindowManagerTests(unittest.TestCase):
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
-        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name))
+        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
 
         # our starting document must be loaded
         self.assertListEqual(docs._documents, [__file__])
@@ -152,15 +155,16 @@ class WindowManagerTests(unittest.TestCase):
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
-        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name))
+        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
 
         # our starting document must be loaded
         self.assertListEqual(docs._documents, [__file__])
 
         # change project_path
         new_project_path = tempfile.gettempdir()
+        file_path = os.path.join(new_project_path, "testfile.py")
         test_window.set_folders([new_project_path])
-        another_view = MockView(None)
+        another_view = MockView(file_path)
         another_view.settings().set("syntax", "Unsupported Syntax")
         test_window._files_in_groups[0][0] = another_view
         wm.activate_view(another_view)
@@ -169,7 +173,7 @@ class WindowManagerTests(unittest.TestCase):
         self.assertEqual(len(docs._sessions), 0)
 
         # don't forget to check or we'll keep restarting sessions!
-        self.assertEqual(wm.get_project_path(), new_project_path)
+        self.assertEqual(wm.get_project_path(file_path), new_project_path)
 
     def test_offers_restart_on_crash(self):
         docs = MockDocuments()
@@ -179,7 +183,7 @@ class WindowManagerTests(unittest.TestCase):
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
-        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name))
+        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
 
         # our starting document must be loaded
         self.assertListEqual(docs._documents, [__file__])
@@ -187,7 +191,7 @@ class WindowManagerTests(unittest.TestCase):
         wm._handle_server_crash(TEST_CONFIG)
 
         # session must be started (todo: verify session is ready)
-        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name))
+        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
 
         # our starting document must be loaded
         self.assertListEqual(docs._documents, [__file__])
@@ -201,7 +205,7 @@ class WindowManagerTests(unittest.TestCase):
         wm.start_active_views()
 
         # session must be started (todo: verify session is ready)
-        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name))
+        self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
 
         # our starting document must be loaded
         self.assertListEqual(docs._documents, [__file__])

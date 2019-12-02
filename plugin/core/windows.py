@@ -367,7 +367,7 @@ class WindowManager(object):
     def disable_config(self, config_name: str) -> None:
         disable_in_project(self._window, config_name)
         self.update_configs()
-        self.end_session(config_name)
+        self.end_config_sessions(config_name)
 
     def start_active_views(self) -> None:
         active_views = get_active_views(self._window)
@@ -473,10 +473,9 @@ class WindowManager(object):
     def end_sessions(self) -> None:
         self.documents.reset()
         for config_name in list(self._sessions):
-            self.end_session(config_name)
+            self.end_config_sessions(config_name)
 
-    # TODO: this should probably only end 1 session
-    def end_session(self, config_name: str) -> None:
+    def end_config_sessions(self, config_name: str) -> None:
         config_sessions = self._sessions[config_name] or []
         for session in config_sessions:
             debug("unloading session", config_name)

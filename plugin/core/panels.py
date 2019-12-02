@@ -60,17 +60,6 @@ def ensure_panel(window: sublime.Window, name: str, result_file_regex: str, resu
     return window.find_output_panel(name) or create_panel(window, name, result_file_regex, result_line_regex, syntax)
 
 
-class LspClearPanelCommand(sublime_plugin.TextCommand):
-    """
-    A clear_panel command to clear the error panel.
-    """
-
-    def run(self, edit: sublime.Edit) -> None:
-        self.view.set_read_only(False)
-        self.view.erase(edit, sublime.Region(0, self.view.size()))
-        self.view.set_read_only(True)
-
-
 class LspUpdatePanelCommand(sublime_plugin.TextCommand):
     """
     A update_panel command to update the error panel with new text.

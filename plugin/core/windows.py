@@ -475,11 +475,12 @@ class WindowManager(object):
         for config_name in list(self._sessions):
             self.end_session(config_name)
 
+    # TODO: this should probably only end 1 session
     def end_session(self, config_name: str) -> None:
-        for config_name, sessions in self._sessions.items():
-            for session in sessions:
-                debug("unloading session", config_name)
-                session.end()
+        config_sessions = self._sessions[config_name] or []
+        for session in config_sessions:
+            debug("unloading session", config_name)
+            session.end()
 
     def get_project_path(self, file_path: str) -> 'Optional[str]':
         for folder in self._workspace_folders:

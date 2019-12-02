@@ -34,7 +34,7 @@ def create_output_panel(window: sublime.Window, name: str) -> 'Optional[sublime.
 
 
 def destroy_output_panels(window: sublime.Window) -> None:
-    for panel_name in ["references", "diagnostics"]:
+    for panel_name in ["references", "diagnostics", "server"]:
         window.destroy_output_panel(panel_name)
 
 

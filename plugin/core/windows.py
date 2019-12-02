@@ -347,6 +347,7 @@ class WindowManager(object):
         self._on_closed = on_closed
         self._is_closing = False
         self._initialization_lock = threading.Lock()
+        self._handle_server_message("LSP", "This is the panel where window/logMessage and stderr will end up.")
 
     def get_session(self, config_name: str) -> 'Optional[Session]':
         return self._sessions.get(config_name)
@@ -628,7 +629,8 @@ class WindowManager(object):
 
     def _handle_server_message(self, name: str, message: str) -> None:
         ensure_server_panel(self._window)
-        with OutputPanel(self._window, "server") as stream:
+        with OutputPanel(self._window, "server", force_writes=True, follow_cursor=True) as stream:
+            stream.seek_end()
             stream.print("{}: {}".format(name, message))
 
     def _handle_log_message(self, name: str, params: 'Any') -> None:

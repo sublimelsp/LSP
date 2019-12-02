@@ -76,7 +76,7 @@ def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
                 # There's nothing in the specification about what the encoding should be of stderr (or, in the case of a
                 # TCP transport, the encoding of stdout). Let's assume the encoding of the current locale.
                 # On Linux and macOS, this is UTF-8 (even when using a Dutch locale on macOS). On Windows, this might be
-                # cp1252.
+                # cp5212.
                 message = content.decode(preferred_encoding).strip()
             except UnicodeDecodeError:
                 message = "Unable to decode bytes! (tried decoding with {})".format(preferred_encoding)

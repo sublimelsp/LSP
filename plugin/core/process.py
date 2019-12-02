@@ -1,4 +1,4 @@
-from .logging import debug, exception_log, server_log
+from .logging import debug, exception_log
 import subprocess
 import os
 import shutil
@@ -54,13 +54,13 @@ def start_server(server_binary_args: 'List[str]', working_dir: str,
         startupinfo=si)
 
 
-def attach_logger(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
-    threading.Thread(target=log_stream, args=(process, stream)).start()
+def attach_logger(process: 'subprocess.Popen', stream: 'IO[Any]', log_callback: 'Callable[[str], None]') -> None:
+    threading.Thread(target=log_stream, args=(process, stream, log_callback)).start()
 
 
-def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
+def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]', log_callback: 'Callable[[str], None]') -> None:
     """
-    Reads any errors from the LSP process.
+    Read lines from a stream and invoke the log_callback on the result
     """
     running = True
     while running:
@@ -75,7 +75,7 @@ def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
             except UnicodeDecodeError:
                 # todo: do we still need this ?
                 decoded = content  # type: ignore
-            server_log(decoded.strip())
+            log_callback(decoded.strip())
         except IOError as err:
             exception_log("Failure reading stream", err)
             return

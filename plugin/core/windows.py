@@ -3,10 +3,13 @@ from .logging import debug, server_log
 from .types import (ClientStates, ClientConfig, WindowLike, ViewLike,
                     LanguageConfig, config_supports_syntax, ConfigRegistry,
                     GlobalConfigs, Settings)
-from .panels import ensure_panel
-from .protocol import Notification, Response
 from .edit import parse_workspace_edit
+from .panels import ensure_panel
+from .process import attach_logger
+from .protocol import Notification, Response
 from .sessions import Session
+from .settings import settings
+from .transports import StdioTransport
 from .url import filename_to_uri
 from .workspace import (
     enable_in_project, disable_in_project, maybe_get_first_workspace_from_window,
@@ -319,6 +322,10 @@ class WindowDocumentHandler(object):
                         session.client.send_notification(Notification.didChange(params))
 
 
+def extract_message(params: 'Any') -> str:
+    return params.get("message", "???") if isinstance(params, dict) else "???"
+
+
 class WindowManager(object):
     def __init__(self, window: WindowLike, configs: ConfigRegistry, documents: DocumentHandler,
                  diagnostics: DiagnosticsStorage, session_starter: 'Callable', sublime: 'Any',
@@ -441,6 +448,10 @@ class WindowManager(object):
         if session:
             debug("window {} added session {}".format(self._window.id(), config.name))
             self._sessions[config.name] = session
+            transport = session.client.transport
+            if isinstance(transport, StdioTransport) and settings.log_stderr:
+                attach_logger(transport.process, transport.process.stderr,
+                              lambda msg: self._handle_server_message(config.name, msg))
 
     def _handle_message_request(self, params: dict, client: Client, request_id: int) -> None:
         actions = params.get("actions", [])
@@ -526,11 +537,11 @@ class WindowManager(object):
 
         client.on_notification(
             "window/showMessage",
-            lambda params: self._sublime.message_dialog(params.get("message")))
+            lambda params: self._handle_show_message(session.config.name, params))
 
         client.on_notification(
             "window/logMessage",
-            lambda params: server_log(session.config.name, params.get("message", "???") if params else "???"))
+            lambda params: self._handle_log_message(session.config.name, params))
 
     def _handle_post_initialize(self, session: 'Session') -> None:
         client = session.client
@@ -613,6 +624,20 @@ class WindowManager(object):
         result = self._sublime.ok_cancel_dialog(msg, ok_title="Restart")
         if result == self._sublime.DIALOG_YES:
             self.restart_sessions()
+
+    def _handle_server_message(self, name: str, message: str) -> None:
+        panel = ensure_server_panel(self._window)
+        if not panel:
+            return
+        panel.set_read_only(False)
+        panel.run_command("lsp_update_panel", {"characters": "{}: {}\n".format(name, message)})
+        panel.set_read_only(True)
+
+    def _handle_log_message(self, name: str, params: 'Any') -> None:
+        self._handle_server_message(name, extract_message(params))
+
+    def _handle_show_message(self, name: str, params: 'Any') -> None:
+        self._sublime.status_message("{}: {}".format(name, extract_message(params)))
 
 
 class WindowRegistry(object):

@@ -1,8 +1,5 @@
 import json
-import socket
-import time
-from .transports import TCPTransport, StdioTransport, Transport
-from .process import attach_logger
+from .transports import StdioTransport, Transport
 try:
     import subprocess
     from typing import Any, List, Dict, Tuple, Callable, Optional, Union
@@ -28,35 +25,8 @@ def format_request(payload: 'Dict[str, Any]') -> str:
     return json.dumps(payload, sort_keys=False)
 
 
-def attach_tcp_client(tcp_port: int, process: 'subprocess.Popen', settings: Settings) -> 'Optional[Client]':
-    if settings.log_stderr:
-        attach_logger(process, process.stdout)
-
-    host = "localhost"
-    start_time = time.time()
-    debug('connecting to {}:{}'.format(host, tcp_port))
-
-    while time.time() - start_time < TCP_CONNECT_TIMEOUT:
-        try:
-            sock = socket.create_connection((host, tcp_port))
-            transport = TCPTransport(sock)
-
-            client = Client(transport, settings)
-            client.set_transport_failure_handler(lambda: try_terminate_process(process))
-            return client
-        except ConnectionRefusedError:
-            pass
-
-    process.kill()
-    raise Exception("Timeout connecting to socket")
-
-
 def attach_stdio_client(process: 'subprocess.Popen', settings: Settings) -> 'Client':
     transport = StdioTransport(process)
-
-    # TODO: process owner can take care of this outside client?
-    if settings.log_stderr:
-        attach_logger(process, process.stderr)
     client = Client(transport, settings)
     client.set_transport_failure_handler(lambda: try_terminate_process(process))
     return client

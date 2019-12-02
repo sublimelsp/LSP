@@ -1,8 +1,7 @@
 from .logging import debug, exception_log, server_log
-import locale
+import subprocess
 import os
 import shutil
-import subprocess
 import threading
 
 try:
@@ -64,7 +63,6 @@ def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
     Reads any errors from the LSP process.
     """
     running = True
-    preferred_encoding = locale.getpreferredencoding()
     while running:
         running = process.poll() is None
 
@@ -72,14 +70,18 @@ def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
             content = stream.readline()
             if not content:
                 break
+            decoded = None  # type: Optional[str]
             try:
                 # There's nothing in the specification about what the encoding should be of stderr (or, in the case of a
-                # TCP transport, the encoding of stdout). Let's assume the encoding of the current locale.
-                # On Linux and macOS, this is UTF-8 (even when using a Dutch locale on macOS). On Windows, this might be
-                # cp5212.
-                message = content.decode(preferred_encoding).strip()
+                # TCP transport, the encoding of stdout). Let's assume UTF-8.
+                decoded = content.decode("UTF-8")
             except UnicodeDecodeError:
-                message = "Unable to decode bytes! (tried decoding with {})".format(preferred_encoding)
+                # Guess it wasn't UTF-8. Let's try UTF-16 as a last resort.
+                try:
+                    decoded = content.decode("UTF-16")
+                except UnicodeDecodeError:
+                    decoded = None
+            message = decoded.strip() if decoded is not None else "Unable to decode bytes! (tried UTF-8 and UTF-16)"
             server_log('server', message)
         except IOError as err:
             exception_log("Failure reading stream", err)

@@ -39,11 +39,6 @@ def exception_log(message: str, ex: Exception) -> None:
         print(''.join(traceback.format_exception(ex.__class__, ex, ex_traceback)))
 
 
-def server_log(server_name: str, *args: 'Any') -> None:
-    if log_server:
-        printf(*args, prefix=server_name)
-
-
 def printf(*args: 'Any', prefix: str = 'LSP') -> None:
     """Print args to the console, prefixed by the plugin name."""
     print(prefix + ":", *args)

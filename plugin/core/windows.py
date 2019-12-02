@@ -1,5 +1,5 @@
 from .diagnostics import DiagnosticsStorage
-from .logging import debug, server_log
+from .logging import debug
 from .types import (ClientStates, ClientConfig, WindowLike, ViewLike,
                     LanguageConfig, config_supports_syntax, ConfigRegistry,
                     GlobalConfigs, Settings)

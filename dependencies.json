@@ -1,13 +1,14 @@
 {
     "*": {
         ">=3124": [
-            "pygments",
-            "python-markdown",
-            "mdpopups",
-            "python-jinja2",
             "markupsafe",
+            "mdpopups",
+            "pygments",
             "pymdownx",
-            "pyyaml"
+            "python-jinja2",
+            "python-markdown",
+            "pyyaml",
+            "sublime_lib"
         ]
     }
 }

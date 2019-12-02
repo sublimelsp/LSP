@@ -3,6 +3,7 @@ from .logging import debug, server_log
 from .types import (ClientStates, ClientConfig, WindowLike, ViewLike,
                     LanguageConfig, config_supports_syntax, ConfigRegistry,
                     GlobalConfigs, Settings)
+from .panels import ensure_panel
 from .protocol import Notification, Response
 from .edit import parse_workspace_edit
 from .sessions import Session
@@ -70,6 +71,10 @@ class DocumentHandler(Protocol):
         ...
 
 
+def ensure_server_panel(window: WindowLike) -> 'Optional[ViewLike]':
+    return ensure_panel(window, "server", "", "", "Packages/Text/Plain text.tmLanguage")
+
+
 def get_active_views(window: WindowLike) -> 'List[ViewLike]':
     views = list()  # type: List[ViewLike]
     num_groups = window.num_groups()
@@ -85,6 +90,7 @@ def get_active_views(window: WindowLike) -> 'List[ViewLike]':
 
 class DocumentState:
     """Stores version count for documents open in a language service"""
+
     def __init__(self, path: str) -> None:
         self.path = path
         self.version = 0
@@ -140,7 +146,7 @@ class WindowDocumentHandler(object):
     def has_document_state(self, path: str) -> bool:
         return path in self._document_states
 
-    def _get_applicable_sessions(self, view: ViewLike, notification_type: 'Optional[str]'=None) -> 'List[Session]':
+    def _get_applicable_sessions(self, view: ViewLike, notification_type: 'Optional[str]' = None) -> 'List[Session]':
         sessions = []  # type: List[Session]
         syntax = view.settings().get("syntax")
         for config_name, session in self._sessions.items():

@@ -205,7 +205,8 @@ class DiagnosticsPhantoms(object):
         base_dir = windows.lookup(self._window).get_project_path(file_path)
         if base_dir:
             file_path = os.path.relpath(file_path, base_dir)
-        location = "{}:{}:{}".format(info.location.file_path, info.location.range.start.row+1, info.location.range.start.col+1)
+        location = "{}:{}:{}".format(info.location.file_path, info.location.range.start.row + 1,
+                                     info.location.range.start.col + 1)
         return "<a href='location:{}'>{}</a>: {}".format(location, location, html.escape(info.message))
 
     def navigate(self, href: str) -> None:

@@ -170,7 +170,7 @@ class MockWindow(object):
         pass
 
     def views(self):
-        views = []
+        views = []  # type: List[ViewLike]
         for views_in_group in self._files_in_groups:
             if len(views_in_group) < 1:
                 views.append(self._default_view)

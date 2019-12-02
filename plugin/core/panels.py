@@ -50,6 +50,8 @@ def create_panel(window: sublime.Window, name: str, result_file_regex: str, resu
     # settings, so that it'll be picked up as a result buffer
     # see: Packages/Default/exec.py#L228-L230
     panel = window.create_output_panel(name)
+    # All our panels are read-only
+    panel.set_read_only(True)
     return panel
 
 

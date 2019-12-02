@@ -26,7 +26,7 @@ try:
     assert LanguageConfig
     assert WorkspaceFolder
 except ImportError:
-    pass
+    from sublime_lib import OutputPanel
     Protocol = object  # type: ignore
 
 
@@ -450,8 +450,9 @@ class WindowManager(object):
             self._sessions[config.name] = session
             transport = session.client.transport
             if isinstance(transport, StdioTransport) and settings.log_stderr:
-                attach_logger(transport.process, transport.process.stderr,
-                              lambda msg: self._handle_server_message(config.name, msg))
+                process = transport.process
+                assert process
+                attach_logger(process, process.stderr, lambda msg: self._handle_server_message(config.name, msg))
 
     def _handle_message_request(self, params: dict, client: Client, request_id: int) -> None:
         actions = params.get("actions", [])
@@ -626,12 +627,9 @@ class WindowManager(object):
             self.restart_sessions()
 
     def _handle_server_message(self, name: str, message: str) -> None:
-        panel = ensure_server_panel(self._window)
-        if not panel:
-            return
-        panel.set_read_only(False)
-        panel.run_command("lsp_update_panel", {"characters": "{}: {}\n".format(name, message)})
-        panel.set_read_only(True)
+        ensure_server_panel(self._window)
+        with OutputPanel(self._window, "server") as stream:
+            stream.print("{}: {}".format(name, message))
 
     def _handle_log_message(self, name: str, params: 'Any') -> None:
         self._handle_server_message(name, extract_message(params))

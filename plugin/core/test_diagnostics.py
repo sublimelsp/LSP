@@ -106,7 +106,7 @@ class DiagnosticsStorageTest(unittest.TestCase):
         ui.select.assert_called_with(-1)
 
         wd.select_none()
-        ui.deselect.assert_called()
+        assert ui.deselect.call_count > 0
 
 
 class DiagnosticsWalkerTests(unittest.TestCase):

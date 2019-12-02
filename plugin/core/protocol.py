@@ -423,7 +423,7 @@ class WorkspaceFolder:
     def from_path(cls, path: str) -> 'WorkspaceFolder':
         assert os.path.isdir(path)
         assert os.path.isabs(path)
-        return cls(os.path.basename(path), path)
+        return cls(os.path.basename(path) or path, path)
 
     def __repr__(self) -> str:
         return "{}('{}', '{}')".format(self.__class__.__name__, self.name, self.path)

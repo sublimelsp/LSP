@@ -110,18 +110,6 @@ class DiagnosticsCursorListener(LSPViewEventListener):
         self.has_status = False
 
 
-class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
-    def run(self) -> None:
-        ensure_diagnostics_panel(self.window)
-        active_panel = self.window.active_panel()
-        is_active_panel = (active_panel == "output.diagnostics")
-
-        if is_active_panel:
-            self.window.run_command("hide_panel", {"panel": "output.diagnostics"})
-        else:
-            self.window.run_command("show_panel", {"panel": "output.diagnostics"})
-
-
 class LspClearDiagnosticsCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:
         windows.lookup(self.window).diagnostics.clear()

@@ -60,14 +60,14 @@
         "args": {}
     },
     {
-        "caption": "LSP: Toggle Server Logs Panel",
+        "caption": "LSP: Toggle Panel: Server Logs",
         "command": "lsp_toggle_panel",
         "args": {"panel_type": "server"}
     },
     {
-        "caption": "LSP: Show Diagnostics",
-        "command": "lsp_show_diagnostics_panel",
-        "args": {}
+        "caption": "LSP: Toggle Panel: Diagnostics",
+        "command": "lsp_toggle_panel",
+        "args": {"panel_type": "diagnostics"}
     },
     {
         "caption": "LSP: Clear Diagnostics",

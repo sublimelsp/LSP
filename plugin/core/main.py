@@ -23,8 +23,7 @@ def startup() -> None:
     popups.load_css()
     windows.set_diagnostics_ui(DiagnosticsPresenter)
     load_handlers()
-    if settings.show_status_messages:
-        sublime.status_message("LSP initialized")
+    sublime.status_message("LSP initialized")
     start_active_window()
 
 

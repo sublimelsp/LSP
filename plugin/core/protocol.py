@@ -316,7 +316,7 @@ class Range(object):
 
 
 class ContentChange(object):
-    def __init__(self, text: str, range: 'Optional[Range]'=None, range_length: 'Optional[int]'=None) -> None:
+    def __init__(self, text: str, range: 'Optional[Range]' = None, range_length: 'Optional[int]' = None) -> None:
         """
 
         [description]

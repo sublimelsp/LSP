@@ -36,7 +36,7 @@ class CompletionHelper(sublime_plugin.EventListener):
 
 class LspTrimCompletionCommand(sublime_plugin.TextCommand):
 
-    def run(self, edit: sublime.Edit, range: 'Optional[Tuple[int, int]]'=None) -> None:
+    def run(self, edit: sublime.Edit, range: 'Optional[Tuple[int, int]]' = None) -> None:
         if range:
             start, end = range
             region = sublime.Region(start, end)

@@ -16,7 +16,7 @@ try:
     assert List and Dict and Optional and Callable and Tuple and TypedDict
     ReferenceDict = TypedDict('ReferenceDict', {'uri': str, 'range': dict})
 except ImportError:
-    pass
+    from sublime_lib import OutputPanel
 
 
 def ensure_references_panel(window: sublime.Window) -> 'Optional[sublime.View]':
@@ -114,7 +114,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
     def on_ref_highlight(self, index: int) -> None:
         self.open_ref_index(index, transient=True)
 
-    def open_ref_index(self, index: int, transient: bool=False) -> None:
+    def open_ref_index(self, index: int, transient: bool = False) -> None:
         if index != -1:
             flags = sublime.ENCODED_POSITION | sublime.TRANSIENT if transient else sublime.ENCODED_POSITION
             window = self.view.window()
@@ -128,33 +128,26 @@ class LspSymbolReferencesCommand(LspTextCommand):
             if not panel:
                 return
 
-            text = ''
-            references_count = 0
-            for file, references in references_by_file.items():
-                text += '◌ {}:\n'.format(self.get_relative_path(file))
-                for reference in references:
-                    references_count += 1
-                    point, line = reference
-                    text += '\t{:>8}:{:<4} {}\n'.format(point.row + 1, point.col + 1, line)
-                # append a new line after each file name
-                text += '\n'
+            with OutputPanel(window, "references", force_writes=True, follow_cursor=False) as stream:
+                stream.clear()
+                references_count = sum((len(references) for references in references_by_file.values()))
+                stream.print(references_count, 'references for', self.word)
+                stream.print()
+                for file, references in references_by_file.items():
+                    stream.print('◌ {}:'.format(self.get_relative_path(file)))
+                    for reference in references:
+                        point, line = reference
+                        stream.print('\t{:>8}:{:<4} {}'.format(point.row + 1, point.col + 1, line))
+                    # append a new line after each file name
+                    stream.print()
 
             base_dir = windows.lookup(window).get_project_path()
             panel.settings().set("result_base_dir", base_dir)
-
-            panel.set_read_only(False)
-            panel.run_command("lsp_clear_panel")
             window.run_command("show_panel", {"panel": "output.references"})
-            panel.run_command('append', {
-                'characters': "{} references for '{}'\n\n{}".format(references_count, self.word, text),
-                'force': True,
-                'scroll_to_end': False
-            })
 
             # highlight all word occurrences
             regions = panel.find_all(r"\b{}\b".format(self.word))
             panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_OUTLINED)
-            panel.set_read_only(True)
 
     def get_selected_file_path(self, index: int) -> str:
         return self.get_full_path(self.reflist[index][0])

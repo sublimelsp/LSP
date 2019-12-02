@@ -20,7 +20,7 @@ def get_workspace_folders(window: WindowLike, file_path: 'Optional[str]' = None)
             else:
                 sorted_folders.append(folder)
     elif file_path:
-        sorted_folders.append(os.path.basename(file_path))
+        sorted_folders.append(os.path.dirname(file_path))
 
     return [WorkspaceFolder.from_path(folder) for folder in sorted_folders]
 

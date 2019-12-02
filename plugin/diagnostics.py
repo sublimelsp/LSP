@@ -18,6 +18,7 @@ if MYPY:
     assert Any and List and Dict and Callable and Optional and Tuple
 else:
     Protocol = object  # type: ignore
+    from sublime_lib import OutputPanel
 
 
 diagnostic_severity_names = {
@@ -303,36 +304,35 @@ class StatusBarSummary(DiagnosticsUpdateWalk):
             active_view.set_status('lsp_errors_warning_count', count)
 
 
-class DiagnosticOutputPanel(DiagnosticsUpdateWalk):
+class DiagnosticOutputPanel(DiagnosticsUpdateWalk, OutputPanel):
     def __init__(self, window: sublime.Window) -> None:
         self._window = window
-        self._to_render = []  # type: List[str]
         self._panel = ensure_diagnostics_panel(self._window)
+        OutputPanel.__init__(self, self._window, "diagnostics", force_writes=True, follow_cursor=True)
 
     def begin(self) -> None:
         self._base_dir = windows.lookup(self._window).get_project_path()
-        self._to_render = []
-        self._file_content = ""
+        self._file_content = []  # type: List[str]
+        self._panel.settings().set("result_base_dir", self._base_dir)
+        assert self._panel, "must have a panel now!"
+        self.clear()
 
     def begin_file(self, file_path: str) -> None:
-        self._file_content = ""
+        self._file_content.clear()
 
     def diagnostic(self, diagnostic: Diagnostic) -> None:
         if diagnostic.severity <= settings.show_diagnostics_severity_level:
-            item = self.format_diagnostic(diagnostic)
-            self._file_content += item + "\n"
+            self._file_content.append(self.format_diagnostic(diagnostic))
 
     def end_file(self, file_path: str) -> None:
         if self._file_content:
             panel_file_path = os.path.relpath(file_path, self._base_dir) if self._base_dir else file_path
-            self._to_render.append(" ◌ {}:\n{}".format(panel_file_path, self._file_content))
+            self.print(" ◌ {}:".format(panel_file_path))
+            for content in self._file_content:
+                self.print(content)
 
     def end(self) -> None:
-        assert self._panel, "must have a panel now!"
-        self._panel.settings().set("result_base_dir", self._base_dir)
-        self._panel.set_read_only(False)
-        self._panel.run_command("lsp_update_panel", {"characters": "\n".join(self._to_render)})
-        self._panel.set_read_only(True)
+        pass
 
     def format_diagnostic(self, diagnostic: Diagnostic) -> str:
         location = "{:>8}:{:<4}".format(

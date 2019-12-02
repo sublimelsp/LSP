@@ -1,9 +1,11 @@
 from .process import log_stream
 from contextlib import contextmanager
-from io import BytesIO, StringIO
+from io import BytesIO
+from io import StringIO
 from subprocess import Popen
 from unittest import TestCase
 from unittest.mock import MagicMock
+import locale
 import os
 import sys
 
@@ -28,41 +30,37 @@ def captured_output() -> 'Iterator[Tuple[StringIO, StringIO]]':
 
 class ProcessTests(TestCase):
 
-    def do_test(self, encoded: bytes, expected: str):
+    def test_log_stream_encoding_utf8(self):
+        encoding = 'UTF-8'
         process = Popen(args=['cmd.exe' if os.name == 'nt' else 'bash'], bufsize=1024)
         process.poll = MagicMock(return_value=None)  # type: ignore
-        stream = BytesIO(encoded)
+        text = '\U00010000'
         with captured_output() as (out, err):
-            log_stream(process, stream)
-        self.assertEqual(out.getvalue().strip(), 'server: {}'.format(expected))
+            log_stream(process, BytesIO(text.encode(encoding)))
+        self.assertEqual(out.getvalue().strip(), 'server: {}'.format(text))
         self.assertEqual(err.getvalue().strip(), '')
 
-    def test_log_stream_encoding_utf8(self):
-        # The unicode character
-        #
-        #    U+10000
-        #
-        # is encoded in UTF-8 as
-        #
-        #    0xF0 0x90 0x80 0x80
-        #
-        #  and in UTF-16 as
-        #
-        #    0xD800 0xDC00
-        #
-        # So let's use that character to do our tests. https://www.compart.com/en/unicode/U+10000
-        encoded_input = bytes((0xF0, 0x90, 0x80, 0x80))
-        expected_output = '\U00010000'
-        self.do_test(encoded_input, expected_output)
-
-    def test_log_stream_encoding_utf16(self):
-        # Here we encode U+10000 as something that can't be decoded by UTF-8, so log_stream should try to decode it as
-        # UTF-16 instead.
-        encoded_input = bytes((0x00, 0xD8, 0x00, 0xDC))  # little endian...
-        expected_output = '\U00010000'
-        self.do_test(encoded_input, expected_output)
+    def test_log_stream_encoding_preferred_locale(self):
+        encoding = locale.getpreferredencoding()
+        process = Popen(args=['cmd.exe' if os.name == 'nt' else 'bash'], bufsize=1024)
+        process.poll = MagicMock(return_value=None)  # type: ignore
+        text = 'ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏ'
+        with captured_output() as (out, err):
+            log_stream(process, BytesIO(text.encode(encoding)))
+        self.assertEqual(out.getvalue().strip(), 'server: {}'.format(text))
+        self.assertEqual(err.getvalue().strip(), '')
 
     def test_log_stream_encoding_failure(self):
-        encoded_input = bytes((0x00, 0xD8, 0x00))
-        expected_output = 'Unable to decode bytes! (tried UTF-8 and UTF-16)'
-        self.do_test(encoded_input, expected_output)
+        encoding = locale.getpreferredencoding()
+        if encoding == "UTF-32-BE":
+            self.skipTest("this test doesn't work when the preferred encoding is UTF-32-BE")
+        process = Popen(args=['cmd.exe' if os.name == 'nt' else 'bash'], bufsize=1024)
+        process.poll = MagicMock(return_value=None)  # type: ignore
+        with captured_output() as (out, err):
+            log_stream(process, BytesIO(bytes((0x00, 0x10, 0xFF, 0xFF))))  # U+10FFFF in UTF-32-BE
+        if encoding == "UTF-8":
+            expected = 'server: Unable to decode bytes! (tried UTF-8)'
+        else:
+            expected = 'server: Unable to decode bytes! (tried UTF-8 and {})'.format(encoding)
+        self.assertEqual(out.getvalue().strip(), expected)
+        self.assertEqual(err.getvalue().strip(), '')

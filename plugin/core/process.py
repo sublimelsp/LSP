@@ -1,7 +1,8 @@
 from .logging import debug, exception_log, server_log
-import subprocess
+import locale
 import os
 import shutil
+import subprocess
 import threading
 
 try:
@@ -63,6 +64,7 @@ def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
     Reads any errors from the LSP process.
     """
     running = True
+    preferred_encoding = locale.getpreferredencoding()
     while running:
         running = process.poll() is None
 
@@ -70,18 +72,19 @@ def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
             content = stream.readline()
             if not content:
                 break
-            decoded = None  # type: Optional[str]
             try:
                 # There's nothing in the specification about what the encoding should be of stderr (or, in the case of a
                 # TCP transport, the encoding of stdout). Let's assume UTF-8.
-                decoded = content.decode("UTF-8")
+                message = content.decode("UTF-8").strip()
             except UnicodeDecodeError:
-                # Guess it wasn't UTF-8. Let's try UTF-16 as a last resort.
-                try:
-                    decoded = content.decode("UTF-16")
-                except UnicodeDecodeError:
-                    decoded = None
-            message = decoded.strip() if decoded is not None else "Unable to decode bytes! (tried UTF-8 and UTF-16)"
+                # Guess it wasn't UTF-8. Let's try the preferred encoding as a last resort.
+                if preferred_encoding != "UTF-8":
+                    try:
+                        message = content.decode(preferred_encoding).strip()
+                    except UnicodeDecodeError:
+                        message = "Unable to decode bytes! (tried UTF-8 and {})".format(preferred_encoding)
+                else:
+                    message = "Unable to decode bytes! (tried UTF-8)"
             server_log('server', message)
         except IOError as err:
             exception_log("Failure reading stream", err)

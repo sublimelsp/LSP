@@ -170,7 +170,7 @@ class MockWindow(object):
         pass
 
     def views(self):
-        views = []
+        views = []  # type: List[ViewLike]
         for views_in_group in self._files_in_groups:
             if len(views_in_group) < 1:
                 views.append(self._default_view)
@@ -204,7 +204,7 @@ class MockConfigs(object):
         else:
             return [TEST_CONFIG]
 
-    def syntax_configs(self, view, include_disabled: bool=False):
+    def syntax_configs(self, view, include_disabled: bool = False):
         if view.settings().get("syntax") == "Plain Text":
             return [TEST_CONFIG]
         else:

@@ -212,3 +212,15 @@ class WindowManagerTests(unittest.TestCase):
 
         # client_start_listeners, client_initialization_listeners,
         self.assertTrue(TEST_CONFIG.name in dispatcher._initialized)
+
+    def test_returns_closest_workspace_folder(self):
+        docs = MockDocuments()
+        dispatcher = MockHandlerDispatcher()
+        file_path = __file__
+        top_folder = os.path.dirname(__file__)
+        parent_folder = os.path.dirname(top_folder)
+        wm = WindowManager(MockWindow([[MockView(__file__)]], [top_folder, parent_folder]), MockConfigs(), docs,
+                           DiagnosticsStorage(None), mock_start_session, test_sublime,
+                           dispatcher)
+        wm.start_active_views()
+        self.assertEqual(top_folder, wm.get_project_path(file_path))

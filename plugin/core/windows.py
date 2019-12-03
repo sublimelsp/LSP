@@ -482,10 +482,12 @@ class WindowManager(object):
             session.end()
 
     def get_project_path(self, file_path: str) -> 'Optional[str]':
+        candidate = None  # type: Optional[str]
         for folder in self._workspace_folders:
             if file_path.startswith(folder.path):
-                return folder.path
-        return None
+                if candidate is None or len(folder.path) > len(candidate):
+                    candidate = folder.path
+        return candidate
 
     def _end_old_sessions(self) -> None:
         # TODO make this a set (of strings?) for better comparing.

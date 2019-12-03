@@ -1,7 +1,7 @@
 from .types import ClientConfig, ClientStates, Settings
 from .protocol import Request
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
-from .rpc import Client, attach_stdio_client
+from .rpc import Client, attach_stdio_client, Response
 from .process import start_server
 from .logging import debug
 import os
@@ -201,9 +201,18 @@ class Session(object):
             debug('single folder session:', self._workspace_folders[0])
         else:
             debug('multi folder session:', self._workspace_folders)
+
         self.state = ClientStates.READY
+
+        self.client.on_request(
+            "workspace/workspaceFolders",
+            lambda _params, request_id: self._handle_workspace_folders(request_id))
+
         if self._on_post_initialize:
             self._on_post_initialize(self)
+
+    def _handle_workspace_folders(self, request_id: int) -> None:
+        self.client.send_response(Response(request_id, [wf.to_dict for wf in self._workspace_folders]))
 
     def end(self) -> None:
         self.state = ClientStates.STOPPING

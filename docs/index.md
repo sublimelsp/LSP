@@ -100,15 +100,7 @@ Requires installation of the `languageserver` package from CRAN:
 
 See the [CRAN mirrored package on GitHub](https://github.com/cran/languageserver) for more information and up-to-date installation instructions.
 
-```json
-"rlang":
-{
-  "command": ["R", "--slave", "-e", "languageserver::run()"],
-  "scopes": ["source.r"],
-  "syntaxes": ["Packages/R/R.sublime-syntax"],
-  "languageId": "r"
-}
-```
+Once this has been done the language server need only be enabled to work, as it is included amongst the default clients.
 
 
 ### Scala<a name="scala"></a>

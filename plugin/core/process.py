@@ -1,5 +1,4 @@
 from .logging import debug, exception_log, server_log
-import locale
 import os
 import shutil
 import subprocess
@@ -64,7 +63,6 @@ def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
     Reads any errors from the LSP process.
     """
     running = True
-    preferred_encoding = locale.getpreferredencoding()
     while running:
         running = process.poll() is None
 
@@ -72,20 +70,7 @@ def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
             content = stream.readline()
             if not content:
                 break
-            try:
-                # There's nothing in the specification about what the encoding should be of stderr (or, in the case of a
-                # TCP transport, the encoding of stdout). Let's assume UTF-8.
-                message = content.decode("UTF-8").strip()
-            except UnicodeDecodeError:
-                # Guess it wasn't UTF-8. Let's try the preferred encoding as a last resort.
-                if preferred_encoding != "UTF-8":
-                    try:
-                        message = content.decode(preferred_encoding).strip()
-                    except UnicodeDecodeError:
-                        message = "Unable to decode bytes! (tried UTF-8 and {})".format(preferred_encoding)
-                else:
-                    message = "Unable to decode bytes! (tried UTF-8)"
-            server_log('server', message)
+            server_log('server', content.decode('UTF-8', 'replace'))
         except IOError as err:
             exception_log("Failure reading stream", err)
             return

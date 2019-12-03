@@ -92,6 +92,17 @@ Goes well with the [Rust Enhanced package](https://github.com/rust-lang/rust-enh
 Alternatively, a newer [rust-analyzer](https://github.com/rust-analyzer/rust-analyzer) server is under development, also supported by LSP.
 
 
+### R<a name="r"></a>
+
+Requires installation of the `languageserver` package from CRAN:
+
+`install.packages("languageserver")`
+
+See the [CRAN mirrored package on GitHub](https://github.com/cran/languageserver) for more information and up-to-date installation instructions.
+
+Once this has been done the language server need only be enabled to work, as it is included amongst the default clients.
+
+
 ### Scala<a name="scala"></a>
 
 *  **[Metals](https://scalameta.org/metals/)**: Most complete LSP server for Scala, see instructions [here](https://scalameta.org/metals/docs/editors/sublime.html) for installation.

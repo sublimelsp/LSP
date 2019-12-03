@@ -12,7 +12,7 @@ python:
 before_install:
     - pip install "mypy==0.750"
     - pip install "flake8==3.7.9"
-    - pip install yapf
+    - pip install "yapf==0.29.0"
     - pip install python-coveralls
     - curl -OL https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/travis.sh
     # enable gui, see https://docs.travis-ci.com/user/gui-and-headless-browsers

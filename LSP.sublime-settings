@@ -494,12 +494,37 @@
       // },
     },
     "vscode-css":
-      {
-        "command": ["css-languageserver", "--stdio"],
-        "scopes": ["source.css"],
-        "syntaxes": ["Packages/CSS/CSS.sublime-syntax"],
-        "languageId": "css"
-      },
+    {
+      "command": 
+      [
+        "css-languageserver", "--stdio"
+      ],
+      "scopes": 
+      [
+        "source.css"
+      ],
+      "syntaxes": 
+      [
+        "Packages/CSS/CSS.sublime-syntax"
+      ],
+      "languageId": "css"
+    },
+    "rlang":
+    {
+      "command":
+      [
+        "R", "--slave", "-e", "languageserver::run()"
+      ],
+      "scopes":
+      [
+        "source.r"
+      ],
+      "syntaxes":
+      [
+        "Packages/R/R.sublime-syntax"
+      ],
+      "languageId": "r"
+    }
 
   }
 }

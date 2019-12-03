@@ -70,7 +70,7 @@ def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
             content = stream.readline()
             if not content:
                 break
-            server_log('server', content.decode('UTF-8', 'replace'))
+            server_log('server', content.decode('UTF-8', 'replace').strip())
         except IOError as err:
             exception_log("Failure reading stream", err)
             return

@@ -106,7 +106,7 @@ class DiagnosticsStorageTest(unittest.TestCase):
         ui.select.assert_called_with(-1)
 
         wd.select_none()
-        ui.deselect.assert_called()
+        assert ui.deselect.call_count > 0
 
 
 class DiagnosticsWalkerTests(unittest.TestCase):
@@ -116,10 +116,10 @@ class DiagnosticsWalkerTests(unittest.TestCase):
         walker = DiagnosticsWalker([walk])
         walker.walk({})
 
-        walk.begin.assert_called_once()
-        walk.begin_file.assert_not_called()
-        walk.diagnostic.assert_not_called()
-        walk.end.assert_called_once()
+        assert walk.begin.call_count == 1
+        assert walk.begin_file.call_count == 0
+        assert walk.diagnostic.call_count == 0
+        assert walk.end.call_count == 1
 
     def test_one_diagnosic(self):
 
@@ -130,10 +130,10 @@ class DiagnosticsWalkerTests(unittest.TestCase):
         diags[test_file_path]["test_server"] = [minimal_diagnostic]
         walker.walk(diags)
 
-        walk.begin.assert_called_once()
+        assert walk.begin.call_count == 1
         walk.begin_file.assert_called_with(test_file_path)
         walk.diagnostic.assert_called_with(minimal_diagnostic)
-        walk.end.assert_called_once()
+        assert walk.end.call_count == 1
 
 
 row1 = at_row(1)

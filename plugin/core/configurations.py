@@ -122,7 +122,7 @@ class WindowConfigManager(object):
     def scope_configs(self, view: 'Any', point: 'Optional[int]' = None) -> 'Iterator[ClientConfig]':
         return get_scope_client_configs(view, self.all, point)
 
-    def syntax_configs(self, view: 'Any', include_disabled: bool=False) -> 'List[ClientConfig]':
+    def syntax_configs(self, view: 'Any', include_disabled: bool = False) -> 'List[ClientConfig]':
         syntax = view.settings().get("syntax")
         return list(filter(lambda c: config_supports_syntax(c, syntax) and (c.enabled or include_disabled), self.all))
 

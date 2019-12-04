@@ -114,6 +114,7 @@ class WindowConfigManager(object):
     def __init__(self, window: 'WindowLike', global_configs: 'List[ClientConfig]') -> None:
         self._window = window
         self._global_configs = global_configs
+        self._temp_disabled_configs = []  # type: List[str]
         self.all = create_window_configs(window, global_configs)
 
     def is_supported(self, view: 'Any') -> bool:
@@ -144,6 +145,9 @@ class WindowConfigManager(object):
 
     def update(self) -> None:
         self.all = create_window_configs(self._window, self._global_configs)
+        for config in self.all:
+            if config.name in self._temp_disabled_configs:
+                config.enabled = False
 
     def enable_config(self, config_name: str) -> None:
         enable_in_project(self._window, config_name)
@@ -154,9 +158,8 @@ class WindowConfigManager(object):
         self.update()
 
     def disable_temporarily(self, config_name: str) -> None:
-        for config in self.all:
-            if config.name == config_name:
-                config.enabled = False
+        self._temp_disabled_configs.append(config_name)
+        self.update()
 
 
 def _merge_dicts(dict_a: dict, dict_b: dict) -> dict:

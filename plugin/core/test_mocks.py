@@ -19,7 +19,7 @@ except ImportError:
 
 TEST_LANGUAGE = LanguageConfig("test", ["source.test"], ["Plain Text"])
 TEST_CONFIG = ClientConfig("test", [], None, languages=[TEST_LANGUAGE])
-
+DISABLED_CONFIG = ClientConfig("test", [], None, languages=[TEST_LANGUAGE], enabled=False)
 
 basic_responses = {
     'initialize': {

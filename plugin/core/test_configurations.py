@@ -4,7 +4,7 @@ from .configurations import is_supported_syntax
 from .configurations import WindowConfigManager
 from .test_mocks import MockView
 from .test_mocks import MockWindow
-from .test_mocks import TEST_CONFIG
+from .test_mocks import TEST_CONFIG, DISABLED_CONFIG
 from .test_mocks import TEST_LANGUAGE
 import unittest
 
@@ -66,6 +66,51 @@ class WindowConfigManagerTests(unittest.TestCase):
         lang_configs = manager.syntax_config_languages(view)
         self.assertEqual(len(lang_configs), 1)
         self.assertEqual(lang_configs[TEST_CONFIG.name].id, TEST_CONFIG.languages[0].id)
+
+    def test_applies_project_settings(self):
+        view = MockView(__file__)
+        window = MockWindow()
+        window.set_project_data({
+            "settings": {
+                "LSP": {
+                    "test": {
+                        "enabled": True
+                    }
+                }
+            }
+        })
+
+        manager = WindowConfigManager(window, [DISABLED_CONFIG])
+        manager.update()
+        configs = manager.syntax_configs(view)
+
+        self.assertEqual(len(configs), 1)
+        config = configs[0]
+        self.assertEqual(DISABLED_CONFIG.name, config.name)
+        self.assertTrue(config.enabled)
+
+    def test_disables_temporarily(self):
+        view = MockView(__file__)
+        window = MockWindow()
+        window.set_project_data({
+            "settings": {
+                "LSP": {
+                    "test": {
+                        "enabled": True
+                    }
+                }
+            }
+        })
+
+        manager = WindowConfigManager(window, [DISABLED_CONFIG])
+        manager.update()
+
+        # crash handler disables config and shows popup
+        manager.disable_temporarily(DISABLED_CONFIG.name)
+
+        # view is activated after popup, we try to start a session again...
+        manager.update()
+        self.assertEqual([], manager.syntax_configs(view))
 
 
 class IsSupportedSyntaxTests(unittest.TestCase):

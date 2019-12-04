@@ -1,0 +1,36 @@
+=> 0.9.2
+
+
+Features:
+
+* Support LocationLink (used in go to definition in ccls) (@rwols)
+
+* Promote keybindings configuration with a command and additional content (@rwols)
+
+
+Fixes:
+
+* Also wrap code blocks in hovers at 80 characters to avoid horizontal scrollbar
+
+* Make `show_diagnostics_severity_level` apply consistently (not in view regions, see https://github.com/tomv564/LSP/pull/800)
+
+* Remove unnecessary `show_status_messages` setting (@Narretz)
+
+* Translate undecodeable UTF-8 sequences in logging output by '?' (@rwols)
+
+* Fix server repeatedly restarting when failing to launch
+
+
+New server support or documentation:
+
+* R (@HarrisonWilde)
+
+
+Deprecations:
+
+* `show_status_messages` setting (always on now)
+
+
+See https://github.com/tomv564/LSP/releases/tag/0.9.2 for full update details.
+
+Thanks to all contributors & reporters!

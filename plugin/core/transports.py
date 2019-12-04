@@ -48,7 +48,7 @@ StateStrings = {STATE_HEADERS: 'STATE_HEADERS',
 
 
 def state_to_string(state: int) -> str:
-    return StateStrings.get(state, '<unknown state: %d>'.format(state))
+    return StateStrings.get(state, '<unknown state: {}>'.format(state))
 
 
 def start_tcp_listener(tcp_port: int) -> socket.socket:

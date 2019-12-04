@@ -91,7 +91,7 @@ class Client(object):
                 # We go to sleep. We wake up once another thread calls .notify() on this condition variable.
                 self._sync_request_cvar.wait_for(lambda: request_id in self._sync_request_results, timeout)
                 result = self._sync_request_results.pop(request_id)
-        except KeyError as e:
+        except KeyError:
             debug('timeout on', request.method)
             return None
         return result

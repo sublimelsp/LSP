@@ -47,7 +47,7 @@ class SessionTest(unittest.TestCase):
         self.assertIsNotNone(session.client)
         self.assertTrue(session.has_capability("testing"))
         self.assertTrue(session.get_capability("testing"))
-        post_initialize_callback.assert_called_once()
+        assert post_initialize_callback.call_count == 1
 
     def test_pre_initialize_callback_is_invoked(self):
         project_path = "/"
@@ -65,8 +65,8 @@ class SessionTest(unittest.TestCase):
         self.assertIsNotNone(session.client)
         self.assertTrue(session.has_capability("testing"))
         self.assertTrue(session.get_capability("testing"))
-        pre_initialize_callback.assert_called_once()
-        post_initialize_callback.assert_called_once()
+        assert pre_initialize_callback.call_count == 1
+        assert post_initialize_callback.call_count == 1
 
     def test_can_shutdown_session(self):
         project_path = "/"
@@ -83,10 +83,10 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(session.state, ClientStates.READY)
         self.assertIsNotNone(session.client)
         self.assertTrue(session.has_capability("testing"))
-        post_initialize_callback.assert_called_once()
+        assert post_initialize_callback.call_count == 1
         session.end()
         self.assertEqual(session.state, ClientStates.STOPPING)
         self.assertIsNone(session.client)
         self.assertFalse(session.has_capability("testing"))
         self.assertIsNone(session.get_capability("testing"))
-        post_exit_callback.assert_called_once()
+        assert post_exit_callback.call_count == 1

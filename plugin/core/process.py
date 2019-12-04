@@ -1,7 +1,7 @@
 from .logging import debug, exception_log
-import subprocess
 import os
 import shutil
+import subprocess
 import threading
 
 try:
@@ -70,12 +70,7 @@ def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]', log_callback: 'Ca
             content = stream.readline()
             if not content:
                 break
-            try:
-                decoded = content.decode("UTF-8")
-            except UnicodeDecodeError:
-                # todo: do we still need this ?
-                decoded = content  # type: ignore
-            log_callback(decoded.strip())
+            log_callback('server', content.decode('UTF-8', 'replace').strip())
         except IOError as err:
             exception_log("Failure reading stream", err)
             return

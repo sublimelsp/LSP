@@ -1,11 +1,16 @@
 import sublime
 import sublime_plugin
+from contextlib import contextmanager
 
 try:
-    from typing import Optional, Any
-    assert Optional, Any
+    from typing import Optional, Any, List, Generator
+    assert Optional and Any and List and Generator
 except ImportError:
     pass
+
+
+# about 80 chars per line implies maintaining a buffer of about 40kb per window
+SERVER_PANEL_MAX_LINES = 500
 
 
 OUTPUT_PANEL_SETTINGS = {
@@ -13,16 +18,24 @@ OUTPUT_PANEL_SETTINGS = {
     "draw_indent_guides": False,
     "draw_white_space": "None",
     "gutter": True,
-    'is_widget': True,
+    "is_widget": True,
     "line_numbers": False,
     "margin": 3,
     "match_brackets": False,
+    "rulers": [],
     "scroll_past_end": False,
     "tab_size": 4,
     "translate_tabs_to_spaces": False,
     "word_wrap": False,
     "fold_buttons": True
 }
+
+
+@contextmanager
+def mutable(view: sublime.View) -> 'Generator':
+    view.set_read_only(False)
+    yield
+    view.set_read_only(True)
 
 
 def create_output_panel(window: sublime.Window, name: str) -> 'Optional[sublime.View]':
@@ -66,9 +79,8 @@ class LspClearPanelCommand(sublime_plugin.TextCommand):
     """
 
     def run(self, edit: sublime.Edit) -> None:
-        self.view.set_read_only(False)
-        self.view.erase(edit, sublime.Region(0, self.view.size()))
-        self.view.set_read_only(True)
+        with mutable(self.view):
+            self.view.erase(edit, sublime.Region(0, self.view.size()))
 
 
 class LspUpdatePanelCommand(sublime_plugin.TextCommand):
@@ -77,11 +89,31 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
     """
 
     def run(self, edit: sublime.Edit, characters: 'Optional[str]' = "") -> None:
-        # Clear folds
-        self.view.unfold(sublime.Region(0, self.view.size()))
+        with mutable(self.view):
+            # Clear folds
+            self.view.unfold(sublime.Region(0, self.view.size()))
 
-        self.view.replace(edit, sublime.Region(0, self.view.size()), characters or "")
+            self.view.replace(edit, sublime.Region(0, self.view.size()), characters or "")
 
-        # Clear the selection
-        selection = self.view.sel()
-        selection.clear()
+            # Clear the selection
+            selection = self.view.sel()
+            selection.clear()
+
+
+class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
+    def run(self, edit: sublime.Edit, prefix: str, message: str) -> None:
+        with mutable(self.view):
+            self.view.insert(edit, self.view.size(), "{}: {}\n".format(prefix, message))
+            total_lines, _ = self.view.rowcol(self.view.size())
+            if total_lines <= SERVER_PANEL_MAX_LINES:
+                return
+            point = 0  # Starting from point 0 in the panel ...
+            regions = []  # type: List[sublime.Region]
+            for _ in range(0, total_lines - SERVER_PANEL_MAX_LINES):
+                # ... collect all regions that span an entire line ...
+                region = self.view.full_line(point)
+                regions.append(region)
+                point = region.b
+            for region in reversed(regions):
+                # ... and erase them in reverse order
+                self.view.erase(edit, region)

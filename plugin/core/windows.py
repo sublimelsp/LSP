@@ -26,7 +26,6 @@ try:
     assert LanguageConfig
     assert WorkspaceFolder
 except ImportError:
-    from sublime_lib import OutputPanel
     Protocol = object  # type: ignore
 
 
@@ -628,10 +627,10 @@ class WindowManager(object):
             self.restart_sessions()
 
     def _handle_server_message(self, name: str, message: str) -> None:
-        ensure_server_panel(self._window)
-        with OutputPanel(self._window, "server", force_writes=True, follow_cursor=True) as stream:
-            stream.seek_end()
-            stream.print("{}: {}".format(name, message))
+        panel = ensure_server_panel(self._window)
+        if not panel:
+            return debug("no server panel for window", self._window.id())
+        panel.run_command("lsp_update_server_panel", {"prefix": name, "message": message})
 
     def _handle_log_message(self, name: str, params: 'Any') -> None:
         self._handle_server_message(name, extract_message(params))

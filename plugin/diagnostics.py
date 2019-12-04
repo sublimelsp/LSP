@@ -330,9 +330,7 @@ class DiagnosticOutputPanel(DiagnosticsUpdateWalk):
     def end(self) -> None:
         assert self._panel, "must have a panel now!"
         self._panel.settings().set("result_base_dir", self._base_dir)
-        self._panel.set_read_only(False)
         self._panel.run_command("lsp_update_panel", {"characters": "\n".join(self._to_render)})
-        self._panel.set_read_only(True)
 
     def format_diagnostic(self, diagnostic: Diagnostic) -> str:
         location = "{:>8}:{:<4}".format(

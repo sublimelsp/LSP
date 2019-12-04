@@ -114,7 +114,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
     def on_ref_highlight(self, index: int) -> None:
         self.open_ref_index(index, transient=True)
 
-    def open_ref_index(self, index: int, transient: bool=False) -> None:
+    def open_ref_index(self, index: int, transient: bool = False) -> None:
         if index != -1:
             flags = sublime.ENCODED_POSITION | sublime.TRANSIENT if transient else sublime.ENCODED_POSITION
             window = self.view.window()
@@ -142,7 +142,6 @@ class LspSymbolReferencesCommand(LspTextCommand):
             base_dir = windows.lookup(window).get_project_path()
             panel.settings().set("result_base_dir", base_dir)
 
-            panel.set_read_only(False)
             panel.run_command("lsp_clear_panel")
             window.run_command("show_panel", {"panel": "output.references"})
             panel.run_command('append', {
@@ -154,7 +153,6 @@ class LspSymbolReferencesCommand(LspTextCommand):
             # highlight all word occurrences
             regions = panel.find_all(r"\b{}\b".format(self.word))
             panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_OUTLINED)
-            panel.set_read_only(True)
 
     def get_selected_file_path(self, index: int) -> str:
         return self.get_full_path(self.reflist[index][0])

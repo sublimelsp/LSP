@@ -531,6 +531,7 @@ class WindowManager(object):
         client = session.client
         client.set_crash_handler(lambda: self._handle_server_crash(session.config))
         client.set_error_display_handler(self._window.status_message)
+        client.set_log_payload_handler(self._handle_log_payload)
 
         client.on_request(
             "window/showMessageRequest",
@@ -637,6 +638,25 @@ class WindowManager(object):
 
     def _handle_show_message(self, name: str, params: 'Any') -> None:
         self._sublime.status_message("{}: {}".format(name, extract_message(params)))
+
+    def _handle_log_payload(self, direction: str, method: 'Optional[str]', request_id: 'Optional[int]',
+                            payload: 'Union[Dict, List, None]') -> None:
+        panel = ensure_server_panel(self._window)
+        if not panel:
+            return debug("no server panel for window", self._window.id())
+        if method is None:
+            # Response from the server to us
+            assert isinstance(request_id, int)
+            message = "{} {}".format(direction, request_id)
+        elif request_id is not None:
+            # Request from us to the server
+            message = "{} {}({})".format(direction, method, request_id)
+        else:
+            # Notification
+            message = "{} {}".format(direction, method)
+        if settings.log_payloads:
+            message = "{}: {}".format(message, payload)
+        panel.run_command("lsp_update_server_panel", {"prefix": "LSP", "message": message})
 
 
 class WindowRegistry(object):

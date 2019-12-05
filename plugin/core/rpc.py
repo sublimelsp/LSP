@@ -204,7 +204,7 @@ class Client(object):
         method = message.get("method", "")
         params = message.get("params")
         if method != "window/logMessage" and self._log_payload_handler:
-            self._log_payload_handler('<-- ', method, args[0] if len(args) > 0 else None, params)
+            self._log_payload_handler('<--', method, args[0] if len(args) > 0 else None, params)
         handler = handlers.get(method)
         if handler:
             try:

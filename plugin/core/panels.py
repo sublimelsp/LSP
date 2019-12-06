@@ -89,15 +89,15 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
     """
 
     def run(self, edit: sublime.Edit, characters: 'Optional[str]' = "") -> None:
-        with mutable(self.view):
-            # Clear folds
-            self.view.unfold(sublime.Region(0, self.view.size()))
+        # Clear folds
+        self.view.unfold(sublime.Region(0, self.view.size()))
 
+        with mutable(self.view):
             self.view.replace(edit, sublime.Region(0, self.view.size()), characters or "")
 
-            # Clear the selection
-            selection = self.view.sel()
-            selection.clear()
+        # Clear the selection
+        selection = self.view.sel()
+        selection.clear()
 
 
 class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
@@ -105,11 +105,9 @@ class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
         with mutable(self.view):
             self.view.insert(edit, self.view.size(), "{}: {}\n".format(prefix, message))
             total_lines, _ = self.view.rowcol(self.view.size())
-            if total_lines <= SERVER_PANEL_MAX_LINES:
-                return
             point = 0  # Starting from point 0 in the panel ...
             regions = []  # type: List[sublime.Region]
-            for _ in range(0, total_lines - SERVER_PANEL_MAX_LINES):
+            for _ in range(0, max(0, total_lines - SERVER_PANEL_MAX_LINES)):
                 # ... collect all regions that span an entire line ...
                 region = self.view.full_line(point)
                 regions.append(region)

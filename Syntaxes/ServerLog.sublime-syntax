@@ -4,10 +4,16 @@
 # [LSP]: https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md
 hidden: true
 scope: output.lsp.log
+
+variables:
+  arrow: (?:<--|-->|==>)
+  method: '[[:alpha:]][[:alnum:]/]*'
+  servername: '[[:alnum:]_-]+'
+
 contexts:
   main:
-    # We know what this looks like because we write it :)
-    - match: ^(LSP)\s*(:)\s*((?:<--|-->|==>))\s*(([[:alpha:]][[:alnum:]/]*)\s*((\()(\d+)(\)))?)?(\d+)?
+    # Payloads
+    - match: ^(LSP)\s*(:)\s*({{arrow}})\s*(({{method}})\s*((\()(\d+)(\)))?)?(\d+)?
       captures:
         1: support.function.lsp
         2: punctuation.separator.lsp
@@ -30,7 +36,7 @@ contexts:
         - match: $
           pop: true
     # Arbitrary messages from servers. We don't know the structure of these messages.
-    - match: ^([[:alnum:]_-]+)\s*(:)
+    - match: ^({{servername}})\s*(:)
       captures:
         1: variable.function.lsp
         2: punctuation.separator.lsp

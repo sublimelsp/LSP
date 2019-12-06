@@ -346,7 +346,17 @@ class WindowManager(object):
         self._on_closed = on_closed
         self._is_closing = False
         self._initialization_lock = threading.Lock()
-        self._handle_server_message("LSP", "This is the panel where window/logMessage and stderr will end up.")
+
+        def info(settingname: str) -> str:
+            boolsetting = getattr(settings, settingname, False)
+            return '"{}" is {}.'.format(settingname, "on" if boolsetting else "off")
+
+        intro = ["This is the panel where window/logMessage and stderr will end up."]
+        intro.append(info("log_debug"))
+        intro.append(info("log_server"))
+        intro.append(info("log_payloads"))
+        intro.append(info("log_stderr"))
+        self._handle_server_message("LSP", " ".join(intro))
 
     def get_session(self, config_name: str) -> 'Optional[Session]':
         return self._sessions.get(config_name)
@@ -641,6 +651,9 @@ class WindowManager(object):
 
     def _handle_log_payload(self, direction: str, method: 'Optional[str]', request_id: 'Optional[int]',
                             payload: 'Union[Dict, List, None]') -> None:
+        # If "log_payloads" == True, ignore "log_debug" and just print the entire line.
+        if not settings.log_debug and not settings.log_payloads:
+            return
         panel = ensure_server_panel(self._window)
         if not panel:
             return debug("no server panel for window", self._window.id())
@@ -654,7 +667,9 @@ class WindowManager(object):
         else:
             # Notification
             message = "{} {}".format(direction, method)
-        if settings.log_payloads:
+        # If "log_payloads" == False but "log_debug" == True, only a short line is printed.
+        if settings.log_payloads and method != "textDocument/didChange" and method != "textDocument/didOpen":
+            # textDocument/didChange and textDocument/didOpen might send the entire content of the view
             message = "{}: {}".format(message, payload)
         panel.run_command("lsp_update_server_panel", {"prefix": "LSP", "message": message})
 

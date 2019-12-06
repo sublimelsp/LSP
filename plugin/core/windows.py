@@ -349,9 +349,6 @@ class WindowManager(object):
         self._is_closing = False
         self._initialization_lock = threading.Lock()
 
-        panel = ensure_server_panel(self._window)
-        panel.settings().set("word_wrap", True)
-
         def info(settingname: str) -> str:
             boolsetting = getattr(settings, settingname, False)
             return '"{}" is {}.'.format(settingname, "on" if boolsetting else "off")

@@ -67,6 +67,7 @@ class MockView(object):
         self._settings = MockSublimeSettings({"syntax": "Plain Text"})
         self._status = dict()  # type: Dict[str, str]
         self._text = "asdf"
+        self.commands = []  # type: List[Tuple[str, Dict[str, Any]]]
 
     def file_name(self):
         return self._file_name
@@ -97,6 +98,9 @@ class MockView(object):
 
     def buffer_id(self):
         return 1
+
+    def run_command(self, command_name: str, command_args: 'Dict[str, Any]') -> None:
+        self.commands.append((command_name, command_args))
 
 
 class MockHandlerDispatcher(object):

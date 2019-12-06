@@ -22,9 +22,12 @@ try:
     from typing_extensions import Protocol
     from typing import Optional, List, Callable, Dict, Any, Iterator, Union
     from types import ModuleType
+    from .rpc import PayloadLike
     assert Optional and List and Callable and Dict and Session and Any and ModuleType and Iterator and Union
     assert LanguageConfig
     assert WorkspaceFolder
+    # error: The type alias to Union is invalid in runtime context
+    assert PayloadLike  # type: ignore
 except ImportError:
     Protocol = object  # type: ignore
 
@@ -74,7 +77,8 @@ class DocumentHandler(Protocol):
 
 
 def ensure_server_panel(window: WindowLike) -> 'Optional[ViewLike]':
-    return ensure_panel(window, "server", "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
+    # error: Argument 1 to "ensure_panel" has incompatible type "WindowLike"; expected "Window"
+    return ensure_panel(window, "server", "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")  # type: ignore
 
 
 def get_active_views(window: WindowLike) -> 'List[ViewLike]':
@@ -650,7 +654,7 @@ class WindowManager(object):
         self._sublime.status_message("{}: {}".format(name, extract_message(params)))
 
     def _handle_log_payload(self, direction: str, method: 'Optional[str]', request_id: 'Optional[int]',
-                            payload: 'Union[Dict, List, None]') -> None:
+                            payload: 'PayloadLike') -> None:
         # If "log_payloads" == True, ignore "log_debug" and just print the entire line.
         if not settings.log_debug and not settings.log_payloads:
             return

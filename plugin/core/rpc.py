@@ -2,9 +2,10 @@ import json
 from .transports import StdioTransport, Transport
 try:
     import subprocess
-    from typing import Any, List, Dict, Tuple, Callable, Optional, Union
+    from typing import Any, List, Dict, Tuple, Callable, Optional, Union, Mapping
     # from mypy_extensions import TypedDict
     assert Any and List and Dict and Tuple and Callable and Optional and Union and subprocess
+    PayloadLike = Union[Optional[Mapping[str, Any]], Optional[List], None]
 except ImportError:
     pass
 
@@ -124,7 +125,7 @@ class Client(object):
 
     def set_log_payload_handler(
         self,
-        handler: 'Callable[[str, Optional[str], Optional[int], Union[Dict, List, None]], None]'
+        handler: 'Callable[[str, Optional[str], Optional[int], PayloadLike], None]'
     ) -> None:
         self._log_payload_handler = handler
 

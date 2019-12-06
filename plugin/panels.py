@@ -8,7 +8,13 @@ class LspTogglePanelCommand(WindowCommand):
         if panel_type == "diagnostics":
             ensure_diagnostics_panel(self.window)
         elif panel_type == "server":
-            ensure_server_panel(self.window)
+            # error: Argument 1 to "ensure_server_panel" has incompatible type "Window"; expected "WindowLike"
+            # note: Following member(s) of "Window" have conflicts:
+            # note:     Expected:
+            # note:         def views(self) -> List[ViewLike]
+            # note:     Got:
+            # note:         def views(self) -> List[View]
+            ensure_server_panel(self.window)  # type: ignore
         else:
             return
         panel_name = "output.{}".format(panel_type)

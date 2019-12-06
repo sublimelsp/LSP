@@ -157,7 +157,7 @@ class InitializationTests(DeferrableTestCase):
 class QueryCompletionsTests(TextDocumentTestCase):
     def test_simple_label(self):
         yield OPEN_DOCUMENT_DELAY
-        self.client.responses['textDocument/completion'] = label_completions
+        self.transport.responses['textDocument/completion'] = label_completions
 
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
@@ -186,7 +186,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
     def test_simple_inserttext(self):
         yield OPEN_DOCUMENT_DELAY
-        self.client.responses[
+        self.transport.responses[
             'textDocument/completion'] = insert_text_completions
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
@@ -202,7 +202,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': '$'})
         self.view.run_command('move_to', {'to': 'eol'})
-        self.client.responses[
+        self.transport.responses[
             'textDocument/completion'] = var_completion_using_label
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
@@ -222,7 +222,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': '$'})
         self.view.run_command('move_to', {'to': 'eol'})
-        self.client.responses[
+        self.transport.responses[
             'textDocument/completion'] = var_prefix_added_in_insertText
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
@@ -242,7 +242,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': '$'})
         self.view.run_command('move_to', {'to': 'eol'})
-        self.client.responses[
+        self.transport.responses[
             'textDocument/completion'] = var_prefix_added_in_label
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
@@ -260,7 +260,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
         """
         yield OPEN_DOCUMENT_DELAY
-        self.client.responses['textDocument/completion'] = space_added_in_label
+        self.transport.responses['textDocument/completion'] = space_added_in_label
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
@@ -280,7 +280,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         self.view.run_command('append', {'characters': '-'})
         self.view.run_command('move_to', {'to': 'eol'})
 
-        self.client.responses[
+        self.transport.responses[
             'textDocument/completion'] = dash_missing_from_label
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
@@ -302,7 +302,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         self.view.run_command('append', {'characters': '  def myF'})
         self.view.run_command('move_to', {'to': 'eol'})
 
-        self.client.responses['textDocument/completion'] = edit_before_cursor
+        self.transport.responses['textDocument/completion'] = edit_before_cursor
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
@@ -327,7 +327,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         self.view.run_command('append', {'characters': 'List.'})
         self.view.run_command('move_to', {'to': 'eol'})
 
-        self.client.responses['textDocument/completion'] = edit_after_nonword
+        self.transport.responses['textDocument/completion'] = edit_after_nonword
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
@@ -349,7 +349,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': 'I'})
         self.view.run_command('move_to', {'to': 'eol'})
-        self.client.responses['textDocument/completion'] = metals_implement_all_members
+        self.transport.responses['textDocument/completion'] = metals_implement_all_members
         handler = self.get_view_event_listener('on_query_completions')
         self.assertIsNotNone(handler)
         if handler:
@@ -364,7 +364,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
     def test_additional_edits(self):
         yield OPEN_DOCUMENT_DELAY
-        self.client.responses[
+        self.transport.responses[
             'textDocument/completion'] = completion_with_additional_edits
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
@@ -381,8 +381,8 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
     def test_resolve_for_additional_edits(self):
         yield OPEN_DOCUMENT_DELAY
-        self.client.responses['textDocument/completion'] = label_completions
-        self.client.responses[
+        self.transport.responses['textDocument/completion'] = label_completions
+        self.transport.responses[
             'completionItem/resolve'] = completion_with_additional_edits[0]
 
         handler = self.get_view_event_listener("on_query_completions")

@@ -51,7 +51,7 @@ class GotoTestCase(TextDocumentTestCase):
         # Put the cursor back at the start of the buffer, otherwise is_at_word fails in goto.py.
         self.view.sel().clear()
         self.view.sel().add(sublime.Region(0, 0))
-        self.client.responses['textDocument/{}'.format(text_document_request)] = response
+        self.client.responses['textDocument/{}'.format(text_document_request)] = RESPONSE
         self.view.run_command('lsp_symbol_{}'.format(subl_command_suffix))
 
     def do_common_checks(self) -> None:

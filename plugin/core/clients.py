@@ -41,7 +41,8 @@ def start_window_config(window: sublime.Window,
                         config: ClientConfig,
                         on_pre_initialize: 'Callable[[Session], None]',
                         on_post_initialize: 'Callable[[Session], None]',
-                        on_post_exit: 'Callable[[str], None]') -> 'Optional[Session]':
+                        on_post_exit: 'Callable[[str], None]',
+                        on_stderr_log: 'Optional[Callable[[str], None]]') -> 'Optional[Session]':
     args, env = get_window_env(window, config)
     config.binary_args = args
     return create_session(config=config,
@@ -50,7 +51,8 @@ def start_window_config(window: sublime.Window,
                           settings=settings,
                           on_pre_initialize=on_pre_initialize,
                           on_post_initialize=on_post_initialize,
-                          on_post_exit=lambda config_name: on_session_ended(window, config_name, on_post_exit))
+                          on_post_exit=lambda config_name: on_session_ended(window, config_name, on_post_exit),
+                          on_stderr_log=on_stderr_log)
 
 
 def on_session_ended(window: sublime.Window, config_name: str, on_post_exit_handler: 'Callable[[str], None]') -> None:

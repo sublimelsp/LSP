@@ -5,11 +5,9 @@ from .types import (ClientStates, ClientConfig, WindowLike, ViewLike,
                     GlobalConfigs, Settings)
 from .edit import parse_workspace_edit
 from .panels import ensure_panel
-from .process import attach_logger
 from .protocol import Notification, Response
 from .sessions import Session
 from .settings import settings
-from .transports import StdioTransport
 from .url import filename_to_uri
 from .workspace import (
     enable_in_project, disable_in_project, maybe_get_first_workspace_from_window,
@@ -451,7 +449,8 @@ class WindowManager(object):
                 config,                        # config
                 self._handle_pre_initialize,   # on_pre_initialize
                 self._handle_post_initialize,  # on_post_initialize
-                self._handle_post_exit)        # on_post_exit
+                self._handle_post_exit,        # on_post_exit
+                lambda msg: self._handle_stderr_log(config.name, msg))  # on_stderr_log
         except Exception as e:
             message = "\n\n".join([
                 "Could not start {}",
@@ -465,11 +464,6 @@ class WindowManager(object):
         if session:
             debug("window {} added session {}".format(self._window.id(), config.name))
             self._sessions[config.name] = session
-            transport = session.client.transport
-            if isinstance(transport, StdioTransport) and settings.log_stderr:
-                process = transport.process
-                assert process
-                attach_logger(process, process.stderr, lambda msg: self._handle_server_message(config.name, msg))
 
     def _handle_message_request(self, params: dict, client: Client, request_id: int) -> None:
         actions = params.get("actions", [])
@@ -652,6 +646,10 @@ class WindowManager(object):
 
     def _handle_log_message(self, name: str, params: 'Any') -> None:
         self._handle_server_message(name, extract_message(params))
+
+    def _handle_stderr_log(self, name: str, message: str) -> None:
+        if settings.log_stderr:
+            self._handle_server_message(name, message)
 
     def _handle_show_message(self, name: str, params: 'Any') -> None:
         self._sublime.status_message("{}: {}".format(name, extract_message(params)))

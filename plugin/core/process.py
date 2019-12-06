@@ -32,8 +32,12 @@ def add_extension_if_missing(server_binary_args: 'List[str]') -> 'List[str]':
     return server_binary_args
 
 
-def start_server(server_binary_args: 'List[str]', working_dir: str,
-                 env: 'Dict[str,str]', attach_stderr: bool) -> 'Optional[subprocess.Popen]':
+def start_server(
+    server_binary_args: 'List[str]',
+    working_dir: str,
+    env: 'Dict[str,str]',
+    on_stderr_log: 'Optional[Callable[[str], None]]'
+) -> 'Optional[subprocess.Popen]':
     si = None
     if os.name == "nt":
         server_binary_args = add_extension_if_missing(server_binary_args)
@@ -42,16 +46,19 @@ def start_server(server_binary_args: 'List[str]', working_dir: str,
 
     debug("starting " + str(server_binary_args))
 
-    stderr_destination = subprocess.PIPE if attach_stderr else subprocess.DEVNULL
-
-    return subprocess.Popen(
+    process = subprocess.Popen(
         server_binary_args,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=stderr_destination,
+        stderr=subprocess.PIPE,
         cwd=working_dir,
         env=env,
         startupinfo=si)
+
+    if on_stderr_log is not None:
+        attach_logger(process, process.stderr, on_stderr_log)
+
+    return process
 
 
 def attach_logger(process: 'subprocess.Popen', stream: 'IO[Any]', log_callback: 'Callable[[str], None]') -> None:

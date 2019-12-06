@@ -65,8 +65,7 @@ class Client(object):
     ) -> 'None':
         self.request_id += 1
         if self.transport is not None:
-            if self._log_payload_handler:
-                self._log_payload_handler('-->', request.method, self.request_id, request.params)
+            self._log('-->', request.method, self.request_id, request.params)
             self._response_handlers[self.request_id] = (handler, error_handler)
             self.send_payload(request.to_payload(self.request_id))
         else:
@@ -85,8 +84,7 @@ class Client(object):
 
         self.request_id += 1
         request_id = self.request_id
-        if self._log_payload_handler:
-            self._log_payload_handler('==>', request.method, self.request_id, request.params)
+        self._log('==>', request.method, self.request_id, request.params)
         self.send_payload(request.to_payload(request_id))
         result = None
         try:
@@ -99,15 +97,19 @@ class Client(object):
             return None
         return result
 
+    def _log(self, direction: str, method: 'Optional[str]', request_id: 'Optional[int]', params: 'PayloadLike') -> None:
+        if self._log_payload_handler:
+            self._log_payload_handler(direction, method, request_id, params)
+
     def send_notification(self, notification: Notification) -> None:
         if self.transport is not None:
-            if self._log_payload_handler:
-                self._log_payload_handler('-->', notification.method, None, notification.params)
+            self._log('-->', notification.method, None, notification.params)
             self.send_payload(notification.to_payload())
         else:
             debug('unable to send', notification.method)
 
     def send_response(self, response: Response) -> None:
+        self._log('-->', None, response.request_id, response.result)
         self.send_payload(response.to_payload())
 
     def exit(self) -> None:
@@ -175,8 +177,7 @@ class Client(object):
         # This response handler *must not* run from the same thread that does a sync request
         # because of the usage of the condition variable below.
         request_id = int(response["id"])
-        if self._log_payload_handler:
-            self._log_payload_handler('<--', None, request_id, response)
+        self._log('<--', None, request_id, response)
         handler, error_handler = self._response_handlers.pop(request_id, (None, None))
         if "result" in response and "error" not in response:
             if handler:
@@ -204,8 +205,8 @@ class Client(object):
     def handle(self, typestr: str, message: 'Dict[str, Any]', handlers: 'Dict[str, Callable]', *args: 'Any') -> None:
         method = message.get("method", "")
         params = message.get("params")
-        if method != "window/logMessage" and self._log_payload_handler:
-            self._log_payload_handler('<--', method, args[0] if len(args) > 0 else None, params)
+        if method != "window/logMessage":
+            self._log('<--', method, args[0] if len(args) > 0 else None, params)
         handler = handlers.get(method)
         if handler:
             try:

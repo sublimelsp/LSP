@@ -660,20 +660,20 @@ class WindowManager(object):
         if not panel:
             return debug("no server panel for window", self._window.id())
         if method is None:
-            # Response from the server to us
+            # Response from the server to us, or response from us to the server
             assert isinstance(request_id, int)
             message = "{} {}".format(direction, request_id)
         elif request_id is not None:
-            # Request from us to the server
+            # Request from us to the server, or request from the server to us
             message = "{} {}({})".format(direction, method, request_id)
         else:
-            # Notification
+            # Notification (both ways)
             message = "{} {}".format(direction, method)
         # If "log_payloads" == False but "log_debug" == True, only a short line is printed.
         if settings.log_payloads and method != "textDocument/didChange" and method != "textDocument/didOpen":
             # textDocument/didChange and textDocument/didOpen might send the entire content of the view
             message = "{}: {}".format(message, payload)
-        panel.run_command("lsp_update_server_panel", {"prefix": "LSP", "message": message})
+        self._handle_server_message("LSP", message)
 
 
 class WindowRegistry(object):

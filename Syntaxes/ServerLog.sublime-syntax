@@ -1,0 +1,55 @@
+%YAML 1.2
+---
+# [Subl]: https://www.sublimetext.com/docs/3/syntax.html
+# [LSP]: https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md
+hidden: true
+scope: output.lsp.log
+contexts:
+  main:
+    # We know what this looks like because we write it :)
+    - match: ^(LSP)\s*(:)\s*((?:<--|-->|==>))\s*(([[:alpha:]][[:alnum:]/]*)\s*((\()(\d+)(\)))?)?(\d+)?
+      captures:
+        1: support.function.lsp
+        2: punctuation.separator.lsp
+        3: storage.modifier.lsp
+        5: keyword.control.lsp
+        7: punctuation.section.parens.begin.lsp
+        8: constant.numeric.lsp
+        9: punctuation.section.parens.end.lsp
+        10: constant.numeric.lsp
+      push:
+        - maybe-payload
+        - maybe-colon
+    # A comment from the plugin
+    - match: ^(LSP)\s*(:)
+      captures:
+        1: support.function.lsp
+        2: punctuation.separator.lsp
+      push:
+        - meta_content_scope: comment.line.lsp
+        - match: $
+          pop: true
+    # Arbitrary messages from servers. We don't know the structure of these messages.
+    - match: ^([[:alnum:]_-]+)\s*(:)
+      captures:
+        1: variable.function.lsp
+        2: punctuation.separator.lsp
+
+  maybe-colon:
+    - match: \s*(:)
+      captures:
+        1: punctuation.separator.lsp
+      pop: true
+    - match: \s*$
+      pop: true
+
+  maybe-payload:
+    - match: \s*(?={)
+      push:
+        - match: $
+          pop: true
+        # The syntax of a payload is a python dictionary.
+        - include: scope:source.python#dictionaries-and-sets
+    - match: \s*$
+      pop: true
+...

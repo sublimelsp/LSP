@@ -74,7 +74,7 @@ class DocumentHandler(Protocol):
 
 
 def ensure_server_panel(window: WindowLike) -> 'Optional[ViewLike]':
-    return ensure_panel(window, "server", "", "", "Packages/Text/Plain text.tmLanguage")
+    return ensure_panel(window, "server", "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
 
 
 def get_active_views(window: WindowLike) -> 'List[ViewLike]':

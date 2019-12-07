@@ -1,5 +1,5 @@
 from LSP.plugin.core.panels import SERVER_PANEL_MAX_LINES
-from LSP.plugin.core.windows import ensure_server_panel
+from LSP.plugin.core.main import ensure_server_panel
 from setup import TextDocumentTestCase
 import sublime
 

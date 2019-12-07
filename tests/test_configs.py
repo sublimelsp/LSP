@@ -59,6 +59,7 @@ class ConfigTests(DeferrableTestCase):
 class WindowConfigTests(DeferrableTestCase):
 
     def setUp(self):
+        windows._windows.clear()
         self.view = sublime.active_window().open_file(test_file_path)
 
     def test_window_without_configs(self):

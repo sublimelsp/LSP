@@ -56,7 +56,7 @@ class Client(object):
         self._crash_handler = None  # type: Optional[Callable]
         self._transport_fail_handler = None  # type: Optional[Callable]
         self._error_display_handler = lambda msg: debug(msg)
-        self._log_payload_handler = None  # type: Optional[PayloadLogHandlerType]  # noqa
+        self._log_payload_handler = None  # type: Optional[PayloadLogHandlerType]
         self.settings = settings
 
     def send_request(

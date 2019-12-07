@@ -213,4 +213,4 @@ class Client(object):
             except Exception as err:
                 exception_log("Error handling {} {}".format(typestr, method), err)
         else:
-            debug("Unhandled {}".format(typestr), method)
+            self._log('unhandled', method, args[0] if len(args) > 0 else None, params)

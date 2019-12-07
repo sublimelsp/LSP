@@ -12,6 +12,20 @@ variables:
 
 contexts:
   main:
+    # Unhandled notifications/requests
+    - match: ^(LSP)\s*(:)\s*(unhandled)\s*(({{method}})\s*((\()(\d+)(\)))?)?(\d+)?
+      captures:
+        1: support.function.lsp
+        2: punctuation.separator.lsp
+        3: invalid.illegal.lsp
+        5: keyword.control.lsp
+        7: punctuation.section.parens.begin.lsp
+        8: constant.numeric.lsp
+        9: punctuation.section.parens.end.lsp
+        10: constant.numeric.lsp
+      push:
+        - maybe-payload
+        - maybe-colon
     # Payloads
     - match: ^(LSP)\s*(:)\s*({{arrow}})\s*(({{method}})\s*((\()(\d+)(\)))?)?(\d+)?
       captures:

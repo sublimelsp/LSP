@@ -1,9 +1,9 @@
 import sublime
 
 from .settings import settings, load_settings, unload_settings
-from .logging import set_debug_logging, set_server_logging
 from .registry import windows, load_handlers, unload_sessions
 from .panels import destroy_output_panels
+from .panels import ensure_panel
 from .popups import popups
 from ..diagnostics import DiagnosticsPresenter
 from ..highlights import remove_highlights
@@ -16,12 +16,16 @@ except ImportError:
     pass
 
 
+def ensure_server_panel(window: sublime.Window) -> 'Optional[sublime.View]':
+    return ensure_panel(window, "server", "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
+
+
 def startup() -> None:
     load_settings()
-    set_debug_logging(settings.log_debug)
-    set_server_logging(settings.log_server)
     popups.load_css()
     windows.set_diagnostics_ui(DiagnosticsPresenter)
+    windows.set_server_panel_factory(ensure_server_panel)
+    windows.set_settings_factory(settings)
     load_handlers()
     sublime.status_message("LSP initialized")
     start_active_window()

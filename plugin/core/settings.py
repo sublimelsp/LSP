@@ -1,4 +1,5 @@
 import sublime
+
 from .types import Settings, ClientConfig, LanguageConfig
 from .logging import debug
 

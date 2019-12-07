@@ -50,6 +50,7 @@ class WindowRegistryTests(unittest.TestCase):
         windows = WindowRegistry(TestGlobalConfigs(), TestDocumentHandlerFactory(),
                                  mock_start_session,
                                  test_sublime, MockHandlerDispatcher())
+        windows.set_settings_factory(MockSettings())
         test_window = MockWindow()
         wm = windows.lookup(test_window)
         self.assertIsNotNone(wm)
@@ -59,6 +60,7 @@ class WindowRegistryTests(unittest.TestCase):
         windows = WindowRegistry(TestGlobalConfigs(), TestDocumentHandlerFactory(),
                                  mock_start_session,
                                  test_sublime, MockHandlerDispatcher())
+        windows.set_settings_factory(MockSettings())
         wm = windows.lookup(test_window)
         wm.start_active_views()
 
@@ -76,7 +78,7 @@ class WindowManagerTests(unittest.TestCase):
 
     def test_can_start_active_views(self):
         docs = MockDocuments()
-        wm = WindowManager(MockWindow([[MockView(__file__)]]), MockConfigs(), docs,
+        wm = WindowManager(MockWindow([[MockView(__file__)]]), MockSettings(), MockConfigs(), docs,
                            DiagnosticsStorage(None), mock_start_session, test_sublime, MockHandlerDispatcher())
         wm.start_active_views()
 
@@ -87,8 +89,8 @@ class WindowManagerTests(unittest.TestCase):
     def test_can_open_supported_view(self):
         docs = MockDocuments()
         window = MockWindow([[]])
-        wm = WindowManager(window, MockConfigs(), docs, DiagnosticsStorage(None), mock_start_session, test_sublime,
-                           MockHandlerDispatcher())
+        wm = WindowManager(window, MockSettings(), MockConfigs(), docs, DiagnosticsStorage(None), mock_start_session,
+                           test_sublime, MockHandlerDispatcher())
 
         wm.start_active_views()
         self.assertIsNone(wm.get_session(TEST_CONFIG.name))
@@ -106,7 +108,7 @@ class WindowManagerTests(unittest.TestCase):
 
     def test_can_restart_sessions(self):
         docs = MockDocuments()
-        wm = WindowManager(MockWindow([[MockView(__file__)]]), MockConfigs(), docs,
+        wm = WindowManager(MockWindow([[MockView(__file__)]]), MockSettings(), MockConfigs(), docs,
                            DiagnosticsStorage(None), mock_start_session, test_sublime, MockHandlerDispatcher())
         wm.start_active_views()
 
@@ -127,7 +129,7 @@ class WindowManagerTests(unittest.TestCase):
     def test_ends_sessions_when_closed(self):
         docs = MockDocuments()
         test_window = MockWindow([[MockView(__file__)]])
-        wm = WindowManager(test_window, MockConfigs(), docs,
+        wm = WindowManager(test_window, MockSettings(), MockConfigs(), docs,
                            DiagnosticsStorage(None), mock_start_session, test_sublime, MockHandlerDispatcher())
         wm.start_active_views()
 
@@ -147,7 +149,7 @@ class WindowManagerTests(unittest.TestCase):
     def test_ends_sessions_when_quick_switching(self):
         docs = MockDocuments()
         test_window = MockWindow([[MockView(__file__)]])
-        wm = WindowManager(test_window, MockConfigs(), docs,
+        wm = WindowManager(test_window, MockSettings(), MockConfigs(), docs,
                            DiagnosticsStorage(None), mock_start_session, test_sublime, MockHandlerDispatcher())
         wm.start_active_views()
 
@@ -173,7 +175,7 @@ class WindowManagerTests(unittest.TestCase):
 
     def test_offers_restart_on_crash(self):
         docs = MockDocuments()
-        wm = WindowManager(MockWindow([[MockView(__file__)]]), MockConfigs(), docs,
+        wm = WindowManager(MockWindow([[MockView(__file__)]]), MockSettings(), MockConfigs(), docs,
                            DiagnosticsStorage(None), mock_start_session, test_sublime,
                            MockHandlerDispatcher())
         wm.start_active_views()
@@ -195,7 +197,7 @@ class WindowManagerTests(unittest.TestCase):
     def test_invokes_language_handler(self):
         docs = MockDocuments()
         dispatcher = MockHandlerDispatcher()
-        wm = WindowManager(MockWindow([[MockView(__file__)]]), MockConfigs(), docs,
+        wm = WindowManager(MockWindow([[MockView(__file__)]]), MockSettings(), MockConfigs(), docs,
                            DiagnosticsStorage(None), mock_start_session, test_sublime,
                            dispatcher)
         wm.start_active_views()

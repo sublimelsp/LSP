@@ -27,4 +27,4 @@ class ProcessTests(TestCase):
             message = msg
 
         log_stream(process, BytesIO(text.encode(encoding)), log_callback)
-        self.assertEqual(message.strip(), 'server: {}'.format(text))
+        self.assertEqual(message.strip(), text)

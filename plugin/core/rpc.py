@@ -6,6 +6,7 @@ try:
     # from mypy_extensions import TypedDict
     assert Any and List and Dict and Tuple and Callable and Optional and Union and subprocess
     PayloadLike = Union[Optional[Mapping[str, Any]], Optional[List], None]
+    PayloadLogHandlerType = Callable[[str, Optional[str], Optional[int], PayloadLike], None]
 except ImportError:
     pass
 
@@ -55,6 +56,7 @@ class Client(object):
         self._crash_handler = None  # type: Optional[Callable]
         self._transport_fail_handler = None  # type: Optional[Callable]
         self._error_display_handler = lambda msg: debug(msg)
+        self._log_payload_handler = None  # type: Optional[PayloadLogHandlerType]  # noqa
         self.settings = settings
 
     def send_request(
@@ -125,10 +127,7 @@ class Client(object):
     def set_transport_failure_handler(self, handler: 'Callable') -> None:
         self._transport_fail_handler = handler
 
-    def set_log_payload_handler(
-        self,
-        handler: 'Callable[[str, Optional[str], Optional[int], PayloadLike], None]'
-    ) -> None:
+    def set_log_payload_handler(self, handler: 'PayloadLogHandlerType') -> None:
         self._log_payload_handler = handler
 
     def handle_transport_failure(self) -> None:

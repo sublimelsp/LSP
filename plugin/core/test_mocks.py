@@ -5,7 +5,7 @@ from .protocol import Request
 from .types import ClientConfig
 from .types import LanguageConfig
 from .types import Settings
-from .windows import ViewLike
+from .types import ViewLike
 import os
 
 try:

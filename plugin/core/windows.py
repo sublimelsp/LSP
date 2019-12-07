@@ -4,10 +4,8 @@ from .types import (ClientStates, ClientConfig, WindowLike, ViewLike,
                     LanguageConfig, config_supports_syntax, ConfigRegistry,
                     GlobalConfigs, Settings)
 from .edit import parse_workspace_edit
-from .panels import ensure_panel
 from .protocol import Notification, Response
 from .sessions import Session
-from .settings import settings
 from .url import filename_to_uri
 from .workspace import (
     enable_in_project, disable_in_project, maybe_get_first_workspace_from_window,
@@ -72,11 +70,6 @@ class DocumentHandler(Protocol):
 
     def handle_view_closed(self, view: ViewLike) -> None:
         ...
-
-
-def ensure_server_panel(window: WindowLike) -> 'Optional[ViewLike]':
-    # error: Argument 1 to "ensure_panel" has incompatible type "WindowLike"; expected "Window"
-    return ensure_panel(window, "server", "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")  # type: ignore
 
 
 def get_active_views(window: WindowLike) -> 'List[ViewLike]':
@@ -328,16 +321,19 @@ def extract_message(params: 'Any') -> str:
 
 
 class WindowManager(object):
-    def __init__(self, window: WindowLike, configs: ConfigRegistry, documents: DocumentHandler,
+    def __init__(self, window: WindowLike, settings: Settings, configs: ConfigRegistry, documents: DocumentHandler,
                  diagnostics: DiagnosticsStorage, session_starter: 'Callable', sublime: 'Any',
-                 handler_dispatcher: LanguageHandlerListener, on_closed: 'Optional[Callable]' = None) -> None:
+                 handler_dispatcher: LanguageHandlerListener, on_closed: 'Optional[Callable]' = None,
+                 server_panel_factory: 'Optional[Callable]' = None) -> None:
 
         # to move here:
         # configurations.py: window_client_configs and all references
         self._window = window
+        self._settings = settings
         self._configs = configs
         self.diagnostics = diagnostics
         self.documents = documents
+        self.server_panel_factory = server_panel_factory
         self._sessions = dict()  # type: Dict[str, Session]
         self._start_session = session_starter
         self._sublime = sublime
@@ -350,7 +346,7 @@ class WindowManager(object):
         self._initialization_lock = threading.Lock()
 
         def info(settingname: str) -> str:
-            boolsetting = getattr(settings, settingname, False)
+            boolsetting = getattr(self._settings, settingname, False)
             return '"{}" is {}.'.format(settingname, "on" if boolsetting else "off")
 
         intro = ["This is the panel where window/logMessage and stderr will end up."]
@@ -636,7 +632,9 @@ class WindowManager(object):
             self.restart_sessions()
 
     def _handle_server_message(self, name: str, message: str) -> None:
-        panel = ensure_server_panel(self._window)
+        if not self.server_panel_factory:
+            return
+        panel = self.server_panel_factory(self._window)
         if not panel:
             return debug("no server panel for window", self._window.id())
         panel.run_command("lsp_update_server_panel", {"prefix": name, "message": message})
@@ -645,7 +643,7 @@ class WindowManager(object):
         self._handle_server_message(name, extract_message(params))
 
     def _handle_stderr_log(self, name: str, message: str) -> None:
-        if settings.log_stderr:
+        if self._settings.log_stderr:
             self._handle_server_message(name, message)
 
     def _handle_show_message(self, name: str, params: 'Any') -> None:
@@ -654,11 +652,8 @@ class WindowManager(object):
     def _handle_log_payload(self, direction: str, method: 'Optional[str]', request_id: 'Optional[int]',
                             payload: 'PayloadLike') -> None:
         # If "log_payloads" == True, ignore "log_debug" and just print the entire line.
-        if not settings.log_debug and not settings.log_payloads:
+        if not self._settings.log_debug and not self._settings.log_payloads:
             return
-        panel = ensure_server_panel(self._window)
-        if not panel:
-            return debug("no server panel for window", self._window.id())
         if method is None:
             # Response from the server to us, or response from us to the server
             assert isinstance(request_id, int)
@@ -670,7 +665,9 @@ class WindowManager(object):
             # Notification (both ways)
             message = "{} {}".format(direction, method)
         # If "log_payloads" == False but "log_debug" == True, only a short line is printed.
-        if settings.log_payloads and method != "textDocument/didChange" and method != "textDocument/didOpen":
+        if self._settings.log_payloads \
+                and method != "textDocument/didChange" \
+                and method != "textDocument/didOpen":
             # textDocument/didChange and textDocument/didOpen might send the entire content of the view
             message = "{}: {}".format(message, payload)
         self._handle_server_message("LSP", message)
@@ -686,20 +683,38 @@ class WindowRegistry(object):
         self._sublime = sublime
         self._handler_dispatcher = handler_dispatcher
         self._diagnostics_ui_class = None  # type: Optional[Callable]
+        self._server_panel_factory = None  # type: Optional[Callable]
+        self._settings = None  # type: Optional[Settings]
 
     def set_diagnostics_ui(self, ui_class: 'Any') -> None:
         self._diagnostics_ui_class = ui_class
 
+    def set_server_panel_factory(self, factory: 'Callable') -> None:
+        self._server_panel_factory = factory
+
+    def set_settings_factory(self, settings: Settings) -> None:
+        self._settings = settings
+
     def lookup(self, window: 'Any') -> WindowManager:
         state = self._windows.get(window.id())
         if state is None:
+            if not self._settings:
+                raise RuntimeError("no settings")
             window_configs = self._configs.for_window(window)
             window_documents = self._documents.for_window(window, window_configs)
             diagnostics_ui = self._diagnostics_ui_class(window,
                                                         window_documents) if self._diagnostics_ui_class else None
-            state = WindowManager(window, window_configs, window_documents, DiagnosticsStorage(diagnostics_ui),
-                                  self._session_starter, self._sublime,
-                                  self._handler_dispatcher, lambda: self._on_closed(window))
+            state = WindowManager(
+                window=window,
+                settings=self._settings,
+                configs=window_configs,
+                documents=window_documents,
+                diagnostics=DiagnosticsStorage(diagnostics_ui),
+                session_starter=self._session_starter,
+                sublime=self._sublime,
+                handler_dispatcher=self._handler_dispatcher,
+                on_closed=lambda: self._on_closed(window),
+                server_panel_factory=self._server_panel_factory)
             self._windows[window.id()] = state
         return state
 

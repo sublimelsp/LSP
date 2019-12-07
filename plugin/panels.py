@@ -1,4 +1,4 @@
-from .core.windows import ensure_server_panel
+from .core.main import ensure_server_panel
 from .diagnostics import ensure_diagnostics_panel
 from sublime_plugin import WindowCommand
 
@@ -8,13 +8,7 @@ class LspTogglePanelCommand(WindowCommand):
         if panel_type == "diagnostics":
             ensure_diagnostics_panel(self.window)
         elif panel_type == "server":
-            # error: Argument 1 to "ensure_server_panel" has incompatible type "Window"; expected "WindowLike"
-            # note: Following member(s) of "Window" have conflicts:
-            # note:     Expected:
-            # note:         def views(self) -> List[ViewLike]
-            # note:     Got:
-            # note:         def views(self) -> List[View]
-            ensure_server_panel(self.window)  # type: ignore
+            ensure_server_panel(self.window)
         else:
             return
         panel_name = "output.{}".format(panel_type)

@@ -307,5 +307,8 @@ class MockClient():
     def set_crash_handler(self, handler: 'Callable') -> None:
         pass
 
+    def set_log_payload_handler(self, handler: 'Callable') -> None:
+        pass
+
     def exit(self) -> None:
         pass

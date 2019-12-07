@@ -46,11 +46,13 @@ def start_server(
 
     debug("starting " + str(server_binary_args))
 
+    stderr_destination = subprocess.PIPE if on_stderr_log else subprocess.DEVNULL
+
     process = subprocess.Popen(
         server_binary_args,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=stderr_destination,
         cwd=working_dir,
         env=env,
         startupinfo=si)

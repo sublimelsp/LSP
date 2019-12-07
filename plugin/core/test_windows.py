@@ -32,7 +32,8 @@ def mock_start_session(window: MockWindow,
                        config: ClientConfig,
                        on_pre_initialize: 'Callable[[Session], None]',
                        on_post_initialize: 'Callable[[Session], None]',
-                       on_post_exit: 'Callable[[str], None]') -> 'Optional[Session]':
+                       on_post_exit: 'Callable[[str], None]',
+                       on_stderr_log: 'Optional[Callable[[str], None]]') -> 'Optional[Session]':
     return create_session(
         config=TEST_CONFIG,
         project_path=project_path,
@@ -41,7 +42,8 @@ def mock_start_session(window: MockWindow,
         bootstrap_client=MockClient(),
         on_pre_initialize=on_pre_initialize,
         on_post_initialize=on_post_initialize,
-        on_post_exit=on_post_exit)
+        on_post_exit=on_post_exit,
+        on_stderr_log=on_stderr_log)
 
 
 class WindowRegistryTests(unittest.TestCase):

@@ -535,7 +535,10 @@ class WindowManager(object):
         client = session.client
         client.set_crash_handler(lambda: self._handle_server_crash(session.config))
         client.set_error_display_handler(self._window.status_message)
-        client.set_log_payload_handler(self._handle_log_payload)
+
+        if self.server_panel_factory:
+            client.set_log_payload_handler(
+                lambda *args: self._sublime.set_timeout_async(lambda: self._handle_log_payload(*args), 0))
 
         client.on_request(
             "window/showMessageRequest",

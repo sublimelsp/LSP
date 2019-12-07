@@ -1,5 +1,7 @@
 import sublime
 
+from .logging import set_debug_logging
+from .logging import set_exception_logging
 from .settings import settings, load_settings, unload_settings
 from .registry import windows, load_handlers, unload_sessions
 from .panels import destroy_output_panels
@@ -23,6 +25,8 @@ def ensure_server_panel(window: sublime.Window) -> 'Optional[sublime.View]':
 def startup() -> None:
     load_settings()
     popups.load_css()
+    set_debug_logging(settings.log_debug)
+    set_exception_logging(True)
     windows.set_diagnostics_ui(DiagnosticsPresenter)
     windows.set_server_panel_factory(ensure_server_panel)
     windows.set_settings_factory(settings)

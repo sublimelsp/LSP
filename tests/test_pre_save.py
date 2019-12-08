@@ -25,7 +25,7 @@ class OnPreSaveTests(TextDocumentTestCase):
         settings.set("ensure_newline_at_eof_on_save", False)
         settings.set("trim_trailing_white_space_on_save", False)
         settings.set("lsp_format_on_save", True)
-        self.client.responses['textDocument/formatting'] = [{
+        self.transport.responses['textDocument/formatting'] = [{
             "newText": "",
             "range": {
                 "start": {"line": 0, "character": 0},

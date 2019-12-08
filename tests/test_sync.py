@@ -14,6 +14,11 @@ AFTER_INSERT_COMPLETION_DELAY = 1000 if os.getenv("TRAVIS") else 100
 
 
 class DocumentSyncTests(TextDocumentTestCase):
+
+    def setUp(self):
+        self.test_file_path = os.path.join(os.path.dirname(__file__), "test_sync.txt")
+        super().setUp()
+
     def test_sends_did_open(self):
         yield OPEN_DOCUMENT_DELAY*3
 
@@ -52,4 +57,3 @@ class DocumentSyncTests(TextDocumentTestCase):
         self.view.run_command("save")
         print("saving cleaned")
         super().tearDown()
-

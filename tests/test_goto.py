@@ -1,10 +1,10 @@
 from setup import TextDocumentTestCase
 import sublime
-from os.path import dirname, join
+import os
 
-SELFDIR = dirname(__file__)
+SELFDIR = os.path.dirname(__file__)
 
-TEST_FILE_PATH = join(SELFDIR, 'testfile.txt')
+TEST_FILE_PATH = os.path.join(SELFDIR, 'test_goto.txt')
 
 RESPONSE = [
     {
@@ -46,12 +46,16 @@ def after_cursor(view) -> str:
 
 class GotoTestCase(TextDocumentTestCase):
 
+    def setUp(self):
+        self.test_file_path = TEST_FILE_PATH
+        super().setUp()
+
     def do_run(self, response: dict, text_document_request: str, subl_command_suffix: str) -> None:
         self.view.run_command('insert', {'characters': CONTENT})
         # Put the cursor back at the start of the buffer, otherwise is_at_word fails in goto.py.
         self.view.sel().clear()
         self.view.sel().add(sublime.Region(0, 0))
-        self.client.responses['textDocument/{}'.format(text_document_request)] = RESPONSE
+        self.transport.responses['textDocument/{}'.format(text_document_request)] = RESPONSE
         self.view.run_command('lsp_symbol_{}'.format(subl_command_suffix))
 
     def do_common_checks(self) -> None:
@@ -60,7 +64,7 @@ class GotoTestCase(TextDocumentTestCase):
             # self.fail or self.skipTest?
             self.skipTest('view.file_name() returned nothing :(')
             return
-        self.assertIn('testfile.txt', filename)
+        self.assertIn('test_goto.txt', filename)
         line1, col1 = self.view.rowcol(self.view.sel()[0].a)
         line2, col2 = self.view.rowcol(self.view.sel()[0].b)
         self.assertEqual(after_cursor(self.view), "F")

@@ -22,6 +22,12 @@ SUPPORTED_SYNTAX = "Packages/Text/Plain text.tmLanguage"
 text_language = LanguageConfig("text", [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX])
 text_config = ClientConfig("textls", [], None, languages=[text_language])
 
+try:
+    from typing import Dict, List, Callable, Any
+    assert Dict and Callable and List and Any
+except ImportError:
+    pass
+
 
 def sublime_delayer(delay):
     def timeout_function(callable):
@@ -116,13 +122,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.wm.update_configs()
         self.transport = TestTransport(basic_responses)
         self.client = Client(self.transport, Settings())
-        # self.client = MockClient(async_response=sublime_delayer(20))
-        # add_config(text_config)
-        # self.transport.read_and_reply()
         self.session = inject_session(self.wm, text_config, self.client)
-        # self.transport.read_and_reply()
-
-
         # from LSP import rpdb; rpdb.set_trace()
         self.view = sublime.active_window().open_file(self.test_file_path)
         self.view.settings().set("auto_complete_selector", "text.plain")

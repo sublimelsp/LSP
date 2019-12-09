@@ -23,19 +23,23 @@ class LspServerPanelTests(TextDocumentTestCase):
         actual_total_lines = len(self.panel.split_by_newlines(sublime.Region(0, self.panel.size())))
         self.assertEqual(actual_total_lines, expected_total_lines)
 
+    def update_panel(self, msg: str) -> None:
+        self.panel.run_command("lsp_update_server_panel", {"prefix": "test", "message": msg})
+
     def test_server_panel_circular_behavior(self):
-        for i in range(0, SERVER_PANEL_MAX_LINES + 1):
+        n = SERVER_PANEL_MAX_LINES
+        for i in range(0, n + 1):
             self.assert_total_lines_equal(max(1, i))
-            self.panel.run_command("lsp_update_server_panel", {"prefix": "test", "message": str(i)})
-        self.panel.run_command("lsp_update_server_panel", {"prefix": "test", "message": "overflow"})
-        self.assert_total_lines_equal(SERVER_PANEL_MAX_LINES)
-        self.panel.run_command("lsp_update_server_panel", {"prefix": "test", "message": "overflow"})
-        self.assert_total_lines_equal(SERVER_PANEL_MAX_LINES)
-        self.panel.run_command("lsp_update_server_panel", {"prefix": "test", "message": "one\ntwo\nthree"})
-        self.assert_total_lines_equal(SERVER_PANEL_MAX_LINES)
+            self.update_panel(str(i))
+        self.update_panel("overflow")
+        self.assert_total_lines_equal(n)
+        self.update_panel("overflow")
+        self.assert_total_lines_equal(n)
+        self.update_panel("one\ntwo\nthree")
+        self.assert_total_lines_equal(n)
         line_regions = self.panel.split_by_newlines(sublime.Region(0, self.panel.size()))
         self.assertEqual(self.panel.substr(line_regions[0]), "test: 6")
-        self.assertEqual(len(line_regions), SERVER_PANEL_MAX_LINES)
-        self.assertEqual(self.panel.substr(line_regions[SERVER_PANEL_MAX_LINES - 3]), "test: one")
-        self.assertEqual(self.panel.substr(line_regions[SERVER_PANEL_MAX_LINES - 2]), "two")
-        self.assertEqual(self.panel.substr(line_regions[SERVER_PANEL_MAX_LINES - 1]), "three")
+        self.assertEqual(len(line_regions), n)
+        self.assertEqual(self.panel.substr(line_regions[n - 3]), "test: one")
+        self.assertEqual(self.panel.substr(line_regions[n - 2]), "two")
+        self.assertEqual(self.panel.substr(line_regions[n - 1]), "three")

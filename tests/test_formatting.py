@@ -1,4 +1,3 @@
-import os
 import sublime
 
 from setup import TextDocumentTestCase
@@ -11,7 +10,6 @@ except ImportError:
 
 OPEN_DOCUMENT_DELAY = 100
 DID_CHANGE_PURGE_DELAY = 500
-AFTER_INSERT_COMPLETION_DELAY = 1000 if os.getenv("TRAVIS") else 100
 
 
 class DocumentFormattingTests(TextDocumentTestCase):

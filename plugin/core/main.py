@@ -19,7 +19,7 @@ except ImportError:
 
 
 def ensure_server_panel(window: sublime.Window) -> 'Optional[sublime.View]':
-    return ensure_panel(window, "server", "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
+    return ensure_panel(window, "language servers", "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
 
 
 def startup() -> None:

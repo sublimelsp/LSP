@@ -8,7 +8,7 @@ class LspTogglePanelCommand(WindowCommand):
     def run(self, panel_type: str) -> None:
         if panel_type == "diagnostics":
             ensure_diagnostics_panel(self.window)
-        elif panel_type == "server":
+        elif panel_type == "language servers":
             ensure_server_panel(self.window)
         else:
             return

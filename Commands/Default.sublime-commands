@@ -60,9 +60,9 @@
         "args": {}
     },
     {
-        "caption": "LSP: Toggle Panel: Server Logs",
+        "caption": "LSP: Toggle Panel: Language Servers",
         "command": "lsp_toggle_panel",
-        "args": {"panel_type": "server"}
+        "args": {"panel_type": "language servers"}
     },
     {
         "caption": "LSP: Toggle Panel: Diagnostics",

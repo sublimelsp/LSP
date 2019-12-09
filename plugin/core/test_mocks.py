@@ -30,7 +30,11 @@ basic_responses = {
                 'triggerCharacters': ['.'],
                 'resolveProvider': False
             },
-            'textDocumentSync': True,
+            'textDocumentSync': {
+                "openClose": True,
+                "change": 1,
+                "save": True
+            },
             'definitionProvider': True,
             'typeDefinitionProvider': True,
             'declarationProvider': True,

@@ -13,7 +13,7 @@ EXPECTED_CONTENT = """<dom-module id="some-thing">
 class LspHoverCommandTests(TextDocumentTestCase):
 
     def test_hover_info(self):
-        self.client.responses['textDocument/hover'] = {"contents": "greeting"}
+        self.transport.responses['textDocument/hover'] = {"contents": "greeting"}
 
         yield 100  # wait for file to be open
         self.view.run_command('insert', {"characters": ORIGINAL_CONTENT})

@@ -135,7 +135,8 @@ def get_initialize_params(project_path: str, config: ClientConfig) -> dict:
                     "symbolKind": {
                         "valueSet": symbol_kinds
                     }
-                }
+                },
+                "configuration": True
             }
         }
     }

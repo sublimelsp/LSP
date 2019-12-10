@@ -13,7 +13,7 @@ from .core.logging import debug
 from .core.completion import parse_completion_response, format_completion
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.configurations import is_supported_syntax
-from .core.documents import get_document_position, is_at_word
+from .core.documents import get_document_position, position_is_word
 from .core.sessions import Session
 from .core.edit import parse_text_edit
 
@@ -176,8 +176,11 @@ class CompletionHandler(LSPViewEventListener):
 
     def on_completion_inserted(self) -> None:
         # get text inserted from last completion
-        word = self.view.word(self.last_location)
-        begin = word.begin()
+        begin = self.last_location
+        if position_is_word(self.view, begin):
+            word = self.view.word(self.last_location)
+            begin = word.begin()
+
         region = sublime.Region(begin, self.view.sel()[0].end())
         inserted = self.view.substr(region)
 
@@ -246,7 +249,7 @@ class CompletionHandler(LSPViewEventListener):
         return None
 
     def on_text_command(self, command_name: str, args: 'Optional[Any]') -> None:
-        self.committing = command_name in ('commit_completion', 'insert_best_completion', 'auto_complete')
+        self.committing = command_name in ('commit_completion', 'auto_complete')
 
     def do_request(self, prefix: str, locations: 'List[int]') -> None:
         self.next_request = None

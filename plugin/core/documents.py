@@ -40,7 +40,11 @@ def get_position(view: sublime.View, event: 'Optional[dict]' = None) -> int:
 
 def is_at_word(view: sublime.View, event: 'Optional[dict]') -> bool:
     pos = get_position(view, event)
-    point_classification = view.classify(pos)
+    return position_is_word(view, pos)
+
+
+def position_is_word(view: sublime.View, position: int) -> bool:
+    point_classification = view.classify(position)
     if point_classification & SUBLIME_WORD_MASK:
         return True
     else:

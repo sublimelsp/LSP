@@ -95,11 +95,11 @@ edit_after_nonword = [
              'range': {
                  'start': {
                      'line': 0,
-                     'character': 6
+                     'character': 5
                  },
                  'end': {
                      'line': 0,
-                     'character': 6
+                     'character': 5
                  }
              }
          })
@@ -164,7 +164,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         if handler:
             # todo: want to test trigger chars instead?
             # self.view.run_command('insert', {"characters": '.'})
-            result = handler.on_query_completions("", [1])
+            result = handler.on_query_completions("", [0])
 
             # synchronous response
             self.assertTrue(handler.initialized)
@@ -180,7 +180,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             self.assertEquals(len(handler.completions), 2)
 
             # verify insertion works
-            self.view.run_command("insert_best_completion")
+            self.view.run_command("commit_completion")
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), 'asdf')
 
@@ -191,9 +191,9 @@ class QueryCompletionsTests(TextDocumentTestCase):
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
-            handler.on_query_completions("", [1])
+            handler.on_query_completions("", [0])
             yield 100
-            self.view.run_command("insert_best_completion")
+            self.view.run_command("commit_completion")
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 insert_text_completions[0]["insertText"])
@@ -209,7 +209,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         if handler:
             handler.on_query_completions("", [1])
             yield 100
-            self.view.run_command("insert_best_completion")
+            self.view.run_command("commit_completion")
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
@@ -229,7 +229,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         if handler:
             handler.on_query_completions("", [1])
             yield 100
-            self.view.run_command("insert_best_completion")
+            self.view.run_command("commit_completion")
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
@@ -249,7 +249,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         if handler:
             handler.on_query_completions("", [1])
             yield 100
-            self.view.run_command("insert_best_completion")
+            self.view.run_command("commit_completion")
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
@@ -264,9 +264,9 @@ class QueryCompletionsTests(TextDocumentTestCase):
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
-            handler.on_query_completions("", [1])
+            handler.on_query_completions("", [0])
             yield 100
-            self.view.run_command("insert_best_completion")
+            self.view.run_command("commit_completion")
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), 'const')
 
@@ -287,7 +287,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         if handler:
             handler.on_query_completions("", [1])
             yield 100
-            self.view.run_command("insert_best_completion")
+            self.view.run_command("commit_completion")
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 '-UniqueId')
@@ -309,8 +309,8 @@ class QueryCompletionsTests(TextDocumentTestCase):
             handler.on_query_completions("myF", [7])
             yield 100
             # note: invoking on_text_command manually as sublime doesn't call it.
-            handler.on_text_command('insert_best_completion', {})
-            self.view.run_command("insert_best_completion", {})
+            handler.on_text_command('commit_completion', {})
+            self.view.run_command("commit_completion", {})
             yield AFTER_INSERT_COMPLETION_DELAY
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
@@ -331,11 +331,11 @@ class QueryCompletionsTests(TextDocumentTestCase):
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
-            handler.on_query_completions("", [6])
+            handler.on_query_completions("", [5])
             yield 100
             # note: invoking on_text_command manually as sublime doesn't call it.
-            handler.on_text_command('insert_best_completion', {})
-            self.view.run_command("insert_best_completion", {})
+            handler.on_text_command('commit_completion', {})
+            self.view.run_command("commit_completion", {})
             yield AFTER_INSERT_COMPLETION_DELAY
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
@@ -355,8 +355,8 @@ class QueryCompletionsTests(TextDocumentTestCase):
         if handler:
             handler.on_query_completions("", [1])
             yield 100
-            handler.on_text_command('insert_best_completion', {})
-            self.view.run_command('insert_best_completion', {})
+            handler.on_text_command('commit_completion', {})
+            self.view.run_command('commit_completion', {})
             yield AFTER_INSERT_COMPLETION_DELAY
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
@@ -369,11 +369,11 @@ class QueryCompletionsTests(TextDocumentTestCase):
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
-            handler.on_query_completions("", [1])
+            handler.on_query_completions("", [0])
             yield 100
             # note: invoking on_text_command manually as sublime doesn't call it.
-            handler.on_text_command('insert_best_completion', {})
-            self.view.run_command("insert_best_completion", {})
+            handler.on_text_command('commit_completion', {})
+            self.view.run_command("commit_completion", {})
             yield AFTER_INSERT_COMPLETION_DELAY
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
@@ -388,15 +388,15 @@ class QueryCompletionsTests(TextDocumentTestCase):
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
-            handler.on_query_completions("", [1])
+            handler.on_query_completions("", [0])
 
             # note: ideally the handler is initialized with resolveProvider capability
             handler.resolve = True
 
             yield 100
             # note: invoking on_text_command manually as sublime doesn't call it.
-            handler.on_text_command('insert_best_completion', {})
-            self.view.run_command("insert_best_completion", {})
+            handler.on_text_command('commit_completion', {})
+            self.view.run_command("commit_completion", {})
             yield AFTER_INSERT_COMPLETION_DELAY
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),

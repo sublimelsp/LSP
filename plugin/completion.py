@@ -295,12 +295,23 @@ class CompletionHandler(LSPViewEventListener):
     def handle_response(self, response: 'Optional[Union[Dict,List]]') -> None:
         if self.state == CompletionState.REQUESTING:
 
-            last_col = self.last_location
-            if is_at_word(self.view, None):
+            completion_start = self.last_location
+            if position_is_word(self.view, self.last_location):
                 # if completion is requested in the middle of a word, where does it start?
                 word = self.view.word(self.last_location)
-                word_start = word.begin()
-                _last_row, last_col = self.view.rowcol(word_start)
+                completion_start = word.begin()
+
+            current_word_start = self.view.sel()[0].begin()
+            if position_is_word(self.view, current_word_start):
+                current_word_region = self.view.word(current_word_start)
+                current_word_start = current_word_region.begin()
+
+            if current_word_start != completion_start:
+                debug('completion results for', completion_start, 'now at', current_word_start, 'discarding')
+                self.state = CompletionState.IDLE
+                return
+
+            _last_row, last_col = self.view.rowcol(completion_start)
 
             response_items, response_incomplete = parse_completion_response(response)
             self.response_items = response_items

@@ -345,17 +345,6 @@ class WindowManager(object):
         self._is_closing = False
         self._initialization_lock = threading.Lock()
 
-        def info(settingname: str) -> str:
-            boolsetting = getattr(self._settings, settingname, False)
-            return '"{}" is {}.'.format(settingname, "on" if boolsetting else "off")
-
-        intro = ["This is the panel where window/logMessage and stderr will end up."]
-        intro.append(info("log_debug"))
-        intro.append(info("log_server"))
-        intro.append(info("log_payloads"))
-        intro.append(info("log_stderr"))
-        self._handle_server_message(":", " ".join(intro))
-
     def get_session(self, config_name: str) -> 'Optional[Session]':
         return self._sessions.get(config_name)
 

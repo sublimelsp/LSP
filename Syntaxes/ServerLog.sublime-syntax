@@ -6,62 +6,78 @@ hidden: true
 scope: output.lsp.log
 
 variables:
-  arrow: (?:<--|-->|==>)
   method: '[[:alpha:]][[:alnum:]/]*'
   servername: '[[:alnum:]_-]+'
 
 contexts:
   main:
-    # Unhandled notifications/requests
-    - match: ^(LSP)\s*(:)\s*(unhandled)\s*(({{method}})\s*((\()(\d+)(\)))?)?(\d+)?
-      captures:
-        1: support.function.lsp
-        2: punctuation.separator.lsp
-        3: invalid.illegal.lsp
-        5: keyword.control.lsp
-        7: punctuation.section.parens.begin.lsp
-        8: constant.numeric.lsp
-        9: punctuation.section.parens.end.lsp
-        10: constant.numeric.lsp
-      push:
-        - maybe-payload
-        - maybe-colon
-    # Payloads
-    - match: ^(LSP)\s*(:)\s*({{arrow}})\s*(({{method}})\s*((\()(\d+)(\)))?)?(\d+)?
-      captures:
-        1: support.function.lsp
-        2: punctuation.separator.lsp
-        3: storage.modifier.lsp
-        5: keyword.control.lsp
-        7: punctuation.section.parens.begin.lsp
-        8: constant.numeric.lsp
-        9: punctuation.section.parens.end.lsp
-        10: constant.numeric.lsp
-      push:
-        - maybe-payload
-        - maybe-colon
-    # A comment from the plugin
-    - match: ^(LSP)\s*(:)
-      captures:
-        1: support.function.lsp
-        2: punctuation.separator.lsp
-      push:
-        - meta_content_scope: comment.line.lsp
-        - match: $
-          pop: true
-    # Arbitrary messages from servers. We don't know the structure of these messages.
-    - match: ^({{servername}})\s*(:)
+    - match: ^({{servername}})(:)
       captures:
         1: variable.function.lsp
         2: punctuation.separator.lsp
-
-  maybe-colon:
-    - match: \s*(:)
-      captures:
-        1: punctuation.separator.lsp
-      pop: true
-    - match: \s*$
-      pop: true
+      push:
+        - meta_scope: meta.block.lsp
+        - match: $
+          pop: true
+    - match: '^::'
+      scope: punctuation.accessor.lsp
+      push:
+      - - meta_scope: meta.group.lsp
+        - match: $
+          pop: true
+        # responses
+      - - match: \d+
+          scope: constant.numeric.integer.decimal.lsp
+          set:
+            - match: ':'
+              scope: punctuation.separator.lsp
+              set: maybe-payload
+            - match: ''
+              pop: true
+        # notifications or requests
+        - match: (?=\w)
+          set:
+            # requests
+          - - match: \(
+              scope: punctuation.section.parens.begin.lsp
+              set:
+                - match: \d+
+                  scope: constant.numeric.integer.decimal.lsp
+                  set:
+                    - match: \)
+                      scope: punctuation.section.parens.end.lsp
+                      set:
+                        - match: ':'
+                          scope: punctuation.separator.lsp
+                          set: maybe-payload
+                        - match: ''
+                          pop: true
+            # notifications
+            - match: ':'
+              scope: punctuation.separator.lsp
+              set: maybe-payload
+            - match: ''
+              pop: true
+          - - match: '{{method}}'
+              scope: keyword.control.lsp
+              pop: true
+        # language server name
+      - - match: \S+
+          scope: variable.function.lsp
+          pop: true
+        # arrows
+      - - match: -->
+          scope: storage.modifier.lsp
+          pop: true
+        - match: <--
+          scope: storage.modifier.lsp
+          pop: true
+        - match: ==>
+          scope: storage.modifier.lsp
+          pop: true
+        - match: unhandled
+          scope: invalid.deprecated.lsp
+          pop: true
 
   maybe-payload:
     - match: \s*(?={)
@@ -70,6 +86,6 @@ contexts:
           pop: true
         # The syntax of a payload is a python dictionary.
         - include: scope:source.python#dictionaries-and-sets
-    - match: \s*$
+    - match: ''
       pop: true
 ...

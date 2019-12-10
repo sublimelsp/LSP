@@ -354,7 +354,7 @@ class WindowManager(object):
         intro.append(info("log_server"))
         intro.append(info("log_payloads"))
         intro.append(info("log_stderr"))
-        self._handle_server_message("LSP", " ".join(intro))
+        self._handle_server_message(":", " ".join(intro))
 
     def get_session(self, config_name: str) -> 'Optional[Session]':
         return self._sessions.get(config_name)
@@ -538,7 +538,8 @@ class WindowManager(object):
 
         if self.server_panel_factory:
             client.set_log_payload_handler(
-                lambda *args: self._sublime.set_timeout_async(lambda: self._handle_log_payload(*args), 0))
+                lambda *args: self._sublime.set_timeout_async(
+                    lambda: self._handle_log_payload(session.config.name, *args), 0))
 
         client.on_request(
             "window/showMessageRequest",
@@ -652,7 +653,7 @@ class WindowManager(object):
     def _handle_show_message(self, name: str, params: 'Any') -> None:
         self._sublime.status_message("{}: {}".format(name, extract_message(params)))
 
-    def _handle_log_payload(self, direction: str, method: 'Optional[str]', request_id: 'Optional[int]',
+    def _handle_log_payload(self, name: str, direction: str, method: 'Optional[str]', request_id: 'Optional[int]',
                             payload: 'PayloadLike') -> None:
         # If "log_payloads" == True, ignore "log_debug" and just print the entire line.
         if not self._settings.log_debug and not self._settings.log_payloads:
@@ -660,20 +661,20 @@ class WindowManager(object):
         if method is None:
             # Response from the server to us, or response from us to the server
             assert isinstance(request_id, int)
-            message = "{} {}".format(direction, request_id)
+            message = "{} {} {}".format(direction, name, request_id)
         elif request_id is not None:
             # Request from us to the server, or request from the server to us
-            message = "{} {}({})".format(direction, method, request_id)
+            message = "{} {} {}({})".format(direction, name, method, request_id)
         else:
             # Notification (both ways)
-            message = "{} {}".format(direction, method)
+            message = "{} {} {}".format(direction, name, method)
         # If "log_payloads" == False but "log_debug" == True, only a short line is printed.
         if self._settings.log_payloads \
                 and method != "textDocument/didChange" \
                 and method != "textDocument/didOpen":
             # textDocument/didChange and textDocument/didOpen might send the entire content of the view
             message = "{}: {}".format(message, payload)
-        self._handle_server_message("LSP", message)
+        self._handle_server_message(":", message)
 
 
 class WindowRegistry(object):

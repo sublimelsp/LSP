@@ -24,6 +24,10 @@ except ImportError:
     pass
 
 
+class UnexpectedProcessExitError(Exception):
+    pass
+
+
 class Transport(object, metaclass=ABCMeta):
     @abstractmethod
     def __init__(self) -> None:
@@ -194,7 +198,10 @@ class StdioTransport(Transport):
             try:
                 # debug("read_stdout: state = {}".format(state_to_string(state)))
                 if state == STATE_HEADERS:
-                    header = self.process.stdout.readline()
+                    try:
+                        header = self.process.stdout.readline()
+                    except AttributeError as ex:
+                        raise UnexpectedProcessExitError() from ex
                     # debug('read_stdout reads: {}'.format(header))
                     if not header:
                         # Truly, this is the EOF on the stream
@@ -209,15 +216,23 @@ class StdioTransport(Transport):
                         content_length = int(header[ContentLengthHeader_len:])
                 elif state == STATE_CONTENT:
                     if content_length > 0:
-                        content = self.process.stdout.read(content_length)
+                        try:
+                            content = self.process.stdout.read(content_length)
+                        except AttributeError as ex:
+                            raise UnexpectedProcessExitError() from ex
                         self.on_receive(content.decode("UTF-8"))
                         # debug("read_stdout: read and received {} byte message".format(content_length))
                         content_length = 0
                     state = STATE_HEADERS
 
-            except (AttributeError, IOError) as err:
+            except IOError as err:
                 self.close()
                 exception_log("Failure reading stdout", err)
+                state = STATE_EOF
+                break
+            except UnexpectedProcessExitError:
+                self.close()
+                debug("process became None")
                 state = STATE_EOF
                 break
 

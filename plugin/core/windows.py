@@ -373,10 +373,9 @@ class WindowManager(object):
                 self.documents.handle_view_opened(view)
 
     def activate_view(self, view: ViewLike) -> None:
-        # TODO: we can shortcut here by checking documentstate.
-        if self._sessions:
+        if not view.settings().get("lsp_active", False):
             self._end_old_sessions()
-        self._initialize_on_open(view)
+            self._initialize_on_open(view)
 
     def _initialize_on_open(self, view: ViewLike) -> None:
         # have all sessions for this document been started?

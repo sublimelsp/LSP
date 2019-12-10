@@ -13,7 +13,7 @@ from .core.logging import debug
 from .core.completion import parse_completion_response, format_completion
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.configurations import is_supported_syntax
-from .core.documents import get_document_position, is_at_word
+from .core.documents import get_document_position, position_is_word
 from .core.sessions import Session
 from .core.edit import parse_text_edit
 
@@ -121,11 +121,6 @@ class CompletionHandler(LSPViewEventListener):
         if self.last_location < 0:
             return False
 
-        # issue 745, some servers return nothing until some chars into a word are returned
-        # Don't cache these empty responses.
-        if prefix and self.last_prefix == "" and not self.completions:
-            return False
-
         # completion requests from the same location with the same prefix are cached.
         current_start = locations[0] - len(prefix)
         last_start = self.last_location - len(self.last_prefix)
@@ -176,8 +171,11 @@ class CompletionHandler(LSPViewEventListener):
 
     def on_completion_inserted(self) -> None:
         # get text inserted from last completion
-        word = self.view.word(self.last_location)
-        begin = word.begin()
+        begin = self.last_location
+        if position_is_word(self.view, begin):
+            word = self.view.word(self.last_location)
+            begin = word.begin()
+
         region = sublime.Region(begin, self.view.sel()[0].end())
         inserted = self.view.substr(region)
 
@@ -235,8 +233,9 @@ class CompletionHandler(LSPViewEventListener):
                     self.completions = []
 
             elif self.state in (CompletionState.REQUESTING, CompletionState.CANCELLING):
-                self.next_request = (prefix, locations)
-                self.state = CompletionState.CANCELLING
+                if not reuse_completion:
+                    self.next_request = (prefix, locations)
+                    self.state = CompletionState.CANCELLING
 
             elif self.state == CompletionState.APPLYING:
                 self.state = CompletionState.IDLE
@@ -246,7 +245,7 @@ class CompletionHandler(LSPViewEventListener):
         return None
 
     def on_text_command(self, command_name: str, args: 'Optional[Any]') -> None:
-        self.committing = command_name in ('commit_completion', 'insert_best_completion', 'auto_complete')
+        self.committing = command_name in ('commit_completion', 'auto_complete')
 
     def do_request(self, prefix: str, locations: 'List[int]') -> None:
         self.next_request = None
@@ -291,12 +290,23 @@ class CompletionHandler(LSPViewEventListener):
     def handle_response(self, response: 'Optional[Union[Dict,List]]') -> None:
         if self.state == CompletionState.REQUESTING:
 
-            last_col = self.last_location
-            if is_at_word(self.view, None):
+            completion_start = self.last_location
+            if position_is_word(self.view, self.last_location):
                 # if completion is requested in the middle of a word, where does it start?
                 word = self.view.word(self.last_location)
-                word_start = word.begin()
-                _last_row, last_col = self.view.rowcol(word_start)
+                completion_start = word.begin()
+
+            current_word_start = self.view.sel()[0].begin()
+            if position_is_word(self.view, current_word_start):
+                current_word_region = self.view.word(current_word_start)
+                current_word_start = current_word_region.begin()
+
+            if current_word_start != completion_start:
+                debug('completion results for', completion_start, 'now at', current_word_start, 'discarding')
+                self.state = CompletionState.IDLE
+                return
+
+            _last_row, last_col = self.view.rowcol(completion_start)
 
             response_items, response_incomplete = parse_completion_response(response)
             self.response_items = response_items

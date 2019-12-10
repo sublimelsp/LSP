@@ -238,8 +238,9 @@ class CompletionHandler(LSPViewEventListener):
                     self.completions = []
 
             elif self.state in (CompletionState.REQUESTING, CompletionState.CANCELLING):
-                self.next_request = (prefix, locations)
-                self.state = CompletionState.CANCELLING
+                if not reuse_completion:
+                    self.next_request = (prefix, locations)
+                    self.state = CompletionState.CANCELLING
 
             elif self.state == CompletionState.APPLYING:
                 self.state = CompletionState.IDLE

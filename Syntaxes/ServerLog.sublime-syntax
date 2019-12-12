@@ -80,8 +80,8 @@ contexts:
           pop: true
 
   maybe-payload:
-    - match: \s*(?={)
-      push:
+    - match: \s*(?=\S)
+      set:
         - match: $
           pop: true
         - include: scope:source.python#constants  # e.g. shutdown request

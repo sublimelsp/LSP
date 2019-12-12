@@ -119,5 +119,5 @@ class IsSupportedSyntaxTests(unittest.TestCase):
         self.assertFalse(is_supported_syntax('asdf', []))
 
     def test_single_config(self):
-        self.assertEqual(TEST_LANGUAGE.syntaxes[0], TEST_CONFIG.languages[0].syntaxes[0])
-        self.assertTrue(is_supported_syntax(TEST_LANGUAGE.syntaxes[0], [TEST_CONFIG]))
+        self.assertEqual(TEST_LANGUAGE.scopes[0], TEST_CONFIG.languages[0].scopes[0])
+        self.assertTrue(is_supported_syntax(TEST_LANGUAGE.scopes[0], [TEST_CONFIG]))

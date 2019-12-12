@@ -136,7 +136,6 @@ Download or build according to instructions above, then add this client config t
   ],
   "enabled": true,
   "languageId": "csharp",
-  "syntaxes": ["Packages/C#/C#.sublime-syntax"],
   "scopes":
   [
     "source.cs"
@@ -161,8 +160,7 @@ Add to LSP settings' clients:
     "command": ["<PATH TO DLS EXECUTABLE>"],
     "enabled": true,
     "languageId": "d",
-    "scopes": ["source.d"],
-    "syntaxes": ["Packages/D/D.sublime-syntax"]
+    "scopes": ["source.d"]
 }
 ```
 
@@ -184,10 +182,6 @@ Add to LSP settings' clients:
     "scopes":
     [
         "source.elm"
-    ],
-    "syntaxes":
-    [
-        "Packages/Elm Syntax Highlighting/src/elm.sublime-syntax"
     ],
     "initializationOptions": {
         "elmAnalyseTrigger": "change"
@@ -266,10 +260,6 @@ Requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUI
     "scopes":
     [
         "source.Kotlin"
-    ],
-    "syntaxes":
-    [
-        "Packages/kotlin/Kotlin.tmLanguage"
     ]
 }
 ```
@@ -292,7 +282,6 @@ Or instead of LSP-julia, add the following client configuration:
   "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"],
   "languageId": "julia",
   "scopes": ["source.julia"],
-  "syntaxes": ["Packages/Julia/Julia.sublime-syntax"],
   "settings": {"runlinter": true}
 }
 ```
@@ -315,10 +304,6 @@ Or instead of LSP-julia, add the following client configuration:
     "scopes":
     [
         "source.lua",
-    ],
-    "syntaxes":
-    [
-        "Packages/Lua/Lua.sublime-syntax"
     ]
 },
 ```
@@ -342,10 +327,6 @@ alternatively you can use the less maintained [lua-lsp](https://github.com/Alloy
     "scopes":
     [
         "source.lisp",
-    ],
-    "syntaxes":
-    [
-        "Packages/Lisp/Lisp.sublime-syntax"
     ]
 }
 ```
@@ -389,10 +370,6 @@ Install the [bash language server](https://github.com/mads-hartmann/bash-languag
   "scopes":
   [
     "source.powershell"
-  ],
-  "syntaxes":
-  [
-    "Packages/PowerShell/Support/PowershellSyntax.tmLanguage"
   ]
 }
 ```
@@ -414,7 +391,6 @@ For more details see this [issue](https://github.com/PowerShell/PowerShellEditor
   ],
   "enabled": true,
   "scopes": ["source.terraform"],
-  "syntaxes":  ["Packages/Terraform/Terraform.sublime-syntax"],
   "languageId": "terraform"
 }
 ```
@@ -432,10 +408,7 @@ For more details see this [issue](https://github.com/PowerShell/PowerShellEditor
       "languageId": "elixir",
       "scopes": ["source.elixir"],
       "settings": {
-      },
-      "syntaxes": [
-        "Packages/Elixir/Syntaxes/Elixir.tmLanguage",
-      ]
+      }
     },
 ```
 
@@ -469,10 +442,6 @@ Add config:
     "scopes":
     [
         "text.xml"
-    ],
-    "syntaxes":
-    [
-        "Packages/XML/XML.sublime-syntax"
     ]
 }
 
@@ -490,9 +459,6 @@ Requires IntelliJ to be running.
   "languageId": "java",
   "scopes": [
     "source.java"
-  ],
-  "syntaxes": [
-    "Packages/Java/Java.sublime-syntax"
   ]
 }
 ```
@@ -534,10 +500,6 @@ Requires IntelliJ to be running.
     "scopes":
     [
         "source.java"
-    ],
-    "syntaxes":
-    [
-        "Packages/Java/Java.sublime-syntax"
     ]
 }
 ```
@@ -552,11 +514,9 @@ Add to LSP settings' clients:
   "command": ["texlab"],
   "languages": [{
     "scopes": ["text.tex.latex"],
-    "syntaxes": ["Packages/LaTeX/LaTeX.sublime-syntax"],
     "languageId": "latex"
   }, {
     "scopes": ["text.bibtex"],
-    "syntaxes": ["Packages/LaTeX/Bibtex.sublime-syntax"],
     "languageId": "bibtex"
   }],
   "enabled": true
@@ -583,7 +543,6 @@ Here is an example for the Javascript/Typescript server:
 "jsts": {
   "command": ["lsp-tsserver"],
   "scopes": ["source.ts", "source.tsx"],
-  "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"],
   "languageId": "typescript"
 }
 ```
@@ -595,11 +554,9 @@ or in multi-language form:
   "command": ["lsp-tsserver"],
   "languages": [{
     "scopes": ["source.js", "source.jsx"],
-    "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
     "languageId": "javascript"
   }, {
     "scopes": ["source.ts", "source.tsx"],
-    "syntaxes": ["Typescript"],
     "languageId": "typescript"
   }
   ]
@@ -613,7 +570,6 @@ Most important:
 Values that determine if a server should be started and queried for a given document:
 
 * `scopes` - add language flavours, eg. `source.js`, `source.jsx`.
-* `syntaxes` - syntaxes that enable LSP features on a document, eg. `Packages/Babel/JavaScript (Babel).tmLanguage`
 * `languageId` - identifies the language for a document - see https://microsoft.github.io/language-server-protocol/specification#textdocumentitem
 * `languages` - group scope, syntax and languageId together for servers that support more than one language
 

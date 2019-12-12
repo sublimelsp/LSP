@@ -1,6 +1,6 @@
 import abc
+from .logging import exception_log
 from .types import ClientConfig
-# from .rpc import Client
 try:
     from typing import List, Callable, Optional, Type
     assert List and Callable and Optional and Type
@@ -22,9 +22,15 @@ class LanguageHandler(metaclass=abc.ABCMeta):
 
     @classmethod
     def instantiate_all(cls) -> 'List[LanguageHandler]':
-        return list(
-            instantiate(c) for c in cls.__subclasses__()
-            if issubclass(c, LanguageHandler))
+        result = []
+        for c in cls.__subclasses__():
+            if issubclass(c, LanguageHandler):
+                try:
+                    instance = instantiate(c)
+                    result.append(instance)
+                except Exception as ex:
+                    exception_log('Failed to instantiate language handler "{}"'.format(c.__name__), ex)
+        return result
 
 
 def instantiate(c: 'Type[LanguageHandler]') -> LanguageHandler:

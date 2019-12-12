@@ -1,8 +1,8 @@
 from copy import deepcopy
+import re
 
 from .types import ClientConfig, LanguageConfig, ViewLike, WindowLike, ConfigRegistry
 from .logging import debug
-from .types import config_supports_syntax, syntax_language
 from .workspace import get_project_config, enable_in_project, disable_in_project
 
 assert ClientConfig
@@ -68,21 +68,47 @@ def apply_project_overrides(client_config: 'ClientConfig', lsp_project_settings:
         client_settings = _merge_dicts(client_config.settings, overrides.get("settings", {}))
         client_env = _merge_dicts(client_config.env, overrides.get("env", {}))
         return ClientConfig(
-            client_config.name,
-            overrides.get("command", client_config.binary_args),
-            overrides.get("tcp_port", client_config.tcp_port),
-            [],
-            [],
-            "",
-            client_config.languages,
-            overrides.get("enabled", client_config.enabled),
-            overrides.get("initializationOptions", client_config.init_options),
-            client_settings,
-            client_env,
-            overrides.get("tcp_host", client_config.tcp_host),
+            name=client_config.name,
+            binary_args=overrides.get("command", client_config.binary_args),
+            tcp_port=overrides.get("tcp_port", client_config.tcp_port),
+            scopes=[],
+            languageId="",
+            languages=client_config.languages,
+            enabled=overrides.get("enabled", client_config.enabled),
+            init_options=overrides.get("initializationOptions", client_config.init_options),
+            settings=client_settings,
+            env=client_env,
+            tcp_host=overrides.get("tcp_host", client_config.tcp_host),
         )
 
     return client_config
+
+
+def syntax_language(config: 'ClientConfig', scope: str) -> 'Optional[LanguageConfig]':
+    for language in config.languages:
+        for lang_scope in language.scopes:
+            if lang_scope == scope:
+                return language
+    return None
+
+
+__syntax_scope_cache = {}  # type: Dict[str, str]
+
+
+def config_supports_syntax(config: 'ClientConfig', syntax: str) -> bool:
+    global __syntax_scope_cache
+    scope = __syntax_scope_cache.get(syntax, "")
+    if not scope:
+        match = re.search(r'^scope: (\S+)', sublime.load_resource(syntax), re.MULTILINE)
+        if not match:
+            return False
+        scope = match.group(1)
+        __syntax_scope_cache[syntax] = scope
+    for language in config.languages:
+        for selector in language.scopes:
+            if sublime.score_selector(scope, selector) > 0:
+                return True
+    return False
 
 
 def is_supported_syntax(syntax: str, configs: 'List[ClientConfig]') -> bool:
@@ -134,11 +160,11 @@ class WindowConfigManager(object):
         return False
 
     def syntax_config_languages(self, view: ViewLike) -> 'Dict[str, LanguageConfig]':
-        syntax = view.settings().get("syntax")
+        scope = view.scope_name(0).strip().split()[0]
         config_languages = {}
         for config in self.all:
             if config.enabled:
-                language = syntax_language(config, syntax)
+                language = syntax_language(config, scope)
                 if language:
                     config_languages[config.name] = language
         return config_languages

@@ -45,23 +45,12 @@ class ClientStates(object):
     STOPPING = 2
 
 
-def syntax_language(config: 'ClientConfig', syntax: str) -> 'Optional[LanguageConfig]':
-    for language in config.languages:
-        for lang_syntax in language.syntaxes:
-            if lang_syntax == syntax:
-                return language
-    return None
-
-
-def config_supports_syntax(config: 'ClientConfig', syntax: str) -> bool:
-    return bool(syntax_language(config, syntax))
-
-
 class LanguageConfig(object):
-    def __init__(self, language_id: str, scopes: 'List[str]', syntaxes: 'List[str]') -> None:
+    def __init__(self, language_id: str, scopes: 'List[str]', syntaxes: 'Optional[List[str]]' = None) -> None:
         self.id = language_id
         self.scopes = scopes
-        self.syntaxes = syntaxes
+        # ignore syntaxes
+        # TODO: Update all LanguageHandlers
 
 
 class ClientConfig(object):
@@ -70,7 +59,6 @@ class ClientConfig(object):
                  binary_args: 'List[str]',
                  tcp_port: 'Optional[int]',
                  scopes: 'List[str]' = [],
-                 syntaxes: 'List[str]' = [],
                  languageId: 'Optional[str]' = None,
                  languages: 'List[LanguageConfig]' = [],
                  enabled: bool = True,
@@ -85,7 +73,7 @@ class ClientConfig(object):
         self.tcp_host = tcp_host
         self.tcp_mode = tcp_mode
         if not languages:
-            languages = [LanguageConfig(languageId, scopes, syntaxes)] if languageId else []
+            languages = [LanguageConfig(languageId, scopes)] if languageId else []
         self.languages = languages
         self.enabled = enabled
         self.init_options = init_options
@@ -96,6 +84,9 @@ class ClientConfig(object):
 class ViewLike(Protocol):
     def __init__(self) -> None:
         pass
+
+    def scope_name(self, point: int) -> str:
+        ...
 
     def file_name(self) -> 'Optional[str]':
         ...

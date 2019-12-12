@@ -1,7 +1,8 @@
+from .configurations import config_supports_syntax
 from .diagnostics import DiagnosticsStorage
 from .logging import debug, server_log
 from .types import (ClientStates, ClientConfig, WindowLike, ViewLike,
-                    LanguageConfig, config_supports_syntax, ConfigRegistry,
+                    LanguageConfig, ConfigRegistry,
                     GlobalConfigs, Settings)
 from .protocol import Notification, Response
 from .edit import parse_workspace_edit
@@ -85,6 +86,7 @@ def get_active_views(window: WindowLike) -> 'List[ViewLike]':
 
 class DocumentState:
     """Stores version count for documents open in a language service"""
+
     def __init__(self, path: str) -> None:
         self.path = path
         self.version = 0

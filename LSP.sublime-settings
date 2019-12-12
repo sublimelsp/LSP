@@ -109,10 +109,8 @@
   //     "command": ["pyls"],
   //
   //     // Use: "Show Scope Name" from Sublime's Developer menu
+  //     // Or, run the following in the console: view.scope_name(0).strip().split()[0]
   //     "scopes": ["source.python"],
-  //
-  //     // Run: view.settings().get("syntax") in console
-  //     "syntaxes": ["Packages/Python/Python.sublime-syntax"],
   //
   //     // See: https://github.com/Microsoft/language-server-protocol/issues/213
   //     "languageId": "python",
@@ -154,7 +152,6 @@
     {
       "command": ["pyls"],
       "scopes": ["source.python"],
-      "syntaxes": ["Packages/Python/Python.sublime-syntax", "Packages/MagicPython/grammars/MagicPython.tmLanguage", "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage"],
       "languageId": "python"
       // "settings": {
       //   "pyls": {
@@ -171,14 +168,12 @@
     {
       "command": ["rustup", "run", "nightly", "rls"],
       "scopes": ["source.rust"],
-      "syntaxes": ["Packages/Rust/Rust.sublime-syntax", "Packages/Rust Enhanced/RustEnhanced.sublime-syntax"],
       "languageId": "rust"
     },
      "ra-lsp":
     {
       "command": ["ra_lsp_server"],
       "scopes": ["source.rust"],
-      "syntaxes": ["Packages/Rust/Rust.sublime-syntax", "Packages/Rust Enhanced/RustEnhanced.sublime-syntax"],
       "languageId": "rust"
     },
     "bashls":
@@ -192,10 +187,6 @@
         "scopes":
         [
             "source.shell.bash"
-        ],
-        "syntaxes":
-        [
-            "Packages/ShellScript/Bash.sublime-syntax"
         ]
     },
     "clangd":
@@ -203,19 +194,15 @@
       "command": ["clangd"],
       "languages": [{
           "scopes": ["source.c"],
-          "syntaxes": ["Packages/C++/C.sublime-syntax"],
           "languageId": "c"
         },{
           "scopes": ["source.c++"],
-          "syntaxes": ["Packages/C++/C++.sublime-syntax"],
           "languageId": "cpp"
         },{
           "scopes": ["source.objc"],
-          "syntaxes": ["Packages/Objective-C/Objective-C.sublime-syntax"],
           "languageId": "objective-c"
         },{
           "scopes": ["source.objc++"],
-          "syntaxes": ["Packages/Objective-C/Objective-C++.sublime-syntax"],
           "languageId": "objective-cpp"
         },
       ]
@@ -239,10 +226,6 @@
           [
             "source.c"
           ],
-          "syntaxes":
-          [
-            "Packages/C++/C.sublime-syntax"
-          ]
         },
         {
           "languageId": "cpp",
@@ -250,10 +233,6 @@
           [
             "source.c++"
           ],
-          "syntaxes":
-          [
-            "Packages/C++/C++.sublime-syntax"
-          ]
         },
         {
           "languageId": "objective-c",
@@ -261,10 +240,6 @@
           [
             "source.objc"
           ],
-          "syntaxes":
-          [
-            "Packages/Objective-C/Objective-C.sublime-syntax"
-          ]
         },
         {
           "languageId": "objective-cpp",
@@ -272,10 +247,6 @@
           [
             "source.objc++"
           ],
-          "syntaxes":
-          [
-            "Packages/Objective-C/Objective-C++.sublime-syntax"
-          ]
         }
       ]
     },
@@ -288,9 +259,6 @@
       "scopes": [
         "source.dart"
       ],
-      "syntaxes": [
-        "Packages/Dart/Dart.tmLanguage"
-      ]
     },
     "elixir-ls": {
       "command": [
@@ -301,15 +269,11 @@
       "scopes": ["source.elixir"],
       "settings": {
       },
-      "syntaxes": [
-        "Packages/Elixir/Syntaxes/Elixir.tmLanguage",
-      ]
     },
     "flow":
     {
       "command": ["flow", "lsp"],
       "scopes": ["source.js"],
-      "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
       "languageId": "javascript"
     },
     "haskell-ide-engine":
@@ -324,16 +288,11 @@
       [
         "source.haskell"
       ],
-      "syntaxes":
-      [
-        "Packages/Haskell/Haskell.sublime-syntax"
-      ]
     },
     "intelephense-ls":
     {
         "command": ["intelephense", "--stdio"],
         "scopes": ["source.php", "embedding.php"],
-        "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
         "languageId": "php",
         "initializationOptions": {
         //   "clearCache": false,
@@ -346,21 +305,18 @@
     {
       "command": ["ocaml-language-server", "--stdio"],
       "scopes": ["source.reason"],
-      "syntaxes": ["Packages/Reason/Reason.tmLanguage"],
       "languageId": "reason"
     },
     "phpls":
     {
         "command": ["php", "~/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"],
         "scopes": ["source.php", "embedding.php"],
-        "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
         "languageId": "php"
     },
     "eslint":
     {
       "command": ["node", "/Users/tomv/Projects/tomv564/vscode-eslint/eslint-server/src/server"],
       "scopes": ["source.js"],
-      "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
       "languageId": "javascript",
       "initializationOptions": {
         "nodePath": "/usr/local/bin/node"
@@ -371,11 +327,9 @@
       "command": ["lsp-tsserver"],
       "languages": [{
         "scopes": ["source.js", "source.jsx"],
-        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
         "languageId": "javascript"
       }, {
         "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
         "languageId": "typescript"
       }
       ]
@@ -385,18 +339,15 @@
       "command": ["metals-sublime"],
       "languageId": "scala",
       "scopes": ["source.scala"],
-      "syntaxes": ["Packages/Scala/Scala.sublime-syntax"]
     },
     "javascript-typescript-langserver":
     {
       "command": ["javascript-typescript-stdio"],
       "languages": [{
         "scopes": ["source.js", "source.jsx"],
-        "syntaxes": ["Javascript"],
         "languageId": "javascript"
       }, {
         "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
         "languageId": "typescript"
       }
       ]
@@ -406,7 +357,6 @@
       "command": ["typescript-language-server", "--stdio"],
       "languages": [{
         "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
         "languageId": "typescript"
       }]
     },
@@ -414,31 +364,24 @@
     {
       "command": ["ocaml-language-server", "--stdio"],
       "scopes": ["source.ocaml"],
-      "syntaxes": ["Packages/OCaml/OCaml.sublime-syntax"],
       "languageId": "ocaml"
     },
     "golsp":
     {
       "command": ["go-langserver"],
       "scopes": ["source.go"],
-      "syntaxes": ["Packages/Go/Go.sublime-syntax"],
       "languageId": "go"
     },
     "gopls":
     {
       "command": ["gopls"],
       "scopes": ["source.go"],
-      "syntaxes": [
-        "Packages/Go/Go.sublime-syntax",
-        "Packages/GoSublime/syntax/GoSublime-Go-Recommended.sublime-syntax",
-      ],
       "languageId": "go"
     },
     "jdtls":
     {
       "command": ["java", "-jar", "PATH_TO_JDT_SERVER/plugins/org.eclipse.equinox.launcher_1.4.0.v20161219-1356.jar", "-configuration", "PATH_TO_CONFIG_DIR"],
       "scopes": ["source.java"],
-      "syntaxes": ["Packages/Java/Java.sublime-syntax"],
       "languageId": "java"
     },
     "polymer-ide":
@@ -446,19 +389,15 @@
       "command": ["polymer-editor-service"],
       "languages": [{
           "scopes": ["text.html", "text.html.basic", "source.html"],
-          "syntaxes": ["Packages/HTML/HTML.sublime-syntax"],
           "languageId": "html"
         },{
           "scopes": ["source.js"],
-          "syntaxes": ["Packages/JavaScript/JavaScript.sublime-syntax"],
           "languageId": "javascript"
         },{
           "scopes": ["source.css"],
-          "syntaxes": ["Packages/CSS/CSS.sublime-syntax"],
           "languageId": "css"
         },{
           "scopes": ["source.json"],
-          "syntaxes": ["Packages/JavaScript/JSON.sublime-syntax"],
           "languageId": "json"
         }
       ],
@@ -481,12 +420,6 @@
         "source.ruby",
         "source.ruby.rails"
       ],
-      "syntaxes":
-      [
-        "Packages/Ruby/Ruby.sublime-syntax",
-        "Packages/Rails/Ruby on Rails.sublime-syntax",
-        "Packages/Rails/HTML (Rails).sublime-syntax"
-      ],
       "tcp_port": 7658,
       // Enable RuboCop linting
       // "initializationOptions": {
@@ -503,10 +436,6 @@
       [
         "source.css"
       ],
-      "syntaxes": 
-      [
-        "Packages/CSS/CSS.sublime-syntax"
-      ],
       "languageId": "css"
     },
     "rlang":
@@ -518,10 +447,6 @@
       "scopes":
       [
         "source.r"
-      ],
-      "syntaxes":
-      [
-        "Packages/R/R.sublime-syntax"
       ],
       "languageId": "r"
     }

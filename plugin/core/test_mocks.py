@@ -17,7 +17,7 @@ except ImportError:
     pass
 
 
-TEST_LANGUAGE = LanguageConfig("test", ["source.test"], ["Plain Text"])
+TEST_LANGUAGE = LanguageConfig("test", ["source.test"])
 TEST_CONFIG = ClientConfig("test", [], None, languages=[TEST_LANGUAGE])
 DISABLED_CONFIG = ClientConfig("test", [], None, languages=[TEST_LANGUAGE], enabled=False)
 
@@ -71,6 +71,9 @@ class MockView(object):
         self._settings = MockSublimeSettings({"syntax": "Plain Text"})
         self._status = dict()  # type: Dict[str, str]
         self._text = "asdf"
+
+    def scope_name(self, point: int) -> str:
+        return "source.test"
 
     def file_name(self):
         return self._file_name

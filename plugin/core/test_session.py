@@ -23,8 +23,13 @@ class SessionTest(unittest.TestCase):
 
     # @unittest.skip("need an example config")
     def test_can_create_session(self):
-
-        config = ClientConfig("test", ["ls"], None, [], [], None, [TEST_LANGUAGE])
+        config = ClientConfig(
+            name="test",
+            binary_args=["ls"],
+            tcp_port=None,
+            scopes=[],
+            languageId=None,
+            languages=[TEST_LANGUAGE])
         project_path = "/"
         session = self.assert_if_none(
             create_session(config, project_path, dict(), Settings()))

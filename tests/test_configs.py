@@ -14,6 +14,7 @@ class ConfigParsingTests(DeferrableTestCase):
         settings = {
             "command": ["pyls"],
             "scopes": ["source.python"],
+            # syntaxes key should be ignored
             "syntaxes": ["Packages/Python/Python.sublime-syntax"],
             "languageId": "python"
         }
@@ -26,7 +27,6 @@ class ConfigParsingTests(DeferrableTestCase):
             "command": ["pyls"],
             "languages": [{
                 "scopes": ["source.python"],
-                "syntaxes": ["Packages/Python/Python.sublime-syntax"],
                 "languageId": "python"
             }]
         }
@@ -38,7 +38,6 @@ class ConfigParsingTests(DeferrableTestCase):
         settings = {
             "command": ["pyls"],
             "scopes": ["source.python"],
-            "syntaxes": ["Packages/Python/Python.sublime-syntax"],
             "languageId": "python"
         }
         config = read_client_config("pyls", settings)

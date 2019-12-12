@@ -122,6 +122,7 @@ class MockWindow(object):
         self._folders = folders
         self._default_view = MockView(None)
         self._project_data = None  # type: Optional[Dict[str, Any]]
+        self._project_file_name = None  # type: Optional[str]
         self.commands = []  # type: List[Tuple[str, Dict[str, Any]]]
 
     def id(self):
@@ -144,6 +145,9 @@ class MockWindow(object):
 
     def set_project_data(self, data: 'Optional[dict]'):
         self._project_data = data
+
+    def project_file_name(self) -> 'Optional[str]':
+        return self._project_file_name
 
     def active_view(self) -> 'Optional[ViewLike]':
         return self.active_view_in_group(0)

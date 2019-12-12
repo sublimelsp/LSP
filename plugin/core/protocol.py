@@ -241,6 +241,10 @@ class Notification:
         return Notification("workspace/didChangeConfiguration", params)
 
     @classmethod
+    def didChangeWorkspaceFolders(cls, params: dict) -> 'Notification':
+        return Notification("workspace/didChangeWorkspaceFolders", params)
+
+    @classmethod
     def exit(cls) -> 'Notification':
         return Notification("exit")
 
@@ -436,7 +440,7 @@ class WorkspaceFolder:
             return self.name == other.name and self.path == other.path
         return False
 
-    def to_dict(self) -> 'Dict[str, str]':
+    def to_lsp(self) -> 'Dict[str, str]':
         return {"name": self.name, "uri": self.uri()}
 
     def uri(self) -> str:

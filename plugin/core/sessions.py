@@ -1,5 +1,5 @@
 from .types import ClientConfig, ClientStates, Settings
-from .protocol import Request
+from .protocol import Request, Notification
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
 from .rpc import Client, attach_stdio_client, Response
 from .process import start_server
@@ -7,8 +7,8 @@ from .logging import debug
 import os
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder
 try:
-    from typing import Callable, Dict, Any, Optional, List
-    assert Callable and Dict and Any and Optional and Transport and List and WorkspaceFolder
+    from typing import Callable, Dict, Any, Optional, List, Tuple
+    assert Callable and Dict and Any and Optional and Transport and List and WorkspaceFolder and Tuple
 except ImportError:
     pass
 
@@ -77,7 +77,7 @@ def get_initialize_params(workspace_folders: 'List[WorkspaceFolder]', config: Cl
         "processId": os.getpid(),
         "rootUri": first_folder.uri(),
         "rootPath": first_folder.path,
-        "workspaceFolders": [folder.to_dict() for folder in workspace_folders],
+        "workspaceFolders": [folder.to_lsp() for folder in workspace_folders],
         "capabilities": {
             "textDocument": {
                 "synchronization": {
@@ -149,6 +149,19 @@ def get_initialize_params(workspace_folders: 'List[WorkspaceFolder]', config: Cl
     return initializeParams
 
 
+def diff_folders(old: 'List[WorkspaceFolder]',
+                 new: 'List[WorkspaceFolder]') -> 'Tuple[List[WorkspaceFolder], List[WorkspaceFolder]]':
+    added = []  # type: List[WorkspaceFolder]
+    removed = []  # type: List[WorkspaceFolder]
+    for folder in old:
+        if folder not in new:
+            removed.append(folder)
+    for folder in new:
+        if folder not in old:
+            added.append(folder)
+    return added, removed
+
+
 class Session(object):
     def __init__(self,
                  config: ClientConfig,
@@ -184,23 +197,39 @@ class Session(object):
 
         return False
 
+    def update_folders(self, folders: 'List[WorkspaceFolder]') -> None:
+        if self._supports_workspace_folders():
+            added, removed = diff_folders(self._workspace_folders, folders)
+            params = {
+                "event": {
+                    "added": [a.to_lsp() for a in added],
+                    "removed": [r.to_lsp() for r in removed]
+                }
+            }
+            notification = Notification.didChangeWorkspaceFolders(params)
+            self.client.send_notification(notification)
+
     def _initialize(self) -> None:
         params = get_initialize_params(self._workspace_folders, self.config)
         self.client.send_request(
             Request.initialize(params),
             lambda result: self._handle_initialize_result(result))
 
-    def _handle_initialize_result(self, result: 'Any') -> None:
-        # only keep supported amount of folders
-        self.capabilities = result.get('capabilities', dict())
+    def _supports_workspace_folders(self) -> bool:
         # 'capabilities': {'workspace': {'workspaceFolders': {'supported': True
         workspace_cap = self.capabilities.get("workspace", {})
         workspace_folder_cap = workspace_cap.get("workspaceFolders", {})
-        if not workspace_folder_cap.get("supported"):
+        return workspace_folder_cap.get("supported")
+
+    def _handle_initialize_result(self, result: 'Any') -> None:
+        # only keep supported amount of folders
+        self.capabilities = result.get('capabilities', dict())
+
+        if self._supports_workspace_folders():
+            debug('multi folder session:', self._workspace_folders)
+        else:
             self._workspace_folders = self._workspace_folders[:1]
             debug('single folder session:', self._workspace_folders[0])
-        else:
-            debug('multi folder session:', self._workspace_folders)
 
         self.state = ClientStates.READY
 
@@ -212,7 +241,7 @@ class Session(object):
             self._on_post_initialize(self)
 
     def _handle_workspace_folders(self, request_id: int) -> None:
-        self.client.send_response(Response(request_id, [wf.to_dict for wf in self._workspace_folders]))
+        self.client.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))
 
     def end(self) -> None:
         self.state = ClientStates.STOPPING

@@ -3,12 +3,12 @@ from .logging import debug, server_log
 from .types import (ClientStates, ClientConfig, WindowLike, ViewLike,
                     LanguageConfig, config_supports_syntax, ConfigRegistry,
                     GlobalConfigs, Settings)
-from .protocol import Notification, Response, WorkspaceFolder
+from .protocol import Notification, Response
 from .edit import parse_workspace_edit
 from .sessions import Session
 from .url import filename_to_uri
 from .workspace import (
-    enable_in_project, disable_in_project, get_workspace_folders
+    enable_in_project, disable_in_project, WorkspaceManager, Workspace
 )
 
 from .rpc import Client
@@ -20,7 +20,6 @@ try:
     from types import ModuleType
     assert Optional and List and Callable and Dict and Session and Any and ModuleType and Iterator and Union
     assert LanguageConfig
-    assert WorkspaceFolder
 except ImportError:
     pass
     Protocol = object  # type: ignore
@@ -332,10 +331,20 @@ class WindowManager(object):
         self._sublime = sublime
         self._handlers = handler_dispatcher
         self._restarting = False
-        self._workspace_folders = []  # type: List[WorkspaceFolder]
         self._on_closed = on_closed
         self._is_closing = False
         self._initialization_lock = threading.Lock()
+        # TODO: name member something other than "workspace".
+        self._workspace = WorkspaceManager(self._window, self._on_workspace_changed, self._on_workspace_switched)
+
+    def _on_workspace_changed(self, workspace: 'Workspace') -> None:
+        for config_name in self._sessions:
+            for session in self._sessions[config_name]:
+                session.update_folders(workspace.workspace_folders)
+
+    def _on_workspace_switched(self, workspace: 'Workspace') -> None:
+        debug('project switched - ending all sessions')
+        self.end_sessions()
 
     def get_session(self, config_name: str, file_path: str) -> 'Optional[Session]':
         return self._find_session(config_name, file_path)
@@ -370,16 +379,18 @@ class WindowManager(object):
         self.end_config_sessions(config_name)
 
     def start_active_views(self) -> None:
+        debug('folders', self._window.folders(), ' project file', self._window.project_file_name())
         active_views = get_active_views(self._window)
         debug('window {} starting {} initial views'.format(self._window.id(), len(active_views)))
         for view in active_views:
             if view.file_name():
+                self._workspace.update(view.file_name() or "")
                 self._initialize_on_open(view)
                 self.documents.handle_view_opened(view)
 
     def activate_view(self, view: ViewLike) -> None:
         if not view.settings().get("lsp_active", False):
-            self._end_old_sessions()
+            self._workspace.update(view.file_name() or "")
             self._initialize_on_open(view)
 
     def _initialize_on_open(self, view: ViewLike) -> None:
@@ -424,15 +435,14 @@ class WindowManager(object):
 
         # TODO: this throws away previous ad-hoc folders.
         # The previous fix was to only set an ad-hoc folder once per window
-        self._workspace_folders = get_workspace_folders(self._window, file_path)
-
+        workspace = self._workspace.current
         self._window.status_message("Starting " + config.name + "...")
-        debug("starting in", self._workspace_folders[0].path)
+        debug("starting in", workspace.working_directory)
         session = None  # type: Optional[Session]
         try:
             session = self._start_session(
                 self._window,                  # window
-                self._workspace_folders,                # workspace_folders
+                workspace.workspace_folders,         # workspace_folders
                 config,                        # config
                 self._handle_pre_initialize,   # on_pre_initialize
                 self._handle_post_initialize,  # on_post_initialize
@@ -483,20 +493,11 @@ class WindowManager(object):
 
     def get_project_path(self, file_path: str) -> 'Optional[str]':
         candidate = None  # type: Optional[str]
-        for folder in self._workspace_folders:
-            if file_path.startswith(folder.path):
-                if candidate is None or len(folder.path) > len(candidate):
-                    candidate = folder.path
+        for folder in self._workspace.current.folders:
+            if file_path.startswith(folder):
+                if candidate is None or len(folder) > len(candidate):
+                    candidate = folder
         return candidate
-
-    def _end_old_sessions(self) -> None:
-        # TODO make this a set (of strings?) for better comparing.
-        new_folders = get_workspace_folders(self._window)
-
-        if any(folder not in self._workspace_folders for folder in new_folders):
-            debug('workspace changed, ending existing sessions')
-            self.end_sessions()
-            self._workspace_folders = new_folders
 
     def _apply_workspace_edit(self, params: 'Dict[str, Any]', client: Client, request_id: int) -> None:
         edit = params.get('edit', dict())

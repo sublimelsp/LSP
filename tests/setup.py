@@ -47,8 +47,8 @@ def remove_config(config):
 
 
 def inject_session(wm, config, client) -> Session:
-    session = Session(config, "", client, wm._handle_pre_initialize, wm._handle_post_initialize)
-    wm._sessions[config.name] = session
+    session = Session(config, workspace_folders, client, wm._handle_pre_initialize, wm._handle_post_initialize)
+    wm._sessions[config.name] = [session]
     wm.update_configs()
     wm._workspace_folders = workspace_folders
     return session

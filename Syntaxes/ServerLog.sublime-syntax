@@ -84,7 +84,8 @@ contexts:
       push:
         - match: $
           pop: true
-        # The syntax of a payload is a python dictionary.
+        - include: scope:source.python#constants  # e.g. shutdown request
+        - include: scope:source.python#lists
         - include: scope:source.python#dictionaries-and-sets
     - match: ''
       pop: true

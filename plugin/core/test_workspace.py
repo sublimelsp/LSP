@@ -87,7 +87,7 @@ class WorkspaceManagerTests(unittest.TestCase):
         manager = WorkspaceManager(window, on_changed, on_switched)
 
         manager.update(__file__)
-        on_changed.assert_called_once()
+        assert on_changed.call_count == 1
         on_switched.assert_not_called()
 
     def test_add_folder(self) -> None:
@@ -101,7 +101,7 @@ class WorkspaceManagerTests(unittest.TestCase):
 
         window.set_folders([folder, parent_folder])
         manager.update(__file__)
-        on_changed.assert_called_once()
+        assert on_changed.call_count == 1
         on_switched.assert_not_called()
 
     def test_switch_project(self) -> None:
@@ -116,7 +116,7 @@ class WorkspaceManagerTests(unittest.TestCase):
         window.set_folders([parent_folder])
         manager.update(__file__)
         on_changed.assert_not_called()
-        on_switched.assert_called_once()
+        assert on_switched.call_count == 1
 
     def test_open_files_without_project(self) -> None:
         on_changed = mock.Mock()
@@ -133,13 +133,13 @@ class WorkspaceManagerTests(unittest.TestCase):
 
         manager.update(first_file)
 
-        on_changed.assert_called_once()
+        assert on_changed.call_count == 1
         on_switched.assert_not_called()
 
         manager.update(file_in_parent_folder)
 
-        on_changed.assert_called_once()
-        on_switched.assert_called_once()
+        assert on_changed.call_count == 1
+        assert on_switched.call_count == 1
 
         self.assertEqual(manager.current.folders, [parent_folder])
 

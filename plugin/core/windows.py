@@ -323,8 +323,6 @@ class WindowManager(object):
                  diagnostics: DiagnosticsStorage, session_starter: 'Callable', sublime: 'Any',
                  handler_dispatcher: LanguageHandlerListener, on_closed: 'Optional[Callable]' = None) -> None:
 
-        # to move here:
-        # configurations.py: window_client_configs and all references
         self._window = window
         self._configs = configs
         self.diagnostics = diagnostics
@@ -382,7 +380,6 @@ class WindowManager(object):
         self.end_config_sessions(config_name)
 
     def start_active_views(self) -> None:
-        debug('folders', self._window.folders(), ' project file', self._window.project_file_name())
         active_views = get_active_views(self._window)
         debug('window {} starting {} initial views'.format(self._window.id(), len(active_views)))
         for view in active_views:
@@ -413,8 +410,6 @@ class WindowManager(object):
         # have all sessions for this document been started?
         with self._initialization_lock:
             new_configs = needed_configs(self._configs.syntax_configs(view, include_disabled=True))
-            # filter(lambda c: c.name not in self._sessions,
-            #                  self._configs.syntax_configs(view, include_disabled=True))
 
             if any(new_configs):
                 # TODO: cannot observe project setting changes
@@ -557,7 +552,6 @@ class WindowManager(object):
         self._handlers.on_initialized(session.config.name, self._window, client)
 
         client.send_notification(Notification.initialized())
-        # from LSP import rpdb; rpdb.set_trace()
 
         document_sync = session.capabilities.get("textDocumentSync")
         if document_sync:
@@ -582,9 +576,6 @@ class WindowManager(object):
                     self._sublime.set_timeout_async(lambda: self._check_window_closed(), 100)
 
     def _check_window_closed(self) -> None:
-        # debug('window {} check window closed closing={}, valid={}'.format(
-        # self._window.id(), self._is_closing, self._window.is_valid()))
-
         if not self._is_closing and not self._window.is_valid():
             self._handle_window_closed()
 

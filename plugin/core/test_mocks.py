@@ -274,7 +274,6 @@ class MockDocuments(object):
         pass
 
     def has_document_state(self, file_name: str) -> bool:
-        debug(self._documents)
         return file_name in self._documents
 
 

@@ -176,7 +176,7 @@ class Session(object):
         self._on_post_exit = on_post_exit
         self.capabilities = dict()  # type: Dict[str, Any]
         self.client = client
-        self._workspace_folders = workspace_folders  # TODO: perhaps not until initialized?
+        self._workspace_folders = workspace_folders
         if on_pre_initialize:
             on_pre_initialize(self)
         self._initialize()
@@ -216,15 +216,14 @@ class Session(object):
             lambda result: self._handle_initialize_result(result))
 
     def _supports_workspace_folders(self) -> bool:
-        # 'capabilities': {'workspace': {'workspaceFolders': {'supported': True
         workspace_cap = self.capabilities.get("workspace", {})
         workspace_folder_cap = workspace_cap.get("workspaceFolders", {})
         return workspace_folder_cap.get("supported")
 
     def _handle_initialize_result(self, result: 'Any') -> None:
-        # only keep supported amount of folders
         self.capabilities = result.get('capabilities', dict())
 
+        # only keep supported amount of folders
         if self._supports_workspace_folders():
             debug('multi folder session:', self._workspace_folders)
         else:

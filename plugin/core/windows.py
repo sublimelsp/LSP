@@ -68,6 +68,9 @@ class DocumentHandler(Protocol):
     def handle_view_closed(self, view: ViewLike) -> None:
         ...
 
+    def has_document_state(self, file_name: str) -> bool:
+        ...
+
 
 def get_active_views(window: WindowLike) -> 'List[ViewLike]':
     views = list()  # type: List[ViewLike]
@@ -389,8 +392,9 @@ class WindowManager(object):
                 self.documents.handle_view_opened(view)
 
     def activate_view(self, view: ViewLike) -> None:
-        if not view.settings().get("lsp_active", False):
-            self._workspace.update(view.file_name() or "")
+        file_name = view.file_name() or ""
+        if not self.documents.has_document_state(file_name):
+            self._workspace.update(file_name)
             self._initialize_on_open(view)
 
     def _initialize_on_open(self, view: ViewLike) -> None:

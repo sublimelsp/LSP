@@ -273,6 +273,10 @@ class MockDocuments(object):
     def handle_view_closed(self, view: ViewLike) -> None:
         pass
 
+    def has_document_state(self, file_name: str) -> bool:
+        debug(self._documents)
+        return file_name in self._documents
+
 
 class TestDocumentHandlerFactory(object):
     def for_window(self, window, configs):

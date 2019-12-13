@@ -46,6 +46,9 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
         assert self._manager
         return self._manager
 
+    def has_manager(self) -> bool:
+        return self._manager is not None
+
 
 class LanguageHandlerDispatcher(object):
 

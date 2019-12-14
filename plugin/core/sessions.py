@@ -41,8 +41,8 @@ def create_session(config: ClientConfig,
             tcp_port = socket.getsockname()[1]
             server_args = list(s.replace("{port}", str(tcp_port)) for s in config.binary_args)
 
-        first_folder = workspace_folders[0].path
-        process = start_server(server_args, first_folder, env, settings.log_stderr)
+        working_dir = workspace_folders[0].path if workspace_folders else None
+        process = start_server(server_args, working_dir, env, settings.log_stderr)
         if process:
             if config.tcp_mode == "host":
                 client_socket, address = socket.accept()
@@ -72,12 +72,12 @@ def create_session(config: ClientConfig,
 
 
 def get_initialize_params(workspace_folders: 'List[WorkspaceFolder]', config: ClientConfig) -> dict:
-    first_folder = workspace_folders[0]
+    first_folder = workspace_folders[0] if workspace_folders else None
     initializeParams = {
         "processId": os.getpid(),
-        "rootUri": first_folder.uri(),
-        "rootPath": first_folder.path,
-        "workspaceFolders": [folder.to_lsp() for folder in workspace_folders],
+        "rootUri": first_folder.uri() if first_folder else None,
+        "rootPath": first_folder.path if first_folder else None,
+        "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
         "capabilities": {
             "textDocument": {
                 "synchronization": {
@@ -191,6 +191,9 @@ class Session(object):
         if not file_path:
             return False
 
+        if not self._workspace_folders:
+            return True
+
         for folder in self._workspace_folders:
             if file_path.startswith(folder.path):
                 return True
@@ -224,11 +227,14 @@ class Session(object):
         self.capabilities = result.get('capabilities', dict())
 
         # only keep supported amount of folders
-        if self._supports_workspace_folders():
-            debug('multi folder session:', self._workspace_folders)
+        if self._workspace_folders:
+            if self._supports_workspace_folders():
+                debug('multi folder session:', self._workspace_folders)
+            else:
+                self._workspace_folders = self._workspace_folders[:1]
+                debug('single folder session:', self._workspace_folders[0])
         else:
-            self._workspace_folders = self._workspace_folders[:1]
-            debug('single folder session:', self._workspace_folders[0])
+            debug("session with no workspace folders")
 
         self.state = ClientStates.READY
 

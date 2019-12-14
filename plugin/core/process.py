@@ -32,7 +32,7 @@ def add_extension_if_missing(server_binary_args: 'List[str]') -> 'List[str]':
     return server_binary_args
 
 
-def start_server(server_binary_args: 'List[str]', working_dir: str,
+def start_server(server_binary_args: 'List[str]', working_dir: 'Optional[str]',
                  env: 'Dict[str,str]', attach_stderr: bool) -> 'Optional[subprocess.Popen]':
     si = None
     if os.name == "nt":

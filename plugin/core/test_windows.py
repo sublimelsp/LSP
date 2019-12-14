@@ -149,7 +149,7 @@ class WindowManagerTests(unittest.TestCase):
 
     def test_ends_sessions_when_quick_switching(self):
         docs = MockDocuments()
-        test_window = MockWindow([[MockView(__file__)]])
+        test_window = MockWindow([[MockView(__file__)]], folders=[os.path.dirname(__file__)])
         wm = WindowManager(test_window, MockConfigs(), docs,
                            DiagnosticsStorage(None), mock_start_session, test_sublime, MockHandlerDispatcher())
         wm.start_active_views()

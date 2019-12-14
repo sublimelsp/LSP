@@ -8,7 +8,7 @@ from .edit import parse_workspace_edit
 from .sessions import Session
 from .url import filename_to_uri
 from .workspace import (
-    enable_in_project, disable_in_project, WorkspaceManager, Workspace
+    enable_in_project, disable_in_project, WorkspaceFolders
 )
 
 from .rpc import Client
@@ -336,14 +336,14 @@ class WindowManager(object):
         self._is_closing = False
         self._initialization_lock = threading.Lock()
         # TODO: name member something other than "workspace".
-        self._workspace = WorkspaceManager(self._window, self._on_workspace_changed, self._on_workspace_switched)
+        self._workspace = WorkspaceFolders(self._window, self._on_workspace_changed, self._on_workspace_switched)
 
-    def _on_workspace_changed(self, workspace: 'Workspace') -> None:
+    def _on_workspace_changed(self, folders: 'List[str]') -> None:
         for config_name in self._sessions:
             for session in self._sessions[config_name]:
-                session.update_folders(workspace.workspace_folders)
+                session.update_folders(self._workspace.workspace_folders)
 
-    def _on_workspace_switched(self, workspace: 'Workspace') -> None:
+    def _on_workspace_switched(self, folders: 'List[str]') -> None:
         debug('project switched - ending all sessions')
         self.end_sessions()
 
@@ -432,16 +432,12 @@ class WindowManager(object):
         if not self._handlers.on_start(config.name, self._window):
             return
 
-        # TODO: this throws away previous ad-hoc folders.
-        # The previous fix was to only set an ad-hoc folder once per window
-        workspace = self._workspace.current
         self._window.status_message("Starting " + config.name + "...")
-        debug("starting in", workspace.working_directory)
         session = None  # type: Optional[Session]
         try:
             session = self._start_session(
                 self._window,                  # window
-                workspace.workspace_folders,         # workspace_folders
+                self._workspace.workspace_folders,  # workspace_folders
                 config,                        # config
                 self._handle_pre_initialize,   # on_pre_initialize
                 self._handle_post_initialize,  # on_post_initialize
@@ -492,7 +488,7 @@ class WindowManager(object):
 
     def get_project_path(self, file_path: str) -> 'Optional[str]':
         candidate = None  # type: Optional[str]
-        for folder in self._workspace.current.folders:
+        for folder in self._workspace._folders:
             if file_path.startswith(folder):
                 if candidate is None or len(folder) > len(candidate):
                     candidate = folder

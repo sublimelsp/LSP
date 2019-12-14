@@ -10,69 +10,48 @@ except ImportError:
     pass
 
 
-class Workspace(object):
+class WorkspaceFolders(object):
 
-    def __init__(self, folders: 'List[str]') -> None:
-        self.folders = folders
-        self._workspace_folders = [WorkspaceFolder.from_path(f) for f in self.folders]
-
-    def is_empty(self) -> bool:
-        return not any(self.folders)
+    def __init__(self, window: WindowLike, on_changed: 'Callable[[List[str]], None]',
+                 on_switched: 'Callable[[List[str]], None]') -> None:
+        self._window = window
+        self._on_changed = on_changed
+        self._on_switched = on_switched
+        self._current_project_file_name = self._window.project_file_name()
+        self._folders = get_workspace_folders(self._window)
+        self._workspace_folders = [WorkspaceFolder.from_path(f) for f in self._folders]
 
     @property
     def workspace_folders(self) -> 'List[WorkspaceFolder]':
         return self._workspace_folders
 
-    @property
-    def working_directory(self) -> 'Optional[str]':
-        return self.folders[0] if self.folders else None
-
-    def __eq__(self, other: object) -> bool:
-        if isinstance(other, Workspace):
-            return self.folders == other.folders
-        else:
-            raise NotImplementedError()
-
-
-class WorkspaceManager(object):
-
-    def __init__(self, window: WindowLike, on_changed: 'Callable[[Workspace], None]',
-                 on_switched: 'Callable[[Workspace], None]') -> None:
-        self._window = window
-        self._on_changed = on_changed
-        self._on_switched = on_switched
-        self._workspace = get_workspace(self._window, None)
-        self._current_project_file_name = self._window.project_file_name()
-
-    @property
-    def current(self) -> 'Workspace':
-        return self._workspace
-
     def update(self, file_path: str) -> None:
-        new_workspace = get_workspace(self._window, file_path)
-        if new_workspace != self._workspace:
-            if self._can_update_to(new_workspace):
-                self._workspace = new_workspace
-                self._on_changed(new_workspace)
+        new_folders = get_workspace_folders(self._window, file_path)
+        if new_folders != self._folders:
+            if self._can_update_to(new_folders):
+                self._folders = new_folders
+                self._on_changed(new_folders)
             else:
-                self._workspace = new_workspace
-                self._on_switched(new_workspace)
+                self._folders = new_folders
+                self._on_switched(new_folders)
 
-    def _can_update_to(self, workspace: Workspace) -> bool:
-        if self._workspace.is_empty():
+            self._workspace_folders = [WorkspaceFolder.from_path(f) for f in self._folders]
+
+    def _can_update_to(self, new_folders: 'List[str]') -> bool:
+        if not self._folders:
             return True
 
         if self._current_project_file_name and self._window.project_file_name() == self._current_project_file_name:
             return True
 
-        for folder in self._workspace.folders:
-            if folder in workspace.folders:
+        for folder in self._folders:
+            if folder in new_folders:
                 return True
 
         return False
 
 
-def get_workspace(window: WindowLike, file_path: 'Optional[str]' = None) -> Workspace:
+def get_workspace_folders(window: WindowLike, file_path: 'Optional[str]' = None) -> 'List[str]':
     folders = window.folders()
     if file_path:
         sorted_folders = []  # type: List[str]
@@ -82,27 +61,10 @@ def get_workspace(window: WindowLike, file_path: 'Optional[str]' = None) -> Work
                     sorted_folders.insert(0, folder)
                 else:
                     sorted_folders.append(folder)
-        else:
-            sorted_folders = [os.path.dirname(file_path)]
 
-        return Workspace(sorted_folders)
+        return sorted_folders
     else:
-        return Workspace(folders)
-
-
-def get_workspace_folders(window: WindowLike, file_path: 'Optional[str]' = None) -> 'List[WorkspaceFolder]':
-    folders = window.folders()
-    sorted_folders = []  # type: List[str]
-    if folders:
-        for folder in folders:
-            if file_path and file_path.startswith(folder):
-                sorted_folders.insert(0, folder)
-            else:
-                sorted_folders.append(folder)
-    elif file_path:
-        sorted_folders.append(os.path.dirname(file_path))
-
-    return [WorkspaceFolder.from_path(folder) for folder in sorted_folders]
+        return folders
 
 
 def enable_in_project(window: 'Any', config_name: str) -> None:

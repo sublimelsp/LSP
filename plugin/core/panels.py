@@ -18,17 +18,18 @@ OUTPUT_PANEL_SETTINGS = {
     "auto_indent": False,
     "draw_indent_guides": False,
     "draw_white_space": "None",
+    "fold_buttons": True,
     "gutter": True,
     "is_widget": True,
     "line_numbers": False,
+    "lsp_active": True,
     "margin": 3,
     "match_brackets": False,
     "rulers": [],
     "scroll_past_end": False,
     "tab_size": 4,
     "translate_tabs_to_spaces": False,
-    "word_wrap": False,
-    "fold_buttons": True
+    "word_wrap": False
 }
 
 

@@ -2,14 +2,15 @@ import sublime
 
 from .logging import set_debug_logging
 from .logging import set_exception_logging
-from .settings import settings, load_settings, unload_settings
-from .registry import windows, load_handlers, unload_sessions
 from .panels import destroy_output_panels
 from .panels import ensure_panel
 from .popups import popups
+from .registry import windows, load_handlers, unload_sessions
+from .settings import settings, load_settings, unload_settings
+
+from ..color import remove_color_boxes
 from ..diagnostics import DiagnosticsPresenter
 from ..highlights import remove_highlights
-from ..color import remove_color_boxes
 
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional, Set

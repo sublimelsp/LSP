@@ -1,6 +1,7 @@
+from .logging import debug
+from contextlib import contextmanager
 import sublime
 import sublime_plugin
-from contextlib import contextmanager
 
 try:
     from typing import Optional, Any, List, Generator
@@ -31,6 +32,12 @@ OUTPUT_PANEL_SETTINGS = {
 }
 
 
+class PanelName:
+    Diagnostics = "diagnostics"
+    References = "references"
+    LanguageServers = "language servers"
+
+
 @contextmanager
 def mutable(view: sublime.View) -> 'Generator':
     view.set_read_only(False)
@@ -47,8 +54,13 @@ def create_output_panel(window: sublime.Window, name: str) -> 'Optional[sublime.
 
 
 def destroy_output_panels(window: sublime.Window) -> None:
-    for panel_name in ["references", "diagnostics", "server"]:
-        window.destroy_output_panel(panel_name)
+    for field in filter(lambda a: not a.startswith('__'), PanelName.__dict__.keys()):
+        panel_name = getattr(PanelName, field)
+        panel = window.find_output_panel(panel_name)
+        if panel and panel.is_valid():
+            debug("destroying", panel_name, "panel for window", window.id())
+            panel.settings().set("syntax", "Packages/Text/Plain text.tmLanguage")
+            window.destroy_output_panel(panel_name)
 
 
 def create_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,

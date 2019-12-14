@@ -1,14 +1,15 @@
 from .core.logging import printf
 from .core.main import ensure_server_panel
 from .diagnostics import ensure_diagnostics_panel
+from .core.panels import PanelName
 from sublime_plugin import WindowCommand
 
 
 class LspTogglePanelCommand(WindowCommand):
     def run(self, panel_type: str) -> None:
-        if panel_type == "diagnostics":
+        if panel_type == PanelName.Diagnostics:
             ensure_diagnostics_panel(self.window)
-        elif panel_type == "language servers":
+        elif panel_type == PanelName.LanguageServers:
             ensure_server_panel(self.window)
         else:
             return
@@ -20,4 +21,4 @@ class LspTogglePanelCommand(WindowCommand):
 class LspShowDiagnosticsPanelCommand(WindowCommand):
     def run(self) -> None:
         printf("lsp_show_diagnostics_panel is deprecated, use lsp_toggle_panel instead (see the keybindings)")
-        self.window.run_command("lsp_toggle_panel", {"panel_type": "diagnostics"})
+        self.window.run_command("lsp_toggle_panel", {"panel_type": PanelName.Diagnostics})

@@ -211,6 +211,7 @@ class Session(object):
             }
             notification = Notification.didChangeWorkspaceFolders(params)
             self.client.send_notification(notification)
+            self._workspace_folders = folders
 
     def _initialize(self) -> None:
         params = get_initialize_params(self._workspace_folders, self.config)

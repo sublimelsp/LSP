@@ -7,8 +7,8 @@ import subprocess
 from .logging import exception_log, debug
 
 try:
-    from typing import Callable, Dict, Any, Optional
-    assert Callable and Dict and Any and Optional and subprocess
+    from typing import Callable, Dict, Any, Optional, IO
+    assert Callable and Dict and Any and Optional and subprocess and IO
 except ImportError:
     pass
 
@@ -21,6 +21,10 @@ try:
     from typing import Any, Dict, Callable
     assert Any and Dict and Callable
 except ImportError:
+    pass
+
+
+class UnexpectedProcessExitError(Exception):
     pass
 
 
@@ -181,6 +185,12 @@ class StdioTransport(Transport):
         self.send_queue.put(None)  # kill the write thread as it's blocked on send_queue
         self.on_closed()
 
+    def _checked_stdout(self) -> 'IO[Any]':
+        if self.process:
+            return self.process.stdout
+        else:
+            raise UnexpectedProcessExitError()
+
     def read_stdout(self) -> None:
         """
         Reads JSON responses from process and dispatch them to response_handler
@@ -194,7 +204,7 @@ class StdioTransport(Transport):
             try:
                 # debug("read_stdout: state = {}".format(state_to_string(state)))
                 if state == STATE_HEADERS:
-                    header = self.process.stdout.readline()
+                    header = self._checked_stdout().readline()
                     # debug('read_stdout reads: {}'.format(header))
                     if not header:
                         # Truly, this is the EOF on the stream
@@ -209,7 +219,7 @@ class StdioTransport(Transport):
                         content_length = int(header[ContentLengthHeader_len:])
                 elif state == STATE_CONTENT:
                     if content_length > 0:
-                        content = self.process.stdout.read(content_length)
+                        content = self._checked_stdout().read(content_length)
                         self.on_receive(content.decode("UTF-8"))
                         # debug("read_stdout: read and received {} byte message".format(content_length))
                         content_length = 0
@@ -218,6 +228,11 @@ class StdioTransport(Transport):
             except IOError as err:
                 self.close()
                 exception_log("Failure reading stdout", err)
+                state = STATE_EOF
+                break
+            except UnexpectedProcessExitError:
+                self.close()
+                debug("process became None")
                 state = STATE_EOF
                 break
 

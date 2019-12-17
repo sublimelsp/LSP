@@ -1,7 +1,6 @@
 from .logging import debug
 from .protocol import WorkspaceFolder
 from .types import WindowLike
-import os
 
 try:
     from typing import List, Optional, Any, Dict, Iterable, Union, Callable

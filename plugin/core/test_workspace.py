@@ -1,5 +1,6 @@
 from .test_mocks import MockWindow
-from .workspace import WorkspaceFolder, get_workspace_folders, WorkspaceFolders
+from .workspace import get_workspace_folders, ProjectFolders
+from .protocol import WorkspaceFolder
 import os
 from unittest import mock
 import unittest
@@ -51,7 +52,7 @@ class WorkspaceFoldersTest(unittest.TestCase):
         on_switched = mock.Mock()
         window = MockWindow(folders=[])
 
-        wf = WorkspaceFolders(window, on_changed, on_switched)
+        wf = ProjectFolders(window, on_changed, on_switched)
         window.set_folders([os.path.dirname(__file__)])
         wf.update(__file__)
         assert on_changed.call_count == 1
@@ -64,7 +65,7 @@ class WorkspaceFoldersTest(unittest.TestCase):
         parent_folder = os.path.dirname(folder)
         window = MockWindow(folders=[folder])
 
-        wf = WorkspaceFolders(window, on_changed, on_switched)
+        wf = ProjectFolders(window, on_changed, on_switched)
 
         window.set_folders([folder, parent_folder])
         wf.update(__file__)
@@ -78,7 +79,7 @@ class WorkspaceFoldersTest(unittest.TestCase):
         parent_folder = os.path.dirname(folder)
         window = MockWindow(folders=[folder])
 
-        wf = WorkspaceFolders(window, on_changed, on_switched)
+        wf = ProjectFolders(window, on_changed, on_switched)
 
         window.set_folders([parent_folder])
         wf.update(__file__)
@@ -96,7 +97,7 @@ class WorkspaceFoldersTest(unittest.TestCase):
 
         window = MockWindow(folders=[])
 
-        wf = WorkspaceFolders(window, on_changed, on_switched)
+        wf = ProjectFolders(window, on_changed, on_switched)
 
         wf.update(first_file)
 
@@ -108,4 +109,4 @@ class WorkspaceFoldersTest(unittest.TestCase):
         assert on_changed.call_count == 0
         assert on_switched.call_count == 0
 
-        self.assertEqual(wf._folders, [])
+        self.assertEqual(wf.folders, [])

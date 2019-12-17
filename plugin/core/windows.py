@@ -8,7 +8,7 @@ from .edit import parse_workspace_edit
 from .sessions import Session
 from .url import filename_to_uri
 from .workspace import (
-    enable_in_project, disable_in_project, WorkspaceFolders
+    enable_in_project, disable_in_project, ProjectFolders
 )
 
 from .rpc import Client
@@ -335,15 +335,14 @@ class WindowManager(object):
         self._on_closed = on_closed
         self._is_closing = False
         self._initialization_lock = threading.Lock()
-        # TODO: name member something other than "workspace".
-        self._workspace = WorkspaceFolders(self._window, self._on_workspace_changed, self._on_workspace_switched)
+        self._workspace = ProjectFolders(self._window, self._on_project_changed, self._on_project_switched)
 
-    def _on_workspace_changed(self, folders: 'List[str]') -> None:
+    def _on_project_changed(self, folders: 'List[str]') -> None:
         for config_name in self._sessions:
             for session in self._sessions[config_name]:
                 session.update_folders(self._workspace.workspace_folders)
 
-    def _on_workspace_switched(self, folders: 'List[str]') -> None:
+    def _on_project_switched(self, folders: 'List[str]') -> None:
         debug('project switched - ending all sessions')
         self.end_sessions()
 
@@ -488,7 +487,7 @@ class WindowManager(object):
 
     def get_project_path(self, file_path: str) -> 'Optional[str]':
         candidate = None  # type: Optional[str]
-        for folder in self._workspace._folders:
+        for folder in self._workspace.folders:
             if file_path.startswith(folder):
                 if candidate is None or len(folder) > len(candidate):
                     candidate = folder

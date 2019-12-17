@@ -9,7 +9,7 @@ except ImportError:
     pass
 
 
-class WorkspaceFolders(object):
+class ProjectFolders(object):
 
     def __init__(self, window: WindowLike, on_changed: 'Callable[[List[str]], None]',
                  on_switched: 'Callable[[List[str]], None]') -> None:
@@ -17,33 +17,31 @@ class WorkspaceFolders(object):
         self._on_changed = on_changed
         self._on_switched = on_switched
         self._current_project_file_name = self._window.project_file_name()
-        self._folders = get_workspace_folders(self._window)
-        self._workspace_folders = [WorkspaceFolder.from_path(f) for f in self._folders]
-
-    @property
-    def workspace_folders(self) -> 'List[WorkspaceFolder]':
-        return self._workspace_folders
+        self._set_folders(get_workspace_folders(self._window))
 
     def update(self, file_path: str) -> None:
         new_folders = get_workspace_folders(self._window, file_path)
-        if new_folders != self._folders:
-            if self._can_update_to(new_folders):
-                self._folders = new_folders
+        if new_folders != self.folders:
+            is_update = self._can_update_to(new_folders)
+            self._set_folders(new_folders)
+            if is_update:
                 self._on_changed(new_folders)
             else:
-                self._folders = new_folders
                 self._on_switched(new_folders)
 
-            self._workspace_folders = [WorkspaceFolder.from_path(f) for f in self._folders]
+    def _set_folders(self, folders: 'List[str]') -> None:
+        self.folders = get_workspace_folders(self._window)
+        self.workspace_folders = [WorkspaceFolder.from_path(f) for f in self.folders]
 
     def _can_update_to(self, new_folders: 'List[str]') -> bool:
-        if not self._folders:
+        """ Should detect difference between a project switch and a change to folders in the loaded project """
+        if not self.folders:
             return True
 
         if self._current_project_file_name and self._window.project_file_name() == self._current_project_file_name:
             return True
 
-        for folder in self._folders:
+        for folder in self.folders:
             if folder in new_folders:
                 return True
 

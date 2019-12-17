@@ -1,4 +1,3 @@
-from .logging import debug
 from contextlib import contextmanager
 import sublime
 import sublime_plugin
@@ -59,7 +58,6 @@ def destroy_output_panels(window: sublime.Window) -> None:
         panel_name = getattr(PanelName, field)
         panel = window.find_output_panel(panel_name)
         if panel and panel.is_valid():
-            debug("destroying", panel_name, "panel for window", window.id())
             panel.settings().set("syntax", "Packages/Text/Plain text.tmLanguage")
             window.destroy_output_panel(panel_name)
 

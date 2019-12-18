@@ -1,4 +1,5 @@
 from . import test_sublime as test_sublime
+from .protocol import WorkspaceFolder
 from .sessions import create_session
 from .sessions import Session
 from .test_mocks import MockClient
@@ -30,11 +31,13 @@ class WindowDocumentHandlerTests(unittest.TestCase):
     def test_sends_did_open_to_session(self):
         view = MockView(__file__)
         window = MockWindow([[view]])
+        project_path = "/"
+        folders = [WorkspaceFolder.from_path(project_path)]
         view.set_window(window)
         handler = WindowDocumentHandler(test_sublime, MockSettings(), window, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
-            create_session(TEST_CONFIG, "", dict(), MockSettings(),
+            create_session(TEST_CONFIG, folders, dict(), MockSettings(),
                            bootstrap_client=client))
         handler.add_session(session)
 
@@ -90,16 +93,18 @@ class WindowDocumentHandlerTests(unittest.TestCase):
     def test_sends_did_open_to_multiple_sessions(self):
         view = MockView(__file__)
         window = MockWindow([[view]])
+        project_path = "/"
+        folders = [WorkspaceFolder.from_path(project_path)]
         view.set_window(window)
         handler = WindowDocumentHandler(test_sublime, MockSettings(), window, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
-            create_session(TEST_CONFIG, "", dict(), MockSettings(),
+            create_session(TEST_CONFIG, folders, dict(), MockSettings(),
                            bootstrap_client=client))
         client2 = MockClient()
         test_config2 = ClientConfig("test2", [], None, languages=[TEST_LANGUAGE])
         session2 = self.assert_if_none(
-            create_session(test_config2, "", dict(), MockSettings(),
+            create_session(test_config2, folders, dict(), MockSettings(),
                            bootstrap_client=client2))
 
         handler.add_session(session)

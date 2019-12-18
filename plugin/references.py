@@ -47,7 +47,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
             self.word = self.view.substr(self.word_region)
 
             # use relative paths if file on the same root.
-            base_dir = windows.lookup(window).get_project_path()
+            base_dir = windows.lookup(window).get_project_path(file_path)
             if base_dir:
                 if os.path.commonprefix([base_dir, file_path]):
                     self.base_dir = base_dir
@@ -96,8 +96,6 @@ class LspSymbolReferencesCommand(LspTextCommand):
                     selected_index = len(self.reflist) - 1
 
         flags = sublime.KEEP_OPEN_ON_FOCUS_LOST
-        if settings.quick_panel_monospace_font:
-            flags |= sublime.MONOSPACE_FONT
         window = self.view.window()
         if window:
             window.show_quick_panel(
@@ -139,7 +137,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 # append a new line after each file name
                 text += '\n'
 
-            base_dir = windows.lookup(window).get_project_path()
+            base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
             panel.settings().set("result_base_dir", base_dir)
 
             panel.run_command("lsp_clear_panel")

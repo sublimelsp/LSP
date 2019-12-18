@@ -30,7 +30,7 @@ class ProjectFolders(object):
                 self._on_switched(new_folders)
 
     def _set_folders(self, folders: 'List[str]') -> None:
-        self.folders = get_workspace_folders(self._window)
+        self.folders = folders
         self.workspace_folders = [WorkspaceFolder.from_path(f) for f in self.folders]
 
     def _can_update_to(self, new_folders: 'List[str]') -> bool:

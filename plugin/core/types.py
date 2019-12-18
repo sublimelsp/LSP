@@ -1,7 +1,8 @@
 try:
     from typing_extensions import Protocol
-    from typing import Optional, List, Callable, Dict, Any, Iterator
+    from typing import Optional, List, Callable, Dict, Any, Iterator, Union, Mapping
     assert Optional and List and Callable and Dict and Any and Iterator
+    Payload = Union[Optional[Mapping[str, Any]], Optional[List], None]
 except ImportError:
     pass
     Protocol = object  # type: ignore

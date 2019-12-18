@@ -223,8 +223,8 @@ class WindowManagerTests(unittest.TestCase):
         file_path = __file__
         top_folder = os.path.dirname(__file__)
         parent_folder = os.path.dirname(top_folder)
-        wm = WindowManager(MockWindow([[MockView(__file__)]], [top_folder, parent_folder]), MockConfigs(), docs,
-                           DiagnosticsStorage(None), mock_start_session, test_sublime,
+        wm = WindowManager(MockWindow([[MockView(__file__)]], [top_folder, parent_folder]), MockSettings(),
+                           MockConfigs(), docs, DiagnosticsStorage(None), mock_start_session, test_sublime,
                            dispatcher)
         wm.start_active_views()
         self.assertEqual(top_folder, wm.get_project_path(file_path))

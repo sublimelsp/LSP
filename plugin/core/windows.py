@@ -18,11 +18,8 @@ try:
     from typing_extensions import Protocol
     from typing import Optional, List, Callable, Dict, Any, Iterator, Union
     from types import ModuleType
-    from .rpc import PayloadLike
     assert Optional and List and Callable and Dict and Session and Any and ModuleType and Iterator and Union
     assert LanguageConfig
-    # error: The type alias to Union is invalid in runtime context
-    assert PayloadLike  # type: ignore
 except ImportError:
     Protocol = object  # type: ignore
 
@@ -522,15 +519,17 @@ class WindowManager(object):
 
         client.send_response(Response(request_id, items))
 
+    def _payload_log_sink(self, message: str) -> None:
+        self._sublime.set_timeout_async(lambda: self._handle_server_message(":", message), 0)
+
     def _handle_pre_initialize(self, session: 'Session') -> None:
         client = session.client
         client.set_crash_handler(lambda: self._handle_server_crash(session.config))
         client.set_error_display_handler(self._window.status_message)
 
         if self.server_panel_factory:
-            client.set_log_payload_handler(
-                lambda *args: self._sublime.set_timeout_async(
-                    lambda: self._handle_log_payload(session.config.name, *args), 0))
+            client.logger.server_name = session.config.name
+            client.logger.sink = self._payload_log_sink
 
         client.on_request(
             "window/showMessageRequest",
@@ -640,29 +639,6 @@ class WindowManager(object):
 
     def _handle_show_message(self, name: str, params: 'Any') -> None:
         self._sublime.status_message("{}: {}".format(name, extract_message(params)))
-
-    def _handle_log_payload(self, name: str, direction: str, method: 'Optional[str]', request_id: 'Optional[int]',
-                            payload: 'PayloadLike') -> None:
-        # If "log_payloads" == True, ignore "log_debug" and just print the entire line.
-        if not self._settings.log_debug and not self._settings.log_payloads:
-            return
-        if method is None:
-            # Response from the server to us, or response from us to the server
-            assert isinstance(request_id, int)
-            message = "{} {} {}".format(direction, name, request_id)
-        elif request_id is not None:
-            # Request from us to the server, or request from the server to us
-            message = "{} {} {}({})".format(direction, name, method, request_id)
-        else:
-            # Notification (both ways)
-            message = "{} {} {}".format(direction, name, method)
-        # If "log_payloads" == False but "log_debug" == True, only a short line is printed.
-        if self._settings.log_payloads \
-                and method != "textDocument/didChange" \
-                and method != "textDocument/didOpen":
-            # textDocument/didChange and textDocument/didOpen might send the entire content of the view
-            message = "{}: {}".format(message, payload)
-        self._handle_server_message(":", message)
 
 
 class WindowRegistry(object):

@@ -96,8 +96,6 @@ class LspSymbolReferencesCommand(LspTextCommand):
                     selected_index = len(self.reflist) - 1
 
         flags = sublime.KEEP_OPEN_ON_FOCUS_LOST
-        if settings.quick_panel_monospace_font:
-            flags |= sublime.MONOSPACE_FONT
         window = self.view.window()
         if window:
             window.show_quick_panel(

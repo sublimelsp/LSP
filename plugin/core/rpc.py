@@ -3,10 +3,7 @@ from .transports import StdioTransport, Transport
 try:
     import subprocess
     from typing import Any, List, Dict, Tuple, Callable, Optional, Union, Mapping
-    from .types import Payload
     assert Any and List and Dict and Tuple and Callable and Optional and Union and subprocess and Mapping
-    # error: The type alias to Union is invalid in runtime context
-    assert Payload  # type: ignore
 except ImportError:
     pass
 
@@ -54,7 +51,7 @@ class PreformattedPayloadLogger:
         self.server_name = server_name
         self.sink = sink
 
-    def log(self, message: str, params: 'Payload', log_payload: bool) -> None:
+    def log(self, message: str, params: 'Any', log_payload: bool) -> None:
         if log_payload:
             message = "{}: {}".format(message, params)
         self.sink(message)
@@ -68,18 +65,18 @@ class PreformattedPayloadLogger:
     def format_notification(self, direction: str, method: str) -> str:
         return "{} {} {}".format(direction, self.server_name, method)
 
-    def outgoing_response(self, request_id: int, params: 'Payload') -> None:
+    def outgoing_response(self, request_id: int, params: 'Any') -> None:
         if not self.settings.log_debug:
             return
         self.log(self.format_response(Direction.Outgoing, request_id), params, self.settings.log_payloads)
 
-    def outgoing_request(self, request_id: int, method: str, params: 'Payload', blocking: bool) -> None:
+    def outgoing_request(self, request_id: int, method: str, params: 'Any', blocking: bool) -> None:
         if not self.settings.log_debug:
             return
         direction = Direction.OutgoingBlocking if blocking else Direction.Outgoing
         self.log(self.format_request(direction, method, request_id), params, self.settings.log_payloads)
 
-    def outgoing_notification(self, method: str, params: 'Payload') -> None:
+    def outgoing_notification(self, method: str, params: 'Any') -> None:
         if not self.settings.log_debug:
             return
         log_payload = self.settings.log_payloads \
@@ -87,18 +84,18 @@ class PreformattedPayloadLogger:
             and method != "textDocument/didOpen"
         self.log(self.format_notification(Direction.Outgoing, method), params, log_payload)
 
-    def incoming_response(self, request_id: int, params: 'Payload') -> None:
+    def incoming_response(self, request_id: int, params: 'Any') -> None:
         if not self.settings.log_debug:
             return
         self.log(self.format_response(Direction.Incoming, request_id), params, self.settings.log_payloads)
 
-    def incoming_request(self, request_id: int, method: str, params: 'Payload', unhandled: bool) -> None:
+    def incoming_request(self, request_id: int, method: str, params: 'Any', unhandled: bool) -> None:
         if not self.settings.log_debug:
             return
         direction = "unhandled" if unhandled else Direction.Incoming
         self.log(self.format_request(direction, method, request_id), params, self.settings.log_payloads)
 
-    def incoming_notification(self, method: str, params: 'Payload', unhandled: bool) -> None:
+    def incoming_notification(self, method: str, params: 'Any', unhandled: bool) -> None:
         if not self.settings.log_debug or method == "window/logMessage":
             return
         direction = "unhandled" if unhandled else Direction.Incoming
@@ -261,7 +258,7 @@ class Client(object):
         request_id = payload.get("id")  # type: Optional[int]
         if request_id is not None:
 
-            def log(method: str, params: 'Payload', unhandled: bool) -> None:
+            def log(method: str, params: 'Any', unhandled: bool) -> None:
                 nonlocal request_id
                 assert isinstance(request_id, int)  # mypy
                 self.logger.incoming_request(request_id, method, params, unhandled)
@@ -271,8 +268,8 @@ class Client(object):
             self.handle(request_id, method, params, "notification", self._notification_handlers,
                         self.logger.incoming_notification)
 
-    def handle(self, request_id: 'Optional[int]', method: str, params: 'Payload', typestr: str,
-               handlers: 'Mapping[str, Callable]', log: 'Callable[[str, Payload, bool], None]') -> None:
+    def handle(self, request_id: 'Optional[int]', method: str, params: 'Any', typestr: str,
+               handlers: 'Mapping[str, Callable]', log: 'Callable[[str, Any, bool], None]') -> None:
         handler = handlers.get(method)
         log(method, params, handler is None)
         if handler:

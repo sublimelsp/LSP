@@ -67,7 +67,7 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
             config_name = self._items[index][0]
             client_configs.disable(config_name)
             wm = windows.lookup(self.window)
-            sublime.set_timeout_async(lambda: wm.end_session(config_name), 500)
+            sublime.set_timeout_async(lambda: wm.end_config_sessions(config_name), 500)
             self.window.status_message("{} disabled, shutting down server...".format(config_name))
 
 

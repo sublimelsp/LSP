@@ -98,6 +98,6 @@ class DocumentSyncListener(LSPViewEventListener):
         self.manager.documents.handle_view_saved(self.view)
 
     def on_close(self) -> None:
-        if self.view.file_name() and self.view.is_primary():
+        if self.view.file_name() and self.view.is_primary() and self.has_manager():
             self.manager.handle_view_closed(self.view)
             self.manager.documents.handle_view_closed(self.view)

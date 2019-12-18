@@ -150,6 +150,9 @@ class WindowLike(Protocol):
     def project_data(self) -> 'Optional[dict]':
         ...
 
+    def project_file_name(self) -> 'Optional[str]':
+        ...
+
     def active_view(self) -> 'Optional[ViewLike]':
         ...
 

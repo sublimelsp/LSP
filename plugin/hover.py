@@ -85,7 +85,7 @@ class LspHoverCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, point: 'Optional[int]' = None) -> None:
         hover_point = point or self.view.sel()[0].begin()
-        self._base_dir = windows.lookup(self.view.window()).get_project_path()
+        self._base_dir = windows.lookup(self.view.window()).get_project_path(self.view.file_name() or "")
 
         self._hover = None  # type: Optional[Any]
         self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]

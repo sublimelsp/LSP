@@ -159,7 +159,6 @@ class DiagnosticsPhantoms(object):
     def set_diagnostic(self, file_diagnostic: 'Optional[Tuple[str, Diagnostic]]') -> None:
         self.clear()
 
-        self._base_dir = windows.lookup(self._window).get_project_path()
         if file_diagnostic:
             file_path, diagnostic = file_diagnostic
             view = self._window.open_file(file_path, sublime.TRANSIENT)
@@ -203,9 +202,11 @@ class DiagnosticsPhantoms(object):
     # TODO: share with hover?
     def format_diagnostic_related_info(self, info: DiagnosticRelatedInformation) -> str:
         file_path = info.location.file_path
-        if self._base_dir and file_path.startswith(self._base_dir):
-            file_path = os.path.relpath(file_path, self._base_dir)
-        location = "{}:{}:{}".format(file_path, info.location.range.start.row+1, info.location.range.start.col+1)
+        base_dir = windows.lookup(self._window).get_project_path(file_path)
+        if base_dir:
+            file_path = os.path.relpath(file_path, base_dir)
+        location = "{}:{}:{}".format(info.location.file_path, info.location.range.start.row + 1,
+                                     info.location.range.start.col + 1)
         return "<a href='location:{}'>{}</a>: {}".format(location, location, html.escape(info.message))
 
     def navigate(self, href: str) -> None:
@@ -218,7 +219,6 @@ class DiagnosticsPhantoms(object):
         elif href.startswith("location"):
             # todo: share with hover?
             _, file_path, location = href.split(":", 2)
-            file_path = os.path.join(self._base_dir, file_path) if self._base_dir else file_path
             self._window.open_file(file_path + ":" + location, sublime.ENCODED_POSITION | sublime.TRANSIENT)
 
     def create_phantom_html(self, content: str, severity: str) -> str:
@@ -322,11 +322,11 @@ class DiagnosticOutputPanel(DiagnosticsUpdateWalk):
         self._panel = ensure_diagnostics_panel(self._window)
 
     def begin(self) -> None:
-        self._base_dir = windows.lookup(self._window).get_project_path()
         self._to_render = []
         self._file_content = ""
 
     def begin_file(self, file_path: str) -> None:
+        self._base_dir = windows.lookup(self._window).get_project_path(file_path)
         self._file_content = ""
 
     def diagnostic(self, diagnostic: Diagnostic) -> None:

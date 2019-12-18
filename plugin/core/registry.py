@@ -109,7 +109,7 @@ def _sessions_for_view_and_window(view: sublime.View, window: 'Optional[sublime.
 
     file_path = view.file_name()
     if not file_path:
-        debug("no session for unsaved file")
+        # debug("no session for unsaved file")
         return []
 
     manager = windows.lookup(window)

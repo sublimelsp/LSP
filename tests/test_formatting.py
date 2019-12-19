@@ -46,8 +46,9 @@ class DocumentFormattingTests(TextDocumentTestCase):
 
         self.assertEquals(self.transport.sent[3]["method"], "textDocument/didChange")
         self.assertEquals(self.transport.sent[4]["method"], "textDocument/formatting")
-        self.assertEquals(self.transport.sent[5]["method"], "textDocument/didChange")
-        self.assertEquals(self.transport.sent[6]["method"], "textDocument/didSave")
+        self.assertEquals(self.transport.sent[5]["method"], "textDocument/didSave")
+        self.assertEquals(self.transport.sent[6]["method"], "textDocument/didChange")
+        self.assertEquals(self.transport.sent[7]["method"], "textDocument/didSave")
 
         text = self.view.substr(sublime.Region(0, self.view.size()))
         self.assertEquals("BBB", text)
@@ -82,6 +83,7 @@ class WillSaveWaitUntilTests(TextDocumentTestCase):
 
         yield OPEN_DOCUMENT_DELAY*3
         self.session.capabilities['textDocumentSync']['willSaveWaitUntil'] = True
+        self.view.settings().set("lsp_format_on_save", False)
 
         self.assertEquals(self.transport.sent[0]["method"], "initialize")
         self.assertEquals(self.transport.sent[1]["method"], "initialized")
@@ -97,8 +99,9 @@ class WillSaveWaitUntilTests(TextDocumentTestCase):
 
         self.assertEquals(self.transport.sent[3]["method"], "textDocument/didChange")
         self.assertEquals(self.transport.sent[4]["method"], "textDocument/willSaveWaitUntil")
-        self.assertEquals(self.transport.sent[5]["method"], "textDocument/didChange")
-        self.assertEquals(self.transport.sent[6]["method"], "textDocument/didSave")
+        self.assertEquals(self.transport.sent[5]["method"], "textDocument/didSave")
+        self.assertEquals(self.transport.sent[6]["method"], "textDocument/didChange")
+        self.assertEquals(self.transport.sent[7]["method"], "textDocument/didSave")
 
         text = self.view.substr(sublime.Region(0, self.view.size()))
         self.assertEquals("BBB", text)

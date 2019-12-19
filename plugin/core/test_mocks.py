@@ -296,9 +296,6 @@ class MockClient():
         else:
             on_success(response)
 
-    def execute_request(self, request: Request) -> 'Any':
-        return self.responses.get(request.method)
-
     def send_notification(self, notification: Notification) -> None:
         self._notifications.append(notification)
 

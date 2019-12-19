@@ -1,4 +1,5 @@
 import sublime
+from .core.logging import debug, printf
 from .core.protocol import Request
 from .core.configurations import is_supported_syntax
 from .core.settings import client_configs
@@ -11,8 +12,8 @@ from .core.sessions import Session
 from .core.views import region_to_range
 
 try:
-    from typing import Dict, Any, List, Optional
-    assert Dict and Any and List and Optional
+    from typing import Dict, Any, List, Optional, Callable
+    assert Dict and Any and List and Optional and Callable
 except ImportError:
     pass
 
@@ -34,9 +35,24 @@ def wants_will_save_wait_until(session: Session) -> bool:
     return False
 
 
+def strandify(f: 'Callable[[Any], None]') -> 'Callable[[Any], None]':
+    return lambda p: sublime.set_timeout_async(lambda: f(p), 0)
+
+
+IDLE = 0
+SAVING_NON_FORMATTED = 1
+SAVED_NON_FORMATTED = 2
+SAVING_FORMATTED = 3
+
+INVALID_STATE = "invalid state :("
+
+
 class FormatOnSaveListener(LSPViewEventListener):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
+        self._set_status(IDLE)
+        self.received = False
+        self.changes = None  # type: Optional[list]
 
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:
@@ -45,16 +61,60 @@ class FormatOnSaveListener(LSPViewEventListener):
             return is_supported_syntax(syntax, client_configs.all)
         return False
 
-    def on_pre_save(self) -> None:
+    def on_pre_save_async(self) -> None:
+        if self.status == IDLE:
+            # debug("on_pre_save", "IDLE")
+            self.start_format_on_save()
+        elif self.status == SAVING_NON_FORMATTED:
+            self._handle_error(INVALID_STATE)
+        elif self.status == SAVED_NON_FORMATTED:
+            self._handle_error(INVALID_STATE)
+        elif self.status == SAVING_FORMATTED:
+            # debug("on_pre_save", "SAVING_FORMATTED")
+            self._set_status(IDLE)
+
+    def on_post_save_async(self) -> None:
+        if self.status == IDLE:
+            # debug("on_post_save", "IDLE")
+            return
+        elif self.status == SAVING_NON_FORMATTED:
+            # debug("on_post_save", "SAVING_NON_FORMATTED")
+            if self.received:
+                if self.changes:
+                    apply_response_to_view(self.changes, self.view)
+                    self._view_maybe_dirty = True
+                    self.changes = None
+                    self._set_status(SAVING_FORMATTED)
+                    self.received = False
+                    self.view.run_command("save")
+                else:
+                    self.changes = None
+                    self._set_status(IDLE)
+                    self.received = False
+            else:
+                self._set_status(SAVED_NON_FORMATTED)
+        elif self.status == SAVED_NON_FORMATTED:
+            self._handle_error(INVALID_STATE)
+        elif self.status == SAVING_FORMATTED:
+            self._handle_error(INVALID_STATE)
+
+    def start_format_on_save(self) -> None:
         file_path = self.view.file_name()
         if not file_path:
             return
 
         self._view_maybe_dirty = True
+        found_provider = False
+        num_sessions = 0
         for session in sessions_for_view(self.view):
-            if wants_will_save_wait_until(session):
+            if wants_will_save_wait_until(session) and not found_provider:
                 self._purge_changes_if_needed()
                 self._will_save_wait_until(file_path, session)
+                found_provider = True
+            num_sessions += 1
+
+        if found_provider and num_sessions > 1:
+            printf("WARNING: Can only run formatting for the first language server active")
 
         if self.view.settings().get("lsp_format_on_save"):
             self._purge_changes_if_needed()
@@ -75,10 +135,9 @@ class FormatOnSaveListener(LSPViewEventListener):
                 "reason": 1  # TextDocumentSaveReason.Manual
             }
             request = Request.willSaveWaitUntil(params)
-            response = client.execute_request(request)
-            if response:
-                apply_response_to_view(response, self.view)
-                self._view_maybe_dirty = True
+            self._set_status(SAVING_NON_FORMATTED)
+
+            client.send_request(request, strandify(self._handle_response), strandify(self._handle_error))
 
     def _format_on_save(self, file_path: str) -> None:
         client = client_from_session(session_for_view(self.view, 'documentFormattingProvider'))
@@ -90,10 +149,42 @@ class FormatOnSaveListener(LSPViewEventListener):
                 "options": options_for_view(self.view)
             }
             request = Request.formatting(params)
-            response = client.execute_request(request)
-            if response:
-                apply_response_to_view(response, self.view)
+            self._set_status(SAVING_NON_FORMATTED)
+            client.send_request(request, strandify(self._handle_response), strandify(self._handle_error))
+
+    def _set_status(self, status: int) -> None:
+        if status == IDLE:
+            self.view.erase_status("lsp_save_status")
+        else:
+            self.view.set_status("lsp_save_status", "formatting...")
+        self.status = status
+
+    def _handle_error(self, error: 'Any') -> None:
+        self._set_status(IDLE)
+        self.changes = None
+        self.received = False
+        debug(error)
+
+    def _handle_response(self, params: 'Any') -> None:
+        if self.status == IDLE:
+            self._handle_error(INVALID_STATE)
+        elif self.status == SAVING_NON_FORMATTED:
+            # debug("handle_response", "SAVING_NON_FORMATTED")
+            self.changes = params
+            self.received = True
+        elif self.status == SAVED_NON_FORMATTED:
+            # debug("handle_response", "SAVED_NON_FORMATTED")
+            if params:
+                apply_response_to_view(params, self.view)
                 self._view_maybe_dirty = True
+                self.changes = None
+                self._set_status(SAVING_FORMATTED)
+                self.view.run_command("save")
+            else:
+                self._set_status(IDLE)
+                self.changes = None
+        elif self.status == SAVING_FORMATTED:
+            self._handle_error(INVALID_STATE)
 
 
 class LspFormatDocumentCommand(LspTextCommand):

@@ -6,9 +6,9 @@ from sublime import Window
 
 
 def toggle_output_panel(window: Window, panel_type: str) -> None:
-        panel_name = "output.{}".format(panel_type)
-        command = "{}_panel".format("hide" if window.active_panel() == panel_name else "show")
-        window.run_command(command, {"panel": panel_name})
+    panel_name = "output.{}".format(panel_type)
+    command = "{}_panel".format("hide" if window.active_panel() == panel_name else "show")
+    window.run_command(command, {"panel": panel_name})
 
 
 class LspToggleServerPanelCommand(WindowCommand):

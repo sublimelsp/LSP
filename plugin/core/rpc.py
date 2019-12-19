@@ -255,17 +255,17 @@ class Client(object):
     def request_or_notification_handler(self, payload: 'Mapping[str, Any]') -> None:
         method = payload["method"]  # type: str
         params = payload.get("params")
-        request_id = payload.get("id")  # type: Optional[int]
+        request_id = payload.get("id")  # type: Union[str, int, None]
         if request_id is not None:
+            request_id_int = int(request_id)
 
             def log(method: str, params: 'Any', unhandled: bool) -> None:
-                nonlocal request_id
-                assert isinstance(request_id, int)  # mypy
-                self.logger.incoming_request(request_id, method, params, unhandled)
+                nonlocal request_id_int
+                self.logger.incoming_request(request_id_int, method, params, unhandled)
 
-            self.handle(request_id, method, params, "request", self._request_handlers, log)
+            self.handle(request_id_int, method, params, "request", self._request_handlers, log)
         else:
-            self.handle(request_id, method, params, "notification", self._notification_handlers,
+            self.handle(None, method, params, "notification", self._notification_handlers,
                         self.logger.incoming_notification)
 
     def handle(self, request_id: 'Optional[int]', method: str, params: 'Any', typestr: str,

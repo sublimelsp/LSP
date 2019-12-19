@@ -61,13 +61,11 @@
     },
     {
         "caption": "LSP: Toggle Panel: Language Servers",
-        "command": "lsp_toggle_panel",
-        "args": {"panel_type": "language servers"}
+        "command": "lsp_toggle_server_panel",
     },
     {
         "caption": "LSP: Toggle Panel: Diagnostics",
-        "command": "lsp_toggle_panel",
-        "args": {"panel_type": "diagnostics"}
+        "command": "lsp_show_diagnostics_panel"
     },
     {
         "caption": "LSP: Clear Diagnostics",

@@ -172,6 +172,10 @@ class CompletionHandler(LSPViewEventListener):
     def on_completion_inserted(self) -> None:
         # get text inserted from last completion
         begin = self.last_location
+
+        if begin < 0:
+            return
+
         if position_is_word(self.view, begin):
             word = self.view.word(self.last_location)
             begin = word.begin()

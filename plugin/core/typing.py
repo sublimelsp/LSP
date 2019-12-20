@@ -12,6 +12,7 @@ try:
     from typing import Set
     from typing import Tuple
     from typing import Union
+    from typing_extensions import Protocol
 
 except ImportError:
 
@@ -70,3 +71,5 @@ except ImportError:
 
     class Union(Type):  # type: ignore
         pass
+
+    Protocol = object  # type: ignore

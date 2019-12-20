@@ -11,13 +11,14 @@ try:
     from typing import Optional
     from typing import Set
     from typing import Tuple
+    from typing import Type
     from typing import Union
     from typing_extensions import Protocol
 
 except ImportError:
 
     def _make_type(name: str) -> '_TypeMeta':
-        return _TypeMeta(name, (Type,), {})
+        return _TypeMeta(name, (Type,), {})  # type: ignore
 
     class _TypeMeta(type):
         def __getitem__(self, args: 'Any') -> 'Any':
@@ -33,7 +34,7 @@ except ImportError:
         def __str__(self) -> str:
             return self.__name__
 
-    class Type(metaclass=_TypeMeta):
+    class Type(metaclass=_TypeMeta):  # type: ignore
         pass
 
     class Any(Type):  # type: ignore

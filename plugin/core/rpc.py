@@ -1,29 +1,21 @@
-import json
-import socket
-import time
-from .transports import TCPTransport, StdioTransport, Transport
-from .process import attach_logger
-try:
-    import subprocess
-    from typing import Any, List, Dict, Tuple, Callable, Optional, Union
-    # from mypy_extensions import TypedDict
-    assert Any and List and Dict and Tuple and Callable and Optional and Union and subprocess
-except ImportError:
-    pass
-
 from .logging import debug, exception_log
+from .process import attach_logger
 from .protocol import Request, Notification, Response
+from .transports import TCPTransport, StdioTransport, Transport
 from .types import Settings
+from .typing import Any, Dict, Tuple, Callable, Optional
 from threading import Condition
 from threading import Lock
+import json
+import socket
+import subprocess
+import time
 
 TCP_CONNECT_TIMEOUT = 5
 DEFAULT_SYNC_REQUEST_TIMEOUT = 1.0
 
-# RequestDict = TypedDict('RequestDict', {'id': 'Union[str,int]', 'method': str, 'params': 'Optional[Any]'})
 
-
-def format_request(payload: 'Dict[str, Any]') -> str:
+def format_request(payload: Dict[str, Any]) -> str:
     """Converts the request into json"""
     return json.dumps(payload, sort_keys=False)
 
@@ -51,7 +43,7 @@ def attach_tcp_client(tcp_port: int, process: 'subprocess.Popen', settings: Sett
     raise Exception("Timeout connecting to socket")
 
 
-def attach_stdio_client(process: 'subprocess.Popen', settings: Settings) -> 'Client':
+def attach_stdio_client(process: subprocess.Popen, settings: Settings) -> 'Client':
     transport = StdioTransport(process)
 
     # TODO: process owner can take care of this outside client?
@@ -62,7 +54,7 @@ def attach_stdio_client(process: 'subprocess.Popen', settings: Settings) -> 'Cli
     return client
 
 
-def try_terminate_process(process: 'subprocess.Popen') -> None:
+def try_terminate_process(process: subprocess.Popen) -> None:
     try:
         process.terminate()
     except ProcessLookupError:
@@ -89,9 +81,9 @@ class Client(object):
     def send_request(
             self,
             request: Request,
-            handler: 'Callable[[Optional[Any]], None]',
-            error_handler: 'Optional[Callable[[Any], None]]' = None,
-    ) -> 'None':
+            handler: Callable[[Optional[Any]], None],
+            error_handler: Optional[Callable[[Any], None]] = None,
+    ) -> None:
         self.request_id += 1
         if self.transport is not None:
             debug(' --> ' + request.method)
@@ -103,7 +95,7 @@ class Client(object):
                 error_handler(None)
             return None
 
-    def execute_request(self, request: Request, timeout: float = DEFAULT_SYNC_REQUEST_TIMEOUT) -> 'Optional[Any]':
+    def execute_request(self, request: Request, timeout: float = DEFAULT_SYNC_REQUEST_TIMEOUT) -> Optional[Any]:
         """
         Sends a request and waits for response up to timeout (default: 1 second), blocking the current thread.
         """
@@ -140,13 +132,13 @@ class Client(object):
         self.exiting = True
         self.send_notification(Notification.exit())
 
-    def set_crash_handler(self, handler: 'Callable') -> None:
+    def set_crash_handler(self, handler: Callable) -> None:
         self._crash_handler = handler
 
-    def set_error_display_handler(self, handler: 'Callable') -> None:
+    def set_error_display_handler(self, handler: Callable) -> None:
         self._error_display_handler = handler
 
-    def set_transport_failure_handler(self, handler: 'Callable') -> None:
+    def set_transport_failure_handler(self, handler: Callable) -> None:
         self._transport_fail_handler = handler
 
     def handle_transport_failure(self) -> None:
@@ -157,7 +149,7 @@ class Client(object):
         if self._crash_handler is not None:
             self._crash_handler()
 
-    def send_payload(self, payload: 'Dict[str, Any]') -> None:
+    def send_payload(self, payload: Dict[str, Any]) -> None:
         if self.transport:
             message = format_request(payload)
             self.transport.send(message)
@@ -191,7 +183,7 @@ class Client(object):
         if not self.exiting:
             self.handle_transport_failure()
 
-    def response_handler(self, response: 'Dict[str, Any]') -> None:
+    def response_handler(self, response: Dict[str, Any]) -> None:
         # This response handler *must not* run from the same thread that does a sync request
         # because of the usage of the condition variable below.
         request_id = int(response["id"])
@@ -217,13 +209,13 @@ class Client(object):
         else:
             debug('invalid response payload', response)
 
-    def on_request(self, request_method: str, handler: 'Callable') -> None:
+    def on_request(self, request_method: str, handler: Callable) -> None:
         self._request_handlers[request_method] = handler
 
-    def on_notification(self, notification_method: str, handler: 'Callable') -> None:
+    def on_notification(self, notification_method: str, handler: Callable) -> None:
         self._notification_handlers[notification_method] = handler
 
-    def handle(self, typestr: str, message: 'Dict[str, Any]', handlers: 'Dict[str, Callable]', *args: 'Any') -> None:
+    def handle(self, typestr: str, message: Dict[str, Any], handlers: Dict[str, Callable], *args: Any) -> None:
         method = message.get("method", "")
         params = message.get("params")
         if method != "window/logMessage":

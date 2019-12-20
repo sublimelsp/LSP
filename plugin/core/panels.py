@@ -1,11 +1,6 @@
 import sublime
 import sublime_plugin
-
-try:
-    from typing import Optional, Any
-    assert Optional, Any
-except ImportError:
-    pass
+from .typing import Optional
 
 
 OUTPUT_PANEL_SETTINGS = {
@@ -25,7 +20,7 @@ OUTPUT_PANEL_SETTINGS = {
 }
 
 
-def create_output_panel(window: sublime.Window, name: str) -> 'Optional[sublime.View]':
+def create_output_panel(window: sublime.Window, name: str) -> Optional[sublime.View]:
     panel = window.create_output_panel(name)
     settings = panel.settings()
     for key, value in OUTPUT_PANEL_SETTINGS.items():
@@ -39,7 +34,7 @@ def destroy_output_panels(window: sublime.Window) -> None:
 
 
 def create_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
-                 syntax: str) -> 'Optional[sublime.View]':
+                 syntax: str) -> Optional[sublime.View]:
     panel = create_output_panel(window, name)
     if not panel:
         return None
@@ -54,7 +49,7 @@ def create_panel(window: sublime.Window, name: str, result_file_regex: str, resu
 
 
 def ensure_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
-                 syntax: str) -> 'Optional[sublime.View]':
+                 syntax: str) -> Optional[sublime.View]:
     return window.find_output_panel(name) or create_panel(window, name, result_file_regex, result_line_regex, syntax)
 
 
@@ -74,7 +69,7 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
     A update_panel command to update the error panel with new text.
     """
 
-    def run(self, edit: sublime.Edit, characters: 'Optional[str]' = "") -> None:
+    def run(self, edit: sublime.Edit, characters: Optional[str] = "") -> None:
         # Clear folds
         self.view.unfold(sublime.Region(0, self.view.size()))
 

@@ -1,9 +1,12 @@
 try:
 
+    # ST builds >= 4000
+
     from typing import Any
     from typing import Callable
     from typing import Dict
     from typing import Generator
+    from typing import IO
     from typing import Iterable
     from typing import Iterator
     from typing import List
@@ -16,6 +19,8 @@ try:
     from typing_extensions import Protocol
 
 except ImportError:
+
+    # ST builds < 4000
 
     def _make_type(name: str) -> '_TypeMeta':
         return _TypeMeta(name, (Type,), {})  # type: ignore
@@ -47,6 +52,9 @@ except ImportError:
         pass
 
     class Generator(Type):  # type: ignore
+        pass
+
+    class IO(Type):  # type: ignore
         pass
 
     class Iterable(Type):  # type: ignore

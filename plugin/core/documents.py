@@ -3,22 +3,15 @@ import sublime
 from .url import filename_to_uri
 from .configurations import is_supported_syntax
 from .views import offset_to_point
-from .windows import ViewLike, WindowLike
 from .settings import client_configs
 from .registry import LSPViewEventListener
-
-try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional
-    assert Any and List and Dict and Tuple and Callable and Optional
-    assert ViewLike and WindowLike
-except ImportError:
-    pass
+from .typing import Any, Dict, Optional
 
 
 SUBLIME_WORD_MASK = 515
 
 
-def get_document_position(view: sublime.View, point: int) -> 'Optional[Dict[str, Any]]':
+def get_document_position(view: sublime.View, point: int) -> Optional[Dict[str, Any]]:
     file_name = view.file_name()
     if file_name:
         if not point:
@@ -31,14 +24,14 @@ def get_document_position(view: sublime.View, point: int) -> 'Optional[Dict[str,
         return None
 
 
-def get_position(view: sublime.View, event: 'Optional[dict]' = None) -> int:
+def get_position(view: sublime.View, event: Optional[dict] = None) -> int:
     if event:
         return view.window_to_text((event["x"], event["y"]))
     else:
         return view.sel()[0].begin()
 
 
-def is_at_word(view: sublime.View, event: 'Optional[dict]') -> bool:
+def is_at_word(view: sublime.View, event: Optional[dict]) -> bool:
     pos = get_position(view, event)
     return position_is_word(view, pos)
 
@@ -62,7 +55,7 @@ def is_transient_view(view: sublime.View) -> bool:
 
 
 class DocumentSyncListener(LSPViewEventListener):
-    def __init__(self, view: 'sublime.View') -> None:
+    def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
 
     @classmethod

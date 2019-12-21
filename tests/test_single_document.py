@@ -1,7 +1,6 @@
 from copy import deepcopy
 from LSP.plugin.hover import _test_contents
-from setup import close_test_view
-from setup import TextDocumentTestCase
+from setup import close_test_view, TextDocumentTestCase
 import sublime
 import os
 

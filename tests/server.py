@@ -12,6 +12,7 @@ return None immediately. Otherwise, it will wait for the method. You should
 have a timeout in your tests to ensure your tests won't hang forever.
 
 TODO: Make this server send out notifications somehow.
+TODO: Untested on Windows.
 """
 from enum import IntEnum
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union

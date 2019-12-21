@@ -177,7 +177,6 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield {"condition": condition, "timeout": 1000}
 
     def await_message(self, method: str, expected_session_state: int = ClientStates.READY) -> 'Generator':
-        print("AWAIT", method)
         self.assertIsNotNone(self.session)
         assert self.session  # mypy
         self.assertEqual(self.session.state, expected_session_state)

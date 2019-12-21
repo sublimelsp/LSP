@@ -14,14 +14,7 @@ have a timeout in your tests to ensure your tests won't hang forever.
 TODO: Make this server send out notifications somehow.
 """
 from enum import IntEnum
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Set
-from typing import Tuple
-from typing import Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 import asyncio
 import json
 import os
@@ -125,8 +118,10 @@ class Session:
         self._writer = writer
 
         self._response_handlers: Dict[int, Tuple[Callable, Callable]]
-        self._request_handlers: Dict[str, Callable[[PayloadLike], PayloadLike]] = {}
-        self._notification_handlers: Dict[str, Callable[[PayloadLike], None]] = {}
+        self._request_handlers: Dict[str,
+                                     Callable[[PayloadLike], PayloadLike]] = {}
+        self._notification_handlers: Dict[str,
+                                          Callable[[PayloadLike], None]] = {}
 
         # initialize/shutdown/exit dance
         self._keep_going = True
@@ -140,22 +135,27 @@ class Session:
         self._install_handlers()
 
     def _log(self, message: str) -> None:
-        self._notify("window/logMessage", {"type": MessageType.info, "message": message})
+        self._notify("window/logMessage",
+                     {"type": MessageType.info, "message": message})
 
     def _notify(self, method: str, params: PayloadLike) -> None:
-        asyncio.create_task(self._send_payload(make_notification(method, params)))
+        asyncio.create_task(self._send_payload(
+            make_notification(method, params)))
 
     def _reply(self, request_id: int, params: PayloadLike) -> None:
-        asyncio.create_task(self._send_payload(make_response(request_id, params)))
+        asyncio.create_task(self._send_payload(
+            make_response(request_id, params)))
 
     def _error(self, request_id: int, err: Error) -> None:
-        asyncio.create_task(self._send_payload(make_error_response(request_id, err)))
+        asyncio.create_task(self._send_payload(
+            make_error_response(request_id, err)))
 
     async def _send_payload(self, payload: StringDict) -> None:
         body = dump(payload)
         content = (
             f"Content-Length: {len(body)}\r\n".encode(ENCODING),
-            f"Content-Type: application/vscode-jsonrpc; charset=utf-8\r\n\r\n".encode(ENCODING),
+            f"Content-Type: application/vscode-jsonrpc; charset=utf-8\r\n\r\n".encode(
+                ENCODING),
             body)
         self._writer.writelines(content)
         await self._writer.drain()
@@ -176,7 +176,8 @@ class Session:
 
     async def _response_handler(self, response: StringDict) -> None:
         request_id = int(response["id"])
-        handler, error_handler = self._response_handlers.pop(request_id, (None, None))
+        handler, error_handler = self._response_handlers.pop(
+            request_id, (None, None))
         assert handler
         if "result" in response and "error" not in response:
             if handler:
@@ -210,7 +211,8 @@ class Session:
                 assert request_id is not None
                 self._reply(request_id, self._responses.pop(method))
             elif request_id is not None:
-                self._error(request_id, Error(ErrorCode.MethodNotFound, "method not found"))
+                self._error(request_id, Error(
+                    ErrorCode.MethodNotFound, "method not found"))
             else:
                 if unhandled:
                     self._log(f"unhandled {typestr} {method}")
@@ -221,7 +223,8 @@ class Session:
             except Error as ex:
                 self._error(request_id, ex)
             except Exception as ex:
-                self._error(request_id, Error(ErrorCode.InternalError, str(ex)))
+                self._error(request_id, Error(
+                    ErrorCode.InternalError, str(ex)))
         else:
             # handle notification
             asyncio.create_task(handler(params))
@@ -272,12 +275,14 @@ class Session:
 
     async def _get_received(self, params: PayloadLike) -> PayloadLike:
         if not isinstance(params, dict):
-            raise Error(ErrorCode.InvalidParams, "expected params to be a dictionary")
+            raise Error(ErrorCode.InvalidParams,
+                        "expected params to be a dictionary")
         if "method" not in params:
             raise Error(ErrorCode.InvalidParams, 'expected "method" key')
         method = params["method"]
         if not isinstance(method, str):
-            raise Error(ErrorCode.InvalidParams, 'expected "method" key to be a string')
+            raise Error(ErrorCode.InvalidParams,
+                        'expected "method" key to be a string')
         async with self._received_cv:
             while True:
                 try:
@@ -289,10 +294,12 @@ class Session:
 
     async def _initialize(self, params: PayloadLike) -> PayloadLike:
         if not isinstance(params, dict):
-            raise Error(ErrorCode.InvalidParams, "expected params to be a dictionary")
+            raise Error(ErrorCode.InvalidParams,
+                        "expected params to be a dictionary")
         init_options = params.get("initializationOptions", {})
         if not isinstance(init_options, dict):
-            raise Error(ErrorCode.InvalidParams, "expected initializationOptions to be a dictionary")
+            raise Error(ErrorCode.InvalidParams,
+                        "expected initializationOptions to be a dictionary")
         return init_options.get("serverResponse", {})
 
     async def _shutdown(self, _: PayloadLike) -> PayloadLike:
@@ -315,7 +322,8 @@ async def stdio(
     writer_transport, writer_protocol = await loop.connect_write_pipe(
         lambda: asyncio.streams.FlowControlMixin(),
         os.fdopen(sys.stdout.fileno(), 'wb'))
-    writer = asyncio.streams.StreamWriter(writer_transport, writer_protocol, None, loop)
+    writer = asyncio.streams.StreamWriter(
+        writer_transport, writer_protocol, None, loop)
     return reader, writer
 
 

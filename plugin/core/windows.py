@@ -8,7 +8,7 @@ from .edit import parse_workspace_edit
 from .sessions import Session
 from .url import filename_to_uri
 from .workspace import (
-    enable_in_project, disable_in_project, ProjectFolders
+    enable_in_project, disable_in_project, ProjectFolders, sorted_workspace_folders, get_workspace_folders
 )
 
 from .rpc import Client
@@ -338,9 +338,10 @@ class WindowManager(object):
         self._workspace = ProjectFolders(self._window, self._on_project_changed, self._on_project_switched)
 
     def _on_project_changed(self, folders: 'List[str]') -> None:
+        workspace_folders = get_workspace_folders(self._workspace.folders)
         for config_name in self._sessions:
             for session in self._sessions[config_name]:
-                session.update_folders(self._workspace.workspace_folders)
+                session.update_folders(workspace_folders)
 
     def _on_project_switched(self, folders: 'List[str]') -> None:
         debug('project switched - ending all sessions')
@@ -383,14 +384,14 @@ class WindowManager(object):
         debug('window {} starting {} initial views'.format(self._window.id(), len(active_views)))
         for view in active_views:
             if view.file_name():
-                self._workspace.update(view.file_name() or "")
+                self._workspace.update()
                 self._initialize_on_open(view)
                 self.documents.handle_view_opened(view)
 
     def activate_view(self, view: ViewLike) -> None:
         file_name = view.file_name() or ""
         if not self.documents.has_document_state(file_name):
-            self._workspace.update(file_name)
+            self._workspace.update()
             self._initialize_on_open(view)
 
     def _initialize_on_open(self, view: ViewLike) -> None:
@@ -433,10 +434,11 @@ class WindowManager(object):
 
         self._window.status_message("Starting " + config.name + "...")
         session = None  # type: Optional[Session]
+        workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
         try:
             session = self._start_session(
                 self._window,                  # window
-                self._workspace.workspace_folders,  # workspace_folders
+                workspace_folders,             # workspace_folders
                 config,                        # config
                 self._handle_pre_initialize,   # on_pre_initialize
                 self._handle_post_initialize,  # on_post_initialize

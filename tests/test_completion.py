@@ -1,8 +1,7 @@
 from LSP.plugin.completion import CompletionHandler
 from LSP.plugin.completion import CompletionState
 from LSP.plugin.core.registry import is_supported_view
-from setup import SUPPORTED_SYNTAX, TextDocumentTestCase
-import os
+from setup import SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove_config, text_config
 import sublime
 
 
@@ -11,9 +10,6 @@ try:
     assert Dict and Optional and List and Generator
 except ImportError:
     pass
-
-OPEN_DOCUMENT_DELAY = 100
-AFTER_INSERT_COMPLETION_DELAY = 1000 if os.getenv("TRAVIS") else 100
 
 label_completions = [dict(label='asdf'), dict(label='efgh')]
 completion_with_additional_edits = [
@@ -124,9 +120,9 @@ metals_implement_all_members = [
 
 
 class InitializationTests(TextDocumentTestCase):
-    # def setUp(self) -> 'Generator':
-    #     self.view = sublime.active_window().new_file()
-    #     add_config(text_config)
+    def setUp(self) -> 'Generator':
+        self.view = sublime.active_window().new_file()
+        add_config(text_config)
 
     def test_is_not_applicable(self) -> None:
         self.assertFalse(CompletionHandler.is_applicable(dict()))
@@ -144,12 +140,12 @@ class InitializationTests(TextDocumentTestCase):
         yield lambda: not handler.enabled
         self.assertIsNone(result)
 
-    # def tearDown(self) -> 'Generator':
-    #     remove_config(text_config)
-    #     if self.view:
-    #         self.view.set_scratch(True)
-    #         self.view.window().focus_view(self.view)
-    #         self.view.window().run_command("close_file")
+    def tearDown(self) -> 'Generator':
+        remove_config(text_config)
+        if self.view:
+            self.view.set_scratch(True)
+            self.view.window().focus_view(self.view)
+            self.view.window().run_command("close_file")
 
 
 class QueryCompletionsTests(TextDocumentTestCase):
@@ -296,7 +292,6 @@ class QueryCompletionsTests(TextDocumentTestCase):
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('commit_completion', {})
             self.view.run_command("commit_completion", {})
-            yield AFTER_INSERT_COMPLETION_DELAY
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 '  override def myFunction(): Unit = ???')
@@ -320,7 +315,6 @@ class QueryCompletionsTests(TextDocumentTestCase):
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('commit_completion', {})
             self.view.run_command("commit_completion", {})
-            yield AFTER_INSERT_COMPLETION_DELAY
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'List.apply()')
@@ -340,7 +334,6 @@ class QueryCompletionsTests(TextDocumentTestCase):
             yield from self.await_message('textDocument/completion')
             handler.on_text_command('commit_completion', {})
             self.view.run_command('commit_completion', {})
-            yield AFTER_INSERT_COMPLETION_DELAY
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'def foo: Int = ???\n   def boo: Int = ???')
@@ -355,7 +348,6 @@ class QueryCompletionsTests(TextDocumentTestCase):
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('commit_completion', {})
             self.view.run_command("commit_completion", {})
-            yield AFTER_INSERT_COMPLETION_DELAY
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'import asdf;\nasdf')
@@ -376,7 +368,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('commit_completion', {})
             self.view.run_command("commit_completion", {})
-            yield AFTER_INSERT_COMPLETION_DELAY
+            yield from self.await_message('completionItem/resolve')
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'import asdf;\nasdf')

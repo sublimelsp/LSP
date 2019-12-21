@@ -110,18 +110,6 @@ class DiagnosticsCursorListener(LSPViewEventListener):
         self.has_status = False
 
 
-class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
-    def run(self) -> None:
-        ensure_diagnostics_panel(self.window)
-        active_panel = self.window.active_panel()
-        is_active_panel = (active_panel == "output.diagnostics")
-
-        if is_active_panel:
-            self.window.run_command("hide_panel", {"panel": "output.diagnostics"})
-        else:
-            self.window.run_command("show_panel", {"panel": "output.diagnostics"})
-
-
 class LspClearDiagnosticsCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:
         windows.lookup(self.window).diagnostics.clear()
@@ -342,9 +330,7 @@ class DiagnosticOutputPanel(DiagnosticsUpdateWalk):
     def end(self) -> None:
         assert self._panel, "must have a panel now!"
         self._panel.settings().set("result_base_dir", self._base_dir)
-        self._panel.set_read_only(False)
         self._panel.run_command("lsp_update_panel", {"characters": "\n".join(self._to_render)})
-        self._panel.set_read_only(True)
 
     def format_diagnostic(self, diagnostic: Diagnostic) -> str:
         location = "{:>8}:{:<4}".format(

@@ -1,4 +1,4 @@
-from .logging import debug, exception_log, server_log
+from .logging import debug, exception_log
 import os
 import shutil
 import subprocess
@@ -32,8 +32,12 @@ def add_extension_if_missing(server_binary_args: 'List[str]') -> 'List[str]':
     return server_binary_args
 
 
-def start_server(server_binary_args: 'List[str]', working_dir: 'Optional[str]',
-                 env: 'Dict[str,str]', attach_stderr: bool) -> 'Optional[subprocess.Popen]':
+def start_server(
+    server_binary_args: 'List[str]',
+    working_dir: 'Optional[str]',
+    env: 'Dict[str,str]',
+    on_stderr_log: 'Optional[Callable[[str], None]]'
+) -> 'Optional[subprocess.Popen]':
     si = None
     if os.name == "nt":
         server_binary_args = add_extension_if_missing(server_binary_args)
@@ -42,9 +46,9 @@ def start_server(server_binary_args: 'List[str]', working_dir: 'Optional[str]',
 
     debug("starting " + str(server_binary_args))
 
-    stderr_destination = subprocess.PIPE if attach_stderr else subprocess.DEVNULL
+    stderr_destination = subprocess.PIPE if on_stderr_log else subprocess.DEVNULL
 
-    return subprocess.Popen(
+    process = subprocess.Popen(
         server_binary_args,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
@@ -53,14 +57,19 @@ def start_server(server_binary_args: 'List[str]', working_dir: 'Optional[str]',
         env=env,
         startupinfo=si)
 
+    if on_stderr_log is not None:
+        attach_logger(process, process.stderr, on_stderr_log)
 
-def attach_logger(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
-    threading.Thread(target=log_stream, args=(process, stream)).start()
+    return process
 
 
-def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
+def attach_logger(process: 'subprocess.Popen', stream: 'IO[Any]', log_callback: 'Callable[[str], None]') -> None:
+    threading.Thread(target=log_stream, args=(process, stream, log_callback)).start()
+
+
+def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]', log_callback: 'Callable[[str], None]') -> None:
     """
-    Reads any errors from the LSP process.
+    Read lines from a stream and invoke the log_callback on the result
     """
     running = True
     while running:
@@ -70,7 +79,7 @@ def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]') -> None:
             content = stream.readline()
             if not content:
                 break
-            server_log('server', content.decode('UTF-8', 'replace').strip())
+            log_callback(content.decode('UTF-8', 'replace').strip())
         except IOError as err:
             exception_log("Failure reading stream", err)
             return

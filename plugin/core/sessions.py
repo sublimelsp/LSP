@@ -20,6 +20,7 @@ def create_session(config: ClientConfig,
                    on_pre_initialize: 'Optional[Callable[[Session], None]]' = None,
                    on_post_initialize: 'Optional[Callable[[Session], None]]' = None,
                    on_post_exit: 'Optional[Callable[[str], None]]' = None,
+                   on_stderr_log: 'Optional[Callable[[str], None]]' = None,
                    bootstrap_client: 'Optional[Any]' = None) -> 'Optional[Session]':
 
     def with_client(client: Client) -> 'Session':
@@ -42,7 +43,7 @@ def create_session(config: ClientConfig,
             server_args = list(s.replace("{port}", str(tcp_port)) for s in config.binary_args)
 
         working_dir = workspace_folders[0].path if workspace_folders else None
-        process = start_server(server_args, working_dir, env, settings.log_stderr)
+        process = start_server(server_args, working_dir, env, on_stderr_log)
         if process:
             if config.tcp_mode == "host":
                 client_socket, address = socket.accept()

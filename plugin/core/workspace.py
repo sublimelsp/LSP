@@ -1,37 +1,64 @@
 from .logging import debug
 from .protocol import WorkspaceFolder
 from .types import WindowLike
-import os
 
 try:
-    from typing import List, Optional, Any, Dict, Iterable, Union
-    assert List and Optional and Any and Dict and Iterable and Union
+    from typing import List, Optional, Any, Dict, Iterable, Union, Callable
+    assert List and Optional and Any and Dict and Iterable and Union and Callable
 except ImportError:
     pass
 
 
-def maybe_get_first_workspace_from_window(window: WindowLike) -> 'Optional[WorkspaceFolder]':
-    folders = window.folders()
-    if not folders:
-        return None
-    return WorkspaceFolder.from_path(folders[0])
+class ProjectFolders(object):
+
+    def __init__(self, window: WindowLike, on_changed: 'Callable[[List[str]], None]',
+                 on_switched: 'Callable[[List[str]], None]') -> None:
+        self._window = window
+        self._on_changed = on_changed
+        self._on_switched = on_switched
+        self._current_project_file_name = self._window.project_file_name()
+        self._set_folders(window.folders())
+
+    def update(self) -> None:
+        new_folders = self._window.folders()
+        if set(new_folders) != set(self.folders):
+            is_update = self._can_update_to(new_folders)
+            self._set_folders(new_folders)
+            if is_update:
+                self._on_changed(new_folders)
+            else:
+                self._on_switched(new_folders)
+
+    def _set_folders(self, folders: 'List[str]') -> None:
+        self.folders = folders
+
+    def _can_update_to(self, new_folders: 'List[str]') -> bool:
+        """ Should detect difference between a project switch and a change to folders in the loaded project """
+        if not self.folders:
+            return True
+
+        if self._current_project_file_name and self._window.project_file_name() == self._current_project_file_name:
+            return True
+
+        for folder in self.folders:
+            if folder in new_folders:
+                return True
+
+        return False
 
 
-def maybe_get_workspace_from_view(view_or_window: 'Any') -> 'Optional[WorkspaceFolder]':
-    if hasattr(view_or_window, 'file_name'):
-        filename = view_or_window.file_name()
-    elif hasattr(view_or_window, 'active_view'):
-        view = view_or_window.active_view()
-        if not view:
-            return None
-        filename = view.file_name()
-    else:
-        return None
-    if filename and os.path.exists(filename):  # https://github.com/tomv564/LSP/issues/644
-        path = os.path.dirname(filename)
-        return WorkspaceFolder.from_path(path)
-    debug("the current file isn't saved to disk.")
-    return None
+def get_workspace_folders(folders: 'List[str]') -> 'List[WorkspaceFolder]':
+    return [WorkspaceFolder.from_path(f) for f in folders]
+
+
+def sorted_workspace_folders(folders: 'List[str]', file_path: str) -> 'List[WorkspaceFolder]':
+    sorted_folders = []  # type: List[WorkspaceFolder]
+    for folder in folders:
+        if file_path and file_path.startswith(folder):
+            sorted_folders.insert(0, WorkspaceFolder.from_path(folder))
+        else:
+            sorted_folders.append(WorkspaceFolder.from_path(folder))
+    return sorted_folders
 
 
 def enable_in_project(window: 'Any', config_name: str) -> None:

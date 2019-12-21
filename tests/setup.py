@@ -1,17 +1,25 @@
 from LSP.plugin.core.logging import debug
-from LSP.plugin.core.protocol import Notification
-from LSP.plugin.core.protocol import Request
+from LSP.plugin.core.protocol import Notification, Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.test_mocks import basic_responses
-from LSP.plugin.core.types import ClientConfig
-from LSP.plugin.core.types import ClientStates
-from LSP.plugin.core.types import LanguageConfig
-from sublime_plugin import view_event_listeners
-from sublime_plugin import ViewEventListener
+from LSP.plugin.core.types import ClientConfig, ClientStates, LanguageConfig
+from sublime_plugin import view_event_listeners, ViewEventListener
 from unittesting import DeferrableTestCase
+from LSP.plugin.core.protocol import WorkspaceFolder
+from os.path import dirname
 import sublime
+
+
+project_path = dirname(__file__)
+test_file_path = project_path + "/testfile.txt"
+workspace_folders = [WorkspaceFolder.from_path(project_path)]
+
+SUPPORTED_SCOPE = "text.plain"
+SUPPORTED_SYNTAX = "Packages/Text/Plain text.tmLanguage"
+text_language = LanguageConfig("text", [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX])
+text_config = ClientConfig("textls", [], None, languages=[text_language])
 
 try:
     from typing import Dict, List, Callable, Any, Optional, Generator
@@ -42,8 +50,8 @@ def make_stdio_test_config() -> ClientConfig:
         tcp_port=None,
         languages=[LanguageConfig(
             language_id="txt",
-            scopes=["text.plain"],
-            syntaxes=["Packages/Text/Plain text.tmLanguage"])],
+            scopes=[SUPPORTED_SCOPE],
+            syntaxes=[SUPPORTED_SYNTAX])],
         enabled=True)
 
 
@@ -66,6 +74,14 @@ def close_test_view(view: sublime.View):
     if view:
         view.set_scratch(True)
         view.close()
+
+
+def inject_session(wm, config, client) -> Session:
+    session = Session(config, workspace_folders, client, wm._handle_pre_initialize, wm._handle_post_initialize)
+    wm._sessions[config.name] = [session]
+    wm.update_configs()
+    wm._workspace_folders = workspace_folders
+    return session
 
 
 def expand(s: str, w: sublime.Window) -> str:
@@ -129,7 +145,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def init_view_settings(self) -> None:
         s = self.view.settings().set
-        s("auto_complete_selector", "text.plain")
+        s("auto_complete_selector", SUPPORTED_SCOPE)
         s("ensure_newline_at_eof_on_save", False)
         s("rulers", [])
         s("tab_size", 4)

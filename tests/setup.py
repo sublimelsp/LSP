@@ -46,7 +46,7 @@ class YieldPromise:
 def make_stdio_test_config() -> ClientConfig:
     return ClientConfig(
         name="TEST",
-        binary_args=["python3", "${packages}/LSP/tests/server.py"],
+        binary_args=["python3", "$packages/LSP/tests/server.py"],
         tcp_port=None,
         languages=[LanguageConfig(
             language_id="txt",
@@ -112,10 +112,10 @@ class TextDocumentTestCase(DeferrableTestCase):
         if session_type == SessionType.Stdio:
             pass
         elif session_type == SessionType.TcpCreate:
-            # TODO: modify self.config so that it'll start a TCP session
+            # TODO
             pass
         elif session_type == SessionType.TcpConnectExisting:
-            # TODO: modify self.config so that it'll start a TCP session
+            # TODO
             pass
         else:
             self.assertFalse(True)
@@ -168,6 +168,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             if not self.session:
                 self.session = self.wm._sessions.get(self.config.name, None)
                 if not self.session:
+                    print("still no session")
                     return False
             if not self.session.client:
                 return False
@@ -180,6 +181,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield {"condition": condition, "timeout": 1000}
 
     def await_message(self, method: str, expected_session_state: int = ClientStates.READY) -> 'Generator':
+        print("AWAIT", method)
         self.assertIsNotNone(self.session)
         assert self.session  # mypy
         self.assertEqual(self.session.state, expected_session_state)

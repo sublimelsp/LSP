@@ -1,12 +1,10 @@
 from LSP.plugin.completion import CompletionHandler
 from LSP.plugin.completion import CompletionState
 from LSP.plugin.core.registry import is_supported_view
-from setup import TextDocumentTestCase
+from setup import SUPPORTED_SYNTAX, text_config, add_config, remove_config, TextDocumentTestCase
 import os
 import sublime
-# from unittesting import DeferrableTestCase
-# from setup import (SUPPORTED_SYNTAX, text_config, add_config, remove_config,
-#                    TextDocumentTestCase)
+
 
 try:
     from typing import Dict, Optional, List, Generator

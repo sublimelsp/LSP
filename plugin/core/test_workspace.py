@@ -1,5 +1,5 @@
 from .test_mocks import MockWindow
-from .workspace import get_workspace_folders, ProjectFolders
+from .workspace import ProjectFolders, sorted_workspace_folders
 from .protocol import WorkspaceFolder
 import os
 from unittest import mock
@@ -7,25 +7,16 @@ import unittest
 import tempfile
 
 
-class GetWorkspaceFoldersTest(unittest.TestCase):
-
-    def test_get_workspace_from_single_folder_project(self) -> None:
-        project_folder = os.path.dirname(__file__)
-        folders = get_workspace_folders(MockWindow(folders=[project_folder]), __file__)
-        self.assertEqual(folders[0], project_folder)
+class SortedWorkspaceFoldersTest(unittest.TestCase):
 
     def test_get_workspace_from_multi_folder_project(self) -> None:
         first_project_path = os.path.dirname(__file__)
         second_project_path = tempfile.gettempdir()
-        folders = get_workspace_folders(MockWindow(folders=[second_project_path, first_project_path]), __file__)
-        # first_folder = WorkspaceFolder.from_path(first_project_path)
-        # second_folder = WorkspaceFolder.from_path(second_project_path)
-        self.assertEqual(folders[0], first_project_path)
-        self.assertEqual(folders[1], second_project_path)
-
-    def test_get_workspace_without_folders(self) -> None:
-        folders = get_workspace_folders(MockWindow(), __file__)
-        self.assertEqual(folders, [])
+        folders = sorted_workspace_folders([second_project_path, first_project_path], __file__)
+        first_folder = WorkspaceFolder.from_path(first_project_path)
+        second_folder = WorkspaceFolder.from_path(second_project_path)
+        self.assertEqual(folders[0], first_folder)
+        self.assertEqual(folders[1], second_folder)
 
 
 class WorkspaceFolderTest(unittest.TestCase):
@@ -54,7 +45,7 @@ class WorkspaceFoldersTest(unittest.TestCase):
 
         wf = ProjectFolders(window, on_changed, on_switched)
         window.set_folders([os.path.dirname(__file__)])
-        wf.update(__file__)
+        wf.update()
         assert on_changed.call_count == 1
         on_switched.assert_not_called()
 
@@ -68,8 +59,22 @@ class WorkspaceFoldersTest(unittest.TestCase):
         wf = ProjectFolders(window, on_changed, on_switched)
 
         window.set_folders([folder, parent_folder])
-        wf.update(__file__)
+        wf.update()
         assert on_changed.call_count == 1
+        on_switched.assert_not_called()
+
+    def test_change_folder_order(self) -> None:
+        on_changed = mock.Mock()
+        on_switched = mock.Mock()
+        folder = os.path.dirname(__file__)
+        parent_folder = os.path.dirname(folder)
+        window = MockWindow(folders=[folder, parent_folder])
+
+        wf = ProjectFolders(window, on_changed, on_switched)
+
+        window.set_folders([parent_folder, folder])
+        wf.update()
+        on_changed.assert_not_called()
         on_switched.assert_not_called()
 
     def test_switch_project(self) -> None:
@@ -82,7 +87,7 @@ class WorkspaceFoldersTest(unittest.TestCase):
         wf = ProjectFolders(window, on_changed, on_switched)
 
         window.set_folders([parent_folder])
-        wf.update(__file__)
+        wf.update()
         on_changed.assert_not_called()
         assert on_switched.call_count == 1
 
@@ -90,21 +95,11 @@ class WorkspaceFoldersTest(unittest.TestCase):
         on_changed = mock.Mock()
         on_switched = mock.Mock()
 
-        first_file = __file__
-        folder = os.path.dirname(__file__)
-        parent_folder = os.path.dirname(folder)
-        file_in_parent_folder = os.path.join(parent_folder, "test_file.py")
-
         window = MockWindow(folders=[])
 
         wf = ProjectFolders(window, on_changed, on_switched)
 
-        wf.update(first_file)
-
-        assert on_changed.call_count == 0
-        on_switched.assert_not_called()
-
-        wf.update(file_in_parent_folder)
+        wf.update()
 
         assert on_changed.call_count == 0
         assert on_switched.call_count == 0

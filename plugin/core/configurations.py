@@ -129,7 +129,6 @@ class WindowConfigManager(object):
 
     def syntax_supported(self, view: ViewLike) -> bool:
         syntax = view.settings().get("syntax")
-        assert isinstance(syntax, str)
         for found in filter(lambda c: config_supports_syntax(c, syntax) and c.enabled, self.all):
             return True
         return False

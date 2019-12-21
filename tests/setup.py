@@ -99,7 +99,6 @@ class TextDocumentTestCase(DeferrableTestCase):
     def __init__(self, *args: 'Any', **kwargs: 'Any') -> None:
         super().__init__(*args, **kwargs)
         self.session = None  # type: Optional[Session]
-        self.old_configs = None   # type: Optional[List[ClientConfig]]
         self.config = make_stdio_test_config()
 
     def setUp(self) -> 'Generator':
@@ -122,10 +121,8 @@ class TextDocumentTestCase(DeferrableTestCase):
         window = sublime.active_window()
         self.assertTrue(window)
         filename = expand("$packages/LSP/tests/{}.txt".format(test_name), window)
-        # inject what the test server should return for its initialize request here
         self.config.init_options["serverResponse"] = server_capabilities
         windows._windows.clear()  # destroy all window managers
-        self.old_configs = client_configs.all.copy()
         client_configs.all.clear()
         add_config(self.config)
         self.wm = windows.lookup(window)  # create just this single one for the test
@@ -166,9 +163,8 @@ class TextDocumentTestCase(DeferrableTestCase):
             if not self.view.is_valid():
                 return False
             if not self.session:
-                self.session = self.wm._sessions.get(self.config.name, None)
+                self.session = self.wm._find_session(self.config.name, self.view.file_name())
                 if not self.session:
-                    print("still no session")
                     return False
             if not self.session.client:
                 return False
@@ -217,7 +213,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def await_boilerplate_end(self) -> 'Generator':
         close_test_view(self.view)
-        self.wm.end_session(self.config.name)  # TODO: Shouldn't this be automatic once the view closes?
+        self.wm.end_config_sessions(self.config.name)  # TODO: Shouldn't this be automatic once the last view closes?
         yield lambda: self.session.state == ClientStates.STOPPING
         yield lambda: self.session.client is None
 

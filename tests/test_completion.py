@@ -1,7 +1,7 @@
 from LSP.plugin.completion import CompletionHandler
 from LSP.plugin.completion import CompletionState
 from LSP.plugin.core.registry import is_supported_view
-from setup import SUPPORTED_SYNTAX, text_config, add_config, remove_config, TextDocumentTestCase
+from setup import SUPPORTED_SYNTAX, TextDocumentTestCase
 import os
 import sublime
 
@@ -140,9 +140,8 @@ class InitializationTests(TextDocumentTestCase):
         self.assertFalse(handler.initialized)
         self.assertFalse(handler.enabled)
         result = handler.on_query_completions("", [0])
-        yield 100
-        self.assertTrue(handler.initialized)
-        self.assertFalse(handler.enabled)
+        yield lambda: handler.initialized
+        yield lambda: not handler.enabled
         self.assertIsNone(result)
 
     # def tearDown(self) -> 'Generator':
@@ -155,8 +154,7 @@ class InitializationTests(TextDocumentTestCase):
 
 class QueryCompletionsTests(TextDocumentTestCase):
     def test_simple_label(self) -> 'Generator':
-        yield OPEN_DOCUMENT_DELAY
-        self.transport.responses['textDocument/completion'] = label_completions
+        self.set_response('textDocument/completion', label_completions)
 
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
@@ -174,7 +172,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             # self.assertEquals(mask, 0)
 
             # now wait for server response
-            yield 100
+            yield from self.await_message('textDocument/completion')
             self.assertEquals(handler.state, CompletionState.IDLE)
             self.assertEquals(len(handler.completions), 2)
 
@@ -184,30 +182,26 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 self.view.substr(sublime.Region(0, self.view.size())), 'asdf')
 
     def test_simple_inserttext(self) -> 'Generator':
-        yield OPEN_DOCUMENT_DELAY
-        self.transport.responses[
-            'textDocument/completion'] = insert_text_completions
+        self.set_response('textDocument/completion', insert_text_completions)
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
             handler.on_query_completions("", [0])
-            yield 100
+            yield from self.await_message('textDocument/completion')
             self.view.run_command("commit_completion")
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 insert_text_completions[0]["insertText"])
 
     def test_var_prefix_using_label(self) -> 'Generator':
-        yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': '$'})
         self.view.run_command('move_to', {'to': 'eol'})
-        self.transport.responses[
-            'textDocument/completion'] = var_completion_using_label
+        self.set_response('textDocument/completion', var_completion_using_label)
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
             handler.on_query_completions("", [1])
-            yield 100
+            yield from self.await_message('textDocument/completion')
             self.view.run_command("commit_completion")
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
@@ -218,16 +212,14 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Powershell: label='true', insertText='$true' (see https://github.com/tomv564/LSP/issues/294)
 
         """
-        yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': '$'})
         self.view.run_command('move_to', {'to': 'eol'})
-        self.transport.responses[
-            'textDocument/completion'] = var_prefix_added_in_insertText
+        self.set_response('textDocument/completion', var_prefix_added_in_insertText)
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
             handler.on_query_completions("", [1])
-            yield 100
+            yield from self.await_message('textDocument/completion')
             self.view.run_command("commit_completion")
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
@@ -238,16 +230,14 @@ class QueryCompletionsTests(TextDocumentTestCase):
         PHP language server: label='$someParam', textEdit='someParam' (https://github.com/tomv564/LSP/issues/368)
 
         """
-        yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': '$'})
         self.view.run_command('move_to', {'to': 'eol'})
-        self.transport.responses[
-            'textDocument/completion'] = var_prefix_added_in_label
+        self.set_response('textDocument/completion', var_prefix_added_in_label)
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
             handler.on_query_completions("", [1])
-            yield 100
+            yield from self.await_message('textDocument/completion')
             self.view.run_command("commit_completion")
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
@@ -258,13 +248,12 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Clangd: label=" const", insertText="const" (https://github.com/tomv564/LSP/issues/368)
 
         """
-        yield OPEN_DOCUMENT_DELAY
-        self.transport.responses['textDocument/completion'] = space_added_in_label
+        self.set_response('textDocument/completion', space_added_in_label)
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
             handler.on_query_completions("", [0])
-            yield 100
+            yield from self.await_message('textDocument/completion')
             self.view.run_command("commit_completion")
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), 'const')
@@ -275,17 +264,15 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Powershell: label="UniqueId", insertText="-UniqueId" (https://github.com/tomv564/LSP/issues/572)
 
         """
-        yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': '-'})
         self.view.run_command('move_to', {'to': 'eol'})
 
-        self.transport.responses[
-            'textDocument/completion'] = dash_missing_from_label
+        self.set_response('textDocument/completion', dash_missing_from_label)
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
             handler.on_query_completions("", [1])
-            yield 100
+            yield from self.await_message('textDocument/completion')
             self.view.run_command("commit_completion")
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
@@ -297,16 +284,15 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Metals: label="override def myFunction(): Unit"
 
         """
-        yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': '  def myF'})
         self.view.run_command('move_to', {'to': 'eol'})
 
-        self.transport.responses['textDocument/completion'] = edit_before_cursor
+        self.set_response('textDocument/completion', edit_before_cursor)
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
             handler.on_query_completions("myF", [7])
-            yield 100
+            yield from self.await_message('textDocument/completion')
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('commit_completion', {})
             self.view.run_command("commit_completion", {})
@@ -322,16 +308,15 @@ class QueryCompletionsTests(TextDocumentTestCase):
         See https://github.com/tomv564/LSP/issues/645
 
         """
-        yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': 'List.'})
         self.view.run_command('move_to', {'to': 'eol'})
 
-        self.transport.responses['textDocument/completion'] = edit_after_nonword
+        self.set_response('textDocument/completion', edit_after_nonword)
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
             handler.on_query_completions("", [5])
-            yield 100
+            yield from self.await_message('textDocument/completion')
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('commit_completion', {})
             self.view.run_command("commit_completion", {})
@@ -345,15 +330,14 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Metals: "Implement all members" should just select the newText.
         https://github.com/tomv564/LSP/issues/771
         """
-        yield OPEN_DOCUMENT_DELAY
         self.view.run_command('append', {'characters': 'I'})
         self.view.run_command('move_to', {'to': 'eol'})
-        self.transport.responses['textDocument/completion'] = metals_implement_all_members
+        self.set_response('textDocument/completion', metals_implement_all_members)
         handler = self.get_view_event_listener('on_query_completions')
         self.assertIsNotNone(handler)
         if handler:
             handler.on_query_completions("", [1])
-            yield 100
+            yield from self.await_message('textDocument/completion')
             handler.on_text_command('commit_completion', {})
             self.view.run_command('commit_completion', {})
             yield AFTER_INSERT_COMPLETION_DELAY
@@ -362,14 +346,12 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 'def foo: Int = ???\n   def boo: Int = ???')
 
     def test_additional_edits(self) -> 'Generator':
-        yield OPEN_DOCUMENT_DELAY
-        self.transport.responses[
-            'textDocument/completion'] = completion_with_additional_edits
+        self.set_response('textDocument/completion', completion_with_additional_edits)
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
         if handler:
             handler.on_query_completions("", [0])
-            yield 100
+            yield from self.await_message('textDocument/completion')
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('commit_completion', {})
             self.view.run_command("commit_completion", {})
@@ -379,10 +361,8 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 'import asdf;\nasdf')
 
     def test_resolve_for_additional_edits(self) -> 'Generator':
-        yield OPEN_DOCUMENT_DELAY
-        self.transport.responses['textDocument/completion'] = label_completions
-        self.transport.responses[
-            'completionItem/resolve'] = completion_with_additional_edits[0]
+        self.set_response('textDocument/completion', label_completions)
+        self.set_response('completionItem/resolve', completion_with_additional_edits[0])
 
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)
@@ -392,7 +372,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             # note: ideally the handler is initialized with resolveProvider capability
             handler.resolve = True
 
-            yield 100
+            yield from self.await_message('textDocument/completion')
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('commit_completion', {})
             self.view.run_command("commit_completion", {})

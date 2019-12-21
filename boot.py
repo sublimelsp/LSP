@@ -4,6 +4,7 @@ from .plugin.core.main import startup, shutdown
 from .plugin.core.panels import *
 from .plugin.core.registry import LspRestartClientCommand
 from .plugin.core.documents import *
+from .plugin.panels import *
 from .plugin.edit import *
 from .plugin.completion import *
 from .plugin.diagnostics import *

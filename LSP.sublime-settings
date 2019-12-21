@@ -82,13 +82,21 @@
   // Show verbose debug messages in the sublime console.
   "log_debug": false,
 
-  // Show notifications from language servers in the console.
+  // Show messages from language servers in the Language Servers output panel.
+  // This output panel can be toggled from the command palette with the
+  // command "LSP: Toggle Panel: Language Servers".
   "log_server": true,
 
-  // Show language server stderr output in the console.
+  // Show language server stderr output in the Language Servers output panel.
+  // This output panel can be toggled from the command palette with the
+  // command "LSP: Toggle Panel: Language Servers".
   "log_stderr": false,
 
-  // Show full JSON-RPC responses in the console
+  // Show full JSON-RPC requests/responses/notifications in the Language Servers
+  // output panel. Note that if the payload is very large, SublimeText will not
+  // highlight the log line.
+  // This output panel can be toggled from the command palette with the
+  // command "LSP: Toggle Panel: Language Servers".
   "log_payloads": false,
 
   // User clients configuration can be used to

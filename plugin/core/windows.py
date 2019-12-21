@@ -1,10 +1,10 @@
 from .diagnostics import DiagnosticsStorage
-from .logging import debug, server_log
+from .logging import debug
 from .types import (ClientStates, ClientConfig, WindowLike, ViewLike,
                     LanguageConfig, config_supports_syntax, ConfigRegistry,
                     GlobalConfigs, Settings)
-from .protocol import Notification, Response
 from .edit import parse_workspace_edit
+from .protocol import Notification, Response
 from .sessions import Session
 from .url import filename_to_uri
 from .workspace import (
@@ -21,7 +21,6 @@ try:
     assert Optional and List and Callable and Dict and Session and Any and ModuleType and Iterator and Union
     assert LanguageConfig
 except ImportError:
-    pass
     Protocol = object  # type: ignore
 
 
@@ -87,6 +86,7 @@ def get_active_views(window: WindowLike) -> 'List[ViewLike]':
 
 class DocumentState:
     """Stores version count for documents open in a language service"""
+
     def __init__(self, path: str) -> None:
         self.path = path
         self.version = 0
@@ -318,15 +318,22 @@ class WindowDocumentHandler(object):
                         session.client.send_notification(Notification.didChange(params))
 
 
+def extract_message(params: 'Any') -> str:
+    return params.get("message", "???") if isinstance(params, dict) else "???"
+
+
 class WindowManager(object):
-    def __init__(self, window: WindowLike, configs: ConfigRegistry, documents: DocumentHandler,
+    def __init__(self, window: WindowLike, settings: Settings, configs: ConfigRegistry, documents: DocumentHandler,
                  diagnostics: DiagnosticsStorage, session_starter: 'Callable', sublime: 'Any',
-                 handler_dispatcher: LanguageHandlerListener, on_closed: 'Optional[Callable]' = None) -> None:
+                 handler_dispatcher: LanguageHandlerListener, on_closed: 'Optional[Callable]' = None,
+                 server_panel_factory: 'Optional[Callable]' = None) -> None:
 
         self._window = window
+        self._settings = settings
         self._configs = configs
         self.diagnostics = diagnostics
         self.documents = documents
+        self.server_panel_factory = server_panel_factory
         self._sessions = dict()  # type: Dict[str, List[Session]]
         self._start_session = session_starter
         self._sublime = sublime
@@ -442,7 +449,8 @@ class WindowManager(object):
                 config,                        # config
                 self._handle_pre_initialize,   # on_pre_initialize
                 self._handle_post_initialize,  # on_post_initialize
-                self._handle_post_exit)        # on_post_exit
+                self._handle_post_exit,        # on_post_exit
+                lambda msg: self._handle_stderr_log(config.name, msg))  # on_stderr_log
         except Exception as e:
             message = "\n\n".join([
                 "Could not start {}",
@@ -513,10 +521,17 @@ class WindowManager(object):
 
         client.send_response(Response(request_id, items))
 
+    def _payload_log_sink(self, message: str) -> None:
+        self._sublime.set_timeout_async(lambda: self._handle_server_message(":", message), 0)
+
     def _handle_pre_initialize(self, session: 'Session') -> None:
         client = session.client
         client.set_crash_handler(lambda: self._handle_server_crash(session.config))
         client.set_error_display_handler(self._window.status_message)
+
+        if self.server_panel_factory:
+            client.logger.server_name = session.config.name
+            client.logger.sink = self._payload_log_sink
 
         client.on_request(
             "window/showMessageRequest",
@@ -524,11 +539,11 @@ class WindowManager(object):
 
         client.on_notification(
             "window/showMessage",
-            lambda params: self._sublime.message_dialog(params.get("message")))
+            lambda params: self._handle_show_message(session.config.name, params))
 
         client.on_notification(
             "window/logMessage",
-            lambda params: server_log(session.config.name, params.get("message", "???") if params else "???"))
+            lambda params: self._handle_log_message(session.config.name, params))
 
     def _handle_post_initialize(self, session: 'Session') -> None:
         client = session.client
@@ -609,6 +624,24 @@ class WindowManager(object):
         if result == self._sublime.DIALOG_YES:
             self.restart_sessions()
 
+    def _handle_server_message(self, name: str, message: str) -> None:
+        if not self.server_panel_factory:
+            return
+        panel = self.server_panel_factory(self._window)
+        if not panel:
+            return debug("no server panel for window", self._window.id())
+        panel.run_command("lsp_update_server_panel", {"prefix": name, "message": message})
+
+    def _handle_log_message(self, name: str, params: 'Any') -> None:
+        self._handle_server_message(name, extract_message(params))
+
+    def _handle_stderr_log(self, name: str, message: str) -> None:
+        if self._settings.log_stderr:
+            self._handle_server_message(name, message)
+
+    def _handle_show_message(self, name: str, params: 'Any') -> None:
+        self._sublime.status_message("{}: {}".format(name, extract_message(params)))
+
 
 class WindowRegistry(object):
     def __init__(self, configs: GlobalConfigs, documents: 'Any',
@@ -620,20 +653,38 @@ class WindowRegistry(object):
         self._sublime = sublime
         self._handler_dispatcher = handler_dispatcher
         self._diagnostics_ui_class = None  # type: Optional[Callable]
+        self._server_panel_factory = None  # type: Optional[Callable]
+        self._settings = None  # type: Optional[Settings]
 
     def set_diagnostics_ui(self, ui_class: 'Any') -> None:
         self._diagnostics_ui_class = ui_class
 
+    def set_server_panel_factory(self, factory: 'Callable') -> None:
+        self._server_panel_factory = factory
+
+    def set_settings_factory(self, settings: Settings) -> None:
+        self._settings = settings
+
     def lookup(self, window: 'Any') -> WindowManager:
         state = self._windows.get(window.id())
         if state is None:
+            if not self._settings:
+                raise RuntimeError("no settings")
             window_configs = self._configs.for_window(window)
             window_documents = self._documents.for_window(window, window_configs)
             diagnostics_ui = self._diagnostics_ui_class(window,
                                                         window_documents) if self._diagnostics_ui_class else None
-            state = WindowManager(window, window_configs, window_documents, DiagnosticsStorage(diagnostics_ui),
-                                  self._session_starter, self._sublime,
-                                  self._handler_dispatcher, lambda: self._on_closed(window))
+            state = WindowManager(
+                window=window,
+                settings=self._settings,
+                configs=window_configs,
+                documents=window_documents,
+                diagnostics=DiagnosticsStorage(diagnostics_ui),
+                session_starter=self._session_starter,
+                sublime=self._sublime,
+                handler_dispatcher=self._handler_dispatcher,
+                on_closed=lambda: self._on_closed(window),
+                server_panel_factory=self._server_panel_factory)
             self._windows[window.id()] = state
         return state
 

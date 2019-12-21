@@ -17,11 +17,11 @@ class ProjectFolders(object):
         self._on_changed = on_changed
         self._on_switched = on_switched
         self._current_project_file_name = self._window.project_file_name()
-        self._set_folders(get_workspace_folders(self._window))
+        self._set_folders(window.folders())
 
-    def update(self, file_path: str) -> None:
-        new_folders = get_workspace_folders(self._window, file_path)
-        if new_folders != self.folders:
+    def update(self) -> None:
+        new_folders = self._window.folders()
+        if set(new_folders) != set(self.folders):
             is_update = self._can_update_to(new_folders)
             self._set_folders(new_folders)
             if is_update:
@@ -31,7 +31,6 @@ class ProjectFolders(object):
 
     def _set_folders(self, folders: 'List[str]') -> None:
         self.folders = folders
-        self.workspace_folders = [WorkspaceFolder.from_path(f) for f in self.folders]
 
     def _can_update_to(self, new_folders: 'List[str]') -> bool:
         """ Should detect difference between a project switch and a change to folders in the loaded project """
@@ -48,20 +47,18 @@ class ProjectFolders(object):
         return False
 
 
-def get_workspace_folders(window: WindowLike, file_path: 'Optional[str]' = None) -> 'List[str]':
-    folders = window.folders()
-    if file_path:
-        sorted_folders = []  # type: List[str]
-        if folders:
-            for folder in folders:
-                if file_path and file_path.startswith(folder):
-                    sorted_folders.insert(0, folder)
-                else:
-                    sorted_folders.append(folder)
+def get_workspace_folders(folders: 'List[str]') -> 'List[WorkspaceFolder]':
+    return [WorkspaceFolder.from_path(f) for f in folders]
 
-        return sorted_folders
-    else:
-        return folders
+
+def sorted_workspace_folders(folders: 'List[str]', file_path: str) -> 'List[WorkspaceFolder]':
+    sorted_folders = []  # type: List[WorkspaceFolder]
+    for folder in folders:
+        if file_path and file_path.startswith(folder):
+            sorted_folders.insert(0, WorkspaceFolder.from_path(folder))
+        else:
+            sorted_folders.append(WorkspaceFolder.from_path(folder))
+    return sorted_folders
 
 
 def enable_in_project(window: 'Any', config_name: str) -> None:

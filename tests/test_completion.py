@@ -2,6 +2,7 @@ from LSP.plugin.completion import CompletionHandler
 from LSP.plugin.completion import CompletionState
 from LSP.plugin.core.registry import is_supported_view
 from setup import SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove_config, text_config
+from unittesting import DeferrableTestCase
 import sublime
 
 
@@ -119,7 +120,7 @@ metals_implement_all_members = [
 ]
 
 
-class InitializationTests(TextDocumentTestCase):
+class InitializationTests(DeferrableTestCase):
     def setUp(self) -> 'Generator':
         self.view = sublime.active_window().new_file()
         add_config(text_config)

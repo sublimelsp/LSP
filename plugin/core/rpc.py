@@ -16,8 +16,6 @@ from threading import Lock
 TCP_CONNECT_TIMEOUT = 5
 DEFAULT_SYNC_REQUEST_TIMEOUT = 1.0
 
-# RequestDict = TypedDict('RequestDict', {'id': 'Union[str,int]', 'method': str, 'params': 'Optional[Any]'})
-
 
 def format_request(payload: 'Dict[str, Any]') -> str:
     """Converts the request into json"""

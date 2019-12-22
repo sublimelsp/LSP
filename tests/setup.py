@@ -200,10 +200,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             debug("Got error:", params, "awaiting timeout :(")
 
         self.session.client.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
-        yield {
-            "condition": promise,
-            "timeout": TIMEOUT_TIME
-        }
+        yield {"condition": promise, "timeout": TIMEOUT_TIME}
 
     def set_response(self, method: str, response: 'Any') -> None:
         self.assertIsNotNone(self.session)

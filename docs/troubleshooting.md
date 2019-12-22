@@ -27,10 +27,6 @@ This issue can be solved in a few ways:
 * On OS-X: Install the [SublimeFixMacPath](https://github.com/int3h/SublimeFixMacPath) package
 * On OS-X: Use `launchctl setenv` to set PATH for OS-X UI applications.
 
-### 3. Multiple root folders?
-
-Have you added multiple folders to your Sublime workspace? LSP may not handle your second folder as expected, see [this issue](https://github.com/sublimelsp/LSP/issues/81) for more details.
-
 ## Known Issues
 
 ### Completions not shown after certain keywords

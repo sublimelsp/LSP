@@ -35,7 +35,7 @@ def startup() -> None:
 
 def shutdown() -> None:
     # Also needs to handle package being disabled or removed
-    # https://github.com/tomv564/LSP/issues/375
+    # https://github.com/sublimelsp/LSP/issues/375
     unload_settings()
 
     for window in sublime.windows():

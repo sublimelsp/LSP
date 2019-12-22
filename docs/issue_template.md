@@ -1,7 +1,7 @@
 Your issue may have been solved already - please search before creating new!
 
 Troubleshooting guide: https://lsp.readthedocs.io/en/latest/#troubleshooting
-Chat: https://gitter.im/SublimeLSP
+Chat: https://discord.gg/RMkk5MR
 
 Is it a language server problem? The LSP package can do little to prevent slowness or missing content - please check their support materials!
 
@@ -14,4 +14,4 @@ Please include in your report:
 
 Requesting a feature?
 
-Please read https://github.com/tomv564/LSP/blob/master/CONTRIBUTING.md. Specifically, LSP avoids building functionality that does not exist in Sublime Text, or that serves only one language.
+Please read https://github.com/sublimelsp/LSP/blob/master/CONTRIBUTING.md. Specifically, LSP avoids building functionality that does not exist in Sublime Text, or that serves only one language.

@@ -206,7 +206,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
     def test_var_prefix_added_in_insertText(self) -> 'Generator':
         """
 
-        Powershell: label='true', insertText='$true' (see https://github.com/tomv564/LSP/issues/294)
+        Powershell: label='true', insertText='$true' (see https://github.com/sublimelsp/LSP/issues/294)
 
         """
         self.view.run_command('append', {'characters': '$'})
@@ -224,7 +224,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
     def test_var_prefix_added_in_label(self) -> 'Generator':
         """
 
-        PHP language server: label='$someParam', textEdit='someParam' (https://github.com/tomv564/LSP/issues/368)
+        PHP language server: label='$someParam', textEdit='someParam' (https://github.com/sublimelsp/LSP/issues/368)
 
         """
         self.view.run_command('append', {'characters': '$'})
@@ -242,7 +242,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
     def test_space_added_in_label(self) -> 'Generator':
         """
 
-        Clangd: label=" const", insertText="const" (https://github.com/tomv564/LSP/issues/368)
+        Clangd: label=" const", insertText="const" (https://github.com/sublimelsp/LSP/issues/368)
 
         """
         self.set_response('textDocument/completion', space_added_in_label)
@@ -258,7 +258,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
     def test_dash_missing_from_label(self) -> 'Generator':
         """
 
-        Powershell: label="UniqueId", insertText="-UniqueId" (https://github.com/tomv564/LSP/issues/572)
+        Powershell: label="UniqueId", insertText="-UniqueId" (https://github.com/sublimelsp/LSP/issues/572)
 
         """
         self.view.run_command('append', {'characters': '-'})
@@ -301,7 +301,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         """
 
         Metals: List.| selects label instead of textedit
-        See https://github.com/tomv564/LSP/issues/645
+        See https://github.com/sublimelsp/LSP/issues/645
 
         """
         self.view.run_command('append', {'characters': 'List.'})
@@ -323,7 +323,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
     def test_implement_all_members_quirk(self) -> 'Generator':
         """
         Metals: "Implement all members" should just select the newText.
-        https://github.com/tomv564/LSP/issues/771
+        https://github.com/sublimelsp/LSP/issues/771
         """
         self.view.run_command('append', {'characters': 'I'})
         self.view.run_command('move_to', {'to': 'eol'})

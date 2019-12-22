@@ -1,0 +1,37 @@
+=> 0.9.3
+
+
+Features:
+
+* Support for multiple folders per window. The behaviour is now:
+  * No folders: 1 server of each configuration is started
+  * Multiple folders:
+    * Server with workspaceFolders support: One per window.
+    * Server without workspaceFolders support: One per project folder
+
+* New server logging panel (@rwols, https://github.com/tomv564/LSP/pull/811)
+  * Run **LSP: Toggle Panel: Language Servers** to see it in action (if you have logging enabled)
+
+
+Fixes:
+
+* Enable workspace/configuration client capability (fixes intelephense configuration)
+
+* Completions should be presented earlier and not show outdated results (https://github.com/tomv564/LSP/pull/822)
+
+* Avoid completion insertion logic when out of range (@randy3k)
+
+
+New server support or documentation:
+
+* Updated Python language server instructions (@OlegSmelov)
+
+
+Deprecations:
+
+* `quick_panel_monospace_font` setting (always uses default Sublime font now)
+
+
+See https://github.com/tomv564/LSP/releases/tag/0.9.3 for full update details.
+
+Thanks to all contributors & reporters!

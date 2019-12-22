@@ -1,14 +1,12 @@
-branches:
-  only:
-    - master
+branches: {only: [master]}
 dist: bionic
 env:
     global:
         - PACKAGE="LSP" # Package name
         - SUBLIME_TEXT_VERSION="3"
 language: python
-python:
-    - "3.7"  # sublime text 3 has 3.3
+services: [xvfb]
+python: ["3.7"]  # sublime text 3 has 3.3
 before_install:
     - python3 tests/server.py --version  # sanity check
     - pip install "mypy==0.750"

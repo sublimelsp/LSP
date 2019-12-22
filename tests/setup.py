@@ -1,14 +1,15 @@
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification, Request
+from LSP.plugin.core.protocol import WorkspaceFolder
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.test_mocks import basic_responses
 from LSP.plugin.core.types import ClientConfig, ClientStates, LanguageConfig
+from os import environ
+from os.path import dirname
 from sublime_plugin import view_event_listeners, ViewEventListener
 from unittesting import DeferrableTestCase
-from LSP.plugin.core.protocol import WorkspaceFolder
-from os.path import dirname
 import sublime
 
 
@@ -16,6 +17,7 @@ project_path = dirname(__file__)
 test_file_path = project_path + "/testfile.txt"
 workspace_folders = [WorkspaceFolder.from_path(project_path)]
 
+TIMEOUT_TIME = 4000 if any(key in environ for key in ("CONTINUOUS_INTEGRATION", "TRAVIS", "CI")) else 1000
 SUPPORTED_SCOPE = "text.plain"
 SUPPORTED_SYNTAX = "Packages/Text/Plain text.tmLanguage"
 text_language = LanguageConfig("text", [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX])
@@ -174,7 +176,7 @@ class TextDocumentTestCase(DeferrableTestCase):
                 return False
             return True
 
-        yield {"condition": condition, "timeout": 1000}
+        yield {"condition": condition, "timeout": TIMEOUT_TIME}
 
     def await_message(self, method: str, expected_session_state: int = ClientStates.READY) -> 'Generator':
         self.assertIsNotNone(self.session)
@@ -192,9 +194,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.session.client.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
         yield {
             "condition": promise,
-            # Enough time for the textDocument/didChange purge delay,
-            # but not enough time for the textDocument/willSaveWaitUntil timeout
-            "timeout": 900
+            "timeout": TIMEOUT_TIME
         }
 
     def set_response(self, method: str, response: 'Any') -> None:

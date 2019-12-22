@@ -175,6 +175,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
             # verify insertion works
             self.view.run_command("commit_completion")
+            yield from self.await_dirty_view()
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), 'asdf')
 
@@ -186,6 +187,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             handler.on_query_completions("", [0])
             yield from self.await_message('textDocument/completion')
             self.view.run_command("commit_completion")
+            yield from self.await_dirty_view()
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 insert_text_completions[0]["insertText"])
@@ -200,6 +202,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             handler.on_query_completions("", [1])
             yield from self.await_message('textDocument/completion')
             self.view.run_command("commit_completion")
+            yield from self.await_dirty_view()
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
@@ -218,6 +221,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             handler.on_query_completions("", [1])
             yield from self.await_message('textDocument/completion')
             self.view.run_command("commit_completion")
+            yield from self.await_dirty_view()
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
@@ -236,6 +240,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             handler.on_query_completions("", [1])
             yield from self.await_message('textDocument/completion')
             self.view.run_command("commit_completion")
+            yield from self.await_dirty_view()
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
@@ -252,6 +257,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             handler.on_query_completions("", [0])
             yield from self.await_message('textDocument/completion')
             self.view.run_command("commit_completion")
+            yield from self.await_dirty_view()
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), 'const')
 
@@ -271,6 +277,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             handler.on_query_completions("", [1])
             yield from self.await_message('textDocument/completion')
             self.view.run_command("commit_completion")
+            yield from self.await_dirty_view()
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 '-UniqueId')
@@ -293,6 +300,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('commit_completion', {})
             self.view.run_command("commit_completion", {})
+            yield from self.await_dirty_view()
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 '  override def myFunction(): Unit = ???')
@@ -316,6 +324,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('commit_completion', {})
             self.view.run_command("commit_completion", {})
+            yield from self.await_dirty_view()
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'List.apply()')
@@ -335,6 +344,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             yield from self.await_message('textDocument/completion')
             handler.on_text_command('commit_completion', {})
             self.view.run_command('commit_completion', {})
+            yield from self.await_dirty_view()
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'def foo: Int = ???\n   def boo: Int = ???')
@@ -349,6 +359,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('commit_completion', {})
             self.view.run_command("commit_completion", {})
+            yield from self.await_dirty_view()
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'import asdf;\nasdf')
@@ -370,6 +381,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             handler.on_text_command('commit_completion', {})
             self.view.run_command("commit_completion", {})
             yield from self.await_message('completionItem/resolve')
+            yield from self.await_dirty_view()
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'import asdf;\nasdf')

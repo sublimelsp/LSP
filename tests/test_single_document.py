@@ -180,7 +180,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         file_changes: 'Iterable[Tuple[Tuple[int, int], Tuple[int, int], str]]'
     ) -> 'Generator':
         assert self.view
-        self.view.run_command('insert', {"characters": original})
+        self.insert_characters_no_dirty(original)
         self.set_response('textDocument/formatting', [{
             'newText': new_text,
             'range': {
@@ -188,12 +188,13 @@ class SingleDocumentTestCase(TextDocumentTestCase):
                 'end': {'line': end[0], 'character': end[1]}}} for start, end, new_text in file_changes])
         self.view.run_command('lsp_format_document')
         yield from self.await_message('textDocument/formatting')
+        yield from self.await_dirty_view()
         edited_content = self.view.substr(sublime.Region(0, self.view.size()))
         self.assertEquals(edited_content, expected)
 
     def __run_goto_test(self, response: list, text_document_request: str, subl_command_suffix: str) -> 'Generator':
         assert self.view
-        self.view.run_command('insert', {'characters': GOTO_CONTENT})
+        self.insert_characters_no_dirty(GOTO_CONTENT)
         # Put the cursor back at the start of the buffer, otherwise is_at_word fails in goto.py.
         self.view.sel().clear()
         self.view.sel().add(sublime.Region(0, 0))
@@ -209,7 +210,8 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.assertIn('testfile.txt', filename)
         line1, col1 = self.view.rowcol(self.view.sel()[0].a)
         line2, col2 = self.view.rowcol(self.view.sel()[0].b)
-        self.assertEqual(after_cursor(self.view), "F")
+        # The cursor should end up at the F character eventually
+        yield lambda: after_cursor(self.view) == "F"
 
     def test_definition(self) -> 'Generator':
         yield from self.__run_goto_test(GOTO_RESPONSE, 'definition', 'definition')
@@ -249,7 +251,7 @@ class WillSaveWaitUntilTestCase(TextDocumentTestCase):
 
     def test_will_save_wait_until(self) -> 'Generator':
         assert self.view
-        self.view.run_command("insert", {"characters": "A"})
+        self.insert_characters_no_dirty("A")
         yield from self.await_message("textDocument/didChange")
         self.set_response('textDocument/willSaveWaitUntil', [{
             'newText': "BBB",

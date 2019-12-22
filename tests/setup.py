@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification, Request
 from LSP.plugin.core.protocol import WorkspaceFolder
@@ -17,7 +18,7 @@ project_path = dirname(__file__)
 test_file_path = project_path + "/testfile.txt"
 workspace_folders = [WorkspaceFolder.from_path(project_path)]
 
-TIMEOUT_TIME = 4000 if any(key in environ for key in ("CONTINUOUS_INTEGRATION", "TRAVIS", "CI")) else 1000
+TIMEOUT_TIME = 8000 if any(key in environ for key in ("TRAVIS", "CI")) else 1000
 SUPPORTED_SCOPE = "text.plain"
 SUPPORTED_SYNTAX = "Packages/Text/Plain text.tmLanguage"
 text_language = LanguageConfig("text", [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX])
@@ -28,6 +29,13 @@ try:
     assert Dict and Callable and List and Any and Optional and Generator
 except ImportError:
     pass
+
+
+@contextmanager
+def prevent_dirty_view(v: sublime.View) -> 'Generator':
+    v.set_scratch(True)
+    yield
+    v.set_scratch(False)
 
 
 class YieldPromise:
@@ -223,6 +231,15 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.view.run_command("save")
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
+
+    def await_dirty_view(self) -> 'Generator':
+        assert self.view  # type: Optional[sublime.View]
+        yield lambda: self.view.is_dirty()
+
+    def insert_characters_no_dirty(self, characters: str) -> None:
+        assert self.view  # type: Optional[sublime.View]
+        with prevent_dirty_view(self.view):
+            self.view.run_command("insert", {"characters": characters})
 
     def tearDown(self) -> 'Generator':
         yield from self.await_boilerplate_end()

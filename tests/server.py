@@ -14,12 +14,17 @@ have a timeout in your tests to ensure your tests won't hang forever.
 TODO: Make this server send out notifications somehow.
 TODO: Untested on Windows.
 """
+from argparse import ArgumentParser
 from enum import IntEnum
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 import asyncio
 import json
 import os
 import sys
+
+
+__package__ = "server"
+__version__ = "0.9.3"
 
 
 if sys.version_info[0] < 3:
@@ -369,7 +374,14 @@ async def main() -> bool:
 
 
 if __name__ == '__main__':
-    try:
-        exit(0 if asyncio.run(main()) else 1)
-    except KeyboardInterrupt:
-        exit(1)
+    parser = ArgumentParser(prog=__package__, description=__doc__)
+    parser.add_argument("-v", "--version", action="store_true", help="print version and exit")
+    args = parser.parse_args()
+    if args.version:
+        print(__package__, __version__)
+        exit(0)
+    else:
+        try:
+            exit(0 if asyncio.run(main()) else 1)
+        except KeyboardInterrupt:
+            exit(1)

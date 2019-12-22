@@ -8,7 +8,7 @@ env:
         - SUBLIME_TEXT_VERSION="3"
 language: python
 python:
-    - "3.5"  # sublime text 3 has 3.3
+    - "3.7"  # sublime text 3 has 3.3
 before_install:
     - pip install "mypy==0.750"
     - pip install "flake8==3.7.9"

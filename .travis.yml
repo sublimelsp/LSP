@@ -1,7 +1,7 @@
 branches:
   only:
     - master
-dist: trusty
+dist: bionic
 env:
     global:
         - PACKAGE="LSP" # Package name

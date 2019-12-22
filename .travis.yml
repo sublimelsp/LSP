@@ -10,6 +10,7 @@ language: python
 python:
     - "3.7"  # sublime text 3 has 3.3
 before_install:
+    - python3 tests/server.py --version  # sanity check
     - pip install "mypy==0.750"
     - pip install "flake8==3.7.9"
     - pip install "yapf==0.29.0"

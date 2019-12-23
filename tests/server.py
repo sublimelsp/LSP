@@ -130,7 +130,6 @@ class Session:
                                           Callable[[PayloadLike], None]] = {}
 
         # initialize/shutdown/exit dance
-        self._keep_going = True
         self._received_shutdown = False
 
         # properties used for testing purposes
@@ -248,7 +247,7 @@ class Session:
 
     async def run_forever(self) -> bool:
         try:
-            while self._keep_going and not self._reader.at_eof():
+            while not self._reader.at_eof():
                 line = await self._reader.readline()
                 if not line:
                     continue
@@ -313,7 +312,7 @@ class Session:
         return None
 
     async def _on_exit(self, _: PayloadLike) -> None:
-        self._keep_going = False
+        exit(0 if self._received_shutdown else 1)
 
 
 # START: https://stackoverflow.com/a/52702646/990142
@@ -367,10 +366,10 @@ def _win32_stdio(loop: Optional[asyncio.AbstractEventLoop]) -> Tuple[asyncio.Str
 # END: https://stackoverflow.com/a/52702646/990142
 
 
-async def main() -> bool:
+async def main() -> None:
     reader, writer = await stdio()
     session = Session(reader, writer)
-    return await session.run_forever()
+    await session.run_forever()
 
 
 if __name__ == '__main__':
@@ -380,8 +379,5 @@ if __name__ == '__main__':
     if args.version:
         print(__package__, __version__)
         exit(0)
-    else:
-        try:
-            exit(0 if asyncio.run(main()) else 1)
-        except KeyboardInterrupt:
-            exit(1)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())

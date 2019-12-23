@@ -1,7 +1,6 @@
 from contextlib import contextmanager
 from LSP.plugin.core.logging import debug
-from LSP.plugin.core.protocol import Notification, Request
-from LSP.plugin.core.protocol import WorkspaceFolder
+from LSP.plugin.core.protocol import Notification, Request, WorkspaceFolder
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.settings import client_configs
@@ -218,8 +217,9 @@ class TextDocumentTestCase(DeferrableTestCase):
     def await_boilerplate_end(self) -> 'Generator':
         close_test_view(self.view)
         self.wm.end_config_sessions(self.config.name)  # TODO: Shouldn't this be automatic once the last view closes?
-        yield lambda: self.session.state == ClientStates.STOPPING
-        yield lambda: self.session.client is None
+        if self.session:
+            yield lambda: self.session.state == ClientStates.STOPPING
+            yield lambda: self.session.client is None
 
     def await_clear_view_and_save(self) -> 'Generator':
         assert self.view  # type: Optional[sublime.View]
@@ -238,8 +238,8 @@ class TextDocumentTestCase(DeferrableTestCase):
         with prevent_dirty_view(self.view):
             self.view.run_command("insert", {"characters": characters})
 
-    def tearDown(self) -> 'Generator':
+    def doCleanups(self) -> 'Generator':
         yield from self.await_boilerplate_end()
         # restore the user's configs
         client_configs.update_configs()
-        super().tearDown()
+        super().doCleanups()

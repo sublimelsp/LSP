@@ -1,0 +1,92 @@
+%YAML 1.2
+---
+# [Subl]: https://www.sublimetext.com/docs/3/syntax.html
+# [LSP]: https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md
+hidden: true
+scope: output.lsp.log
+
+variables:
+  method: '[[:alpha:]][[:alnum:]/]*'
+  servername: '[[:alnum:]_-]+'
+
+contexts:
+  main:
+    - match: ^({{servername}})(:)
+      captures:
+        1: variable.function.lsp
+        2: punctuation.separator.lsp
+      push:
+        - meta_scope: meta.block.lsp
+        - match: $
+          pop: true
+    - match: '^::'
+      scope: punctuation.accessor.lsp
+      push:
+      - - meta_scope: meta.group.lsp
+        - match: $
+          pop: true
+        # responses
+      - - match: \d+
+          scope: constant.numeric.integer.decimal.lsp
+          set:
+            - match: ':'
+              scope: punctuation.separator.lsp
+              set: maybe-payload
+            - match: ''
+              pop: true
+        # notifications or requests
+        - match: (?=\w)
+          set:
+            # requests
+          - - match: \(
+              scope: punctuation.section.parens.begin.lsp
+              set:
+                - match: \d+
+                  scope: constant.numeric.integer.decimal.lsp
+                  set:
+                    - match: \)
+                      scope: punctuation.section.parens.end.lsp
+                      set:
+                        - match: ':'
+                          scope: punctuation.separator.lsp
+                          set: maybe-payload
+                        - match: ''
+                          pop: true
+            # notifications
+            - match: ':'
+              scope: punctuation.separator.lsp
+              set: maybe-payload
+            - match: ''
+              pop: true
+          - - match: '{{method}}'
+              scope: keyword.control.lsp
+              pop: true
+        # language server name
+      - - match: \S+
+          scope: variable.function.lsp
+          pop: true
+        # arrows
+      - - match: -->
+          scope: storage.modifier.lsp
+          pop: true
+        - match: <--
+          scope: storage.modifier.lsp
+          pop: true
+        - match: ==>
+          scope: storage.modifier.lsp
+          pop: true
+        - match: unhandled
+          scope: invalid.deprecated.lsp
+          pop: true
+
+  maybe-payload:
+    - match: \s*(?=\S)
+      set:
+        - match: $
+          pop: true
+        - include: scope:source.python#constants  # e.g. shutdown request
+        - include: scope:source.python#lists
+        - include: scope:source.python#dictionaries-and-sets
+    - match: ''
+      pop: true
+...

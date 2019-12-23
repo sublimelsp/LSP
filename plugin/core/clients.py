@@ -4,8 +4,9 @@ from .sessions import create_session, Session
 
 # typing only
 from .rpc import Client
+from .protocol import WorkspaceFolder
 from .settings import ClientConfig, settings
-assert Client and ClientConfig
+assert Client and ClientConfig and WorkspaceFolder
 
 
 try:
@@ -37,20 +38,22 @@ def get_window_env(window: sublime.Window, config: ClientConfig) -> 'Tuple[List[
 
 
 def start_window_config(window: sublime.Window,
-                        project_path: str,
+                        workspace_folders: 'List[WorkspaceFolder]',
                         config: ClientConfig,
                         on_pre_initialize: 'Callable[[Session], None]',
                         on_post_initialize: 'Callable[[Session], None]',
-                        on_post_exit: 'Callable[[str], None]') -> 'Optional[Session]':
+                        on_post_exit: 'Callable[[str], None]',
+                        on_stderr_log: 'Optional[Callable[[str], None]]') -> 'Optional[Session]':
     args, env = get_window_env(window, config)
     config.binary_args = args
     return create_session(config=config,
-                          project_path=project_path,
+                          workspace_folders=workspace_folders,
                           env=env,
                           settings=settings,
                           on_pre_initialize=on_pre_initialize,
                           on_post_initialize=on_post_initialize,
-                          on_post_exit=lambda config_name: on_session_ended(window, config_name, on_post_exit))
+                          on_post_exit=lambda config_name: on_session_ended(window, config_name, on_post_exit),
+                          on_stderr_log=on_stderr_log)
 
 
 def on_session_ended(window: sublime.Window, config_name: str, on_post_exit_handler: 'Callable[[str], None]') -> None:

@@ -34,27 +34,55 @@ Be sure to install [Vue Syntax Highlight](https://packagecontrol.io/packages/Vue
 
 ### Python<a name="python"></a>
 
-`pip install python-language-server`
+There are at least two language servers, use either one.
 
-See: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
+#### Palantir Python Language Server
 
-Alternatively, Microsoft's python language server (using .NET Core runtime)
+```sh
+pip install python-language-server
+```
 
-[Instructions here](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md)
+Make sure you can run `pyls` in your terminal. If you've installed it into a virtualenv, you might need to override the path to `pyls` in global LSP settings (Package Settings -> LSP -> Settings):
 
-Use virtualenv adding the following settings :
 
-```json
-"settings": {
+```js
+{
+    "clients": {
+        "pyls": {
+            "enabled": true, // if you want to enable Python Language Server globally
+            "command": [
+                // example path, adjust it for your use case
+                "/Users/mike/.virtualenvs/pyls-virtual-env/bin/pyls"
+            ]
+        }
+    }
+}
+```
+
+If you use a virtualenv for your current project, add a path to it in your [project configuration](https://www.sublimetext.com/docs/3/projects.html) (Project -> Edit Project):
+
+```js
+{
+    "settings": {
         "LSP": {
             "pyls": {
+                "enabled": true, // if you want to enable Python Language Server for current project only
                 "env": {
+                    // example path, adjust it for your use case
+                    // it needs to be an absolute path, neither $HOME nor ~ work here
                     "PYTHONPATH": "/Users/mike/.virtualenvs/my-virtual-env/lib/python3.7/site-packages"
                 }
             }
         }
     }
+}
 ```
+
+See: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
+
+#### Microsoft Python Language Server
+
+Alternatively, use Microsoft Python Language Server (using .NET Core runtime). [Instructions](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md).
 
 ### PHP<a name="php"></a>
 
@@ -414,7 +442,7 @@ For more details see this [issue](https://github.com/PowerShell/PowerShellEditor
 
 ### XML
 
-Discussed in [this issue](https://github.com/tomv564/LSP/issues/578)
+Discussed in [this issue](https://github.com/sublimelsp/LSP/issues/578)
 
 Download jar from [angelozerr/lsp4xml](https://github.com/angelozerr/lsp4xml/releases)
 

@@ -31,7 +31,6 @@ class Settings(object):
         self.complete_all_chars = False
         self.completion_hint_type = "auto"
         self.show_references_in_quick_panel = False
-        self.quick_panel_monospace_font = False
         self.disabled_capabilities = []  # type: List[str]
         self.log_debug = True
         self.log_server = True
@@ -115,6 +114,9 @@ class ViewLike(Protocol):
     def score_selector(self, region: 'Any', scope: str) -> int:
         ...
 
+    def run_command(self, command_name: str, command_args: 'Dict[str, Any]') -> None:
+        ...
+
 
 class WindowLike(Protocol):
     def id(self) -> int:
@@ -139,6 +141,9 @@ class WindowLike(Protocol):
         ...
 
     def project_data(self) -> 'Optional[dict]':
+        ...
+
+    def project_file_name(self) -> 'Optional[str]':
         ...
 
     def active_view(self) -> 'Optional[ViewLike]':

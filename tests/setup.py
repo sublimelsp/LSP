@@ -10,11 +10,14 @@ from LSP.plugin.core.test_mocks import basic_responses
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.rpc import Client
 from LSP.plugin.core.transports import Transport
+from LSP.plugin.core.protocol import WorkspaceFolder
 from os.path import dirname
 from LSP.plugin.core.registry import windows
 from unittesting import DeferrableTestCase
 
-test_file_path = dirname(__file__) + "/testfile.txt"
+project_path = dirname(__file__)
+test_file_path = project_path + "/testfile.txt"
+workspace_folders = [WorkspaceFolder.from_path(project_path)]
 
 SUPPORTED_SCOPE = "text.plain"
 SUPPORTED_SYNTAX = "Packages/Text/Plain text.tmLanguage"
@@ -44,9 +47,10 @@ def remove_config(config):
 
 
 def inject_session(wm, config, client) -> Session:
-    session = Session(config, "", client, wm._handle_pre_initialize, wm._handle_post_initialize)
-    wm._sessions[config.name] = session
+    session = Session(config, workspace_folders, client, wm._handle_pre_initialize, wm._handle_post_initialize)
+    wm._sessions[config.name] = [session]
     wm.update_configs()
+    wm._workspace_folders = workspace_folders
     return session
 
 

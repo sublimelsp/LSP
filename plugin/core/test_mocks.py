@@ -5,7 +5,7 @@ from .protocol import Request
 from .types import ClientConfig
 from .types import LanguageConfig
 from .types import Settings
-from .windows import ViewLike
+from .types import ViewLike
 import os
 
 try:
@@ -71,6 +71,7 @@ class MockView(object):
         self._settings = MockSublimeSettings({"syntax": "Plain Text"})
         self._status = dict()  # type: Dict[str, str]
         self._text = "asdf"
+        self.commands = []  # type: List[Tuple[str, Dict[str, Any]]]
 
     def scope_name(self, point: int) -> str:
         return "source.test"
@@ -105,6 +106,9 @@ class MockView(object):
     def buffer_id(self):
         return 1
 
+    def run_command(self, command_name: str, command_args: 'Dict[str, Any]') -> None:
+        self.commands.append((command_name, command_args))
+
 
 class MockHandlerDispatcher(object):
     def __init__(self, can_start: bool = True) -> None:
@@ -125,6 +129,7 @@ class MockWindow(object):
         self._folders = folders
         self._default_view = MockView(None)
         self._project_data = None  # type: Optional[Dict[str, Any]]
+        self._project_file_name = None  # type: Optional[str]
         self.commands = []  # type: List[Tuple[str, Dict[str, Any]]]
 
     def id(self):
@@ -147,6 +152,9 @@ class MockWindow(object):
 
     def set_project_data(self, data: 'Optional[dict]'):
         self._project_data = data
+
+    def project_file_name(self) -> 'Optional[str]':
+        return self._project_file_name
 
     def active_view(self) -> 'Optional[ViewLike]':
         return self.active_view_in_group(0)
@@ -272,6 +280,9 @@ class MockDocuments(object):
     def handle_view_closed(self, view: ViewLike) -> None:
         pass
 
+    def has_document_state(self, file_name: str) -> bool:
+        return file_name in self._documents
+
 
 class TestDocumentHandlerFactory(object):
     def for_window(self, window, configs):
@@ -308,6 +319,9 @@ class MockClient():
         pass
 
     def set_crash_handler(self, handler: 'Callable') -> None:
+        pass
+
+    def set_log_payload_handler(self, handler: 'Callable') -> None:
         pass
 
     def exit(self) -> None:

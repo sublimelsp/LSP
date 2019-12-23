@@ -241,6 +241,10 @@ class Notification:
         return Notification("workspace/didChangeConfiguration", params)
 
     @classmethod
+    def didChangeWorkspaceFolders(cls, params: dict) -> 'Notification':
+        return Notification("workspace/didChangeWorkspaceFolders", params)
+
+    @classmethod
     def exit(cls) -> 'Notification':
         return Notification("exit")
 
@@ -423,7 +427,7 @@ class WorkspaceFolder:
     def from_path(cls, path: str) -> 'WorkspaceFolder':
         assert os.path.isdir(path)
         assert os.path.isabs(path)
-        return cls(os.path.basename(path), path)
+        return cls(os.path.basename(path) or path, path)
 
     def __repr__(self) -> str:
         return "{}('{}', '{}')".format(self.__class__.__name__, self.name, self.path)
@@ -436,7 +440,7 @@ class WorkspaceFolder:
             return self.name == other.name and self.path == other.path
         return False
 
-    def to_dict(self) -> 'Dict[str, str]':
+    def to_lsp(self) -> 'Dict[str, str]':
         return {"name": self.name, "uri": self.uri()}
 
     def uri(self) -> str:

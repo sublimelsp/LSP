@@ -27,15 +27,11 @@ This issue can be solved in a few ways:
 * On OS-X: Install the [SublimeFixMacPath](https://github.com/int3h/SublimeFixMacPath) package
 * On OS-X: Use `launchctl setenv` to set PATH for OS-X UI applications.
 
-### 3. Multiple root folders?
-
-Have you added multiple folders to your Sublime workspace? LSP may not handle your second folder as expected, see [this issue](https://github.com/tomv564/LSP/issues/81) for more details.
-
 ## Known Issues
 
 ### Completions not shown after certain keywords
 
 Sublime Text's built-in `Completion Rules.tmPreferences` for some languages surpress completions after certain keywords.
-Python's `import` keyword is an example - no completions are shown at `import a|` (See [this LSP issue](https://github.com/tomv564/LSP/issues/203)).
+Python's `import` keyword is an example - no completions are shown at `import a|` (See [this LSP issue](https://github.com/sublimelsp/LSP/issues/203)).
 The solution is to put an edited version of the `Completion Rules.tmPreferences` in the `Packages` folder (you may need to clear the copy in the Cache folder afterwards).
 More details on [workaround and a final fix for Lua](https://forum.sublimetext.com/t/bug-lua-autocomplete-not-working-between-if-then/36635)

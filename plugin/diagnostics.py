@@ -110,18 +110,6 @@ class DiagnosticsCursorListener(LSPViewEventListener):
         self.has_status = False
 
 
-class LspShowDiagnosticsPanelCommand(sublime_plugin.WindowCommand):
-    def run(self) -> None:
-        ensure_diagnostics_panel(self.window)
-        active_panel = self.window.active_panel()
-        is_active_panel = (active_panel == "output.diagnostics")
-
-        if is_active_panel:
-            self.window.run_command("hide_panel", {"panel": "output.diagnostics"})
-        else:
-            self.window.run_command("show_panel", {"panel": "output.diagnostics"})
-
-
 class LspClearDiagnosticsCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:
         windows.lookup(self.window).diagnostics.clear()
@@ -159,7 +147,6 @@ class DiagnosticsPhantoms(object):
     def set_diagnostic(self, file_diagnostic: 'Optional[Tuple[str, Diagnostic]]') -> None:
         self.clear()
 
-        self._base_dir = windows.lookup(self._window).get_project_path()
         if file_diagnostic:
             file_path, diagnostic = file_diagnostic
             view = self._window.open_file(file_path, sublime.TRANSIENT)
@@ -203,9 +190,11 @@ class DiagnosticsPhantoms(object):
     # TODO: share with hover?
     def format_diagnostic_related_info(self, info: DiagnosticRelatedInformation) -> str:
         file_path = info.location.file_path
-        if self._base_dir and file_path.startswith(self._base_dir):
-            file_path = os.path.relpath(file_path, self._base_dir)
-        location = "{}:{}:{}".format(file_path, info.location.range.start.row+1, info.location.range.start.col+1)
+        base_dir = windows.lookup(self._window).get_project_path(file_path)
+        if base_dir:
+            file_path = os.path.relpath(file_path, base_dir)
+        location = "{}:{}:{}".format(info.location.file_path, info.location.range.start.row + 1,
+                                     info.location.range.start.col + 1)
         return "<a href='location:{}'>{}</a>: {}".format(location, location, html.escape(info.message))
 
     def navigate(self, href: str) -> None:
@@ -218,7 +207,6 @@ class DiagnosticsPhantoms(object):
         elif href.startswith("location"):
             # todo: share with hover?
             _, file_path, location = href.split(":", 2)
-            file_path = os.path.join(self._base_dir, file_path) if self._base_dir else file_path
             self._window.open_file(file_path + ":" + location, sublime.ENCODED_POSITION | sublime.TRANSIENT)
 
     def create_phantom_html(self, content: str, severity: str) -> str:
@@ -322,11 +310,11 @@ class DiagnosticOutputPanel(DiagnosticsUpdateWalk):
         self._panel = ensure_diagnostics_panel(self._window)
 
     def begin(self) -> None:
-        self._base_dir = windows.lookup(self._window).get_project_path()
         self._to_render = []
         self._file_content = ""
 
     def begin_file(self, file_path: str) -> None:
+        self._base_dir = windows.lookup(self._window).get_project_path(file_path)
         self._file_content = ""
 
     def diagnostic(self, diagnostic: Diagnostic) -> None:
@@ -342,9 +330,7 @@ class DiagnosticOutputPanel(DiagnosticsUpdateWalk):
     def end(self) -> None:
         assert self._panel, "must have a panel now!"
         self._panel.settings().set("result_base_dir", self._base_dir)
-        self._panel.set_read_only(False)
         self._panel.run_command("lsp_update_panel", {"characters": "\n".join(self._to_render)})
-        self._panel.set_read_only(True)
 
     def format_diagnostic(self, diagnostic: Diagnostic) -> str:
         location = "{:>8}:{:<4}".format(

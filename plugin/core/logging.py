@@ -8,7 +8,6 @@ if MYPY:
 
 log_debug = False
 log_exceptions = True
-log_server = True
 
 
 def set_debug_logging(logging_enabled: bool) -> None:
@@ -19,11 +18,6 @@ def set_debug_logging(logging_enabled: bool) -> None:
 def set_exception_logging(logging_enabled: bool) -> None:
     global log_exceptions
     log_exceptions = logging_enabled
-
-
-def set_server_logging(logging_enabled: bool) -> None:
-    global log_server
-    log_server = logging_enabled
 
 
 def debug(*args: 'Any') -> None:
@@ -37,11 +31,6 @@ def exception_log(message: str, ex: Exception) -> None:
         print(message)
         ex_traceback = ex.__traceback__
         print(''.join(traceback.format_exception(ex.__class__, ex, ex_traceback)))
-
-
-def server_log(server_name: str, *args: 'Any') -> None:
-    if log_server:
-        printf(*args, prefix=server_name)
 
 
 def printf(*args: 'Any', prefix: str = 'LSP') -> None:

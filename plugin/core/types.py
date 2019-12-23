@@ -123,6 +123,9 @@ class ViewLike(Protocol):
     def score_selector(self, region: 'Any', scope: str) -> int:
         ...
 
+    def run_command(self, command_name: str, command_args: 'Dict[str, Any]') -> None:
+        ...
+
 
 class WindowLike(Protocol):
     def id(self) -> int:

@@ -1,7 +1,7 @@
 # LSP
 
-[![GitHub release](https://img.shields.io/github/release/tomv564/LSP.svg)](https://github.com/tomv564/LSP/releases)
-[![Build Status](https://travis-ci.org/tomv564/LSP.svg?branch=master)](https://travis-ci.org/tomv564/LSP)
+[![GitHub release](https://img.shields.io/github/release/sublimelsp/LSP.svg)](https://github.com/sublimelsp/LSP/releases)
+[![Build Status](https://travis-ci.org/sublimelsp/LSP.svg?branch=master)](https://travis-ci.org/sublimelsp/LSP)
 [![Coverage Status](https://coveralls.io/repos/github/tomv564/LSP/badge.svg?branch=master)](https://coveralls.io/github/tomv564/LSP?branch=master)
 [![SublimeHQ Discord](https://img.shields.io/discord/280102180189634562?label=SublimeHQ%20Discord&logo=discord&style=flat-square)](#chat)
 
@@ -75,5 +75,5 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
 <a name="chat"></a>
 
 * The [#lsp](https://discordapp.com/channels/280102180189634562/645268178397560865) channel (join the [SublimeHQ Discord](https://discord.gg/RMkk5MR) first!)
-* By [searching or creating a new issue](https://github.com/tomv564/LSP/issues)
-* Search the [old Gitter chat](https://gitter.im/SublimeLSP) (for live chat join Discord instead)
+* By [searching or creating a new issue](https://github.com/sublimelsp/LSP/issues)
+* Search the [old Gitter chat](https://gitter.im/tomv564) (for live chat join Discord instead)

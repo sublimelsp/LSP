@@ -469,7 +469,7 @@ For more details see this [issue](https://github.com/PowerShell/PowerShellEditor
 
 ### XML
 
-Discussed in [this issue](https://github.com/tomv564/LSP/issues/578)
+Discussed in [this issue](https://github.com/sublimelsp/LSP/issues/578)
 
 Download jar from [angelozerr/lsp4xml](https://github.com/angelozerr/lsp4xml/releases)
 

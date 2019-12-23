@@ -140,7 +140,6 @@ class LspSymbolReferencesCommand(LspTextCommand):
             base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
             panel.settings().set("result_base_dir", base_dir)
 
-            panel.set_read_only(False)
             panel.run_command("lsp_clear_panel")
             window.run_command("show_panel", {"panel": "output.references"})
             panel.run_command('append', {
@@ -152,7 +151,6 @@ class LspSymbolReferencesCommand(LspTextCommand):
             # highlight all word occurrences
             regions = panel.find_all(r"\b{}\b".format(self.word))
             panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_OUTLINED)
-            panel.set_read_only(True)
 
     def get_selected_file_path(self, index: int) -> str:
         return self.get_full_path(self.reflist[index][0])

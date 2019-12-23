@@ -40,22 +40,62 @@ class LspGotoCommand(LspTextCommand):
                     request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response: 'Optional[Any]', position: int) -> None:
+        def process_response_array(array):
+            return [process_response(x) for x in array]
+
+        def process_response(response):
+            if "targetUri" in response:
+                # TODO: Do something clever with originSelectionRange and targetRange.
+                file_path = uri_to_filename(response["targetUri"])
+                start = Point.from_lsp(response["targetSelectionRange"]["start"])
+            else:
+                file_path = uri_to_filename(response["uri"])
+                start = Point.from_lsp(response["range"]["start"])
+            row = start.row + 1
+            col = start.col + 1
+            file_path_and_row_col = "{}:{}:{}".format(file_path, row, col)
+            return file_path, file_path_and_row_col, (row, col)
+
+        def open_location(window, location):
+            fname, file_path_and_row_col, rowcol = location
+            row, col = rowcol
+            debug("opening location", file_path_and_row_col)
+            window.open_file(
+                file_path_and_row_col,
+                sublime.ENCODED_POSITION | sublime.FORCE_GROUP)
+
+        def select_entry(window, locations, idx, orig_view, orig_sel):
+            if idx >= 0:
+                open_location(window, locations[idx])
+            else:
+                if orig_view:
+                    orig_view.sel().clear()
+                    orig_view.sel().add_all(orig_sel)
+                    window.focus_view(orig_view)
+                    orig_view.show(orig_sel[0])
+
+        def highlight_entry(window, locations, idx):
+            fname, file_path_and_row_col, rowcol = locations[idx]
+            row, col = rowcol
+            window.open_file(
+                    file_path_and_row_col,
+                    group=window.active_group(),
+                    flags=sublime.TRANSIENT | sublime.ENCODED_POSITION | sublime.FORCE_GROUP)
+        orig_sel = None
         window = sublime.active_window()
         if response:
             # Save to jump back history.
             get_jump_history_for_view(self.view).push_selection(self.view)
             # TODO: DocumentLink support.
-            location = response if isinstance(response, dict) else response[0]
-            if "targetUri" in location:
-                # TODO: Do something clever with originSelectionRange and targetRange.
-                file_path = uri_to_filename(location["targetUri"])
-                start = Point.from_lsp(location["targetSelectionRange"]["start"])
-            else:
-                file_path = uri_to_filename(location["uri"])
-                start = Point.from_lsp(location["range"]["start"])
-            file_location = "{}:{}:{}".format(file_path, start.row + 1, start.col + 1)
-            debug("opening location", location)
-            window.open_file(file_location, sublime.ENCODED_POSITION)
+            locations = [process_response(response)] if isinstance(response, dict) else process_response_array(response)
+            if len(locations) == 1:
+                open_location(window, locations[0])
+            elif len(locations) > 1:
+                window.show_quick_panel(
+                    items=[display_name for file_path, display_name, rowcol in locations],
+                    on_select=lambda x: select_entry(window, locations, x, self.view, orig_sel),
+                    on_highlight=lambda x: highlight_entry(window, locations, x),
+                    flags=sublime.KEEP_OPEN_ON_FOCUS_LOST)
             # TODO: can add region here.
         else:
             sublime.status_message("Empty response from language server, "

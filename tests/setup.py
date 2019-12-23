@@ -120,7 +120,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         if session_type == SessionType.Stdio:
             pass
         elif session_type == SessionType.TcpCreate:
-            # TODO
+            # TODO: make the test server do TCP
             pass
         elif session_type == SessionType.TcpConnectExisting:
             # TODO

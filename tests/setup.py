@@ -221,10 +221,6 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
 
-    def await_dirty_view(self) -> 'Generator':
-        assert self.view  # type: Optional[sublime.View]
-        yield lambda: self.view.is_dirty()
-
     def insert_characters(self, characters: str) -> int:
         assert self.view  # type: Optional[sublime.View]
         self.view.run_command("insert", {"characters": characters})

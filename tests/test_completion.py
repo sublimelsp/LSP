@@ -174,8 +174,9 @@ class QueryCompletionsTests(TextDocumentTestCase):
             self.assertEquals(len(handler.completions), 2)
 
             # verify insertion works
+            original_change_count = self.view.change_count()
             self.view.run_command("commit_completion")
-            yield from self.await_dirty_view()
+            yield lambda: self.view.change_count() > original_change_count
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), 'asdf')
 
@@ -186,8 +187,9 @@ class QueryCompletionsTests(TextDocumentTestCase):
         if handler:
             handler.on_query_completions("", [0])
             yield from self.await_message('textDocument/completion')
+            original_change_count = self.view.change_count()
             self.view.run_command("commit_completion")
-            yield from self.await_dirty_view()
+            yield lambda: self.view.change_count() > original_change_count
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 insert_text_completions[0]["insertText"])
@@ -201,10 +203,10 @@ class QueryCompletionsTests(TextDocumentTestCase):
         if handler:
             handler.on_query_completions("", [1])
             yield from self.await_message('textDocument/completion')
+            original_change_count = self.view.change_count()
             self.view.run_command("commit_completion")
-            yield from self.await_dirty_view()
-            self.assertEquals(
-                self.view.substr(sublime.Region(0, self.view.size())), '$what')
+            yield lambda: self.view.change_count() > original_change_count
+            self.assertEquals(self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
     def test_var_prefix_added_in_insertText(self) -> 'Generator':
         """
@@ -220,8 +222,9 @@ class QueryCompletionsTests(TextDocumentTestCase):
         if handler:
             handler.on_query_completions("", [1])
             yield from self.await_message('textDocument/completion')
+            original_change_count = self.view.change_count()
             self.view.run_command("commit_completion")
-            yield from self.await_dirty_view()
+            yield lambda: self.view.change_count() > original_change_count
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
@@ -239,8 +242,9 @@ class QueryCompletionsTests(TextDocumentTestCase):
         if handler:
             handler.on_query_completions("", [1])
             yield from self.await_message('textDocument/completion')
+            original_change_count = self.view.change_count()
             self.view.run_command("commit_completion")
-            yield from self.await_dirty_view()
+            yield lambda: self.view.change_count() > original_change_count
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), '$what')
 
@@ -256,8 +260,9 @@ class QueryCompletionsTests(TextDocumentTestCase):
         if handler:
             handler.on_query_completions("", [0])
             yield from self.await_message('textDocument/completion')
+            original_change_count = self.view.change_count()
             self.view.run_command("commit_completion")
-            yield from self.await_dirty_view()
+            yield lambda: self.view.change_count() > original_change_count
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())), 'const')
 
@@ -276,8 +281,9 @@ class QueryCompletionsTests(TextDocumentTestCase):
         if handler:
             handler.on_query_completions("", [1])
             yield from self.await_message('textDocument/completion')
+            original_change_count = self.view.change_count()
             self.view.run_command("commit_completion")
-            yield from self.await_dirty_view()
+            yield lambda: self.view.change_count() > original_change_count
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 '-UniqueId')
@@ -299,8 +305,9 @@ class QueryCompletionsTests(TextDocumentTestCase):
             yield from self.await_message('textDocument/completion')
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('commit_completion', {})
+            original_change_count = self.view.change_count()
             self.view.run_command("commit_completion", {})
-            yield from self.await_dirty_view()
+            yield lambda: self.view.change_count() > original_change_count
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 '  override def myFunction(): Unit = ???')
@@ -323,8 +330,9 @@ class QueryCompletionsTests(TextDocumentTestCase):
             yield from self.await_message('textDocument/completion')
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('commit_completion', {})
+            original_change_count = self.view.change_count()
             self.view.run_command("commit_completion", {})
-            yield from self.await_dirty_view()
+            yield lambda: self.view.change_count() > original_change_count
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'List.apply()')
@@ -343,8 +351,9 @@ class QueryCompletionsTests(TextDocumentTestCase):
             handler.on_query_completions("", [1])
             yield from self.await_message('textDocument/completion')
             handler.on_text_command('commit_completion', {})
-            self.view.run_command('commit_completion', {})
-            yield from self.await_dirty_view()
+            original_change_count = self.view.change_count()
+            self.view.run_command("commit_completion", {})
+            yield lambda: self.view.change_count() > original_change_count
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'def foo: Int = ???\n   def boo: Int = ???')
@@ -358,8 +367,9 @@ class QueryCompletionsTests(TextDocumentTestCase):
             yield from self.await_message('textDocument/completion')
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('commit_completion', {})
+            original_change_count = self.view.change_count()
             self.view.run_command("commit_completion", {})
-            yield from self.await_dirty_view()
+            yield lambda: self.view.change_count() > original_change_count
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'import asdf;\nasdf')
@@ -379,9 +389,11 @@ class QueryCompletionsTests(TextDocumentTestCase):
             yield from self.await_message('textDocument/completion')
             # note: invoking on_text_command manually as sublime doesn't call it.
             handler.on_text_command('commit_completion', {})
+            original_change_count = self.view.change_count()
             self.view.run_command("commit_completion", {})
+            yield lambda: self.view.change_count() > original_change_count
             yield from self.await_message('completionItem/resolve')
-            yield from self.await_dirty_view()
+            yield lambda: self.view.change_count() > original_change_count + 1
             self.assertEquals(
                 self.view.substr(sublime.Region(0, self.view.size())),
                 'import asdf;\nasdf')

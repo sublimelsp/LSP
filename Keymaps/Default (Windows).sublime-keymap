@@ -28,6 +28,11 @@
      // Find Symbol References
     { "keys": ["shift+f12"], "command": "lsp_symbol_references", "context": [{"key": "setting.lsp_active"}]},
 
+    // Next/Prevous diagnostics
+    { "keys": ["f8"], "command": "lsp_next_diagnostic", "context": [{"key": "setting.lsp_active"}] },
+    { "keys": ["shift+f8"], "command": "lsp_previous_diagnostic", "context": [{"key": "setting.lsp_active"}] },
+    { "keys": ["escape"], "command": "lsp_hide_diagnostic", "context": [{ "key": "setting.lsp_diagnostic_phantom"}, {"key": "setting.lsp_active"}] },
+
     // Go To Definition
     // {"keys": ["UNBOUND"], "command": "lsp_symbol_definition", "context": [{"key": "setting.lsp_active"}]},
 

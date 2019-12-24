@@ -13,10 +13,10 @@
     { "keys": ["ctrl+."], "command": "lsp_code_actions", "context": [{"key": "setting.lsp_active"}]},
 
     // Show/Hide Diagnostics Panel
-    { "keys": ["ctrl+alt+m"], "command": "lsp_toggle_panel", "args": {"panel_type": "diagnostics"}, "context": [{"key": "setting.lsp_active"}]},
+    { "keys": ["ctrl+alt+m"], "command": "lsp_show_diagnostics_panel", "context": [{"key": "setting.lsp_active"}]},
 
     // Show/Hide Language Server Logs Panel
-    // { "keys": ["UNBOUND"], "command": "lsp_toggle_panel", "args": {"panel_type": "language servers"}, "context": [{"key": "setting.lsp_active"}]},
+    // { "keys": ["UNBOUND"], "command": "lsp_toggle_server_panel", "context": [{"key": "setting.lsp_active"}]},
 
     // Trigger Signature Help
     { "keys": ["ctrl+alt+space"], "command": "noop", "context": [{ "key": "lsp.signature_help", "operator": "equal", "operand": 0}] },

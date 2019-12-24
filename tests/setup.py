@@ -221,9 +221,9 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
 
-    def await_view_change(self, original_view_count: int) -> 'Generator':
+    def await_view_change(self, expected_change_count: int) -> 'Generator':
         assert self.view  # type: Optional[sublime.View]
-        yield {"condition": self.view.change_count() > original_view_count, "timeout": TIMEOUT_TIME}
+        yield {"condition": lambda: self.view.change_count() == expected_change_count, "timeout": TIMEOUT_TIME}
 
     def insert_characters(self, characters: str) -> int:
         assert self.view  # type: Optional[sublime.View]

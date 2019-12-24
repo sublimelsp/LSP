@@ -60,11 +60,11 @@
         "args": {}
     },
     {
-        "caption": "LSP: Toggle Panel: Language Servers",
+        "caption": "LSP: Toggle Log Panel",
         "command": "lsp_toggle_server_panel",
     },
     {
-        "caption": "LSP: Toggle Panel: Diagnostics",
+        "caption": "LSP: Toggle Diagnostics Panel",
         "command": "lsp_show_diagnostics_panel"
     },
     {

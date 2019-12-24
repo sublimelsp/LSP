@@ -1,4 +1,3 @@
-from contextlib import contextmanager
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification, Request, WorkspaceFolder
 from LSP.plugin.core.registry import windows
@@ -28,13 +27,6 @@ try:
     assert Dict and Callable and List and Any and Optional and Generator
 except ImportError:
     pass
-
-
-@contextmanager
-def prevent_dirty_view(v: sublime.View) -> 'Generator':
-    v.set_scratch(True)
-    yield
-    v.set_scratch(False)
 
 
 class YieldPromise:
@@ -233,10 +225,10 @@ class TextDocumentTestCase(DeferrableTestCase):
         assert self.view  # type: Optional[sublime.View]
         yield lambda: self.view.is_dirty()
 
-    def insert_characters_no_dirty(self, characters: str) -> None:
+    def insert_characters(self, characters: str) -> int:
         assert self.view  # type: Optional[sublime.View]
-        with prevent_dirty_view(self.view):
-            self.view.run_command("insert", {"characters": characters})
+        self.view.run_command("insert", {"characters": characters})
+        return self.view.change_count()
 
     def doCleanups(self) -> 'Generator':
         yield from self.await_boilerplate_end()

@@ -188,7 +188,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
                 'end': {'line': end[0], 'character': end[1]}}} for start, end, new_text in file_changes])
         self.view.run_command('lsp_format_document')
         yield from self.await_message('textDocument/formatting')
-        yield lambda: self.view.change_count() > original_change_count
+        yield from self.await_view_change(original_change_count)
         edited_content = self.view.substr(sublime.Region(0, self.view.size()))
         self.assertEquals(edited_content, expected)
 

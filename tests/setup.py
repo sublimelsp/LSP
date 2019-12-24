@@ -16,7 +16,7 @@ project_path = dirname(__file__)
 test_file_path = project_path + "/testfile.txt"
 workspace_folders = [WorkspaceFolder.from_path(project_path)]
 
-TIMEOUT_TIME = 8000 if any(key in environ for key in ("TRAVIS", "CI")) else 1000
+TIMEOUT_TIME = 10000 if any(key in environ for key in ("TRAVIS", "CI")) else 1000
 SUPPORTED_SCOPE = "text.plain"
 SUPPORTED_SYNTAX = "Packages/Text/Plain text.tmLanguage"
 text_language = LanguageConfig("text", [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX])
@@ -220,6 +220,10 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.view.run_command("save")
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
+
+    def await_view_change(self, original_view_count: int) -> 'Generator':
+        assert self.view  # type: Optional[sublime.View]
+        yield {"condition": self.view.change_count() > original_view_count, "timeout": TIMEOUT_TIME}
 
     def insert_characters(self, characters: str) -> int:
         assert self.view  # type: Optional[sublime.View]

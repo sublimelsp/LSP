@@ -18,6 +18,7 @@ project_path = dirname(__file__)
 test_file_path = project_path + "/testfile.txt"
 workspace_folders = [WorkspaceFolder.from_path(project_path)]
 TIMEOUT_TIME = 10000 if CI else 1000
+PERIOD_TIME = 200 if CI else 17
 SUPPORTED_SCOPE = "text.plain"
 SUPPORTED_SYNTAX = "Packages/Text/Plain text.tmLanguage"
 text_language = LanguageConfig("text", [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX])
@@ -176,7 +177,7 @@ class TextDocumentTestCase(DeferrableTestCase):
                 return False
             return True
 
-        yield {"condition": condition, "timeout": TIMEOUT_TIME}
+        yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
 
     def await_message(self, method: str, expected_session_state: int = ClientStates.READY) -> 'Generator':
         self.assertIsNotNone(self.session)
@@ -192,7 +193,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             debug("Got error:", params, "awaiting timeout :(")
 
         self.session.client.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
-        yield {"condition": promise, "timeout": TIMEOUT_TIME}
+        yield {"condition": promise, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
 
     def set_response(self, method: str, response: 'Any') -> None:
         self.assertIsNotNone(self.session)
@@ -240,7 +241,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             v = self.view
             return v.change_count() == expected_change_count
 
-        yield {"condition": condition, "timeout": TIMEOUT_TIME}
+        yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
 
     def insert_characters(self, characters: str) -> int:
         assert self.view  # type: Optional[sublime.View]

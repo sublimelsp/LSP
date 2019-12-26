@@ -250,6 +250,37 @@ Older [flow-language-server](https://github.com/flowtype/flow-language-server):
 npm install -g flow-language-server
 ```
 
+### Fortran<a name="fortran"></a>
+
+1\. Install the [Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.  
+2\. Install the [Fortran Language Server](https://github.com/hansec/fortran-language-server) (requires Python):
+
+```sh
+pip install fortran-language-server
+```
+
+3\. Add to LSP settings' clients:
+
+```json
+"fortls": {
+  "command": ["fortls"],
+  "enabled": true,
+  "languageId": "fortran",
+  "scopes": [
+    "source.modern-fortran",
+    "source.fixedform-fortran"
+  ],
+  "syntaxes": [
+    "Packages/Fortran/grammars/FortranModern.sublime-syntax",
+    "Packages/Fortran/grammars/FortranFixedForm.sublime-syntax"
+  ]
+}
+```
+
+> Note: See the [Language server settings](https://github.com/hansec/fortran-language-server#language-server-settings)
+  documentation for a detailed description of available configuration options, for example
+  `"command": ["fortls", "--lowercase_intrinsics"]` to use lowercase for autocomplete suggestions.
+
 ### Go<a name="go"></a>
 
 #### Gopls

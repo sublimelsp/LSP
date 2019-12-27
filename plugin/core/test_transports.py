@@ -1,6 +1,6 @@
 import unittest
 import io
-from .transports import StdioTransport, TCPTransport
+from .transports import TCPTransport
 import time
 try:
     from typing import List
@@ -51,46 +51,6 @@ class FakeSocket(object):
 
     def sendall(self, payload: str) -> None:
         self.sent.append(payload)
-
-
-class StdioTransportTests(unittest.TestCase):
-    def test_read_messages(self):
-
-        process = FakeProcess()
-        t = StdioTransport(process)  # type: ignore
-        self.assertIsNotNone(t)
-        received = []
-
-        def on_receive(msg):
-            received.append(msg)
-
-        def on_close():
-            pass
-
-        t.start(on_receive, on_close)
-        time.sleep(0.01)
-        self.assertEqual(received, ["hello", "world"])
-        t.close()
-
-    def test_write_messages(self):
-
-        process = FakeProcess()
-        t = StdioTransport(process)  # type: ignore
-        self.assertIsNotNone(t)
-        received = []
-
-        def on_receive(msg):
-            received.append(msg)
-
-        def on_close():
-            pass
-
-        t.start(on_receive, on_close)
-        t.send("hello")
-        t.send("world")
-        time.sleep(0.01)
-        self.assertEqual(process.stdin.getvalue(), json_rpc_message("hello") + json_rpc_message("world"))
-        t.close()
 
 
 class TCPTransportTests(unittest.TestCase):

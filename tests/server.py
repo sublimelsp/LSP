@@ -13,6 +13,7 @@ have a timeout in your tests to ensure your tests won't hang forever.
 
 TODO: Make this server send out notifications somehow.
 TODO: Untested on Windows.
+TODO: It should also understand TCP, both as slave and master.
 """
 from argparse import ArgumentParser
 from enum import IntEnum

@@ -1,6 +1,6 @@
 # from copy import deepcopy
 from LSP.plugin.hover import _test_contents
-from setup import close_test_view, TextDocumentTestCase, TIMEOUT_TIME, PERIOD_TIME
+from setup import close_test_view, TextDocumentTestCase, TIMEOUT_TIME, PERIOD_TIME, CI
 import sublime
 import os
 
@@ -197,6 +197,8 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.set_response(method, response)
         self.view.run_command('lsp_symbol_{}'.format(subl_command_suffix))
         yield from self.await_message(method)
+        if CI:
+            yield 500
 
         def condition() -> bool:
             nonlocal self

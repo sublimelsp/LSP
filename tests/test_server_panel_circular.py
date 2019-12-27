@@ -1,17 +1,18 @@
 from LSP.plugin.core.panels import SERVER_PANEL_MAX_LINES
 from LSP.plugin.core.main import ensure_server_panel
-from setup import TextDocumentTestCase
+from unittest import TestCase
 import sublime
 
 
-class LspServerPanelTests(TextDocumentTestCase):
+class LspServerPanelTests(TestCase):
 
     def setUp(self):
         super().setUp()
-        window = self.view.window()
+        window = sublime.active_window()
         if window is None:
             self.skipTest("window is None!")
             return
+        self.view = window.active_view()
         panel = ensure_server_panel(window)
         if panel is None:
             self.skipTest("panel is None!")

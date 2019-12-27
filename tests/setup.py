@@ -58,13 +58,6 @@ def make_stdio_test_config() -> ClientConfig:
         enabled=True)
 
 
-def sublime_delayer(delay):
-    def timeout_function(callable):
-        sublime.set_timeout(callable, delay)
-
-    return timeout_function
-
-
 def add_config(config):
     client_configs.all.append(config)
 
@@ -248,8 +241,11 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.view.run_command("insert", {"characters": characters})
         return self.view.change_count()
 
-    def doCleanups(self) -> 'Generator':
+    def tearDown(self) -> 'Generator':
         yield from self.await_boilerplate_end()
+        super().tearDown()
+
+    def doCleanups(self) -> 'Generator':
         # restore the user's configs
         client_configs.update_configs()
-        super().doCleanups()
+        yield from super().doCleanups()

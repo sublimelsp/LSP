@@ -29,6 +29,10 @@ jobs:
         name: Install Sublime Text
       - run: ln -s /opt/sublime_text/sublime_text /usr/local/bin/subl
         name: Symlink subl
+      - run: export PATH=/usr/local/bin:$PATH
+        name: Add /usr/local/bin to PATH
+      - run: which subl
+        name: Verify that subl is in PATH
       - run: sh -e /etc/init.d/xvfb start
         name: Start the X11 virtual framebuffer
       - run: sh github.sh install_package_control

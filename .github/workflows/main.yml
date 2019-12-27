@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
   linux:
     env:
-      PATH: "${{env.HOME}}/.local/bin:${{env.PATH}}"
+      PATH: "$HOME/.local/bin:${{env.PATH}}"
     runs-on: ubuntu-latest
     container: sublimetext/unittesting
     steps:

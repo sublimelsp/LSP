@@ -12,7 +12,7 @@ from unittesting import DeferrableTestCase
 import sublime
 
 
-CI = any(key in environ for key in ("TRAVIS", "CI"))
+CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 
 project_path = dirname(__file__)
 test_file_path = project_path + "/testfile.txt"

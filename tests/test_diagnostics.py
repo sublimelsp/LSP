@@ -1,9 +1,9 @@
 import unittest
 from collections import OrderedDict
 from unittest import mock
-from .diagnostics import DiagnosticsStorage, DiagnosticsWalker, DiagnosticsCursor, CURSOR_FORWARD, CURSOR_BACKWARD
-from .protocol import Diagnostic, Point, Range, DiagnosticSeverity
-from .test_protocol import LSP_MINIMAL_DIAGNOSTIC
+from LSP.plugin.core.diagnostics import DiagnosticsStorage, DiagnosticsWalker, DiagnosticsCursor, CURSOR_FORWARD, CURSOR_BACKWARD
+from LSP.plugin.core.protocol import Diagnostic, Point, Range, DiagnosticSeverity
+from test_protocol import LSP_MINIMAL_DIAGNOSTIC
 
 TYPE_CHECKING = False
 if TYPE_CHECKING:

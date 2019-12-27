@@ -1,6 +1,6 @@
-from .test_mocks import MockWindow
-from .workspace import ProjectFolders, sorted_workspace_folders
-from .protocol import WorkspaceFolder
+from test_mocks import MockWindow
+from LSP.plugin.core.workspace import ProjectFolders, sorted_workspace_folders
+from LSP.plugin.core.protocol import WorkspaceFolder
 import os
 from unittest import mock
 import unittest

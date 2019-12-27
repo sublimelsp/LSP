@@ -27,10 +27,8 @@ jobs:
         name: Download the UnitTesting script wrapper
       - run: sh github.sh bootstrap
         name: Install Sublime Text
-      - run: ln -s /opt/sublime_text/sublime_text /usr/local/bin/subl
+      - run: ln -s /opt/sublime_text/sublime_text /usr/bin/subl
         name: Symlink subl
-      - run: export PATH=/usr/local/bin:$PATH
-        name: Add /usr/local/bin to PATH
       - run: which subl
         name: Verify that subl is in PATH
       - run: sh -e /etc/init.d/xvfb start

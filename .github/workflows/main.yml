@@ -28,11 +28,11 @@ jobs:
       - run: export PATH="$HOME/.local/bin:$PATH"
         name: Set up PATH
       - run: sh github.sh bootstrap
-        name: Bootstrap UnitTesting script wrapper
-      - run: sh github.sh install_package_control
-        name: Install Package Control
+        name: Install Sublime Text
       - run: sh -e /etc/init.d/xvfb start
         name: Start the X11 virtual framebuffer
+      - run: sh github.sh install_package_control
+        name: Install Package Control
       - run: sh github.sh run_tests --coverage
         name: Run tests
       - run: pip3 install coverage==4.5.4 codecov==2.0.15

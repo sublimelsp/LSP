@@ -30,33 +30,51 @@ This will add `"enabled": true` to the corresponding language server setting und
 Your user-settings file is stored at `Packages/User/LSP.sublime-settings` and can be opened via "Preferences > Package Settings > LSP > Settings" from the menu.
 If your language server is missing or not configured correctly, you need to add/override further settings which are explained below.
 
-Here is an example for the JavaScript/TypeScript server:
+Here is an example of the `LSP.sublime-settings` file with configurations for the JavaScript/TypeScript server:
 
-```json
-"lsp-tsserver": {
-  "command": ["lsp-tsserver"],
-  "enabled": true,
-  "languageId": "typescript",
-  "scopes": ["source.ts", "source.tsx"],
-  "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"]
+```js
+{
+  // General settings
+  "log_stderr": true,
+  "log_payloads": true,
+
+  // Language server configurations
+  "clients": {
+    "lsp-tsserver": {
+      "command": ["lsp-tsserver"],
+      "enabled": true,
+      "languageId": "typescript",
+      "scopes": ["source.ts", "source.tsx"],
+      "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"]
+    }
+  }
 }
 ```
 
 Some language servers support multiple languages, which can be specified in the following way:
 
-```json
-"lsp-tsserver": {
-  "command": ["lsp-tsserver"],
-  "enabled": true,
-  "languages": [{
-    "languageId": "javascript",
-    "scopes": ["source.js", "source.jsx"],
-    "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"]
-  }, {
-    "languageId": "typescript",
-    "scopes": ["source.ts", "source.tsx"],
-    "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"]
-  }]
+```js
+{
+  // General settings
+  "log_stderr": true,
+  "log_payloads": true,
+
+  // Language server configurations
+  "clients": {
+    "lsp-tsserver": {
+      "command": ["lsp-tsserver"],
+      "enabled": true,
+      "languages": [{
+        "languageId": "javascript",
+        "scopes": ["source.js", "source.jsx"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"]
+      }, {
+        "languageId": "typescript",
+        "scopes": ["source.ts", "source.tsx"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"]
+      }]
+    }
+  }
 }
 ```
 
@@ -118,6 +136,10 @@ Any global language server settings can be overridden per project by adding an L
 
 
 ## Language servers<a name="language-servers"></a>
+
+The following list can help you to install and configure language servers for use with LSP.
+Please remember to put the configurations in a `"clients"` dictionary in your `LSP.sublime-settings` file, as shown in the example above.
+If you use or would like to use language servers that are not in this list, please create issues or pull requests, so we can add support for more languages.
 
 ### Bash<a name="bash"></a>
 
@@ -710,7 +732,3 @@ Be sure to install [Vue Syntax Highlight](https://packagecontrol.io/packages/Vue
 ```
 
 > Note: Discussed in [this issue](https://github.com/sublimelsp/LSP/issues/578).
-
-### Other<a name="other"></a>
-
-Please create issues or pull requests, so we can get support for more languages.

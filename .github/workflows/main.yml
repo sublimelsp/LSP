@@ -28,3 +28,6 @@ jobs:
     - run: mypy -p plugin
     - run: flake8 plugin tests
     - run: yapf --diff plugin/core/main.py
+    - run: |
+        pip3 install coverage==4.5.4 codecov==2.0.15
+        codecov

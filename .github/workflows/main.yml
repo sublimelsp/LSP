@@ -16,7 +16,7 @@ jobs:
       - run: sudo apt-get install xvfb -y
       - run: sudo curl --silent https://raw.githubusercontent.com/SublimeText/UnitTesting/master/docker/xvfb --output /etc/init.d/xvfb
       - run: sudo chmod +x /etc/init.d/xvfb
-      - run: sh -e /etc/init.d/xvfb start
+      - run: sudo sh -e /etc/init.d/xvfb start
         name: Start X11 virtual  framebuffer
       - uses: actions/checkout@v1
         name: Clone the repository

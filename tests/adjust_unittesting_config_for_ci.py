@@ -16,4 +16,4 @@ if __name__ == '__main__':
             "output": None,
             "generate_html_report": False
         }
-        json.dump(config, fp)
+        json.dump(config, fp, indent=4)

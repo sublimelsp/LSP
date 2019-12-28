@@ -1,40 +1,42 @@
-name: build
+name: main
 
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
   linux:
     runs-on: ubuntu-latest
-    container: sublimetext/unittesting
+    env:
+      CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
+      SUBLIME_TEXT_VERSION: "3"
+      SUBLIME_TEXT_ARCH: x64
+      PACKAGE: LSP
     steps:
+      - run: echo ::add-path::$HOME/.local/bin
+      - run: sh -e /etc/init.d/xvfb start
+        name: Start X11 virtual  framebuffer
       - uses: actions/checkout@v1
         name: Clone the repository
+      - run: apt-get install python3-pip -y
+        name: Install python3 and pip3
+      - run: pip3 install mypy==0.750 flake8==3.7.9 yapf==0.29.0
+        name: Install python test tools
       - run: python3 tests/server.py --version
         name: Verify a working test language server
-      - run: |
-          apt-get install python3-pip -y
-          pip3 install "mypy==0.750"
-          pip3 install "flake8==3.7.9"
-          pip3 install "yapf==0.29.0"
-        name: Install python test tools
       - run: mypy -p plugin
         name: Run mypy
       - run: flake8 plugin tests
         name: Run flake8
       - run: yapf --diff plugin/core/main.py
         name: Run yapf
-      - run: curl -OL https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/github.sh
+      - run: curl -OL https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/ci.sh
         name: Download the UnitTesting script wrapper
-      - run: |
-          sh -e /etc/init.d/xvfb start
-          PATH="$HOME/.local/bin:$PATH"
-          sh github.sh bootstrap
-          sh github.sh install_package_control
-          sh github.sh run_tests --coverage
-        name: Install Sublime Text, Install Package Control, Run tests
+      - run: sh ci.sh bootstrap
+        name: Install  Sublime Text
+      - run: sh ci.sh install_package_control
+        name: Install Package Control
+      - run: sh ci.sh run_tests --coverage
+        name: Run tests
       - run: pip3 install coverage==4.5.4 codecov==2.0.15
         name: Install code coverage tools
       - run: codecov
         name: Publish code coverage
-        env:
-          CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}

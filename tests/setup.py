@@ -3,11 +3,11 @@ from LSP.plugin.core.protocol import Notification, Request, WorkspaceFolder
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.settings import client_configs
-from LSP.plugin.core.test_mocks import basic_responses
 from LSP.plugin.core.types import ClientConfig, ClientStates, LanguageConfig
 from os import environ
 from os.path import dirname
 from sublime_plugin import view_event_listeners, ViewEventListener
+from test_mocks import basic_responses
 from unittesting import DeferrableTestCase
 import sublime
 

@@ -1,6 +1,6 @@
-from .handlers import LanguageHandler
-from .test_mocks import TEST_CONFIG
-from .types import ClientConfig
+from LSP.plugin.core.handlers import LanguageHandler
+from LSP.plugin.core.types import ClientConfig
+from test_mocks import TEST_CONFIG
 import unittest
 
 

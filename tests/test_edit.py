@@ -1,6 +1,6 @@
 import unittest
-from .edit import sort_by_application_order, parse_workspace_edit, parse_text_edit
-from .test_protocol import LSP_RANGE
+from LSP.plugin.core.edit import sort_by_application_order, parse_workspace_edit, parse_text_edit
+from test_protocol import LSP_RANGE
 
 TYPE_CHECKING = False
 if TYPE_CHECKING:

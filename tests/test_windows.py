@@ -1,27 +1,27 @@
-from . import test_sublime as test_sublime
-from .diagnostics import DiagnosticsStorage
-from .sessions import create_session
-from .sessions import Session
-from .test_mocks import MockClient
-from .test_mocks import MockConfigs
-from .test_mocks import MockDocuments
-from .test_mocks import MockHandlerDispatcher
-from .test_mocks import MockSettings
-from .test_mocks import MockView
-from .test_mocks import MockWindow
-from .test_mocks import TEST_CONFIG
-from .test_mocks import TestDocumentHandlerFactory
-from .test_mocks import TestGlobalConfigs
-from .types import ClientConfig
-from .types import LanguageConfig
-from .windows import WindowManager
-from .windows import WindowRegistry
-import tempfile
-import unittest
+from LSP.plugin.core.diagnostics import DiagnosticsStorage
+from LSP.plugin.core.sessions import create_session
+from LSP.plugin.core.sessions import Session
+from LSP.plugin.core.types import ClientConfig
+from LSP.plugin.core.types import LanguageConfig
+from LSP.plugin.core.windows import WindowManager
+from LSP.plugin.core.windows import WindowRegistry
+from test_mocks import MockClient
+from test_mocks import MockConfigs
+from test_mocks import MockDocuments
+from test_mocks import MockHandlerDispatcher
+from test_mocks import MockSettings
+from test_mocks import MockView
+from test_mocks import MockWindow
+from test_mocks import TEST_CONFIG
+from test_mocks import TestDocumentHandlerFactory
+from test_mocks import TestGlobalConfigs
 import os
+import tempfile
+import test_sublime
+import unittest
 
 try:
-    from .protocol import WorkspaceFolder
+    from LSP.plugin.core.protocol import WorkspaceFolder
     from typing import Callable, List, Optional, Set, Dict, Any, Tuple
     assert Callable and List and Optional and Set and Session and Dict and Any and Tuple
     assert ClientConfig and LanguageConfig and WorkspaceFolder

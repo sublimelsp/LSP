@@ -1,6 +1,6 @@
 import unittest
 import io
-from .transports import TCPTransport
+from LSP.plugin.core.transports import TCPTransport
 import time
 try:
     from typing import List

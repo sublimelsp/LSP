@@ -1,11 +1,11 @@
-from .protocol import WorkspaceFolder
-from .sessions import create_session, Session
-from .test_mocks import MockClient
-from .test_mocks import TEST_CONFIG
-from .test_mocks import TEST_LANGUAGE
-from .types import ClientConfig
-from .types import ClientStates
-from .types import Settings
+from LSP.plugin.core.protocol import WorkspaceFolder
+from LSP.plugin.core.sessions import create_session, Session
+from LSP.plugin.core.types import ClientConfig
+from LSP.plugin.core.types import ClientStates
+from LSP.plugin.core.types import Settings
+from test_mocks import MockClient
+from test_mocks import TEST_CONFIG
+from test_mocks import TEST_LANGUAGE
 import unittest
 import unittest.mock
 

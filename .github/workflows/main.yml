@@ -12,6 +12,7 @@ jobs:
       PACKAGE: LSP
     steps:
     - run: echo ::add-path::$HOME/.local/bin
+    - run: echo ::add-path::$HOME/Library/Python/3.7/bin
     - uses: actions/checkout@v1
     - run: python3 tests/server.py --version
     - run: python3 tests/adjust_unittesting_config_for_ci.py && cat unittesting.json

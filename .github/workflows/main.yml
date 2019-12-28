@@ -10,9 +10,12 @@ jobs:
       SUBLIME_TEXT_VERSION: "3"
       SUBLIME_TEXT_ARCH: x64
       PACKAGE: LSP
+      DISPLAY: ":1"
     steps:
       - run: echo ::add-path::$HOME/.local/bin
       - run: sudo apt-get install xvfb -y
+      - run: curl --silent https://raw.githubusercontent.com/SublimeText/UnitTesting/master/docker/xvfb --output /etc/init.d/xvfb
+      - run: chmod +x /etc/init.d/xvfb
       - run: sh -e /etc/init.d/xvfb start
         name: Start X11 virtual  framebuffer
       - uses: actions/checkout@v1
@@ -29,7 +32,7 @@ jobs:
         name: Run flake8
       - run: yapf --diff plugin/core/main.py
         name: Run yapf
-      - run: curl -OL https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/ci.sh
+      - run: curl --silent https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/ci.sh --output ci.sh
         name: Download the UnitTesting script wrapper
       - run: sh ci.sh bootstrap
         name: Install  Sublime Text

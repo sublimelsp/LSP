@@ -12,6 +12,7 @@ jobs:
       PACKAGE: LSP
     steps:
       - run: echo ::add-path::$HOME/.local/bin
+      - run: sudo apt-get install xvfb -y
       - run: sh -e /etc/init.d/xvfb start
         name: Start X11 virtual  framebuffer
       - uses: actions/checkout@v1

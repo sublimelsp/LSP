@@ -3,7 +3,7 @@ name: main
 on: [pull_request]
 
 jobs:
-  linux:
+  macOS:
     runs-on: macOS-latest
     env:
       CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
@@ -15,7 +15,7 @@ jobs:
     # - run: sudo curl --silent https://raw.githubusercontent.com/SublimeText/UnitTesting/master/docker/xvfb --output /etc/init.d/xvfb
     # - run: sudo chmod +x /etc/init.d/xvfb
     # - run: sudo sh -e /etc/init.d/xvfb start
-    # - run: echo ::add-path::$HOME/.local/bin
+    - run: echo ::add-path::$HOME/.local/bin
     # - run: sudo apt-get install xvfb python3-pip -y
     - uses: actions/checkout@v1
     - run: curl --silent https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/ci.sh --output ci.sh

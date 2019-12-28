@@ -25,15 +25,14 @@ jobs:
         name: Run yapf
       - run: curl -OL https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/github.sh
         name: Download the UnitTesting script wrapper
-      - run: sh github.sh bootstrap
-        name: Install Sublime Text
       - run: sh -e /etc/init.d/xvfb start
         name: Start the X11 virtual framebuffer
       - run: |
-          export PATH=$HOME/.local/bin:$PATH
+          PATH="$HOME/.local/bin:$PATH"
+          sh github.sh bootstrap
           sh github.sh install_package_control
           sh github.sh run_tests --coverage
-        name: Install Package Control, Run tests
+        name: Install Sublime Text, Install Package Control, Run tests
       - run: pip3 install coverage==4.5.4 codecov==2.0.15
         name: Install code coverage tools
       - run: codecov

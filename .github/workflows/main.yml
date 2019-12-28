@@ -12,35 +12,20 @@ jobs:
       PACKAGE: LSP
       DISPLAY: ":1"
     steps:
-      - run: echo ::add-path::$HOME/.local/bin
-      - run: sudo apt-get install xvfb -y
-      - run: sudo curl --silent https://raw.githubusercontent.com/SublimeText/UnitTesting/master/docker/xvfb --output /etc/init.d/xvfb
-      - run: sudo chmod +x /etc/init.d/xvfb
-      - run: sudo sh -e /etc/init.d/xvfb start
-        name: Start X11 virtual  framebuffer
-      - uses: actions/checkout@v1
-        name: Clone the repository
-      - run: sudo apt-get install python3-pip -y
-        name: Install python3 and pip3
-      - run: pip3 install mypy==0.750 flake8==3.7.9 yapf==0.29.0 --user
-        name: Install python test tools
-      - run: python3 tests/server.py --version
-        name: Verify a working test language server
-      - run: mypy -p plugin
-        name: Run mypy
-      - run: flake8 plugin tests
-        name: Run flake8
-      - run: yapf --diff plugin/core/main.py
-        name: Run yapf
-      - run: curl --silent https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/ci.sh --output ci.sh
-        name: Download the UnitTesting script wrapper
-      - run: sh ci.sh bootstrap
-        name: Install  Sublime Text
-      - run: sh ci.sh install_package_control
-        name: Install Package Control
-      - run: sh ci.sh run_tests --coverage
-        name: Run tests
-      - run: pip3 install coverage==4.5.4 codecov==2.0.15 --user
-        name: Install code coverage tools
-      - run: codecov
-        name: Publish code coverage
+    - run: sudo curl --silent https://raw.githubusercontent.com/SublimeText/UnitTesting/master/docker/xvfb --output /etc/init.d/xvfb
+    - run: sudo chmod +x /etc/init.d/xvfb
+    - run: sudo sh -e /etc/init.d/xvfb start
+    - run: echo ::add-path::$HOME/.local/bin
+    - run: sudo apt-get install xvfb python3-pip -y
+    - uses: actions/checkout@v1
+    - run: curl --silent https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/ci.sh --output ci.sh
+    - run: sh ci.sh bootstrap
+    - run: sh ci.sh install_package_control
+    - run: python3 tests/server.py --version
+    - run: sh ci.sh run_tests --coverage
+    - run: pip3 install mypy==0.750 flake8==3.7.9 yapf==0.29.0 --user
+    - run: mypy -p plugin
+    - run: flake8 plugin tests
+    - run: yapf --diff plugin/core/main.py
+    - run: pip3 install coverage==4.5.4 codecov==2.0.15 --user
+    - run: codecov

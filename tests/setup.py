@@ -12,7 +12,7 @@ from unittesting import DeferrableTestCase
 import sublime
 
 
-CI = any(key in environ for key in ("TRAVIS", "CI"))
+CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 
 project_path = dirname(__file__)
 test_file_path = project_path + "/testfile.txt"
@@ -170,7 +170,7 @@ class TextDocumentTestCase(DeferrableTestCase):
                 return False
             return True
 
-        yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
+        yield {"condition": condition, "timeout": 20000 if CI else 2000, "period": PERIOD_TIME}
 
     def await_message(self, method: str, expected_session_state: int = ClientStates.READY) -> 'Generator':
         self.assertIsNotNone(self.session)

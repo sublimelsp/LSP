@@ -11,15 +11,16 @@ jobs:
       SUBLIME_TEXT_ARCH: x64
       PACKAGE: LSP
     steps:
+    - run: echo ::add-path::$HOME/.local/bin
     - uses: actions/checkout@v1
     - run: python3 tests/server.py --version
     - run: python3 tests/adjust_unittesting_config_for_ci.py && cat unittesting.json
     - run: curl --silent https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/ci.sh --output ci.sh
     - run: |
-        PATH="$HOME/.local/bin:$PATH"
         sh ci.sh bootstrap
         sh ci.sh install_package_control
         sh ci.sh run_tests
+      name: Run UnitTesting tests
     - run: pip3 install mypy==0.750 flake8==3.7.9 yapf==0.29.0 --user
     - run: mypy -p plugin
     - run: flake8 plugin tests

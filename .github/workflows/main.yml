@@ -20,9 +20,9 @@ jobs:
         name: Start X11 virtual  framebuffer
       - uses: actions/checkout@v1
         name: Clone the repository
-      - run: apt-get install python3-pip -y
+      - run: sudo apt-get install python3-pip -y
         name: Install python3 and pip3
-      - run: pip3 install mypy==0.750 flake8==3.7.9 yapf==0.29.0
+      - run: pip3 install mypy==0.750 flake8==3.7.9 yapf==0.29.0 --user
         name: Install python test tools
       - run: python3 tests/server.py --version
         name: Verify a working test language server
@@ -40,7 +40,7 @@ jobs:
         name: Install Package Control
       - run: sh ci.sh run_tests --coverage
         name: Run tests
-      - run: pip3 install coverage==4.5.4 codecov==2.0.15
+      - run: pip3 install coverage==4.5.4 codecov==2.0.15 --user
         name: Install code coverage tools
       - run: codecov
         name: Publish code coverage

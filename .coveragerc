@@ -1,8 +1,5 @@
 [run]
-source = .
-omit =
-        *test_*
+omit = /*/tests/*
 
 [report]
-omit =
-        *test_*
+ignore_errors = True

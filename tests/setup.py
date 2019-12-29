@@ -17,8 +17,8 @@ CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 project_path = dirname(__file__)
 test_file_path = project_path + "/testfile.txt"
 workspace_folders = [WorkspaceFolder.from_path(project_path)]
-TIMEOUT_TIME = 16000 if CI else 2000
-PERIOD_TIME = 400 if CI else 1
+TIMEOUT_TIME = 20000 if CI else 2000
+PERIOD_TIME = 500 if CI else 1
 SUPPORTED_SCOPE = "text.plain"
 SUPPORTED_SYNTAX = "Packages/Text/Plain text.tmLanguage"
 text_language = LanguageConfig("text", [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX])
@@ -183,7 +183,7 @@ class TextDocumentTestCase(DeferrableTestCase):
                 return False
             return True
 
-        yield {"condition": condition, "timeout": 20000 if CI else 2000, "period": PERIOD_TIME}
+        yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
 
     def await_message(self, method: str, expected_session_state: int = ClientStates.READY) -> 'Generator':
         self.assertIsNotNone(self.session)

@@ -118,7 +118,19 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.assertTrue(window)
         filename = expand("$packages/LSP/tests/{}.txt".format(test_name), window)
         self.config.init_options["serverResponse"] = server_capabilities
-        windows._windows.clear()  # destroy all window managers
+        window.run_command("close_all")
+        # Cleanly shut down all window managers by ending all their sessions
+        for wm in windows._windows.values():
+            wm.end_sessions()
+
+            def condition() -> bool:
+                nonlocal wm
+                return len(wm._sessions) == 0
+
+            yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
+        # The Sublime windows are actually still valid, so WindowManagers don't remove themselves from this global
+        # dictionary. We do it by hand.
+        windows._windows.clear()
         client_configs.all.clear()
         add_config(self.config)
         self.wm = windows.lookup(window)  # create just this single one for the test

@@ -125,6 +125,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.view = window.open_file(filename)
         self.assertTrue(self.wm._configs.syntax_supported(self.view))
         self.init_view_settings()
+        self.wm.start_active_views()  # in case testfile.txt was already opened
         yield from self.await_boilerplate_begin()
 
     def get_test_name(self) -> str:

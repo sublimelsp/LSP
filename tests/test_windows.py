@@ -61,7 +61,6 @@ class WindowRegistryTests(unittest.TestCase):
 
     def test_removes_window_state(self):
         test_window = MockWindow([[MockView(__file__)]])
-        print(__file__)
         windows = WindowRegistry(TestGlobalConfigs(), TestDocumentHandlerFactory(),
                                  mock_start_session,
                                  test_sublime, MockHandlerDispatcher())

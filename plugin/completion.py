@@ -49,6 +49,7 @@ class CompletionHandler(LSPViewEventListener):
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
+        self.ignored_chars = []  # type: List[str]
         self.auto_complete_selector = view.settings().get("auto_complete_selector", "") or ""  # type: str
         self.resolve = False
         self.state = CompletionState.IDLE
@@ -80,6 +81,7 @@ class CompletionHandler(LSPViewEventListener):
             self.resolve = completionProvider.get('resolveProvider') or False
             self.trigger_chars = completionProvider.get(
                 'triggerCharacters') or []
+            self.ignored_chars = settings.auto_complete_ignored_triggers
             if self.trigger_chars:
                 self.register_trigger_chars(session)
 
@@ -106,13 +108,6 @@ class CompletionHandler(LSPViewEventListener):
                             })
 
             self.view.settings().set('auto_complete_triggers', completion_triggers)
-
-    def is_after_trigger_character(self, location: int) -> bool:
-        if location > 0:
-            prev_char = self.view.substr(location - 1)
-            return prev_char in self.trigger_chars
-        else:
-            return False
 
     def is_same_completion(self, prefix: str, locations: 'List[int]') -> bool:
         if self.response_incomplete:
@@ -260,7 +255,10 @@ class CompletionHandler(LSPViewEventListener):
         if not client:
             return
 
-        if settings.complete_all_chars or self.is_after_trigger_character(locations[0]):
+        prev_point = locations[0] - 1 if locations[0] - 1 >= 0 else 0
+        prev_char = view.substr(prev_point)
+
+        if prev_char in self.trigger_chars or prev_char not in self.ignored_chars:
             self.manager.documents.purge_changes(self.view)
             document_position = get_document_position(view, locations[0])
             if document_position:

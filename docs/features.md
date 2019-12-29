@@ -70,7 +70,7 @@ Add these settings to your Sublime settings, Syntax-specific settings and/or in 
 
 ### Package settings (LSP)
 
-* `complete_all_chars` `true` *request completions for all characters, not just trigger characters*
+* `auto_complete_ignored_triggers` `[","]` *Auto complete won't be triggered for these characters*
 * `only_show_lsp_completions` `false` *disable sublime word completion and snippets from autocomplete lists*
 * `completion_hint_type` `"auto"` *override automatic completion hints with "detail", "kind" or "none"*
 * `show_references_in_quick_panel` `false` *show symbol references in Sublime's quick panel instead of the bottom panel*

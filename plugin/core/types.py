@@ -28,7 +28,7 @@ class Settings(object):
         self.diagnostics_gutter_marker = "dot"
         self.show_code_actions_bulb = False
         self.show_symbol_action_links = False
-        self.complete_all_chars = False
+        self.auto_complete_ignored_triggers = [","]
         self.completion_hint_type = "auto"
         self.show_references_in_quick_panel = False
         self.disabled_capabilities = []  # type: List[str]

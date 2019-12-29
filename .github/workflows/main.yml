@@ -21,7 +21,7 @@ jobs:
         sh ci.sh bootstrap
         sh ci.sh install_package_control
         subl &
-        sleep 5
+        sleep 6
         sh ci.sh run_tests --coverage
       name: Run UnitTesting tests
     - run: pip3 install mypy==0.750 flake8==3.7.9 yapf==0.29.0 --user

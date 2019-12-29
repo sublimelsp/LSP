@@ -380,7 +380,7 @@
         "languageId": "javascript"
       }, {
         "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript Syntax/TypeScript.tmLanguage"],
         "languageId": "typescript"
       }
       ]
@@ -401,7 +401,7 @@
         "languageId": "javascript"
       }, {
         "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript Syntax/TypeScript.tmLanguage"],
         "languageId": "typescript"
       }
       ]
@@ -415,7 +415,7 @@
         "languageId": "javascript"
       }, {
         "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript Syntax/TypeScript.tmLanguage"],
         "languageId": "typescript"
       }
       ]

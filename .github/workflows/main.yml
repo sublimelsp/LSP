@@ -29,5 +29,5 @@ jobs:
     - run: flake8 plugin tests
     - run: yapf --diff plugin/core/main.py
     - run: |
-        pip3 install python-coveralls
+        pip3 install coverage==4.5.4 python-coveralls
         coveralls

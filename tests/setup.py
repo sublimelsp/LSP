@@ -17,8 +17,8 @@ CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 project_path = dirname(__file__)
 test_file_path = project_path + "/testfile.txt"
 workspace_folders = [WorkspaceFolder.from_path(project_path)]
-TIMEOUT_TIME = 10000 if CI else 1000
-PERIOD_TIME = 200 if CI else 17
+TIMEOUT_TIME = 16000 if CI else 2000
+PERIOD_TIME = 400 if CI else 1
 SUPPORTED_SCOPE = "text.plain"
 SUPPORTED_SYNTAX = "Packages/Text/Plain text.tmLanguage"
 text_language = LanguageConfig("text", [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX])
@@ -118,13 +118,26 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.assertTrue(window)
         filename = expand("$packages/LSP/tests/{}.txt".format(test_name), window)
         self.config.init_options["serverResponse"] = server_capabilities
-        windows._windows.clear()  # destroy all window managers
+        window.run_command("close_all")
+        # Cleanly shut down all window managers by ending all their sessions
+        for wm in windows._windows.values():
+            wm.end_sessions()
+
+            def condition() -> bool:
+                nonlocal wm
+                return len(wm._sessions) == 0
+
+            yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
+        # The Sublime windows are actually still valid, so WindowManagers don't remove themselves from this global
+        # dictionary. We do it by hand.
+        windows._windows.clear()
         client_configs.all.clear()
         add_config(self.config)
         self.wm = windows.lookup(window)  # create just this single one for the test
         self.view = window.open_file(filename)
         self.assertTrue(self.wm._configs.syntax_supported(self.view))
         self.init_view_settings()
+        self.wm.start_active_views()  # in case testfile.txt was already opened
         yield from self.await_boilerplate_begin()
 
     def get_test_name(self) -> str:

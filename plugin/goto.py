@@ -40,10 +40,10 @@ class LspGotoCommand(LspTextCommand):
                     request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response: 'Optional[Any]', position: int) -> None:
-        def process_response_array(array):
-            return [process_response(x) for x in array]
+        def process_response_list(responses: list):
+            return [process_response(x) for x in responses]
 
-        def process_response(response):
+        def process_response(response: dict):
             if "targetUri" in response:
                 # TODO: Do something clever with originSelectionRange and targetRange.
                 file_path = uri_to_filename(response["targetUri"])
@@ -56,7 +56,7 @@ class LspGotoCommand(LspTextCommand):
             file_path_and_row_col = "{}:{}:{}".format(file_path, row, col)
             return file_path, file_path_and_row_col, (row, col)
 
-        def open_location(window, location):
+        def open_location(window: sublime.Window, location: list):
             fname, file_path_and_row_col, rowcol = location
             row, col = rowcol
             debug("opening location", file_path_and_row_col)
@@ -64,7 +64,7 @@ class LspGotoCommand(LspTextCommand):
                 file_path_and_row_col,
                 sublime.ENCODED_POSITION | sublime.FORCE_GROUP)
 
-        def select_entry(window, locations, idx, orig_view, orig_sel):
+        def select_entry(window: sublime.Window, locations: list, idx: int, orig_view: sublime.View, orig_sel: sublime.Selection):
             if idx >= 0:
                 open_location(window, locations[idx])
             else:
@@ -74,7 +74,7 @@ class LspGotoCommand(LspTextCommand):
                     window.focus_view(orig_view)
                     orig_view.show(orig_sel[0])
 
-        def highlight_entry(window, locations, idx):
+        def highlight_entry(window: sublime.Window, locations: list, idx: int):
             fname, file_path_and_row_col, rowcol = locations[idx]
             row, col = rowcol
             window.open_file(
@@ -87,7 +87,7 @@ class LspGotoCommand(LspTextCommand):
             # Save to jump back history.
             get_jump_history_for_view(self.view).push_selection(self.view)
             # TODO: DocumentLink support.
-            locations = [process_response(response)] if isinstance(response, dict) else process_response_array(response)
+            locations = [process_response(response)] if isinstance(response, dict) else process_response_list(response)
             if len(locations) == 1:
                 open_location(window, locations[0])
             elif len(locations) > 1:

@@ -8,7 +8,7 @@ from .core.logging import debug
 from Default.history_list import get_jump_history_for_view
 
 try:
-    from typing import List, Dict, Optional, Any
+    from typing import List, Dict, Optional, Any, Tuple
     assert List and Dict and Optional and Any
 except ImportError:
     pass
@@ -40,10 +40,10 @@ class LspGotoCommand(LspTextCommand):
                     request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response: 'Optional[Any]', position: int) -> None:
-        def process_response_list(responses: list):
+        def process_response_list(responses: list) -> List[Tuple[str, str, Tuple[int, int]]]:
             return [process_response(x) for x in responses]
 
-        def process_response(response: dict):
+        def process_response(response: dict) -> Tuple[str, str, Tuple[int, int]]:
             if "targetUri" in response:
                 # TODO: Do something clever with originSelectionRange and targetRange.
                 file_path = uri_to_filename(response["targetUri"])
@@ -56,7 +56,7 @@ class LspGotoCommand(LspTextCommand):
             file_path_and_row_col = "{}:{}:{}".format(file_path, row, col)
             return file_path, file_path_and_row_col, (row, col)
 
-        def open_location(window: sublime.Window, location: list):
+        def open_location(window: sublime.Window, location: Tuple[str, str, Tuple[int, int]]) -> None:
             fname, file_path_and_row_col, rowcol = location
             row, col = rowcol
             debug("opening location", file_path_and_row_col)
@@ -64,7 +64,7 @@ class LspGotoCommand(LspTextCommand):
                 file_path_and_row_col,
                 sublime.ENCODED_POSITION | sublime.FORCE_GROUP)
 
-        def select_entry(window: sublime.Window, locations: list, idx: int, orig_view: sublime.View, orig_sel: sublime.Selection):
+        def select_entry(window: sublime.Window, locations: List[Tuple[str, str, Tuple[int, int]]], idx: int, orig_view: sublime.View, orig_sel: List[sublime.Region]) -> None:
             if idx >= 0:
                 open_location(window, locations[idx])
             else:
@@ -74,20 +74,29 @@ class LspGotoCommand(LspTextCommand):
                     window.focus_view(orig_view)
                     orig_view.show(orig_sel[0])
 
-        def highlight_entry(window: sublime.Window, locations: list, idx: int):
+        def highlight_entry(window: sublime.Window, locations: List[Tuple[str, str, Tuple[int, int]]], idx: int) -> None:
             fname, file_path_and_row_col, rowcol = locations[idx]
             row, col = rowcol
             window.open_file(
                     file_path_and_row_col,
                     group=window.active_group(),
                     flags=sublime.TRANSIENT | sublime.ENCODED_POSITION | sublime.FORCE_GROUP)
-        orig_sel = None
+
         window = sublime.active_window()
+        orig_sel = []
+        if window.active_view():
+            view = sublime.View(window.active_view())
+            sel = view.sel()
+            orig_sel = [sublime.Region(r.a, r.b) for r in sublime.Selection(sel)]
         if response:
             # Save to jump back history.
             get_jump_history_for_view(self.view).push_selection(self.view)
             # TODO: DocumentLink support.
-            locations = [process_response(response)] if isinstance(response, dict) else process_response_list(response)
+            if isinstance(response, dict):
+                locations = [process_response(response)]
+            else:
+                process_response_list(response)
+            # locations = [process_response(response)] if isinstance(response, dict) else process_response_list(response)
             if len(locations) == 1:
                 open_location(window, locations[0])
             elif len(locations) > 1:

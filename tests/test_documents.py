@@ -3,6 +3,7 @@ from LSP.plugin.core.sessions import create_session
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.windows import WindowDocumentHandler
+from LSP.plugin.core.workspace import ProjectFolders
 from os.path import basename
 from test_mocks import MockClient
 from test_mocks import MockConfigs
@@ -34,7 +35,8 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         project_path = "/"
         folders = [WorkspaceFolder.from_path(project_path)]
         view.set_window(window)
-        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, MockConfigs())
+        workspace = ProjectFolders(window)
+        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, workspace, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
             create_session(TEST_CONFIG, folders, dict(), MockSettings(),
@@ -96,7 +98,8 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         project_path = "/"
         folders = [WorkspaceFolder.from_path(project_path)]
         view.set_window(window)
-        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, MockConfigs())
+        workspace = ProjectFolders(window)
+        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, workspace, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
             create_session(TEST_CONFIG, folders, dict(), MockSettings(),

@@ -1,6 +1,6 @@
 # from copy import deepcopy
 from LSP.plugin.hover import _test_contents
-from setup import close_test_view, TextDocumentTestCase, TIMEOUT_TIME, PERIOD_TIME, CI
+from setup import close_test_view, TextDocumentTestCase, TIMEOUT_TIME, PERIOD_TIME
 import sublime
 import os
 
@@ -48,9 +48,11 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         pass
 
     def test_did_close(self) -> 'Generator':
+        yield 100
         assert self.view
         close_test_view(self.view)
         self.view = None
+        yield 100
         yield from self.await_message("textDocument/didClose")
 
     def test_did_change(self) -> 'Generator':
@@ -195,10 +197,10 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.view.sel().add(sublime.Region(0, 0))
         method = 'textDocument/{}'.format(text_document_request)
         self.set_response(method, response)
+        yield 100
         self.view.run_command('lsp_symbol_{}'.format(subl_command_suffix))
+        yield 100
         yield from self.await_message(method)
-        if CI:
-            yield 500
 
         def condition() -> bool:
             nonlocal self

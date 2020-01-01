@@ -1,7 +1,7 @@
 from .logging import debug
 from .protocol import WorkspaceFolder
 from .types import WindowLike
-from os.path import commonprefix, realpath
+from os.path import commonprefix
 
 try:
     from typing import List, Optional, Any, Dict, Iterable, Union, Callable
@@ -34,7 +34,6 @@ class ProjectFolders(object):
 
     def is_foreign(self, p: str) -> bool:
         """Note that for a folderless window no path is foreign"""
-        p = realpath(p)
         return all(commonprefix((f, p)) != f for f in self.folders)
 
     def is_inside(self, p: str) -> bool:

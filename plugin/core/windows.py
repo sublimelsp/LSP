@@ -1,6 +1,6 @@
 from .diagnostics import DiagnosticsStorage
 from .logging import debug
-from .types import (ClientStates, ClientConfig, WindowLike, ViewLike,
+from .types import (ClientConfig, WindowLike, ViewLike,
                     LanguageConfig, config_supports_syntax, ConfigRegistry,
                     GlobalConfigs, Settings)
 from .edit import parse_workspace_edit

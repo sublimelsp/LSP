@@ -58,8 +58,9 @@
   // Show symbol action links in hover popup if available
   "show_symbol_action_links": false,
 
-  // Auto complete won't be triggered for these characters
-  "auto_complete_ignored_triggers": [","],
+  // Request completions for all characters if set to true,
+  // or just after trigger characters only otherwise.
+  "complete_all_chars": true,
 
   // Controls which hints the completion panel displays
   // "auto": completion details if available or kind otherwise

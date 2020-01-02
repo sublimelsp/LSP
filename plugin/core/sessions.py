@@ -195,7 +195,7 @@ class Session(object):
             return False
         with self.ready_lock:
             # If we're in a window with no folders, or we're a multi-folder session, then we handle any path.
-            if not self._workspace_folders or self._supports_workspace_folders():
+            if not self._workspace_folders or self._unsafe_supports_workspace_folders():
                 return True
         # We're in a window with folders, and we're a single-folder session.
         for folder in self._workspace_folders:
@@ -205,7 +205,7 @@ class Session(object):
 
     def update_folders(self, folders: 'List[WorkspaceFolder]') -> None:
         with self.ready_lock:
-            if self._supports_workspace_folders():
+            if self._unsafe_supports_workspace_folders():
                 added, removed = diff_folders(self._workspace_folders, folders)
                 params = {
                     "event": {
@@ -225,7 +225,7 @@ class Session(object):
             self._handle_initialize_result,
             self._handle_initialize_error)
 
-    def _supports_workspace_folders(self) -> bool:
+    def _unsafe_supports_workspace_folders(self) -> bool:
         assert self.ready_lock.locked()
         workspace_cap = self.capabilities.get("workspace", {})
         workspace_folder_cap = workspace_cap.get("workspaceFolders", {})
@@ -233,7 +233,7 @@ class Session(object):
 
     def supports_workspace_folders(self) -> bool:
         with self.ready_lock:
-            return self._supports_workspace_folders()
+            return self._unsafe_supports_workspace_folders()
 
     def _handle_initialize_error(self, error: 'Any') -> None:
         self.state = ClientStates.STOPPING
@@ -245,7 +245,7 @@ class Session(object):
 
         # only keep supported amount of folders
         if self._workspace_folders:
-            if self._supports_workspace_folders():
+            if self._unsafe_supports_workspace_folders():
                 debug('multi folder session:', self._workspace_folders)
             else:
                 self._workspace_folders = self._workspace_folders[:1]
@@ -279,6 +279,3 @@ class Session(object):
         self.capabilities = dict()
         if self._on_post_exit:
             self._on_post_exit(self.config.name)
-
-    def __str__(self) -> str:
-        return "<{}, {}, {}>".format(self.config.name, self.state, self._workspace_folders)

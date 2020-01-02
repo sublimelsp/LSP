@@ -18,13 +18,6 @@ from .core.sessions import Session
 from .core.edit import parse_text_edit
 
 
-class CompletionState(object):
-    IDLE = 0
-    REQUESTING = 1
-    APPLYING = 2
-    CANCELLING = 3
-
-
 last_text_command = None
 
 
@@ -49,12 +42,9 @@ class CompletionHandler(LSPViewEventListener):
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
-        self.ignored_chars = []  # type: List[str]
-        self.auto_complete_selector = view.settings().get("auto_complete_selector", "") or ""  # type: str
         self.resolve = False
-        self.state = CompletionState.IDLE
+        self.is_request_pending = False
         self.completions = []  # type: List[Any]
-        self.next_request = None  # type: Optional[Tuple[str, List[int]]]
         self.last_prefix = ""
         self.last_location = -1
         self.committing = False
@@ -79,9 +69,7 @@ class CompletionHandler(LSPViewEventListener):
             # usual query for completions. So the explicit check for None is necessary.
             self.enabled = True
             self.resolve = completionProvider.get('resolveProvider') or False
-            self.trigger_chars = completionProvider.get(
-                'triggerCharacters') or []
-            self.ignored_chars = settings.auto_complete_ignored_triggers
+            self.trigger_chars = completionProvider.get('triggerCharacters') or []
             if self.trigger_chars:
                 self.register_trigger_chars(session)
 
@@ -106,20 +94,7 @@ class CompletionHandler(LSPViewEventListener):
                                 'characters': "".join(self.trigger_chars),
                                 'selector': scope
                             })
-
             self.view.settings().set('auto_complete_triggers', completion_triggers)
-
-    def is_same_completion(self, prefix: str, locations: 'List[int]') -> bool:
-        if self.response_incomplete:
-            return False
-
-        if self.last_location < 0:
-            return False
-
-        # completion requests from the same location with the same prefix are cached.
-        current_start = locations[0] - len(prefix)
-        last_start = self.last_location - len(self.last_prefix)
-        return prefix.startswith(self.last_prefix) and current_start == last_start
 
     def find_completion_item(self, inserted: str) -> 'Optional[dict]':
         """
@@ -143,26 +118,17 @@ class CompletionHandler(LSPViewEventListener):
         return None
 
     def on_modified(self) -> None:
-
         # hide completion when backspacing past last completion.
         if self.view.sel()[0].begin() < self.last_location:
             self.last_location = -1
             self.view.run_command("hide_auto_complete")
 
-        # cancel current completion if the previous input is an space
-        prev_char = self.view.substr(self.view.sel()[0].begin() - 1)
-        if self.state == CompletionState.REQUESTING and prev_char.isspace():
-            self.state = CompletionState.CANCELLING
-
         if self.committing:
             self.committing = False
             self.on_completion_inserted()
         else:
-            if self.view.is_auto_complete_visible():
-                if self.response_incomplete:
-                    # debug('incomplete, triggering new completions')
-                    self.view.run_command("hide_auto_complete")
-                    sublime.set_timeout(self.run_auto_complete, 0)
+            if self.response_incomplete:
+                self.update_completions()
 
     def on_completion_inserted(self) -> None:
         # get text inserted from last completion
@@ -216,62 +182,42 @@ class CompletionHandler(LSPViewEventListener):
 
         flags = 0
         if settings.only_show_lsp_completions:
-            flags |= sublime.INHIBIT_WORD_COMPLETIONS
-            flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
+            flags = sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS
 
-        if self.enabled:
-            if not self.view.match_selector(locations[0], self.auto_complete_selector):
-                return ([], flags)
+        if not self.enabled:
+            return None
 
-            reuse_completion = self.is_same_completion(prefix, locations)
-            if self.state == CompletionState.IDLE:
-                if not reuse_completion:
-                    self.last_prefix = prefix
-                    self.last_location = locations[0]
-                    self.do_request(prefix, locations)
-                    self.completions = []
+        if self.last_location != locations[0]:
+            self.last_prefix = prefix
+            self.last_location = locations[0]
+            self.do_request(prefix, locations)
 
-            elif self.state in (CompletionState.REQUESTING, CompletionState.CANCELLING):
-                if not reuse_completion:
-                    self.next_request = (prefix, locations)
-                    self.state = CompletionState.CANCELLING
-
-            elif self.state == CompletionState.APPLYING:
-                self.state = CompletionState.IDLE
-
-            return (self.completions, flags)
-
-        return None
+        return (self.completions, flags)
 
     def on_text_command(self, command_name: str, args: 'Optional[Any]') -> None:
         self.committing = command_name in ('commit_completion', 'auto_complete')
 
     def do_request(self, prefix: str, locations: 'List[int]') -> None:
-        self.next_request = None
-        view = self.view
+        if self.is_request_pending:
+            return
 
         # don't store client so we can handle restarts
-        client = client_from_session(session_for_view(view, 'completionProvider', locations[0]))
+        client = client_from_session(session_for_view(self.view, 'completionProvider', locations[0]))
         if not client:
             return
 
-        prev_point = locations[0] - 1 if locations[0] - 1 >= 0 else 0
-        prev_char = view.substr(prev_point)
-
-        if prev_char in self.trigger_chars or prev_char not in self.ignored_chars:
-            self.manager.documents.purge_changes(self.view)
-            document_position = get_document_position(view, locations[0])
-            if document_position:
-                client.send_request(
-                    Request.complete(document_position),
-                    self.handle_response,
-                    self.handle_error)
-                self.state = CompletionState.REQUESTING
+        self.manager.documents.purge_changes(self.view)
+        document_position = get_document_position(self.view, locations[0])
+        if document_position:
+            self.is_request_pending = True
+            self.completions = []
+            client.send_request(
+                Request.complete(document_position),
+                self.handle_response,
+                self.handle_error)
 
     def do_resolve(self, item: dict) -> None:
-        view = self.view
-
-        client = client_from_session(session_for_view(view, 'completionProvider', self.last_location))
+        client = client_from_session(session_for_view(self.view, 'completionProvider', self.last_location))
         if not client:
             return
 
@@ -290,56 +236,37 @@ class CompletionHandler(LSPViewEventListener):
         sublime.status_message('Applied additional edits for completion')
 
     def handle_response(self, response: 'Optional[Union[Dict,List]]') -> None:
-        if self.state == CompletionState.REQUESTING:
+        self.is_request_pending = False
+        completion_start = self.last_location
+        _last_row, last_col = self.view.rowcol(completion_start)
 
-            completion_start = self.last_location
-            if position_is_word(self.view, self.last_location):
-                # if completion is requested in the middle of a word, where does it start?
-                word = self.view.word(self.last_location)
-                completion_start = word.begin()
+        response_items, response_incomplete = parse_completion_response(response)
+        self.response_items = response_items
+        self.response_incomplete = response_incomplete
+        self.completions = list(format_completion(item, last_col, settings) for item in self.response_items)
 
-            current_word_start = self.view.sel()[0].begin()
-            if position_is_word(self.view, current_word_start):
-                current_word_region = self.view.word(current_word_start)
-                current_word_start = current_word_region.begin()
+        # if insert_best_completion was just ran, undo it before presenting new completions.
+        prev_char = self.view.substr(self.view.sel()[0].begin() - 1)
+        if prev_char.isspace():
+            if last_text_command == "insert_best_completion":
+                self.view.run_command("undo")
 
-            if current_word_start != completion_start:
-                debug('completion results for', completion_start, 'now at', current_word_start, 'discarding')
-                self.state = CompletionState.IDLE
-                return
-
-            _last_row, last_col = self.view.rowcol(completion_start)
-
-            response_items, response_incomplete = parse_completion_response(response)
-            self.response_items = response_items
-            self.response_incomplete = response_incomplete
-            self.completions = list(format_completion(item, last_col, settings) for item in self.response_items)
-
-            # if insert_best_completion was just ran, undo it before presenting new completions.
-            prev_char = self.view.substr(self.view.sel()[0].begin() - 1)
-            if prev_char.isspace():
-                if last_text_command == "insert_best_completion":
-                    self.view.run_command("undo")
-
-            self.state = CompletionState.APPLYING
-            self.view.run_command("hide_auto_complete")
-            self.run_auto_complete()
-        elif self.state == CompletionState.CANCELLING:
-            self.state = CompletionState.IDLE
-            if self.next_request:
-                prefix, locations = self.next_request
-                self.do_request(prefix, locations)
-        else:
-            debug('Got unexpected response while in state {}'.format(self.state))
+        if settings.complete_all_chars or prev_char in self.trigger_chars:
+            self.update_completions()
 
     def handle_error(self, error: dict) -> None:
+        self.is_request_pending = False
         sublime.status_message('Completion error: ' + str(error.get('message')))
-        self.state = CompletionState.IDLE
 
-    def run_auto_complete(self) -> None:
-        self.view.run_command(
-            "auto_complete", {
-                'disable_auto_insert': True,
-                'api_completions_only': settings.only_show_lsp_completions,
-                'next_completion_if_showing': False
-            })
+    def update_completions(self) -> None:
+        if self.view.is_auto_complete_visible():
+            self.view.run_command("hide_auto_complete")
+
+        def _show_auto_complete() -> None:
+                self.view.run_command("auto_complete", {
+                    'disable_auto_insert': True,
+                    'api_completions_only': settings.only_show_lsp_completions,
+                    'next_completion_if_showing': False
+                })
+
+        sublime.set_timeout(_show_auto_complete, 0)

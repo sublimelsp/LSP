@@ -1,6 +1,6 @@
 import os
 import sublime
-from LSP.plugin.completion import CompletionHandler, CompletionState
+from LSP.plugin.completion import CompletionHandler
 from LSP.plugin.core.registry import is_supported_view
 from unittesting import DeferrableTestCase
 from setup import (SUPPORTED_SYNTAX, text_config, add_config, remove_config,
@@ -176,7 +176,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
             # now wait for server response
             yield 100
-            self.assertEquals(handler.state, CompletionState.IDLE)
+            self.assertEquals(handler.is_request_pending, False)
             self.assertEquals(len(handler.completions), 2)
 
             # verify insertion works

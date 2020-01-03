@@ -83,7 +83,7 @@ class LspGotoCommand(LspTextCommand):
                     flags=sublime.TRANSIENT | sublime.ENCODED_POSITION | sublime.FORCE_GROUP)
 
         window = sublime.active_window()
-        orig_sel = []
+        orig_sel = []  # type: List[sublime.Region]
         if window.active_view():
             view = sublime.View(window.active_view())
             sel = view.sel()

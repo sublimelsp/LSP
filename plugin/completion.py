@@ -237,8 +237,7 @@ class CompletionHandler(LSPViewEventListener):
 
     def handle_response(self, response: 'Optional[Union[Dict,List]]') -> None:
         self.is_request_pending = False
-        completion_start = self.last_location
-        _last_row, last_col = self.view.rowcol(completion_start)
+        _last_row, last_col = self.view.rowcol(self.last_location)
 
         response_items, response_incomplete = parse_completion_response(response)
         self.response_items = response_items

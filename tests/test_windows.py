@@ -5,6 +5,7 @@ from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.types import LanguageConfig
 from LSP.plugin.core.windows import WindowManager
 from LSP.plugin.core.windows import WindowRegistry
+from LSP.plugin.core.workspace import ProjectFolders
 from test_mocks import MockClient
 from test_mocks import MockConfigs
 from test_mocks import MockDocuments
@@ -80,27 +81,45 @@ class WindowRegistryTests(unittest.TestCase):
 
 class WindowManagerTests(unittest.TestCase):
 
-    def test_can_start_active_views(self):
+    def make(
+        self,
+        *args: 'Any',
+        **kwargs: 'Any'
+    ) -> 'Tuple[MockWindow, MockDocuments, MockHandlerDispatcher, WindowManager]':
+        """The args and kwargs are the arguments for a MockWindow"""
         docs = MockDocuments()
-        wm = WindowManager(MockWindow([[MockView(__file__)]]), MockSettings(), MockConfigs(), docs,
-                           DiagnosticsStorage(None), mock_start_session, test_sublime, MockHandlerDispatcher())
+        dispatcher = MockHandlerDispatcher()
+        window = MockWindow(*args, **kwargs)
+        workspace = ProjectFolders(window)
+        wm = WindowManager(
+            window=window,
+            workspace=workspace,
+            settings=MockSettings(),
+            configs=MockConfigs(),
+            documents=docs,
+            diagnostics=DiagnosticsStorage(None),
+            session_starter=mock_start_session,
+            sublime=test_sublime,
+            handler_dispatcher=dispatcher)
         wm.start_active_views()
+        for sessions in wm._sessions.values():
+            for session in sessions:
+                with session.ready_lock:
+                    pass
+        return window, docs, dispatcher, wm
 
-        # session must be started (todo: verify session is ready)
+    def test_can_start_active_views(self):
+        _, docs, _, wm = self.make([[MockView(__file__)]])
+        # session must be started
         self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
         self.assertListEqual(docs._documents, [__file__])
 
     def test_can_open_supported_view(self):
-        docs = MockDocuments()
-        window = MockWindow([[]])
-        wm = WindowManager(window, MockSettings(), MockConfigs(), docs, DiagnosticsStorage(None), mock_start_session,
-                           test_sublime, MockHandlerDispatcher())
-
-        wm.start_active_views()
+        window, docs, _, wm = self.make([[]])
         self.assertIsNone(wm.get_session(TEST_CONFIG.name, __file__))
         self.assertListEqual(docs._documents, [])
 
-        # session must be started (todo: verify session is ready)
+        # session must be started
         view = MockView(__file__)
 
         # WindowManager will call window.active_view() at some point during wm.activate_view
@@ -111,12 +130,9 @@ class WindowManagerTests(unittest.TestCase):
         self.assertEqual(len(docs._sessions), 1)
 
     def test_can_restart_sessions(self):
-        docs = MockDocuments()
-        wm = WindowManager(MockWindow([[MockView(__file__)]]), MockSettings(), MockConfigs(), docs,
-                           DiagnosticsStorage(None), mock_start_session, test_sublime, MockHandlerDispatcher())
-        wm.start_active_views()
+        _, docs, _, wm = self.make([[MockView(__file__)]])
 
-        # session must be started (todo: verify session is ready)
+        # session must be started
         self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
 
         # our starting document must be loaded
@@ -124,20 +140,16 @@ class WindowManagerTests(unittest.TestCase):
 
         wm.restart_sessions()
 
-        # session must be started (todo: verify session is ready)
+        # session must be started
         self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
 
         # our starting document must be loaded
         self.assertListEqual(docs._documents, [__file__])
 
     def test_ends_sessions_when_closed(self):
-        docs = MockDocuments()
-        test_window = MockWindow([[MockView(__file__)]])
-        wm = WindowManager(test_window, MockSettings(), MockConfigs(), docs,
-                           DiagnosticsStorage(None), mock_start_session, test_sublime, MockHandlerDispatcher())
-        wm.start_active_views()
+        test_window, docs, _, wm = self.make([[MockView(__file__)]])
 
-        # session must be started (todo: verify session is ready)
+        # session must be started
         self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
 
         # our starting document must be loaded
@@ -151,13 +163,9 @@ class WindowManagerTests(unittest.TestCase):
         self.assertEqual(len(docs._sessions), 0)
 
     def test_ends_sessions_when_quick_switching(self):
-        docs = MockDocuments()
-        test_window = MockWindow([[MockView(__file__)]], folders=[os.path.dirname(__file__)])
-        wm = WindowManager(test_window, MockSettings(), MockConfigs(), docs,
-                           DiagnosticsStorage(None), mock_start_session, test_sublime, MockHandlerDispatcher())
-        wm.start_active_views()
+        test_window, docs, _, wm = self.make([[MockView(__file__)]], folders=[os.path.dirname(__file__)])
 
-        # session must be started (todo: verify session is ready)
+        # session must be started
         self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
 
         # our starting document must be loaded
@@ -179,13 +187,9 @@ class WindowManagerTests(unittest.TestCase):
         self.assertEqual(wm.get_project_path(file_path), new_project_path)
 
     def test_offers_restart_on_crash(self):
-        docs = MockDocuments()
-        wm = WindowManager(MockWindow([[MockView(__file__)]]), MockSettings(), MockConfigs(), docs,
-                           DiagnosticsStorage(None), mock_start_session, test_sublime,
-                           MockHandlerDispatcher())
-        wm.start_active_views()
+        _, docs, _, wm = self.make([[MockView(__file__)]])
 
-        # session must be started (todo: verify session is ready)
+        # session must be started
         self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
 
         # our starting document must be loaded
@@ -193,21 +197,16 @@ class WindowManagerTests(unittest.TestCase):
 
         wm._handle_server_crash(TEST_CONFIG)
 
-        # session must be started (todo: verify session is ready)
+        # session must be started
         self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
 
         # our starting document must be loaded
         self.assertListEqual(docs._documents, [__file__])
 
     def test_invokes_language_handler(self):
-        docs = MockDocuments()
-        dispatcher = MockHandlerDispatcher()
-        wm = WindowManager(MockWindow([[MockView(__file__)]]), MockSettings(), MockConfigs(), docs,
-                           DiagnosticsStorage(None), mock_start_session, test_sublime,
-                           dispatcher)
-        wm.start_active_views()
+        _, docs, dispatcher, wm = self.make([[MockView(__file__)]])
 
-        # session must be started (todo: verify session is ready)
+        # session must be started
         self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
 
         # our starting document must be loaded
@@ -217,13 +216,21 @@ class WindowManagerTests(unittest.TestCase):
         self.assertTrue(TEST_CONFIG.name in dispatcher._initialized)
 
     def test_returns_closest_workspace_folder(self):
-        docs = MockDocuments()
-        dispatcher = MockHandlerDispatcher()
         file_path = __file__
         top_folder = os.path.dirname(__file__)
         parent_folder = os.path.dirname(top_folder)
-        wm = WindowManager(MockWindow([[MockView(__file__)]], [top_folder, parent_folder]), MockSettings(),
-                           MockConfigs(), docs, DiagnosticsStorage(None), mock_start_session, test_sublime,
-                           dispatcher)
-        wm.start_active_views()
+        _, _, _, wm = self.make([[MockView(__file__)]], [top_folder, parent_folder])
         self.assertEqual(top_folder, wm.get_project_path(file_path))
+
+    def test_reuses_existing_session_for_foreign_file(self):
+        top_folder = os.path.dirname(__file__)
+        parent_folder = os.path.dirname(top_folder)
+        _, _, _, wm = self.make([[MockView(__file__)]], [top_folder, parent_folder])
+        with tempfile.TemporaryDirectory() as tmpdir:
+            outside_file = os.path.join(tmpdir, "testfile.txt")
+            with open(outside_file, "w") as fp:
+                print("hello world", file=fp)
+            another_view = MockView(outside_file)
+            wm.activate_view(another_view)
+            _ = wm.get_session(TEST_CONFIG.name, outside_file)
+            self.assertEqual(len(wm._sessions), 1)

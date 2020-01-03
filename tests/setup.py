@@ -175,12 +175,8 @@ class TextDocumentTestCase(DeferrableTestCase):
                 self.session = self.wm._find_session(self.config.name, self.view.file_name())
                 if not self.session:
                     return False
-            if not self.session.client:
-                return False
-            if self.session.state != ClientStates.READY:
-                return False
-            if not self.session.capabilities:
-                return False
+            self.session.ready_lock.acquire()
+            self.session.ready_lock.release()
             return True
 
         yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}

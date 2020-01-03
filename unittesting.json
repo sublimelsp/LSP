@@ -1,8 +1,8 @@
 {
     "deferred": true,
-    "verbosity": 1,
+    "verbosity": 0,
     "capture_console": false,
-    "failfast": false,
+    "failfast": true,
     "reload_package_on_testing": true,
     "start_coverage_after_reload": false,
     "show_reload_progress": false,

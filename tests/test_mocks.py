@@ -282,7 +282,7 @@ class MockDocuments(object):
 
 
 class TestDocumentHandlerFactory(object):
-    def for_window(self, window, configs):
+    def for_window(self, window, workspace, configs):
         return MockDocuments()
 
 

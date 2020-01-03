@@ -16,11 +16,9 @@ Language Server Protocol support for Sublime Text 3 that gives you IDE [features
 
 Open the command palette and run `Package Control: Install Package`, then select `LSP`.
 
-
 ### Development Version
 
 Clone this repository into your Packages directory. Open the command palette and run `Package Control: Satisfy Dependencies`.
-
 
 ## Getting started
 
@@ -32,15 +30,18 @@ Open a document supported by the language server. LSP should report the language
 
 Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 
-## Available Languages <a name="available_languages"></a>
+## Available Languages<a name="available_languages"></a>
+
 * [Bash](https://lsp.readthedocs.io/en/latest/#bash)
-* [C/C++](https://lsp.readthedocs.io/en/latest/#clangd)
+* [C/C++](https://lsp.readthedocs.io/en/latest/cplusplus/)
+* [C#](https://lsp.readthedocs.io/en/latest/#csharp)
 * [CSS/LESS/SASS (SCSS only)](https://lsp.readthedocs.io/en/latest/#css)
 * [D](https://lsp.readthedocs.io/en/latest/#d)
 * [Dart](https://lsp.readthedocs.io/en/latest/#dart)
-* [Elm](https://lsp.readthedocs.io/en/latest/#elm)
 * [Elixir](https://lsp.readthedocs.io/en/latest/#elixir)
+* [Elm](https://lsp.readthedocs.io/en/latest/#elm)
 * [Flow (JavaScript)](https://lsp.readthedocs.io/en/latest/#flow)
+* [Fortran](https://lsp.readthedocs.io/en/latest/#fortran)
 * [Go](https://lsp.readthedocs.io/en/latest/#go)
 * [HTML](https://lsp.readthedocs.io/en/latest/#html)
 * [Java](https://lsp.readthedocs.io/en/latest/#java)
@@ -53,12 +54,12 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [Lua](https://lsp.readthedocs.io/en/latest/#lua)
 * [PHP](https://lsp.readthedocs.io/en/latest/#php)
 * [Polymer](https://lsp.readthedocs.io/en/latest/#polymer)
+* [PowerShell](https://lsp.readthedocs.io/en/latest/#powershell)
 * [Python](https://lsp.readthedocs.io/en/latest/#python)
 * [R](https://lsp.readthedocs.io/en/latest/#r)
 * [Reason](https://lsp.readthedocs.io/en/latest/#reason)
 * [Ruby](https://lsp.readthedocs.io/en/latest/#ruby)
 * [Rust](https://lsp.readthedocs.io/en/latest/#rust)
-* [PowerShell](https://lsp.readthedocs.io/en/latest/#powershell)
 * [Scala](https://lsp.readthedocs.io/en/latest/#scala)
 * [Terraform](https://lsp.readthedocs.io/en/latest/#terraform)
 * [Vue (JavaScript)](https://lsp.readthedocs.io/en/latest/#vue)

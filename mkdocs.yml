@@ -3,5 +3,6 @@ theme: readthedocs
 
 nav:
     - Home: 'index.md'
+    - C/C++: 'cplusplus.md'
     - Features: 'features.md'
     - Troubleshooting: 'troubleshooting.md'

@@ -9,7 +9,7 @@ from Default.history_list import get_jump_history_for_view
 
 try:
     from typing import List, Dict, Optional, Any, Tuple
-    assert List and Dict and Optional and Any
+    assert List and Dict and Optional and Any and Tuple
 except ImportError:
     pass
 
@@ -40,10 +40,10 @@ class LspGotoCommand(LspTextCommand):
                     request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response: 'Optional[Any]', position: int) -> None:
-        def process_response_list(responses: list) -> List[Tuple[str, str, Tuple[int, int]]]:
+        def process_response_list(responses: list) -> 'List[Tuple[str, str, Tuple[int, int]]]':
             return [process_response(x) for x in responses]
 
-        def process_response(response: dict) -> Tuple[str, str, Tuple[int, int]]:
+        def process_response(response: dict) -> 'Tuple[str, str, Tuple[int, int]]':
             if "targetUri" in response:
                 # TODO: Do something clever with originSelectionRange and targetRange.
                 file_path = uri_to_filename(response["targetUri"])
@@ -56,7 +56,7 @@ class LspGotoCommand(LspTextCommand):
             file_path_and_row_col = "{}:{}:{}".format(file_path, row, col)
             return file_path, file_path_and_row_col, (row, col)
 
-        def open_location(window: sublime.Window, location: Tuple[str, str, Tuple[int, int]]) -> None:
+        def open_location(window: sublime.Window, location: 'Tuple[str, str, Tuple[int, int]]') -> None:
             fname, file_path_and_row_col, rowcol = location
             row, col = rowcol
             debug("opening location", file_path_and_row_col)
@@ -64,17 +64,24 @@ class LspGotoCommand(LspTextCommand):
                 file_path_and_row_col,
                 sublime.ENCODED_POSITION | sublime.FORCE_GROUP)
 
-        def select_entry(window: sublime.Window, locations: List[Tuple[str, str, Tuple[int, int]]], idx: int, orig_view: sublime.View, orig_sel: List[sublime.Region]) -> None:
+        def select_entry(
+                window: sublime.Window,
+                locations: 'List[Tuple[str, str, Tuple[int, int]]]',
+                idx: int,
+                orig_view: sublime.View) -> None:
             if idx >= 0:
                 open_location(window, locations[idx])
             else:
                 if orig_view:
                     orig_view.sel().clear()
-                    orig_view.sel().add_all(orig_sel)
+                    # orig_view.sel().add_all(orig_sel)
                     window.focus_view(orig_view)
-                    orig_view.show(orig_sel[0])
+                    # orig_view.show(orig_sel[0])
 
-        def highlight_entry(window: sublime.Window, locations: List[Tuple[str, str, Tuple[int, int]]], idx: int) -> None:
+        def highlight_entry(
+                window: sublime.Window,
+                locations: 'List[Tuple[str, str, Tuple[int, int]]]',
+                idx: int) -> None:
             fname, file_path_and_row_col, rowcol = locations[idx]
             row, col = rowcol
             window.open_file(
@@ -83,11 +90,6 @@ class LspGotoCommand(LspTextCommand):
                     flags=sublime.TRANSIENT | sublime.ENCODED_POSITION | sublime.FORCE_GROUP)
 
         window = sublime.active_window()
-        orig_sel = []  # type: List[sublime.Region]
-        if window.active_view():
-            view = sublime.View(window.active_view())
-            sel = view.sel()
-            orig_sel = [sublime.Region(r.a, r.b) for r in sublime.Selection(sel)]
         if response:
             # Save to jump back history.
             get_jump_history_for_view(self.view).push_selection(self.view)
@@ -95,14 +97,13 @@ class LspGotoCommand(LspTextCommand):
             if isinstance(response, dict):
                 locations = [process_response(response)]
             else:
-                process_response_list(response)
-            # locations = [process_response(response)] if isinstance(response, dict) else process_response_list(response)
+                locations = process_response_list(response)
             if len(locations) == 1:
                 open_location(window, locations[0])
             elif len(locations) > 1:
                 window.show_quick_panel(
                     items=[display_name for file_path, display_name, rowcol in locations],
-                    on_select=lambda x: select_entry(window, locations, x, self.view, orig_sel),
+                    on_select=lambda x: select_entry(window, locations, x, self.view),
                     on_highlight=lambda x: highlight_entry(window, locations, x),
                     flags=sublime.KEEP_OPEN_ON_FOCUS_LOST)
             # TODO: can add region here.

@@ -258,8 +258,7 @@ class CompletionHandler(LSPViewEventListener):
         sublime.status_message('Completion error: ' + str(error.get('message')))
 
     def update_completions(self) -> None:
-        if self.view.is_auto_complete_visible():
-            self.view.run_command("hide_auto_complete")
+        self.view.run_command("hide_auto_complete")
 
         def _show_auto_complete() -> None:
                 self.view.run_command("auto_complete", {

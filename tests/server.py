@@ -118,6 +118,10 @@ class MessageType:
     log = 4
 
 
+class StopLoopException(Exception):
+    pass
+
+
 class Session:
 
     def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
@@ -235,10 +239,9 @@ class Session:
             # handle notification
             asyncio.create_task(handler(params))
 
-    def _handle_body(self, body: bytes) -> None:
+    async def _handle_body(self, body: bytes) -> None:
         try:
-            payload = json.loads(body)
-            asyncio.create_task(self._receive_payload(payload))
+            await self._receive_payload(json.loads(body))
         except IOError as ex:
             self._log(f"malformed {ENCODING}: {ex}")
         except UnicodeDecodeError as ex:
@@ -262,8 +265,9 @@ class Session:
                     line = await self._reader.readline()
                 if not line:
                     continue
-                self._handle_body(await self._reader.readexactly(num_bytes))
-        except (BrokenPipeError, ConnectionResetError):
+                body = await self._reader.readexactly(num_bytes)
+                asyncio.create_task(self._handle_body(body))
+        except (BrokenPipeError, ConnectionResetError, StopLoopException):
             pass
         return self._received_shutdown
 
@@ -313,7 +317,7 @@ class Session:
         return None
 
     async def _on_exit(self, _: PayloadLike) -> None:
-        exit(0 if self._received_shutdown else 1)
+        self._reader.set_exception(StopLoopException())
 
 
 # START: https://stackoverflow.com/a/52702646/990142
@@ -367,10 +371,10 @@ def _win32_stdio(loop: Optional[asyncio.AbstractEventLoop]) -> Tuple[asyncio.Str
 # END: https://stackoverflow.com/a/52702646/990142
 
 
-async def main() -> None:
+async def main() -> bool:
     reader, writer = await stdio()
     session = Session(reader, writer)
-    await session.run_forever()
+    return await session.run_forever()
 
 
 if __name__ == '__main__':
@@ -381,4 +385,7 @@ if __name__ == '__main__':
         print(__package__, __version__)
         exit(0)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    shutdown_received = loop.run_until_complete(main())
+    loop.run_until_complete(loop.shutdown_asyncgens())
+    loop.close()
+    exit(0 if shutdown_received else 1)

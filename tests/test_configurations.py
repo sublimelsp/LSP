@@ -1,11 +1,11 @@
-from .configurations import _merge_dicts
-from .configurations import ConfigManager
-from .configurations import is_supported_syntax
-from .configurations import WindowConfigManager
-from .test_mocks import MockView
-from .test_mocks import MockWindow
-from .test_mocks import TEST_CONFIG, DISABLED_CONFIG
-from .test_mocks import TEST_LANGUAGE
+from LSP.plugin.core.configurations import _merge_dicts
+from LSP.plugin.core.configurations import ConfigManager
+from LSP.plugin.core.configurations import is_supported_syntax
+from LSP.plugin.core.configurations import WindowConfigManager
+from test_mocks import MockView
+from test_mocks import MockWindow
+from test_mocks import TEST_CONFIG, DISABLED_CONFIG
+from test_mocks import TEST_LANGUAGE
 import unittest
 
 

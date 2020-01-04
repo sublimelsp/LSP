@@ -1,8 +1,8 @@
 import unittest
 from os import path
 import json
-from .completion import format_completion, parse_completion_response
-from .types import Settings
+from LSP.plugin.core.completion import format_completion, parse_completion_response
+from LSP.plugin.core.types import Settings
 try:
     from typing import Optional, Dict
     assert Optional and Dict
@@ -11,7 +11,7 @@ except ImportError:
 
 
 def load_completion_sample(name: str) -> 'Dict':
-    return json.load(open(path.join(path.dirname(__file__), "../../tests/", name + ".json")))
+    return json.load(open(path.join(path.dirname(__file__), name + ".json")))
 
 
 pyls_completion_sample = load_completion_sample("pyls_completion_sample")

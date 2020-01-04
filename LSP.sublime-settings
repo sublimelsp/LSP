@@ -375,13 +375,21 @@
     {
       "command": ["lsp-tsserver"],
       "languages": [{
-        "scopes": ["source.js", "source.jsx"],
+        "scopes": ["source.js"],
         "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
         "languageId": "javascript"
       }, {
-        "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
+        "scopes": ["source.jsx"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+        "languageId": "javascriptreact"
+      }, {
+        "scopes": ["source.ts"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript Syntax/TypeScript.tmLanguage"],
         "languageId": "typescript"
+      }, {
+        "scopes": ["source.tsx"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage", "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage"],
+        "languageId": "typescriptreact"
       }
       ]
     },
@@ -396,13 +404,21 @@
     {
       "command": ["javascript-typescript-stdio"],
       "languages": [{
-        "scopes": ["source.js", "source.jsx"],
-        "syntaxes": ["Javascript"],
+        "scopes": ["source.js"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
         "languageId": "javascript"
       }, {
-        "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
+        "scopes": ["source.jsx"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+        "languageId": "javascriptreact"
+      }, {
+        "scopes": ["source.ts"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript Syntax/TypeScript.tmLanguage"],
         "languageId": "typescript"
+      }, {
+        "scopes": ["source.tsx"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage", "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage"],
+        "languageId": "typescriptreact"
       }
       ]
     },
@@ -410,10 +426,23 @@
     {
       "command": ["typescript-language-server", "--stdio"],
       "languages": [{
-        "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
+        "scopes": ["source.js"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+        "languageId": "javascript"
+      }, {
+        "scopes": ["source.jsx"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+        "languageId": "javascriptreact"
+      }, {
+        "scopes": ["source.ts"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript Syntax/TypeScript.tmLanguage"],
         "languageId": "typescript"
-      }]
+      }, {
+        "scopes": ["source.tsx"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage", "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage"],
+        "languageId": "typescriptreact"
+      }
+      ]
     },
     "ocaml":
     {

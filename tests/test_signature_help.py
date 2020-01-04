@@ -1,4 +1,4 @@
-from .signature_help import (
+from LSP.plugin.core.signature_help import (
     create_signature_help, SignatureHelp, get_documentation,
     parse_signature_information, ScopeRenderer, render_signature_label
 )

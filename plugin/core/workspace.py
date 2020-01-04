@@ -1,6 +1,7 @@
 from .logging import debug
 from .protocol import WorkspaceFolder
 from .types import WindowLike
+from os.path import commonprefix
 
 try:
     from typing import List, Optional, Any, Dict, Iterable, Union, Callable
@@ -11,11 +12,11 @@ except ImportError:
 
 class ProjectFolders(object):
 
-    def __init__(self, window: WindowLike, on_changed: 'Callable[[List[str]], None]',
-                 on_switched: 'Callable[[List[str]], None]') -> None:
+    def __init__(self, window: WindowLike) -> None:
         self._window = window
-        self._on_changed = on_changed
-        self._on_switched = on_switched
+        self.on_changed = None  # type: Optional[Callable[[List[str]], None]]
+        self.on_switched = None  # type: Optional[Callable[[List[str]], None]]
+        self.folders = []  # type: List[str]
         self._current_project_file_name = self._window.project_file_name()
         self._set_folders(window.folders())
 
@@ -25,9 +26,27 @@ class ProjectFolders(object):
             is_update = self._can_update_to(new_folders)
             self._set_folders(new_folders)
             if is_update:
-                self._on_changed(new_folders)
+                if self.on_changed:
+                    self.on_changed(new_folders)
             else:
-                self._on_switched(new_folders)
+                if self.on_switched:
+                    self.on_switched(new_folders)
+
+    def is_foreign(self, p: str) -> bool:
+        """Note that for a folderless window no path is foreign"""
+        return all(commonprefix((f, p)) != f for f in self.folders)
+
+    def is_inside(self, p: str) -> bool:
+        """The negation of is_foreign"""
+        return not self.is_foreign(p)
+
+    def __contains__(self, item: 'Any') -> bool:
+        if isinstance(item, str):
+            return self.is_inside(item)
+        elif item is None:
+            return True
+        else:
+            return getattr(item, "file_name")() in self
 
     def _set_folders(self, folders: 'List[str]') -> None:
         self.folders = folders

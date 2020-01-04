@@ -259,7 +259,11 @@ class CompletionHandler(LSPViewEventListener):
         prev_point = locations[0] - 1 if locations[0] - 1 >= 0 else 0
         prev_char = view.substr(prev_point)
 
-        if settings.complete_all_chars or prev_char not in self.ignored_trigger_chars or prev_char in self.trigger_chars:
+        if (
+            settings.complete_all_chars or
+            prev_char in self.trigger_chars or
+            prev_char not in self.ignored_trigger_chars
+        ):
             self.manager.documents.purge_changes(self.view)
             document_position = get_document_position(view, locations[0])
             if document_position:

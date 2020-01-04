@@ -321,23 +321,31 @@ class Session:
 
 
 # START: https://stackoverflow.com/a/52702646/990142
-async def stdio(
-    limit: int = asyncio.streams._DEFAULT_LIMIT
-) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+async def stdio() -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
     loop = asyncio.get_running_loop()
     if sys.platform == 'win32':
         return _win32_stdio(loop)
-    reader = asyncio.StreamReader(limit=limit)
-    await loop.connect_read_pipe(lambda: asyncio.StreamReaderProtocol(reader), sys.stdin)
-    writer_transport, writer_protocol = await loop.connect_write_pipe(
-        lambda: asyncio.streams.FlowControlMixin(),
-        os.fdopen(sys.stdout.fileno(), 'wb'))
-    writer = asyncio.streams.StreamWriter(
-        writer_transport, writer_protocol, None, loop)
+    else:
+        return await _unix_stdio(loop)
+
+
+async def _unix_stdio(loop: asyncio.AbstractEventLoop) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+    reader = asyncio.StreamReader(loop=loop)
+
+    def reader_factory() -> asyncio.StreamReaderProtocol:
+        return asyncio.StreamReaderProtocol(reader)
+
+    def writer_factory() -> asyncio.streams.FlowControlMixin:
+        return asyncio.streams.FlowControlMixin()
+
+    await loop.connect_read_pipe(reader_factory, sys.stdin)
+    pipe = os.fdopen(sys.stdout.fileno(), 'wb')
+    writer_transport, writer_protocol = await loop.connect_write_pipe(writer_factory, pipe)
+    writer = asyncio.streams.StreamWriter(writer_transport, writer_protocol, None, loop)
     return reader, writer
 
 
-def _win32_stdio(loop: Optional[asyncio.AbstractEventLoop]) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+def _win32_stdio(loop: asyncio.AbstractEventLoop) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
 
     # no support for asyncio stdio yet on Windows, see https://bugs.python.org/issue26832
     # use an executor to read from stdio and write to stdout
@@ -367,7 +375,7 @@ def _win32_stdio(loop: Optional[asyncio.AbstractEventLoop]) -> Tuple[asyncio.Str
             # a single call to sys.stdout.writelines() is thread-safe
             return await self.loop.run_in_executor(None, sys.stdout.writelines, data)
 
-    return Win32StdinReader(), Win32StdoutWriter()  # type: ignore
+    return Win32StdinReader(loop), Win32StdoutWriter(loop)  # type: ignore
 # END: https://stackoverflow.com/a/52702646/990142
 
 

@@ -17,8 +17,8 @@ CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 project_path = dirname(__file__)
 test_file_path = project_path + "/testfile.txt"
 workspace_folders = [WorkspaceFolder.from_path(project_path)]
-TIMEOUT_TIME = 20000 if CI else 2000
-PERIOD_TIME = 500 if CI else 1
+TIMEOUT_TIME = 10000 if CI else 2000
+PERIOD_TIME = 100 if CI else 1
 SUPPORTED_SCOPE = "text.plain"
 SUPPORTED_SYNTAX = "Packages/Text/Plain text.tmLanguage"
 text_language = LanguageConfig("text", [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX])
@@ -138,6 +138,8 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.assertTrue(self.wm._configs.syntax_supported(self.view))
         self.init_view_settings()
         self.wm.start_active_views()  # in case testfile.txt was already opened
+        if sublime.platform() == "osx":
+            yield 200
         yield from self.await_boilerplate_begin()
 
     def get_test_name(self) -> str:
@@ -205,21 +207,13 @@ class TextDocumentTestCase(DeferrableTestCase):
             Notification("$test/setResponse", {"method": method, "response": response}))
 
     def await_boilerplate_begin(self) -> 'Generator':
-        if CI:
-            yield 500
         yield from self.await_session()
-        if CI:
-            yield 500
         yield from self.await_message("initialize")
         yield from self.await_message("initialized")
         yield from self.await_message("textDocument/didOpen")
 
     def await_boilerplate_end(self) -> 'Generator':
-        if CI:
-            yield 500
         close_test_view(self.view)
-        if CI:
-            yield 500
         self.wm.end_config_sessions(self.config.name)  # TODO: Shouldn't this be automatic once the last view closes?
         if self.session:
             yield lambda: self.session.state == ClientStates.STOPPING

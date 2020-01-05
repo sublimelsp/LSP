@@ -48,11 +48,9 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         pass
 
     def test_did_close(self) -> 'Generator':
-        yield 100
         assert self.view
         close_test_view(self.view)
         self.view = None
-        yield 100
         yield from self.await_message("textDocument/didClose")
 
     def test_did_change(self) -> 'Generator':
@@ -190,6 +188,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.assertEquals(edited_content, ''.join(expected))
 
     def __run_goto_test(self, response: list, text_document_request: str, subl_command_suffix: str) -> 'Generator':
+        yield 100
         assert self.view
         self.insert_characters(GOTO_CONTENT)
         # Put the cursor back at the start of the buffer, otherwise is_at_word fails in goto.py.

@@ -37,3 +37,28 @@ jobs:
     - run: |
         pip3 install coverage==4.5.4 codecov==2.0.15
         codecov
+
+  Windows:
+    runs-on: windows-latest
+    env:
+      CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
+      SUBLIME_TEXT_VERSION: "3"
+      SUBLIME_TEXT_ARCH: x64
+      PACKAGE: LSP
+    steps:
+    - uses: actions/checkout@v1
+    - run: python3 tests/server.py --version
+    - run: python3 tests/adjust_unittesting_config_for_ci.py
+    - run: (new-object net.webclient).DownloadFile("https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/github.ps1","github.ps1")
+    - run: |
+        ./github.ps1 "bootstrap" -verbose
+        ./github.ps1 "install_package_control" -verbose
+        ./github.ps1 "run_tests" -coverage -verbose
+      name: Run UnitTesting tests
+    - run: pip3 install mypy==0.750 flake8==3.7.9 yapf==0.29.0 --user
+    - run: mypy -p plugin
+    - run: flake8 plugin tests
+    - run: yapf --diff plugin/core/main.py
+    - run: |
+        pip3 install coverage==4.5.4 codecov==2.0.15
+        codecov

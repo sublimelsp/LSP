@@ -1,4 +1,5 @@
 from LSP.plugin.hover import _test_contents
+from LSP.plugin.core.url import filename_to_uri
 from setup import TextDocumentTestCase, TIMEOUT_TIME, PERIOD_TIME, CI
 import unittest
 import sublime
@@ -14,7 +15,7 @@ SELFDIR = os.path.dirname(__file__)
 TEST_FILE_PATH = os.path.join(SELFDIR, 'testfile.txt')
 GOTO_RESPONSE = [
     {
-        'uri': TEST_FILE_PATH,
+        'uri': filename_to_uri(TEST_FILE_PATH),
         'range':
         {
             'start':

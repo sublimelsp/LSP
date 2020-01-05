@@ -1,12 +1,12 @@
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification, Request, WorkspaceFolder
 from LSP.plugin.core.registry import windows
-from LSP.plugin.core.sessions import InitializeError
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.types import ClientConfig, LanguageConfig
 from os import environ
 from os.path import dirname
+from os.path import join
 from sublime_plugin import view_event_listeners, ViewEventListener
 from test_mocks import basic_responses
 from unittesting import DeferrableTestCase
@@ -16,7 +16,7 @@ import sublime
 CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 
 project_path = dirname(__file__)
-test_file_path = project_path + "/testfile.txt"
+test_file_path = join(project_path, "testfile.txt")
 workspace_folders = [WorkspaceFolder.from_path(project_path)]
 TIMEOUT_TIME = 10000 if CI else 2000
 PERIOD_TIME = 100 if CI else 1
@@ -50,7 +50,7 @@ class YieldPromise:
 def make_stdio_test_config() -> ClientConfig:
     return ClientConfig(
         name="TEST",
-        binary_args=["python3", "$packages/LSP/tests/server.py"],
+        binary_args=["python3", join("$packages", "LSP", "tests", "server.py")],
         tcp_port=None,
         languages=[LanguageConfig(
             language_id="txt",
@@ -117,7 +117,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             self.assertFalse(True)
         window = sublime.active_window()
         self.assertTrue(window)
-        filename = expand("$packages/LSP/tests/{}.txt".format(test_name), window)
+        filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(test_name)), window)
         self.config.init_options["serverResponse"] = server_capabilities
         window.run_command("close_all")
         # Cleanly shut down all window managers by ending all their sessions

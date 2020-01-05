@@ -79,15 +79,7 @@ def register_language_handler(handler: LanguageHandler) -> None:
 
 
 def client_from_session(session: 'Optional[Session]') -> 'Optional[Client]':
-    if session:
-        if session.client:
-            return session.client
-        else:
-            debug(session.config.name, "in state", session.state)
-            return None
-    else:
-        debug('no session found')
-        return None
+    return session.client if session is not None else None
 
 
 def sessions_for_view(view: sublime.View, point: 'Optional[int]' = None) -> 'Iterable[Session]':

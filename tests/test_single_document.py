@@ -1,6 +1,6 @@
 # from copy import deepcopy
 from LSP.plugin.hover import _test_contents
-from setup import close_test_view, TextDocumentTestCase, TIMEOUT_TIME, PERIOD_TIME
+from setup import TextDocumentTestCase, TIMEOUT_TIME, PERIOD_TIME
 import sublime
 import os
 
@@ -49,7 +49,12 @@ class SingleDocumentTestCase(TextDocumentTestCase):
 
     def test_did_close(self) -> 'Generator':
         assert self.view
-        close_test_view(self.view)
+        self.view.set_scratch(True)
+        if sublime.platform() == "osx":
+            yield 100
+        self.view.close()
+        if sublime.platform() == "osx":
+            yield 100
         self.view = None
         yield from self.await_message("textDocument/didClose")
 

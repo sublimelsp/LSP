@@ -7,7 +7,7 @@ from .configurations import (
 from .clients import (
     start_window_config
 )
-from .types import ClientStates, ClientConfig, WindowLike
+from .types import ClientConfig, WindowLike
 from .handlers import LanguageHandler
 from .logging import debug
 from .sessions import Session
@@ -114,9 +114,10 @@ def _sessions_for_view_and_window(view: sublime.View, window: 'Optional[sublime.
 
     manager = windows.lookup(window)
     scope_configs = manager._configs.scope_configs(view, point)
-    sessions = (manager.get_session(config.name, file_path) for config in scope_configs)
-    ready_sessions = (session for session in sessions if session and session.state == ClientStates.READY)
-    return ready_sessions
+    for config in scope_configs:
+        session = manager.get_session(config.name, file_path)
+        if session:
+            yield session
 
 
 def unload_sessions(window: sublime.Window) -> None:

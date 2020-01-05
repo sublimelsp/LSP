@@ -17,7 +17,7 @@ TODO: It should also understand TCP, both as slave and master.
 """
 from argparse import ArgumentParser
 from enum import IntEnum
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, Iterable
 import asyncio
 import json
 import os
@@ -109,6 +109,10 @@ def content_length(line: bytes) -> Optional[int]:
         except ValueError:
             raise ValueError("Invalid Content-Length header: {}".format(value))
     return None
+
+
+def debug(line: str) -> None:
+    print(line, file=sys.stderr)
 
 
 class MessageType:
@@ -303,6 +307,7 @@ class Session:
                 await self._received_cv.wait()
 
     async def _initialize(self, params: PayloadLike) -> PayloadLike:
+        self._log("receied initialize request")
         if not isinstance(params, dict):
             raise Error(ErrorCode.InvalidParams,
                         "expected params to be a dictionary")
@@ -310,6 +315,7 @@ class Session:
         if not isinstance(init_options, dict):
             raise Error(ErrorCode.InvalidParams,
                         "expected initializationOptions to be a dictionary")
+        self._log("sending initialize response")
         return init_options.get("serverResponse", {})
 
     async def _shutdown(self, _: PayloadLike) -> PayloadLike:
@@ -348,19 +354,25 @@ async def _unix_stdio(loop: asyncio.AbstractEventLoop) -> Tuple[asyncio.StreamRe
 def _win32_stdio(loop: asyncio.AbstractEventLoop) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
 
     # no support for asyncio stdio yet on Windows, see https://bugs.python.org/issue26832
-    # use an executor to read from stdio and write to stdout
+    # use an executor to read from stdin and write to stdout
     # note: if nothing ever drains the writer explicitly, no flushing ever takes place!
-    class Win32StdinReader:
+    class Reader:
 
         def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
             self.loop = loop
             self.stdin = sys.stdin.buffer
 
-        async def readline(self) -> None:
+        def at_eof(self) -> bool:
+            return False
+
+        async def readline(self) -> bytes:
             # a single call to sys.stdin.readline() is thread-safe
             return await self.loop.run_in_executor(None, self.stdin.readline)
 
-    class Win32StdoutWriter:
+        async def readexactly(self, n: int) -> bytes:
+            return await self.loop.run_in_executor(None, self.stdin.read, n)
+
+    class Writer:
 
         def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
             self.loop = loop
@@ -370,12 +382,19 @@ def _win32_stdio(loop: asyncio.AbstractEventLoop) -> Tuple[asyncio.StreamReader,
         def write(self, data: bytes) -> None:
             self.buffer.append(data)
 
+        def writelines(self, lines: Iterable[bytes]) -> None:
+            self.buffer.extend(lines)
+
         async def drain(self) -> None:
             data, self.buffer = self.buffer, []
-            # a single call to sys.stdout.writelines() is thread-safe
-            return await self.loop.run_in_executor(None, sys.stdout.writelines, data)
 
-    return Win32StdinReader(loop), Win32StdoutWriter(loop)  # type: ignore
+            def do_blocking_drain() -> None:
+                self.stdout.write(b''.join(data))
+                self.stdout.flush()
+
+            await self.loop.run_in_executor(None, do_blocking_drain)
+
+    return Reader(loop), Writer(loop)  # type: ignore
 # END: https://stackoverflow.com/a/52702646/990142
 
 
@@ -393,7 +412,11 @@ if __name__ == '__main__':
         print(__package__, __version__)
         exit(0)
     loop = asyncio.get_event_loop()
-    shutdown_received = loop.run_until_complete(main())
+    shutdown_received = False
+    try:
+        shutdown_received = loop.run_until_complete(main())
+    except KeyboardInterrupt:
+        pass
     loop.run_until_complete(loop.shutdown_asyncgens())
     loop.close()
     exit(0 if shutdown_received else 1)

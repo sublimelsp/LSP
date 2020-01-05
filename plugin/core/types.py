@@ -38,12 +38,6 @@ class Settings(object):
         self.log_payloads = False
 
 
-class ClientStates(object):
-    STARTING = 0
-    READY = 1
-    STOPPING = 2
-
-
 def syntax_language(config: 'ClientConfig', syntax: str) -> 'Optional[LanguageConfig]':
     for language in config.languages:
         for lang_syntax in language.syntaxes:

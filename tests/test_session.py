@@ -1,13 +1,13 @@
 from LSP.plugin.core.protocol import WorkspaceFolder
-from LSP.plugin.core.sessions import create_session, Session
+from LSP.plugin.core.sessions import create_session, Session, InitializeError
 from LSP.plugin.core.types import ClientConfig
-from LSP.plugin.core.types import ClientStates
 from LSP.plugin.core.types import Settings
 from test_mocks import MockClient
 from test_mocks import TEST_CONFIG
 from test_mocks import TEST_LANGUAGE
 import unittest
 import unittest.mock
+import sublime
 
 try:
     from typing import Any, List, Dict, Tuple, Callable, Optional
@@ -18,20 +18,29 @@ except ImportError:
 
 class SessionTest(unittest.TestCase):
 
-    def assert_if_none(self, session) -> 'Session':
+    def assert_if_none(self, session: 'Optional[Session]') -> 'Session':
         self.assertIsNotNone(session)
+        assert session  # mypy
         return session
+
+    def assert_initialized(self, session: Session) -> None:
+        try:
+            with session.acquire_timeout():
+                pass
+        except InitializeError:
+            self.fail("session failed to initialize")
 
     # @unittest.skip("need an example config")
     def test_can_create_session(self):
 
-        config = ClientConfig("test", ["ls"], None, [], [], None, [TEST_LANGUAGE])
+        config = ClientConfig(
+            "test",
+            ["cmd.exe"] if sublime.platform() == "windows" else ["ls"],
+            None, [], [], None, [TEST_LANGUAGE])
         project_path = "/"
         folders = [WorkspaceFolder.from_path(project_path)]
         session = self.assert_if_none(
             create_session(config, folders, dict(), Settings()))
-
-        self.assertEqual(session.state, ClientStates.STARTING)
         session.end()
         # self.assertIsNone(session.capabilities) -- empty dict
 
@@ -46,7 +55,7 @@ class SessionTest(unittest.TestCase):
                            settings=Settings(),
                            bootstrap_client=MockClient(),
                            on_post_initialize=post_initialize_callback))
-        self.assertEqual(session.state, ClientStates.READY)
+        self.assert_initialized(session)
         self.assertIsNotNone(session.client)
         self.assertTrue(session.has_capability("testing"))
         self.assertTrue(session.get_capability("testing"))
@@ -65,7 +74,7 @@ class SessionTest(unittest.TestCase):
                            bootstrap_client=MockClient(),
                            on_pre_initialize=pre_initialize_callback,
                            on_post_initialize=post_initialize_callback))
-        self.assertEqual(session.state, ClientStates.READY)
+        self.assert_initialized(session)
         self.assertIsNotNone(session.client)
         self.assertTrue(session.has_capability("testing"))
         self.assertTrue(session.get_capability("testing"))
@@ -85,12 +94,11 @@ class SessionTest(unittest.TestCase):
                            bootstrap_client=MockClient(),
                            on_post_initialize=post_initialize_callback,
                            on_post_exit=post_exit_callback))
-        self.assertEqual(session.state, ClientStates.READY)
+        self.assert_initialized(session)
         self.assertIsNotNone(session.client)
         self.assertTrue(session.has_capability("testing"))
         assert post_initialize_callback.call_count == 1
         session.end()
-        self.assertEqual(session.state, ClientStates.STOPPING)
         self.assertIsNone(session.client)
         self.assertFalse(session.has_capability("testing"))
         self.assertIsNone(session.get_capability("testing"))

@@ -7,9 +7,9 @@ if __name__ == '__main__':
     with open(file, 'w') as fp:
         config = {
             "deferred": True,
-            "verbosity": 2,
-            "capture_console": False,
-            "failfast": False,
+            "verbosity": 0,
+            "capture_console": True,
+            "failfast": True,
             "reload_package_on_testing": False,
             "start_coverage_after_reload": False,
             "show_reload_progress": False,

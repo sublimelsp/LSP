@@ -4,14 +4,18 @@ from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, T
 from .rpc import Client, attach_stdio_client, Response
 from .process import start_server
 from .logging import debug
+from contextlib import contextmanager
 import os
 import threading
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder
 try:
-    from typing import Callable, Dict, Any, Optional, List, Tuple
-    assert Callable and Dict and Any and Optional and Transport and List and WorkspaceFolder and Tuple
+    from typing import Callable, Dict, Any, Optional, List, Tuple, Generator
+    assert Callable and Dict and Any and Optional and Transport and List and WorkspaceFolder and Tuple and Generator
 except ImportError:
     pass
+
+
+ACQUIRE_READY_LOCK_TIMEOUT = 3
 
 
 def create_session(config: ClientConfig,
@@ -164,6 +168,14 @@ def diff_folders(old: 'List[WorkspaceFolder]',
     return added, removed
 
 
+@contextmanager
+def acquire_timeout(lock: threading.Lock, timeout: float) -> 'Generator[bool, None, None]':
+    result = lock.acquire(True, timeout)
+    yield result
+    if result:
+        lock.release()
+
+
 class Session(object):
     def __init__(self,
                  config: ClientConfig,
@@ -193,7 +205,10 @@ class Session(object):
     def handles_path(self, file_path: 'Optional[str]') -> bool:
         if not file_path:
             return False
-        with self.ready_lock:
+        with acquire_timeout(self.ready_lock, ACQUIRE_READY_LOCK_TIMEOUT) as acquired:
+            if not acquired:
+                raise TimeoutError("{} did not respond to the initialize request within {} seconds".format(
+                    self.config.name, ACQUIRE_READY_LOCK_TIMEOUT))
             # If we're in a window with no folders, or we're a multi-folder session, then we handle any path.
             if not self._workspace_folders or self._unsafe_supports_workspace_folders():
                 return True

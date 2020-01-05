@@ -32,3 +32,4 @@ class ProcessTests(TestCase):
 
         log_stream(process, BytesIO(text.encode(encoding)), log_callback)
         self.assertEqual(message.strip(), text)
+        process.kill()

@@ -41,6 +41,10 @@ class Transport(object, metaclass=ABCMeta):
     def send(self, message: str) -> None:
         pass
 
+    @abstractmethod
+    def close(self) -> None:
+        pass
+
 
 STATE_HEADERS = 0
 STATE_CONTENT = 1
@@ -253,7 +257,10 @@ class StdioTransport(Transport):
             else:
                 try:
                     msgbytes = bytes(message, 'UTF-8')
-                    self.process.stdin.write(msgbytes)
+                    try:
+                        self.process.stdin.write(msgbytes)
+                    except AttributeError:
+                        return
                     self.process.stdin.flush()
                 except (BrokenPipeError, OSError) as err:
                     exception_log("Failure writing to stdout", err)

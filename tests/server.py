@@ -111,10 +111,6 @@ def content_length(line: bytes) -> Optional[int]:
     return None
 
 
-def debug(line: str) -> None:
-    print(line, file=sys.stderr)
-
-
 class MessageType:
     error = 1
     warning = 2
@@ -307,7 +303,6 @@ class Session:
                 await self._received_cv.wait()
 
     async def _initialize(self, params: PayloadLike) -> PayloadLike:
-        self._log("receied initialize request")
         if not isinstance(params, dict):
             raise Error(ErrorCode.InvalidParams,
                         "expected params to be a dictionary")
@@ -315,7 +310,6 @@ class Session:
         if not isinstance(init_options, dict):
             raise Error(ErrorCode.InvalidParams,
                         "expected initializationOptions to be a dictionary")
-        self._log("sending initialize response")
         return init_options.get("serverResponse", {})
 
     async def _shutdown(self, _: PayloadLike) -> PayloadLike:
@@ -361,15 +355,25 @@ def _win32_stdio(loop: asyncio.AbstractEventLoop) -> Tuple[asyncio.StreamReader,
         def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
             self.loop = loop
             self.stdin = sys.stdin.buffer
+            self.__exception: Optional[Exception] = None
 
         def at_eof(self) -> bool:
-            return False
+            return self.__exception is not None
+
+        def set_exception(self, exception: Exception) -> None:
+            self.__exception = exception
+
+        def __check(self) -> None:
+            if self.__exception is not None:
+                raise self.__exception
 
         async def readline(self) -> bytes:
+            self.__check()
             # a single call to sys.stdin.readline() is thread-safe
             return await self.loop.run_in_executor(None, self.stdin.readline)
 
         async def readexactly(self, n: int) -> bytes:
+            self.__check()
             return await self.loop.run_in_executor(None, self.stdin.read, n)
 
     class Writer:

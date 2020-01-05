@@ -32,7 +32,6 @@ class SessionTest(unittest.TestCase):
 
     # @unittest.skip("need an example config")
     def test_can_create_session(self):
-
         config = ClientConfig(
             "test",
             ["cmd.exe"] if sublime.platform() == "windows" else ["ls"],
@@ -41,8 +40,7 @@ class SessionTest(unittest.TestCase):
         folders = [WorkspaceFolder.from_path(project_path)]
         session = self.assert_if_none(
             create_session(config, folders, dict(), Settings()))
-        session.end()
-        # self.assertIsNone(session.capabilities) -- empty dict
+        session.client.transport.close()
 
     def test_can_get_started_session(self):
         project_path = "/"

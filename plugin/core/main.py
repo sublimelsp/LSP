@@ -1,16 +1,17 @@
 import sublime
 
+from ..color import remove_color_boxes
+from ..diagnostics import DiagnosticsPresenter
+from ..highlights import remove_highlights
 from .logging import set_debug_logging, set_exception_logging
 from .panels import destroy_output_panels, ensure_panel, PanelName
 from .popups import popups
 from .registry import windows, load_handlers, unload_sessions
 from .settings import settings, load_settings, unload_settings
-from ..color import remove_color_boxes
-from ..diagnostics import DiagnosticsPresenter
-from ..highlights import remove_highlights
+from .typing import Optional
 
 
-def ensure_server_panel(window: sublime.Window) -> 'Optional[sublime.View]':
+def ensure_server_panel(window: sublime.Window) -> Optional[sublime.View]:
     return ensure_panel(window, PanelName.LanguageServers, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
 
 

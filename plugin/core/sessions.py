@@ -272,11 +272,11 @@ class Session(object):
         else:
             debug("session with no workspace folders")
 
-        self.ready_lock.release()  # acquired in _initialize
-
         self.client.on_request(
             "workspace/workspaceFolders",
             lambda _params, request_id: self._handle_workspace_folders(request_id))
+
+        self.ready_lock.release()  # acquired in _initialize
 
         if self._on_post_initialize:
             self._on_post_initialize(self)

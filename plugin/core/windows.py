@@ -378,25 +378,23 @@ class WindowManager(object):
         self.end_sessions()
 
     def get_session(self, config_name: str, file_path: str) -> 'Optional[Session]':
-        return self._find_session(config_name, file_path)
-
-    def _can_start_config(self, config_name: str, file_path: str) -> bool:
-        return not bool(self._find_session(config_name, file_path))
-
-    def _find_session(self, config_name: str, file_path: str) -> 'Optional[Session]':
         try:
-            if file_path in self._workspace:
-                if config_name in self._sessions:
-                    for session in self._sessions[config_name]:
-                        if session.handles_path(file_path):
-                            return session
-            else:
-                sessions = self._sessions.get(config_name, None)
-                if not sessions:
-                    return None
-                return sessions[0]
+            return self._find_session(config_name, file_path)
         except InitializeError as ex:
             self._disable_temporarily(ex.name, ex)
+        return None
+
+    def _find_session(self, config_name: str, file_path: str) -> 'Optional[Session]':
+        if file_path in self._workspace:
+            sessions = self._sessions.get(config_name, [])
+            for session in sessions:
+                if session.handles_path(file_path):
+                    return session
+        else:
+            sessions = self._sessions.get(config_name, [])
+            if not sessions:
+                return None
+            return sessions[0]
         return None
 
     def update_configs(self) -> None:
@@ -487,16 +485,15 @@ class WindowManager(object):
             session.end()
 
     def _start_client(self, config: ClientConfig, file_path: str) -> None:
-
-        if not self._can_start_config(config.name, file_path):
-            debug('Already starting on this window:', config.name)
+        session = self.get_session(config.name, file_path)
+        if session is not None:
+            debug(config.name, "was already started")
             return
 
         if not self._handlers.on_start(config.name, self._window):
             return
 
         self._window.status_message("Starting " + config.name + "...")
-        session = None  # type: Optional[Session]
         workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
         try:
             session = self._start_session(

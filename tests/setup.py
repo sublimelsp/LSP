@@ -1,6 +1,7 @@
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification, Request, WorkspaceFolder
 from LSP.plugin.core.registry import windows
+from LSP.plugin.core.sessions import InitializeError
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.types import ClientConfig, LanguageConfig
@@ -134,12 +135,26 @@ class TextDocumentTestCase(DeferrableTestCase):
         client_configs.all.clear()
         add_config(self.config)
         self.wm = windows.lookup(window)  # create just this single one for the test
+        self.assertEqual(len(self.wm._sessions), 0)
         self.view = window.open_file(filename)
+        if sublime.platform() == "osx":
+            yield 200
         self.assertTrue(self.wm._configs.syntax_supported(self.view))
         self.init_view_settings()
         self.wm.start_active_views()  # in case testfile.txt was already opened
-        if sublime.platform() == "osx":
-            yield 200
+        yield lambda: len(self.wm._sessions) > 0
+        sessions = self.wm._sessions.get(self.config.name, [])
+        self.assertEqual(len(sessions), 1)
+        self.session = sessions[0]
+        self.assertEqual(self.session.config.name, self.config.name)
+
+        def condition() -> bool:
+            acquired = self.session.ready_lock.acquire(False)
+            if acquired:
+                self.session.ready_lock.release()
+            return acquired
+
+        yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
         yield from self.await_boilerplate_begin()
 
     def get_test_name(self) -> str:
@@ -166,23 +181,6 @@ class TextDocumentTestCase(DeferrableTestCase):
                 return listener
         return None
 
-    def await_session(self) -> 'Generator':
-
-        def condition() -> bool:
-            if not self.view:
-                return False
-            if not self.view.is_valid():
-                return False
-            if not self.session:
-                self.session = self.wm._find_session(self.config.name, self.view.file_name())
-                if not self.session:
-                    return False
-            self.session.ready_lock.acquire()
-            self.session.ready_lock.release()
-            return True
-
-        yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
-
     def await_message(self, method: str) -> 'Generator':
         self.assertIsNotNone(self.session)
         assert self.session  # mypy
@@ -205,7 +203,6 @@ class TextDocumentTestCase(DeferrableTestCase):
             Notification("$test/setResponse", {"method": method, "response": response}))
 
     def await_boilerplate_begin(self) -> 'Generator':
-        yield from self.await_session()
         yield from self.await_message("initialize")
         yield from self.await_message("initialized")
         yield from self.await_message("textDocument/didOpen")

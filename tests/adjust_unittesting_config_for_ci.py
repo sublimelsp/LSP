@@ -8,8 +8,8 @@ if __name__ == '__main__':
         config = {
             "deferred": True,
             "verbosity": 2,
-            "capture_console": False,
-            "failfast": False,
+            "capture_console": True,
+            "failfast": True,
             "reload_package_on_testing": False,
             "start_coverage_after_reload": False,
             "show_reload_progress": False,

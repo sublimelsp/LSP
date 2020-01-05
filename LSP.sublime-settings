@@ -82,13 +82,21 @@
   // Show verbose debug messages in the sublime console.
   "log_debug": false,
 
-  // Show notifications from language servers in the console.
+  // Show messages from language servers in the Language Servers output panel.
+  // This output panel can be toggled from the command palette with the
+  // command "LSP: Toggle Panel: Language Servers".
   "log_server": true,
 
-  // Show language server stderr output in the console.
+  // Show language server stderr output in the Language Servers output panel.
+  // This output panel can be toggled from the command palette with the
+  // command "LSP: Toggle Panel: Language Servers".
   "log_stderr": false,
 
-  // Show full JSON-RPC responses in the console
+  // Show full JSON-RPC requests/responses/notifications in the Language Servers
+  // output panel. Note that if the payload is very large, SublimeText will not
+  // highlight the log line.
+  // This output panel can be toggled from the command palette with the
+  // command "LSP: Toggle Panel: Language Servers".
   "log_payloads": false,
 
   // User clients configuration can be used to
@@ -367,13 +375,21 @@
     {
       "command": ["lsp-tsserver"],
       "languages": [{
-        "scopes": ["source.js", "source.jsx"],
+        "scopes": ["source.js"],
         "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
         "languageId": "javascript"
       }, {
-        "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
+        "scopes": ["source.jsx"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+        "languageId": "javascriptreact"
+      }, {
+        "scopes": ["source.ts"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript Syntax/TypeScript.tmLanguage"],
         "languageId": "typescript"
+      }, {
+        "scopes": ["source.tsx"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage", "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage"],
+        "languageId": "typescriptreact"
       }
       ]
     },
@@ -388,13 +404,21 @@
     {
       "command": ["javascript-typescript-stdio"],
       "languages": [{
-        "scopes": ["source.js", "source.jsx"],
-        "syntaxes": ["Javascript"],
+        "scopes": ["source.js"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
         "languageId": "javascript"
       }, {
-        "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
+        "scopes": ["source.jsx"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+        "languageId": "javascriptreact"
+      }, {
+        "scopes": ["source.ts"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript Syntax/TypeScript.tmLanguage"],
         "languageId": "typescript"
+      }, {
+        "scopes": ["source.tsx"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage", "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage"],
+        "languageId": "typescriptreact"
       }
       ]
     },
@@ -402,10 +426,23 @@
     {
       "command": ["typescript-language-server", "--stdio"],
       "languages": [{
-        "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
+        "scopes": ["source.js"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+        "languageId": "javascript"
+      }, {
+        "scopes": ["source.jsx"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+        "languageId": "javascriptreact"
+      }, {
+        "scopes": ["source.ts"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript Syntax/TypeScript.tmLanguage"],
         "languageId": "typescript"
-      }]
+      }, {
+        "scopes": ["source.tsx"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage", "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage"],
+        "languageId": "typescriptreact"
+      }
+      ]
     },
     "ocaml":
     {

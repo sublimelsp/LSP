@@ -235,12 +235,12 @@ class StdioTransport(Transport):
                 debug("process became None")
                 state = STATE_EOF
                 break
-
         debug("process {} stdout ended {}".format(pid, "(still alive)" if self.process else "(terminated)"))
         if self.process:
             # We use the stdout thread to block and wait on the exiting process, or zombie processes may be the result.
             returncode = self.process.wait()
             debug("process {} exited with code {}".format(pid, returncode))
+        self.send_queue.put(None)
 
     def send(self, content: str) -> None:
         self.send_queue.put(build_message(content))

@@ -1,11 +1,11 @@
-from . import test_sublime as test_sublime
-from .logging import debug
-from .protocol import Notification
-from .protocol import Request
-from .types import ClientConfig
-from .types import LanguageConfig
-from .types import Settings
-from .windows import ViewLike
+import test_sublime
+from LSP.plugin.core.logging import debug
+from LSP.plugin.core.protocol import Notification
+from LSP.plugin.core.protocol import Request
+from LSP.plugin.core.types import ClientConfig
+from LSP.plugin.core.types import LanguageConfig
+from LSP.plugin.core.types import Settings
+from LSP.plugin.core.types import ViewLike
 import os
 
 try:
@@ -71,6 +71,7 @@ class MockView(object):
         self._settings = MockSublimeSettings({"syntax": "Plain Text"})
         self._status = dict()  # type: Dict[str, str]
         self._text = "asdf"
+        self.commands = []  # type: List[Tuple[str, Dict[str, Any]]]
 
     def file_name(self):
         return self._file_name
@@ -101,6 +102,9 @@ class MockView(object):
 
     def buffer_id(self):
         return 1
+
+    def run_command(self, command_name: str, command_args: 'Dict[str, Any]') -> None:
+        self.commands.append((command_name, command_args))
 
 
 class MockHandlerDispatcher(object):
@@ -278,7 +282,7 @@ class MockDocuments(object):
 
 
 class TestDocumentHandlerFactory(object):
-    def for_window(self, window, configs):
+    def for_window(self, window, workspace, configs):
         return MockDocuments()
 
 
@@ -312,6 +316,9 @@ class MockClient():
         pass
 
     def set_crash_handler(self, handler: 'Callable') -> None:
+        pass
+
+    def set_log_payload_handler(self, handler: 'Callable') -> None:
         pass
 
     def exit(self) -> None:

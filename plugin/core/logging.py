@@ -1,10 +1,13 @@
 import traceback
 
-from .typing import Any
+MYPY = False
+if MYPY:
+    from typing import Any
+    assert Any
+
 
 log_debug = False
 log_exceptions = True
-log_server = True
 
 
 def set_debug_logging(logging_enabled: bool) -> None:
@@ -17,12 +20,7 @@ def set_exception_logging(logging_enabled: bool) -> None:
     log_exceptions = logging_enabled
 
 
-def set_server_logging(logging_enabled: bool) -> None:
-    global log_server
-    log_server = logging_enabled
-
-
-def debug(*args: Any) -> None:
+def debug(*args: 'Any') -> None:
     """Print args to the console if the "debug" setting is True."""
     if log_debug:
         printf(*args)
@@ -35,11 +33,6 @@ def exception_log(message: str, ex: Exception) -> None:
         print(''.join(traceback.format_exception(ex.__class__, ex, ex_traceback)))
 
 
-def server_log(server_name: str, *args: Any) -> None:
-    if log_server:
-        printf(*args, prefix=server_name)
-
-
-def printf(*args: Any, prefix: str = 'LSP') -> None:
+def printf(*args: 'Any', prefix: str = 'LSP') -> None:
     """Print args to the console, prefixed by the plugin name."""
     print(prefix + ":", *args)

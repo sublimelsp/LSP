@@ -1,7 +1,7 @@
 # LSP
 
-[![GitHub release](https://img.shields.io/github/release/tomv564/LSP.svg)](https://github.com/tomv564/LSP/releases)
-[![Build Status](https://travis-ci.org/tomv564/LSP.svg?branch=master)](https://travis-ci.org/tomv564/LSP)
+[![GitHub release](https://img.shields.io/github/release/sublimelsp/LSP.svg)](https://github.com/sublimelsp/LSP/releases)
+[![Github Action](https://github.com/sublimelsp/LSP/workflows/main/badge.svg?branch=master)](https://github.com/sublimelsp/LSP/actions)
 [![Coverage Status](https://coveralls.io/repos/github/tomv564/LSP/badge.svg?branch=master)](https://coveralls.io/github/tomv564/LSP?branch=master)
 [![SublimeHQ Discord](https://img.shields.io/discord/280102180189634562?label=SublimeHQ%20Discord&logo=discord&style=flat-square)](#chat)
 
@@ -15,11 +15,9 @@ Language Server Protocol support for Sublime Text 3 that gives you IDE [features
 
 Open the command palette and run `Package Control: Install Package`, then select `LSP`.
 
-
 ### Development Version
 
 Clone this repository into your Packages directory. Open the command palette and run `Package Control: Satisfy Dependencies`.
-
 
 ## Getting started
 
@@ -31,15 +29,18 @@ Open a document supported by the language server. LSP should report the language
 
 Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 
-## Available Languages <a name="available_languages"></a>
+## Available Languages<a name="available_languages"></a>
+
 * [Bash](https://lsp.readthedocs.io/en/latest/#bash)
-* [C/C++](https://lsp.readthedocs.io/en/latest/#clangd)
+* [C/C++](https://lsp.readthedocs.io/en/latest/cplusplus/)
+* [C#](https://lsp.readthedocs.io/en/latest/#csharp)
 * [CSS/LESS/SASS (SCSS only)](https://lsp.readthedocs.io/en/latest/#css)
 * [D](https://lsp.readthedocs.io/en/latest/#d)
 * [Dart](https://lsp.readthedocs.io/en/latest/#dart)
-* [Elm](https://lsp.readthedocs.io/en/latest/#elm)
 * [Elixir](https://lsp.readthedocs.io/en/latest/#elixir)
+* [Elm](https://lsp.readthedocs.io/en/latest/#elm)
 * [Flow (JavaScript)](https://lsp.readthedocs.io/en/latest/#flow)
+* [Fortran](https://lsp.readthedocs.io/en/latest/#fortran)
 * [Go](https://lsp.readthedocs.io/en/latest/#go)
 * [HTML](https://lsp.readthedocs.io/en/latest/#html)
 * [Java](https://lsp.readthedocs.io/en/latest/#java)
@@ -52,12 +53,12 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [Lua](https://lsp.readthedocs.io/en/latest/#lua)
 * [PHP](https://lsp.readthedocs.io/en/latest/#php)
 * [Polymer](https://lsp.readthedocs.io/en/latest/#polymer)
+* [PowerShell](https://lsp.readthedocs.io/en/latest/#powershell)
 * [Python](https://lsp.readthedocs.io/en/latest/#python)
 * [R](https://lsp.readthedocs.io/en/latest/#r)
 * [Reason](https://lsp.readthedocs.io/en/latest/#reason)
 * [Ruby](https://lsp.readthedocs.io/en/latest/#ruby)
 * [Rust](https://lsp.readthedocs.io/en/latest/#rust)
-* [PowerShell](https://lsp.readthedocs.io/en/latest/#powershell)
 * [Scala](https://lsp.readthedocs.io/en/latest/#scala)
 * [Terraform](https://lsp.readthedocs.io/en/latest/#terraform)
 * [Vue (JavaScript)](https://lsp.readthedocs.io/en/latest/#vue)
@@ -75,5 +76,5 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
 <a name="chat"></a>
 
 * The [#lsp](https://discordapp.com/channels/280102180189634562/645268178397560865) channel (join the [SublimeHQ Discord](https://discord.gg/RMkk5MR) first!)
-* By [searching or creating a new issue](https://github.com/tomv564/LSP/issues)
-* Search the [old Gitter chat](https://gitter.im/SublimeLSP) (for live chat join Discord instead)
+* By [searching or creating a new issue](https://github.com/sublimelsp/LSP/issues)
+* Search the [old Gitter chat](https://gitter.im/tomv564) (for live chat join Discord instead)

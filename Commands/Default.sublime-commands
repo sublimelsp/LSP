@@ -60,9 +60,12 @@
         "args": {}
     },
     {
-        "caption": "LSP: Show Diagnostics",
-        "command": "lsp_show_diagnostics_panel",
-        "args": {}
+        "caption": "LSP: Toggle Panel: Language Servers",
+        "command": "lsp_toggle_server_panel",
+    },
+    {
+        "caption": "LSP: Toggle Panel: Diagnostics",
+        "command": "lsp_show_diagnostics_panel"
     },
     {
         "caption": "LSP: Clear Diagnostics",

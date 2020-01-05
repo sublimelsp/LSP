@@ -74,25 +74,26 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield from self.await_message("textDocument/didSave")
         yield from self.await_clear_view_and_save()
 
-    # def test_formats_on_save(self) -> 'Generator':
-    #     assert self.view
-    #     self.view.settings().set("lsp_format_on_save", True)
-    #     self.insert_characters("A")
-    #     yield from self.await_message("textDocument/didChange")
-    #     self.set_response('textDocument/formatting', [{
-    #         'newText': "BBB",
-    #         'range': {
-    #             'start': {'line': 0, 'character': 0},
-    #             'end': {'line': 0, 'character': 3}
-    #         }
-    #     }])
-    #     self.view.run_command("save")
-    #     yield from self.await_message("textDocument/formatting")
-    #     yield from self.await_message("textDocument/didChange")
-    #     yield from self.await_message("textDocument/didSave")
-    #     text = self.view.substr(sublime.Region(0, self.view.size()))
-    #     self.assertEquals("BBB", text)
-    #     yield from self.await_clear_view_and_save()
+    @unittest.skip("FIXME: this blocks the test driver")
+    def test_formats_on_save(self) -> 'Generator':
+        assert self.view
+        self.view.settings().set("lsp_format_on_save", True)
+        self.insert_characters("A")
+        yield from self.await_message("textDocument/didChange")
+        self.set_response('textDocument/formatting', [{
+            'newText': "BBB",
+            'range': {
+                'start': {'line': 0, 'character': 0},
+                'end': {'line': 0, 'character': 3}
+            }
+        }])
+        self.view.run_command("save")
+        yield from self.await_message("textDocument/formatting")
+        yield from self.await_message("textDocument/didChange")
+        yield from self.await_message("textDocument/didSave")
+        text = self.view.substr(sublime.Region(0, self.view.size()))
+        self.assertEquals("BBB", text)
+        yield from self.await_clear_view_and_save()
 
     def test_hover_info(self) -> 'Generator':
         assert self.view

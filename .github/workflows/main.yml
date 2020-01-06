@@ -47,8 +47,8 @@ jobs:
       PACKAGE: LSP
     steps:
     - uses: actions/checkout@v1
-    - run: python3 tests/server.py --version
-    - run: python3 tests/adjust_unittesting_config_for_ci.py
+    - run: python tests/server.py --version
+    - run: python tests/adjust_unittesting_config_for_ci.py
     - run: (new-object net.webclient).DownloadFile("https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/github.ps1","github.ps1")
     - run: |
         ./github.ps1 "bootstrap" -verbose

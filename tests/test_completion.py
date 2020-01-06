@@ -365,6 +365,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 'def foo: Int = ???\n   def boo: Int = ???')
 
     def test_additional_edits(self) -> 'Generator':
+        yield 200
         self.set_response('textDocument/completion', completion_with_additional_edits)
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)

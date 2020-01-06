@@ -15,7 +15,7 @@ except ImportError:
     pass
 
 
-ACQUIRE_READY_LOCK_TIMEOUT = 3
+ACQUIRE_READY_LOCK_TIMEOUT = 5
 
 
 def create_session(config: ClientConfig,

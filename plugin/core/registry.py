@@ -1,24 +1,15 @@
 import sublime
 import sublime_plugin
-from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
-from .configurations import (
-    ConfigManager, is_supported_syntax
-)
-from .clients import (
-    start_window_config
-)
-from .types import ClientConfig, WindowLike
+from .clients import start_window_config
+from .configurations import ConfigManager, is_supported_syntax
 from .handlers import LanguageHandler
 from .logging import debug
+from .rpc import Client
 from .sessions import Session
-from .clients import Client
 from .settings import settings, client_configs
-
-try:
-    from typing import Optional, List, Callable, Dict, Any, Iterable
-    assert Optional and List and Callable and Dict and Any and ClientConfig and Client and Session and Iterable
-except ImportError:
-    pass
+from .types import ClientConfig, WindowLike
+from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
+from .typing import Optional, Callable, Dict, Any, Iterable
 
 
 client_start_listeners = {}  # type: Dict[str, Callable]
@@ -78,23 +69,23 @@ def register_language_handler(handler: LanguageHandler) -> None:
         client_initialization_listeners[handler.name] = handler.on_initialized
 
 
-def client_from_session(session: 'Optional[Session]') -> 'Optional[Client]':
-    return session.client if session is not None else None
+def client_from_session(session: Optional[Session]) -> Optional[Client]:
+    return session.client if session else None
 
 
-def sessions_for_view(view: sublime.View, point: 'Optional[int]' = None) -> 'Iterable[Session]':
+def sessions_for_view(view: sublime.View, point: Optional[int] = None) -> Iterable[Session]:
     return _sessions_for_view_and_window(view, view.window(), point)
 
 
 def session_for_view(view: sublime.View,
                      capability: str,
-                     point: 'Optional[int]' = None) -> 'Optional[Session]':
+                     point: Optional[int] = None) -> Optional[Session]:
     return next((session for session in sessions_for_view(view, point)
                  if session.has_capability(capability)), None)
 
 
-def _sessions_for_view_and_window(view: sublime.View, window: 'Optional[sublime.Window]',
-                                  point: 'Optional[int]' = None) -> 'Iterable[Session]':
+def _sessions_for_view_and_window(view: sublime.View, window: Optional[sublime.Window],
+                                  point: Optional[int] = None) -> Iterable[Session]:
     if not window:
         debug("no window for view", view.file_name())
         return []
@@ -124,7 +115,7 @@ handlers_dispatcher = LanguageHandlerDispatcher()
 windows = WindowRegistry(configs, documents, start_window_config, sublime, handlers_dispatcher)
 
 
-def configs_for_scope(view: 'Any', point: 'Optional[int]' = None) -> 'Iterable[ClientConfig]':
+def configs_for_scope(view: Any, point: Optional[int] = None) -> Iterable[ClientConfig]:
     window = view.window()
     if window:
         # todo: don't expose _configs
@@ -144,13 +135,13 @@ class LspTextCommand(sublime_plugin.TextCommand):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
 
-    def is_visible(self, event: 'Optional[dict]' = None) -> bool:
+    def is_visible(self, event: Optional[dict] = None) -> bool:
         return is_supported_view(self.view)
 
     def has_client_with_capability(self, capability: str) -> bool:
         return session_for_view(self.view, capability) is not None
 
-    def client_with_capability(self, capability: str) -> 'Optional[Client]':
+    def client_with_capability(self, capability: str) -> Optional[Client]:
         return client_from_session(session_for_view(self.view, capability))
 
 
@@ -158,7 +149,7 @@ class LspRestartClientCommand(sublime_plugin.TextCommand):
     def is_enabled(self) -> bool:
         return is_supported_view(self.view)
 
-    def run(self, edit: 'Any') -> None:
+    def run(self, edit: Any) -> None:
         window = self.view.window()
         if window:
             windows.lookup(window).restart_sessions()

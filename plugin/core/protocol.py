@@ -1,12 +1,7 @@
+from .typing import Any, List, Dict, Optional, Union, Mapping
 from .url import filename_to_uri
 from .url import uri_to_filename
 import os
-
-try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional, Union, Mapping
-    assert Any and List and Dict and Tuple and Callable and Optional and Union and Mapping
-except ImportError:
-    pass
 
 
 TextDocumentSyncKindNone = 0
@@ -92,7 +87,7 @@ class DocumentHighlightKind(object):
 
 
 class Request:
-    def __init__(self, method: str, params: 'Optional[Mapping[str, Any]]') -> None:
+    def __init__(self, method: str, params: Optional[Mapping[str, Any]]) -> None:
         self.method = method
         self.params = params
         self.jsonrpc = "2.0"
@@ -146,7 +141,7 @@ class Request:
         return Request('textDocument/documentColor', params)
 
     @classmethod
-    def executeCommand(cls, params: 'Mapping[str, Any]') -> 'Request':
+    def executeCommand(cls, params: Mapping[str, Any]) -> 'Request':
         return Request("workspace/executeCommand", params)
 
     @classmethod
@@ -184,7 +179,7 @@ class Request:
     def __repr__(self) -> str:
         return self.method + " " + str(self.params)
 
-    def to_payload(self, id: int) -> 'Dict[str, Any]':
+    def to_payload(self, id: int) -> Dict[str, Any]:
         r = {
             "jsonrpc": "2.0",
             "id": id,
@@ -196,7 +191,7 @@ class Request:
 
 
 class Response:
-    def __init__(self, request_id: int, result: 'Optional[Union[Dict[str, Any], List[Any]]]') -> None:
+    def __init__(self, request_id: int, result: Optional[Union[Dict[str, Any], List[Any]]]) -> None:
         self.request_id = request_id
         self.result = result
         self.jsonrpc = "2.0"
@@ -251,7 +246,7 @@ class Notification:
     def __repr__(self) -> str:
         return self.method + " " + str(self.params)
 
-    def to_payload(self) -> 'Dict[str, Any]':
+    def to_payload(self) -> Dict[str, Any]:
         r = {
             "jsonrpc": "2.0",
             "method": self.method
@@ -280,7 +275,7 @@ class Point(object):
     def from_lsp(cls, point: dict) -> 'Point':
         return Point(point['line'], point['character'])
 
-    def to_lsp(self) -> 'Dict[str, Any]':
+    def to_lsp(self) -> Dict[str, Any]:
         return {
             "line": self.row,
             "character": self.col
@@ -305,7 +300,7 @@ class Range(object):
     def from_lsp(cls, range: dict) -> 'Range':
         return Range(Point.from_lsp(range['start']), Point.from_lsp(range['end']))
 
-    def to_lsp(self) -> 'Dict[str, Any]':
+    def to_lsp(self) -> Dict[str, Any]:
         return {
             'start': self.start.to_lsp(),
             'end': self.end.to_lsp()
@@ -316,11 +311,11 @@ class Range(object):
 
     def intersects(self, rge: 'Range') -> bool:
         return rge.start.row <= self.end.row and rge.start.col <= self.end.col and \
-               rge.end.row >= self.start.row and rge.end.col >= self.start.col
+            rge.end.row >= self.start.row and rge.end.col >= self.start.col
 
 
 class ContentChange(object):
-    def __init__(self, text: str, range: 'Optional[Range]' = None, range_length: 'Optional[int]' = None) -> None:
+    def __init__(self, text: str, range: Optional[Range] = None, range_length: Optional[int] = None) -> None:
         """
 
         [description]
@@ -334,7 +329,7 @@ class ContentChange(object):
         self.range = range
         self.range_length = range_length
 
-    def to_lsp(self) -> 'Dict[str, Any]':
+    def to_lsp(self) -> Dict[str, Any]:
         change = {
             'text': self.text,
         }  # type: Dict[str, Any]
@@ -344,7 +339,7 @@ class ContentChange(object):
             change['rangeLength'] = self.range_length
         return change
 
-    def __eq__(self, other: 'Any') -> bool:
+    def __eq__(self, other: Any) -> bool:
         return self.text == other.text and self.range == other.range and self.range_length == other.range_length
 
     def __repr__(self) -> str:
@@ -378,8 +373,8 @@ class DiagnosticRelatedInformation(object):
 
 
 class Diagnostic(object):
-    def __init__(self, message: str, range: Range, severity: int, source: 'Optional[str]', lsp_diagnostic: dict,
-                 related_info: 'List[DiagnosticRelatedInformation]') -> None:
+    def __init__(self, message: str, range: Range, severity: int, source: Optional[str], lsp_diagnostic: dict,
+                 related_info: List[DiagnosticRelatedInformation]) -> None:
         self.message = message
         self.range = range
         self.severity = severity
@@ -400,7 +395,7 @@ class Diagnostic(object):
             [DiagnosticRelatedInformation.from_lsp(info) for info in lsp_diagnostic.get('relatedInformation', [])]
         )
 
-    def to_lsp(self) -> 'Dict[str, Any]':
+    def to_lsp(self) -> Dict[str, Any]:
         return self._lsp_diagnostic
 
     def __eq__(self, other: object) -> bool:
@@ -435,12 +430,12 @@ class WorkspaceFolder:
     def __str__(self) -> str:
         return self.path
 
-    def __eq__(self, other: 'Any') -> bool:
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, WorkspaceFolder):
             return self.name == other.name and self.path == other.path
         return False
 
-    def to_lsp(self) -> 'Dict[str, str]':
+    def to_lsp(self) -> Dict[str, str]:
         return {"name": self.name, "uri": self.uri()}
 
     def uri(self) -> str:

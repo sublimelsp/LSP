@@ -1,13 +1,11 @@
+from .typing import List, Dict, Any, Iterable, Tuple
 from .url import uri_to_filename
 import operator
-TYPE_CHECKING = False
-if TYPE_CHECKING:
-    from typing import List, Dict, Optional, Any, Iterable, Tuple
-    TextEdit = Tuple[Tuple[int, int], Tuple[int, int], str]
-    assert List and Dict and Optional and Any and Iterable and Tuple
+
+TextEdit = Tuple[Tuple[int, int], Tuple[int, int], str]
 
 
-def parse_workspace_edit(workspace_edit: 'Dict[str, Any]') -> 'Dict[str, List[TextEdit]]':
+def parse_workspace_edit(workspace_edit: Dict[str, Any]) -> Dict[str, List[TextEdit]]:
     changes = {}  # type: Dict[str, List[TextEdit]]
     if 'changes' in workspace_edit:
         for uri, file_changes in workspace_edit.get('changes', {}).items():
@@ -19,11 +17,11 @@ def parse_workspace_edit(workspace_edit: 'Dict[str, Any]') -> 'Dict[str, List[Te
     return changes
 
 
-def parse_range(range: 'Dict[str, int]') -> 'Tuple[int, int]':
+def parse_range(range: Dict[str, int]) -> Tuple[int, int]:
     return range['line'], range['character']
 
 
-def parse_text_edit(text_edit: 'Dict[str, Any]') -> 'TextEdit':
+def parse_text_edit(text_edit: Dict[str, Any]) -> TextEdit:
     return (
         parse_range(text_edit['range']['start']),
         parse_range(text_edit['range']['end']),
@@ -31,7 +29,7 @@ def parse_text_edit(text_edit: 'Dict[str, Any]') -> 'TextEdit':
     )
 
 
-def sort_by_application_order(changes: 'Iterable[TextEdit]') -> 'List[TextEdit]':
+def sort_by_application_order(changes: Iterable[TextEdit]) -> List[TextEdit]:
     # The spec reads:
     # > However, it is possible that multiple edits have the same start position: multiple
     # > inserts, or any number of inserts followed by a single remove or replace edit. If

@@ -1,17 +1,13 @@
 from .protocol import CompletionItemKind, Range
 from .types import Settings
 from .logging import debug
-try:
-    from typing import Tuple, Optional, Dict, List, Union
-    assert Tuple and Optional and Dict and List and Union and Settings
-except ImportError:
-    pass
+from .typing import Tuple, Optional, Dict, List, Union
 
 
 completion_item_kind_names = {v: k for k, v in CompletionItemKind.__dict__.items()}
 
 
-def get_completion_hint(item: dict, settings: 'Settings') -> 'Optional[str]':
+def get_completion_hint(item: dict, settings: Settings) -> Optional[str]:
     # choose hint based on availability and user preference
     hint = None
     if settings.completion_hint_type == "auto":
@@ -29,7 +25,7 @@ def get_completion_hint(item: dict, settings: 'Settings') -> 'Optional[str]':
     return hint
 
 
-def format_completion(item: dict, word_col: int, settings: 'Settings') -> 'Tuple[str, str]':
+def format_completion(item: dict, word_col: int, settings: Settings) -> Tuple[str, str]:
     # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
     trigger = item["label"]
 
@@ -59,7 +55,7 @@ def format_completion(item: dict, word_col: int, settings: 'Settings') -> 'Tuple
     return "\t  ".join((trigger, hint)) if hint else trigger, replacement
 
 
-def text_edit_text(item: dict, word_col: int) -> 'Optional[str]':
+def text_edit_text(item: dict, word_col: int) -> Optional[str]:
     text_edit = item.get('textEdit')
     if text_edit:
         edit_range, edit_text = text_edit.get("range"), text_edit.get("newText")
@@ -77,7 +73,7 @@ def text_edit_text(item: dict, word_col: int) -> 'Optional[str]':
     return None
 
 
-def parse_completion_response(response: 'Optional[Union[Dict,List]]') -> 'Tuple[List[Dict], bool]':
+def parse_completion_response(response: Optional[Union[Dict, List]]) -> Tuple[List[Dict], bool]:
     items = []  # type: List[Dict]
     is_incomplete = False
     if isinstance(response, dict):

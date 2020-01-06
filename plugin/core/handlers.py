@@ -1,11 +1,6 @@
-import abc
 from .types import ClientConfig
-# from .rpc import Client
-try:
-    from typing import List, Callable, Optional, Type
-    assert List and Callable and Optional and Type
-except ImportError:
-    pass
+from .typing import List, Callable, Optional, Type
+import abc
 
 
 class LanguageHandler(metaclass=abc.ABCMeta):
@@ -27,5 +22,5 @@ class LanguageHandler(metaclass=abc.ABCMeta):
             if issubclass(c, LanguageHandler))
 
 
-def instantiate(c: 'Type[LanguageHandler]') -> LanguageHandler:
+def instantiate(c: Type[LanguageHandler]) -> LanguageHandler:
     return c()

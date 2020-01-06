@@ -73,10 +73,7 @@ class LspGotoCommand(LspTextCommand):
                 open_location(window, locations[idx])
             else:
                 if orig_view:
-                    orig_view.sel().clear()
-                    # orig_view.sel().add_all(orig_sel)
                     window.focus_view(orig_view)
-                    # orig_view.show(orig_sel[0])
 
         def highlight_entry(
                 window: sublime.Window,
@@ -90,9 +87,10 @@ class LspGotoCommand(LspTextCommand):
                     flags=sublime.TRANSIENT | sublime.ENCODED_POSITION | sublime.FORCE_GROUP)
 
         window = sublime.active_window()
+        view = self.view
         if response:
             # Save to jump back history.
-            get_jump_history_for_view(self.view).push_selection(self.view)
+            get_jump_history_for_view(view).push_selection(view)
             # TODO: DocumentLink support.
             if isinstance(response, dict):
                 locations = [process_response(response)]
@@ -103,7 +101,7 @@ class LspGotoCommand(LspTextCommand):
             elif len(locations) > 1:
                 window.show_quick_panel(
                     items=[display_name for file_path, display_name, rowcol in locations],
-                    on_select=lambda x: select_entry(window, locations, x, self.view),
+                    on_select=lambda x: select_entry(window, locations, x, view),
                     on_highlight=lambda x: highlight_entry(window, locations, x),
                     flags=sublime.KEEP_OPEN_ON_FOCUS_LOST)
             # TODO: can add region here.

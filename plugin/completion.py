@@ -263,7 +263,7 @@ class CompletionHandler(LSPViewEventListener):
             settings.complete_all_chars or
             prev_char in self.trigger_chars or
             prev_char not in self.ignored_trigger_chars
-        ):
+    if prev_char in self.trigger_chars or (settings.complete_all_chars and prev_char not in self.view.settings().get("word_separators")):
             self.manager.documents.purge_changes(self.view)
             document_position = get_document_position(view, locations[0])
             if document_position:

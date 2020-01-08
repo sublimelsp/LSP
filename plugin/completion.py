@@ -49,7 +49,6 @@ class CompletionHandler(LSPViewEventListener):
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
-        self.ignored_trigger_chars = []  # type: List[str]
         self.auto_complete_selector = view.settings().get("auto_complete_selector", "") or ""  # type: str
         self.resolve = False
         self.state = CompletionState.IDLE
@@ -81,8 +80,6 @@ class CompletionHandler(LSPViewEventListener):
             self.resolve = completionProvider.get('resolveProvider') or False
             self.trigger_chars = completionProvider.get(
                 'triggerCharacters') or []
-            word_separators = self.view.settings().get("word_separators")
-            self.ignored_trigger_chars = [char for char in word_separators if char not in self.trigger_chars]
             if self.trigger_chars:
                 self.register_trigger_chars(session)
 
@@ -256,14 +253,11 @@ class CompletionHandler(LSPViewEventListener):
         if not client:
             return
 
-        prev_point = locations[0] - 1 if locations[0] - 1 >= 0 else 0
+        prev_point = max(0, locations[0] - 1)
         prev_char = view.substr(prev_point)
+        is_word_separator = prev_char in self.view.settings().get("word_separators")
 
-        if (
-            settings.complete_all_chars or
-            prev_char in self.trigger_chars or
-            prev_char not in self.ignored_trigger_chars
-    if prev_char in self.trigger_chars or (settings.complete_all_chars and prev_char not in self.view.settings().get("word_separators")):
+        if prev_char in self.trigger_chars or (settings.complete_all_chars and not is_word_separator):
             self.manager.documents.purge_changes(self.view)
             document_position = get_document_position(view, locations[0])
             if document_position:

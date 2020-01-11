@@ -177,7 +177,9 @@ class WindowDocumentHandler(object):
 
         # if a TextDocumentSyncOptions object was sent, we can disable some notifications
         if isinstance(sync_options, dict):
-            return bool(sync_options.get(notification_type))
+            notification = sync_options.get(notification_type)
+            if notification is None or notification is False:
+                return False
 
         # otherwise we send them all.
         return True

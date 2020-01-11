@@ -151,6 +151,11 @@ class InitializationTests(DeferrableTestCase):
 
 class QueryCompletionsTests(TextDocumentTestCase):
 
+    def init_view_settings(self) -> None:
+        super().init_view_settings()
+        assert self.view
+        self.view.settings().set("auto_complete_selector", "text.plain")
+
     def await_message(self, msg: str) -> 'Generator':
         if CI:
             yield 500
@@ -365,7 +370,6 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 'def foo: Int = ???\n   def boo: Int = ???')
 
     def test_additional_edits(self) -> 'Generator':
-        yield 200
         self.set_response('textDocument/completion', completion_with_additional_edits)
         handler = self.get_view_event_listener("on_query_completions")
         self.assertIsNotNone(handler)

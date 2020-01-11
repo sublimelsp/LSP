@@ -205,6 +205,14 @@ class Session:
     def _on_notification(self, notification_method: str, handler: Callable) -> None:
         self._notification_handlers[notification_method] = handler
 
+    def _handle_notification_handler_exception(self, fut: asyncio.Future) -> None:
+        try:
+            ex = fut.exception()
+        except asyncio.CancelledError:
+            return
+        if ex and not self._received_shutdown:
+            self._notify("window/logMessage", {"type": MessageType.error, "message": str(ex)})
+
     async def _handle(self, typestr: str, message: 'Dict[str, Any]', handlers: Dict[str, Callable],
                       request_id: Optional[int]) -> None:
         method = message.get("method", "")
@@ -237,7 +245,8 @@ class Session:
                     ErrorCode.InternalError, str(ex)))
         else:
             # handle notification
-            asyncio.create_task(handler(params))
+            task = asyncio.create_task(handler(params))
+            task.add_done_callback(self._handle_notification_handler_exception)
 
     async def _handle_body(self, body: bytes) -> None:
         try:
@@ -312,11 +321,15 @@ class Session:
                         "expected initializationOptions to be a dictionary")
         return init_options.get("serverResponse", {})
 
-    async def _shutdown(self, _: PayloadLike) -> PayloadLike:
+    async def _shutdown(self, params: PayloadLike) -> PayloadLike:
+        if params is not None:
+            raise Error(ErrorCode.InvalidParams, "expected shutdown params to be null")
         self._received_shutdown = True
         return None
 
-    async def _on_exit(self, _: PayloadLike) -> None:
+    async def _on_exit(self, params: PayloadLike) -> None:
+        if params is not None:
+            raise Error(ErrorCode.InvalidParams, "expected exit params to be null")
         self._reader.set_exception(StopLoopException())
 
 

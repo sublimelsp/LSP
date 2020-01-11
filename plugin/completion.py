@@ -49,7 +49,6 @@ class CompletionHandler(LSPViewEventListener):
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
-        self.auto_complete_selector = view.settings().get("auto_complete_selector", "") or ""  # type: str
         self.resolve = False
         self.state = CompletionState.IDLE
         self.completions = []  # type: List[Any]
@@ -215,6 +214,10 @@ class CompletionHandler(LSPViewEventListener):
         else:
             debug('could not find completion item for inserted "{}"'.format(inserted))
 
+    def match_selector(self, location: int) -> bool:
+        selector = self.view.settings().get("auto_complete_selector", "") or ""  # type: str
+        return self.view.match_selector(location, selector)
+
     def on_query_completions(self, prefix: str, locations: 'List[int]') -> 'Optional[Tuple[List[Tuple[str,str]], int]]':
         if not self.initialized:
             self.initialize()
@@ -225,7 +228,7 @@ class CompletionHandler(LSPViewEventListener):
             flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
 
         if self.enabled:
-            if not self.view.match_selector(locations[0], self.auto_complete_selector):
+            if not self.match_selector(locations[0]):
                 return ([], flags)
 
             reuse_completion = self.is_same_completion(prefix, locations)

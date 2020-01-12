@@ -230,28 +230,28 @@
           "scopes":
           [
             "source.c"
-          ],
+          ]
         },
         {
           "languageId": "cpp",
           "scopes":
           [
             "source.c++"
-          ],
+          ]
         },
         {
           "languageId": "objective-c",
           "scopes":
           [
             "source.objc"
-          ],
+          ]
         },
         {
           "languageId": "objective-cpp",
           "scopes":
           [
             "source.objc++"
-          ],
+          ]
         }
       ]
     },
@@ -263,7 +263,7 @@
       "languageId": "dart",
       "scopes": [
         "source.dart"
-      ],
+      ]
     },
     "elixir-ls": {
       "command": [
@@ -292,7 +292,7 @@
       "scopes":
       [
         "source.haskell"
-      ],
+      ]
     },
     "intelephense-ls":
     {
@@ -331,11 +331,17 @@
     {
       "command": ["lsp-tsserver"],
       "languages": [{
-        "scopes": ["source.js", "source.jsx"],
+        "scopes": ["source.js"],
         "languageId": "javascript"
       }, {
-        "scopes": ["source.ts", "source.tsx"],
+        "scopes": ["source.jsx"],
+        "languageId": "javascriptreact"
+      }, {
+        "scopes": ["source.ts"],
         "languageId": "typescript"
+      }, {
+        "scopes": ["source.tsx"],
+        "languageId": "typescriptreact"
       }
       ]
     },
@@ -343,17 +349,23 @@
     {
       "command": ["metals-sublime"],
       "languageId": "scala",
-      "scopes": ["source.scala"],
+      "scopes": ["source.scala"]
     },
     "javascript-typescript-langserver":
     {
       "command": ["javascript-typescript-stdio"],
       "languages": [{
-        "scopes": ["source.js", "source.jsx"],
+        "scopes": ["source.js"],
         "languageId": "javascript"
       }, {
-        "scopes": ["source.ts", "source.tsx"],
+        "scopes": ["source.jsx"],
+        "languageId": "javascriptreact"
+      }, {
+        "scopes": ["source.ts"],
         "languageId": "typescript"
+      }, {
+        "scopes": ["source.tsx"],
+        "languageId": "typescriptreact"
       }
       ]
     },
@@ -361,9 +373,19 @@
     {
       "command": ["typescript-language-server", "--stdio"],
       "languages": [{
-        "scopes": ["source.ts", "source.tsx"],
+        "scopes": ["source.js"],
+        "languageId": "javascript"
+      }, {
+        "scopes": ["source.jsx"],
+        "languageId": "javascriptreact"
+      }, {
+        "scopes": ["source.ts"],
         "languageId": "typescript"
-      }]
+      }, {
+        "scopes": ["source.tsx"],
+        "languageId": "typescriptreact"
+      }
+      ]
     },
     "ocaml":
     {

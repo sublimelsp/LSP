@@ -1,4 +1,4 @@
-from .process import log_stream
+from LSP.plugin.core.process import log_stream
 from io import BytesIO
 from subprocess import Popen
 from unittest import TestCase

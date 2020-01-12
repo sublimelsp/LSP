@@ -1,23 +1,12 @@
-import sublime
-import os
-from .sessions import create_session, Session
-
-# typing only
-from .rpc import Client
 from .protocol import WorkspaceFolder
+from .sessions import create_session, Session
 from .settings import ClientConfig, settings
-assert Client and ClientConfig and WorkspaceFolder
+from .typing import List, Dict, Tuple, Callable, Optional
+import os
+import sublime
 
 
-try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional, Set
-    assert Any and List and Dict and Tuple and Callable and Optional and Set
-    assert Session
-except ImportError:
-    pass
-
-
-def get_window_env(window: sublime.Window, config: ClientConfig) -> 'Tuple[List[str], Dict[str, str]]':
+def get_window_env(window: sublime.Window, config: ClientConfig) -> Tuple[List[str], Dict[str, str]]:
 
     # Create a dictionary of Sublime Text variables
     variables = window.extract_variables()
@@ -38,12 +27,12 @@ def get_window_env(window: sublime.Window, config: ClientConfig) -> 'Tuple[List[
 
 
 def start_window_config(window: sublime.Window,
-                        workspace_folders: 'List[WorkspaceFolder]',
+                        workspace_folders: List[WorkspaceFolder],
                         config: ClientConfig,
-                        on_pre_initialize: 'Callable[[Session], None]',
-                        on_post_initialize: 'Callable[[Session], None]',
-                        on_post_exit: 'Callable[[str], None]',
-                        on_stderr_log: 'Optional[Callable[[str], None]]') -> 'Optional[Session]':
+                        on_pre_initialize: Callable[[Session], None],
+                        on_post_initialize: Callable[[Session], None],
+                        on_post_exit: Callable[[str], None],
+                        on_stderr_log: Optional[Callable[[str], None]]) -> Optional[Session]:
     args, env = get_window_env(window, config)
     config.binary_args = args
     return create_session(config=config,
@@ -56,5 +45,5 @@ def start_window_config(window: sublime.Window,
                           on_stderr_log=on_stderr_log)
 
 
-def on_session_ended(window: sublime.Window, config_name: str, on_post_exit_handler: 'Callable[[str], None]') -> None:
+def on_session_ended(window: sublime.Window, config_name: str, on_post_exit_handler: Callable[[str], None]) -> None:
     on_post_exit_handler(config_name)

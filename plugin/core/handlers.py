@@ -1,11 +1,7 @@
-import abc
 from .logging import exception_log
 from .types import ClientConfig
-try:
-    from typing import List, Callable, Optional, Type
-    assert List and Callable and Optional and Type
-except ImportError:
-    pass
+from .typing import List, Callable, Optional, Type
+import abc
 
 
 class LanguageHandler(metaclass=abc.ABCMeta):
@@ -33,5 +29,5 @@ class LanguageHandler(metaclass=abc.ABCMeta):
         return result
 
 
-def instantiate(c: 'Type[LanguageHandler]') -> LanguageHandler:
+def instantiate(c: Type[LanguageHandler]) -> LanguageHandler:
     return c()

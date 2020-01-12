@@ -1,4 +1,4 @@
-from .protocol import (
+from LSP.plugin.core.protocol import (
     Point, Range, Diagnostic, DiagnosticSeverity, Request, Notification
 )
 import unittest

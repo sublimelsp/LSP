@@ -1,9 +1,7 @@
 from .configurations import config_supports_syntax
 from .diagnostics import DiagnosticsStorage
 from .logging import debug
-from .types import (ClientStates, ClientConfig, WindowLike, ViewLike,
-                    LanguageConfig, ConfigRegistry,
-                    GlobalConfigs, Settings)
+from .types import ClientConfig, WindowLike, ViewLike, LanguageConfig, ConfigRegistry, GlobalConfigs, Settings
 from .edit import parse_workspace_edit
 from .protocol import Notification, Response
 from .sessions import Session
@@ -102,8 +100,9 @@ class DocumentHandlerFactory(object):
         self._sublime = sublime
         self._settings = settings
 
-    def for_window(self, window: 'WindowLike', configs: 'ConfigRegistry') -> DocumentHandler:
-        return WindowDocumentHandler(self._sublime, self._settings, window, configs)
+    def for_window(self, window: 'WindowLike', workspace: ProjectFolders,
+                   configs: 'ConfigRegistry') -> DocumentHandler:
+        return WindowDocumentHandler(self._sublime, self._settings, window, workspace, configs)
 
 
 def nop() -> None:
@@ -111,7 +110,8 @@ def nop() -> None:
 
 
 class WindowDocumentHandler(object):
-    def __init__(self, sublime: 'Any', settings: Settings, window: WindowLike, configs: ConfigRegistry) -> None:
+    def __init__(self, sublime: 'Any', settings: Settings, window: WindowLike, workspace: ProjectFolders,
+                 configs: ConfigRegistry) -> None:
         self._sublime = sublime
         self._settings = settings
         self._configs = configs
@@ -119,6 +119,7 @@ class WindowDocumentHandler(object):
         self._document_states = dict()  # type: Dict[str, DocumentState]
         self._pending_buffer_changes = dict()  # type: Dict[int, Dict]
         self._sessions = dict()  # type: Dict[str, List[Session]]
+        self._workspace = workspace
         self.changed = nop
         self.saved = nop
 
@@ -146,12 +147,21 @@ class WindowDocumentHandler(object):
     def _get_applicable_sessions(self, view: ViewLike, notification_type: 'Optional[str]' = None) -> 'List[Session]':
         sessions = []  # type: List[Session]
         syntax = view.settings().get("syntax")
-        for config_name, config_sessions in self._sessions.items():
-            for session in config_sessions:
-                if config_supports_syntax(session.config, syntax):
+
+        def conditional_append(session: Session) -> None:
+            if config_supports_syntax(session.config, syntax):
+                if not notification_type or self._session_supports_notification(session, notification_type):
+                    sessions.append(session)
+
+        if view in self._workspace:
+            for sessions_per_config_name in self._sessions.values():
+                for session in sessions_per_config_name:
                     if session.handles_path(view.file_name()):
-                        if not notification_type or self._session_supports_notification(session, notification_type):
-                            sessions.append(session)
+                        conditional_append(session)
+        else:
+            for sessions_per_config_name in self._sessions.values():
+                assert len(sessions_per_config_name) > 0
+                conditional_append(sessions_per_config_name[0])
         return sessions
 
     def _session_supports_notification(self, session: 'Session', notification_type: str) -> bool:
@@ -166,7 +176,9 @@ class WindowDocumentHandler(object):
 
         # if a TextDocumentSyncOptions object was sent, we can disable some notifications
         if isinstance(sync_options, dict):
-            return bool(sync_options.get(notification_type))
+            notification = sync_options.get(notification_type)
+            if notification is None or notification is False:
+                return False
 
         # otherwise we send them all.
         return True
@@ -324,11 +336,20 @@ def extract_message(params: 'Any') -> str:
 
 
 class WindowManager(object):
-    def __init__(self, window: WindowLike, settings: Settings, configs: ConfigRegistry, documents: DocumentHandler,
-                 diagnostics: DiagnosticsStorage, session_starter: 'Callable', sublime: 'Any',
-                 handler_dispatcher: LanguageHandlerListener, on_closed: 'Optional[Callable]' = None,
-                 server_panel_factory: 'Optional[Callable]' = None) -> None:
-
+    def __init__(
+        self,
+        window: WindowLike,
+        workspace: ProjectFolders,
+        settings: Settings,
+        configs: ConfigRegistry,
+        documents: DocumentHandler,
+        diagnostics: DiagnosticsStorage,
+        session_starter: 'Callable',
+        sublime: 'Any',
+        handler_dispatcher: LanguageHandlerListener,
+        on_closed: 'Optional[Callable]' = None,
+        server_panel_factory: 'Optional[Callable]' = None
+    ) -> None:
         self._window = window
         self._settings = settings
         self._configs = configs
@@ -343,7 +364,9 @@ class WindowManager(object):
         self._on_closed = on_closed
         self._is_closing = False
         self._initialization_lock = threading.Lock()
-        self._workspace = ProjectFolders(self._window, self._on_project_changed, self._on_project_switched)
+        self._workspace = workspace
+        self._workspace.on_changed = self._on_project_changed
+        self._workspace.on_switched = self._on_project_switched
 
     def _on_project_changed(self, folders: 'List[str]') -> None:
         workspace_folders = get_workspace_folders(self._workspace.folders)
@@ -358,19 +381,20 @@ class WindowManager(object):
     def get_session(self, config_name: str, file_path: str) -> 'Optional[Session]':
         return self._find_session(config_name, file_path)
 
-    def _is_session_ready(self, config_name: str, file_path: str) -> bool:
-        maybe_session = self._find_session(config_name, file_path)
-        return maybe_session is not None and maybe_session.state == ClientStates.READY
-
     def _can_start_config(self, config_name: str, file_path: str) -> bool:
         return not bool(self._find_session(config_name, file_path))
 
     def _find_session(self, config_name: str, file_path: str) -> 'Optional[Session]':
-        if config_name in self._sessions:
-            for session in self._sessions[config_name]:
-                if session.handles_path(file_path):
-                    return session
-
+        if file_path in self._workspace:
+            if config_name in self._sessions:
+                for session in self._sessions[config_name]:
+                    if session.handles_path(file_path):
+                        return session
+        else:
+            sessions = self._sessions.get(config_name, None)
+            if not sessions:
+                return None
+            return sessions[0]
         return None
 
     def update_configs(self) -> None:
@@ -402,29 +426,46 @@ class WindowManager(object):
             self._workspace.update()
             self._initialize_on_open(view)
 
+    def needed_configs(self, file_path: str, configs: 'List[ClientConfig]') -> 'List[ClientConfig]':
+        new_configs = []
+        for c in configs:
+            sessions = self._sessions.get(c.name, None)
+            if sessions is None:
+                new_configs.append(c)
+                continue
+            assert isinstance(sessions, list)
+            assert len(sessions) > 0
+            first_session = sessions[0]
+            if first_session.supports_workspace_folders():
+                # A workspace-aware language server handles any path, both inside and outside the workspace.
+                continue
+            if file_path in self._workspace:
+                if any(s.handles_path(file_path) for s in sessions):
+                    # The file_path is inside the workspace, and there's a non-workspace-aware language server that can
+                    # handle this path. So no new session is needed.
+                    continue
+                # There is no non-workspace-aware language that handles this path, but it is inside the workspace. So
+                # we must start a new session.
+                new_configs.append(c)
+                continue
+            # We're now dealing with a non-workspace-aware language server, and the file_path is outside the workspace.
+            # Let us then take the first language server in the list that shall handle this path.
+            # (so no new session is needed).
+        return new_configs
+
     def _initialize_on_open(self, view: ViewLike) -> None:
         file_path = view.file_name() or ""
 
-        def needed_configs(configs: 'List[ClientConfig]') -> 'List[ClientConfig]':
-            new_configs = []
-            for c in configs:
-                if c.name not in self._sessions:
-                    new_configs.append(c)
-                elif all(not s.handles_path(file_path) for s in self._sessions[c.name]):
-                    debug('path not in existing {} session: {}'.format(c.name, file_path))
-                    new_configs.append(c)
-            return new_configs
-
         # have all sessions for this document been started?
         with self._initialization_lock:
-            new_configs = needed_configs(self._configs.syntax_configs(view, include_disabled=True))
+            new_configs = self.needed_configs(file_path, self._configs.syntax_configs(view, include_disabled=True))
 
             if any(new_configs):
                 # TODO: cannot observe project setting changes
                 # have to check project overrides every session request
                 self.update_configs()
 
-                startable_configs = needed_configs(self._configs.syntax_configs(view))
+                startable_configs = self.needed_configs(file_path, self._configs.syntax_configs(view))
 
                 for config in startable_configs:
 
@@ -671,12 +712,14 @@ class WindowRegistry(object):
         if state is None:
             if not self._settings:
                 raise RuntimeError("no settings")
+            workspace = ProjectFolders(window)
             window_configs = self._configs.for_window(window)
-            window_documents = self._documents.for_window(window, window_configs)
+            window_documents = self._documents.for_window(window, workspace, window_configs)
             diagnostics_ui = self._diagnostics_ui_class(window,
                                                         window_documents) if self._diagnostics_ui_class else None
             state = WindowManager(
                 window=window,
+                workspace=workspace,
                 settings=self._settings,
                 configs=window_configs,
                 documents=window_documents,

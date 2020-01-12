@@ -4,26 +4,22 @@ import re
 from .types import ClientConfig, LanguageConfig, ViewLike, WindowLike, ConfigRegistry
 from .logging import debug
 from .workspace import get_project_config, enable_in_project, disable_in_project
-
-assert ClientConfig
+from .typing import Any, List, Dict, Tuple, Optional, Iterator
 
 try:
     import sublime
-    from typing import Any, List, Dict, Tuple, Callable, Optional, Iterator
     assert sublime
-    assert Any and List and Dict and Tuple and Callable and Optional and Iterator
-    assert ViewLike and WindowLike and ConfigRegistry and LanguageConfig
 except ImportError:
     pass
 
 
-def get_scope_client_config(view: 'sublime.View', configs: 'List[ClientConfig]',
-                            point: 'Optional[int]' = None) -> 'Optional[ClientConfig]':
+def get_scope_client_config(view: 'sublime.View', configs: List[ClientConfig],
+                            point: Optional[int] = None) -> Optional[ClientConfig]:
     return next(get_scope_client_configs(view, configs, point), None)
 
 
-def get_scope_client_configs(view: 'sublime.View', configs: 'List[ClientConfig]',
-                             point: 'Optional[int]' = None) -> 'Iterator[ClientConfig]':
+def get_scope_client_configs(view: 'sublime.View', configs: List[ClientConfig],
+                             point: Optional[int] = None) -> Iterator[ClientConfig]:
     # When there are multiple server configurations, all of which are for
     # similar scopes (e.g. 'source.json', 'source.json.sublime.settings') the
     # configuration with the most specific scope (highest ranked selector)
@@ -52,16 +48,16 @@ def get_scope_client_configs(view: 'sublime.View', configs: 'List[ClientConfig]'
         scope_configs, key=lambda config_score: config_score[1], reverse=True))
 
 
-def get_global_client_config(view: 'sublime.View', global_configs: 'List[ClientConfig]') -> 'Optional[ClientConfig]':
+def get_global_client_config(view: 'sublime.View', global_configs: List[ClientConfig]) -> Optional[ClientConfig]:
     return get_scope_client_config(view, global_configs)
 
 
-def create_window_configs(window: 'WindowLike', global_configs: 'List[ClientConfig]') -> 'List[ClientConfig]':
+def create_window_configs(window: WindowLike, global_configs: List[ClientConfig]) -> List[ClientConfig]:
     window_config = get_project_config(window)
     return list(map(lambda c: apply_project_overrides(c, window_config), global_configs))
 
 
-def apply_project_overrides(client_config: 'ClientConfig', lsp_project_settings: dict) -> 'ClientConfig':
+def apply_project_overrides(client_config: ClientConfig, lsp_project_settings: dict) -> ClientConfig:
     if client_config.name in lsp_project_settings:
         overrides = lsp_project_settings[client_config.name]
         debug('window has override for {}'.format(client_config.name), overrides)
@@ -84,7 +80,7 @@ def apply_project_overrides(client_config: 'ClientConfig', lsp_project_settings:
     return client_config
 
 
-def syntax_language(config: 'ClientConfig', scope: str) -> 'Optional[LanguageConfig]':
+def syntax_language(config: ClientConfig, scope: str) -> Optional[LanguageConfig]:
     for language in config.languages:
         for lang_scope in language.scopes:
             if lang_scope == scope:
@@ -95,7 +91,7 @@ def syntax_language(config: 'ClientConfig', scope: str) -> 'Optional[LanguageCon
 __syntax_scope_cache = {}  # type: Dict[str, str]
 
 
-def config_supports_syntax(config: 'ClientConfig', syntax: str) -> bool:
+def config_supports_syntax(config: ClientConfig, syntax: str) -> bool:
     global __syntax_scope_cache
     scope = __syntax_scope_cache.get(syntax, "")
     if not scope:
@@ -111,7 +107,7 @@ def config_supports_syntax(config: 'ClientConfig', syntax: str) -> bool:
     return False
 
 
-def is_supported_syntax(syntax: str, configs: 'List[ClientConfig]') -> bool:
+def is_supported_syntax(syntax: str, configs: List[ClientConfig]) -> bool:
     for config in configs:
         if config_supports_syntax(config, syntax):
             return True
@@ -121,11 +117,11 @@ def is_supported_syntax(syntax: str, configs: 'List[ClientConfig]') -> bool:
 class ConfigManager(object):
     """Distributes language client configuration between windows"""
 
-    def __init__(self, global_configs: 'List[ClientConfig]') -> None:
+    def __init__(self, global_configs: List[ClientConfig]) -> None:
         self._configs = global_configs
         self._managers = {}  # type: Dict[int, ConfigRegistry]
 
-    def for_window(self, window: 'WindowLike') -> 'ConfigRegistry':
+    def for_window(self, window: WindowLike) -> ConfigRegistry:
         window_configs = WindowConfigManager(window, self._configs)
         self._managers[window.id()] = window_configs
         return window_configs
@@ -137,19 +133,19 @@ class ConfigManager(object):
 
 
 class WindowConfigManager(object):
-    def __init__(self, window: 'WindowLike', global_configs: 'List[ClientConfig]') -> None:
+    def __init__(self, window: WindowLike, global_configs: List[ClientConfig]) -> None:
         self._window = window
         self._global_configs = global_configs
         self._temp_disabled_configs = []  # type: List[str]
         self.all = create_window_configs(window, global_configs)
 
-    def is_supported(self, view: 'Any') -> bool:
+    def is_supported(self, view: Any) -> bool:
         return any(self.scope_configs(view))
 
-    def scope_configs(self, view: 'Any', point: 'Optional[int]' = None) -> 'Iterator[ClientConfig]':
+    def scope_configs(self, view: Any, point: Optional[int] = None) -> Iterator[ClientConfig]:
         return get_scope_client_configs(view, self.all, point)
 
-    def syntax_configs(self, view: 'Any', include_disabled: bool = False) -> 'List[ClientConfig]':
+    def syntax_configs(self, view: Any, include_disabled: bool = False) -> List[ClientConfig]:
         syntax = view.settings().get("syntax")
         return list(filter(lambda c: config_supports_syntax(c, syntax) and (c.enabled or include_disabled), self.all))
 
@@ -159,7 +155,7 @@ class WindowConfigManager(object):
             return True
         return False
 
-    def syntax_config_languages(self, view: ViewLike) -> 'Dict[str, LanguageConfig]':
+    def syntax_config_languages(self, view: ViewLike) -> Dict[str, LanguageConfig]:
         scope = view.scope_name(0).strip().split()[0]
         config_languages = {}
         for config in self.all:

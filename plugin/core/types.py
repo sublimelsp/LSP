@@ -39,7 +39,7 @@ class ClientStates(object):
 
 
 class LanguageConfig(object):
-    def __init__(self, language_id: str, scopes: List[str], _: Optional[List[str]] = None) -> None:
+    def __init__(self, language_id: str, scopes: List[str], syntaxes: Optional[List[str]] = None) -> None:
         self.id = language_id
         self.scopes = scopes
         # TODO: Update all LanguageHandlers

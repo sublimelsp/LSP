@@ -68,13 +68,13 @@ class MockView(object):
     def __init__(self, file_name):
         self._file_name = file_name
         self._window = None
-        self._settings = MockSublimeSettings({"syntax": "Plain Text"})
+        self._settings = MockSublimeSettings({"syntax": "Packages/Text/Plain text.tmLanguage"})
         self._status = dict()  # type: Dict[str, str]
         self._text = "asdf"
         self.commands = []  # type: List[Tuple[str, Dict[str, Any]]]
 
     def scope_name(self, point: int) -> str:
-        return "source.test"
+        return "text.plain foo.bar hello.world"
 
     def file_name(self):
         return self._file_name

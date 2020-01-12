@@ -2,6 +2,8 @@ from LSP.plugin.core.configurations import _merge_dicts
 from LSP.plugin.core.configurations import ConfigManager
 from LSP.plugin.core.configurations import is_supported_syntax
 from LSP.plugin.core.configurations import WindowConfigManager
+from LSP.plugin.core.types import ClientConfig
+from LSP.plugin.core.types import LanguageConfig
 from test_mocks import MockView
 from test_mocks import MockWindow
 from test_mocks import TEST_CONFIG, DISABLED_CONFIG
@@ -120,4 +122,33 @@ class IsSupportedSyntaxTests(unittest.TestCase):
 
     def test_single_config(self):
         self.assertEqual(TEST_LANGUAGE.scopes[0], TEST_CONFIG.languages[0].scopes[0])
-        self.assertTrue(is_supported_syntax(TEST_LANGUAGE.scopes[0], [TEST_CONFIG]))
+
+    def do_is_supported_test(self, syntax: str, scope: str, expect: bool) -> None:
+        configs = [
+            ClientConfig(
+                name="foobar",
+                binary_args=["dont", "care"],
+                tcp_port=None,
+                languages=[LanguageConfig(language_id="dontcare", scopes=[scope])])]
+        result = is_supported_syntax(syntax, configs)
+        if expect:
+            self.assertTrue(result)
+        else:
+            self.assertFalse(result)
+
+    def test_sublime_syntax_is_supported_syntax(self):
+        self.do_is_supported_test("Packages/Python/Python.sublime-syntax", "source.python", True)
+        self.do_is_supported_test("Packages/C++/C++.sublime-syntax", "source.c++", True)
+        self.do_is_supported_test("Packages/Rust/Rust.sublime-syntax", "source.rust", True)
+        self.do_is_supported_test("Packages/Go/Go.sublime-syntax", "source.go", True)
+
+    def test_tmLanguage_is_supported_syntax(self):
+        self.do_is_supported_test("Packages/Text/Plain text.tmLanguage", "text.plain", True)
+
+    def test_hidden_tmLanguage_is_supported_syntax(self):
+        self.do_is_supported_test("Packages/Default/Find Results.hidden-tmLanguage", "text.find-in-files", True)
+
+    def test_is_not_supported_syntax(self):
+        self.do_is_supported_test("Packages/C++/C++.sublime-syntax", "source.python", False)
+        self.do_is_supported_test("Packages/Rust/Rust.sublime-syntax", "source.c++", False)
+        self.do_is_supported_test("Packages/Go/Go.sublime-syntax", "source.rust", False)

@@ -1,5 +1,6 @@
 from copy import deepcopy
 import re
+import plistlib
 
 from .types import ClientConfig, LanguageConfig, ViewLike, WindowLike, ConfigRegistry
 from .logging import debug
@@ -88,18 +89,45 @@ def syntax_language(config: ClientConfig, scope: str) -> Optional[LanguageConfig
     return None
 
 
-__syntax_scope_cache = {}  # type: Dict[str, str]
+class UnrecognizedExtensionError(Exception):
+
+    def __init__(self, syntax: str) -> None:
+        super().__init__("unrecognized extension: {}".format(syntax))
+        self.syntax = syntax
+
+
+def read_scope_from_syntax_file(syntax: str) -> str:
+    """
+    Call this function as few times as possible. It's a heavy operation!
+    """
+    if syntax.endswith(".sublime-syntax"):
+        match = re.search(r'^scope: (\S+)', sublime.load_resource(syntax), re.MULTILINE)
+        return match.group(1) if match else ""
+    elif syntax.endswith(".tmLanguage") or syntax.endswith(".hidden-tmLanguage"):
+        # TODO: What should this encoding be?
+        content = sublime.load_resource(syntax).encode("utf-8")
+        # TODO: When on python 3.8, use plistlib.loads instead, and use plistlib.FMT_XML
+        data = plistlib.readPlistFromBytes(content)  # type: Dict[str, Any]
+        return data.get("scopeName", "")
+    else:
+        raise UnrecognizedExtensionError(syntax)
+
+
+_syntax2scope = {}  # type: Dict[str, str]
 
 
 def config_supports_syntax(config: ClientConfig, syntax: str) -> bool:
-    global __syntax_scope_cache
-    scope = __syntax_scope_cache.get(syntax, "")
-    if not scope:
-        match = re.search(r'^scope: (\S+)', sublime.load_resource(syntax), re.MULTILINE)
-        if not match:
-            return False
-        scope = match.group(1)
-        __syntax_scope_cache[syntax] = scope
+    global _syntax2scope
+    scope = _syntax2scope.get(syntax, None)  # type: Optional[str]
+    if scope is None:
+        try:
+            scope = read_scope_from_syntax_file(syntax)
+            _syntax2scope[syntax] = scope
+        except Exception as ex:
+            _syntax2scope[syntax] = ""
+            raise ex from ex
+    if scope == "":
+        return False
     for language in config.languages:
         for selector in language.scopes:
             if sublime.score_selector(scope, selector) > 0:

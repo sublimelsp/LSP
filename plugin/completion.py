@@ -49,6 +49,7 @@ class CompletionHandler(LSPViewEventListener):
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
+        self.auto_complete_selector = ""
         self.resolve = False
         self.state = CompletionState.IDLE
         self.completions = []  # type: List[Any]
@@ -81,6 +82,7 @@ class CompletionHandler(LSPViewEventListener):
                 'triggerCharacters') or []
             if self.trigger_chars:
                 self.register_trigger_chars(session)
+            self.auto_complete_selector = self.view.settings().get("auto_complete_selector", "") or ""  # type: str
 
     def _view_language(self, config_name: str) -> 'Optional[str]':
         languages = self.view.settings().get('lsp_language')
@@ -215,8 +217,7 @@ class CompletionHandler(LSPViewEventListener):
             debug('could not find completion item for inserted "{}"'.format(inserted))
 
     def match_selector(self, location: int) -> bool:
-        selector = self.view.settings().get("auto_complete_selector", "") or ""  # type: str
-        return self.view.match_selector(location, selector)
+        return self.view.match_selector(location, self.auto_complete_selector)
 
     def on_query_completions(self, prefix: str, locations: 'List[int]') -> 'Optional[Tuple[List[Tuple[str,str]], int]]':
         if not self.initialized:

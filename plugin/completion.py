@@ -82,7 +82,7 @@ class CompletionHandler(LSPViewEventListener):
                 'triggerCharacters') or []
             if self.trigger_chars:
                 self.register_trigger_chars(session)
-            self.auto_complete_selector = self.view.settings().get("auto_complete_selector", "") or ""  # type: str
+            self.auto_complete_selector = self.view.settings().get("auto_complete_selector", "") or ""
 
     def _view_language(self, config_name: str) -> 'Optional[str]':
         languages = self.view.settings().get('lsp_language')

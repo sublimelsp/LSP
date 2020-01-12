@@ -59,7 +59,11 @@ class ConfigTests(DeferrableTestCase):
 class WindowConfigTests(DeferrableTestCase):
 
     def setUp(self):
-        windows._windows.clear()
+        super().setUp()
+        w, windows._windows = windows._windows, {}
+        for window_id, wm in w.items():
+            wm.end_sessions()
+            yield lambda: len(wm._sessions) == 0
         self.view = sublime.active_window().open_file(test_file_path)
 
     def test_window_without_configs(self):
@@ -71,7 +75,7 @@ class WindowConfigTests(DeferrableTestCase):
         pass
 
     def doCleanups(self):
-        if self.view:
+        if hasattr(self, "view") and self.view:
             self.view.set_scratch(True)
             self.view.window().focus_view(self.view)
             self.view.window().run_command("close_file")

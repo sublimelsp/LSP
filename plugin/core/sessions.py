@@ -3,7 +3,7 @@ from .process import start_server
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification
 from .rpc import Client, attach_stdio_client, Response
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
-from .types import ClientConfig, ClientStates, Settings
+from .types import ClientConfig, Settings
 from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator
 from contextlib import contextmanager
 import os
@@ -104,6 +104,14 @@ def diff_folders(old: List[WorkspaceFolder],
     return added, removed
 
 
+class InitializeError(Exception):
+
+    def __init__(self, config_name: str) -> None:
+        super().__init__("The server did not respond to the initialize request within {} seconds".format(
+            ACQUIRE_READY_LOCK_TIMEOUT))
+        self.name = config_name
+
+
 class Session(object):
     def __init__(self,
                  config: ClientConfig,
@@ -113,7 +121,6 @@ class Session(object):
                  on_post_initialize: 'Optional[Callable[[Session], None]]' = None,
                  on_post_exit: Optional[Callable[[str], None]] = None) -> None:
         self.config = config
-        self.state = ClientStates.STARTING
         self._on_post_initialize = on_post_initialize
         self._on_post_exit = on_post_exit
         self.capabilities = dict()  # type: Dict[str, Any]
@@ -134,11 +141,9 @@ class Session(object):
     def acquire_timeout(self) -> Generator[None, None, None]:
         acquired = self.ready_lock.acquire(True, ACQUIRE_READY_LOCK_TIMEOUT)
         if not acquired:
-            raise TimeoutError("{} did not respond to the initialize request within {} seconds".format(
-                self.config.name, ACQUIRE_READY_LOCK_TIMEOUT))
+            raise InitializeError(self.config.name)
         yield
-        if acquired:
-            self.ready_lock.release()
+        self.ready_lock.release()
 
     def handles_path(self, file_path: Optional[str]) -> bool:
         if not file_path:
@@ -186,7 +191,6 @@ class Session(object):
             return self._unsafe_supports_workspace_folders()
 
     def _handle_initialize_error(self, error: Any) -> None:
-        self.state = ClientStates.STOPPING
         self.ready_lock.release()  # acquired in _initialize
         self.end()
 
@@ -203,12 +207,11 @@ class Session(object):
         else:
             debug("session with no workspace folders")
 
-        self.state = ClientStates.READY
-        self.ready_lock.release()  # acquired in _initialize
-
         self.client.on_request(
             "workspace/workspaceFolders",
             lambda _params, request_id: self._handle_workspace_folders(request_id))
+
+        self.ready_lock.release()  # acquired in _initialize
 
         if self._on_post_initialize:
             self._on_post_initialize(self)
@@ -217,7 +220,6 @@ class Session(object):
         self.client.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))
 
     def end(self) -> None:
-        self.state = ClientStates.STOPPING
         self.client.send_request(
             Request.shutdown(),
             lambda result: self._handle_shutdown_result(),

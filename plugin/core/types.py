@@ -32,12 +32,6 @@ class Settings(object):
         self.log_payloads = False
 
 
-class ClientStates(object):
-    STARTING = 0
-    READY = 1
-    STOPPING = 2
-
-
 class LanguageConfig(object):
     def __init__(self, language_id: str, scopes: List[str], syntaxes: List[str]) -> None:
         self.id = language_id

@@ -151,6 +151,11 @@ class InitializationTests(DeferrableTestCase):
 
 class QueryCompletionsTests(TextDocumentTestCase):
 
+    def init_view_settings(self) -> None:
+        super().init_view_settings()
+        assert self.view
+        self.view.settings().set("auto_complete_selector", "text.plain")
+
     def await_message(self, msg: str) -> 'Generator':
         if CI:
             yield 500

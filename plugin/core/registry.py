@@ -7,7 +7,7 @@ from .logging import debug
 from .rpc import Client
 from .sessions import Session
 from .settings import settings, client_configs
-from .types import ClientStates, ClientConfig, WindowLike
+from .types import ClientConfig, WindowLike
 from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
 from .typing import Optional, Callable, Dict, Any, Iterable
 
@@ -70,15 +70,7 @@ def register_language_handler(handler: LanguageHandler) -> None:
 
 
 def client_from_session(session: Optional[Session]) -> Optional[Client]:
-    if session:
-        if session.client:
-            return session.client
-        else:
-            debug(session.config.name, "in state", session.state)
-            return None
-    else:
-        debug('no session found')
-        return None
+    return session.client if session else None
 
 
 def sessions_for_view(view: sublime.View, point: Optional[int] = None) -> Iterable[Session]:
@@ -105,9 +97,10 @@ def _sessions_for_view_and_window(view: sublime.View, window: Optional[sublime.W
 
     manager = windows.lookup(window)
     scope_configs = manager._configs.scope_configs(view, point)
-    sessions = (manager.get_session(config.name, file_path) for config in scope_configs)
-    ready_sessions = (session for session in sessions if session and session.state == ClientStates.READY)
-    return ready_sessions
+    for config in scope_configs:
+        session = manager.get_session(config.name, file_path)
+        if session:
+            yield session
 
 
 def unload_sessions(window: sublime.Window) -> None:

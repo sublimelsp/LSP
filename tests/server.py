@@ -17,7 +17,7 @@ TODO: It should also understand TCP, both as slave and master.
 """
 from argparse import ArgumentParser
 from enum import IntEnum
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, Iterable
 import asyncio
 import json
 import os
@@ -205,6 +205,14 @@ class Session:
     def _on_notification(self, notification_method: str, handler: Callable) -> None:
         self._notification_handlers[notification_method] = handler
 
+    def _handle_notification_handler_exception(self, fut: asyncio.Future) -> None:
+        try:
+            ex = fut.exception()
+        except asyncio.CancelledError:
+            return
+        if ex and not self._received_shutdown:
+            self._notify("window/logMessage", {"type": MessageType.error, "message": str(ex)})
+
     async def _handle(self, typestr: str, message: 'Dict[str, Any]', handlers: Dict[str, Callable],
                       request_id: Optional[int]) -> None:
         method = message.get("method", "")
@@ -237,7 +245,8 @@ class Session:
                     ErrorCode.InternalError, str(ex)))
         else:
             # handle notification
-            asyncio.create_task(handler(params))
+            task = asyncio.create_task(handler(params))
+            task.add_done_callback(self._handle_notification_handler_exception)
 
     async def _handle_body(self, body: bytes) -> None:
         try:
@@ -312,11 +321,15 @@ class Session:
                         "expected initializationOptions to be a dictionary")
         return init_options.get("serverResponse", {})
 
-    async def _shutdown(self, _: PayloadLike) -> PayloadLike:
+    async def _shutdown(self, params: PayloadLike) -> PayloadLike:
+        if params is not None:
+            raise Error(ErrorCode.InvalidParams, "expected shutdown params to be null")
         self._received_shutdown = True
         return None
 
-    async def _on_exit(self, _: PayloadLike) -> None:
+    async def _on_exit(self, params: PayloadLike) -> None:
+        if params is not None:
+            raise Error(ErrorCode.InvalidParams, "expected exit params to be null")
         self._reader.set_exception(StopLoopException())
 
 
@@ -348,19 +361,35 @@ async def _unix_stdio(loop: asyncio.AbstractEventLoop) -> Tuple[asyncio.StreamRe
 def _win32_stdio(loop: asyncio.AbstractEventLoop) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
 
     # no support for asyncio stdio yet on Windows, see https://bugs.python.org/issue26832
-    # use an executor to read from stdio and write to stdout
+    # use an executor to read from stdin and write to stdout
     # note: if nothing ever drains the writer explicitly, no flushing ever takes place!
-    class Win32StdinReader:
+    class Reader:
 
         def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
             self.loop = loop
             self.stdin = sys.stdin.buffer
+            self.__exception: Optional[Exception] = None
 
-        async def readline(self) -> None:
+        def at_eof(self) -> bool:
+            return self.__exception is not None
+
+        def set_exception(self, exception: Exception) -> None:
+            self.__exception = exception
+
+        def __check(self) -> None:
+            if self.__exception is not None:
+                raise self.__exception
+
+        async def readline(self) -> bytes:
+            self.__check()
             # a single call to sys.stdin.readline() is thread-safe
             return await self.loop.run_in_executor(None, self.stdin.readline)
 
-    class Win32StdoutWriter:
+        async def readexactly(self, n: int) -> bytes:
+            self.__check()
+            return await self.loop.run_in_executor(None, self.stdin.read, n)
+
+    class Writer:
 
         def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
             self.loop = loop
@@ -370,12 +399,19 @@ def _win32_stdio(loop: asyncio.AbstractEventLoop) -> Tuple[asyncio.StreamReader,
         def write(self, data: bytes) -> None:
             self.buffer.append(data)
 
+        def writelines(self, lines: Iterable[bytes]) -> None:
+            self.buffer.extend(lines)
+
         async def drain(self) -> None:
             data, self.buffer = self.buffer, []
-            # a single call to sys.stdout.writelines() is thread-safe
-            return await self.loop.run_in_executor(None, sys.stdout.writelines, data)
 
-    return Win32StdinReader(loop), Win32StdoutWriter(loop)  # type: ignore
+            def do_blocking_drain() -> None:
+                self.stdout.write(b''.join(data))
+                self.stdout.flush()
+
+            await self.loop.run_in_executor(None, do_blocking_drain)
+
+    return Reader(loop), Writer(loop)  # type: ignore
 # END: https://stackoverflow.com/a/52702646/990142
 
 
@@ -393,7 +429,11 @@ if __name__ == '__main__':
         print(__package__, __version__)
         exit(0)
     loop = asyncio.get_event_loop()
-    shutdown_received = loop.run_until_complete(main())
+    shutdown_received = False
+    try:
+        shutdown_received = loop.run_until_complete(main())
+    except KeyboardInterrupt:
+        pass
     loop.run_until_complete(loop.shutdown_asyncgens())
     loop.close()
     exit(0 if shutdown_received else 1)

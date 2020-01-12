@@ -10,7 +10,7 @@ import os
 import threading
 
 
-ACQUIRE_READY_LOCK_TIMEOUT = 5
+ACQUIRE_READY_LOCK_TIMEOUT = 3
 
 
 def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: ClientConfig) -> dict:
@@ -143,8 +143,7 @@ class Session(object):
         if not acquired:
             raise InitializeError(self.config.name)
         yield
-        if acquired:
-            self.ready_lock.release()
+        self.ready_lock.release()
 
     def handles_path(self, file_path: Optional[str]) -> bool:
         if not file_path:

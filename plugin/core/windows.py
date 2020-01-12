@@ -4,7 +4,7 @@ from .logging import debug
 from .types import ClientConfig, WindowLike, ViewLike, LanguageConfig, ConfigRegistry, GlobalConfigs, Settings
 from .edit import parse_workspace_edit
 from .protocol import Notification, Response
-from .sessions import Session
+from .sessions import Session, InitializeError
 from .url import filename_to_uri
 from .workspace import (
     enable_in_project, disable_in_project, ProjectFolders, sorted_workspace_folders, get_workspace_folders
@@ -379,19 +379,20 @@ class WindowManager(object):
         self.end_sessions()
 
     def get_session(self, config_name: str, file_path: str) -> 'Optional[Session]':
-        return self._find_session(config_name, file_path)
-
-    def _can_start_config(self, config_name: str, file_path: str) -> bool:
-        return not bool(self._find_session(config_name, file_path))
+        try:
+            return self._find_session(config_name, file_path)
+        except InitializeError as ex:
+            self._disable_temporarily(ex.name, ex)
+        return None
 
     def _find_session(self, config_name: str, file_path: str) -> 'Optional[Session]':
         if file_path in self._workspace:
-            if config_name in self._sessions:
-                for session in self._sessions[config_name]:
-                    if session.handles_path(file_path):
-                        return session
+            sessions = self._sessions.get(config_name, [])
+            for session in sessions:
+                if session.handles_path(file_path):
+                    return session
         else:
-            sessions = self._sessions.get(config_name, None)
+            sessions = self._sessions.get(config_name, [])
             if not sessions:
                 return None
             return sessions[0]
@@ -472,17 +473,28 @@ class WindowManager(object):
                     debug("window {} requests {} for {}".format(self._window.id(), config.name, file_path))
                     self._start_client(config, file_path)
 
-    def _start_client(self, config: ClientConfig, file_path: str) -> None:
+    def _disable_temporarily(self, name: str, e: Exception) -> None:
+        message = "\n\n".join([
+            "Could not start {}",
+            "{}",
+            "Server will be disabled for this window"
+        ]).format(name, str(e))
+        sessions = self._sessions.pop(name, [])
+        self._configs.disable_temporarily(name)
+        self._sublime.message_dialog(message)
+        for session in sessions:
+            session.end()
 
-        if not self._can_start_config(config.name, file_path):
-            debug('Already starting on this window:', config.name)
+    def _start_client(self, config: ClientConfig, file_path: str) -> None:
+        session = self.get_session(config.name, file_path)
+        if session is not None:
+            debug(config.name, "was already started")
             return
 
         if not self._handlers.on_start(config.name, self._window):
             return
 
         self._window.status_message("Starting " + config.name + "...")
-        session = None  # type: Optional[Session]
         workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
         try:
             session = self._start_session(
@@ -494,14 +506,7 @@ class WindowManager(object):
                 self._handle_post_exit,        # on_post_exit
                 lambda msg: self._handle_stderr_log(config.name, msg))  # on_stderr_log
         except Exception as e:
-            message = "\n\n".join([
-                "Could not start {}",
-                "{}",
-                "Server will be disabled for this window"
-            ]).format(config.name, str(e))
-
-            self._configs.disable_temporarily(config.name)
-            self._sublime.message_dialog(message)
+            self._disable_temporarily(config.name, e)
 
         if session:
             debug("window {} added session {}".format(self._window.id(), config.name))
@@ -532,7 +537,7 @@ class WindowManager(object):
             self.end_config_sessions(config_name)
 
     def end_config_sessions(self, config_name: str) -> None:
-        config_sessions = self._sessions[config_name] or []
+        config_sessions = self._sessions.pop(config_name, [])
         for session in config_sessions:
             debug("unloading session", config_name)
             session.end()
@@ -650,7 +655,6 @@ class WindowManager(object):
 
     def _handle_post_exit(self, config_name: str) -> None:
         self.documents.remove_session(config_name)
-        del self._sessions[config_name]
         for view in self._window.views():
             file_name = view.file_name()
             if file_name:

@@ -1,6 +1,8 @@
 import unittest
 from LSP.plugin.core.edit import sort_by_application_order, parse_workspace_edit, parse_text_edit
+from LSP.plugin.core.url import filename_to_uri
 from test_protocol import LSP_RANGE
+import sublime
 
 TYPE_CHECKING = False
 if TYPE_CHECKING:
@@ -8,16 +10,13 @@ if TYPE_CHECKING:
     assert List and Dict and Optional and Any and Iterable
 
 LSP_TEXT_EDIT = dict(newText='newText', range=LSP_RANGE)
-
-LSP_EDIT_CHANGES = {
-    'changes': {
-        'file:///file.py': [LSP_TEXT_EDIT]
-    }
-}
+FILENAME = 'C:\\file.py' if sublime.platform() == "windows" else '/file.py'
+URI = filename_to_uri(FILENAME)
+LSP_EDIT_CHANGES = {'changes': {URI: [LSP_TEXT_EDIT]}}
 
 LSP_EDIT_DOCUMENT_CHANGES = {
     'documentChanges': [{
-        'textDocument': {'uri': 'file:///file.py'},
+        'textDocument': {'uri': URI},
         'edits': [LSP_TEXT_EDIT]
     }]
 }
@@ -42,13 +41,15 @@ class WorkspaceEditTests(unittest.TestCase):
 
     def test_parse_changes_from_lsp(self):
         edit = parse_workspace_edit(LSP_EDIT_CHANGES)
+        self.assertIn(FILENAME, edit)
         self.assertEqual(len(edit), 1)
-        self.assertEqual(len(edit['/file.py']), 1)
+        self.assertEqual(len(edit[FILENAME]), 1)
 
     def test_parse_document_changes_from_lsp(self):
         edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES)
+        self.assertIn(FILENAME, edit)
         self.assertEqual(len(edit), 1)
-        self.assertEqual(len(edit['/file.py']), 1)
+        self.assertEqual(len(edit[FILENAME]), 1)
 
 
 class SortByApplicationOrderTests(unittest.TestCase):

@@ -23,7 +23,7 @@ compleiton_kinds = {
     14: (sublime.KIND_ID_KEYWORD, "κ", "Keyword"),
     15: (sublime.KIND_ID_SNIPPET, "s", "Snippet"),
     16: (sublime.KIND_ID_AMBIGUOUS, "c", "Color"),
-    17: (sublime.KIND_ID_AMBIGUOUS, "ƒ", "File"),
+    17: (sublime.KIND_ID_AMBIGUOUS, "Ξ", "File"),
     18: (sublime.KIND_ID_AMBIGUOUS, "⇢", "Reference"),
     19: (sublime.KIND_ID_AMBIGUOUS, "ƒ", "Folder"),
     20: (sublime.KIND_ID_TYPE, "ε", "EnumMember"),
@@ -33,7 +33,6 @@ compleiton_kinds = {
     24: (sublime.KIND_ID_KEYWORD, "ο", "Operator"),
     25: (sublime.KIND_ID_TYPE, "τ", "Type Parameter")
 }
-
 
 def format_completion(item: dict, word_col: int, settings: 'Settings' = None) -> 'Tuple[str, str]':
     trigger = item.get('label')
@@ -60,24 +59,6 @@ def format_completion(item: dict, word_col: int, settings: 'Settings' = None) ->
         annotation=annotation,
         kind=kind
     )
-
-
-def text_edit_text(item: dict, word_col: int) -> Optional[str]:
-    text_edit = item.get('textEdit')
-    if text_edit:
-        edit_range, edit_text = text_edit.get("range"), text_edit.get("newText")
-        if edit_range and edit_text:
-            edit_range = Range.from_lsp(edit_range)
-
-            # debug('textEdit from col {}, {} applied at col {}'.format(
-            #     edit_range.start.col, edit_range.end.col, word_col))
-
-            if edit_range.start.col <= word_col:
-                # if edit starts at current word, we can use it.
-                # if edit starts before current word, use the whole thing and we'll fix it up later.
-                return edit_text
-
-    return None
 
 
 def parse_completion_response(response: Optional[Union[Dict, List]]) -> Tuple[List[Dict], bool]:

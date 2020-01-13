@@ -5,6 +5,8 @@ from LSP.plugin.core.diagnostics import (
     DiagnosticsStorage, DiagnosticsWalker, DiagnosticsCursor, CURSOR_FORWARD, CURSOR_BACKWARD)
 from LSP.plugin.core.protocol import Diagnostic, Point, Range, DiagnosticSeverity
 from test_protocol import LSP_MINIMAL_DIAGNOSTIC
+import sublime
+
 
 TYPE_CHECKING = False
 if TYPE_CHECKING:
@@ -12,7 +14,7 @@ if TYPE_CHECKING:
     assert List and Dict
 
 
-test_file_path = "/test.py"
+test_file_path = "test.py" if sublime.platform() == "windows" else "/test.py"
 test_file_uri = "file:///test.py"
 second_file_path = "/test2.py"
 second_file_uri = "file:///test2.py"
@@ -61,7 +63,8 @@ class DiagnosticsStorageTest(unittest.TestCase):
         self.assertEqual(len(view_diags["test_server"]), 1)
         self.assertEqual(view_diags["test_server"][0].message, LSP_MINIMAL_DIAGNOSTIC['message'])
         self.assertIn(test_file_path, wd.get())
-        ui.update.assert_called_with(test_file_path, "test_server", {'/test.py': {'test_server': [minimal_diagnostic]}})
+        ui.update.assert_called_with(
+            test_file_path, "test_server", {test_file_path: {'test_server': [minimal_diagnostic]}})
 
         wd.receive("test_server", make_update([]))
         view_diags = wd.get_by_file(test_file_path)

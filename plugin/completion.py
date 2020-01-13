@@ -92,7 +92,6 @@ class CompletionHandler(LSPViewEventListener):
         self.initialized = False
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
-
         self.completion_list = sublime.CompletionList()
         self.last_prefix = ""
         self.last_location = -1
@@ -122,6 +121,7 @@ class CompletionHandler(LSPViewEventListener):
                 'triggerCharacters') or []
             if self.trigger_chars:
                 self.register_trigger_chars(session)
+            self.auto_complete_selector = self.view.settings().get("auto_complete_selector", "") or ""
 
     def _view_language(self, config_name: str) -> 'Optional[str]':
         languages = self.view.settings().get('lsp_language')

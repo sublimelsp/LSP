@@ -1,12 +1,6 @@
 import html
 from .logging import debug
-try:
-    from typing_extensions import Protocol
-    from typing import Tuple, Optional, Dict, List, Union, Any
-    assert Tuple and Optional and Dict and List and Union and Any
-except ImportError:
-    pass
-    Protocol = object  # type: ignore
+from .typing import Tuple, Optional, Dict, List, Any, Protocol
 
 
 class ScopeRenderer(Protocol):
@@ -24,7 +18,7 @@ class ScopeRenderer(Protocol):
         ...
 
 
-def get_documentation(d: 'Dict[str, Any]') -> 'Optional[str]':
+def get_documentation(d: Dict[str, Any]) -> Optional[str]:
     docs = d.get('documentation', None)
     if docs is None:
         return None
@@ -40,7 +34,26 @@ def get_documentation(d: 'Dict[str, Any]') -> 'Optional[str]':
         return None
 
 
-def parse_signature_label(signature_label: str, parameters: 'List[ParameterInformation]') -> 'Tuple[int, int]':
+class ParameterInformation(object):
+
+    def __init__(self, label: Optional[str], label_range: Optional[Tuple[int, int]],
+                 documentation: Optional[str]) -> None:
+        self.label = label
+        self.range = label_range
+        self.documentation = documentation
+
+
+class SignatureInformation(object):
+
+    def __init__(self, label: str, documentation: Optional[str], paren_bounds: Tuple[int, int],
+                 parameters: List[ParameterInformation] = []) -> None:
+        self.label = label
+        self.documentation = documentation
+        self.parameters = parameters
+        [self.open_paren_index, self.close_paren_index] = paren_bounds
+
+
+def parse_signature_label(signature_label: str, parameters: List[ParameterInformation]) -> Tuple[int, int]:
     current_index = -1
 
     # assumption - if there are parens, the first paren starts arguments
@@ -80,7 +93,7 @@ def parse_signature_label(signature_label: str, parameters: 'List[ParameterInfor
     return open_paren_index, close_paren_index
 
 
-def parse_parameter_information(parameter: 'Dict') -> 'ParameterInformation':
+def parse_parameter_information(parameter: dict) -> ParameterInformation:
     label_or_range = parameter['label']
     label_range = None
     label = None
@@ -91,7 +104,7 @@ def parse_parameter_information(parameter: 'Dict') -> 'ParameterInformation':
     return ParameterInformation(label, label_range, get_documentation(parameter))
 
 
-def parse_signature_information(signature: 'Dict') -> 'SignatureInformation':
+def parse_signature_information(signature: dict) -> SignatureInformation:
     signature_label = signature['label']
     param_infos = []  # type: 'List[ParameterInformation]'
     parameters = signature.get('parameters')
@@ -103,26 +116,63 @@ def parse_signature_information(signature: 'Dict') -> 'SignatureInformation':
     return SignatureInformation(signature_label, get_documentation(signature), paren_bounds, param_infos)
 
 
-class ParameterInformation(object):
+class SignatureHelp(object):
 
-    def __init__(self, label: 'Optional[str]', label_range: 'Optional[Tuple[int, int]]',
-                 documentation: 'Optional[str]') -> None:
-        self.label = label
-        self.range = label_range
-        self.documentation = documentation
+    def __init__(self, signatures: List[SignatureInformation],
+                 active_signature: int = 0, active_parameter: int = 0) -> None:
+        self._signatures = signatures
+        self._active_signature_index = active_signature
+        self._active_parameter_index = active_parameter
+
+    def build_popup_content(self, renderer: ScopeRenderer) -> str:
+        parameter_documentation = None  # type: Optional[str]
+
+        formatted = []
+
+        if len(self._signatures) > 1:
+            formatted.append(self._build_overload_selector())
+
+        signature = self._signatures[self._active_signature_index]  # type: SignatureInformation
+
+        # Write the active signature and give special treatment to the active parameter (if found).
+        # Note that this <div> class and the extra <pre> are copied from mdpopups' HTML output. When mdpopups changes
+        # its output style, we must update this literal string accordingly.
+        formatted.append('<div class="highlight"><pre>')
+        formatted.append(render_signature_label(renderer, signature, self._active_parameter_index))
+        formatted.append("</pre></div>")
+
+        if signature.documentation:
+            formatted.append("<p>{}</p>".format(renderer.markdown(signature.documentation)))
+
+        if signature.parameters and self._active_parameter_index in range(0, len(signature.parameters)):
+            parameter = signature.parameters[self._active_parameter_index]
+            parameter_label = html.escape(parameter.label, quote=False) if parameter.label else ""
+            parameter_documentation = parameter.documentation
+            if parameter_documentation:
+                formatted.append("<p><b>{}</b>: {}</p>".format(
+                    parameter_label,
+                    renderer.markdown(parameter_documentation)))
+
+        return "\n".join(formatted)
+
+    def has_multiple_signatures(self) -> bool:
+        return len(self._signatures) > 1
+
+    def select_signature(self, direction: int) -> None:
+        new_index = self._active_signature_index + direction
+
+        # clamp signature index
+        self._active_signature_index = max(0, min(new_index, len(self._signatures) - 1))
+
+    def active_signature(self) -> SignatureInformation:
+        return self._signatures[self._active_signature_index]
+
+    def _build_overload_selector(self) -> str:
+        return "**{}** of **{}** overloads (use the ↑ ↓ keys to navigate):\n".format(
+            str(self._active_signature_index + 1), str(len(self._signatures)))
 
 
-class SignatureInformation(object):
-
-    def __init__(self, label: str, documentation: 'Optional[str]', paren_bounds: 'Tuple[int, int]',
-                 parameters: 'List[ParameterInformation]' = []) -> None:
-        self.label = label
-        self.documentation = documentation
-        self.parameters = parameters
-        [self.open_paren_index, self.close_paren_index] = paren_bounds
-
-
-def create_signature_help(response: 'Optional[Dict]') -> 'Optional[SignatureHelp]':
+def create_signature_help(response: Optional[dict]) -> Optional[SignatureHelp]:
     if response is None:
         return None
 
@@ -141,7 +191,7 @@ def create_signature_help(response: 'Optional[Dict]') -> 'Optional[SignatureHelp
         return None
 
 
-def find_params_to_split_at(label: str) -> 'List[int]':
+def find_params_to_split_at(label: str) -> List[int]:
     max_length = 80
     params_to_newline_before = []  # type: List[int]
     if len(label) > max_length and '\n' not in label:
@@ -199,59 +249,3 @@ def render_signature_label(renderer: ScopeRenderer, sig_info: SignatureInformati
         return renderer.function(label, escape=False)
     else:
         return renderer.function(sig_info.label)
-
-
-class SignatureHelp(object):
-
-    def __init__(self, signatures: 'List[SignatureInformation]',
-                 active_signature: int = 0, active_parameter: int = 0) -> None:
-        self._signatures = signatures
-        self._active_signature_index = active_signature
-        self._active_parameter_index = active_parameter
-
-    def build_popup_content(self, renderer: ScopeRenderer) -> str:
-        parameter_documentation = None  # type: Optional[str]
-
-        formatted = []
-
-        if len(self._signatures) > 1:
-            formatted.append(self._build_overload_selector())
-
-        signature = self._signatures[self._active_signature_index]  # type: SignatureInformation
-
-        # Write the active signature and give special treatment to the active parameter (if found).
-        # Note that this <div> class and the extra <pre> are copied from mdpopups' HTML output. When mdpopups changes
-        # its output style, we must update this literal string accordingly.
-        formatted.append('<div class="highlight"><pre>')
-        formatted.append(render_signature_label(renderer, signature, self._active_parameter_index))
-        formatted.append("</pre></div>")
-
-        if signature.documentation:
-            formatted.append("<p>{}</p>".format(renderer.markdown(signature.documentation)))
-
-        if signature.parameters and self._active_parameter_index in range(0, len(signature.parameters)):
-            parameter = signature.parameters[self._active_parameter_index]
-            parameter_label = html.escape(parameter.label, quote=False) if parameter.label else ""
-            parameter_documentation = parameter.documentation
-            if parameter_documentation:
-                formatted.append("<p><b>{}</b>: {}</p>".format(
-                    parameter_label,
-                    renderer.markdown(parameter_documentation)))
-
-        return "\n".join(formatted)
-
-    def has_multiple_signatures(self) -> bool:
-        return len(self._signatures) > 1
-
-    def select_signature(self, direction: int) -> None:
-        new_index = self._active_signature_index + direction
-
-        # clamp signature index
-        self._active_signature_index = max(0, min(new_index, len(self._signatures) - 1))
-
-    def active_signature(self) -> 'SignatureInformation':
-        return self._signatures[self._active_signature_index]
-
-    def _build_overload_selector(self) -> str:
-        return "**{}** of **{}** overloads (use the ↑ ↓ keys to navigate):\n".format(
-            str(self._active_signature_index + 1), str(len(self._signatures)))

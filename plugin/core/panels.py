@@ -1,12 +1,7 @@
+from .typing import Optional, List, Generator
 from contextlib import contextmanager
 import sublime
 import sublime_plugin
-
-try:
-    from typing import Optional, Any, List, Generator
-    assert Optional and Any and List and Generator
-except ImportError:
-    pass
 
 
 # about 80 chars per line implies maintaining a buffer of about 40kb per window
@@ -39,13 +34,13 @@ class PanelName:
 
 
 @contextmanager
-def mutable(view: sublime.View) -> 'Generator':
+def mutable(view: sublime.View) -> Generator:
     view.set_read_only(False)
     yield
     view.set_read_only(True)
 
 
-def create_output_panel(window: sublime.Window, name: str) -> 'Optional[sublime.View]':
+def create_output_panel(window: sublime.Window, name: str) -> Optional[sublime.View]:
     panel = window.create_output_panel(name)
     settings = panel.settings()
     for key, value in OUTPUT_PANEL_SETTINGS.items():
@@ -63,7 +58,7 @@ def destroy_output_panels(window: sublime.Window) -> None:
 
 
 def create_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
-                 syntax: str) -> 'Optional[sublime.View]':
+                 syntax: str) -> Optional[sublime.View]:
     panel = create_output_panel(window, name)
     if not panel:
         return None
@@ -80,7 +75,7 @@ def create_panel(window: sublime.Window, name: str, result_file_regex: str, resu
 
 
 def ensure_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
-                 syntax: str) -> 'Optional[sublime.View]':
+                 syntax: str) -> Optional[sublime.View]:
     return window.find_output_panel(name) or create_panel(window, name, result_file_regex, result_line_regex, syntax)
 
 
@@ -99,7 +94,7 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
     A update_panel command to update the error panel with new text.
     """
 
-    def run(self, edit: sublime.Edit, characters: 'Optional[str]' = "") -> None:
+    def run(self, edit: sublime.Edit, characters: Optional[str] = "") -> None:
         # Clear folds
         self.view.unfold(sublime.Region(0, self.view.size()))
 

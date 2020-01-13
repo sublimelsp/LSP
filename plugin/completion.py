@@ -25,9 +25,9 @@ last_text_command = None
 class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
     def run(self, edit: 'Any', item) -> None:
 
-        textEdit = item.get('textEdit')
-        if textEdit:
-            range = Range.from_lsp(textEdit['range'])
+        text_edit = item.get('textEdit')
+        if text_edit:
+            range = Range.from_lsp(text_edit['range'])
             region = range_to_region(range, self.view)
             new_text = text_edit.get('newText')
             self.view.replace(edit, region, new_text)

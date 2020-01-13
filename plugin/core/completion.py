@@ -1,6 +1,6 @@
 import sublime
 import sublime_plugin
-from .protocol import CompletionItemKind, InsertTextFormat, Range
+from .protocol import CompletionItemKind, Range
 from .types import Settings
 from .logging import debug
 try:
@@ -58,12 +58,6 @@ def format_completion(item: dict, word_col: int, settings: 'Settings' = None) ->
         list_kind[2] = "⚠ {} - Deprecated".format(list_kind[2])
         kind = tuple(list_kind)
 
-    completion = item.get('insertText') or item.get('label')
-
-    insert_text_format = item.get("insertTextFormat")
-    if insert_text_format == InsertTextFormat.Snippet:
-        return sublime.CompletionItem.snippet_completion(trigger, completion, annotation, kind)
-
     return sublime.CompletionItem.command_completion(
         trigger,
         command="lsp_select_completion_item",
@@ -73,8 +67,6 @@ def format_completion(item: dict, word_col: int, settings: 'Settings' = None) ->
         annotation=annotation,
         kind=kind
     )
-
-    return sublime.CompletionItem(trigger, annotation, completion, kind=kind)
 
 
 def text_edit_text(item: dict, word_col: int) -> 'Optional[str]':

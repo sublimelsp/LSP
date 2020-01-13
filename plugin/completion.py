@@ -7,7 +7,7 @@ try:
 except ImportError:
     pass
 
-from .core.protocol import Request, Range
+from .core.protocol import Request, Range, InsertTextFormat
 from .core.settings import settings, client_configs
 from .core.logging import debug
 from .core.completion import parse_completion_response, format_completion
@@ -24,17 +24,24 @@ last_text_command = None
 
 class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
     def run(self, edit: 'Any', item) -> None:
+        insert_text_format = item.get("insertTextFormat")
 
         text_edit = item.get('textEdit')
         if text_edit:
             range = Range.from_lsp(text_edit['range'])
             region = range_to_region(range, self.view)
             new_text = text_edit.get('newText')
-            self.view.replace(edit, region, new_text)
+            if insert_text_format == InsertTextFormat.Snippet:
+                self.view.run_command("insert_snippet", { "contents": new_text })
+            else:
+                self.view.replace(edit, region, new_text)
         else:
             completion = item.get('insertText') or item.get('label')
             current_point = self.view.sel()[0].begin()
-            self.view.insert(edit, current_point, completion)
+            if insert_text_format == InsertTextFormat.Snippet:
+                self.view.run_command("insert_snippet", { "contents": completion })
+            else:
+                self.view.insert(edit, current_point, completion)
 
         # import statements, etc. some servers only return these after a resolve.
         additional_edits = item.get('additionalTextEdits')

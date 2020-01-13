@@ -55,6 +55,7 @@ CLASS_LINE_END = ...  # type: int
 CLASS_EMPTY_LINE = ...  # type: int
 INHIBIT_WORD_COMPLETIONS = ...  # type: int
 INHIBIT_EXPLICIT_COMPLETIONS = ...  # type: int
+DYNAMIC_COMPLETIONS = ...  # type: int
 DIALOG_CANCEL = ...  # type: int
 DIALOG_YES = ...  # type: int
 DIALOG_NO = ...  # type: int
@@ -236,6 +237,15 @@ def windows() -> 'Sequence[Window]':
 
 def get_macro() -> Sequence[dict]:
     ...
+
+
+class CompletionItem:
+    ...
+
+
+class CompletionList:
+    def set_completions(self, completions: List[CompletionItem], flags: int = 0) -> None:
+        ...
 
 
 class Window:

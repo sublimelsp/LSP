@@ -1,4 +1,6 @@
-from .protocol import CompletionItemKind, Range
+import sublime
+import sublime_plugin
+from .protocol import CompletionItemKind, InsertTextFormat, Range
 from .types import Settings
 from .logging import debug
 try:
@@ -11,52 +13,68 @@ except ImportError:
 completion_item_kind_names = {v: k for k, v in CompletionItemKind.__dict__.items()}
 
 
-def get_completion_hint(item: dict, settings: 'Settings') -> 'Optional[str]':
-    # choose hint based on availability and user preference
-    hint = None
-    if settings.completion_hint_type == "auto":
-        hint = item.get("detail")
-        if not hint:
-            kind = item.get("kind")
-            if kind:
-                hint = completion_item_kind_names[kind]
-    elif settings.completion_hint_type == "detail":
-        hint = item.get("detail")
-    elif settings.completion_hint_type == "kind":
-        kind = item.get("kind")
-        if kind:
-            hint = completion_item_kind_names.get(kind)
-    return hint
+compleiton_kinds = {
+    1: (sublime.KIND_ID_MARKUP, "Ξ", "Text"),
+    2: (sublime.KIND_ID_FUNCTION, "λ", "Method"),
+    3: (sublime.KIND_ID_FUNCTION, "λ", "Function"),
+    4: (sublime.KIND_ID_FUNCTION, "c", "Constructor"),
+    5: (sublime.KIND_ID_VARIABLE, "f", "Field"),
+    6: (sublime.KIND_ID_VARIABLE, "v", "Variable"),
+    7: (sublime.KIND_ID_TYPE, "⊂", "Class"),
+    8: (sublime.KIND_ID_TYPE, "i", "Interface"),
+    9: (sublime.KIND_ID_NAMESPACE, "❒", "Module"),
+    10: (sublime.KIND_ID_VARIABLE, "ρ", "Property"),
+    11: (sublime.KIND_ID_VARIABLE, "u", "Unit"),
+    12: (sublime.KIND_ID_VARIABLE, "ν", "Value"),
+    13: (sublime.KIND_ID_TYPE, "ε", "Enum"),
+    14: (sublime.KIND_ID_KEYWORD, "ㆁ", "Keyword"),
+    15: (sublime.KIND_ID_SNIPPET, "s", "Snippet"),
+    16: (sublime.KIND_ID_AMBIGUOUS, "c", "Color"),
+    17: (sublime.KIND_ID_AMBIGUOUS, "ʃ", "File"),
+    18: (sublime.KIND_ID_AMBIGUOUS, "⇢", "Reference"),
+    19: (sublime.KIND_ID_AMBIGUOUS, "ʃ", "Folder"),
+    20: (sublime.KIND_ID_TYPE, "ε", "EnumMember"),
+    21: (sublime.KIND_ID_VARIABLE, "π", "Constant"),
+    22: (sublime.KIND_ID_TYPE, "s", "Struct"),
+    23: (sublime.KIND_ID_FUNCTION, "e", "Event"),
+    24: (sublime.KIND_ID_KEYWORD, "ο", "Operator"),
+    25: (sublime.KIND_ID_TYPE, "τ", "Type Parameter")
+}
 
 
-def format_completion(item: dict, word_col: int, settings: 'Settings') -> 'Tuple[str, str]':
-    # Sublime handles snippets automatically, so we don't have to care about insertTextFormat.
-    trigger = item["label"]
+def format_completion(item: dict, word_col: int, settings: 'Settings' = None) -> 'Tuple[str, str]':
+    trigger = item.get('label')
+    annotation = item.get('detail', "")
+    kind = sublime.KIND_AMBIGUOUS
 
-    hint = get_completion_hint(item, settings)
+    item_kind = item.get("kind")
+    if item_kind:
+        kind = compleiton_kinds.get(item_kind)
 
-    # label is an alternative for insertText if neither textEdit nor insertText is provided
-    replacement = text_edit_text(item, word_col) or item.get("insertText") or trigger
+    is_deprecated = item.get("deprecated", False)
+    if is_deprecated:
+        list_kind = list(kind)
+        list_kind[1] = '⚠'
+        list_kind[2] = "⚠ {} - Deprecated".format(list_kind[2])
+        kind = tuple(list_kind)
 
-    if replacement[0] != trigger[0]:
-        # fix some common cases when server sends different start on label and replacement.
-        if replacement[0] == '$':
-            trigger = '$' + trigger  # add missing $
-        elif replacement[0] == '-':
-            trigger = '-' + trigger  # add missing -
-        elif trigger[0] == ':':
-            replacement = ':' + replacement  # add missing :
-        elif trigger[0] == '$':
-            trigger = trigger[1:]  # remove leading $
-        elif trigger[0] == ' ' or trigger[0] == '•':
-            trigger = trigger[1:]  # remove clangd insertion indicator
-        else:
-            debug("WARNING: Replacement prefix does not match trigger '{}'".format(trigger))
+    completion = item.get('insertText') or item.get('label')
 
-    if len(replacement) > 0 and replacement[0] == '$':  # sublime needs leading '$' escaped.
-        replacement = '\\$' + replacement[1:]
-    # only return trigger with a hint if available
-    return "\t  ".join((trigger, hint)) if hint else trigger, replacement
+    insert_text_format = item.get("insertTextFormat")
+    if insert_text_format == InsertTextFormat.Snippet:
+        return sublime.CompletionItem.snippet_completion(trigger, completion, annotation, kind)
+
+    return sublime.CompletionItem.command_completion(
+        trigger,
+        command="lsp_select_completion_item",
+        args={
+            "item": item
+        },
+        annotation=annotation,
+        kind=kind
+    )
+
+    return sublime.CompletionItem(trigger, annotation, completion, kind=kind)
 
 
 def text_edit_text(item: dict, word_col: int) -> 'Optional[str]':

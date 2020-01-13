@@ -1,5 +1,4 @@
 from LSP.plugin.completion import CompletionHandler
-from LSP.plugin.completion import CompletionState
 from LSP.plugin.core.registry import is_supported_view
 from setup import CI, SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove_config, text_config
 from unittesting import DeferrableTestCase
@@ -176,7 +175,6 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
             # now wait for server response
             yield from self.await_message('textDocument/completion')
-            self.assertEquals(handler.state, CompletionState.IDLE)
             self.assertEquals(len(handler.completions), 2)
 
             # verify insertion works

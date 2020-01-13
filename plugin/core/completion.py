@@ -6,9 +6,6 @@ from .logging import debug
 from .typing import Tuple, Optional, Dict, List, Union
 
 
-completion_item_kind_names = {v: k for k, v in CompletionItemKind.__dict__.items()}
-
-
 compleiton_kinds = {
     1: (sublime.KIND_ID_MARKUP, "Ξ", "Text"),
     2: (sublime.KIND_ID_FUNCTION, "λ", "Method"),
@@ -16,19 +13,19 @@ compleiton_kinds = {
     4: (sublime.KIND_ID_FUNCTION, "c", "Constructor"),
     5: (sublime.KIND_ID_VARIABLE, "f", "Field"),
     6: (sublime.KIND_ID_VARIABLE, "v", "Variable"),
-    7: (sublime.KIND_ID_TYPE, "⊂", "Class"),
+    7: (sublime.KIND_ID_TYPE, "c", "Class"),
     8: (sublime.KIND_ID_TYPE, "i", "Interface"),
-    9: (sublime.KIND_ID_NAMESPACE, "❒", "Module"),
+    9: (sublime.KIND_ID_NAMESPACE, "◪", "Module"),
     10: (sublime.KIND_ID_VARIABLE, "ρ", "Property"),
     11: (sublime.KIND_ID_VARIABLE, "u", "Unit"),
     12: (sublime.KIND_ID_VARIABLE, "ν", "Value"),
     13: (sublime.KIND_ID_TYPE, "ε", "Enum"),
-    14: (sublime.KIND_ID_KEYWORD, "ㆁ", "Keyword"),
+    14: (sublime.KIND_ID_KEYWORD, "κ", "Keyword"),
     15: (sublime.KIND_ID_SNIPPET, "s", "Snippet"),
     16: (sublime.KIND_ID_AMBIGUOUS, "c", "Color"),
-    17: (sublime.KIND_ID_AMBIGUOUS, "ʃ", "File"),
+    17: (sublime.KIND_ID_AMBIGUOUS, "ƒ", "File"),
     18: (sublime.KIND_ID_AMBIGUOUS, "⇢", "Reference"),
-    19: (sublime.KIND_ID_AMBIGUOUS, "ʃ", "Folder"),
+    19: (sublime.KIND_ID_AMBIGUOUS, "ƒ", "Folder"),
     20: (sublime.KIND_ID_TYPE, "ε", "EnumMember"),
     21: (sublime.KIND_ID_VARIABLE, "π", "Constant"),
     22: (sublime.KIND_ID_TYPE, "s", "Struct"),

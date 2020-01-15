@@ -90,11 +90,11 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         }])
         self.view.run_command("save")
         yield from self.await_message("textDocument/formatting")
-        yield from self.await_message("textDocument/didSave")
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
         text = self.view.substr(sublime.Region(0, self.view.size()))
         self.assertEquals("BBB", text)
+        self.view.settings().set("lsp_format_on_save", False)
         yield from self.await_clear_view_and_save()
 
     def test_hover_info(self) -> 'Generator':
@@ -264,7 +264,6 @@ class WillSaveWaitUntilTestCase(TextDocumentTestCase):
         self.view.settings().set("lsp_format_on_save", False)
         self.view.run_command("save")
         yield from self.await_message("textDocument/willSaveWaitUntil")
-        yield from self.await_message("textDocument/didSave")
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
         text = self.view.substr(sublime.Region(0, self.view.size()))

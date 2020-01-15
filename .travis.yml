@@ -1,31 +1,25 @@
-branches:
-  only:
-    - master
-dist: trusty
+branches: {only: [master]}
+dist: bionic
 env:
     global:
         - PACKAGE="LSP" # Package name
         - SUBLIME_TEXT_VERSION="3"
 language: python
-python:
-    - "3.5"  # sublime text 3 has 3.3
+services: [xvfb]
+python: ["3.7"]  # sublime text 3 has 3.3
 before_install:
+    - python3 tests/server.py --version  # sanity check
     - pip install "mypy==0.750"
     - pip install "flake8==3.7.9"
     - pip install "yapf==0.29.0"
     - pip install python-coveralls
     - curl -OL https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/travis.sh
-    # enable gui, see https://docs.travis-ci.com/user/gui-and-headless-browsers
-    - if [ "$TRAVIS_OS_NAME" == "linux"  ]; then
-            export DISPLAY=:99.0;
-            sh -e /etc/init.d/xvfb start;
-      fi
 install:
     - sh travis.sh bootstrap
     - sh travis.sh install_package_control
 script:
     - mypy -p plugin
-    - flake8 plugin tests
+    - flake8 plugin tests --exclude tests/server.py
     - coverage run -m unittest discover
     - sh travis.sh run_tests
     - yapf --diff plugin/core/main.py

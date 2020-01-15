@@ -1,11 +1,11 @@
-from . import test_sublime as test_sublime
-from .logging import debug
-from .protocol import Notification
-from .protocol import Request
-from .types import ClientConfig
-from .types import LanguageConfig
-from .types import Settings
-from .types import ViewLike
+import test_sublime
+from LSP.plugin.core.logging import debug
+from LSP.plugin.core.protocol import Notification
+from LSP.plugin.core.protocol import Request
+from LSP.plugin.core.types import ClientConfig
+from LSP.plugin.core.types import LanguageConfig
+from LSP.plugin.core.types import Settings
+from LSP.plugin.core.types import ViewLike
 import os
 
 try:
@@ -282,7 +282,7 @@ class MockDocuments(object):
 
 
 class TestDocumentHandlerFactory(object):
-    def for_window(self, window, configs):
+    def for_window(self, window, workspace, configs):
         return MockDocuments()
 
 

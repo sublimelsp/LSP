@@ -1,17 +1,12 @@
 from .logging import debug, exception_log
+from .typing import Any, List, Dict, Callable, Optional, IO
 import os
 import shutil
 import subprocess
 import threading
 
-try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional, Union, IO
-    assert Any and List and Dict and Tuple and Callable and Optional and Union and IO
-except ImportError:
-    pass
 
-
-def add_extension_if_missing(server_binary_args: 'List[str]') -> 'List[str]':
+def add_extension_if_missing(server_binary_args: List[str]) -> List[str]:
     if len(server_binary_args) > 0:
         executable_arg = server_binary_args[0]
         fname, ext = os.path.splitext(executable_arg)
@@ -33,11 +28,11 @@ def add_extension_if_missing(server_binary_args: 'List[str]') -> 'List[str]':
 
 
 def start_server(
-    server_binary_args: 'List[str]',
-    working_dir: 'Optional[str]',
-    env: 'Dict[str,str]',
-    on_stderr_log: 'Optional[Callable[[str], None]]'
-) -> 'Optional[subprocess.Popen]':
+    server_binary_args: List[str],
+    working_dir: Optional[str],
+    env: Dict[str, str],
+    on_stderr_log: Optional[Callable[[str], None]]
+) -> Optional[subprocess.Popen]:
     si = None
     if os.name == "nt":
         server_binary_args = add_extension_if_missing(server_binary_args)
@@ -63,11 +58,11 @@ def start_server(
     return process
 
 
-def attach_logger(process: 'subprocess.Popen', stream: 'IO[Any]', log_callback: 'Callable[[str], None]') -> None:
+def attach_logger(process: subprocess.Popen, stream: IO[Any], log_callback: Callable[[str], None]) -> None:
     threading.Thread(target=log_stream, args=(process, stream, log_callback)).start()
 
 
-def log_stream(process: 'subprocess.Popen', stream: 'IO[Any]', log_callback: 'Callable[[str], None]') -> None:
+def log_stream(process: subprocess.Popen, stream: IO[Any], log_callback: Callable[[str], None]) -> None:
     """
     Read lines from a stream and invoke the log_callback on the result
     """

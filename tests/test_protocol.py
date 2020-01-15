@@ -1,4 +1,4 @@
-from .protocol import (
+from LSP.plugin.core.protocol import (
     Point, Range, Diagnostic, DiagnosticSeverity, Request, Notification
 )
 import unittest
@@ -72,6 +72,14 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(payload["method"], "initialize")
         self.assertEqual(payload["params"], {"param": 1})
 
+    def test_shutdown(self):
+        req = Request.shutdown()
+        payload = req.to_payload(1)
+        self.assertEqual(payload["jsonrpc"], "2.0")
+        self.assertEqual(payload["id"], 1)
+        self.assertEqual(payload["method"], "shutdown")
+        self.assertEqual(payload["params"], None)
+
 
 class NotificationTests(unittest.TestCase):
 
@@ -82,3 +90,11 @@ class NotificationTests(unittest.TestCase):
         self.assertNotIn("id", payload)
         self.assertEqual(payload["method"], "initialized")
         self.assertEqual(payload["params"], dict())
+
+    def test_exit(self):
+        notification = Notification.exit()
+        payload = notification.to_payload()
+        self.assertEqual(payload["jsonrpc"], "2.0")
+        self.assertNotIn("id", payload)
+        self.assertEqual(payload["method"], "exit")
+        self.assertEqual(payload["params"], None)

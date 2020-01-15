@@ -1,11 +1,11 @@
-from .logging import set_exception_logging
-from .protocol import Notification
-from .protocol import Request
-from .rpc import Client
-from .rpc import format_request
-from .test_mocks import MockSettings
-from .transports import Transport
-from .types import Settings
+from LSP.plugin.core.logging import set_exception_logging
+from LSP.plugin.core.protocol import Notification
+from LSP.plugin.core.protocol import Request
+from LSP.plugin.core.rpc import Client
+from LSP.plugin.core.rpc import format_request
+from LSP.plugin.core.transports import Transport
+from LSP.plugin.core.types import Settings
+from test_mocks import MockSettings
 import json
 import unittest
 try:

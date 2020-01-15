@@ -41,6 +41,10 @@ class Transport(object, metaclass=ABCMeta):
     def send(self, message: str) -> None:
         pass
 
+    @abstractmethod
+    def close(self) -> None:
+        pass
+
 
 STATE_HEADERS = 0
 STATE_CONTENT = 1
@@ -235,12 +239,12 @@ class StdioTransport(Transport):
                 debug("process became None")
                 state = STATE_EOF
                 break
-
         debug("process {} stdout ended {}".format(pid, "(still alive)" if self.process else "(terminated)"))
         if self.process:
             # We use the stdout thread to block and wait on the exiting process, or zombie processes may be the result.
             returncode = self.process.wait()
             debug("process {} exited with code {}".format(pid, returncode))
+        self.send_queue.put(None)
 
     def send(self, content: str) -> None:
         self.send_queue.put(build_message(content))
@@ -253,7 +257,10 @@ class StdioTransport(Transport):
             else:
                 try:
                     msgbytes = bytes(message, 'UTF-8')
-                    self.process.stdin.write(msgbytes)
+                    try:
+                        self.process.stdin.write(msgbytes)
+                    except AttributeError:
+                        return
                     self.process.stdin.flush()
                 except (BrokenPipeError, OSError) as err:
                     exception_log("Failure writing to stdout", err)

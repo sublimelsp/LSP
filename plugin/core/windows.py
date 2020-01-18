@@ -1,31 +1,30 @@
 from .configurations import config_supports_syntax
 from .diagnostics import DiagnosticsStorage
-from .logging import debug
-from .types import ClientConfig, WindowLike, ViewLike, LanguageConfig, ConfigRegistry, GlobalConfigs, Settings
 from .edit import parse_workspace_edit
+from .logging import debug
 from .protocol import Notification, Response
-from .sessions import Session, InitializeError
-from .url import filename_to_uri
-from .workspace import (
-    enable_in_project, disable_in_project, ProjectFolders, sorted_workspace_folders, get_workspace_folders
-)
-
 from .rpc import Client
+from .sessions import Session, InitializeError
+from .types import ClientConfig
+from .types import ConfigRegistry
+from .types import GlobalConfigs
+from .types import LanguageConfig
+from .types import Settings
+from .types import ViewLike
+from .types import WindowLike
+from .typing import Optional, List, Callable, Dict, Any, Protocol
+from .url import filename_to_uri
+from .workspace import get_workspace_folders
+from .workspace import disable_in_project
+from .workspace import enable_in_project
+from .workspace import ProjectFolders
+from .workspace import sorted_workspace_folders
 import threading
-
-try:
-    from typing_extensions import Protocol
-    from typing import Optional, List, Callable, Dict, Any, Iterator, Union
-    from types import ModuleType
-    assert Optional and List and Callable and Dict and Session and Any and ModuleType and Iterator and Union
-    assert LanguageConfig
-except ImportError:
-    Protocol = object  # type: ignore
 
 
 class SublimeLike(Protocol):
 
-    def set_timeout_async(self, f: 'Callable', timeout_ms: int = 0) -> None:
+    def set_timeout_async(self, f: Callable, timeout_ms: int = 0) -> None:
         ...
 
     def Region(self, a: int, b: int) -> 'Any':
@@ -70,7 +69,7 @@ class DocumentHandler(Protocol):
         ...
 
 
-def get_active_views(window: WindowLike) -> 'List[ViewLike]':
+def get_active_views(window: WindowLike) -> List[ViewLike]:
     views = list()  # type: List[ViewLike]
     num_groups = window.num_groups()
     for group in range(0, num_groups):
@@ -96,12 +95,12 @@ class DocumentState:
 
 
 class DocumentHandlerFactory(object):
-    def __init__(self, sublime: 'Any', settings: Settings) -> None:
+    def __init__(self, sublime: Any, settings: Settings) -> None:
         self._sublime = sublime
         self._settings = settings
 
-    def for_window(self, window: 'WindowLike', workspace: ProjectFolders,
-                   configs: 'ConfigRegistry') -> DocumentHandler:
+    def for_window(self, window: WindowLike, workspace: ProjectFolders,
+                   configs: ConfigRegistry) -> DocumentHandler:
         return WindowDocumentHandler(self._sublime, self._settings, window, workspace, configs)
 
 
@@ -110,7 +109,7 @@ def nop() -> None:
 
 
 class WindowDocumentHandler(object):
-    def __init__(self, sublime: 'Any', settings: Settings, window: WindowLike, workspace: ProjectFolders,
+    def __init__(self, sublime: Any, settings: Settings, window: WindowLike, workspace: ProjectFolders,
                  configs: ConfigRegistry) -> None:
         self._sublime = sublime
         self._settings = settings
@@ -144,7 +143,7 @@ class WindowDocumentHandler(object):
     def has_document_state(self, path: str) -> bool:
         return path in self._document_states
 
-    def _get_applicable_sessions(self, view: ViewLike, notification_type: 'Optional[str]' = None) -> 'List[Session]':
+    def _get_applicable_sessions(self, view: ViewLike, notification_type: Optional[str] = None) -> List[Session]:
         sessions = []  # type: List[Session]
         syntax = view.settings().get("syntax")
 
@@ -164,7 +163,7 @@ class WindowDocumentHandler(object):
                 conditional_append(sessions_per_config_name[0])
         return sessions
 
-    def _session_supports_notification(self, session: 'Session', notification_type: str) -> bool:
+    def _session_supports_notification(self, session: Session, notification_type: str) -> bool:
         """
             openClose: boolean
             change: 0 (none), 1 (full), 2 (incremental)
@@ -197,10 +196,10 @@ class WindowDocumentHandler(object):
     def _is_supported_view(self, view: ViewLike) -> bool:
         return self._configs.syntax_supported(view)
 
-    def _config_languages(self, view: ViewLike) -> 'Dict[str, LanguageConfig]':
+    def _config_languages(self, view: ViewLike) -> Dict[str, LanguageConfig]:
         return self._configs.syntax_config_languages(view)
 
-    def _attach_view(self, view: ViewLike, sessions: 'List[Session]') -> None:
+    def _attach_view(self, view: ViewLike, sessions: List[Session]) -> None:
         view.settings().set("show_definitions", False)
         if self._settings.show_view_status:
             view.set_status("lsp_clients", ", ".join(session.config.name for session in sessions))
@@ -209,11 +208,11 @@ class WindowDocumentHandler(object):
         view.settings().erase("show_definitions")
         view.set_status("lsp_clients", "")
 
-    def _view_language(self, view: ViewLike, config_name: str) -> 'Optional[str]':
+    def _view_language(self, view: ViewLike, config_name: str) -> Optional[str]:
         languages = view.settings().get('lsp_language')
         return languages.get(config_name) if languages else None
 
-    def _set_view_languages(self, view: ViewLike, config_languages: 'Dict[str, LanguageConfig]') -> None:
+    def _set_view_languages(self, view: ViewLike, config_languages: Dict[str, LanguageConfig]) -> None:
         languages = {}
         for config_name, language in config_languages.items():
             languages[config_name] = language.id
@@ -294,7 +293,7 @@ class WindowDocumentHandler(object):
     def purge_changes(self, view: ViewLike) -> None:
         self.purge_did_change(view.buffer_id())
 
-    def purge_did_change(self, buffer_id: int, buffer_version: 'Optional[int]' = None) -> None:
+    def purge_did_change(self, buffer_id: int, buffer_version: Optional[int] = None) -> None:
         if buffer_id not in self._pending_buffer_changes:
             return
 
@@ -331,7 +330,7 @@ class WindowDocumentHandler(object):
                         session.client.send_notification(Notification.didChange(params))
 
 
-def extract_message(params: 'Any') -> str:
+def extract_message(params: Any) -> str:
     return params.get("message", "???") if isinstance(params, dict) else "???"
 
 
@@ -344,11 +343,11 @@ class WindowManager(object):
         configs: ConfigRegistry,
         documents: DocumentHandler,
         diagnostics: DiagnosticsStorage,
-        session_starter: 'Callable',
-        sublime: 'Any',
+        session_starter: Callable,
+        sublime: Any,
         handler_dispatcher: LanguageHandlerListener,
-        on_closed: 'Optional[Callable]' = None,
-        server_panel_factory: 'Optional[Callable]' = None
+        on_closed: Optional[Callable] = None,
+        server_panel_factory: Optional[Callable] = None
     ) -> None:
         self._window = window
         self._settings = settings
@@ -368,24 +367,24 @@ class WindowManager(object):
         self._workspace.on_changed = self._on_project_changed
         self._workspace.on_switched = self._on_project_switched
 
-    def _on_project_changed(self, folders: 'List[str]') -> None:
+    def _on_project_changed(self, folders: List[str]) -> None:
         workspace_folders = get_workspace_folders(self._workspace.folders)
         for config_name in self._sessions:
             for session in self._sessions[config_name]:
                 session.update_folders(workspace_folders)
 
-    def _on_project_switched(self, folders: 'List[str]') -> None:
+    def _on_project_switched(self, folders: List[str]) -> None:
         debug('project switched - ending all sessions')
         self.end_sessions()
 
-    def get_session(self, config_name: str, file_path: str) -> 'Optional[Session]':
+    def get_session(self, config_name: str, file_path: str) -> Optional[Session]:
         try:
             return self._find_session(config_name, file_path)
         except InitializeError as ex:
             self._disable_temporarily(ex.name, ex)
         return None
 
-    def _find_session(self, config_name: str, file_path: str) -> 'Optional[Session]':
+    def _find_session(self, config_name: str, file_path: str) -> Optional[Session]:
         if file_path in self._workspace:
             sessions = self._sessions.get(config_name, [])
             for session in sessions:
@@ -427,7 +426,7 @@ class WindowManager(object):
             self._workspace.update()
             self._initialize_on_open(view)
 
-    def needed_configs(self, file_path: str, configs: 'List[ClientConfig]') -> 'List[ClientConfig]':
+    def needed_configs(self, file_path: str, configs: List[ClientConfig]) -> List[ClientConfig]:
         new_configs = []
         for c in configs:
             sessions = self._sessions.get(c.name, None)
@@ -542,7 +541,7 @@ class WindowManager(object):
             debug("unloading session", config_name)
             session.end()
 
-    def get_project_path(self, file_path: str) -> 'Optional[str]':
+    def get_project_path(self, file_path: str) -> Optional[str]:
         candidate = None  # type: Optional[str]
         for folder in self._workspace.folders:
             if file_path.startswith(folder):
@@ -550,7 +549,7 @@ class WindowManager(object):
                     candidate = folder
         return candidate
 
-    def _apply_workspace_edit(self, params: 'Dict[str, Any]', client: Client, request_id: int) -> None:
+    def _apply_workspace_edit(self, params: Dict[str, Any], client: Client, request_id: int) -> None:
         edit = params.get('edit', dict())
         changes = parse_workspace_edit(edit)
         self._window.run_command('lsp_apply_workspace_edit', {'changes': changes})
@@ -560,7 +559,7 @@ class WindowManager(object):
         # reconstruct/get the actual Client object back. Maybe we can (ab)use our homebrew event system for this?
         client.send_response(Response(request_id, {"applied": True}))
 
-    def _get_session_config(self, params: 'Dict[str, Any]', session: Session, client: Client, request_id: int) -> None:
+    def _get_session_config(self, params: Dict[str, Any], session: Session, client: Client, request_id: int) -> None:
         items = []  # type: List[Any]
         requested_items = params.get("items") or []
         for requested_item in requested_items:
@@ -571,7 +570,7 @@ class WindowManager(object):
     def _payload_log_sink(self, message: str) -> None:
         self._sublime.set_timeout_async(lambda: self._handle_server_message(":", message), 0)
 
-    def _handle_pre_initialize(self, session: 'Session') -> None:
+    def _handle_pre_initialize(self, session: Session) -> None:
         client = session.client
         client.set_crash_handler(lambda: self._handle_server_crash(session.config))
         client.set_error_display_handler(self._window.status_message)
@@ -592,7 +591,7 @@ class WindowManager(object):
             "window/logMessage",
             lambda params: self._handle_log_message(session.config.name, params))
 
-    def _handle_post_initialize(self, session: 'Session') -> None:
+    def _handle_post_initialize(self, session: Session) -> None:
         client = session.client
 
         # handle server requests and notifications
@@ -678,20 +677,20 @@ class WindowManager(object):
             return debug("no server panel for window", self._window.id())
         panel.run_command("lsp_update_server_panel", {"prefix": name, "message": message})
 
-    def _handle_log_message(self, name: str, params: 'Any') -> None:
+    def _handle_log_message(self, name: str, params: Any) -> None:
         self._handle_server_message(name, extract_message(params))
 
     def _handle_stderr_log(self, name: str, message: str) -> None:
         if self._settings.log_stderr:
             self._handle_server_message(name, message)
 
-    def _handle_show_message(self, name: str, params: 'Any') -> None:
+    def _handle_show_message(self, name: str, params: Any) -> None:
         self._sublime.status_message("{}: {}".format(name, extract_message(params)))
 
 
 class WindowRegistry(object):
-    def __init__(self, configs: GlobalConfigs, documents: 'Any',
-                 session_starter: 'Callable', sublime: 'Any', handler_dispatcher: LanguageHandlerListener) -> None:
+    def __init__(self, configs: GlobalConfigs, documents: Any,
+                 session_starter: Callable, sublime: Any, handler_dispatcher: LanguageHandlerListener) -> None:
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs
         self._documents = documents
@@ -702,16 +701,16 @@ class WindowRegistry(object):
         self._server_panel_factory = None  # type: Optional[Callable]
         self._settings = None  # type: Optional[Settings]
 
-    def set_diagnostics_ui(self, ui_class: 'Any') -> None:
+    def set_diagnostics_ui(self, ui_class: Any) -> None:
         self._diagnostics_ui_class = ui_class
 
-    def set_server_panel_factory(self, factory: 'Callable') -> None:
+    def set_server_panel_factory(self, factory: Callable) -> None:
         self._server_panel_factory = factory
 
     def set_settings_factory(self, settings: Settings) -> None:
         self._settings = settings
 
-    def lookup(self, window: 'Any') -> WindowManager:
+    def lookup(self, window: Any) -> WindowManager:
         state = self._windows.get(window.id())
         if state is None:
             if not self._settings:

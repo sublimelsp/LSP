@@ -60,6 +60,7 @@ class WindowConfigManagerTests(unittest.TestCase):
 
     def test_with_single_config(self):
         view = MockView(__file__)
+        view.current_scope = "source.test variable.function.test"
         manager = WindowConfigManager(MockWindow(), [TEST_CONFIG])
         self.assertTrue(manager.is_supported(view))
         self.assertEqual(list(manager.scope_configs(view)), [TEST_CONFIG])
@@ -71,6 +72,7 @@ class WindowConfigManagerTests(unittest.TestCase):
 
     def test_applies_project_settings(self):
         view = MockView(__file__)
+        view.current_scope = "source.test foo.bar hello.world"
         window = MockWindow()
         window.set_project_data({
             "settings": {

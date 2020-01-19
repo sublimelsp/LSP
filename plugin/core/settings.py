@@ -1,6 +1,6 @@
 from .logging import debug
 from .types import Settings, ClientConfig, LanguageConfig
-from .typing import List, Optional, Dict, Callable
+from .typing import Any, List, Optional, Dict, Callable
 import sublime
 
 
@@ -159,26 +159,22 @@ def unload_settings() -> None:
         _settings_obj.clear_on_change("_on_new_client_settings")
 
 
-def read_language_config(config: dict) -> LanguageConfig:
-    language_id = config.get("languageId", "")
-    scopes = config.get("scopes", [])
-    return LanguageConfig(language_id, scopes)
+def read_language_config(config: Dict[str, Any]) -> LanguageConfig:
+    return LanguageConfig(config["languageId"], config["scopes"])
 
 
-def read_language_configs(client_config: dict) -> List[LanguageConfig]:
+def read_language_configs(client_config: Dict[str, Any]) -> List[LanguageConfig]:
     return list(map(read_language_config, client_config.get("languages", [])))
 
 
-def read_client_config(name: str, client_config: Dict) -> ClientConfig:
-    languages = read_language_configs(client_config)
-
+def read_client_config(name: str, client_config: Dict[str, Any]) -> ClientConfig:
     return ClientConfig(
         name,
         client_config.get("command", []),
         client_config.get("tcp_port", None),
         client_config.get("scopes", []),
         client_config.get("languageId", ""),
-        languages,
+        read_language_configs(client_config),
         client_config.get("enabled", False),
         client_config.get("initializationOptions", dict()),
         client_config.get("settings", dict()),
@@ -188,7 +184,7 @@ def read_client_config(name: str, client_config: Dict) -> ClientConfig:
     )
 
 
-def update_client_config(config: ClientConfig, settings: dict) -> ClientConfig:
+def update_client_config(config: ClientConfig, settings: Dict[str, Any]) -> ClientConfig:
     default_language = config.languages[0]
     return ClientConfig(
         config.name,

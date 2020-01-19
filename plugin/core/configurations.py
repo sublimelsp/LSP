@@ -1,25 +1,18 @@
 from copy import deepcopy
-import re
-import plistlib
-
-from .types import ClientConfig, LanguageConfig, ViewLike, WindowLike, ConfigRegistry
+from .types import ClientConfig, LanguageConfig, ViewLike, WindowLike, ConfigRegistry, base_scope_from_view
+from .types import base_scope_from_syntax
 from .logging import debug
 from .workspace import get_project_config, enable_in_project, disable_in_project
-from .typing import Any, List, Dict, Tuple, Optional, Iterator
-
-try:
-    import sublime
-    assert sublime
-except ImportError:
-    pass
+from .typing import Any, List, Dict, Tuple, Optional, Iterator, Iterable
+import sublime
 
 
-def get_scope_client_config(view: 'sublime.View', configs: List[ClientConfig],
+def get_scope_client_config(view: sublime.View, configs: List[ClientConfig],
                             point: Optional[int] = None) -> Optional[ClientConfig]:
     return next(get_scope_client_configs(view, configs, point), None)
 
 
-def get_scope_client_configs(view: 'sublime.View', configs: List[ClientConfig],
+def get_scope_client_configs(view: sublime.View, configs: List[ClientConfig],
                              point: Optional[int] = None) -> Iterator[ClientConfig]:
     # When there are multiple server configurations, all of which are for
     # similar scopes (e.g. 'source.json', 'source.json.sublime.settings') the
@@ -89,57 +82,16 @@ def syntax_language(config: ClientConfig, scope: str) -> Optional[LanguageConfig
     return None
 
 
-class UnrecognizedExtensionError(Exception):
-
-    def __init__(self, syntax: str) -> None:
-        super().__init__("unrecognized extension: {}".format(syntax))
-        self.syntax = syntax
-
-
-def read_scope_from_syntax_file(syntax: str) -> str:
-    """
-    Call this function as few times as possible. It's a heavy operation!
-    """
-    if syntax.endswith(".sublime-syntax"):
-        match = re.search(r'^scope: (\S+)', sublime.load_resource(syntax), re.MULTILINE)
-        return match.group(1) if match else ""
-    elif syntax.endswith(".tmLanguage") or syntax.endswith(".hidden-tmLanguage"):
-        # TODO: What should this encoding be?
-        content = sublime.load_resource(syntax).encode("utf-8")
-        # TODO: When on python 3.8, use plistlib.loads instead, and use plistlib.FMT_XML
-        data = plistlib.readPlistFromBytes(content)  # type: Dict[str, Any]
-        return data.get("scopeName", "")
-    else:
-        raise UnrecognizedExtensionError(syntax)
-
-
-_syntax2scope = {}  # type: Dict[str, str]
-
-
 def config_supports_syntax(config: ClientConfig, syntax: str) -> bool:
-    global _syntax2scope
-    scope = _syntax2scope.get(syntax, None)  # type: Optional[str]
-    if scope is None:
-        try:
-            scope = read_scope_from_syntax_file(syntax)
-            _syntax2scope[syntax] = scope
-        except Exception as ex:
-            _syntax2scope[syntax] = ""
-            raise ex from ex
-    if scope == "":
-        return False
-    for language in config.languages:
-        for selector in language.scopes:
-            if sublime.score_selector(scope, selector) > 0:
-                return True
-    return False
+    base_scope = base_scope_from_syntax(syntax)
+    return config.supports(base_scope)
 
 
 def is_supported_syntax(syntax: str, configs: List[ClientConfig]) -> bool:
-    for config in configs:
-        if config_supports_syntax(config, syntax):
-            return True
-    return False
+    if not configs:
+        return False
+    base_scope = base_scope_from_syntax(syntax)
+    return any(config.supports(base_scope) for config in configs)
 
 
 class ConfigManager(object):
@@ -168,23 +120,30 @@ class WindowConfigManager(object):
         self.all = create_window_configs(window, global_configs)
 
     def is_supported(self, view: Any) -> bool:
-        return any(self.scope_configs(view))
+        base_scope = base_scope_from_view(view)
+        for config in self.all:
+            if config.supports(base_scope):
+                return True
+        return False
 
     def scope_configs(self, view: Any, point: Optional[int] = None) -> Iterator[ClientConfig]:
         return get_scope_client_configs(view, self.all, point)
 
-    def syntax_configs(self, view: Any, include_disabled: bool = False) -> List[ClientConfig]:
-        syntax = view.settings().get("syntax")
-        return list(filter(lambda c: config_supports_syntax(c, syntax) and (c.enabled or include_disabled), self.all))
+    def syntax_configs(self, view: Any, include_disabled: bool = False) -> Iterable[ClientConfig]:
+        scope = base_scope_from_view(view)
+        for config in self.all:
+            if (include_disabled or config.enabled) and config.supports(scope):
+                yield config
 
     def syntax_supported(self, view: ViewLike) -> bool:
-        syntax = view.settings().get("syntax")
-        for found in filter(lambda c: config_supports_syntax(c, syntax) and c.enabled, self.all):
-            return True
+        scope = base_scope_from_view(view)
+        for config in self.all:
+            if config.enabled and config.supports(scope):
+                return True
         return False
 
     def syntax_config_languages(self, view: ViewLike) -> Dict[str, LanguageConfig]:
-        scope = view.scope_name(0).strip().split()[0]
+        scope = base_scope_from_view(view)
         config_languages = {}
         for config in self.all:
             if config.enabled:

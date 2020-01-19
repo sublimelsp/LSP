@@ -1,4 +1,48 @@
-from .typing import Optional, List, Dict, Any, Iterator, Protocol
+from .typing import Optional, List, Dict, Any, Iterator, Iterable, Protocol
+import plistlib
+import re
+import sublime
+
+
+class UnrecognizedExtensionError(Exception):
+
+    def __init__(self, syntax: str) -> None:
+        super().__init__("unrecognized extension: {}".format(syntax))
+        self.syntax = syntax
+
+
+def base_scope_from_view(view: Any) -> str:
+    return view.scope_name(0).strip().split()[0]
+
+
+def _read_base_scope_from_syntax_file(syntax: str) -> str:
+    if syntax.endswith(".sublime-syntax"):
+        match = re.search(r'^scope: (\S+)', sublime.load_resource(syntax), re.MULTILINE)
+        return match.group(1) if match else ""
+    elif syntax.endswith(".tmLanguage") or syntax.endswith(".hidden-tmLanguage"):
+        # TODO: What should this encoding be?
+        content = sublime.load_resource(syntax).encode("utf-8")
+        # TODO: When on python 3.8, use plistlib.loads instead, and use plistlib.FMT_XML
+        data = plistlib.readPlistFromBytes(content)  # type: Dict[str, Any]
+        return data.get("scopeName", "")
+    else:
+        raise UnrecognizedExtensionError(syntax)
+
+
+_syntax2scope = {}  # type: Dict[str, str]
+
+
+def base_scope_from_syntax(syntax: str) -> str:
+    global _syntax2scope
+    base_scope = _syntax2scope.get(syntax, None)  # type: Optional[str]
+    if base_scope is None:
+        try:
+            base_scope = _read_base_scope_from_syntax_file(syntax)
+            _syntax2scope[syntax] = base_scope
+        except Exception as ex:
+            _syntax2scope[syntax] = ""
+            raise ex from ex
+    return base_scope
 
 
 class Settings(object):
@@ -38,6 +82,20 @@ class LanguageConfig(object):
         self.scopes = scopes
         # TODO: Update all LanguageHandlers
 
+    def __repr__(self) -> str:
+        return 'LanguageConfig({}, {})'.format(repr(self.id), repr(self.scopes))
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, LanguageConfig):
+            return False
+        return self.id == other.id and self.scopes == other.scopes
+
+    def score(self, base_scope: str) -> int:
+        return max(sublime.score_selector(base_scope, s) for s in self.scopes)
+
+    def supports(self, base_scope: str) -> bool:
+        return self.score(base_scope) > 0
+
 
 class ClientConfig(object):
     def __init__(self,
@@ -59,12 +117,33 @@ class ClientConfig(object):
         self.tcp_host = tcp_host
         self.tcp_mode = tcp_mode
         if not languages:
-            languages = [LanguageConfig(languageId, scopes)] if languageId else []
+            assert languageId
+            assert len(scopes) > 0
+            languages = [LanguageConfig(languageId, scopes)]
         self.languages = languages
         self.enabled = enabled
         self.init_options = init_options
         self.settings = settings
         self.env = env
+
+    def __repr__(self) -> str:
+        return 'ClientConfig({}, {}, {}, {}, {}, {}, {}, {}, {}, {})'.format(
+            repr(self.name),
+            repr(self.binary_args),
+            repr(self.tcp_port),
+            repr([]),
+            repr(None),
+            repr(self.languages),
+            repr(self.enabled),
+            repr(self.init_options),
+            repr(self.settings),
+            repr(self.env))
+
+    def score(self, base_scope: str) -> int:
+        return max(language.score(base_scope) for language in self.languages)
+
+    def supports(self, base_scope: str) -> bool:
+        return self.score(base_scope) > 0
 
 
 class ViewLike(Protocol):
@@ -154,7 +233,7 @@ class ConfigRegistry(Protocol):
     def scope_configs(self, view: ViewLike, point: Optional[int] = None) -> Iterator[ClientConfig]:
         ...
 
-    def syntax_configs(self, view: ViewLike, include_disabled: bool = False) -> List[ClientConfig]:
+    def syntax_configs(self, view: ViewLike, include_disabled: bool = False) -> Iterable[ClientConfig]:
         ...
 
     def syntax_supported(self, view: ViewLike) -> bool:

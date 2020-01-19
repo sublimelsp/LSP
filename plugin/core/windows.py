@@ -12,7 +12,7 @@ from .types import LanguageConfig
 from .types import Settings
 from .types import ViewLike
 from .types import WindowLike
-from .typing import Optional, List, Callable, Dict, Any, Protocol
+from .typing import Optional, List, Callable, Dict, Any, Iterable, Protocol
 from .url import filename_to_uri
 from .workspace import get_workspace_folders
 from .workspace import disable_in_project
@@ -187,8 +187,7 @@ class WindowDocumentHandler(object):
             if session.handles_path(file_name):
                 view = self._window.find_open_file(file_name)
                 if view:
-                    syntax = view.settings().get("syntax")
-                    if config_supports_syntax(session.config, syntax):
+                    if self._configs.is_supported(view):
                         sessions = self._get_applicable_sessions(view)
                         self._attach_view(view, sessions)
                         self._notify_did_open(view, session)
@@ -426,12 +425,11 @@ class WindowManager(object):
             self._workspace.update()
             self._initialize_on_open(view)
 
-    def needed_configs(self, file_path: str, configs: List[ClientConfig]) -> List[ClientConfig]:
-        new_configs = []
+    def needed_configs(self, file_path: str, configs: Iterable[ClientConfig]) -> Iterable[ClientConfig]:
         for c in configs:
             sessions = self._sessions.get(c.name, None)
             if sessions is None:
-                new_configs.append(c)
+                yield c
                 continue
             assert isinstance(sessions, list)
             assert len(sessions) > 0
@@ -446,12 +444,11 @@ class WindowManager(object):
                     continue
                 # There is no non-workspace-aware language that handles this path, but it is inside the workspace. So
                 # we must start a new session.
-                new_configs.append(c)
+                yield c
                 continue
             # We're now dealing with a non-workspace-aware language server, and the file_path is outside the workspace.
             # Let us then take the first language server in the list that shall handle this path.
             # (so no new session is needed).
-        return new_configs
 
     def _initialize_on_open(self, view: ViewLike) -> None:
         file_path = view.file_name() or ""

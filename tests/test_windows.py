@@ -109,7 +109,7 @@ class WindowManagerTests(unittest.TestCase):
         return window, docs, dispatcher, wm
 
     def test_can_start_active_views(self):
-        _, docs, _, wm = self.make([[MockView(__file__)]])
+        _, docs, _, wm = self.make([[MockView(__file__, current_scope="source.test")]])
         # session must be started
         self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, __file__))
         self.assertListEqual(docs._documents, [__file__])
@@ -121,6 +121,7 @@ class WindowManagerTests(unittest.TestCase):
 
         # session must be started
         view = MockView(__file__)
+        view.current_scope = "source.test meta.group.test punctuation.section.parens.begin.test"
 
         # WindowManager will call window.active_view() at some point during wm.activate_view
         window._files_in_groups = [[view]]

@@ -88,8 +88,6 @@ def config_supports_syntax(config: ClientConfig, syntax: str) -> bool:
 
 
 def is_supported_syntax(syntax: str, configs: List[ClientConfig]) -> bool:
-    if not configs:
-        return False
     base_scope = base_scope_from_syntax(syntax)
     return any(config.supports(base_scope) for config in configs)
 
@@ -121,10 +119,7 @@ class WindowConfigManager(object):
 
     def is_supported(self, view: Any) -> bool:
         base_scope = base_scope_from_view(view)
-        for config in self.all:
-            if config.supports(base_scope):
-                return True
-        return False
+        return any(config.supports(base_scope) for config in self.all)
 
     def scope_configs(self, view: Any, point: Optional[int] = None) -> Iterator[ClientConfig]:
         return get_scope_client_configs(view, self.all, point)

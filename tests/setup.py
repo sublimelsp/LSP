@@ -124,11 +124,11 @@ class TextDocumentTestCase(DeferrableTestCase):
         for wm in windows._windows.values():
             wm.end_sessions()
 
-            def condition() -> bool:
+            def all_sessions_ended() -> bool:
                 nonlocal wm
                 return len(wm._sessions) == 0
 
-            yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
+            yield {"condition": all_sessions_ended, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
         # The Sublime windows are actually still valid, so WindowManagers don't remove themselves from this global
         # dictionary. We do it by hand.
         windows._windows.clear()
@@ -137,8 +137,12 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.wm = windows.lookup(window)  # create just this single one for the test
         self.assertEqual(len(self.wm._sessions), 0)
         self.view = window.open_file(filename)
-        if sublime.platform() == "osx":
-            yield 200
+
+        # It's not safe to call API functions on a view that is not yet loaded.
+        def wait_for_loaded_view() -> bool:
+            return not self.view.is_loading()
+
+        yield {"condition": wait_for_loaded_view, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
         self.assertTrue(self.wm._configs.syntax_supported(self.view))
         self.init_view_settings()
         self.wm.start_active_views()  # in case testfile.txt was already opened
@@ -148,13 +152,13 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.session = sessions[0]
         self.assertEqual(self.session.config.name, self.config.name)
 
-        def condition() -> bool:
+        def wait_for_session_ready() -> bool:
             acquired = self.session.ready_lock.acquire(False)
             if acquired:
                 self.session.ready_lock.release()
             return acquired
 
-        yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
+        yield {"condition": wait_for_session_ready, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
         yield from self.await_boilerplate_begin()
 
     def get_test_name(self) -> str:

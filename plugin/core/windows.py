@@ -1,4 +1,3 @@
-from .configurations import config_supports_syntax
 from .diagnostics import DiagnosticsStorage
 from .edit import parse_workspace_edit
 from .logging import debug
@@ -12,6 +11,7 @@ from .types import LanguageConfig
 from .types import Settings
 from .types import ViewLike
 from .types import WindowLike
+from .types import base_scope_from_view
 from .typing import Optional, List, Callable, Dict, Any, Iterable, Protocol
 from .url import filename_to_uri
 from .workspace import get_workspace_folders
@@ -145,22 +145,23 @@ class WindowDocumentHandler(object):
 
     def _get_applicable_sessions(self, view: ViewLike, notification_type: Optional[str] = None) -> List[Session]:
         sessions = []  # type: List[Session]
-        syntax = view.settings().get("syntax")
+        base_scope = base_scope_from_view(view)
 
         def conditional_append(session: Session) -> None:
-            if config_supports_syntax(session.config, syntax):
-                if not notification_type or self._session_supports_notification(session, notification_type):
-                    sessions.append(session)
+            if not notification_type or self._session_supports_notification(session, notification_type):
+                sessions.append(session)
 
         if view in self._workspace:
             for sessions_per_config_name in self._sessions.values():
                 for session in sessions_per_config_name:
-                    if session.handles_path(view.file_name()):
+                    if session.config.supports(base_scope) and session.handles_path(view.file_name()):
                         conditional_append(session)
         else:
             for sessions_per_config_name in self._sessions.values():
                 assert len(sessions_per_config_name) > 0
-                conditional_append(sessions_per_config_name[0])
+                session = sessions_per_config_name[0]
+                if session.config.supports(base_scope):
+                    conditional_append(session)
         return sessions
 
     def _session_supports_notification(self, session: Session, notification_type: str) -> bool:
@@ -455,17 +456,11 @@ class WindowManager(object):
 
         # have all sessions for this document been started?
         with self._initialization_lock:
-            new_configs = self.needed_configs(file_path, self._configs.syntax_configs(view, include_disabled=True))
-
-            if any(new_configs):
+            if any(self.needed_configs(file_path, self._configs.syntax_configs(view, include_disabled=True))):
                 # TODO: cannot observe project setting changes
                 # have to check project overrides every session request
                 self.update_configs()
-
-                startable_configs = self.needed_configs(file_path, self._configs.syntax_configs(view))
-
-                for config in startable_configs:
-
+                for config in self.needed_configs(file_path, self._configs.syntax_configs(view)):
                     debug("window {} requests {} for {}".format(self._window.id(), config.name, file_path))
                     self._start_client(config, file_path)
 

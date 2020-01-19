@@ -4,6 +4,7 @@ from LSP.plugin.core.configurations import is_supported_syntax
 from LSP.plugin.core.configurations import WindowConfigManager
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.types import LanguageConfig
+from LSP.plugin.core.types import UnrecognizedExtensionError
 from test_mocks import MockView
 from test_mocks import MockWindow
 from test_mocks import TEST_CONFIG, DISABLED_CONFIG
@@ -63,9 +64,9 @@ class WindowConfigManagerTests(unittest.TestCase):
         view.current_scope = "source.test variable.function.test"
         manager = WindowConfigManager(MockWindow(), [TEST_CONFIG])
         self.assertTrue(manager.is_supported(view))
-        self.assertEqual(list(manager.scope_configs(view)), [TEST_CONFIG])
+        self.assertListEqual(list(manager.scope_configs(view)), [TEST_CONFIG])
         self.assertTrue(manager.syntax_supported(view))
-        self.assertEqual(manager.syntax_configs(view), [TEST_CONFIG])
+        self.assertListEqual(list(manager.syntax_configs(view)), [TEST_CONFIG])
         lang_configs = manager.syntax_config_languages(view)
         self.assertEqual(len(lang_configs), 1)
         self.assertEqual(lang_configs[TEST_CONFIG.name].id, TEST_CONFIG.languages[0].id)
@@ -86,7 +87,7 @@ class WindowConfigManagerTests(unittest.TestCase):
 
         manager = WindowConfigManager(window, [DISABLED_CONFIG])
         manager.update()
-        configs = manager.syntax_configs(view)
+        configs = list(manager.syntax_configs(view))
 
         self.assertEqual(len(configs), 1)
         config = configs[0]
@@ -114,13 +115,21 @@ class WindowConfigManagerTests(unittest.TestCase):
 
         # view is activated after popup, we try to start a session again...
         manager.update()
-        self.assertEqual([], manager.syntax_configs(view))
+        self.assertListEqual([], list(manager.syntax_configs(view)))
 
 
 class IsSupportedSyntaxTests(unittest.TestCase):
 
     def test_no_configs(self):
-        self.assertFalse(is_supported_syntax('asdf', []))
+        self.assertFalse(is_supported_syntax('Packages/Python/Python.sublime-syntax', []))
+
+    def test_raises_unrecognized_extension(self):
+        with self.assertRaises(UnrecognizedExtensionError):
+            is_supported_syntax("Packages/LSP/popups.css", "source.css")
+
+    def test_raises_io_error(self):
+        with self.assertRaises(IOError):
+            is_supported_syntax("Packages/some/non/existent/file.sublime-syntax", "text.plain")
 
     def test_single_config(self):
         self.assertEqual(TEST_LANGUAGE.scopes[0], TEST_CONFIG.languages[0].scopes[0])

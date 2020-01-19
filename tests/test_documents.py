@@ -30,7 +30,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         return session
 
     def test_sends_did_open_to_session(self):
-        view = MockView(__file__)
+        view = MockView(__file__, current_scope="source.test")
         window = MockWindow([[view]])
         project_path = "/"
         folders = [WorkspaceFolder.from_path(project_path)]
@@ -93,7 +93,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         self.assertFalse(__file__ in handler._document_states)
 
     def test_sends_did_open_to_multiple_sessions(self):
-        view = MockView(__file__)
+        view = MockView(__file__, current_scope="source.test")
         window = MockWindow([[view]])
         project_path = "/"
         folders = [WorkspaceFolder.from_path(project_path)]

@@ -221,13 +221,13 @@ class MockConfigs(object):
             return [TEST_CONFIG]
 
     def syntax_configs(self, view, include_disabled: bool = False):
-        if view.settings().get("syntax") == "Plain Text":
+        if view.settings().get("syntax") == "Packages/Text/Plain text.tmLanguage":
             return [TEST_CONFIG]
         else:
             return []
 
     def syntax_supported(self, view: ViewLike) -> bool:
-        return view.settings().get("syntax") == "Plain Text"
+        return view.settings().get("syntax") == "Packages/Text/Plain text.tmLanguage"
 
     def syntax_config_languages(self, view: ViewLike) -> 'Dict[str, LanguageConfig]':
         if self.syntax_supported(view):

@@ -193,9 +193,6 @@ class WindowDocumentHandler(object):
                         self._attach_view(view, sessions)
                         self._notify_did_open(view, session)
 
-    def _is_supported_view(self, view: ViewLike) -> bool:
-        return self._configs.syntax_supported(view)
-
     def _config_languages(self, view: ViewLike) -> Dict[str, LanguageConfig]:
         return self._configs.syntax_config_languages(view)
 

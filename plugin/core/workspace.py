@@ -1,13 +1,8 @@
 from .logging import debug
 from .protocol import WorkspaceFolder
 from .types import WindowLike
+from .typing import List, Optional, Any, Callable
 from os.path import commonprefix
-
-try:
-    from typing import List, Optional, Any, Dict, Iterable, Union, Callable
-    assert List and Optional and Any and Dict and Iterable and Union and Callable
-except ImportError:
-    pass
 
 
 class ProjectFolders(object):
@@ -48,10 +43,10 @@ class ProjectFolders(object):
         else:
             return getattr(item, "file_name")() in self
 
-    def _set_folders(self, folders: 'List[str]') -> None:
+    def _set_folders(self, folders: List[str]) -> None:
         self.folders = folders
 
-    def _can_update_to(self, new_folders: 'List[str]') -> bool:
+    def _can_update_to(self, new_folders: List[str]) -> bool:
         """ Should detect difference between a project switch and a change to folders in the loaded project """
         if not self.folders:
             return True
@@ -66,11 +61,11 @@ class ProjectFolders(object):
         return False
 
 
-def get_workspace_folders(folders: 'List[str]') -> 'List[WorkspaceFolder]':
+def get_workspace_folders(folders: List[str]) -> List[WorkspaceFolder]:
     return [WorkspaceFolder.from_path(f) for f in folders]
 
 
-def sorted_workspace_folders(folders: 'List[str]', file_path: str) -> 'List[WorkspaceFolder]':
+def sorted_workspace_folders(folders: List[str], file_path: str) -> List[WorkspaceFolder]:
     sorted_folders = []  # type: List[WorkspaceFolder]
     for folder in folders:
         if file_path and file_path.startswith(folder):
@@ -80,7 +75,7 @@ def sorted_workspace_folders(folders: 'List[str]', file_path: str) -> 'List[Work
     return sorted_folders
 
 
-def enable_in_project(window: 'Any', config_name: str) -> None:
+def enable_in_project(window: Any, config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
         project_settings = project_data.setdefault('settings', dict())
@@ -92,7 +87,7 @@ def enable_in_project(window: 'Any', config_name: str) -> None:
         debug('non-dict returned in project_settings: ', project_data)
 
 
-def disable_in_project(window: 'Any', config_name: str) -> None:
+def disable_in_project(window: Any, config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
         project_settings = project_data.setdefault('settings', dict())
@@ -104,7 +99,7 @@ def disable_in_project(window: 'Any', config_name: str) -> None:
         debug('non-dict returned in project_settings: ', project_data)
 
 
-def get_project_config(window: 'Any') -> dict:
+def get_project_config(window: Any) -> dict:
     project_data = window.project_data() or dict()
     if isinstance(project_data, dict):
         project_settings = project_data.setdefault('settings', dict())

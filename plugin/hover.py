@@ -85,7 +85,7 @@ class LspHoverCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, point: 'Optional[int]' = None) -> None:
         hover_point = point or self.view.sel()[0].begin()
-        self._base_dir = windows.lookup(self.view.window()).get_project_path()
+        self._base_dir = windows.lookup(self.view.window()).get_project_path(self.view.file_name() or "")
 
         self._hover = None  # type: Optional[Any]
         self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
@@ -196,11 +196,13 @@ class LspHoverCommand(LspTextCommand):
             else:
                 value = item.get("value")
                 language = item.get("language")
+
+            if '\n' not in value:
+                value = "\n".join(textwrap.wrap(value, 80))
+
             if language:
                 formatted.append("```{}\n{}\n```\n".format(language, value))
             else:
-                if '\n' not in value:
-                    value = "\n".join(textwrap.wrap(value, 80))
                 formatted.append(value)
 
         if formatted:

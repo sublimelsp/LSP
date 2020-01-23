@@ -1,22 +1,18 @@
 from .logging import debug
 from .url import uri_to_filename
 from .protocol import Diagnostic, DiagnosticSeverity, Point
-assert Diagnostic
+from .typing import Protocol, List, Dict, Tuple, Callable, Optional
 
 try:
     import sublime
-    from typing_extensions import Protocol
-    from typing import Any, List, Dict, Tuple, Callable, Optional
     assert sublime
-    assert Any and List and Dict and Tuple and Callable and Optional
 except ImportError:
     pass
-    Protocol = object  # type: ignore
 
 
 class DiagnosticsUI(Protocol):
 
-    def update(self, file_name: str, config_name: str, diagnostics: 'Dict[str, Dict[str, List[Diagnostic]]]') -> None:
+    def update(self, file_name: str, config_name: str, diagnostics: Dict[str, Dict[str, List[Diagnostic]]]) -> None:
         ...
 
     def select(self, index: int) -> None:
@@ -28,17 +24,17 @@ class DiagnosticsUI(Protocol):
 
 class DiagnosticsStorage(object):
 
-    def __init__(self, updateable: 'Optional[DiagnosticsUI]') -> None:
+    def __init__(self, updateable: Optional[DiagnosticsUI]) -> None:
         self._diagnostics = {}  # type: Dict[str, Dict[str, List[Diagnostic]]]
         self._updatable = updateable
 
-    def get(self) -> 'Dict[str, Dict[str, List[Diagnostic]]]':
+    def get(self) -> Dict[str, Dict[str, List[Diagnostic]]]:
         return self._diagnostics
 
-    def get_by_file(self, file_path: str) -> 'Dict[str, List[Diagnostic]]':
+    def get_by_file(self, file_path: str) -> Dict[str, List[Diagnostic]]:
         return self._diagnostics.get(file_path, {})
 
-    def _update(self, file_path: str, client_name: str, diagnostics: 'List[Diagnostic]') -> bool:
+    def _update(self, file_path: str, client_name: str, diagnostics: List[Diagnostic]) -> bool:
         updated = False
         if diagnostics:
             file_diagnostics = self._diagnostics.setdefault(file_path, dict())
@@ -109,7 +105,7 @@ class DiagnosticsUpdateWalk(object):
     def begin_file(self, file_path: str) -> None:
         pass
 
-    def diagnostic(self, diagnostic: 'Diagnostic') -> None:
+    def diagnostic(self, diagnostic: Diagnostic) -> None:
         pass
 
     def end_file(self, file_path: str) -> None:
@@ -124,8 +120,7 @@ CURSOR_BACKWARD = -1
 
 
 class DiagnosticCursorWalk(DiagnosticsUpdateWalk):
-
-    def __init__(self, cursor: 'DiagnosticsCursor', direction: int=0) -> None:
+    def __init__(self, cursor: 'DiagnosticsCursor', direction: int = 0) -> None:
         self._cursor = cursor
         self._direction = direction
         self._current_file_path = ""
@@ -134,7 +129,10 @@ class DiagnosticCursorWalk(DiagnosticsUpdateWalk):
     def begin_file(self, file_path: str) -> None:
         self._current_file_path = file_path
 
-    def _take_candidate(self, diagnostic: 'Diagnostic') -> None:
+    def _meets_max_severity(self, diagnostic: Diagnostic) -> bool:
+        return diagnostic.severity <= self._cursor.max_severity_level
+
+    def _take_candidate(self, diagnostic: Diagnostic) -> None:
         self._candidate = self._current_file_path, diagnostic
 
     def end(self) -> None:
@@ -153,8 +151,8 @@ class FromPositionWalk(DiagnosticCursorWalk):
         self._first_after_file = None  # type: Optional[Tuple[str, Diagnostic]]
         self._last_before_file = None  # type: Optional[Tuple[str, Diagnostic]]
 
-    def diagnostic(self, diagnostic: 'Diagnostic') -> None:
-        if diagnostic.severity <= DiagnosticSeverity.Warning:
+    def diagnostic(self, diagnostic: Diagnostic) -> None:
+        if self._meets_max_severity(diagnostic):
             if not self._first:
                 self._first = self._current_file_path, diagnostic
 
@@ -219,8 +217,8 @@ class FromDiagnosticWalk(DiagnosticCursorWalk):
         self._file_path, self._diagnostic = cursor.value
         self._take_next = False
 
-    def diagnostic(self, diagnostic: 'Diagnostic') -> None:
-        if diagnostic.severity <= DiagnosticSeverity.Warning:
+    def diagnostic(self, diagnostic: Diagnostic) -> None:
+        if self._meets_max_severity(diagnostic):
 
             if self._direction == CURSOR_FORWARD:
                 if not self._first:
@@ -248,9 +246,8 @@ class FromDiagnosticWalk(DiagnosticCursorWalk):
 
 
 class TakeFirstDiagnosticWalk(DiagnosticCursorWalk):
-
     def diagnostic(self, diagnostic: Diagnostic) -> None:
-        if diagnostic.severity <= DiagnosticSeverity.Warning:
+        if self._meets_max_severity(diagnostic):
             if self._direction == CURSOR_FORWARD:
                 if self._candidate is None:
                     self._take_candidate(diagnostic)
@@ -259,8 +256,7 @@ class TakeFirstDiagnosticWalk(DiagnosticCursorWalk):
 
 
 class DiagnosticsUpdatedWalk(DiagnosticCursorWalk):
-
-    def diagnostic(self, diagnostic: 'Diagnostic') -> None:
+    def diagnostic(self, diagnostic: Diagnostic) -> None:
         if self._cursor.value:
             if self._current_file_path == self._cursor.value[0]:
                 if diagnostic == self._cursor.value[1]:
@@ -268,23 +264,23 @@ class DiagnosticsUpdatedWalk(DiagnosticCursorWalk):
 
 
 class DiagnosticsCursor(object):
-
-    def __init__(self) -> None:
-        self._file_diagnostic = None  # type: 'Optional[Tuple[str, Diagnostic]]'
+    def __init__(self, show_diagnostics_severity_level: int = DiagnosticSeverity.Warning) -> None:
+        self._file_diagnostic = None  # type: Optional[Tuple[str, Diagnostic]]
+        self.max_severity_level = show_diagnostics_severity_level
 
     @property
     def has_value(self) -> bool:
         return self._file_diagnostic is not None
 
-    def set_value(self, file_diagnostic: 'Optional[Tuple[str, Diagnostic]]') -> None:
+    def set_value(self, file_diagnostic: Optional[Tuple[str, Diagnostic]]) -> None:
         self._file_diagnostic = file_diagnostic
 
     @property
-    def value(self) -> 'Optional[Tuple[str, Diagnostic]]':
+    def value(self) -> Optional[Tuple[str, Diagnostic]]:
         return self._file_diagnostic
 
-    def from_position(self, direction: int, file_path: 'Optional[str]' = None,
-                      point: 'Optional[Point]' = None) -> DiagnosticsUpdateWalk:
+    def from_position(self, direction: int, file_path: Optional[str] = None,
+                      point: Optional[Point] = None) -> DiagnosticsUpdateWalk:
         if file_path and point:
             return FromPositionWalk(self, file_path, point, direction)
         else:
@@ -302,10 +298,10 @@ class DiagnosticsCursor(object):
 class DiagnosticsWalker(object):
     """ Iterate over diagnostics structure"""
 
-    def __init__(self, subs: 'List[DiagnosticsUpdateWalk]') -> None:
+    def __init__(self, subs: List[DiagnosticsUpdateWalk]) -> None:
         self._subscribers = subs
 
-    def walk(self, diagnostics_by_file: 'Dict[str, Dict[str, List[Diagnostic]]]') -> None:
+    def walk(self, diagnostics_by_file: Dict[str, Dict[str, List[Diagnostic]]]) -> None:
         self.invoke_each(lambda w: w.begin())
 
         if diagnostics_by_file:
@@ -321,6 +317,6 @@ class DiagnosticsWalker(object):
 
         self.invoke_each(lambda w: w.end())
 
-    def invoke_each(self, func: 'Callable[[DiagnosticsUpdateWalk], None]') -> None:
+    def invoke_each(self, func: Callable[[DiagnosticsUpdateWalk], None]) -> None:
         for sub in self._subscribers:
             func(sub)

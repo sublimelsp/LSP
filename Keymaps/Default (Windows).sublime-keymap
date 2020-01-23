@@ -15,6 +15,9 @@
     // Show/Hide Diagnostics Panel
     { "keys": ["ctrl+alt+m"], "command": "lsp_show_diagnostics_panel", "context": [{"key": "setting.lsp_active"}]},
 
+    // Show/Hide Language Server Logs Panel
+    // { "keys": ["UNBOUND"], "command": "lsp_toggle_server_panel", "context": [{"key": "setting.lsp_active"}]},
+
     // Trigger Signature Help
     { "keys": ["ctrl+alt+space"], "command": "noop", "context": [{ "key": "lsp.signature_help", "operator": "equal", "operand": 0}] },
 
@@ -24,6 +27,11 @@
 
      // Find Symbol References
     { "keys": ["shift+f12"], "command": "lsp_symbol_references", "context": [{"key": "setting.lsp_active"}]},
+
+    // Next/Prevous diagnostics
+    { "keys": ["f8"], "command": "lsp_next_diagnostic", "context": [{"key": "setting.lsp_active"}] },
+    { "keys": ["shift+f8"], "command": "lsp_previous_diagnostic", "context": [{"key": "setting.lsp_active"}] },
+    { "keys": ["escape"], "command": "lsp_hide_diagnostic", "context": [{ "key": "setting.lsp_diagnostic_phantom"}] },
 
     // Go To Definition
     // {"keys": ["UNBOUND"], "command": "lsp_symbol_definition", "context": [{"key": "setting.lsp_active"}]},

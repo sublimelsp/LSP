@@ -1,11 +1,11 @@
-from . import test_sublime as test_sublime
-from .logging import debug
-from .protocol import Notification
-from .protocol import Request
-from .types import ClientConfig
-from .types import LanguageConfig
-from .types import Settings
-from .windows import ViewLike
+import test_sublime
+from LSP.plugin.core.logging import debug
+from LSP.plugin.core.protocol import Notification
+from LSP.plugin.core.protocol import Request
+from LSP.plugin.core.types import ClientConfig
+from LSP.plugin.core.types import LanguageConfig
+from LSP.plugin.core.types import Settings
+from LSP.plugin.core.types import ViewLike
 import os
 
 try:
@@ -19,7 +19,7 @@ except ImportError:
 
 TEST_LANGUAGE = LanguageConfig("test", ["source.test"], ["Plain Text"])
 TEST_CONFIG = ClientConfig("test", [], None, languages=[TEST_LANGUAGE])
-
+DISABLED_CONFIG = ClientConfig("test", [], None, languages=[TEST_LANGUAGE], enabled=False)
 
 basic_responses = {
     'initialize': {
@@ -30,11 +30,16 @@ basic_responses = {
                 'triggerCharacters': ['.'],
                 'resolveProvider': False
             },
-            'textDocumentSync': True,
+            'textDocumentSync': {
+                "openClose": True,
+                "change": 1,
+                "save": True
+            },
             'definitionProvider': True,
             'typeDefinitionProvider': True,
             'declarationProvider': True,
-            'implementationProvider': True
+            'implementationProvider': True,
+            'documentFormattingProvider': True
         }
     }
 }
@@ -66,6 +71,7 @@ class MockView(object):
         self._settings = MockSublimeSettings({"syntax": "Plain Text"})
         self._status = dict()  # type: Dict[str, str]
         self._text = "asdf"
+        self.commands = []  # type: List[Tuple[str, Dict[str, Any]]]
 
     def file_name(self):
         return self._file_name
@@ -97,6 +103,9 @@ class MockView(object):
     def buffer_id(self):
         return 1
 
+    def run_command(self, command_name: str, command_args: 'Dict[str, Any]') -> None:
+        self.commands.append((command_name, command_args))
+
 
 class MockHandlerDispatcher(object):
     def __init__(self, can_start: bool = True) -> None:
@@ -117,6 +126,7 @@ class MockWindow(object):
         self._folders = folders
         self._default_view = MockView(None)
         self._project_data = None  # type: Optional[Dict[str, Any]]
+        self._project_file_name = None  # type: Optional[str]
         self.commands = []  # type: List[Tuple[str, Dict[str, Any]]]
 
     def id(self):
@@ -139,6 +149,9 @@ class MockWindow(object):
 
     def set_project_data(self, data: 'Optional[dict]'):
         self._project_data = data
+
+    def project_file_name(self) -> 'Optional[str]':
+        return self._project_file_name
 
     def active_view(self) -> 'Optional[ViewLike]':
         return self.active_view_in_group(0)
@@ -169,7 +182,7 @@ class MockWindow(object):
         pass
 
     def views(self):
-        views = []
+        views = []  # type: List[ViewLike]
         for views_in_group in self._files_in_groups:
             if len(views_in_group) < 1:
                 views.append(self._default_view)
@@ -203,7 +216,7 @@ class MockConfigs(object):
         else:
             return [TEST_CONFIG]
 
-    def syntax_configs(self, view, include_disabled: bool=False):
+    def syntax_configs(self, view, include_disabled: bool = False):
         if view.settings().get("syntax") == "Plain Text":
             return [TEST_CONFIG]
         else:
@@ -264,9 +277,12 @@ class MockDocuments(object):
     def handle_view_closed(self, view: ViewLike) -> None:
         pass
 
+    def has_document_state(self, file_name: str) -> bool:
+        return file_name in self._documents
+
 
 class TestDocumentHandlerFactory(object):
-    def for_window(self, window, configs):
+    def for_window(self, window, workspace, configs):
         return MockDocuments()
 
 
@@ -284,6 +300,9 @@ class MockClient():
         else:
             on_success(response)
 
+    def execute_request(self, request: Request) -> 'Any':
+        return self.responses.get(request.method)
+
     def send_notification(self, notification: Notification) -> None:
         self._notifications.append(notification)
 
@@ -297,6 +316,9 @@ class MockClient():
         pass
 
     def set_crash_handler(self, handler: 'Callable') -> None:
+        pass
+
+    def set_log_payload_handler(self, handler: 'Callable') -> None:
         pass
 
     def exit(self) -> None:

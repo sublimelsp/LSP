@@ -1,9 +1,12 @@
 import unittest
 from collections import OrderedDict
 from unittest import mock
-from .diagnostics import DiagnosticsStorage, DiagnosticsWalker, DiagnosticsCursor, CURSOR_FORWARD, CURSOR_BACKWARD
-from .protocol import Diagnostic, Point, Range, DiagnosticSeverity
-from .test_protocol import LSP_MINIMAL_DIAGNOSTIC
+from LSP.plugin.core.diagnostics import (
+    DiagnosticsStorage, DiagnosticsWalker, DiagnosticsCursor, CURSOR_FORWARD, CURSOR_BACKWARD)
+from LSP.plugin.core.protocol import Diagnostic, Point, Range, DiagnosticSeverity
+from test_protocol import LSP_MINIMAL_DIAGNOSTIC
+import sublime
+
 
 TYPE_CHECKING = False
 if TYPE_CHECKING:
@@ -11,7 +14,7 @@ if TYPE_CHECKING:
     assert List and Dict
 
 
-test_file_path = "/test.py"
+test_file_path = "test.py" if sublime.platform() == "windows" else "/test.py"
 test_file_uri = "file:///test.py"
 second_file_path = "/test2.py"
 second_file_uri = "file:///test2.py"
@@ -60,7 +63,8 @@ class DiagnosticsStorageTest(unittest.TestCase):
         self.assertEqual(len(view_diags["test_server"]), 1)
         self.assertEqual(view_diags["test_server"][0].message, LSP_MINIMAL_DIAGNOSTIC['message'])
         self.assertIn(test_file_path, wd.get())
-        ui.update.assert_called_with(test_file_path, "test_server", {'/test.py': {'test_server': [minimal_diagnostic]}})
+        ui.update.assert_called_with(
+            test_file_path, "test_server", {test_file_path: {'test_server': [minimal_diagnostic]}})
 
         wd.receive("test_server", make_update([]))
         view_diags = wd.get_by_file(test_file_path)
@@ -106,7 +110,7 @@ class DiagnosticsStorageTest(unittest.TestCase):
         ui.select.assert_called_with(-1)
 
         wd.select_none()
-        ui.deselect.assert_called()
+        assert ui.deselect.call_count > 0
 
 
 class DiagnosticsWalkerTests(unittest.TestCase):
@@ -116,10 +120,10 @@ class DiagnosticsWalkerTests(unittest.TestCase):
         walker = DiagnosticsWalker([walk])
         walker.walk({})
 
-        walk.begin.assert_called_once()
-        walk.begin_file.assert_not_called()
-        walk.diagnostic.assert_not_called()
-        walk.end.assert_called_once()
+        assert walk.begin.call_count == 1
+        assert walk.begin_file.call_count == 0
+        assert walk.diagnostic.call_count == 0
+        assert walk.end.call_count == 1
 
     def test_one_diagnosic(self):
 
@@ -130,10 +134,10 @@ class DiagnosticsWalkerTests(unittest.TestCase):
         diags[test_file_path]["test_server"] = [minimal_diagnostic]
         walker.walk(diags)
 
-        walk.begin.assert_called_once()
+        assert walk.begin.call_count == 1
         walk.begin_file.assert_called_with(test_file_path)
         walk.diagnostic.assert_called_with(minimal_diagnostic)
-        walk.end.assert_called_once()
+        assert walk.end.call_count == 1
 
 
 row1 = at_row(1)

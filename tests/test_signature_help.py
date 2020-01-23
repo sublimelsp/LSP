@@ -1,4 +1,4 @@
-from .signature_help import (
+from LSP.plugin.core.signature_help import (
     create_signature_help, SignatureHelp, get_documentation,
     parse_signature_information, ScopeRenderer, render_signature_label
 )
@@ -115,7 +115,7 @@ def create_signature(label: str, *param_labels, **kwargs) -> dict:
     return raw
 
 
-class TestRenderer(ScopeRenderer):
+class MockRenderer(ScopeRenderer):
 
     def function(self, content: str, escape: bool = True) -> str:
         return self._wrap_with_scope_style(content, "entity.name.function")
@@ -133,7 +133,7 @@ class TestRenderer(ScopeRenderer):
         return content
 
 
-renderer = TestRenderer()
+renderer = MockRenderer()
 
 
 class GetDocumentationTests(unittest.TestCase):

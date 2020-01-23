@@ -1,14 +1,10 @@
-import sublime
-from .types import Settings, ClientConfig, LanguageConfig
 from .logging import debug
+from .types import Settings, ClientConfig, LanguageConfig
+from .typing import List, Optional, Dict, Callable
+import sublime
+
 
 PLUGIN_NAME = 'LSP'
-
-try:
-    from typing import List, Optional, Dict, Any, Callable
-    assert List and Optional and Dict and Any and Callable
-except ImportError:
-    pass
 
 
 def read_bool_setting(settings_obj: sublime.Settings, key: str, default: bool) -> bool:
@@ -66,11 +62,11 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings) -> None:
     settings.auto_show_diagnostics_panel = read_auto_show_diagnostics_panel_setting(settings_obj,
                                                                                     "auto_show_diagnostics_panel",
                                                                                     'always')
-    settings.auto_show_diagnostics_panel_level = read_int_setting(settings_obj, "auto_show_diagnostics_panel_level", 3)
+    settings.auto_show_diagnostics_panel_level = read_int_setting(settings_obj, "auto_show_diagnostics_panel_level", 2)
     settings.show_diagnostics_count_in_view_status = read_bool_setting(settings_obj,
                                                                        "show_diagnostics_count_in_view_status", False)
     settings.show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
-    settings.show_diagnostics_severity_level = read_int_setting(settings_obj, "show_diagnostics_severity_level", 3)
+    settings.show_diagnostics_severity_level = read_int_setting(settings_obj, "show_diagnostics_severity_level", 2)
     settings.diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
     settings.document_highlight_style = read_str_setting(settings_obj, "document_highlight_style", "stippled")
     settings.document_highlight_scopes = read_dict_setting(settings_obj, "document_highlight_scopes",
@@ -82,7 +78,6 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings) -> None:
     settings.complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
     settings.completion_hint_type = read_str_setting(settings_obj, "completion_hint_type", "auto")
     settings.show_references_in_quick_panel = read_bool_setting(settings_obj, "show_references_in_quick_panel", False)
-    settings.quick_panel_monospace_font = read_bool_setting(settings_obj, "quick_panel_monospace_font", False)
     settings.disabled_capabilities = read_array_setting(settings_obj, "disabled_capabilities", [])
     settings.log_debug = read_bool_setting(settings_obj, "log_debug", False)
     settings.log_server = read_bool_setting(settings_obj, "log_server", True)
@@ -139,7 +134,7 @@ class ClientConfigs(object):
     def disable(self, config_name: str) -> None:
         self._set_enabled(config_name, False)
 
-    def set_listener(self, recipient: 'Callable') -> None:
+    def set_listener(self, recipient: Callable) -> None:
         self._listener = recipient
 
 
@@ -164,18 +159,18 @@ def unload_settings() -> None:
         _settings_obj.clear_on_change("_on_new_client_settings")
 
 
-def read_language_config(config: dict) -> 'LanguageConfig':
+def read_language_config(config: dict) -> LanguageConfig:
     language_id = config.get("languageId", "")
     scopes = config.get("scopes", [])
     syntaxes = config.get("syntaxes", [])
     return LanguageConfig(language_id, scopes, syntaxes)
 
 
-def read_language_configs(client_config: dict) -> 'List[LanguageConfig]':
+def read_language_configs(client_config: dict) -> List[LanguageConfig]:
     return list(map(read_language_config, client_config.get("languages", [])))
 
 
-def read_client_config(name: str, client_config: 'Dict') -> ClientConfig:
+def read_client_config(name: str, client_config: Dict) -> ClientConfig:
     languages = read_language_configs(client_config)
 
     return ClientConfig(
@@ -195,7 +190,7 @@ def read_client_config(name: str, client_config: 'Dict') -> ClientConfig:
     )
 
 
-def update_client_config(config: 'ClientConfig', settings: dict) -> 'ClientConfig':
+def update_client_config(config: ClientConfig, settings: dict) -> ClientConfig:
     default_language = config.languages[0]
     return ClientConfig(
         config.name,

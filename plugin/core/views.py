@@ -1,16 +1,10 @@
 import sublime
 import linecache
-
 from .protocol import Point, Range
-
-try:
-    from typing import Optional
-    assert Optional
-except ImportError:
-    pass
+from .typing import Optional
 
 
-def get_line(window: 'Optional[sublime.Window]', file_name: str, row: int) -> str:
+def get_line(window: Optional[sublime.Window], file_name: str, row: int) -> str:
     '''
     Get the line from the buffer if the view is open, else get line from linecache.
     row - is 0 based. If you want to get the first line, you should pass 0.
@@ -33,15 +27,15 @@ def point_to_offset(point: Point, view: sublime.View) -> int:
     return view.text_point(point.row, point.col)
 
 
-def offset_to_point(view: sublime.View, offset: int) -> 'Point':
+def offset_to_point(view: sublime.View, offset: int) -> Point:
     return Point(*view.rowcol(offset))
 
 
-def range_to_region(range: Range, view: sublime.View) -> 'sublime.Region':
+def range_to_region(range: Range, view: sublime.View) -> sublime.Region:
     return sublime.Region(point_to_offset(range.start, view), point_to_offset(range.end, view))
 
 
-def region_to_range(view: sublime.View, region: sublime.Region) -> 'Range':
+def region_to_range(view: sublime.View, region: sublime.Region) -> Range:
     return Range(
         offset_to_point(view, region.begin()),
         offset_to_point(view, region.end())

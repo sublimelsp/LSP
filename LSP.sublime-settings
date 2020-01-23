@@ -14,7 +14,7 @@
   // warning: 2
   // info: 3
   // hint: 4
-  "auto_show_diagnostics_panel_level": 3,
+  "auto_show_diagnostics_panel_level": 2,
 
   // Show errors and warnings count in the status bar
   "show_diagnostics_count_in_view_status": false,
@@ -29,7 +29,7 @@
   // warning: 2
   // info: 3
   // hint: 4
-  "show_diagnostics_severity_level": 3,
+  "show_diagnostics_severity_level": 2,
 
   // Highlighting style of code diagnostics.
   // Valid values are "underline" or "box"
@@ -75,9 +75,6 @@
   // Show symbol references in Sublime's quick panel instead of the bottom panel.
   "show_references_in_quick_panel": false,
 
-  // Use monospace font for the quick panel.
-  "quick_panel_monospace_font": false,
-
   // Disable language client capabilities. Supported values:
   // "hover", "completion", "colorProvider", "documentHighlight", "signatureHelp"
   "disabled_capabilities": [],
@@ -85,13 +82,21 @@
   // Show verbose debug messages in the sublime console.
   "log_debug": false,
 
-  // Show notifications from language servers in the console.
+  // Show messages from language servers in the Language Servers output panel.
+  // This output panel can be toggled from the command palette with the
+  // command "LSP: Toggle Panel: Language Servers".
   "log_server": true,
 
-  // Show language server stderr output in the console.
+  // Show language server stderr output in the Language Servers output panel.
+  // This output panel can be toggled from the command palette with the
+  // command "LSP: Toggle Panel: Language Servers".
   "log_stderr": false,
 
-  // Show full JSON-RPC responses in the console
+  // Show full JSON-RPC requests/responses/notifications in the Language Servers
+  // output panel. Note that if the payload is very large, SublimeText will not
+  // highlight the log line.
+  // This output panel can be toggled from the command palette with the
+  // command "LSP: Toggle Panel: Language Servers".
   "log_payloads": false,
 
   // User clients configuration can be used to
@@ -370,13 +375,21 @@
     {
       "command": ["lsp-tsserver"],
       "languages": [{
-        "scopes": ["source.js", "source.jsx"],
+        "scopes": ["source.js"],
         "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
         "languageId": "javascript"
       }, {
-        "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
+        "scopes": ["source.jsx"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+        "languageId": "javascriptreact"
+      }, {
+        "scopes": ["source.ts"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript Syntax/TypeScript.tmLanguage"],
         "languageId": "typescript"
+      }, {
+        "scopes": ["source.tsx"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage", "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage"],
+        "languageId": "typescriptreact"
       }
       ]
     },
@@ -391,13 +404,21 @@
     {
       "command": ["javascript-typescript-stdio"],
       "languages": [{
-        "scopes": ["source.js", "source.jsx"],
-        "syntaxes": ["Javascript"],
+        "scopes": ["source.js"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
         "languageId": "javascript"
       }, {
-        "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
+        "scopes": ["source.jsx"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+        "languageId": "javascriptreact"
+      }, {
+        "scopes": ["source.ts"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript Syntax/TypeScript.tmLanguage"],
         "languageId": "typescript"
+      }, {
+        "scopes": ["source.tsx"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage", "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage"],
+        "languageId": "typescriptreact"
       }
       ]
     },
@@ -405,10 +426,23 @@
     {
       "command": ["typescript-language-server", "--stdio"],
       "languages": [{
-        "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage"],
+        "scopes": ["source.js"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+        "languageId": "javascript"
+      }, {
+        "scopes": ["source.jsx"],
+        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
+        "languageId": "javascriptreact"
+      }, {
+        "scopes": ["source.ts"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript Syntax/TypeScript.tmLanguage"],
         "languageId": "typescript"
-      }]
+      }, {
+        "scopes": ["source.tsx"],
+        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage", "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage"],
+        "languageId": "typescriptreact"
+      }
+      ]
     },
     "ocaml":
     {
@@ -494,12 +528,37 @@
       // },
     },
     "vscode-css":
-      {
-        "command": ["css-languageserver", "--stdio"],
-        "scopes": ["source.css"],
-        "syntaxes": ["Packages/CSS/CSS.sublime-syntax"],
-        "languageId": "css"
-      },
+    {
+      "command": 
+      [
+        "css-languageserver", "--stdio"
+      ],
+      "scopes": 
+      [
+        "source.css"
+      ],
+      "syntaxes": 
+      [
+        "Packages/CSS/CSS.sublime-syntax"
+      ],
+      "languageId": "css"
+    },
+    "rlang":
+    {
+      "command":
+      [
+        "R", "--slave", "-e", "languageserver::run()"
+      ],
+      "scopes":
+      [
+        "source.r"
+      ],
+      "syntaxes":
+      [
+        "Packages/R/R.sublime-syntax"
+      ],
+      "languageId": "r"
+    }
 
   }
 }

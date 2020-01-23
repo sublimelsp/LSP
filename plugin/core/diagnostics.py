@@ -1,13 +1,7 @@
 from .logging import debug
-from .url import uri_to_filename
 from .protocol import Diagnostic, DiagnosticSeverity, Point
 from .typing import Protocol, List, Dict, Tuple, Callable, Optional
-
-try:
-    import sublime
-    assert sublime
-except ImportError:
-    pass
+from .url import uri_to_filename
 
 
 class DiagnosticsUI(Protocol):

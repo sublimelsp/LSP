@@ -3,21 +3,14 @@ import os
 import sublime
 import sublime_plugin
 
+from .core.diagnostics import DiagnosticsWalker, DiagnosticsUpdateWalk, DiagnosticsCursor, DocumentsState
 from .core.logging import debug
 from .core.panels import ensure_panel
 from .core.protocol import Diagnostic, DiagnosticSeverity, DiagnosticRelatedInformation, Point, Range
-from .core.settings import settings, PLUGIN_NAME
-from .core.views import range_to_region, region_to_range
 from .core.registry import windows, LSPViewEventListener
-from .core.diagnostics import DiagnosticsWalker, DiagnosticsUpdateWalk, DiagnosticsCursor, DocumentsState
-
-MYPY = False
-if MYPY:
-    from typing import Any, List, Dict, Callable, Optional, Tuple
-    from typing_extensions import Protocol
-    assert Any and List and Dict and Callable and Optional and Tuple
-else:
-    Protocol = object  # type: ignore
+from .core.settings import settings, PLUGIN_NAME
+from .core.typing import List, Dict, Optional, Tuple
+from .core.views import range_to_region, region_to_range
 
 
 diagnostic_severity_names = {
@@ -44,7 +37,7 @@ def format_severity(severity: int) -> str:
     return diagnostic_severity_names.get(severity, "???")
 
 
-def view_diagnostics(view: sublime.View) -> 'Dict[str, List[Diagnostic]]':
+def view_diagnostics(view: sublime.View) -> Dict[str, List[Diagnostic]]:
     if view.window():
         file_name = view.file_name()
         if file_name:
@@ -53,7 +46,7 @@ def view_diagnostics(view: sublime.View) -> 'Dict[str, List[Diagnostic]]':
     return {}
 
 
-def filter_by_point(file_diagnostics: 'Dict[str, List[Diagnostic]]', point: Point) -> 'Dict[str, List[Diagnostic]]':
+def filter_by_point(file_diagnostics: Dict[str, List[Diagnostic]], point: Point) -> Dict[str, List[Diagnostic]]:
     diagnostics_by_config = {}
     for config_name, diagnostics in file_diagnostics.items():
         point_diagnostics = [
@@ -64,7 +57,7 @@ def filter_by_point(file_diagnostics: 'Dict[str, List[Diagnostic]]', point: Poin
     return diagnostics_by_config
 
 
-def filter_by_range(file_diagnostics: 'Dict[str, List[Diagnostic]]', rge: Range) -> 'Dict[str, List[Diagnostic]]':
+def filter_by_range(file_diagnostics: Dict[str, List[Diagnostic]], rge: Range) -> Dict[str, List[Diagnostic]]:
     diagnostics_by_config = {}
     for config_name, diagnostics in file_diagnostics.items():
         point_diagnostics = [
@@ -101,7 +94,7 @@ class DiagnosticsCursorListener(LSPViewEventListener):
             elif self.has_status:
                 self.clear_diagnostics_status()
 
-    def show_diagnostics_status(self, diagnostic: 'Diagnostic') -> None:
+    def show_diagnostics_status(self, diagnostic: Diagnostic) -> None:
         self.has_status = True
         self.view.set_status('lsp_diagnostics', diagnostic.message)
 
@@ -115,7 +108,7 @@ class LspClearDiagnosticsCommand(sublime_plugin.WindowCommand):
         windows.lookup(self.window).diagnostics.clear()
 
 
-def ensure_diagnostics_panel(window: sublime.Window) -> 'Optional[sublime.View]':
+def ensure_diagnostics_panel(window: sublime.Window) -> Optional[sublime.View]:
     return ensure_panel(window, "diagnostics", r"^\s*\S\s+(\S.*):$", r"^\s+([0-9]+):?([0-9]+).*$",
                         "Packages/" + PLUGIN_NAME + "/Syntaxes/Diagnostics.sublime-syntax")
 
@@ -144,7 +137,7 @@ class DiagnosticsPhantoms(object):
         self._window = window
         self._last_phantom_set = None  # type: 'Optional[sublime.PhantomSet]'
 
-    def set_diagnostic(self, file_diagnostic: 'Optional[Tuple[str, Diagnostic]]') -> None:
+    def set_diagnostic(self, file_diagnostic: Optional[Tuple[str, Diagnostic]]) -> None:
         self.clear()
 
         if file_diagnostic:

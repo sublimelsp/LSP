@@ -5,21 +5,16 @@ import webbrowser
 import os
 import textwrap
 from html import escape
+from .code_actions import actions_manager, run_code_action_or_command
+from .code_actions import CodeActionOrCommand
 from .core.configurations import is_supported_syntax
-from .diagnostics import filter_by_point, view_diagnostics
-from .core.registry import session_for_view, LspTextCommand, windows
-from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation, Point
 from .core.documents import get_document_position
 from .core.popups import popups
-from .code_actions import actions_manager, run_code_action_or_command
+from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation, Point
+from .core.registry import session_for_view, LspTextCommand, windows
 from .core.settings import client_configs, settings
-
-try:
-    from typing import List, Optional, Any, Dict
-    from .code_actions import CodeActionOrCommand
-    assert List and Optional and Any and Dict and Diagnostic and CodeActionOrCommand
-except ImportError:
-    pass
+from .core.typing import List, Optional, Any, Dict
+from .diagnostics import filter_by_point, view_diagnostics
 
 
 SUBLIME_WORD_MASK = 515
@@ -83,7 +78,7 @@ class LspHoverCommand(LspTextCommand):
         word_at_sel = self.view.classify(point)
         return bool(word_at_sel & SUBLIME_WORD_MASK)
 
-    def run(self, edit: sublime.Edit, point: 'Optional[int]' = None) -> None:
+    def run(self, edit: sublime.Edit, point: Optional[int] = None) -> None:
         hover_point = point or self.view.sel()[0].begin()
         self._base_dir = windows.lookup(self.view.window()).get_project_path(self.view.file_name() or "")
 
@@ -116,11 +111,11 @@ class LspHoverCommand(LspTextCommand):
         actions_manager.request(self.view, point, lambda response: self.handle_code_actions(response, point),
                                 self._diagnostics_by_config)
 
-    def handle_code_actions(self, responses: 'Dict[str, List[CodeActionOrCommand]]', point: int) -> None:
+    def handle_code_actions(self, responses: Dict[str, List[CodeActionOrCommand]], point: int) -> None:
         self._actions_by_config = responses
         self.request_show_hover(point)
 
-    def handle_response(self, response: 'Optional[Any]', point: int) -> None:
+    def handle_response(self, response: Optional[Any], point: int) -> None:
         self._hover = response
         self.request_show_hover(point)
 
@@ -264,7 +259,7 @@ class LspHoverCommand(LspTextCommand):
             selected = self._actions_by_config[config_name][index]
             run_code_action_or_command(self.view, config_name, selected)
 
-    def run_command_from_point(self, point: int, command_name: str, args: 'Optional[Any]' = None) -> None:
+    def run_command_from_point(self, point: int, command_name: str, args: Optional[Any] = None) -> None:
         sel = self.view.sel()
         sel.clear()
         sel.add(sublime.Region(point, point))

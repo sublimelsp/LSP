@@ -2,16 +2,12 @@ import sublime
 import sublime_plugin
 
 from .core.configurations import is_supported_syntax
+from .core.documents import get_document_position
 from .core.protocol import Request, Range, DocumentHighlightKind
 from .core.registry import session_for_view, client_from_session
-from .core.documents import get_document_position
 from .core.settings import settings, client_configs
+from .core.typing import List, Dict, Optional
 from .core.views import range_to_region
-try:
-    from typing import List, Dict, Optional
-    assert List and Dict and Optional
-except ImportError:
-    pass
 
 SUBLIME_WORD_MASK = 515
 NO_HIGHLIGHT_SCOPES = 'comment, string'
@@ -91,7 +87,7 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
                     request = Request.documentHighlight(params)
                     client.send_request(request, self._handle_response)
 
-    def _handle_response(self, response: 'Optional[List]') -> None:
+    def _handle_response(self, response: Optional[List]) -> None:
         if not response:
             return
         kind2regions = {}  # type: Dict[str, List[sublime.Region]]

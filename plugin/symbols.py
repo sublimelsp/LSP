@@ -5,12 +5,8 @@ from .core.protocol import SymbolKind
 from .core.registry import LspTextCommand
 from .core.url import filename_to_uri
 from .core.views import range_to_region
+from .core.typing import List, Optional
 
-try:
-    from typing import List, Optional, Any, Tuple
-    assert List and Optional and Any and Tuple
-except ImportError:
-    pass
 
 symbol_kind_names = {
     SymbolKind.File: "file",
@@ -46,7 +42,7 @@ def format_symbol_kind(kind: int) -> str:
     return symbol_kind_names.get(kind, str(kind))
 
 
-def format_symbol(item: dict) -> 'List[str]':
+def format_symbol(item: dict) -> List[str]:
     """
     items may be a list of strings, or a list of string lists.
     In the latter case, each entry in the quick panel will show multiple rows
@@ -60,7 +56,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
 
-    def is_enabled(self, event: 'Optional[dict]' = None) -> bool:
+    def is_enabled(self, event: Optional[dict] = None) -> bool:
         return self.has_client_with_capability('documentSymbolProvider')
 
     def run(self, edit: sublime.Edit) -> None:
@@ -75,7 +71,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             request = Request.documentSymbols(params)
             client.send_request(request, self.handle_response)
 
-    def handle_response(self, response: 'Optional[List]') -> None:
+    def handle_response(self, response: Optional[List]) -> None:
         response_list = response or []
         symbols = list(format_symbol(item) for item in response_list)
         self.symbols = response_list

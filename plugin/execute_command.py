@@ -1,13 +1,8 @@
 import sublime
-from .core.registry import LspTextCommand
 from .core.protocol import Request
+from .core.registry import LspTextCommand
 from .core.rpc import Client
-
-try:
-    from typing import List, Optional, Dict, Any, Tuple
-    assert List and Optional and Dict and Any, Tuple
-except ImportError:
-    pass
+from .core.typing import List, Optional, Dict, Any
 
 
 class LspExecuteCommand(LspTextCommand):
@@ -16,8 +11,8 @@ class LspExecuteCommand(LspTextCommand):
 
     def run(self,
             edit: sublime.Edit,
-            command_name: 'Optional[str]' = None,
-            command_args: 'Optional[Any]' = None) -> None:
+            command_name: Optional[str] = None,
+            command_args: Optional[Any] = None) -> None:
         client = self.client_with_capability('executeCommandProvider')
         if client and command_name:
             window = self.view.window()
@@ -25,18 +20,18 @@ class LspExecuteCommand(LspTextCommand):
                 window.status_message("Running command {}".format(command_name))
             self._send_command(client, command_name, command_args)
 
-    def _handle_response(self, command: str, response: 'Optional[Any]') -> None:
+    def _handle_response(self, command: str, response: Optional[Any]) -> None:
         msg = "command {} completed".format(command)
         if response:
             msg += "with response: {}".format(response)
 
         sublime.message_dialog(msg)
 
-    def _handle_error(self, command: str, error: 'Dict[str, Any]') -> None:
+    def _handle_error(self, command: str, error: Dict[str, Any]) -> None:
         msg = "command {} failed. Reason: {}".format(command, error.get("message", "none provided by server :("))
         sublime.message_dialog(msg)
 
-    def _send_command(self, client: Client, command_name: str, command_args: 'Optional[List[Any]]') -> None:
+    def _send_command(self, client: Client, command_name: str, command_args: Optional[List[Any]]) -> None:
         request = {
             "command": command_name,
             "arguments": command_args

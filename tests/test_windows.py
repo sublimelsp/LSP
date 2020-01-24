@@ -32,14 +32,16 @@ except ImportError:
 
 def mock_start_session(window: MockWindow,
                        workspace_folders: 'List[WorkspaceFolder]',
+                       designated_folder: 'Optional[WorkspaceFolder]',
                        config: ClientConfig,
                        on_pre_initialize: 'Callable[[Session], None]',
-                       on_post_initialize: 'Callable[[Session], None]',
+                       on_post_initialize: 'Callable[[Session, Optional[Dict[str, Any]]], None]',
                        on_post_exit: 'Callable[[str], None]',
                        on_stderr_log: 'Optional[Callable[[str], None]]') -> 'Optional[Session]':
     return create_session(
         config=TEST_CONFIG,
         workspace_folders=workspace_folders,
+        designated_folder=designated_folder,
         env=dict(),
         settings=MockSettings(),
         bootstrap_client=MockClient(),

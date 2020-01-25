@@ -24,24 +24,26 @@ last_text_command = None
 
 class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
     def run(self, edit: 'Any', item) -> None:
-        print('CompletionHandler prefix', CompletionHandler.prefix)
         insert_text_format = item.get("insertTextFormat")
 
         text_edit = item.get('textEdit')
         if text_edit:
-            range = Range.from_lsp(text_edit['range'])
-            text_edit_region = range_to_region(range, self.view)
-            current_point = self.view.sel()[0].begin()
             new_text = text_edit.get('newText')
+
+            range = Range.from_lsp(text_edit['range'])
+            edit_region = range_to_region(range, self.view)
+
+            # subtract the prefix from the end
+            end_edit_position = edit_region.end() - len(CompletionHandler.prefix)
+            edit_range = sublime.Region(edit_region.begin(), end_edit_position)
+
             if insert_text_format == InsertTextFormat.Snippet:
-                self.view.run_command("insert_snippet", { "contents": new_text })
+                self.view.replace(edit, edit_range, "")
+                self.view.run_command("insert_snippet", {"contents": new_text})
             else:
-                # subtract the prefix length from the end
-                end_edit_position = text_edit_region.end() - len(CompletionHandler.prefix)
-                edit_range = sublime.Region(text_edit_region.begin(), end_edit_position)
                 self.view.replace(edit, edit_range, new_text)
 
-                # move the cursor to the end
+                # move the cursor to the end of the text edit
                 sel = self.view.sel()
                 sel.clear()
                 sel.add(edit_range.begin() + len(new_text))
@@ -52,7 +54,7 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
             completion = item.get('insertText') or item.get('label')
             current_point = self.view.sel()[0].begin()
             if insert_text_format == InsertTextFormat.Snippet:
-                self.view.run_command("insert_snippet", { "contents": completion })
+                self.view.run_command("insert_snippet", {"contents": completion})
             else:
                 self.view.insert(edit, current_point, completion)
 
@@ -60,16 +62,19 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
         additional_edits = item.get('additionalTextEdits')
         if additional_edits:
             self.apply_additional_edits(additional_edits)
-        # elif self.resolve:
-        elif True:
-            self.do_resolve(item)
+
+        self.do_resolve(item)
 
     def do_resolve(self, item: dict) -> None:
-        client = client_from_session(session_for_view(self.view, 'completionProvider', self.view.sel()[0].begin()))
+        session = session_for_view(self.view, 'completionProvider', self.view.sel()[0].begin())
+        client = client_from_session(session)
+
         if not client:
             return
 
-        client.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
+        resolve_provider = session.get_capability('completionProvider').get('resolveProvider') or False
+        if resolve_provider:
+            client.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
 
     def handle_resolve_response(self, response: 'Optional[Dict]') -> None:
         if response:
@@ -100,7 +105,7 @@ class LspTrimCompletionCommand(sublime_plugin.TextCommand):
 
 
 class CompletionHandler(LSPViewEventListener):
-    prefix=""
+    prefix = ""
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
@@ -108,7 +113,6 @@ class CompletionHandler(LSPViewEventListener):
         self.enabled = False
         self.trigger_chars = []  # type: List[str]
         self.completion_list = sublime.CompletionList()
-        self.last_prefix = ""
         self.last_location = -1
         self.committing = False
         self.response_items = []  # type: List[dict]
@@ -163,7 +167,7 @@ class CompletionHandler(LSPViewEventListener):
             self.view.settings().set('auto_complete_triggers', completion_triggers)
 
     def on_query_completions(self, prefix: str, locations: 'List[int]') -> 'Optional[sublime.CompletionList]':
-        CompletionHandler.prefix=prefix
+        CompletionHandler.prefix = prefix
         if not self.initialized:
             self.initialize()
 
@@ -171,7 +175,6 @@ class CompletionHandler(LSPViewEventListener):
             return None
 
         self.completion_list = sublime.CompletionList()
-        self.last_prefix = prefix
         self.last_location = locations[0]
         self.do_request(prefix, locations)
 

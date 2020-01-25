@@ -23,7 +23,7 @@ compleiton_kinds = {
     14: (sublime.KIND_ID_KEYWORD, "κ", "Keyword"),
     15: (sublime.KIND_ID_SNIPPET, "s", "Snippet"),
     16: (sublime.KIND_ID_AMBIGUOUS, "c", "Color"),
-    17: (sublime.KIND_ID_AMBIGUOUS, "Ξ", "File"),
+    17: (sublime.KIND_ID_AMBIGUOUS, "#", "File"),
     18: (sublime.KIND_ID_AMBIGUOUS, "⇢", "Reference"),
     19: (sublime.KIND_ID_AMBIGUOUS, "ƒ", "Folder"),
     20: (sublime.KIND_ID_TYPE, "ε", "EnumMember"),

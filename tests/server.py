@@ -29,10 +29,10 @@ __version__ = "0.9.3"
 
 
 if sys.version_info[0] < 3:
-    print("only works for python3.5 and higher")
+    print("only works for python3.6 and higher")
     exit(1)
-if sys.version_info[1] < 5:
-    print("only works for python3.5 and higher")
+if sys.version_info[1] < 6:
+    print("only works for python3.6 and higher")
     exit(1)
 
 
@@ -149,15 +149,15 @@ class Session:
                      {"type": MessageType.info, "message": message})
 
     def _notify(self, method: str, params: PayloadLike) -> None:
-        asyncio.create_task(self._send_payload(
+        asyncio.get_event_loop().create_task(self._send_payload(
             make_notification(method, params)))
 
     def _reply(self, request_id: int, params: PayloadLike) -> None:
-        asyncio.create_task(self._send_payload(
+        asyncio.get_event_loop().create_task(self._send_payload(
             make_response(request_id, params)))
 
     def _error(self, request_id: int, err: Error) -> None:
-        asyncio.create_task(self._send_payload(
+        asyncio.get_event_loop().create_task(self._send_payload(
             make_error_response(request_id, err)))
 
     async def _send_payload(self, payload: StringDict) -> None:
@@ -245,7 +245,7 @@ class Session:
                     ErrorCode.InternalError, str(ex)))
         else:
             # handle notification
-            task = asyncio.create_task(handler(params))
+            task = asyncio.get_event_loop().create_task(handler(params))
             task.add_done_callback(self._handle_notification_handler_exception)
 
     async def _handle_body(self, body: bytes) -> None:
@@ -275,7 +275,7 @@ class Session:
                 if not line:
                     continue
                 body = await self._reader.readexactly(num_bytes)
-                asyncio.create_task(self._handle_body(body))
+                asyncio.get_event_loop().create_task(self._handle_body(body))
         except (BrokenPipeError, ConnectionResetError, StopLoopException):
             pass
         return self._received_shutdown
@@ -335,7 +335,7 @@ class Session:
 
 # START: https://stackoverflow.com/a/52702646/990142
 async def stdio() -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
-    loop = asyncio.get_running_loop()
+    loop = asyncio.get_event_loop()
     if sys.platform == 'win32':
         return _win32_stdio(loop)
     else:

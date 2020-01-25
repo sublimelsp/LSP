@@ -10,7 +10,7 @@ import os
 import threading
 
 
-ACQUIRE_READY_LOCK_TIMEOUT = 3
+ACQUIRE_READY_LOCK_TIMEOUT = 5
 
 
 def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: ClientConfig) -> dict:

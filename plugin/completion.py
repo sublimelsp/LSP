@@ -24,17 +24,30 @@ last_text_command = None
 
 class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
     def run(self, edit: 'Any', item) -> None:
+        print('CompletionHandler prefix', CompletionHandler.prefix)
         insert_text_format = item.get("insertTextFormat")
 
         text_edit = item.get('textEdit')
         if text_edit:
             range = Range.from_lsp(text_edit['range'])
+            text_edit_region = range_to_region(range, self.view)
             current_point = self.view.sel()[0].begin()
             new_text = text_edit.get('newText')
             if insert_text_format == InsertTextFormat.Snippet:
                 self.view.run_command("insert_snippet", { "contents": new_text })
             else:
-                self.view.insert(edit, current_point, new_text)
+                # subtract the prefix length from the end
+                end_edit_position = text_edit_region.end() - len(CompletionHandler.prefix)
+                edit_range = sublime.Region(text_edit_region.begin(), end_edit_position)
+                self.view.replace(edit, edit_range, new_text)
+
+                # move the cursor to the end
+                sel = self.view.sel()
+                sel.clear()
+                sel.add(edit_range.begin() + len(new_text))
+
+                # reset the prefix
+                CompletionHandler.prefix = ""
         else:
             completion = item.get('insertText') or item.get('label')
             current_point = self.view.sel()[0].begin()
@@ -87,6 +100,8 @@ class LspTrimCompletionCommand(sublime_plugin.TextCommand):
 
 
 class CompletionHandler(LSPViewEventListener):
+    prefix=""
+
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self.initialized = False
@@ -148,7 +163,7 @@ class CompletionHandler(LSPViewEventListener):
             self.view.settings().set('auto_complete_triggers', completion_triggers)
 
     def on_query_completions(self, prefix: str, locations: 'List[int]') -> 'Optional[sublime.CompletionList]':
-
+        CompletionHandler.prefix=prefix
         if not self.initialized:
             self.initialize()
 

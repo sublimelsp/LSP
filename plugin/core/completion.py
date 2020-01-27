@@ -1,9 +1,10 @@
 import sublime
-import sublime_plugin
-from .protocol import CompletionItemKind, Range
-from .types import Settings
-from .logging import debug
 from .typing import Tuple, Optional, Dict, List, Union
+
+try:
+    from typing import cast
+except ImportError:
+    pass
 
 
 compleiton_kinds = {
@@ -34,21 +35,22 @@ compleiton_kinds = {
     25: (sublime.KIND_ID_TYPE, "τ", "Type Parameter")
 }
 
-def format_completion(item: dict, word_col: int, settings: 'Settings' = None) -> 'Tuple[str, str]':
-    trigger = item.get('label')
-    annotation = item.get('detail', "")
+
+def format_completion(item: dict, word_col: int) -> sublime.CompletionItem:
+    trigger = item.get('label') or ""
+    annotation = item.get('detail') or ""
     kind = sublime.KIND_AMBIGUOUS
 
     item_kind = item.get("kind")
     if item_kind:
-        kind = compleiton_kinds.get(item_kind)
+        kind = compleiton_kinds.get(item_kind, sublime.KIND_AMBIGUOUS)
 
     is_deprecated = item.get("deprecated", False)
     if is_deprecated:
         list_kind = list(kind)
         list_kind[1] = '⚠'
         list_kind[2] = "⚠ {} - Deprecated".format(list_kind[2])
-        kind = tuple(list_kind)
+        kind = cast(Tuple[int, str, str], tuple(list_kind))
 
     return sublime.CompletionItem.command_completion(
         trigger,

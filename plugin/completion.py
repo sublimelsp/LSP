@@ -13,7 +13,7 @@ from .core.logging import debug
 from .core.completion import parse_completion_response, format_completion
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.configurations import is_supported_syntax
-from .core.documents import get_document_position, position_is_word
+from .core.documents import get_document_position
 from .core.sessions import Session
 from .core.edit import parse_text_edit
 from .core.views import range_to_region
@@ -23,7 +23,7 @@ last_text_command = None
 
 
 class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
-    def run(self, edit: 'Any', item) -> None:
+    def run(self, edit: 'Any', item: 'Dict') -> None:
         insert_text_format = item.get("insertTextFormat")
 
         text_edit = item.get('textEdit')
@@ -33,25 +33,20 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
             range = Range.from_lsp(text_edit['range'])
             edit_region = range_to_region(range, self.view)
 
-            # subtract the prefix from the end
-            end_edit_position = edit_region.end() - len(CompletionHandler.prefix)
-            edit_range = sublime.Region(edit_region.begin(), end_edit_position)
-
             if insert_text_format == InsertTextFormat.Snippet:
-                self.view.replace(edit, edit_range, "")
                 self.view.run_command("insert_snippet", {"contents": new_text})
             else:
+                # subtract the prefix from the end
+                end_edit_position = edit_region.end() - len(CompletionHandler.prefix)
+                edit_range = sublime.Region(edit_region.begin(), end_edit_position)
                 self.view.replace(edit, edit_range, new_text)
 
                 # move the cursor to the end of the text edit
                 sel = self.view.sel()
                 sel.clear()
                 sel.add(edit_range.begin() + len(new_text))
-
-                # reset the prefix
-                CompletionHandler.prefix = ""
         else:
-            completion = item.get('insertText') or item.get('label')
+            completion = item.get('insertText') or item.get('label') or ""
             current_point = self.view.sel()[0].begin()
             if insert_text_format == InsertTextFormat.Snippet:
                 self.view.run_command("insert_snippet", {"contents": completion})
@@ -67,13 +62,16 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
 
     def do_resolve(self, item: dict) -> None:
         session = session_for_view(self.view, 'completionProvider', self.view.sel()[0].begin())
-        client = client_from_session(session)
+        if not session:
+            return
 
+        client = client_from_session(session)
         if not client:
             return
 
-        resolve_provider = session.get_capability('completionProvider').get('resolveProvider') or False
-        if resolve_provider:
+        completion_provider = session.get_capability('completionProvider')
+        has_resolve_provider = completion_provider and completion_provider.get('resolveProvider', False)
+        if has_resolve_provider:
             client.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
 
     def handle_resolve_response(self, response: 'Optional[Dict]') -> None:
@@ -105,6 +103,7 @@ class LspTrimCompletionCommand(sublime_plugin.TextCommand):
 
 
 class CompletionHandler(LSPViewEventListener):
+    # the last known prefix
     prefix = ""
 
     def __init__(self, view: sublime.View) -> None:
@@ -184,7 +183,6 @@ class CompletionHandler(LSPViewEventListener):
         self.committing = command_name in ('commit_completion', 'auto_complete')
 
     def do_request(self, prefix: str, locations: 'List[int]') -> None:
-        print('send  request')
         # don't store client so we can handle restarts
         client = client_from_session(session_for_view(self.view, 'completionProvider', locations[0]))
         if not client:

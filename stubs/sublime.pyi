@@ -68,6 +68,24 @@ UI_ELEMENT_OPEN_FILES = ...  # type: int
 LAYOUT_INLINE = ...  # type: int
 LAYOUT_BELOW = ...  # type: int
 LAYOUT_BLOCK = ...  # type: int
+KIND_ID_AMBIGUOUS = ...  # type: int
+KIND_ID_KEYWORD = ...  # type: int
+KIND_ID_TYPE = ...  # type: int
+KIND_ID_FUNCTION = ...  # type: int
+KIND_ID_NAMESPACE = ...  # type: int
+KIND_ID_NAVIGATION = ...  # type: int
+KIND_ID_MARKUP = ...  # type: int
+KIND_ID_VARIABLE = ...  # type: int
+KIND_ID_SNIPPET = ...  # type: int
+KIND_AMBIGUOUS = ...  # type: Tuple[int, str, str]
+KIND_KEYWORD = ...  # type: Tuple[int, str, str]
+KIND_TYPE = ...  # type: Tuple[int, str, str]
+KIND_FUNCTION = ...  # type: Tuple[int, str, str]
+KIND_NAMESPACE = ...  # type: Tuple[int, str, str]
+KIND_NAVIGATION = ...  # type: Tuple[int, str, str]
+KIND_MARKUP = ...  # type: Tuple[int, str, str]
+KIND_VARIABLE = ...  # type: Tuple[int, str, str]
+KIND_SNIPPET = ...  # type: Tuple[int, str, str]
 
 
 class Settings:
@@ -240,8 +258,15 @@ def get_macro() -> Sequence[dict]:
 
 
 class CompletionItem:
-    ...
-
+    @classmethod
+    def command_completion(cls,
+                           trigger: str,
+                           command: str,
+                           args: dict = {},
+                           annotation: str = "",
+                           kind: Tuple[int, str, str] = KIND_AMBIGUOUS
+                           ) -> 'CompletionItem':
+        ...
 
 class CompletionList:
     def set_completions(self, completions: List[CompletionItem], flags: int = 0) -> None:
@@ -501,7 +526,7 @@ class Selection(Sized):
     def clear(self) -> None:
         ...
 
-    def add(self, x: Region) -> None:
+    def add(self, x: Union[Region, int]) -> None:
         ...
 
     def add_all(self, regions: Sequence[Region]) -> None:

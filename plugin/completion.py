@@ -32,8 +32,8 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
                 self.view.run_command("insert_snippet", {"contents": new_text})
             else:
                 # subtract the prefix from the end
-                end_edit_position = edit_region.end() - len(CompletionHandler.prefix)
-                edit_range = sublime.Region(edit_region.begin(), end_edit_position)
+                current_point = self.view.sel()[0].begin()
+                edit_range = sublime.Region(edit_region.begin(), current_point)
                 self.view.replace(edit, edit_range, new_text)
 
                 # move the cursor to the end of the text edit
@@ -98,9 +98,6 @@ class LspTrimCompletionCommand(sublime_plugin.TextCommand):
 
 
 class CompletionHandler(LSPViewEventListener):
-    # the last known prefix
-    prefix = ""
-
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self.initialized = False
@@ -160,7 +157,6 @@ class CompletionHandler(LSPViewEventListener):
             self.view.settings().set('auto_complete_triggers', completion_triggers)
 
     def on_query_completions(self, prefix: str, locations: 'List[int]') -> 'Optional[sublime.CompletionList]':
-        CompletionHandler.prefix = prefix
         if not self.initialized:
             self.initialize()
 

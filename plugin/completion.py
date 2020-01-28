@@ -1,12 +1,6 @@
 import sublime
 import sublime_plugin
 
-try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional, Union
-    assert Any and List and Dict and Tuple and Callable and Optional and Union
-except ImportError:
-    pass
-
 from .core.protocol import Request, Range, InsertTextFormat
 from .core.settings import settings, client_configs
 from .core.logging import debug
@@ -17,6 +11,7 @@ from .core.documents import get_document_position
 from .core.sessions import Session
 from .core.edit import parse_text_edit
 from .core.views import range_to_region
+from .core.typing import Any, List, Dict, Tuple, Optional, Union
 
 
 last_text_command = None
@@ -115,7 +110,6 @@ class CompletionHandler(LSPViewEventListener):
         self.last_location = -1
         self.committing = False
         self.response_items = []  # type: List[dict]
-        self.selected_item_index = -1
 
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:

@@ -1,0 +1,33 @@
+=> 0.9.4
+
+
+Features:
+
+* When using any of the various "goto" variants, a quick panel is now shown
+  when the language server returns multiple locations. Before this, we took
+  the first location and jumped to that location. (@mrbrian)
+
+
+Fixes:
+
+* Workspace-aware and workspace-unaware language servers are attached to views
+  outside the workspace (rather than only for views inside the workspace).
+
+* The tests/ folder is now part of the export-ignore attribute in the
+  .gitattributes file, so the .sublime-package file that you installed through
+  Package Control will be smaller.
+
+
+New server support or documentation:
+
+* Adjusted default configurations for lsp-tsserver,
+  javascript-typescript-stdio, and typescript-language-server. (@plinss)
+
+* Document next/prev diagnostics in key bindings
+  As an alternative to the "diagnostics panel", you can also tab through the
+  errors/warnings in the view via SublimeText phantoms. (@pedragnikolic)
+
+* Add Fortran language server (@jwortmann)
+
+* Refreshed and enhanced documentation: https://lsp.readthedocs.io/en/latest
+  (@jwortmann)

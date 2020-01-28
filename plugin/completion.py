@@ -88,14 +88,14 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
 
 
 class CompletionHelper(sublime_plugin.EventListener):
-    def on_text_command(self, view: sublime.View, command_name: str, args: 'Optional[Any]') -> None:
+    def on_text_command(self, view: sublime.View, command_name: str, args: Optional[Any]) -> None:
         global last_text_command
         last_text_command = command_name
 
 
 class LspTrimCompletionCommand(sublime_plugin.TextCommand):
 
-    def run(self, edit: sublime.Edit, range: 'Optional[Tuple[int, int]]' = None) -> None:
+    def run(self, edit: sublime.Edit, range: Optional[Tuple[int, int]] = None) -> None:
         if range:
             start, end = range
             region = sublime.Region(start, end)
@@ -141,7 +141,7 @@ class CompletionHandler(LSPViewEventListener):
                 self.register_trigger_chars(session)
             self.auto_complete_selector = self.view.settings().get("auto_complete_selector", "") or ""
 
-    def _view_language(self, config_name: str) -> 'Optional[str]':
+    def _view_language(self, config_name: str) -> Optional[str]:
         languages = self.view.settings().get('lsp_language')
         return languages.get(config_name) if languages else None
 
@@ -223,13 +223,13 @@ class CompletionHandler(LSPViewEventListener):
 
         client.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
 
-    def handle_resolve_response(self, response: 'Optional[Dict]') -> None:
+    def handle_resolve_response(self, response: Optional[Dict]) -> None:
         if response:
             additional_edits = response.get('additionalTextEdits')
             if additional_edits:
                 self.apply_additional_edits(additional_edits)
 
-    def apply_additional_edits(self, additional_edits: 'List[Dict]') -> None:
+    def apply_additional_edits(self, additional_edits: List[Dict]) -> None:
         edits = list(parse_text_edit(additional_edit) for additional_edit in additional_edits)
         debug('applying additional edits:', edits)
         self.view.run_command("lsp_apply_document_edit", {'changes': edits})

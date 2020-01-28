@@ -2,6 +2,7 @@ try:
 
     # ST builds >= 4000
 
+    from mypy_extensions import TypedDict
     from typing import Any
     from typing import Callable
     from typing import Dict
@@ -41,6 +42,10 @@ except ImportError:
 
     class Type(metaclass=_TypeMeta):  # type: ignore
         pass
+
+    class TypedDict(Type, dict):  # type: ignore
+        def __init__(*args, **kwargs) -> None:  # type: ignore
+            pass
 
     class Any(Type):  # type: ignore
         pass

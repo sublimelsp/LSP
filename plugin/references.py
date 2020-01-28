@@ -7,16 +7,11 @@ from .core.panels import ensure_panel
 from .core.protocol import Request, Point
 from .core.registry import LspTextCommand, windows
 from .core.settings import PLUGIN_NAME, settings
+from .core.typing import List, Dict, Optional, Tuple, TypedDict
 from .core.url import uri_to_filename
 from .core.views import get_line
 
-try:
-    from typing import List, Dict, Optional, Callable, Tuple
-    from mypy_extensions import TypedDict
-    assert List and Dict and Optional and Callable and Tuple and TypedDict
-    ReferenceDict = TypedDict('ReferenceDict', {'uri': str, 'range': dict})
-except ImportError:
-    pass
+ReferenceDict = TypedDict('ReferenceDict', {'uri': str, 'range': dict})
 
 
 def ensure_references_panel(window: sublime.Window) -> 'Optional[sublime.View]':
@@ -32,12 +27,12 @@ class LspSymbolReferencesCommand(LspTextCommand):
         self.word = ""
         self.base_dir = None  # type: Optional[str]
 
-    def is_enabled(self, event: 'Optional[dict]' = None) -> bool:
+    def is_enabled(self, event: Optional[dict] = None) -> bool:
         if self.has_client_with_capability('referencesProvider'):
             return is_at_word(self.view, event)
         return False
 
-    def run(self, edit: sublime.Edit, event: 'Optional[dict]' = None) -> None:
+    def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
         client = self.client_with_capability('referencesProvider')
         file_path = self.view.file_name()
         if client and file_path:
@@ -61,7 +56,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 client.send_request(
                     request, lambda response: self.handle_response(response, pos))
 
-    def handle_response(self, response: 'Optional[List[ReferenceDict]]', pos: int) -> None:
+    def handle_response(self, response: Optional[List[ReferenceDict]], pos: int) -> None:
         window = self.view.window()
 
         if response is None:
@@ -82,7 +77,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
             else:
                 self.show_references_panel(references_by_file)
 
-    def show_quick_panel(self, references_by_file: 'Dict[str, List[Tuple[Point, str]]]') -> None:
+    def show_quick_panel(self, references_by_file: Dict[str, List[Tuple[Point, str]]]) -> None:
         selected_index = -1
         current_file_path = self.view.file_name()
         for file_path, references in references_by_file.items():
@@ -119,7 +114,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
             if window:
                 window.open_file(self.get_selected_file_path(index), flags)
 
-    def show_references_panel(self, references_by_file: 'Dict[str, List[Tuple[Point, str]]]') -> None:
+    def show_references_panel(self, references_by_file: Dict[str, List[Tuple[Point, str]]]) -> None:
         window = self.view.window()
         if window:
             panel = ensure_references_panel(window)
@@ -169,8 +164,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
     def want_event(self) -> bool:
         return True
 
-    def _group_references_by_file(self, references: 'List[ReferenceDict]'
-                                  ) -> 'Dict[str, List[Tuple[Point, str]]]':
+    def _group_references_by_file(self, references: List[ReferenceDict]
+                                  ) -> Dict[str, List[Tuple[Point, str]]]:
         """ Return a dictionary that groups references by the file it belongs. """
         grouped_references = {}  # type: Dict[str, List[Tuple[Point, str]]]
         for reference in references:

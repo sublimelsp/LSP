@@ -106,7 +106,6 @@ class CompletionHandler(LSPViewEventListener):
         self.completion_list = sublime.CompletionList()
         self.last_location = -1
         self.committing = False
-        self.response_items = []  # type: List[dict]
 
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:
@@ -163,6 +162,10 @@ class CompletionHandler(LSPViewEventListener):
         if not self.enabled:
             return None
 
+        if self.last_location == locations[0]:
+            # return cache
+            return self.completion_list
+
         self.completion_list = sublime.CompletionList()
         self.last_location = locations[0]
         self.do_request(prefix, locations)
@@ -190,7 +193,6 @@ class CompletionHandler(LSPViewEventListener):
         _last_row, last_col = self.view.rowcol(self.last_location)
 
         response_items, response_incomplete = parse_completion_response(response)
-        self.response_items = response_items
         items = list(format_completion(item, last_col) for item in response_items)
 
         flags = 0

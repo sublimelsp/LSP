@@ -1,17 +1,11 @@
 import sublime
-
-from .core.registry import LspTextCommand
-from .core.protocol import Request, Point
-from .core.documents import get_document_position, get_position, is_at_word
-from .core.url import uri_to_filename
-from .core.logging import debug
 from Default.history_list import get_jump_history_for_view
-
-try:
-    from typing import List, Dict, Optional, Any, Tuple
-    assert List and Dict and Optional and Any and Tuple
-except ImportError:
-    pass
+from .core.documents import get_document_position, get_position, is_at_word
+from .core.logging import debug
+from .core.protocol import Request, Point
+from .core.registry import LspTextCommand
+from .core.typing import List, Optional, Any, Tuple
+from .core.url import uri_to_filename
 
 
 class LspGotoCommand(LspTextCommand):
@@ -20,12 +14,12 @@ class LspGotoCommand(LspTextCommand):
         super().__init__(view)
         self.goto_kind = "definition"
 
-    def is_enabled(self, event: 'Optional[dict]' = None) -> bool:
+    def is_enabled(self, event: Optional[dict] = None) -> bool:
         if self.has_client_with_capability(self.goto_kind + "Provider"):
             return is_at_word(self.view, event)
         return False
 
-    def run(self, edit: sublime.Edit, event: 'Optional[dict]' = None) -> None:
+    def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
         client = self.client_with_capability(self.goto_kind + "Provider")
         if client:
             pos = get_position(self.view, event)
@@ -39,11 +33,11 @@ class LspGotoCommand(LspTextCommand):
                 client.send_request(
                     request, lambda response: self.handle_response(response, pos))
 
-    def handle_response(self, response: 'Optional[Any]', position: int) -> None:
-        def process_response_list(responses: list) -> 'List[Tuple[str, str, Tuple[int, int]]]':
+    def handle_response(self, response: Optional[Any], position: int) -> None:
+        def process_response_list(responses: list) -> List[Tuple[str, str, Tuple[int, int]]]:
             return [process_response(x) for x in responses]
 
-        def process_response(response: dict) -> 'Tuple[str, str, Tuple[int, int]]':
+        def process_response(response: dict) -> Tuple[str, str, Tuple[int, int]]:
             if "targetUri" in response:
                 # TODO: Do something clever with originSelectionRange and targetRange.
                 file_path = uri_to_filename(response["targetUri"])
@@ -56,7 +50,7 @@ class LspGotoCommand(LspTextCommand):
             file_path_and_row_col = "{}:{}:{}".format(file_path, row, col)
             return file_path, file_path_and_row_col, (row, col)
 
-        def open_location(window: sublime.Window, location: 'Tuple[str, str, Tuple[int, int]]') -> None:
+        def open_location(window: sublime.Window, location: Tuple[str, str, Tuple[int, int]]) -> None:
             fname, file_path_and_row_col, rowcol = location
             row, col = rowcol
             debug("opening location", file_path_and_row_col)
@@ -66,7 +60,7 @@ class LspGotoCommand(LspTextCommand):
 
         def select_entry(
                 window: sublime.Window,
-                locations: 'List[Tuple[str, str, Tuple[int, int]]]',
+                locations: List[Tuple[str, str, Tuple[int, int]]],
                 idx: int,
                 orig_view: sublime.View) -> None:
             if idx >= 0:
@@ -77,7 +71,7 @@ class LspGotoCommand(LspTextCommand):
 
         def highlight_entry(
                 window: sublime.Window,
-                locations: 'List[Tuple[str, str, Tuple[int, int]]]',
+                locations: List[Tuple[str, str, Tuple[int, int]]],
                 idx: int) -> None:
             fname, file_path_and_row_col, rowcol = locations[idx]
             row, col = rowcol

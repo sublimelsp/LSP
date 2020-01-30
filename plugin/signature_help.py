@@ -3,20 +3,14 @@ import sublime
 import html
 import webbrowser
 
-try:
-    from typing import Any, List, Dict, Optional
-    assert Any and List and Dict and Optional
-except ImportError:
-    pass
-
 from .core.configurations import is_supported_syntax
-from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.documents import get_document_position
-from .core.protocol import Request
 from .core.popups import popups
+from .core.protocol import Request
+from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.settings import client_configs, settings
 from .core.signature_help import create_signature_help, SignatureHelp
-assert SignatureHelp
+from .core.typing import List, Dict, Optional
 
 
 class ColorSchemeScopeRenderer(object):
@@ -109,7 +103,7 @@ class SignatureHelpListener(LSPViewEventListener):
                     Request.signatureHelp(document_position),
                     lambda response: self.handle_response(response, point))
 
-    def handle_response(self, response: 'Optional[Dict]', point: int) -> None:
+    def handle_response(self, response: Optional[Dict], point: int) -> None:
         if self.view.sel()[0].begin() == self.requested_position:
             self._help = create_signature_help(response)
             if self._help:

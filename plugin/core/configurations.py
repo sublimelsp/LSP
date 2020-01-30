@@ -1,24 +1,18 @@
+import sublime
 from copy import deepcopy
-
-from .types import ClientConfig, LanguageConfig, ViewLike, WindowLike, ConfigRegistry
 from .logging import debug
+from .types import ClientConfig, LanguageConfig, ViewLike, WindowLike, ConfigRegistry
 from .types import config_supports_syntax, syntax_language
-from .workspace import get_project_config, enable_in_project, disable_in_project
 from .typing import Any, List, Dict, Tuple, Optional, Iterator
-
-try:
-    import sublime
-    assert sublime
-except ImportError:
-    pass
+from .workspace import get_project_config, enable_in_project, disable_in_project
 
 
-def get_scope_client_config(view: 'sublime.View', configs: List[ClientConfig],
+def get_scope_client_config(view: sublime.View, configs: List[ClientConfig],
                             point: Optional[int] = None) -> Optional[ClientConfig]:
     return next(get_scope_client_configs(view, configs, point), None)
 
 
-def get_scope_client_configs(view: 'sublime.View', configs: List[ClientConfig],
+def get_scope_client_configs(view: sublime.View, configs: List[ClientConfig],
                              point: Optional[int] = None) -> Iterator[ClientConfig]:
     # When there are multiple server configurations, all of which are for
     # similar scopes (e.g. 'source.json', 'source.json.sublime.settings') the
@@ -48,7 +42,7 @@ def get_scope_client_configs(view: 'sublime.View', configs: List[ClientConfig],
         scope_configs, key=lambda config_score: config_score[1], reverse=True))
 
 
-def get_global_client_config(view: 'sublime.View', global_configs: List[ClientConfig]) -> Optional[ClientConfig]:
+def get_global_client_config(view: sublime.View, global_configs: List[ClientConfig]) -> Optional[ClientConfig]:
     return get_scope_client_config(view, global_configs)
 
 

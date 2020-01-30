@@ -137,8 +137,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.wm = windows.lookup(window)  # create just this single one for the test
         self.assertEqual(len(self.wm._sessions), 0)
         self.view = window.open_file(filename)
-        if sublime.platform() == "osx":
-            yield 200
+        yield lambda: not self.view.is_loading()
         self.assertTrue(self.wm._configs.syntax_supported(self.view))
         self.init_view_settings()
         self.wm.start_active_views()  # in case testfile.txt was already opened

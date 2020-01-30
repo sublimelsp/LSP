@@ -40,12 +40,12 @@ def format_completion(item: dict, word_col: int) -> sublime.CompletionItem:
     if item_kind:
         kind = compleiton_kinds.get(item_kind, sublime.KIND_AMBIGUOUS)
 
-    is_deprecated = item.get("deprecated", True)
-    # if is_deprecated:
-        # list_kind = list(kind)
-        # list_kind[1] = '⚠'
-        # list_kind[2] = "⚠ {} - Deprecated".format(list_kind[2])
-        # kind = tuple(list_kind)  # type: ignore
+    is_deprecated = item.get("deprecated", False)
+    if is_deprecated:
+        list_kind = list(kind)
+        list_kind[1] = '⚠'
+        list_kind[2] = "⚠ {} - Deprecated".format(list_kind[2])
+        kind = tuple(list_kind)  # type: ignore
 
     return sublime.CompletionItem.command_completion(
         trigger,

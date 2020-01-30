@@ -31,7 +31,7 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
             if insert_text_format == InsertTextFormat.Snippet:
                 self.view.run_command("insert_snippet", {"contents": new_text})
             else:
-                # subtract the prefix from the end
+                # use current point as the end of the edit region
                 current_point = self.view.sel()[0].begin()
                 edit_range = sublime.Region(edit_region.begin(), current_point)
                 self.view.replace(edit, edit_range, new_text)

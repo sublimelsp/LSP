@@ -105,7 +105,6 @@ class CompletionHandler(LSPViewEventListener):
         self.trigger_chars = []  # type: List[str]
         self.completion_list = sublime.CompletionList()
         self.last_location = -1
-        self.committing = False
 
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:
@@ -171,9 +170,6 @@ class CompletionHandler(LSPViewEventListener):
         self.do_request(prefix, locations)
 
         return self.completion_list
-
-    def on_text_command(self, command_name: str, args: 'Optional[Any]') -> None:
-        self.committing = command_name in ('commit_completion', 'auto_complete')
 
     def do_request(self, prefix: str, locations: 'List[int]') -> None:
         # don't store client so we can handle restarts

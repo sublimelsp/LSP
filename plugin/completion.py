@@ -1,21 +1,15 @@
 import sublime
 import sublime_plugin
-
-try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional, Union
-    assert Any and List and Dict and Tuple and Callable and Optional and Union
-except ImportError:
-    pass
-
-from .core.protocol import Request
-from .core.settings import settings, client_configs
-from .core.logging import debug
 from .core.completion import parse_completion_response, format_completion
-from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.configurations import is_supported_syntax
 from .core.documents import get_document_position, position_is_word
-from .core.sessions import Session
 from .core.edit import parse_text_edit
+from .core.logging import debug
+from .core.protocol import Request
+from .core.registry import session_for_view, client_from_session, LSPViewEventListener
+from .core.sessions import Session
+from .core.settings import settings, client_configs
+from .core.typing import Any, List, Dict, Tuple, Optional, Union
 
 
 class CompletionState(object):
@@ -29,14 +23,14 @@ last_text_command = None
 
 
 class CompletionHelper(sublime_plugin.EventListener):
-    def on_text_command(self, view: sublime.View, command_name: str, args: 'Optional[Any]') -> None:
+    def on_text_command(self, view: sublime.View, command_name: str, args: Optional[Any]) -> None:
         global last_text_command
         last_text_command = command_name
 
 
 class LspTrimCompletionCommand(sublime_plugin.TextCommand):
 
-    def run(self, edit: sublime.Edit, range: 'Optional[Tuple[int, int]]' = None) -> None:
+    def run(self, edit: sublime.Edit, range: Optional[Tuple[int, int]] = None) -> None:
         if range:
             start, end = range
             region = sublime.Region(start, end)
@@ -84,7 +78,7 @@ class CompletionHandler(LSPViewEventListener):
                 self.register_trigger_chars(session)
             self.auto_complete_selector = self.view.settings().get("auto_complete_selector", "") or ""
 
-    def _view_language(self, config_name: str) -> 'Optional[str]':
+    def _view_language(self, config_name: str) -> Optional[str]:
         languages = self.view.settings().get('lsp_language')
         return languages.get(config_name) if languages else None
 
@@ -115,7 +109,7 @@ class CompletionHandler(LSPViewEventListener):
         else:
             return False
 
-    def is_same_completion(self, prefix: str, locations: 'List[int]') -> bool:
+    def is_same_completion(self, prefix: str, locations: List[int]) -> bool:
         if self.response_incomplete:
             return False
 
@@ -127,7 +121,7 @@ class CompletionHandler(LSPViewEventListener):
         last_start = self.last_location - len(self.last_prefix)
         return prefix.startswith(self.last_prefix) and current_start == last_start
 
-    def find_completion_item(self, inserted: str) -> 'Optional[dict]':
+    def find_completion_item(self, inserted: str) -> Optional[dict]:
         """
 
         Returns the completionItem for a given replacement string.
@@ -219,7 +213,7 @@ class CompletionHandler(LSPViewEventListener):
     def match_selector(self, location: int) -> bool:
         return self.view.match_selector(location, self.auto_complete_selector)
 
-    def on_query_completions(self, prefix: str, locations: 'List[int]') -> 'Optional[Tuple[List[Tuple[str,str]], int]]':
+    def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[Tuple[List[Tuple[str, str]], int]]:
         if not self.initialized:
             self.initialize()
 
@@ -252,10 +246,10 @@ class CompletionHandler(LSPViewEventListener):
 
         return None
 
-    def on_text_command(self, command_name: str, args: 'Optional[Any]') -> None:
+    def on_text_command(self, command_name: str, args: Optional[Any]) -> None:
         self.committing = command_name in ('commit_completion', 'auto_complete')
 
-    def do_request(self, prefix: str, locations: 'List[int]') -> None:
+    def do_request(self, prefix: str, locations: List[int]) -> None:
         self.next_request = None
         view = self.view
 
@@ -283,19 +277,19 @@ class CompletionHandler(LSPViewEventListener):
 
         client.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
 
-    def handle_resolve_response(self, response: 'Optional[Dict]') -> None:
+    def handle_resolve_response(self, response: Optional[Dict]) -> None:
         if response:
             additional_edits = response.get('additionalTextEdits')
             if additional_edits:
                 self.apply_additional_edits(additional_edits)
 
-    def apply_additional_edits(self, additional_edits: 'List[Dict]') -> None:
+    def apply_additional_edits(self, additional_edits: List[Dict]) -> None:
         edits = list(parse_text_edit(additional_edit) for additional_edit in additional_edits)
         debug('applying additional edits:', edits)
         self.view.run_command("lsp_apply_document_edit", {'changes': edits})
         sublime.status_message('Applied additional edits for completion')
 
-    def handle_response(self, response: 'Optional[Union[Dict,List]]') -> None:
+    def handle_response(self, response: Optional[Union[Dict, List]]) -> None:
         if self.state == CompletionState.REQUESTING:
 
             completion_start = self.last_location

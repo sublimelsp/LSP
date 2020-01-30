@@ -15,7 +15,7 @@ from .core.typing import Any, List, Dict, Tuple, Optional, Union
 
 
 class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
-    def run(self, edit: 'Any', item: 'Dict') -> None:
+    def run(self, edit: Any, item: dict) -> None:
         insert_text_format = item.get("insertTextFormat")
 
         text_edit = item.get('textEdit')
@@ -66,13 +66,13 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
         if has_resolve_provider:
             client.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
 
-    def handle_resolve_response(self, response: 'Optional[Dict]') -> None:
+    def handle_resolve_response(self, response: Optional[dict]) -> None:
         if response:
             additional_edits = response.get('additionalTextEdits')
             if additional_edits:
                 self.apply_additional_edits(additional_edits)
 
-    def apply_additional_edits(self, additional_edits: 'List[Dict]') -> None:
+    def apply_additional_edits(self, additional_edits: List[dict]) -> None:
         edits = list(parse_text_edit(additional_edit) for additional_edit in additional_edits)
         debug('applying additional edits:', edits)
         self.view.run_command("lsp_apply_document_edit", {'changes': edits})
@@ -80,7 +80,6 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
 
 
 class LspTrimCompletionCommand(sublime_plugin.TextCommand):
-
     def run(self, edit: sublime.Edit, range: Optional[Tuple[int, int]] = None) -> None:
         if range:
             start, end = range
@@ -145,7 +144,7 @@ class CompletionHandler(LSPViewEventListener):
 
             self.view.settings().set('auto_complete_triggers', completion_triggers)
 
-    def on_query_completions(self, prefix: str, locations: 'List[int]') -> 'Optional[sublime.CompletionList]':
+    def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[sublime.CompletionList]:
         if not self.initialized:
             self.initialize()
 
@@ -162,7 +161,7 @@ class CompletionHandler(LSPViewEventListener):
 
         return self.completion_list
 
-    def do_request(self, prefix: str, locations: 'List[int]') -> None:
+    def do_request(self, prefix: str, locations: List[int]) -> None:
         # don't store client so we can handle restarts
         client = client_from_session(session_for_view(self.view, 'completionProvider', locations[0]))
         if not client:
@@ -176,7 +175,7 @@ class CompletionHandler(LSPViewEventListener):
                 self.handle_response,
                 self.handle_error)
 
-    def handle_response(self, response: 'Optional[Union[Dict,List]]') -> None:
+    def handle_response(self, response: Optional[Union[dict, List]]) -> None:
         _last_row, last_col = self.view.rowcol(self.last_location)
 
         response_items, response_incomplete = parse_completion_response(response)
@@ -202,13 +201,13 @@ class CompletionHandler(LSPViewEventListener):
 
         client.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
 
-    def handle_resolve_response(self, response: Optional[Dict]) -> None:
+    def handle_resolve_response(self, response: Optional[dict]) -> None:
         if response:
             additional_edits = response.get('additionalTextEdits')
             if additional_edits:
                 self.apply_additional_edits(additional_edits)
 
-    def apply_additional_edits(self, additional_edits: List[Dict]) -> None:
+    def apply_additional_edits(self, additional_edits: List[dict]) -> None:
         edits = list(parse_text_edit(additional_edit) for additional_edit in additional_edits)
         debug('applying additional edits:', edits)
         self.view.run_command("lsp_apply_document_edit", {'changes': edits})

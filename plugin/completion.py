@@ -14,9 +14,6 @@ from .core.views import range_to_region
 from .core.typing import Any, List, Dict, Tuple, Optional, Union
 
 
-last_text_command = None
-
-
 class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
     def run(self, edit: 'Any', item: 'Dict') -> None:
         insert_text_format = item.get("insertTextFormat")
@@ -80,12 +77,6 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
         debug('applying additional edits:', edits)
         self.view.run_command("lsp_apply_document_edit", {'changes': edits})
         sublime.status_message('Applied additional edits for completion')
-
-
-class CompletionHelper(sublime_plugin.EventListener):
-    def on_text_command(self, view: sublime.View, command_name: str, args: Optional[Any]) -> None:
-        global last_text_command
-        last_text_command = command_name
 
 
 class LspTrimCompletionCommand(sublime_plugin.TextCommand):

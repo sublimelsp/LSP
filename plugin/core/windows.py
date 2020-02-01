@@ -81,18 +81,6 @@ def get_active_views(window: WindowLike) -> List[ViewLike]:
     return views
 
 
-class DocumentState:
-    """Stores version count for documents open in a language service"""
-
-    def __init__(self, path: str) -> None:
-        self.path = path
-        self.version = 0
-
-    def inc_version(self) -> int:
-        self.version += 1
-        return self.version
-
-
 class DocumentHandlerFactory(object):
     def __init__(self, sublime: Any, settings: Settings) -> None:
         self._sublime = sublime
@@ -114,7 +102,7 @@ class WindowDocumentHandler(object):
         self._settings = settings
         self._configs = configs
         self._window = window
-        self._document_states = dict()  # type: Dict[str, DocumentState]
+        self._document_states = set()  # type: Set[str]
         self._pending_buffer_changes = dict()  # type: Dict[int, Dict]
         self._sessions = dict()  # type: Dict[str, List[Session]]
         self._workspace = workspace
@@ -133,11 +121,6 @@ class WindowDocumentHandler(object):
         for view in self._window.views():
             self.detach_view(view)
         self._document_states.clear()
-
-    def get_document_state(self, path: str) -> DocumentState:
-        if path not in self._document_states:
-            self._document_states[path] = DocumentState(path)
-        return self._document_states[path]
 
     def has_document_state(self, path: str) -> bool:
         return path in self._document_states
@@ -182,7 +165,7 @@ class WindowDocumentHandler(object):
         return True
 
     def _notify_open_documents(self, session: Session) -> None:
-        for file_name in list(self._document_states):
+        for file_name in self._document_states:
             if session.handles_path(file_name):
                 view = self._window.find_open_file(file_name)
                 if view:
@@ -220,45 +203,45 @@ class WindowDocumentHandler(object):
 
     def handle_view_opened(self, view: ViewLike) -> None:
         file_name = view.file_name()
-        if file_name:
-            if not self.has_document_state(file_name):
-                config_languages = self._config_languages(view)
-                if len(config_languages) > 0:
-                    # always register a supported document
-                    self.get_document_state(file_name)
-                    self._set_view_languages(view, config_languages)
+        if file_name and file_name not in self._document_states:
+            config_languages = self._config_languages(view)
+            if len(config_languages) > 0:
+                # always register a supported document
+                self._document_states.add(file_name)
+                self._set_view_languages(view, config_languages)
 
-                    # the sessions may not be available yet,
-                    # the document will get synced when a session is added.
-                    sessions = self._get_applicable_sessions(view)
-                    self._attach_view(view, sessions)
-                    for session in sessions:
-                        if self._session_supports_notification(session, 'openClose'):
-                            self._notify_did_open(view, session)
+                # the sessions may not be available yet,
+                # the document will get synced when a session is added.
+                sessions = self._get_applicable_sessions(view)
+                self._attach_view(view, sessions)
+                for session in sessions:
+                    if self._session_supports_notification(session, 'openClose'):
+                        self._notify_did_open(view, session)
 
     def _notify_did_open(self, view: ViewLike, session: Session) -> None:
         file_name = view.file_name()
         if file_name:
-            ds = self.get_document_state(file_name)
             params = {
                 "textDocument": {
                     "uri": filename_to_uri(file_name),
                     "languageId": self._view_language(view, session.config.name),
                     "text": view.substr(self._sublime.Region(0, view.size())),
-                    "version": ds.version
+                    "version": view.change_count()
                 }
             }
             session.client.send_notification(Notification.didOpen(params))
 
     def handle_view_closed(self, view: ViewLike) -> None:
-        file_name = view.file_name()
-        if file_name in self._document_states:
-            del self._document_states[file_name]
-            for session in self._get_applicable_sessions(view, 'openClose'):
-                debug('closing', file_name, session.config.name)
-                if session.client:
-                    params = {"textDocument": {"uri": filename_to_uri(file_name)}}
-                    session.client.send_notification(Notification.didClose(params))
+        file_name = view.file_name() or ""
+        try:
+            self._document_states.remove(file_name)
+        except ValueError:
+            return
+        for session in self._get_applicable_sessions(view, 'openClose'):
+            debug('closing', file_name, session.config.name)
+            if session.client:
+                params = {"textDocument": {"uri": filename_to_uri(file_name)}}
+                session.client.send_notification(Notification.didClose(params))
 
     def handle_view_saved(self, view: ViewLike) -> None:
         file_name = view.file_name()
@@ -307,20 +290,19 @@ class WindowDocumentHandler(object):
         file_name = view.file_name()
         if file_name and view.window() == self._window:
             # ensure view is opened.
-            if not self.has_document_state(file_name):
+            if file_name not in self._document_states:
                 self.handle_view_opened(view)
 
             if view.buffer_id() in self._pending_buffer_changes:
                 del self._pending_buffer_changes[view.buffer_id()]
 
                 for session in self._get_applicable_sessions(view, 'change'):
-                    if session.client:
-                        document_state = self.get_document_state(file_name)
+                    if session.client and file_name in self._document_states:
                         uri = filename_to_uri(file_name)
                         params = {
                             "textDocument": {
                                 "uri": uri,
-                                "version": document_state.inc_version(),
+                                "version": view.change_count(),
                             },
                             "contentChanges": [{
                                 "text": view.substr(self._sublime.Region(0, view.size()))

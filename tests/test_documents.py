@@ -39,7 +39,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         handler = WindowDocumentHandler(test_sublime, MockSettings(), window, workspace, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
-            create_session(TEST_CONFIG, folders, dict(), MockSettings(),
+            create_session(TEST_CONFIG, folders, folders[0], dict(), MockSettings(),
                            bootstrap_client=client))
         handler.add_session(session)
 
@@ -102,12 +102,12 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         handler = WindowDocumentHandler(test_sublime, MockSettings(), window, workspace, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
-            create_session(TEST_CONFIG, folders, dict(), MockSettings(),
+            create_session(TEST_CONFIG, folders, folders[0], dict(), MockSettings(),
                            bootstrap_client=client))
         client2 = MockClient()
         test_config2 = ClientConfig("test2", [], None, languages=[TEST_LANGUAGE])
         session2 = self.assert_if_none(
-            create_session(test_config2, folders, dict(), MockSettings(),
+            create_session(test_config2, folders, folders[0], dict(), MockSettings(),
                            bootstrap_client=client2))
 
         handler.add_session(session)

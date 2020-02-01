@@ -1,20 +1,14 @@
-import sublime_plugin
 import sublime
-
-try:
-    from typing import Any, List, Dict, Callable, Optional
-    assert Any and List and Dict and Callable and Optional
-except ImportError:
-    pass
-
-from .core.protocol import Request
-from .core.url import filename_to_uri
-from .core.registry import session_for_view, sessions_for_view, client_from_session, configs_for_scope
-from .core.settings import settings, client_configs
-from .core.views import range_to_region
-from .core.protocol import Range
+import sublime_plugin
 from .core.configurations import is_supported_syntax
 from .core.documents import is_transient_view
+from .core.protocol import Range
+from .core.protocol import Request
+from .core.registry import session_for_view, sessions_for_view, client_from_session, configs_for_scope
+from .core.settings import settings, client_configs
+from .core.typing import Any, List, Dict, Optional
+from .core.url import filename_to_uri
+from .core.views import range_to_region
 
 
 color_phantoms_by_view = dict()  # type: Dict[int, sublime.PhantomSet]
@@ -28,7 +22,7 @@ class LspColorListener(sublime_plugin.ViewEventListener):
         self.enabled = False
 
     @classmethod
-    def is_applicable(cls, _settings: 'Any') -> bool:
+    def is_applicable(cls, _settings: Any) -> bool:
         syntax = _settings.get('syntax')
         is_supported = syntax and is_supported_syntax(syntax, client_configs.all)
         disabled_by_user = 'colorProvider' in settings.disabled_capabilities
@@ -94,7 +88,7 @@ class LspColorListener(sublime_plugin.ViewEventListener):
                     self.handle_response
                 )
 
-    def handle_response(self, response: 'Optional[List[dict]]') -> None:
+    def handle_response(self, response: Optional[List[dict]]) -> None:
         color_infos = response if response else []
         phantoms = []
         for color_info in color_infos:

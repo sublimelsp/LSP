@@ -1,18 +1,11 @@
 import sublime
 import sublime_plugin
-
-from .core.settings import ClientConfig, client_configs
 from .core.registry import windows
-
-try:
-    from typing import List, Optional, Dict, Any
-    assert List and Optional and Dict and Any
-    assert ClientConfig
-except ImportError:
-    pass
+from .core.settings import ClientConfig, client_configs
+from .core.typing import List
 
 
-def create_config_items(configs: 'List[ClientConfig]') -> 'List[List[str]]':
+def create_config_items(configs: List[ClientConfig]) -> List[List[str]]:
     return [[
         config.name, ", ".join(language.id
                                for language in config.languages)

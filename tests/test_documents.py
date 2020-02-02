@@ -73,7 +73,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         self.assertEqual(len(client._notifications), 2)
         did_change = client._notifications[1]
         document = did_change.params.get("textDocument")
-        self.assertEqual(document.get("version"), 1)  # increments with did_change
+        self.assertEqual(document.get("version"), 3)  # increments when calling change_count() on the MockView
         purged_changes = did_change.params["contentChanges"]
         self.assertEqual(purged_changes[0].get("text"), view._text)
 

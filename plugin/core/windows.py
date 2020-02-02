@@ -257,20 +257,12 @@ class WindowDocumentHandler(object):
 
     def handle_view_modified(self, view: ViewLike) -> None:
         buffer_id = view.buffer_id()
-        buffer_version = 1
-        pending_buffer = None
+        change_count = view.change_count()
         if buffer_id in self._pending_buffer_changes:
-            pending_buffer = self._pending_buffer_changes[buffer_id]
-            buffer_version = pending_buffer["version"] + 1
-            pending_buffer["version"] = buffer_version
+            self._pending_buffer_changes[buffer_id]["version"] = change_count
         else:
-            self._pending_buffer_changes[buffer_id] = {
-                "view": view,
-                "version": buffer_version
-            }
-
-        self._sublime.set_timeout_async(
-            lambda: self.purge_did_change(buffer_id, buffer_version), 500)
+            self._pending_buffer_changes[buffer_id] = {"view": view, "version": change_count}
+        self._sublime.set_timeout_async(lambda: self.purge_did_change(buffer_id, change_count), 500)
 
     def purge_changes(self, view: ViewLike) -> None:
         self.purge_did_change(view.buffer_id())

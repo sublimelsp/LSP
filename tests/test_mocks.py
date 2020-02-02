@@ -76,7 +76,8 @@ class MockView(object):
         self.change_counter = 0
 
     def change_count(self) -> int:
-        retval, self.change_counter = self.change_counter, self.change_counter + 1
+        retval = self.change_counter
+        self.change_counter += 1
         return retval
 
     def file_name(self):

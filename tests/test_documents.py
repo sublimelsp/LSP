@@ -121,13 +121,13 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         document = did_open.params["textDocument"]
         self.assertEqual(document.get("languageId"), "test")
         self.assertEqual(document.get("text"), "asdf")
-        self.assertEqual(document.get("version"), 0)
+        self.assertIsNotNone(document.get("version"))
 
         did_open2 = client._notifications[0]
         document2 = did_open2.params["textDocument"]
         self.assertEqual(document2.get("languageId"), "test")
         self.assertEqual(document2.get("text"), "asdf")
-        self.assertEqual(document2.get("version"), 0)
+        self.assertIsNotNone(document2.get("version"))
         status_string = view._status.get("lsp_clients")
         if status_string:
             status_configs = status_string.split(", ")

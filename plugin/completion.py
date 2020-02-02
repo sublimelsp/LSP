@@ -2,7 +2,7 @@ import sublime
 import sublime_plugin
 from .core.completion import parse_completion_response, format_completion
 from .core.configurations import is_supported_syntax
-from .core.documents import get_document_position, position_is_word
+from .core.documents import position_is_word
 from .core.edit import parse_text_edit
 from .core.logging import debug
 from .core.protocol import Request
@@ -10,6 +10,7 @@ from .core.registry import session_for_view, client_from_session, LSPViewEventLi
 from .core.sessions import Session
 from .core.settings import settings, client_configs
 from .core.typing import Any, List, Dict, Tuple, Optional, Union
+from .core.views import text_document_position_params
 
 
 class CompletionState(object):
@@ -260,13 +261,12 @@ class CompletionHandler(LSPViewEventListener):
 
         if settings.complete_all_chars or self.is_after_trigger_character(locations[0]):
             self.manager.documents.purge_changes(self.view)
-            document_position = get_document_position(view, locations[0])
-            if document_position:
-                client.send_request(
-                    Request.complete(document_position),
-                    self.handle_response,
-                    self.handle_error)
-                self.state = CompletionState.REQUESTING
+            document_position = text_document_position_params(self.view, locations[0])
+            client.send_request(
+                Request.complete(document_position),
+                self.handle_response,
+                self.handle_error)
+            self.state = CompletionState.REQUESTING
 
     def do_resolve(self, item: dict) -> None:
         view = self.view

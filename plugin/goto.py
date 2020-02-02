@@ -1,11 +1,12 @@
 import sublime
 from Default.history_list import get_jump_history_for_view
-from .core.documents import get_document_position, get_position, is_at_word
+from .core.documents import get_position, is_at_word
 from .core.logging import debug
 from .core.protocol import Request, Point
 from .core.registry import LspTextCommand
 from .core.typing import List, Optional, Any, Tuple
 from .core.url import uri_to_filename
+from .core.views import text_document_position_params
 
 
 class LspGotoCommand(LspTextCommand):
@@ -23,15 +24,14 @@ class LspGotoCommand(LspTextCommand):
         client = self.client_with_capability(self.goto_kind + "Provider")
         if client:
             pos = get_position(self.view, event)
-            document_position = get_document_position(self.view, pos)
-            if document_position:
-                request_type = getattr(Request, self.goto_kind)
-                if not request_type:
-                    debug("unrecognized goto kind:", self.goto_kind)
-                    return
-                request = request_type(document_position)
-                client.send_request(
-                    request, lambda response: self.handle_response(response, pos))
+            document_position = text_document_position_params(self.view, pos)
+            request_type = getattr(Request, self.goto_kind)
+            if not request_type:
+                debug("unrecognized goto kind:", self.goto_kind)
+                return
+            request = request_type(document_position)
+            client.send_request(
+                request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response: Optional[Any], position: int) -> None:
         def process_response_list(responses: list) -> List[Tuple[str, str, Tuple[int, int]]]:

@@ -73,6 +73,11 @@ class MockView(object):
         self._status = dict()  # type: Dict[str, str]
         self._text = "asdf"
         self.commands = []  # type: List[Tuple[str, Dict[str, Any]]]
+        self.change_counter = 0
+
+    def change_count(self) -> int:
+        retval, self.change_counter = self.change_counter, self.change_counter + 1
+        return retval
 
     def file_name(self):
         return self._file_name

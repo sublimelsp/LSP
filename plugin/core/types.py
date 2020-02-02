@@ -83,6 +83,9 @@ class ViewLike(Protocol):
     def file_name(self) -> Optional[str]:
         ...
 
+    def change_count(self) -> int:
+        ...
+
     def window(self) -> Optional[Any]:  # WindowLike
         ...
 

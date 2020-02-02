@@ -39,7 +39,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         handler = WindowDocumentHandler(test_sublime, MockSettings(), window, workspace, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
-            create_session(TEST_CONFIG, folders, dict(), MockSettings(),
+            create_session(TEST_CONFIG, folders, folders[0], dict(), MockSettings(),
                            bootstrap_client=client))
         handler.add_session(session)
 
@@ -73,7 +73,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         self.assertEqual(len(client._notifications), 2)
         did_change = client._notifications[1]
         document = did_change.params.get("textDocument")
-        self.assertEqual(document.get("version"), 1)  # increments with did_change
+        self.assertEqual(document.get("version"), 3)  # increments when calling change_count() on the MockView
         purged_changes = did_change.params["contentChanges"]
         self.assertEqual(purged_changes[0].get("text"), view._text)
 
@@ -102,12 +102,12 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         handler = WindowDocumentHandler(test_sublime, MockSettings(), window, workspace, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
-            create_session(TEST_CONFIG, folders, dict(), MockSettings(),
+            create_session(TEST_CONFIG, folders, folders[0], dict(), MockSettings(),
                            bootstrap_client=client))
         client2 = MockClient()
         test_config2 = ClientConfig("test2", [], None, languages=[TEST_LANGUAGE])
         session2 = self.assert_if_none(
-            create_session(test_config2, folders, dict(), MockSettings(),
+            create_session(test_config2, folders, folders[0], dict(), MockSettings(),
                            bootstrap_client=client2))
 
         handler.add_session(session)
@@ -121,13 +121,13 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         document = did_open.params["textDocument"]
         self.assertEqual(document.get("languageId"), "test")
         self.assertEqual(document.get("text"), "asdf")
-        self.assertEqual(document.get("version"), 0)
+        self.assertIsNotNone(document.get("version"))
 
         did_open2 = client._notifications[0]
         document2 = did_open2.params["textDocument"]
         self.assertEqual(document2.get("languageId"), "test")
         self.assertEqual(document2.get("text"), "asdf")
-        self.assertEqual(document2.get("version"), 0)
+        self.assertIsNotNone(document2.get("version"))
         status_string = view._status.get("lsp_clients")
         if status_string:
             status_configs = status_string.split(", ")

@@ -7,6 +7,7 @@ from LSP.plugin.core.types import LanguageConfig
 from LSP.plugin.core.types import Settings
 from LSP.plugin.core.types import ViewLike
 import os
+import copy
 
 try:
     from typing import Dict, Set, List, Optional, Any, Tuple, Callable
@@ -72,6 +73,12 @@ class MockView(object):
         self._status = dict()  # type: Dict[str, str]
         self._text = "asdf"
         self.commands = []  # type: List[Tuple[str, Dict[str, Any]]]
+        self.change_counter = 0
+
+    def change_count(self) -> int:
+        retval = self.change_counter
+        self.change_counter += 1
+        return retval
 
     def file_name(self):
         return self._file_name
@@ -205,7 +212,7 @@ class TestGlobalConfigs(object):
 
 class MockConfigs(object):
     def __init__(self):
-        self.all = [TEST_CONFIG]
+        self.all = [copy.deepcopy(TEST_CONFIG)]
 
     def is_supported(self, view):
         return any(self.scope_configs(view))
@@ -243,7 +250,8 @@ class MockConfigs(object):
         pass
 
     def disable_temporarily(self, config_name: str) -> None:
-        pass
+        if config_name == self.all[0].name:
+            self.all[0].enabled = False
 
 
 class MockDocuments(object):

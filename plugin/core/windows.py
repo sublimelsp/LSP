@@ -1,7 +1,7 @@
 from .diagnostics import DiagnosticsStorage
 from .edit import parse_workspace_edit
-from .logging import debug
-from .protocol import Notification, Response
+from .logging import debug, exception_log
+from .protocol import Notification, Response, WorkspaceFolder
 from .rpc import Client
 from .sessions import Session, InitializeError
 from .types import ClientConfig
@@ -12,13 +12,12 @@ from .types import LanguageConfig
 from .types import Settings
 from .types import ViewLike
 from .types import WindowLike
-from .typing import Optional, List, Callable, Dict, Any, Protocol
+from .typing import Optional, List, Callable, Dict, Any, Protocol, Set, Union
 from .url import filename_to_uri
 from .workspace import get_workspace_folders
 from .workspace import disable_in_project
 from .workspace import enable_in_project
 from .workspace import ProjectFolders
-from .workspace import sorted_workspace_folders
 import threading
 
 
@@ -82,18 +81,6 @@ def get_active_views(window: WindowLike) -> List[ViewLike]:
     return views
 
 
-class DocumentState:
-    """Stores version count for documents open in a language service"""
-
-    def __init__(self, path: str) -> None:
-        self.path = path
-        self.version = 0
-
-    def inc_version(self) -> int:
-        self.version += 1
-        return self.version
-
-
 class DocumentHandlerFactory(object):
     def __init__(self, sublime: Any, settings: Settings) -> None:
         self._sublime = sublime
@@ -115,7 +102,7 @@ class WindowDocumentHandler(object):
         self._settings = settings
         self._configs = configs
         self._window = window
-        self._document_states = dict()  # type: Dict[str, DocumentState]
+        self._document_states = set()  # type: Set[str]
         self._pending_buffer_changes = dict()  # type: Dict[int, Dict]
         self._sessions = dict()  # type: Dict[str, List[Session]]
         self._workspace = workspace
@@ -134,11 +121,6 @@ class WindowDocumentHandler(object):
         for view in self._window.views():
             self.detach_view(view)
         self._document_states.clear()
-
-    def get_document_state(self, path: str) -> DocumentState:
-        if path not in self._document_states:
-            self._document_states[path] = DocumentState(path)
-        return self._document_states[path]
 
     def has_document_state(self, path: str) -> bool:
         return path in self._document_states
@@ -183,7 +165,7 @@ class WindowDocumentHandler(object):
         return True
 
     def _notify_open_documents(self, session: Session) -> None:
-        for file_name in list(self._document_states):
+        for file_name in self._document_states:
             if session.handles_path(file_name):
                 view = self._window.find_open_file(file_name)
                 if view:
@@ -221,45 +203,45 @@ class WindowDocumentHandler(object):
 
     def handle_view_opened(self, view: ViewLike) -> None:
         file_name = view.file_name()
-        if file_name:
-            if not self.has_document_state(file_name):
-                config_languages = self._config_languages(view)
-                if len(config_languages) > 0:
-                    # always register a supported document
-                    self.get_document_state(file_name)
-                    self._set_view_languages(view, config_languages)
+        if file_name and file_name not in self._document_states:
+            config_languages = self._config_languages(view)
+            if len(config_languages) > 0:
+                # always register a supported document
+                self._document_states.add(file_name)
+                self._set_view_languages(view, config_languages)
 
-                    # the sessions may not be available yet,
-                    # the document will get synced when a session is added.
-                    sessions = self._get_applicable_sessions(view)
-                    self._attach_view(view, sessions)
-                    for session in sessions:
-                        if self._session_supports_notification(session, 'openClose'):
-                            self._notify_did_open(view, session)
+                # the sessions may not be available yet,
+                # the document will get synced when a session is added.
+                sessions = self._get_applicable_sessions(view)
+                self._attach_view(view, sessions)
+                for session in sessions:
+                    if self._session_supports_notification(session, 'openClose'):
+                        self._notify_did_open(view, session)
 
     def _notify_did_open(self, view: ViewLike, session: Session) -> None:
         file_name = view.file_name()
         if file_name:
-            ds = self.get_document_state(file_name)
             params = {
                 "textDocument": {
                     "uri": filename_to_uri(file_name),
                     "languageId": self._view_language(view, session.config.name),
                     "text": view.substr(self._sublime.Region(0, view.size())),
-                    "version": ds.version
+                    "version": view.change_count()
                 }
             }
             session.client.send_notification(Notification.didOpen(params))
 
     def handle_view_closed(self, view: ViewLike) -> None:
-        file_name = view.file_name()
-        if file_name in self._document_states:
-            del self._document_states[file_name]
-            for session in self._get_applicable_sessions(view, 'openClose'):
-                debug('closing', file_name, session.config.name)
-                if session.client:
-                    params = {"textDocument": {"uri": filename_to_uri(file_name)}}
-                    session.client.send_notification(Notification.didClose(params))
+        file_name = view.file_name() or ""
+        try:
+            self._document_states.remove(file_name)
+        except ValueError:
+            return
+        for session in self._get_applicable_sessions(view, 'openClose'):
+            debug('closing', file_name, session.config.name)
+            if session.client:
+                params = {"textDocument": {"uri": filename_to_uri(file_name)}}
+                session.client.send_notification(Notification.didClose(params))
 
     def handle_view_saved(self, view: ViewLike) -> None:
         file_name = view.file_name()
@@ -275,20 +257,12 @@ class WindowDocumentHandler(object):
 
     def handle_view_modified(self, view: ViewLike) -> None:
         buffer_id = view.buffer_id()
-        buffer_version = 1
-        pending_buffer = None
+        change_count = view.change_count()
         if buffer_id in self._pending_buffer_changes:
-            pending_buffer = self._pending_buffer_changes[buffer_id]
-            buffer_version = pending_buffer["version"] + 1
-            pending_buffer["version"] = buffer_version
+            self._pending_buffer_changes[buffer_id]["version"] = change_count
         else:
-            self._pending_buffer_changes[buffer_id] = {
-                "view": view,
-                "version": buffer_version
-            }
-
-        self._sublime.set_timeout_async(
-            lambda: self.purge_did_change(buffer_id, buffer_version), 500)
+            self._pending_buffer_changes[buffer_id] = {"view": view, "version": change_count}
+        self._sublime.set_timeout_async(lambda: self.purge_did_change(buffer_id, change_count), 500)
 
     def purge_changes(self, view: ViewLike) -> None:
         self.purge_did_change(view.buffer_id())
@@ -308,20 +282,19 @@ class WindowDocumentHandler(object):
         file_name = view.file_name()
         if file_name and view.window() == self._window:
             # ensure view is opened.
-            if not self.has_document_state(file_name):
+            if file_name not in self._document_states:
                 self.handle_view_opened(view)
 
             if view.buffer_id() in self._pending_buffer_changes:
                 del self._pending_buffer_changes[view.buffer_id()]
 
                 for session in self._get_applicable_sessions(view, 'change'):
-                    if session.client:
-                        document_state = self.get_document_state(file_name)
+                    if session.client and file_name in self._document_states:
                         uri = filename_to_uri(file_name)
                         params = {
                             "textDocument": {
                                 "uri": uri,
-                                "version": document_state.inc_version(),
+                                "version": view.change_count(),
                             },
                             "contentChanges": [{
                                 "text": view.substr(self._sublime.Region(0, view.size()))
@@ -366,6 +339,7 @@ class WindowManager(object):
         self._workspace = workspace
         self._workspace.on_changed = self._on_project_changed
         self._workspace.on_switched = self._on_project_switched
+        self._blacklist = {}  # type: Dict[str, Set[Optional[WorkspaceFolder]]]
 
     def _on_project_changed(self, folders: List[str]) -> None:
         workspace_folders = get_workspace_folders(self._workspace.folders)
@@ -381,7 +355,8 @@ class WindowManager(object):
         try:
             return self._find_session(config_name, file_path)
         except InitializeError as ex:
-            self._disable_temporarily(ex.name, ex)
+            assert ex.session.config.name == config_name
+            self._disable_temporarily(ex.session, ex, self._workspace.designated(file_path))
         return None
 
     def _find_session(self, config_name: str, file_path: str) -> Optional[Session]:
@@ -430,11 +405,9 @@ class WindowManager(object):
         new_configs = []
         for c in configs:
             sessions = self._sessions.get(c.name, None)
-            if sessions is None:
+            if not sessions:
                 new_configs.append(c)
                 continue
-            assert isinstance(sessions, list)
-            assert len(sessions) > 0
             first_session = sessions[0]
             if first_session.supports_workspace_folders():
                 # A workspace-aware language server handles any path, both inside and outside the workspace.
@@ -472,19 +445,39 @@ class WindowManager(object):
                     debug("window {} requests {} for {}".format(self._window.id(), config.name, file_path))
                     self._start_client(config, file_path)
 
-    def _disable_temporarily(self, name: str, e: Exception) -> None:
-        message = "\n\n".join([
-            "Could not start {}",
-            "{}",
-            "Server will be disabled for this window"
-        ]).format(name, str(e))
-        sessions = self._sessions.pop(name, [])
-        self._configs.disable_temporarily(name)
-        self._sublime.message_dialog(message)
-        for session in sessions:
+    def _disable_temporarily(self, session: Union[str, Session], ex: Exception,
+                             folder: Optional[WorkspaceFolder]) -> None:
+        if isinstance(session, Session):
+            # The process started, but failed to respond to the initialize request. Disable locally for the folder
             session.end()
+            name = session.config.name
+            config_sessions = self._sessions.get(name, [])
+            try:
+                config_sessions.remove(session)
+            except ValueError:
+                debug("should never end up here")
+                pass
+            path = folder.path if folder else "folderless window"
+            msg = "{} for {} did not initialize properly. Disabling until this window is restarted".format(name, path)
+            self._sublime.status_message(msg)
+            self._blacklist.setdefault(name, set()).add(folder)
+        else:
+            # The process did not even start. Disable the configuration.
+            name = session
+            msg = "\n\n".join(["Could not start {}", "{}", "Server will be disabled for this window"]).format(
+                name, str(ex))
+            sessions = self._sessions.pop(name, [])
+            self._configs.disable_temporarily(name)
+            self._sublime.message_dialog(msg)
+            for session in sessions:
+                session.end()
+        exception_log(msg, ex)
 
     def _start_client(self, config: ClientConfig, file_path: str) -> None:
+        designated_folder = self._workspace.designated(file_path)
+        if designated_folder in self._blacklist.get(config.name, set()):
+            debug(config.name, "failed to start for", designated_folder, "not attempting again until ST is restarted")
+            return
         session = self.get_session(config.name, file_path)
         if session is not None:
             debug(config.name, "was already started")
@@ -494,18 +487,19 @@ class WindowManager(object):
             return
 
         self._window.status_message("Starting " + config.name + "...")
-        workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
         try:
             session = self._start_session(
                 self._window,                  # window
-                workspace_folders,             # workspace_folders
+                self._workspace.all(),         # workspace_folders
+                designated_folder,             # designated_folder
                 config,                        # config
                 self._handle_pre_initialize,   # on_pre_initialize
                 self._handle_post_initialize,  # on_post_initialize
                 self._handle_post_exit,        # on_post_exit
                 lambda msg: self._handle_stderr_log(config.name, msg))  # on_stderr_log
         except Exception as e:
-            self._disable_temporarily(config.name, e)
+            self._disable_temporarily(config.name, e, designated_folder)
+            return
 
         if session:
             debug("window {} added session {}".format(self._window.id(), config.name))
@@ -591,7 +585,13 @@ class WindowManager(object):
             "window/logMessage",
             lambda params: self._handle_log_message(session.config.name, params))
 
-    def _handle_post_initialize(self, session: Session) -> None:
+    def _handle_post_initialize(self, session: Session, error: Optional[Dict[str, Any]]) -> None:
+        if error is not None:
+            message = error['message']
+            self._sublime.error_message(message)
+            self._disable_temporarily(session, RuntimeError(message), session.designated_folder)
+            return
+
         client = session.client
 
         # handle server requests and notifications

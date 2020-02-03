@@ -31,7 +31,7 @@ compleiton_kinds = {
 }
 
 
-def format_completion(item: dict, word_col: int) -> sublime.CompletionItem:
+def format_completion(item: dict) -> sublime.CompletionItem:
     trigger = item.get('label') or ""
     annotation = item.get('detail') or ""
     kind = sublime.KIND_AMBIGUOUS

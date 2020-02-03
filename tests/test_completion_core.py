@@ -36,15 +36,13 @@ class CompletionResponseParsingTests(unittest.TestCase):
 class CompletionFormattingTests(unittest.TestCase):
 
     def test_only_label_item(self):
-        result = format_completion({"label": "asdf"}, 0)
+        result = format_completion({"label": "asdf"})
         self.assertEqual(len(result), 2)
         self.assertEqual("asdf", result[0])
         self.assertEqual("asdf", result[1])
 
     def test_prefers_insert_text(self):
-        result = format_completion(
-            {"label": "asdf", "insertText": "Asdf"},
-            0)
+        result = format_completion({"label": "asdf", "insertText": "Asdf"})
         self.assertEqual(len(result), 2)
         self.assertEqual("asdf", result[0])
         self.assertEqual("Asdf", result[1])
@@ -64,7 +62,7 @@ class CompletionFormattingTests(unittest.TestCase):
             }
         }
 
-        result = format_completion(item, 0)
+        result = format_completion(item)
         self.assertEqual(len(result), 2)
         self.assertEqual("$true", result[0])
         self.assertEqual("\\$true", result[1])
@@ -89,12 +87,12 @@ class CompletionFormattingTests(unittest.TestCase):
             }
         }
         last_col = 1
-        result = format_completion(item, last_col)
+        result = format_completion(item)
         self.assertEqual(result, ('const\t  Keyword', 'const'))
 
     def test_text_edit_intelephense(self):
         last_col = 1
-        result = [format_completion(item, last_col) for item in intelephense_completion_sample]
+        result = [format_completion(item) for item in intelephense_completion_sample]
         self.assertEqual(
             result,
             [
@@ -121,7 +119,7 @@ class CompletionFormattingTests(unittest.TestCase):
         # handler.last_location = 1
         # handler.last_prefix = ""
         last_col = 1
-        result = [format_completion(item, last_col) for item in clangd_completion_sample]
+        result = [format_completion(item) for item in clangd_completion_sample]
         # We should prefer textEdit over insertText. This test covers that.
         self.assertEqual(
             result, [('argc\t  int', 'argc'), ('argv\t  const char **', 'argv'),
@@ -146,7 +144,7 @@ class CompletionFormattingTests(unittest.TestCase):
 
     def test_missing_text_edit_but_we_do_have_insert_text_for_pyls(self):
         last_col = 1
-        result = [format_completion(item, last_col) for item in pyls_completion_sample]
+        result = [format_completion(item) for item in pyls_completion_sample]
         self.assertEqual(
             result,
             [

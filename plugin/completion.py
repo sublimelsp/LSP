@@ -92,7 +92,6 @@ class CompletionHandler(LSPViewEventListener):
         super().__init__(view)
         self.initialized = False
         self.enabled = False
-        self.trigger_chars = []  # type: List[str]
 
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:
@@ -112,31 +111,31 @@ class CompletionHandler(LSPViewEventListener):
             # usual query for completions. So the explicit check for None is necessary.
             self.enabled = True
 
-            self.trigger_chars = completionProvider.get(
+            trigger_chars = completionProvider.get(
                 'triggerCharacters') or []
-            if self.trigger_chars:
-                self.register_trigger_chars(session)
+            if trigger_chars:
+                self.register_trigger_chars(session, trigger_chars)
             self.auto_complete_selector = self.view.settings().get("auto_complete_selector", "") or ""
 
     def _view_language(self, config_name: str) -> Optional[str]:
         languages = self.view.settings().get('lsp_language')
         return languages.get(config_name) if languages else None
 
-    def register_trigger_chars(self, session: Session) -> None:
+    def register_trigger_chars(self, session: Session, trigger_chars: List[str]) -> None:
         completion_triggers = self.view.settings().get('auto_complete_triggers', []) or []  # type: List[Dict[str, str]]
         view_language = self._view_language(session.config.name)
         if view_language:
             for language in session.config.languages:
                 if language.id == view_language:
                     for scope in language.scopes:
-                        # debug("registering", self.trigger_chars, "for", scope)
+                        # debug("registering", trigger_chars, "for", scope)
                         scope_trigger = next(
                             (trigger for trigger in completion_triggers if trigger.get('selector', None) == scope),
                             None
                         )
                         if not scope_trigger:  # do not override user's trigger settings.
                             completion_triggers.append({
-                                'characters': "".join(self.trigger_chars),
+                                'characters': "".join(trigger_chars),
                                 'selector': scope
                             })
 
@@ -154,7 +153,7 @@ class CompletionHandler(LSPViewEventListener):
 
         return completion_list
 
-    def do_request(self, completion_list, prefix: str, locations: List[int]) -> None:
+    def do_request(self, completion_list: sublime.CompletionList, prefix: str, locations: List[int]) -> None:
         # don't store client so we can handle restarts
         client = client_from_session(session_for_view(self.view, 'completionProvider', locations[0]))
         if not client:
@@ -168,7 +167,8 @@ class CompletionHandler(LSPViewEventListener):
                 lambda res: self.handle_response(res, completion_list, prefix),
                 self.handle_error)
 
-    def handle_response(self, response: Optional[Union[dict, List]], completion_list, prefix: str) -> None:
+    def handle_response(self, response: Optional[Union[dict, List]],
+                        completion_list: sublime.CompletionList, prefix: str) -> None:
         response_items, response_incomplete = parse_completion_response(response)
         items = list(format_completion(item) for item in response_items)
 

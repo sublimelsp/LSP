@@ -16,33 +16,31 @@ from .core.typing import Any, List, Dict, Tuple, Optional, Union
 
 class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
     def run(self, edit: Any, item: dict) -> None:
+        current_point = self.view.sel()[0].begin()
+
         insert_text_format = item.get("insertTextFormat")
 
         text_edit = item.get('textEdit')
         if text_edit:
+            # insert the removed command completion item prefix
+            # so we don't have to calculate the offset for the textEdit range
+            self.view.insert(edit, current_point, CompletionHandler.last_prefix)
+
             new_text = text_edit.get('newText')
 
             range = Range.from_lsp(text_edit['range'])
             edit_region = range_to_region(range, self.view)
-            # subtract the typed prefix form the end of the text edit
-            edit_region = sublime.Region(edit_region.begin(), edit_region.end() - len(CompletionHandler.last_prefix))
 
+            self.view.erase(edit, edit_region)
             if insert_text_format == InsertTextFormat.Snippet:
-                self.view.erase(edit, edit_region)
                 self.view.run_command("insert_snippet", {"contents": new_text})
             else:
-                self.view.replace(edit, edit_region, new_text)
-
-                # move the cursor to the end of the text edit
-                sel = self.view.sel()
-                sel.clear()
-                sel.add(edit_region.begin() + len(new_text))
+                self.view.insert(edit, edit_region.begin(), new_text)
         else:
             completion = item.get('insertText') or item.get('label') or ""
             if insert_text_format == InsertTextFormat.Snippet:
                 self.view.run_command("insert_snippet", {"contents": completion})
             else:
-                current_point = self.view.sel()[0].begin()
                 self.view.insert(edit, current_point, completion)
 
         # import statements, etc. some servers only return these after a resolve.

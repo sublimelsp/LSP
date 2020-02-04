@@ -25,6 +25,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], designated_f
             "textDocument": {
                 "synchronization": {
                     "didSave": True,
+                    "willSave": True,
                     "willSaveWaitUntil": True
                 },
                 "hover": {

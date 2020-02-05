@@ -234,9 +234,7 @@ class MockConfigs(object):
 
     def syntax_config_languages(self, view: ViewLike) -> 'Dict[str, LanguageConfig]':
         if self.syntax_supported(view):
-            return {
-                "test": TEST_LANGUAGE
-            }
+            return {config.name: config.languages[0] for config in self.all}
         else:
             return {}
 

@@ -21,6 +21,12 @@ Fixes:
   two folders in your sublime-project, and one is contained in the other, the
   wrong folder would be reported as the rootUri in the initialize request.
 
+* textDocument/willSave is now sent before saving the view if the language
+  server is interested in this notification.
+
+* textDocument/didSave now includes the content of the view if the language
+  server wants it.
+
 * The tests/ folder is now part of the export-ignore attribute in the
   .gitattributes file, so the .sublime-package file that you installed through
   Package Control will be smaller.

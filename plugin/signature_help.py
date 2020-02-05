@@ -4,13 +4,13 @@ import html
 import webbrowser
 
 from .core.configurations import is_supported_syntax
-from .core.documents import get_document_position
 from .core.popups import popups
 from .core.protocol import Request
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.settings import client_configs, settings
 from .core.signature_help import create_signature_help, SignatureHelp
 from .core.typing import List, Dict, Optional
+from .core.views import text_document_position_params
 
 
 class ColorSchemeScopeRenderer(object):
@@ -97,11 +97,10 @@ class SignatureHelpListener(LSPViewEventListener):
         client = client_from_session(session_for_view(self.view, 'signatureHelpProvider', point))
         if client:
             self.manager.documents.purge_changes(self.view)
-            document_position = get_document_position(self.view, point)
-            if document_position:
-                client.send_request(
-                    Request.signatureHelp(document_position),
-                    lambda response: self.handle_response(response, point))
+            document_position = text_document_position_params(self.view, point)
+            client.send_request(
+                Request.signatureHelp(document_position),
+                lambda response: self.handle_response(response, point))
 
     def handle_response(self, response: Optional[Dict], point: int) -> None:
         if self.view.sel()[0].begin() == self.requested_position:

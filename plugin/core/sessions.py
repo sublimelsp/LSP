@@ -1,6 +1,7 @@
 from .logging import debug
 from .process import start_server
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification
+from .protocol import TextDocumentSyncKindNone
 from .rpc import Client, attach_stdio_client, Response
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
 from .types import ClientConfig, Settings
@@ -24,6 +25,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], designated_f
             "textDocument": {
                 "synchronization": {
                     "didSave": True,
+                    "willSave": True,
                     "willSaveWaitUntil": True
                 },
                 "hover": {
@@ -139,6 +141,51 @@ class Session(object):
     def get_capability(self, capability: str) -> Optional[Any]:
         return self.capabilities.get(capability)
 
+    def should_notify_did_open(self) -> bool:
+        textsync = self.capabilities.get('textDocumentSync')
+        if isinstance(textsync, dict):
+            return bool(textsync.get('openClose'))
+        if isinstance(textsync, int):
+            return textsync > TextDocumentSyncKindNone
+        return False
+
+    def text_sync_kind(self) -> int:
+        textsync = self.capabilities.get('textDocumentSync')
+        if isinstance(textsync, dict):
+            return int(textsync.get('change', TextDocumentSyncKindNone))
+        if isinstance(textsync, int):
+            return textsync
+        return TextDocumentSyncKindNone
+
+    def should_notify_did_change(self) -> bool:
+        return self.text_sync_kind() > TextDocumentSyncKindNone
+
+    def should_notify_will_save(self) -> bool:
+        textsync = self.capabilities.get('textDocumentSync')
+        if isinstance(textsync, dict):
+            return bool(textsync.get('willSave'))
+        if isinstance(textsync, int):
+            return textsync > TextDocumentSyncKindNone
+        return False
+
+    def should_request_will_save_wait_until(self) -> bool:
+        textsync = self.capabilities.get('textDocumentSync')
+        if isinstance(textsync, dict):
+            return bool(textsync.get('willSaveWaitUntil'))
+        return False
+
+    def should_notify_did_save(self) -> Tuple[bool, bool]:
+        textsync = self.capabilities.get('textDocumentSync')
+        if isinstance(textsync, dict):
+            options = textsync.get('save')
+            return True, bool(options.get('includeText')) if isinstance(options, dict) else False
+        if isinstance(textsync, int):
+            return textsync > TextDocumentSyncKindNone, False
+        return False, False
+
+    def should_notify_did_close(self) -> bool:
+        return self.should_notify_did_open()
+
     @contextmanager
     def acquire_timeout(self) -> Generator[None, None, None]:
         acquired = self.ready_lock.acquire(True, ACQUIRE_READY_LOCK_TIMEOUT)
@@ -198,7 +245,7 @@ class Session(object):
             self._on_post_initialize(self, error)
 
     def _handle_initialize_result(self, result: Any) -> None:
-        self.capabilities = result.get('capabilities', dict())
+        self.capabilities.update(result.get('capabilities', dict()))
 
         # only keep supported amount of folders
         if self._workspace_folders:
@@ -232,7 +279,7 @@ class Session(object):
     def _handle_shutdown_result(self) -> None:
         self.client.exit()
         self.client = None  # type: ignore
-        self.capabilities = dict()
+        self.capabilities.clear()
         if self._on_post_exit:
             self._on_post_exit(self.config.name)
 

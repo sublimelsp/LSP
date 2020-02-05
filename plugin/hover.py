@@ -8,12 +8,12 @@ from html import escape
 from .code_actions import actions_manager, run_code_action_or_command
 from .code_actions import CodeActionOrCommand
 from .core.configurations import is_supported_syntax
-from .core.documents import get_document_position
 from .core.popups import popups
 from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation, Point
 from .core.registry import session_for_view, LspTextCommand, windows
 from .core.settings import client_configs, settings
 from .core.typing import List, Optional, Any, Dict
+from .core.views import text_document_position_params
 from .diagnostics import filter_by_point, view_diagnostics
 
 
@@ -100,12 +100,11 @@ class LspHoverCommand(LspTextCommand):
         # can we memoize some part (eg. where no point is provided?)
         session = session_for_view(self.view, 'hoverProvider', point)
         if session:
-            document_position = get_document_position(self.view, point)
-            if document_position:
-                if session.client:
-                    session.client.send_request(
-                        Request.hover(document_position),
-                        lambda response: self.handle_response(response, point))
+            document_position = text_document_position_params(self.view, point)
+            if session.client:
+                session.client.send_request(
+                    Request.hover(document_position),
+                    lambda response: self.handle_response(response, point))
 
     def request_code_actions(self, point: int) -> None:
         actions_manager.request(self.view, point, lambda response: self.handle_code_actions(response, point),

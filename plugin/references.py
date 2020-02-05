@@ -2,14 +2,14 @@ import os
 import sublime
 import linecache
 
-from .core.documents import is_at_word, get_position, get_document_position
+from .core.documents import is_at_word, get_position
 from .core.panels import ensure_panel
 from .core.protocol import Request, Point
 from .core.registry import LspTextCommand, windows
 from .core.settings import PLUGIN_NAME, settings
 from .core.typing import List, Dict, Optional, Tuple, TypedDict
 from .core.url import uri_to_filename
-from .core.views import get_line
+from .core.views import get_line, text_document_position_params
 
 ReferenceDict = TypedDict('ReferenceDict', {'uri': str, 'range': dict})
 
@@ -47,14 +47,10 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 if os.path.commonprefix([base_dir, file_path]):
                     self.base_dir = base_dir
 
-            document_position = get_document_position(self.view, pos)
-            if document_position:
-                document_position['context'] = {
-                    "includeDeclaration": False
-                }
-                request = Request.references(document_position)
-                client.send_request(
-                    request, lambda response: self.handle_response(response, pos))
+            document_position = text_document_position_params(self.view, pos)
+            document_position['context'] = {"includeDeclaration": False}
+            request = Request.references(document_position)
+            client.send_request(request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response: Optional[List[ReferenceDict]], pos: int) -> None:
         window = self.view.window()

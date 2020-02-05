@@ -49,10 +49,10 @@ class DocumentHandler(Protocol):
     def reset(self) -> None:
         ...
 
-    def handle_view_opened(self, view: ViewLike) -> None:
+    def handle_did_open(self, view: ViewLike) -> None:
         ...
 
-    def handle_view_modified(self, view: ViewLike) -> None:
+    def handle_did_change(self, view: ViewLike) -> None:
         ...
 
     def purge_changes(self, view: ViewLike) -> None:
@@ -61,10 +61,10 @@ class DocumentHandler(Protocol):
     def handle_will_save(self, view: ViewLike, reason: int) -> None:
         ...
 
-    def handle_view_saved(self, view: ViewLike) -> None:
+    def handle_did_save(self, view: ViewLike) -> None:
         ...
 
-    def handle_view_closed(self, view: ViewLike) -> None:
+    def handle_did_close(self, view: ViewLike) -> None:
         ...
 
     def has_document_state(self, file_name: str) -> bool:
@@ -185,7 +185,7 @@ class WindowDocumentHandler(object):
         view.settings().set('lsp_language', languages)
         view.settings().set('lsp_active', True)
 
-    def handle_view_opened(self, view: ViewLike) -> None:
+    def handle_did_open(self, view: ViewLike) -> None:
         file_name = view.file_name()
         if file_name and file_name not in self._document_states:
             config_languages = self._config_languages(view)
@@ -208,7 +208,7 @@ class WindowDocumentHandler(object):
             # mypy: expected sublime.View, got ViewLike
             session.client.send_notification(did_open(view, language_id))  # type: ignore
 
-    def handle_view_closed(self, view: ViewLike) -> None:
+    def handle_did_close(self, view: ViewLike) -> None:
         file_name = view.file_name() or ""
         try:
             self._document_states.remove(file_name)
@@ -228,7 +228,7 @@ class WindowDocumentHandler(object):
                     # mypy: expected sublime.View, got ViewLike
                     session.client.send_notification(will_save(view, reason))  # type: ignore
 
-    def handle_view_saved(self, view: ViewLike) -> None:
+    def handle_did_save(self, view: ViewLike) -> None:
         file_name = view.file_name()
         if file_name in self._document_states:
             self.purge_changes(view)
@@ -242,7 +242,7 @@ class WindowDocumentHandler(object):
         else:
             debug('document not tracked', file_name)
 
-    def handle_view_modified(self, view: ViewLike) -> None:
+    def handle_did_change(self, view: ViewLike) -> None:
         buffer_id = view.buffer_id()
         change_count = view.change_count()
         if buffer_id in self._pending_buffer_changes:
@@ -270,7 +270,7 @@ class WindowDocumentHandler(object):
         if file_name and view.window() == self._window:
             # ensure view is opened.
             if file_name not in self._document_states:
-                self.handle_view_opened(view)
+                self.handle_did_open(view)
 
             if view.buffer_id() in self._pending_buffer_changes:
                 del self._pending_buffer_changes[view.buffer_id()]
@@ -371,7 +371,7 @@ class WindowManager(object):
             if view.file_name():
                 self._workspace.update()
                 self._initialize_on_open(view)
-                self.documents.handle_view_opened(view)
+                self.documents.handle_did_open(view)
 
     def activate_view(self, view: ViewLike) -> None:
         file_name = view.file_name() or ""

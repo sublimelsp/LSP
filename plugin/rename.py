@@ -1,10 +1,11 @@
 import sublime
 import sublime_plugin
-from .core.documents import get_document_position, get_position, is_at_word
+from .core.documents import get_position, is_at_word
 from .core.edit import parse_workspace_edit
 from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.typing import Dict, Optional
+from .core.views import text_document_position_params
 
 
 class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
@@ -49,10 +50,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             return None
 
     def run(self, edit: sublime.Edit, new_name: str, event: Optional[dict] = None) -> None:
-        pos = get_position(self.view, event)
-        position = get_document_position(self.view, pos)
-        if position:
-            self.request_rename(position, new_name)
+        self.request_rename(text_document_position_params(self.view, get_position(self.view, event)), new_name)
 
     def request_rename(self, params: dict, new_name: str) -> None:
         client = self.client_with_capability('renameProvider')

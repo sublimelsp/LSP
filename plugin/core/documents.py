@@ -1,27 +1,12 @@
 import sublime
 
-from .url import filename_to_uri
 from .configurations import is_supported_syntax
-from .views import offset_to_point
-from .settings import client_configs
 from .registry import LSPViewEventListener
-from .typing import Any, Dict, Optional
+from .settings import client_configs
+from .typing import Optional
 
 
 SUBLIME_WORD_MASK = 515
-
-
-def get_document_position(view: sublime.View, point: int) -> Optional[Dict[str, Any]]:
-    file_name = view.file_name()
-    if file_name:
-        if not point:
-            point = view.sel()[0].begin()
-        d = dict()  # type: Dict[str, Any]
-        d['textDocument'] = {"uri": filename_to_uri(file_name)}
-        d['position'] = offset_to_point(view, point).to_lsp()
-        return d
-    else:
-        return None
 
 
 def get_position(view: sublime.View, event: Optional[dict] = None) -> int:
@@ -86,6 +71,10 @@ class DocumentSyncListener(LSPViewEventListener):
     def on_modified(self) -> None:
         if self.view.file_name():
             self.manager.documents.handle_view_modified(self.view)
+
+    def on_pre_save(self) -> None:
+        if self.view.file_name():
+            self.manager.documents.handle_will_save(self.view, reason=1)  # TextDocumentSaveReason.Manual
 
     def on_post_save_async(self) -> None:
         self.manager.documents.handle_view_saved(self.view)

@@ -228,6 +228,10 @@ class Notification:
         return Notification("textDocument/didChange", params)
 
     @classmethod
+    def willSave(cls, params: dict) -> 'Notification':
+        return Notification("textDocument/willSave", params)
+
+    @classmethod
     def didSave(cls, params: dict) -> 'Notification':
         return Notification("textDocument/didSave", params)
 

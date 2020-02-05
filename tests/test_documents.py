@@ -99,13 +99,15 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         folders = [WorkspaceFolder.from_path(project_path)]
         view.set_window(window)
         workspace = ProjectFolders(window)
-        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, workspace, MockConfigs())
+        configs = MockConfigs()
+        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, workspace, configs)
         client = MockClient()
         session = self.assert_if_none(
             create_session(TEST_CONFIG, folders, folders[0], dict(), MockSettings(),
                            bootstrap_client=client))
         client2 = MockClient()
         test_config2 = ClientConfig("test2", [], None, languages=[TEST_LANGUAGE])
+        configs.all.append(test_config2)
         session2 = self.assert_if_none(
             create_session(test_config2, folders, folders[0], dict(), MockSettings(),
                            bootstrap_client=client2))

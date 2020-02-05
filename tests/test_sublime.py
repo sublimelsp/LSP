@@ -31,6 +31,10 @@ def _run_timeout():
         callback()
 
 
+def status_message(s: str) -> None:
+    pass
+
+
 class Region(object):
     def __init__(self, a, b):
         self.a = a

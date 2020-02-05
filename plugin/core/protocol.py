@@ -228,6 +228,10 @@ class Notification:
         return Notification("textDocument/didChange", params)
 
     @classmethod
+    def willSave(cls, params: dict) -> 'Notification':
+        return Notification("textDocument/willSave", params)
+
+    @classmethod
     def didSave(cls, params: dict) -> 'Notification':
         return Notification("textDocument/didSave", params)
 
@@ -434,6 +438,9 @@ class WorkspaceFolder:
         if isinstance(other, WorkspaceFolder):
             return self.name == other.name and self.path == other.path
         return False
+
+    def __hash__(self) -> int:
+        return hash(self.path)
 
     def to_lsp(self) -> Dict[str, str]:
         return {"name": self.name, "uri": self.uri()}

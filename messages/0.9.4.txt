@@ -13,6 +13,20 @@ Fixes:
 * Workspace-aware and workspace-unaware language servers are attached to views
   outside the workspace (rather than only for views inside the workspace).
 
+* Language servers that crash during initialize are disabled for the folder
+  of the sublime-project that they were initially started in, instead of
+  disabling them for the entire window.
+
+* Fix a bug for workspace-unaware language servers where if you had at least
+  two folders in your sublime-project, and one is contained in the other, the
+  wrong folder would be reported as the rootUri in the initialize request.
+
+* textDocument/willSave is now sent before saving the view if the language
+  server is interested in this notification.
+
+* textDocument/didSave now includes the content of the view if the language
+  server wants it.
+
 * The tests/ folder is now part of the export-ignore attribute in the
   .gitattributes file, so the .sublime-package file that you installed through
   Package Control will be smaller.

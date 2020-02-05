@@ -39,12 +39,12 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         handler = WindowDocumentHandler(test_sublime, MockSettings(), window, workspace, MockConfigs())
         client = MockClient()
         session = self.assert_if_none(
-            create_session(TEST_CONFIG, folders, dict(), MockSettings(),
+            create_session(TEST_CONFIG, folders, folders[0], dict(), MockSettings(),
                            bootstrap_client=client))
         handler.add_session(session)
 
         # open
-        handler.handle_view_opened(view)
+        handler.handle_did_open(view)
         self.assertTrue(handler.has_document_state(__file__))
         self.assertEqual(len(client._notifications), 1)
         did_open = client._notifications[0]
@@ -56,14 +56,14 @@ class WindowDocumentHandlerTests(unittest.TestCase):
 
         # change 1
         view._text = "asdf jklm"
-        handler.handle_view_modified(view)
+        handler.handle_did_change(view)
         changes = handler._pending_buffer_changes[view.buffer_id()]
         self.assertEqual(changes, dict(view=view, version=1))
         self.assertEqual(len(client._notifications), 1)
 
         # change 2
         view._text = "asdf jklm qwer"
-        handler.handle_view_modified(view)
+        handler.handle_did_change(view)
         changes = handler._pending_buffer_changes[view.buffer_id()]
         self.assertEqual(changes, dict(view=view, version=2))
         self.assertEqual(len(client._notifications), 1)
@@ -73,19 +73,19 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         self.assertEqual(len(client._notifications), 2)
         did_change = client._notifications[1]
         document = did_change.params.get("textDocument")
-        self.assertEqual(document.get("version"), 1)  # increments with did_change
+        self.assertEqual(document.get("version"), 3)  # increments when calling change_count() on the MockView
         purged_changes = did_change.params["contentChanges"]
         self.assertEqual(purged_changes[0].get("text"), view._text)
 
-        # save
-        handler.handle_view_saved(view)
+        # did save
+        handler.handle_did_save(view)
         self.assertEqual(len(client._notifications), 3)
         did_save = client._notifications[2]
         document = did_save.params.get("textDocument")
         self.assertIn(basename(__file__), document.get("uri"))
 
-        # close
-        handler.handle_view_closed(view)
+        # did close
+        handler.handle_did_close(view)
         self.assertEqual(len(client._notifications), 4)
         did_close = client._notifications[3]
         document = did_close.params.get("textDocument")
@@ -99,20 +99,22 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         folders = [WorkspaceFolder.from_path(project_path)]
         view.set_window(window)
         workspace = ProjectFolders(window)
-        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, workspace, MockConfigs())
+        configs = MockConfigs()
+        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, workspace, configs)
         client = MockClient()
         session = self.assert_if_none(
-            create_session(TEST_CONFIG, folders, dict(), MockSettings(),
+            create_session(TEST_CONFIG, folders, folders[0], dict(), MockSettings(),
                            bootstrap_client=client))
         client2 = MockClient()
         test_config2 = ClientConfig("test2", [], None, languages=[TEST_LANGUAGE])
+        configs.all.append(test_config2)
         session2 = self.assert_if_none(
-            create_session(test_config2, folders, dict(), MockSettings(),
+            create_session(test_config2, folders, folders[0], dict(), MockSettings(),
                            bootstrap_client=client2))
 
         handler.add_session(session)
         handler.add_session(session2)
-        handler.handle_view_opened(view)
+        handler.handle_did_open(view)
         self.assertTrue(handler.has_document_state(__file__))
         self.assertEqual(len(client._notifications), 1)
         self.assertEqual(len(client2._notifications), 1)
@@ -121,13 +123,13 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         document = did_open.params["textDocument"]
         self.assertEqual(document.get("languageId"), "test")
         self.assertEqual(document.get("text"), "asdf")
-        self.assertEqual(document.get("version"), 0)
+        self.assertIsNotNone(document.get("version"))
 
         did_open2 = client._notifications[0]
         document2 = did_open2.params["textDocument"]
         self.assertEqual(document2.get("languageId"), "test")
         self.assertEqual(document2.get("text"), "asdf")
-        self.assertEqual(document2.get("version"), 0)
+        self.assertIsNotNone(document2.get("version"))
         status_string = view._status.get("lsp_clients")
         if status_string:
             status_configs = status_string.split(", ")

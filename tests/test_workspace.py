@@ -1,5 +1,5 @@
 from test_mocks import MockWindow
-from LSP.plugin.core.workspace import ProjectFolders, sorted_workspace_folders
+from LSP.plugin.core.workspace import ProjectFolders
 from LSP.plugin.core.protocol import WorkspaceFolder
 import os
 from unittest import mock
@@ -10,13 +10,25 @@ import tempfile
 class SortedWorkspaceFoldersTest(unittest.TestCase):
 
     def test_get_workspace_from_multi_folder_project(self) -> None:
-        first_project_path = os.path.dirname(__file__)
-        second_project_path = tempfile.gettempdir()
-        folders = sorted_workspace_folders([second_project_path, first_project_path], __file__)
-        first_folder = WorkspaceFolder.from_path(first_project_path)
-        second_folder = WorkspaceFolder.from_path(second_project_path)
-        self.assertEqual(folders[0], first_folder)
-        self.assertEqual(folders[1], second_folder)
+        first = os.path.dirname(__file__)
+        with tempfile.TemporaryDirectory() as second:
+            folders = ProjectFolders(MockWindow())
+            folders.folders = [second, first]
+            workspaces, designated = folders.all_and_designated(__file__)
+            self.assertListEqual(workspaces, [WorkspaceFolder.from_path(f) for f in (second, first)])
+            self.assertEqual(designated.path, first)
+
+    def test_nested_folders(self) -> None:
+        with tempfile.TemporaryDirectory() as first:
+            second = os.path.join(first, "foobar")
+            os.makedirs(second, exist_ok=True)
+            with tempfile.TemporaryDirectory() as third:
+                folders = ProjectFolders(MockWindow())
+                folders.folders = [first, second, third]  # [/tmp/asdf, /tmp/asdf/foobar, /tmp/qwerty]
+                file_path = os.path.join(second, "somefile.txt")
+                workspaces, designated = folders.all_and_designated(file_path)
+                self.assertListEqual(workspaces, [WorkspaceFolder.from_path(f) for f in (first, second, third)])
+                self.assertEqual(designated.path, second)
 
 
 class WorkspaceFolderTest(unittest.TestCase):

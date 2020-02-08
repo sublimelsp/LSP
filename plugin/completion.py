@@ -16,15 +16,14 @@ from .core.typing import Any, List, Dict, Tuple, Optional, Union
 
 class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
     def run(self, edit: Any, item: dict) -> None:
-        current_point = self.view.sel()[0].begin()
-
         insert_text_format = item.get("insertTextFormat")
 
         text_edit = item.get('textEdit')
         if text_edit:
             # insert the removed command completion item prefix
             # so we don't have to calculate the offset for the textEdit range
-            self.view.insert(edit, current_point, CompletionHandler.last_prefix)
+            for sel in self.view.sel():
+                self.view.insert(edit, sel.begin(), CompletionHandler.last_prefix)
 
             new_text = text_edit.get('newText')
 
@@ -41,7 +40,8 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
             if insert_text_format == InsertTextFormat.Snippet:
                 self.view.run_command("insert_snippet", {"contents": completion})
             else:
-                self.view.insert(edit, current_point, completion)
+                for sel in self.view.sel():
+                    self.view.insert(edit, sel.begin(), completion)
 
         # import statements, etc. some servers only return these after a resolve.
         additional_edits = item.get('additionalTextEdits')

@@ -11,111 +11,146 @@ try:
 except ImportError:
     pass
 
-label_completions = [dict(label='asdf'), dict(label='efgh')]
+label_completions = [{'label': 'asdf'}, {'label': 'efcgh'}]
 completion_with_additional_edits = [
-    dict(label='asdf',
-         additionalTextEdits=[{
-             'range': {
-                 'start': {
-                     'line': 0,
-                     'character': 0
-                 },
-                 'end': {
-                     'line': 0,
-                     'character': 0
-                 }
-             },
-             'newText': 'import asdf;\n'
-         }])
+    {
+        'label': 'asdf',
+        'additionalTextEdits': [
+            {
+                'range': {
+                    'start': {
+                        'line': 0,
+                        'character': 0
+                    },
+                    'end': {
+                        'line': 0,
+                        'character': 0
+                    }
+                },
+                'newText': 'import asdf;\n'
+            }
+        ]
+    }
 ]
-insert_text_completions = [dict(label='asdf', insertText='asdf()')]
-var_completion_using_label = [dict(label='$what')]
-var_prefix_added_in_insertText = [dict(label='$what', insertText='what')]
+insert_text_completions = [{'label': 'asdf', 'insertText': 'asdf()'}]
+var_completion_using_label = [{'label': '$what'}]
+var_prefix_added_in_insertText = [
+    {
+        "insertText": "$true",
+        "label": "true",
+        "textEdit": {
+            "newText": "$true",
+            "range": {
+                "end": {
+                    "character": 5,
+                    "line": 0
+                },
+                "start": {
+                    "character": 0,
+                    "line": 0
+                }
+            }
+        }
+    }
+]
 var_prefix_added_in_label = [
-    dict(label='$what',
-         textEdit={
-             'range': {
-                 'start': {
-                     'line': 0,
-                     'character': 1
-                 },
-                 'end': {
-                     'line': 0,
-                     'character': 1
-                 }
-             },
-             'newText': 'what'
-         })
+    {
+        'label': '$what',
+        'textEdit': {
+            'range': {
+                'start': {
+                    'line': 0,
+                    'character': 1
+                },
+                'end': {
+                    'line': 0,
+                    'character': 1
+                }
+            },
+            'newText': 'what'
+        }
+    }
 ]
-space_added_in_label = [dict(label=' const', insertText='const')]
+space_added_in_label = [{'label': ' const', 'insertText': 'const'}]
 
 dash_missing_from_label = [
-    dict(label='UniqueId',
-         textEdit={
-             'range': {
-                 'start': {
-                     'character': 14,
-                     'line': 26
-                 },
-                 'end': {
-                     'character': 15,
-                     'line': 26
-                 }
-             },
-             'newText': '-UniqueId'
-         },
-         insertText='-UniqueId')
+    {
+        'label': 'UniqueId',
+        'textEdit': {
+            'range': {
+                'start': {
+                    'character': 0,
+                    'line': 0
+                },
+                'end': {
+                    'character': 1,
+                    'line': 0
+                }
+            },
+            'newText': '-UniqueId'
+        },
+        'insertText': '-UniqueId'
+    }
 ]
 
 edit_before_cursor = [
-    dict(label='override def myFunction(): Unit',
-         textEdit={
-             'newText': 'override def myFunction(): Unit = ${0:???}',
-             'range': {
-                 'start': {
-                     'line': 0,
-                     'character': 2
-                 },
-                 'end': {
-                     'line': 0,
-                     'character': 18
-                 }
-             }
-         })
+    {
+        'insertTextFormat': 2,
+        'label': 'override def myFunction(): Unit',
+        'textEdit': {
+            'newText': 'override def myFunction(): Unit = ${0:???}',
+            'range': {
+                'start': {
+                    'line': 0,
+                    'character': 2
+                },
+                'end': {
+                    'line': 0,
+                    'character': 18
+                }
+            }
+        }
+    }
 ]
 
 edit_after_nonword = [
-    dict(label='apply[A](xs: A*): List[A]',
-         textEdit={
-             'newText': 'apply($0)',
-             'range': {
-                 'start': {
-                     'line': 0,
-                     'character': 5
-                 },
-                 'end': {
-                     'line': 0,
-                     'character': 5
-                 }
-             }
-         })
+    {
+        'insertTextFormat': 2,
+        'label': 'apply[A](xs: A*): List[A]',
+        'textEdit': {
+            'newText': 'apply($0)',
+            'range': {
+                'start': {
+                    'line': 0,
+                    'character': 5
+                },
+                'end': {
+                    'line': 0,
+                    'character': 5
+                }
+            }
+        }
+    }
 ]
 
 metals_implement_all_members = [
-    dict(label='Implement all members',
-         textEdit={
-             'newText': 'def foo: Int \u003d ${0:???}\n   def boo: Int \u003d ${0:???}',
-             'range': {
-                 'start': {
-                     'line': 0,
-                     'character': 0
-                 },
-                 'end': {
-                     'line': 0,
-                     'character': 1
-                 }
-             }
-         })
+    {
+        'insertTextFormat': 2,
+        'label': 'Implement all members',
+        'textEdit': {
+            'newText': 'def foo: Int \u003d ${0:???}\n   def boo: Int \u003d ${0:???}',
+            'range': {
+                'start': {
+                    'line': 0,
+                    'character': 0
+                },
+                'end': {
+                    'line': 0,
+                    'character': 1
+                }
+            }
+        }
+    }
 ]
 
 
@@ -149,7 +184,6 @@ class InitializationTests(DeferrableTestCase):
 
 
 class QueryCompletionsTests(TextDocumentTestCase):
-
     def init_view_settings(self) -> None:
         super().init_view_settings()
         assert self.view
@@ -160,62 +194,53 @@ class QueryCompletionsTests(TextDocumentTestCase):
             yield 500
         yield from super().await_message(msg)
 
-    def test_simple_label(self) -> 'Generator':
-        self.set_response('textDocument/completion', label_completions)
+    def type(self, text: str) -> None:
+        self.view.run_command('append', {'characters': text})
+        self.view.run_command('move_to', {'to': 'eol'})
 
+    def select_completion(self) -> 'Generator':
+        self.view.run_command('auto_complete')
+
+        yield 100
+        self.view.run_command("commit_completion")
+
+    def read_file(self) -> str:
+        return self.view.substr(sublime.Region(0, self.view.size()))
+
+    def test_simple_label(self) -> 'Generator':
         handler = self.get_view_event_listener("on_query_completions")
+        handler.test_completions = label_completions
+
         self.assertIsNotNone(handler)
         if handler:
-            # todo: want to test trigger chars instead?
-            # self.view.run_command('insert', {"characters": '.'})
-            result = handler.on_query_completions("", [0])
+            self.type("a")
+            yield from self.select_completion()
 
-            # synchronous response
-            self.assertTrue(handler.initialized)
-            self.assertTrue(handler.enabled)
-            self.assertIsNotNone(result)
-            items, mask = result
-            self.assertEquals(len(items), 0)
-            # self.assertEquals(mask, 0)
-
-            # now wait for server response
-            yield from self.await_message('textDocument/completion')
-            self.assertEquals(len(handler.completions), 2)
-
-            # verify insertion works
-            original_change_count = self.view.change_count()
-            self.view.run_command("commit_completion")
-            yield from self.await_view_change(original_change_count + 1)
-            self.assertEquals(
-                self.view.substr(sublime.Region(0, self.view.size())), 'asdf')
+            self.assertEquals(self.read_file(), 'asdf')
 
     def test_simple_inserttext(self) -> 'Generator':
-        self.set_response('textDocument/completion', insert_text_completions)
         handler = self.get_view_event_listener("on_query_completions")
+        handler.test_completions = insert_text_completions
+
         self.assertIsNotNone(handler)
         if handler:
-            handler.on_query_completions("", [0])
-            yield from self.await_message('textDocument/completion')
-            original_change_count = self.view.change_count()
-            self.view.run_command("commit_completion")
-            yield from self.await_view_change(original_change_count + 1)
+            self.type("a")
+            yield from self.select_completion()
+
             self.assertEquals(
-                self.view.substr(sublime.Region(0, self.view.size())),
+                self.read_file(),
                 insert_text_completions[0]["insertText"])
 
     def test_var_prefix_using_label(self) -> 'Generator':
-        self.view.run_command('append', {'characters': '$'})
-        self.view.run_command('move_to', {'to': 'eol'})
-        self.set_response('textDocument/completion', var_completion_using_label)
         handler = self.get_view_event_listener("on_query_completions")
+        handler.test_completions = var_completion_using_label
+
         self.assertIsNotNone(handler)
         if handler:
-            handler.on_query_completions("", [1])
-            yield from self.await_message('textDocument/completion')
-            original_change_count = self.view.change_count()
-            self.view.run_command("commit_completion")
-            yield from self.await_view_change(original_change_count + 2)
-            self.assertEquals(self.view.substr(sublime.Region(0, self.view.size())), '$what')
+            self.type("$")
+            yield from self.select_completion()
+
+            self.assertEquals(self.read_file(), '$what')
 
     def test_var_prefix_added_in_insertText(self) -> 'Generator':
         """
@@ -223,39 +248,42 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Powershell: label='true', insertText='$true' (see https://github.com/sublimelsp/LSP/issues/294)
 
         """
-        self.view.run_command('append', {'characters': '$'})
-        self.view.run_command('move_to', {'to': 'eol'})
-        self.set_response('textDocument/completion', var_prefix_added_in_insertText)
         handler = self.get_view_event_listener("on_query_completions")
+        handler.test_completions = var_prefix_added_in_insertText
+
         self.assertIsNotNone(handler)
         if handler:
-            handler.on_query_completions("", [1])
-            yield from self.await_message('textDocument/completion')
-            original_change_count = self.view.change_count()
-            self.view.run_command("commit_completion")
-            yield from self.await_view_change(original_change_count + 1)
+            self.type("$")
+            yield from self.select_completion()
+
             self.assertEquals(
-                self.view.substr(sublime.Region(0, self.view.size())), '$what')
+                self.read_file(), '$true')
 
-    def test_var_prefix_added_in_label(self) -> 'Generator':
-        """
+    # def test_var_prefix_added_in_label(self) -> 'Generator':
+    #     """
 
-        PHP language server: label='$someParam', textEdit='someParam' (https://github.com/sublimelsp/LSP/issues/368)
+    #     PHP language server: label='$someParam', textEdit='someParam' (https://github.com/sublimelsp/LSP/issues/368)
 
-        """
-        self.view.run_command('append', {'characters': '$'})
-        self.view.run_command('move_to', {'to': 'eol'})
-        self.set_response('textDocument/completion', var_prefix_added_in_label)
-        handler = self.get_view_event_listener("on_query_completions")
-        self.assertIsNotNone(handler)
-        if handler:
-            handler.on_query_completions("", [1])
-            yield from self.await_message('textDocument/completion')
-            original_change_count = self.view.change_count()
-            self.view.run_command("commit_completion")
-            yield from self.await_view_change(original_change_count + 1)
-            self.assertEquals(
-                self.view.substr(sublime.Region(0, self.view.size())), '$what')
+    #     """
+    #     handler = self.get_view_event_listener("on_query_completions")
+    #     handler.test_completions = var_prefix_added_in_label
+
+    #     self.assertIsNotNone(handler)
+    #     if handler:
+    #         self.view.run_command('append', {'characters': "$"})
+    #         self.view.run_command('move_to', {'to': 'eol'})
+
+    #         # show autocomplete
+    #         self.view.run_command('type')
+
+    #         # select a completion item
+    #         yield 4000
+    #         self.view.run_command("commit_completion")
+
+    #         yield 4000
+    #         self.assertEquals(
+    #             self.read_file(), '$what')
+
 
     def test_space_added_in_label(self) -> 'Generator':
         """
@@ -263,17 +291,16 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Clangd: label=" const", insertText="const" (https://github.com/sublimelsp/LSP/issues/368)
 
         """
-        self.set_response('textDocument/completion', space_added_in_label)
         handler = self.get_view_event_listener("on_query_completions")
+        handler.test_completions = space_added_in_label
+
         self.assertIsNotNone(handler)
         if handler:
-            handler.on_query_completions("", [0])
-            yield from self.await_message('textDocument/completion')
-            original_change_count = self.view.change_count()
-            self.view.run_command("commit_completion")
-            yield from self.await_view_change(original_change_count + 1)
+            self.type("")
+            yield from self.select_completion()
+
             self.assertEquals(
-                self.view.substr(sublime.Region(0, self.view.size())), 'const')
+                self.read_file(), 'const')
 
     def test_dash_missing_from_label(self) -> 'Generator':
         """
@@ -281,45 +308,34 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Powershell: label="UniqueId", insertText="-UniqueId" (https://github.com/sublimelsp/LSP/issues/572)
 
         """
-        self.view.run_command('append', {'characters': '-'})
-        self.view.run_command('move_to', {'to': 'eol'})
-
-        self.set_response('textDocument/completion', dash_missing_from_label)
         handler = self.get_view_event_listener("on_query_completions")
+        handler.test_completions = dash_missing_from_label
+
         self.assertIsNotNone(handler)
         if handler:
-            handler.on_query_completions("", [1])
-            yield from self.await_message('textDocument/completion')
-            original_change_count = self.view.change_count()
-            self.view.run_command("commit_completion")
-            yield from self.await_view_change(original_change_count + 2)
+            self.type("u")
+            yield from self.select_completion()
+
             self.assertEquals(
-                self.view.substr(sublime.Region(0, self.view.size())),
+                self.read_file(),
                 '-UniqueId')
 
-    def test_edit_before_cursor(self) -> 'Generator':
-        """
+    # def test_edit_before_cursor(self) -> 'Generator':
+    #     """
 
-        Metals: label="override def myFunction(): Unit"
+    #     Metals: label="override def myFunction(): Unit"
 
-        """
-        self.view.run_command('append', {'characters': '  def myF'})
-        self.view.run_command('move_to', {'to': 'eol'})
+    #     """
+    #     handler = self.get_view_event_listener("on_query_completions")
+    #     handler.test_completions = edit_before_cursor
 
-        self.set_response('textDocument/completion', edit_before_cursor)
-        handler = self.get_view_event_listener("on_query_completions")
-        self.assertIsNotNone(handler)
-        if handler:
-            handler.on_query_completions("myF", [7])
-            yield from self.await_message('textDocument/completion')
-            # note: invoking on_text_command manually as sublime doesn't call it.
-            handler.on_text_command('commit_completion', {})
-            original_change_count = self.view.change_count()
-            self.view.run_command("commit_completion", {})
-            yield from self.await_view_change(original_change_count + 3)
-            self.assertEquals(
-                self.view.substr(sublime.Region(0, self.view.size())),
-                '  override def myFunction(): Unit = ???')
+    #     self.assertIsNotNone(handler)
+    #     if handler:
+    #         self.type("  def myF")
+    #         yield from self.select_completion()
+    #         self.assertEquals(
+    #             self.read_file(),
+    #             '  override def myFunction(): Unit = ???')
 
     def test_edit_after_nonword(self) -> 'Generator':
         """
@@ -328,22 +344,16 @@ class QueryCompletionsTests(TextDocumentTestCase):
         See https://github.com/sublimelsp/LSP/issues/645
 
         """
-        self.view.run_command('append', {'characters': 'List.'})
-        self.view.run_command('move_to', {'to': 'eol'})
-
-        self.set_response('textDocument/completion', edit_after_nonword)
         handler = self.get_view_event_listener("on_query_completions")
+        handler.test_completions = edit_after_nonword
+
         self.assertIsNotNone(handler)
         if handler:
-            handler.on_query_completions("", [5])
-            yield from self.await_message('textDocument/completion')
-            # note: invoking on_text_command manually as sublime doesn't call it.
-            handler.on_text_command('commit_completion', {})
-            original_change_count = self.view.change_count()
-            self.view.run_command("commit_completion", {})
-            yield from self.await_view_change(original_change_count + 1)
+            self.type("List.")
+            yield from self.select_completion()
+
             self.assertEquals(
-                self.view.substr(sublime.Region(0, self.view.size())),
+                self.read_file(),
                 'List.apply()')
 
     def test_implement_all_members_quirk(self) -> 'Generator':
@@ -351,59 +361,52 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Metals: "Implement all members" should just select the newText.
         https://github.com/sublimelsp/LSP/issues/771
         """
-        self.view.run_command('append', {'characters': 'I'})
-        self.view.run_command('move_to', {'to': 'eol'})
-        self.set_response('textDocument/completion', metals_implement_all_members)
-        handler = self.get_view_event_listener('on_query_completions')
+        handler = self.get_view_event_listener("on_query_completions")
+        handler.test_completions = metals_implement_all_members
+
         self.assertIsNotNone(handler)
         if handler:
-            handler.on_query_completions("", [1])
-            yield from self.await_message('textDocument/completion')
-            handler.on_text_command('commit_completion', {})
-            original_change_count = self.view.change_count()
-            self.view.run_command("commit_completion", {})
-            yield from self.await_view_change(original_change_count + 2)
+            self.type("I")
+            yield from self.select_completion()
+
             self.assertEquals(
-                self.view.substr(sublime.Region(0, self.view.size())),
+                self.read_file(),
                 'def foo: Int = ???\n   def boo: Int = ???')
 
     def test_additional_edits(self) -> 'Generator':
-        self.set_response('textDocument/completion', completion_with_additional_edits)
         handler = self.get_view_event_listener("on_query_completions")
+        handler.test_completions = completion_with_additional_edits
+
         self.assertIsNotNone(handler)
         if handler:
-            handler.on_query_completions("", [0])
-            yield from self.await_message('textDocument/completion')
-            # note: invoking on_text_command manually as sublime doesn't call it.
-            handler.on_text_command('commit_completion', {})
-            original_change_count = self.view.change_count()
-            self.view.run_command("commit_completion", {})
-            yield from self.await_view_change(original_change_count + 2)
+            self.type("")
+            yield from self.select_completion()
+
             self.assertEquals(
-                self.view.substr(sublime.Region(0, self.view.size())),
+                self.read_file(),
                 'import asdf;\nasdf')
 
-    def test_resolve_for_additional_edits(self) -> 'Generator':
-        self.set_response('textDocument/completion', label_completions)
-        self.set_response('completionItem/resolve', completion_with_additional_edits[0])
+    # def test_resolve_for_additional_edits(self) -> 'Generator':
+    #     self.set_response('textDocument/completion', label_completions)
+    #     self.set_response('completionItem/resolve', completion_with_additional_edits[0])
 
-        handler = self.get_view_event_listener("on_query_completions")
-        self.assertIsNotNone(handler)
-        if handler:
-            handler.on_query_completions("", [0])
+    #     handler = self.get_view_event_listener("on_query_completions")
+    #     self.assertIsNotNone(handler)
+    #     if handler:
+    #         handler.on_query_completions("", [0])
 
-            # note: ideally the handler is initialized with resolveProvider capability
-            handler.resolve = True
+    #         # note: ideally the handler is initialized with resolveProvider capability
+    #         handler.resolve = True
 
-            yield from self.await_message('textDocument/completion')
-            # note: invoking on_text_command manually as sublime doesn't call it.
-            handler.on_text_command('commit_completion', {})
-            original_change_count = self.view.change_count()
-            self.view.run_command("commit_completion", {})
-            yield from self.await_view_change(original_change_count + 2)
-            yield from self.await_message('completionItem/resolve')
-            yield from self.await_view_change(original_change_count + 2)  # XXX: no changes?
-            self.assertEquals(
-                self.view.substr(sublime.Region(0, self.view.size())),
-                'import asdf;\nasdf')
-            handler.resolve = False
+    #         yield from self.await_message('textDocument/completion')
+    #         # note: invoking on_text_command manually as sublime doesn't call it.
+    #         handler.on_text_command('commit_completion', {})
+    #         original_change_count = self.view.change_count()
+    #         self.view.run_command("commit_completion", {})
+    #         yield from self.await_view_change(original_change_count + 2)
+    #         yield from self.await_message('completionItem/resolve')
+    #         yield from self.await_view_change(original_change_count + 2)  # XXX: no changes?
+    #         self.assertEquals(
+    #             self.read_file(),
+    #             'import asdf;\nasdf')
+    #         handler.resolve = False

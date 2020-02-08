@@ -92,6 +92,7 @@ class CompletionHandler(LSPViewEventListener):
         super().__init__(view)
         self.initialized = False
         self.enabled = False
+        self.test_completions = None  # type: List[dict]
 
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:
@@ -148,7 +149,12 @@ class CompletionHandler(LSPViewEventListener):
             return None
 
         completion_list = sublime.CompletionList()
-        self.do_request(completion_list, prefix, locations)
+
+        # this is for tests
+        if self.test_completions:
+            self.handle_response(self.test_completions, completion_list, prefix)
+        else:
+            self.do_request(completion_list, prefix, locations)
 
         return completion_list
 

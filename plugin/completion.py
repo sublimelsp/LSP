@@ -166,11 +166,10 @@ class CompletionHandler(LSPViewEventListener):
 
         self.manager.documents.purge_changes(self.view)
         document_position = text_document_position_params(self.view, locations[0])
-        if document_position:
-            client.send_request(
-                Request.complete(document_position),
-                lambda res: self.handle_response(res, completion_list, prefix),
-                self.handle_error)
+        client.send_request(
+            Request.complete(document_position),
+            lambda res: self.handle_response(res, completion_list, prefix),
+            self.handle_error)
 
     def handle_response(self, response: Optional[Union[dict, List]],
                         completion_list: sublime.CompletionList, prefix: str) -> None:

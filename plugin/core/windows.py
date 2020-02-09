@@ -13,10 +13,10 @@ from .types import Settings
 from .types import ViewLike
 from .types import WindowLike
 from .typing import Optional, List, Callable, Dict, Any, Protocol, Set, Union
-from .url import filename_to_uri
-from .workspace import get_workspace_folders
+from .views import did_change, did_close, did_open, did_save, will_save
 from .workspace import disable_in_project
 from .workspace import enable_in_project
+from .workspace import get_workspace_folders
 from .workspace import ProjectFolders
 import threading
 
@@ -49,19 +49,22 @@ class DocumentHandler(Protocol):
     def reset(self) -> None:
         ...
 
-    def handle_view_opened(self, view: ViewLike) -> None:
+    def handle_did_open(self, view: ViewLike) -> None:
         ...
 
-    def handle_view_modified(self, view: ViewLike) -> None:
+    def handle_did_change(self, view: ViewLike) -> None:
         ...
 
     def purge_changes(self, view: ViewLike) -> None:
         ...
 
-    def handle_view_saved(self, view: ViewLike) -> None:
+    def handle_will_save(self, view: ViewLike, reason: int) -> None:
         ...
 
-    def handle_view_closed(self, view: ViewLike) -> None:
+    def handle_did_save(self, view: ViewLike) -> None:
+        ...
+
+    def handle_did_close(self, view: ViewLike) -> None:
         ...
 
     def has_document_state(self, file_name: str) -> bool:
@@ -125,14 +128,13 @@ class WindowDocumentHandler(object):
     def has_document_state(self, path: str) -> bool:
         return path in self._document_states
 
-    def _get_applicable_sessions(self, view: ViewLike, notification_type: Optional[str] = None) -> List[Session]:
+    def _get_applicable_sessions(self, view: ViewLike) -> List[Session]:
         sessions = []  # type: List[Session]
         syntax = view.settings().get("syntax")
 
         def conditional_append(session: Session) -> None:
             if config_supports_syntax(session.config, syntax):
-                if not notification_type or self._session_supports_notification(session, notification_type):
-                    sessions.append(session)
+                sessions.append(session)
 
         if view in self._workspace:
             for sessions_per_config_name in self._sessions.values():
@@ -145,25 +147,6 @@ class WindowDocumentHandler(object):
                 conditional_append(sessions_per_config_name[0])
         return sessions
 
-    def _session_supports_notification(self, session: Session, notification_type: str) -> bool:
-        """
-            openClose: boolean
-            change: 0 (none), 1 (full), 2 (incremental)
-            willSave: boolean
-            willSaveWaitUntil: boolean
-            save: {includeText: boolean}
-        """
-        sync_options = session.capabilities.get('textDocumentSync')
-
-        # if a TextDocumentSyncOptions object was sent, we can disable some notifications
-        if isinstance(sync_options, dict):
-            notification = sync_options.get(notification_type)
-            if notification is None or notification is False:
-                return False
-
-        # otherwise we send them all.
-        return True
-
     def _notify_open_documents(self, session: Session) -> None:
         for file_name in self._document_states:
             if session.handles_path(file_name):
@@ -173,7 +156,9 @@ class WindowDocumentHandler(object):
                     if config_supports_syntax(session.config, syntax):
                         sessions = self._get_applicable_sessions(view)
                         self._attach_view(view, sessions)
-                        self._notify_did_open(view, session)
+                        for session in sessions:
+                            if session.should_notify_did_open():
+                                self._notify_did_open(view, session)
 
     def _is_supported_view(self, view: ViewLike) -> bool:
         return self._configs.syntax_supported(view)
@@ -190,9 +175,8 @@ class WindowDocumentHandler(object):
         view.settings().erase("show_definitions")
         view.set_status("lsp_clients", "")
 
-    def _view_language(self, view: ViewLike, config_name: str) -> Optional[str]:
-        languages = view.settings().get('lsp_language')
-        return languages.get(config_name) if languages else None
+    def _view_language(self, view: ViewLike, config_name: str) -> str:
+        return view.settings().get('lsp_language')[config_name]
 
     def _set_view_languages(self, view: ViewLike, config_languages: Dict[str, LanguageConfig]) -> None:
         languages = {}
@@ -201,7 +185,7 @@ class WindowDocumentHandler(object):
         view.settings().set('lsp_language', languages)
         view.settings().set('lsp_active', True)
 
-    def handle_view_opened(self, view: ViewLike) -> None:
+    def handle_did_open(self, view: ViewLike) -> None:
         file_name = view.file_name()
         if file_name and file_name not in self._document_states:
             config_languages = self._config_languages(view)
@@ -215,47 +199,50 @@ class WindowDocumentHandler(object):
                 sessions = self._get_applicable_sessions(view)
                 self._attach_view(view, sessions)
                 for session in sessions:
-                    if self._session_supports_notification(session, 'openClose'):
+                    if session.should_notify_did_open():
                         self._notify_did_open(view, session)
 
     def _notify_did_open(self, view: ViewLike, session: Session) -> None:
-        file_name = view.file_name()
-        if file_name:
-            params = {
-                "textDocument": {
-                    "uri": filename_to_uri(file_name),
-                    "languageId": self._view_language(view, session.config.name),
-                    "text": view.substr(self._sublime.Region(0, view.size())),
-                    "version": view.change_count()
-                }
-            }
-            session.client.send_notification(Notification.didOpen(params))
+        language_id = self._view_language(view, session.config.name)
+        if session.client:
+            # mypy: expected sublime.View, got ViewLike
+            session.client.send_notification(did_open(view, language_id))  # type: ignore
 
-    def handle_view_closed(self, view: ViewLike) -> None:
+    def handle_did_close(self, view: ViewLike) -> None:
         file_name = view.file_name() or ""
         try:
             self._document_states.remove(file_name)
-        except ValueError:
+        except KeyError:
             return
-        for session in self._get_applicable_sessions(view, 'openClose'):
-            debug('closing', file_name, session.config.name)
-            if session.client:
-                params = {"textDocument": {"uri": filename_to_uri(file_name)}}
-                session.client.send_notification(Notification.didClose(params))
+        # mypy: expected sublime.View, got ViewLike
+        notification = did_close(view)  # type: ignore
+        for session in self._get_applicable_sessions(view):
+            if session.client and session.should_notify_did_close():
+                session.client.send_notification(notification)
 
-    def handle_view_saved(self, view: ViewLike) -> None:
+    def handle_will_save(self, view: ViewLike, reason: int) -> None:
+        file_name = view.file_name()
+        if file_name in self._document_states:
+            for session in self._get_applicable_sessions(view):
+                if session.client and session.should_notify_will_save():
+                    # mypy: expected sublime.View, got ViewLike
+                    session.client.send_notification(will_save(view, reason))  # type: ignore
+
+    def handle_did_save(self, view: ViewLike) -> None:
         file_name = view.file_name()
         if file_name in self._document_states:
             self.purge_changes(view)
-            for session in self._get_applicable_sessions(view, 'save'):
+            for session in self._get_applicable_sessions(view):
                 if session.client:
-                    params = {"textDocument": {"uri": filename_to_uri(file_name)}}
-                    session.client.send_notification(Notification.didSave(params))
+                    send_did_save, include_text = session.should_notify_did_save()
+                    if send_did_save:
+                        # mypy: expected sublime.View, got ViewLike
+                        session.client.send_notification(did_save(view, include_text))  # type: ignore
             self.saved()
         else:
             debug('document not tracked', file_name)
 
-    def handle_view_modified(self, view: ViewLike) -> None:
+    def handle_did_change(self, view: ViewLike) -> None:
         buffer_id = view.buffer_id()
         change_count = view.change_count()
         if buffer_id in self._pending_buffer_changes:
@@ -283,24 +270,15 @@ class WindowDocumentHandler(object):
         if file_name and view.window() == self._window:
             # ensure view is opened.
             if file_name not in self._document_states:
-                self.handle_view_opened(view)
+                self.handle_did_open(view)
 
             if view.buffer_id() in self._pending_buffer_changes:
                 del self._pending_buffer_changes[view.buffer_id()]
-
-                for session in self._get_applicable_sessions(view, 'change'):
-                    if session.client and file_name in self._document_states:
-                        uri = filename_to_uri(file_name)
-                        params = {
-                            "textDocument": {
-                                "uri": uri,
-                                "version": view.change_count(),
-                            },
-                            "contentChanges": [{
-                                "text": view.substr(self._sublime.Region(0, view.size()))
-                            }]
-                        }
-                        session.client.send_notification(Notification.didChange(params))
+                # mypy: expected sublime.View, got ViewLike
+                notification = did_change(view)  # type: ignore
+                for session in self._get_applicable_sessions(view):
+                    if session.client and file_name in self._document_states and session.should_notify_did_change():
+                        session.client.send_notification(notification)
 
 
 def extract_message(params: Any) -> str:
@@ -393,7 +371,7 @@ class WindowManager(object):
             if view.file_name():
                 self._workspace.update()
                 self._initialize_on_open(view)
-                self.documents.handle_view_opened(view)
+                self.documents.handle_did_open(view)
 
     def activate_view(self, view: ViewLike) -> None:
         file_name = view.file_name() or ""

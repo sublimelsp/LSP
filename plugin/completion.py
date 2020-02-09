@@ -7,11 +7,11 @@ from .core.logging import debug
 from .core.completion import parse_completion_response, format_completion
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.configurations import is_supported_syntax
-from .core.documents import get_document_position
 from .core.sessions import Session
 from .core.edit import parse_text_edit
 from .core.views import range_to_region
 from .core.typing import Any, List, Dict, Tuple, Optional, Union
+from .core.views import text_document_position_params
 
 
 class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
@@ -165,7 +165,7 @@ class CompletionHandler(LSPViewEventListener):
             return
 
         self.manager.documents.purge_changes(self.view)
-        document_position = get_document_position(self.view, locations[0])
+        document_position = text_document_position_params(self.view, locations[0])
         if document_position:
             client.send_request(
                 Request.complete(document_position),

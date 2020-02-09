@@ -2,7 +2,7 @@ import sublime
 from .typing import Tuple, Optional, Dict, List, Union
 
 
-compleiton_kinds = {
+completion_kinds = {
     1: (sublime.KIND_ID_MARKUP, "Ξ", "Text"),
     2: (sublime.KIND_ID_FUNCTION, "λ", "Method"),
     3: (sublime.KIND_ID_FUNCTION, "λ", "Function"),
@@ -38,7 +38,7 @@ def format_completion(item: dict) -> sublime.CompletionItem:
 
     item_kind = item.get("kind")
     if item_kind:
-        kind = compleiton_kinds.get(item_kind, sublime.KIND_AMBIGUOUS)
+        kind = completion_kinds.get(item_kind, sublime.KIND_AMBIGUOUS)
 
     is_deprecated = item.get("deprecated", False)
     if is_deprecated:

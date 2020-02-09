@@ -16,7 +16,7 @@ compleiton_kinds = {
     11: (sublime.KIND_ID_VARIABLE, "u", "Unit"),
     12: (sublime.KIND_ID_VARIABLE, "ν", "Value"),
     13: (sublime.KIND_ID_TYPE, "ε", "Enum"),
-    14: (sublime.KIND_ID_KEYWORD, "κ", "Keyword"),
+    14: (sublime.KIND_ID_KEYWORD, "☌", "Keyword"),
     15: (sublime.KIND_ID_SNIPPET, "s", "Snippet"),
     16: (sublime.KIND_ID_AMBIGUOUS, "c", "Color"),
     17: (sublime.KIND_ID_AMBIGUOUS, "#", "File"),

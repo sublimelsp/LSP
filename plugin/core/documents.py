@@ -61,25 +61,25 @@ class DocumentSyncListener(LSPViewEventListener):
         # skip transient views:
         if not is_transient_view(self.view):
             self.manager.activate_view(self.view)
-            self.manager.documents.handle_view_opened(self.view)
+            self.manager.documents.handle_did_open(self.view)
 
     def on_activated_async(self) -> None:
         if self.view.file_name() and not is_transient_view(self.view):
             self.manager.activate_view(self.view)
-            self.manager.documents.handle_view_opened(self.view)
+            self.manager.documents.handle_did_open(self.view)
 
     def on_modified(self) -> None:
         if self.view.file_name():
-            self.manager.documents.handle_view_modified(self.view)
+            self.manager.documents.handle_did_change(self.view)
 
     def on_pre_save(self) -> None:
         if self.view.file_name():
             self.manager.documents.handle_will_save(self.view, reason=1)  # TextDocumentSaveReason.Manual
 
     def on_post_save_async(self) -> None:
-        self.manager.documents.handle_view_saved(self.view)
+        self.manager.documents.handle_did_save(self.view)
 
     def on_close(self) -> None:
         if self.view.file_name() and self.view.is_primary() and self.has_manager():
             self.manager.handle_view_closed(self.view)
-            self.manager.documents.handle_view_closed(self.view)
+            self.manager.documents.handle_did_close(self.view)

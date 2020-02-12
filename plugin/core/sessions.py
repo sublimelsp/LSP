@@ -3,15 +3,13 @@ from .process import start_server
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification
 from .protocol import TextDocumentSyncKindNone
 from .rpc import Client, attach_stdio_client, Response
+from .settings import settings as global_settings
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
 from .types import ClientConfig, Settings
 from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator
 from contextlib import contextmanager
 import os
 import threading
-
-
-ACQUIRE_READY_LOCK_TIMEOUT = 3
 
 
 def get_initialize_params(workspace_folders: List[WorkspaceFolder], designated_folder: Optional[WorkspaceFolder],
@@ -110,7 +108,7 @@ class InitializeError(Exception):
 
     def __init__(self, session: 'Session') -> None:
         super().__init__("{} did not respond to the initialize request within {} seconds".format(
-            session.config.name, ACQUIRE_READY_LOCK_TIMEOUT))
+            session.config.name, global_settings.initialize_timeout))
         self.session = session
 
 
@@ -188,7 +186,7 @@ class Session(object):
 
     @contextmanager
     def acquire_timeout(self) -> Generator[None, None, None]:
-        acquired = self.ready_lock.acquire(True, ACQUIRE_READY_LOCK_TIMEOUT)
+        acquired = self.ready_lock.acquire(True, global_settings.initialize_timeout)
         if not acquired:
             raise InitializeError(self)
         yield
@@ -239,6 +237,12 @@ class Session(object):
         with self.acquire_timeout():
             return self._unsafe_supports_workspace_folders()
 
+    def on_request(self, method: str, handler: Callable) -> None:
+        self.client.on_request(method, handler)
+
+    def on_notification(self, method: str, handler: Callable) -> None:
+        self.client.on_notification(method, handler)
+
     def _handle_initialize_error(self, error: Any) -> None:
         self.ready_lock.release()  # acquired in _initialize
         if self._on_post_initialize:
@@ -258,17 +262,25 @@ class Session(object):
         else:
             debug("session with no workspace folders")
 
-        self.client.on_request(
-            "workspace/workspaceFolders",
-            lambda _params, request_id: self._handle_workspace_folders(request_id))
-
         self.ready_lock.release()  # acquired in _initialize
+
+        self.on_request("workspace/workspaceFolders", self._handle_request_workspace_folders)
+        self.on_request("workspace/configuration", self._handle_request_workspace_configuration)
+        if self.config.settings:
+            self.client.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
 
         if self._on_post_initialize:
             self._on_post_initialize(self, None)
 
-    def _handle_workspace_folders(self, request_id: int) -> None:
+    def _handle_request_workspace_folders(self, _: Any, request_id: int) -> None:
         self.client.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))
+
+    def _handle_request_workspace_configuration(self, params: Dict[str, Any], request_id: int) -> None:
+        items = []  # type: List[Any]
+        requested_items = params.get("items") or []
+        for requested_item in requested_items:
+            items.append(self.config.settings)  # ???
+        self.client.send_response(Response(request_id, items))
 
     def end(self) -> None:
         self.client.send_request(

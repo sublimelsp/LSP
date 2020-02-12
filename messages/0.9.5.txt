@@ -12,3 +12,5 @@ Fixes:
 
 * Renamed lsp_toggle_server_panel and lsp_show_diagnostics_panel to something
   more memorable (@pedragnikolic)
+
+* Fix accumulation in reference quick panel (@Anaminus)

@@ -6,3 +6,9 @@ New settings:
 * "initialize_timeout": The number of seconds we wait for a language server
   to initialize before we consider it "faulty" and disable it for the
   workspace folder. The default is 3 seconds.
+
+
+Fixes:
+
+* Renamed lsp_toggle_server_panel and lsp_show_diagnostics_panel to something
+  more memorable (@pedragnikolic)

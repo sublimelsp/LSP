@@ -50,9 +50,7 @@ def format_completion(item: dict) -> sublime.CompletionItem:
     return sublime.CompletionItem.command_completion(
         trigger,
         command="lsp_select_completion_item",
-        args={
-            "item": item
-        },
+        args=item,
         annotation=annotation,
         kind=kind
     )

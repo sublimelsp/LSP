@@ -15,7 +15,7 @@ from .core.views import text_document_position_params
 
 
 class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
-    def run(self, edit: Any, item: dict) -> None:
+    def run(self, edit: Any, **item: Any) -> None:
         insert_text_format = item.get("insertTextFormat")
 
         text_edit = item.get('textEdit')

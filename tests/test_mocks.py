@@ -24,7 +24,7 @@ basic_responses = {
             'hoverProvider': True,
             'completionProvider': {
                 'triggerCharacters': ['.'],
-                'resolveProvider': False
+                'resolveProvider': True
             },
             'textDocumentSync': {
                 "openClose": True,

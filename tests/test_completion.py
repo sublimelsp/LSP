@@ -208,39 +208,32 @@ class QueryCompletionsTests(TextDocumentTestCase):
         return self.view.substr(sublime.Region(0, self.view.size()))
 
     def test_simple_label(self) -> 'Generator':
-        handler = self.get_view_event_listener("on_query_completions")
-        handler.test_completions = label_completions
+        self.set_response("textDocument/completion", label_completions)
 
-        self.assertIsNotNone(handler)
-        if handler:
-            handler.on_query_completions("a", [0])
-            yield from self.select_completion()
+        self.type("a")
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
 
-            self.assertEquals(self.read_file(), 'asdf')
+        self.assertEquals(self.read_file(), 'asdf')
 
     def test_simple_inserttext(self) -> 'Generator':
-        handler = self.get_view_event_listener("on_query_completions")
-        handler.test_completions = insert_text_completions
+        self.set_response("textDocument/completion", insert_text_completions)
 
-        self.assertIsNotNone(handler)
-        if handler:
-            handler.on_query_completions("a", [0])
-            yield from self.select_completion()
+        self.type("a")
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
 
-            self.assertEquals(
-                self.read_file(),
-                insert_text_completions[0]["insertText"])
+        self.assertEquals(
+            self.read_file(),
+            insert_text_completions[0]["insertText"])
 
     def test_var_prefix_using_label(self) -> 'Generator':
-        handler = self.get_view_event_listener("on_query_completions")
-        handler.test_completions = var_completion_using_label
+        self.set_response("textDocument/completion", var_completion_using_label)
+        self.type("$")
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
 
-        self.assertIsNotNone(handler)
-        if handler:
-            self.type("$")
-            yield from self.select_completion()
-
-            self.assertEquals(self.read_file(), '$what')
+        self.assertEquals(self.read_file(), '$what')
 
     def test_var_prefix_added_in_insertText(self) -> 'Generator':
         """
@@ -248,16 +241,13 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Powershell: label='true', insertText='$true' (see https://github.com/sublimelsp/LSP/issues/294)
 
         """
-        handler = self.get_view_event_listener("on_query_completions")
-        handler.test_completions = var_prefix_added_in_insertText
+        self.set_response("textDocument/completion", var_prefix_added_in_insertText)
+        self.type("$")
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
 
-        self.assertIsNotNone(handler)
-        if handler:
-            self.type("$")
-            yield from self.select_completion()
-
-            self.assertEquals(
-                self.read_file(), '$true')
+        self.assertEquals(
+            self.read_file(), '$true')
 
     def test_var_prefix_added_in_label(self) -> 'Generator':
         """
@@ -265,16 +255,13 @@ class QueryCompletionsTests(TextDocumentTestCase):
         PHP language server: label='$someParam', textEdit='someParam' (https://github.com/sublimelsp/LSP/issues/368)
 
         """
-        handler = self.get_view_event_listener("on_query_completions")
-        handler.test_completions = var_prefix_added_in_label
+        self.set_response("textDocument/completion", var_prefix_added_in_label)
+        self.type("$")
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
 
-        self.assertIsNotNone(handler)
-        if handler:
-            self.type("$")
-            yield from self.select_completion()
-
-            self.assertEquals(
-                self.read_file(), '$what')
+        self.assertEquals(
+            self.read_file(), '$what')
 
     def test_space_added_in_label(self) -> 'Generator':
         """
@@ -282,17 +269,12 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Clangd: label=" const", insertText="const" (https://github.com/sublimelsp/LSP/issues/368)
 
         """
-        handler = self.get_view_event_listener("on_query_completions")
-        handler.test_completions = space_added_in_label
+        self.set_response("textDocument/completion", space_added_in_label)
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
 
-        self.assertIsNotNone(handler)
-        if handler:
-            self.type("")
-            handler.on_query_completions("", [0])
-            yield from self.select_completion()
-
-            self.assertEquals(
-                self.read_file(), 'const')
+        self.assertEquals(
+            self.read_file(), 'const')
 
     def test_dash_missing_from_label(self) -> 'Generator':
         """
@@ -300,17 +282,14 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Powershell: label="UniqueId", insertText="-UniqueId" (https://github.com/sublimelsp/LSP/issues/572)
 
         """
-        handler = self.get_view_event_listener("on_query_completions")
-        handler.test_completions = dash_missing_from_label
+        self.set_response("textDocument/completion", dash_missing_from_label)
+        self.type("u")
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
 
-        self.assertIsNotNone(handler)
-        if handler:
-            handler.on_query_completions("u", [0])
-            yield from self.select_completion()
-
-            self.assertEquals(
-                self.read_file(),
-                '-UniqueId')
+        self.assertEquals(
+            self.read_file(),
+            '-UniqueId')
 
     def test_edit_before_cursor(self) -> 'Generator':
         """
@@ -318,17 +297,14 @@ class QueryCompletionsTests(TextDocumentTestCase):
         Metals: label="override def myFunction(): Unit"
 
         """
-        handler = self.get_view_event_listener("on_query_completions")
-        handler.test_completions = edit_before_cursor
+        self.set_response("textDocument/completion", edit_before_cursor)
+        self.type('  omyFu')
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
 
-        self.assertIsNotNone(handler)
-        if handler:
-            self.type('  ')
-            handler.on_query_completions("myF", [7])
-            yield from self.select_completion()
-            self.assertEquals(
-                self.read_file(),
-                '  override def myFunction(): Unit = ???')
+        self.assertEquals(
+            self.read_file(),
+            '  override def myFunction(): Unit = ???')
 
     def test_edit_after_nonword(self) -> 'Generator':
         """
@@ -337,71 +313,47 @@ class QueryCompletionsTests(TextDocumentTestCase):
         See https://github.com/sublimelsp/LSP/issues/645
 
         """
-        handler = self.get_view_event_listener("on_query_completions")
-        handler.test_completions = edit_after_nonword
-
-        self.assertIsNotNone(handler)
-        if handler:
-            self.type("List.")
-            handler.on_query_completions("", [0])
-            yield from self.select_completion()
-
-            self.assertEquals(
-                self.read_file(),
-                'List.apply()')
+        self.set_response("textDocument/completion", edit_after_nonword)
+        self.type("List.")
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
+        
+        self.assertEquals(
+            self.read_file(),
+            'List.apply()')
 
     def test_implement_all_members_quirk(self) -> 'Generator':
         """
         Metals: "Implement all members" should just select the newText.
         https://github.com/sublimelsp/LSP/issues/771
         """
-        handler = self.get_view_event_listener("on_query_completions")
-        handler.test_completions = metals_implement_all_members
+        self.set_response("textDocument/completion", metals_implement_all_members)
+        self.type("I")
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
 
-        self.assertIsNotNone(handler)
-        if handler:
-            self.type("I")
-            handler.on_query_completions("I", [0])
-            yield from self.select_completion()
-
-            self.assertEquals(
-                self.read_file(),
-                'def foo: Int = ???\n   def boo: Int = ???')
+        self.assertEquals(
+            self.read_file(),
+            'def foo: Int = ???\n   def boo: Int = ???')
 
     def test_additional_edits(self) -> 'Generator':
-        handler = self.get_view_event_listener("on_query_completions")
-        handler.test_completions = completion_with_additional_edits
+        self.set_response("textDocument/completion", completion_with_additional_edits)
 
-        self.assertIsNotNone(handler)
-        if handler:
-            handler.on_query_completions("", [0])
-            yield from self.select_completion()
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
 
-            self.assertEquals(
-                self.read_file(),
-                'import asdf;\nasdf')
+        self.assertEquals(
+            self.read_file(),
+            'import asdf;\nasdf')
 
-    # def test_resolve_for_additional_edits(self) -> 'Generator':
-    #     self.set_response('textDocument/completion', label_completions)
-    #     self.set_response('completionItem/resolve', completion_with_additional_edits[0])
+    def test_resolve_for_additional_edits(self) -> 'Generator':
+        self.set_response('textDocument/completion', label_completions)
+        self.set_response('completionItem/resolve', completion_with_additional_edits[0])
 
-    #     handler = self.get_view_event_listener("on_query_completions")
-    #     self.assertIsNotNone(handler)
-    #     if handler:
-    #         handler.on_query_completions("", [0])
+        yield from self.select_completion()
+        yield from self.await_message('textDocument/completion')
+        yield from self.await_message('completionItem/resolve')
 
-    #         # note: ideally the handler is initialized with resolveProvider capability
-    #         handler.resolve = True
-
-    #         yield from self.await_message('textDocument/completion')
-    #         # note: invoking on_text_command manually as sublime doesn't call it.
-    #         handler.on_text_command('commit_completion', {})
-    #         original_change_count = self.view.change_count()
-    #         self.view.run_command("commit_completion", {})
-    #         yield from self.await_view_change(original_change_count + 2)
-    #         yield from self.await_message('completionItem/resolve')
-    #         yield from self.await_view_change(original_change_count + 2)  # XXX: no changes?
-    #         self.assertEquals(
-    #             self.read_file(),
-    #             'import asdf;\nasdf')
-    #         handler.resolve = False
+        self.assertEquals(
+            self.read_file(),
+            'import asdf;\nasdf')

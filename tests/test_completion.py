@@ -60,14 +60,14 @@ var_prefix_added_in_label = [
             'range': {
                 'start': {
                     'line': 0,
-                    'character': 1
+                    'character': 0
                 },
                 'end': {
                     'line': 0,
                     'character': 1
                 }
             },
-            'newText': 'what'
+            'newText': '$what'
         }
     }
 ]
@@ -213,7 +213,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
         self.assertIsNotNone(handler)
         if handler:
-            self.type("a")
+            handler.on_query_completions("a", [0])
             yield from self.select_completion()
 
             self.assertEquals(self.read_file(), 'asdf')
@@ -224,7 +224,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
         self.assertIsNotNone(handler)
         if handler:
-            self.type("a")
+            handler.on_query_completions("a", [0])
             yield from self.select_completion()
 
             self.assertEquals(
@@ -259,31 +259,22 @@ class QueryCompletionsTests(TextDocumentTestCase):
             self.assertEquals(
                 self.read_file(), '$true')
 
-    # def test_var_prefix_added_in_label(self) -> 'Generator':
-    #     """
+    def test_var_prefix_added_in_label(self) -> 'Generator':
+        """
 
-    #     PHP language server: label='$someParam', textEdit='someParam' (https://github.com/sublimelsp/LSP/issues/368)
+        PHP language server: label='$someParam', textEdit='someParam' (https://github.com/sublimelsp/LSP/issues/368)
 
-    #     """
-    #     handler = self.get_view_event_listener("on_query_completions")
-    #     handler.test_completions = var_prefix_added_in_label
+        """
+        handler = self.get_view_event_listener("on_query_completions")
+        handler.test_completions = var_prefix_added_in_label
 
-    #     self.assertIsNotNone(handler)
-    #     if handler:
-    #         self.view.run_command('append', {'characters': "$"})
-    #         self.view.run_command('move_to', {'to': 'eol'})
+        self.assertIsNotNone(handler)
+        if handler:
+            self.type("$")
+            yield from self.select_completion()
 
-    #         # show autocomplete
-    #         self.view.run_command('type')
-
-    #         # select a completion item
-    #         yield 4000
-    #         self.view.run_command("commit_completion")
-
-    #         yield 4000
-    #         self.assertEquals(
-    #             self.read_file(), '$what')
-
+            self.assertEquals(
+                self.read_file(), '$what')
 
     def test_space_added_in_label(self) -> 'Generator':
         """
@@ -297,6 +288,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         self.assertIsNotNone(handler)
         if handler:
             self.type("")
+            handler.on_query_completions("", [0])
             yield from self.select_completion()
 
             self.assertEquals(
@@ -313,29 +305,30 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
         self.assertIsNotNone(handler)
         if handler:
-            self.type("u")
+            handler.on_query_completions("u", [0])
             yield from self.select_completion()
 
             self.assertEquals(
                 self.read_file(),
                 '-UniqueId')
 
-    # def test_edit_before_cursor(self) -> 'Generator':
-    #     """
+    def test_edit_before_cursor(self) -> 'Generator':
+        """
 
-    #     Metals: label="override def myFunction(): Unit"
+        Metals: label="override def myFunction(): Unit"
 
-    #     """
-    #     handler = self.get_view_event_listener("on_query_completions")
-    #     handler.test_completions = edit_before_cursor
+        """
+        handler = self.get_view_event_listener("on_query_completions")
+        handler.test_completions = edit_before_cursor
 
-    #     self.assertIsNotNone(handler)
-    #     if handler:
-    #         self.type("  def myF")
-    #         yield from self.select_completion()
-    #         self.assertEquals(
-    #             self.read_file(),
-    #             '  override def myFunction(): Unit = ???')
+        self.assertIsNotNone(handler)
+        if handler:
+            self.type('  ')
+            handler.on_query_completions("myF", [7])
+            yield from self.select_completion()
+            self.assertEquals(
+                self.read_file(),
+                '  override def myFunction(): Unit = ???')
 
     def test_edit_after_nonword(self) -> 'Generator':
         """
@@ -350,6 +343,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         self.assertIsNotNone(handler)
         if handler:
             self.type("List.")
+            handler.on_query_completions("", [0])
             yield from self.select_completion()
 
             self.assertEquals(
@@ -367,6 +361,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         self.assertIsNotNone(handler)
         if handler:
             self.type("I")
+            handler.on_query_completions("I", [0])
             yield from self.select_completion()
 
             self.assertEquals(
@@ -379,7 +374,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
         self.assertIsNotNone(handler)
         if handler:
-            self.type("")
+            handler.on_query_completions("", [0])
             yield from self.select_completion()
 
             self.assertEquals(

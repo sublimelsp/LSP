@@ -1,12 +1,10 @@
 => 0.9.5
 
-
 New settings:
 
 * "initialize_timeout": The number of seconds we wait for a language server
   to initialize before we consider it "faulty" and disable it for the
   workspace folder. The default is 3 seconds.
-
 
 Fixes:
 
@@ -14,3 +12,6 @@ Fixes:
   more memorable (@pedragnikolic)
 
 * Fix accumulation in reference quick panel (@Anaminus)
+
+* Fix an exception being thrown when no diagnostics were present and hitting
+  F8.

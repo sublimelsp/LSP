@@ -398,3 +398,14 @@ class QueryCompletionsTests(TextDocumentTestCase):
         self.assertEquals(
             self.read_file(),
             'import asdf;\nasdf')
+
+    def test_apply_additional_edits_only_once(self) -> 'Generator':
+        self.set_response('textDocument/completion', completion_with_additional_edits)
+        self.set_response('completionItem/resolve', completion_with_additional_edits[0])
+
+        yield from self.select_completion()
+        yield from self.await_message('textDocument/completion')
+
+        self.assertEquals(
+            self.read_file(),
+            'import asdf;\nasdf')

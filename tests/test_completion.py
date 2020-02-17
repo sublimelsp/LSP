@@ -11,7 +11,32 @@ try:
 except ImportError:
     pass
 
-label_completions = [{'label': 'asdf'}, {'label': 'efcgh'}]
+completions_with_label = [{'label': 'asdf'}, {'label': 'efcgh'}]
+completions_with_label_and_insert_text = [
+    {
+        "label": "Label text",
+        "insertText": "Insert text"
+    }
+]
+completions_with_label_and_insert_text_and_text_edit = [
+    {
+        "label": "Label text",
+        "insertText": "Insert text",
+        "textEdit": {
+            "newText": "Text edit",
+            "range": {
+                "end": {
+                    "character": 5,
+                    "line": 0
+                },
+                "start": {
+                    "character": 0,
+                    "line": 0
+                }
+            }
+        }
+    }
+]
 completion_with_additional_edits = [
     {
         'label': 'asdf',
@@ -208,13 +233,29 @@ class QueryCompletionsTests(TextDocumentTestCase):
         return self.view.substr(sublime.Region(0, self.view.size()))
 
     def test_simple_label(self) -> 'Generator':
-        self.set_response("textDocument/completion", label_completions)
+        self.set_response("textDocument/completion", completions_with_label)
 
         self.type("a")
         yield from self.select_completion()
         yield from self.await_message("textDocument/completion")
 
         self.assertEquals(self.read_file(), 'asdf')
+
+    def test_prefer_insert_text_over_label(self) -> 'Generator':
+        self.set_response("textDocument/completion", completions_with_label_and_insert_text)
+
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
+
+        self.assertEquals(self.read_file(), 'Insert text')
+
+    def test_prefer_text_edit_over_insert_text(self) -> 'Generator':
+        self.set_response("textDocument/completion", completions_with_label_and_insert_text_and_text_edit)
+
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
+
+        self.assertEquals(self.read_file(), 'Text edit')
 
     def test_simple_inserttext(self) -> 'Generator':
         self.set_response("textDocument/completion", insert_text_completions)
@@ -347,7 +388,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             'import asdf;\nasdf')
 
     def test_resolve_for_additional_edits(self) -> 'Generator':
-        self.set_response('textDocument/completion', label_completions)
+        self.set_response('textDocument/completion', completions_with_label)
         self.set_response('completionItem/resolve', completion_with_additional_edits[0])
 
         yield from self.select_completion()

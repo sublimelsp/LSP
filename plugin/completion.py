@@ -47,8 +47,8 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
         additional_edits = item.get('additionalTextEdits')
         if additional_edits:
             self.apply_additional_edits(additional_edits)
-
-        self.do_resolve(item)
+        else:
+            self.do_resolve(item)
 
     def do_resolve(self, item: dict) -> None:
         session = session_for_view(self.view, 'completionProvider', self.view.sel()[0].begin())

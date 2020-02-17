@@ -358,7 +358,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         self.type("List.")
         yield from self.select_completion()
         yield from self.await_message("textDocument/completion")
-        
+
         self.assertEquals(
             self.read_file(),
             'List.apply()')

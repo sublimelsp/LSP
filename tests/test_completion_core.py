@@ -1,7 +1,7 @@
 import unittest
 from os import path
 import json
-from LSP.plugin.core.completion import format_completion, parse_completion_response
+from LSP.plugin.core.completion import parse_completion_response
 try:
     from typing import Optional, Dict
     assert Optional and Dict
@@ -31,4 +31,3 @@ class CompletionResponseParsingTests(unittest.TestCase):
 
     def test_incomplete_dict_response(self):
         self.assertEqual(parse_completion_response({'items': [], 'isIncomplete': True}), ([], True))
-

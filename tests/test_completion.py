@@ -339,7 +339,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
         """
         self.set_response("textDocument/completion", edit_before_cursor)
-        self.type('  omyFu')
+        self.type('  def myF')
         yield from self.select_completion()
         yield from self.await_message("textDocument/completion")
 

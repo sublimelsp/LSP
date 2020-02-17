@@ -531,14 +531,6 @@ class WindowManager(object):
         # reconstruct/get the actual Client object back. Maybe we can (ab)use our homebrew event system for this?
         client.send_response(Response(request_id, {"applied": True}))
 
-    def _get_session_config(self, params: Dict[str, Any], session: Session, client: Client, request_id: int) -> None:
-        items = []  # type: List[Any]
-        requested_items = params.get("items") or []
-        for requested_item in requested_items:
-            items.append(session.config.settings)
-
-        client.send_response(Response(request_id, items))
-
     def _payload_log_sink(self, message: str) -> None:
         self._sublime.set_timeout_async(lambda: self._handle_server_message(":", message), 0)
 
@@ -570,35 +562,22 @@ class WindowManager(object):
             self._disable_temporarily(session, RuntimeError(message), session.designated_folder)
             return
 
-        client = session.client
-
         # handle server requests and notifications
-        client.on_request(
+        session.on_request(
             "workspace/applyEdit",
-            lambda params, request_id: self._apply_workspace_edit(params, client, request_id))
+            lambda params, request_id: self._apply_workspace_edit(params, session.client, request_id))
 
-        client.on_request(
-            "workspace/configuration",
-            lambda params, request_id: self._get_session_config(params, session, client, request_id))
-
-        client.on_notification(
+        session.on_notification(
             "textDocument/publishDiagnostics",
             lambda params: self.diagnostics.receive(session.config.name, params))
 
-        self._handlers.on_initialized(session.config.name, self._window, client)
+        self._handlers.on_initialized(session.config.name, self._window, session.client)
 
-        client.send_notification(Notification.initialized())
+        session.client.send_notification(Notification.initialized())
 
         document_sync = session.capabilities.get("textDocumentSync")
         if document_sync:
             self.documents.add_session(session)
-
-        if session.config.settings:
-            configParams = {
-                'settings': session.config.settings
-            }
-            client.send_notification(Notification.didChangeConfiguration(configParams))
-
         self._window.status_message("{} initialized".format(session.config.name))
 
     def handle_view_closed(self, view: ViewLike) -> None:

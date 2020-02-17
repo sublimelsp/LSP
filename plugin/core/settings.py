@@ -78,6 +78,7 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings) -> None:
     settings.complete_all_chars = read_bool_setting(settings_obj, "complete_all_chars", True)
     settings.show_references_in_quick_panel = read_bool_setting(settings_obj, "show_references_in_quick_panel", False)
     settings.disabled_capabilities = read_array_setting(settings_obj, "disabled_capabilities", [])
+    settings.initialize_timeout = read_int_setting(settings_obj, "initialize_timeout", 3)
     settings.log_debug = read_bool_setting(settings_obj, "log_debug", False)
     settings.log_server = read_bool_setting(settings_obj, "log_server", True)
     settings.log_stderr = read_bool_setting(settings_obj, "log_stderr", False)

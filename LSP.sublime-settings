@@ -58,10 +58,6 @@
   // Show symbol action links in hover popup if available
   "show_symbol_action_links": false,
 
-  // Request completions for all characters if set to true,
-  // or just after trigger characters only otherwise.
-  "complete_all_chars": true,
-
   // Disable Sublime Text's explicit and word completion.
   "only_show_lsp_completions": false,
 

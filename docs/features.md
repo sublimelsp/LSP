@@ -70,7 +70,6 @@ Add these settings to your Sublime settings, Syntax-specific settings and/or in 
 
 ### Package settings (LSP)
 
-* `complete_all_chars` `true` *request completions for all characters, not just trigger characters*
 * `only_show_lsp_completions` `false` *disable sublime word completion and snippets from autocomplete lists*
 * `show_references_in_quick_panel` `false` *show symbol references in Sublime's quick panel instead of the bottom panel*
 * `show_view_status` `true` *show permanent language server status in the status bar*

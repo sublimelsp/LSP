@@ -4,6 +4,7 @@ from setup import CI, SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove
 from unittesting import DeferrableTestCase
 import sublime
 
+from LSP.tests.intelephense_completion_sample import intelephense_before_state, intelephense_expected_state, intelephense_response
 
 try:
     from typing import Dict, Optional, List, Generator
@@ -223,6 +224,13 @@ class QueryCompletionsTests(TextDocumentTestCase):
         self.view.run_command('append', {'characters': text})
         self.view.run_command('move_to', {'to': 'eol'})
 
+    def move_cursor(self, row: int, col: int) -> None:
+        point = self.view.text_point(row, col)
+        # move cursor to point
+        s = self.view.sel()
+        s.clear()
+        s.add(point)
+
     def select_completion(self) -> 'Generator':
         self.view.run_command('auto_complete')
 
@@ -409,3 +417,16 @@ class QueryCompletionsTests(TextDocumentTestCase):
         self.assertEquals(
             self.read_file(),
             'import asdf;\nasdf')
+
+    def test__prefix_should_include_the_dollar_sign(self):
+        self.set_response('textDocument/completion', intelephense_response)
+
+        self.type(intelephense_before_state)
+        # move cursor after `$he|`
+        self.move_cursor(2, 3)
+        yield from self.select_completion()
+        yield from self.await_message('textDocument/completion')
+
+        self.assertEquals(
+            self.read_file(),
+            intelephense_expected_state)

@@ -348,6 +348,7 @@ class DiagnosticsPresenter(object):
         self._relevance_check = HasRelevantDiagnostics()
         self._cursor = DiagnosticsCursor(settings.show_diagnostics_severity_level)
         self._phantoms = DiagnosticsPhantoms(self._window)
+        self._diagnostics = {}  # type: Dict[str, Dict[str, List[Diagnostic]]]
         if settings.auto_show_diagnostics_panel == 'saved':
             setattr(documents_state, 'changed', self.on_document_changed)
             setattr(documents_state, 'saved', self.on_document_saved)
@@ -369,7 +370,7 @@ class DiagnosticsPresenter(object):
         else:
             self._window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
-    def update(self, file_path: str, config_name: str, diagnostics: 'Dict[str, Dict[str, List[Diagnostic]]]') -> None:
+    def update(self, file_path: str, config_name: str, diagnostics: Dict[str, Dict[str, List[Diagnostic]]]) -> None:
         self._diagnostics = diagnostics
         self._received_diagnostics_after_change = True
 

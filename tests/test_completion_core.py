@@ -9,15 +9,6 @@ except ImportError:
     pass
 
 
-def load_completion_sample(name: str) -> 'Dict':
-    return json.load(open(path.join(path.dirname(__file__), name + ".json")))
-
-
-pyls_completion_sample = load_completion_sample("pyls_completion_sample")
-clangd_completion_sample = load_completion_sample("clangd_completion_sample")
-intelephense_completion_sample = load_completion_sample("intelephense_completion_sample")
-
-
 class CompletionResponseParsingTests(unittest.TestCase):
 
     def test_no_response(self):

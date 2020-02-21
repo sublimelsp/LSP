@@ -173,6 +173,24 @@ See the dedicated <a href="cplusplus"/>C/C++ guide</a> for using ccls, cquery or
 }
 ```
 
+### Clojure<a name="clojure"</a>
+
+1. Download [clojure-lsp](https://github.com/snoe/clojure-lsp).
+2. Add to LSP settings' clients:
+
+```js
+"clojure-lsp": {
+  "command": ["java", "-jar", "/PATH/TO/clojure-lsp"],
+  "enabled": true,
+  "initializationOptions": {},
+  "languageId": "clojure",
+  "scopes": ["source.clojure"],
+  "syntaxes": ["Packages/Clojure/Clojure.sublime-syntax"]
+}
+```
+
+clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/clojure-lsp#initializationoptions).
+
 ### CSS<a name="css"></a>
 
 1\. Install the CSS language server from VS Code:

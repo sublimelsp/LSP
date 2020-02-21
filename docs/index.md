@@ -347,6 +347,21 @@ go get github.com/sourcegraph/go-langserver
 
 > Note: Work on this language server has been deprioritized in favor of the gopls language server mentioned above.
 
+### Haskell
+
+1. Install [ghcide](https://github.com/digital-asset/ghcide).
+2. Add to LSP settings' clients:
+
+```js
+"ghcide": {
+  "enabled": true,
+  "languageId": "haskell",
+  "command": ["ghcide", "--lsp"],
+  "scopes": ["source.haskell"],
+  "syntaxes": ["Packages/Haskell/Haskell.sublime-syntax"]
+}
+```
+
 ### Java<a name="java"></a>
 
 #### Eclipse JDT Language Server

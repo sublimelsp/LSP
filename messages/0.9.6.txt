@@ -1,0 +1,8 @@
+=> 0.9.6
+
+Fixes:
+
+* All the "Go to" variants re-use an already open view.
+  Previously, if you had the target view in another pane open,
+  LSP would open another view in the pane from where you ran
+  "Go To xxx".

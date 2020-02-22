@@ -147,11 +147,33 @@ class CompletionHandler(LSPViewEventListener):
         if not self.enabled:
             return None
 
+        prefix = self.include_special_chars(prefix, locations[0])
         completion_list = sublime.CompletionList()
 
         self.do_request(completion_list, prefix, locations)
 
         return completion_list
+
+    def include_special_chars(self, prefix: str, point: int) -> str:
+        """
+        Sanatize the prefix, sublime trims of special characters from the prefix
+        """
+        special_chars = ['$']
+
+        # prev char under cursor is a special char, $|
+        prev_char = self.view.substr(point - 1)
+        if prev_char in special_chars:
+            return prev_char
+
+        # char before the word is a special char, $hello|
+        word_region = self.view.word(point)
+        char_before_word = self.view.substr(word_region.begin() - 1)
+
+        if char_before_word in special_chars:
+            return char_before_word + prefix
+
+        # no special chars, hello|
+        return prefix
 
     def do_request(self, completion_list: sublime.CompletionList, prefix: str, locations: List[int]) -> None:
         # don't store client so we can handle restarts

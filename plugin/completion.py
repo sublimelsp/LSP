@@ -30,11 +30,11 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
             range = Range.from_lsp(text_edit['range'])
             edit_region = range_to_region(range, self.view)
 
+            self.view.erase(edit, edit_region)
             if insert_text_format == InsertTextFormat.Snippet:
-                self.view.erase(edit, edit_region)
                 self.view.run_command("insert_snippet", {"contents": new_text})
             else:
-                self.view.replace(edit, edit_region, new_text)
+                self.view.insert(edit, edit_region.begin(), new_text)
         else:
             completion = item.get('insertText') or item.get('label') or ""
             if insert_text_format == InsertTextFormat.Snippet:

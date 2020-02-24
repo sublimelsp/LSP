@@ -2,7 +2,16 @@
 
 Fixes:
 
-* All the "Go to" variants re-use an already open view.
+* All the "Go To" variants re-use an already open view.
   Previously, if you had the target view in another pane open,
   LSP would open another view in the pane from where you ran
   "Go To xxx".
+
+* Prevent a race condition when iterating over the open documents.
+
+* The rust analyzer binary was renamed from ra_lsp_server to rust-analyzer.
+  If you haven't updated rust-analyzer, now would be a good time!
+  The "clients" key was also renamed from ra_lsp_server to rust-analyzer.
+  so if you were using any overrides in your User/LSP.sublime-settings
+  file, please update that, too.
+  https://github.com/sublimelsp/LSP/pull/888 (@dlom)

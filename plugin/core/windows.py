@@ -148,7 +148,8 @@ class WindowDocumentHandler(object):
         return sessions
 
     def _notify_open_documents(self, session: Session) -> None:
-        for file_name in self._document_states:
+        # Note: a copy is made of self._document_states because it may be modified in another thread.
+        for file_name in list(self._document_states):
             if session.handles_path(file_name):
                 view = self._window.find_open_file(file_name)
                 if view:

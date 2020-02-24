@@ -183,9 +183,9 @@
       "syntaxes": ["Packages/Rust/Rust.sublime-syntax", "Packages/Rust Enhanced/RustEnhanced.sublime-syntax"],
       "languageId": "rust"
     },
-     "ra-lsp":
+     "rust-analyzer":
     {
-      "command": ["ra_lsp_server"],
+      "command": ["rust-analyzer"],
       "scopes": ["source.rust"],
       "syntaxes": ["Packages/Rust/Rust.sublime-syntax", "Packages/Rust Enhanced/RustEnhanced.sublime-syntax"],
       "languageId": "rust"

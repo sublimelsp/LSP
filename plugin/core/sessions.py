@@ -106,6 +106,14 @@ def diff_folders(old: List[WorkspaceFolder],
     return added, removed
 
 
+@contextmanager
+def acquire_timeout(lock: threading.Lock, timeout: float) -> 'Generator[bool, None, None]':
+    result = lock.acquire(True, timeout)
+    yield result
+    if result:
+        lock.release()
+
+
 class Session(object):
     def __init__(self,
                  config: ClientConfig,
@@ -177,23 +185,13 @@ class Session(object):
     def should_notify_did_close(self) -> bool:
         return self.should_notify_did_open()
 
-    @contextmanager
-    def acquire_timeout(self) -> Generator[None, None, None]:
-        acquired = self.ready_lock.acquire(True, ACQUIRE_READY_LOCK_TIMEOUT)
-        if not acquired:
-            raise TimeoutError("{} did not respond to the initialize request within {} seconds".format(
-                self.config.name, ACQUIRE_READY_LOCK_TIMEOUT))
-        yield
-        if acquired:
-            self.ready_lock.release()
-
     def handles_path(self, file_path: Optional[str]) -> bool:
         if not file_path:
             return False
-        with self.acquire_timeout():
-            # If we're in a window with no folders, or we're a multi-folder session, then we handle any path.
-            if not self._workspace_folders or self._unsafe_supports_workspace_folders():
-                return True
+        with acquire_timeout(self.ready_lock, ACQUIRE_READY_LOCK_TIMEOUT) as acquired:
+            if not acquired:
+                raise TimeoutError("{} did not respond to the initialize request within {} seconds".format(
+                    self.config.name, ACQUIRE_READY_LOCK_TIMEOUT))
         # We're in a window with folders, and we're a single-folder session.
         for folder in self._workspace_folders:
             if file_path.startswith(folder.path):
@@ -201,7 +199,7 @@ class Session(object):
         return False
 
     def update_folders(self, folders: List[WorkspaceFolder]) -> None:
-        with self.acquire_timeout():
+        with self.ready_lock:
             if self._unsafe_supports_workspace_folders():
                 added, removed = diff_folders(self._workspace_folders, folders)
                 params = {
@@ -229,7 +227,7 @@ class Session(object):
         return workspace_folder_cap.get("supported")
 
     def supports_workspace_folders(self) -> bool:
-        with self.acquire_timeout():
+        with self.ready_lock:
             return self._unsafe_supports_workspace_folders()
 
     def on_request(self, method: str, handler: Callable) -> None:

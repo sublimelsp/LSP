@@ -1,7 +1,6 @@
-from LSP.plugin.core.protocol import TextDocumentSyncKindFull, TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
 from LSP.plugin.core.protocol import WorkspaceFolder
-from LSP.plugin.core.sessions import create_session, Session, InitializeError
-from LSP.plugin.core.settings import settings as global_settings
+from LSP.plugin.core.protocol import TextDocumentSyncKindFull, TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
+from LSP.plugin.core.sessions import create_session, Session, InitializeError, ACQUIRE_READY_LOCK_TIMEOUT
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.types import Settings
 from LSP.plugin.core.typing import Callable, Optional
@@ -103,7 +102,7 @@ class SessionTest(unittest.TestCase):
 
         def async_response(f: Callable[[], None]) -> None:
             # resolve the request one second after the timeout triggers (so it's always too late).
-            timeout_ms = 1000 * (global_settings.initialize_timeout + 1)
+            timeout_ms = 1000 * (ACQUIRE_READY_LOCK_TIMEOUT + 1)
             sublime.set_timeout(f, timeout_ms=timeout_ms)
 
         client = MockClient(async_response=async_response)

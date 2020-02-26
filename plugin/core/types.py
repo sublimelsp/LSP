@@ -26,7 +26,6 @@ class Settings(object):
         self.completion_hint_type = "auto"
         self.show_references_in_quick_panel = False
         self.disabled_capabilities = []  # type: List[str]
-        self.initialize_timeout = 3
         self.log_debug = True
         self.log_server = True
         self.log_stderr = False

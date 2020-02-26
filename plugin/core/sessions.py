@@ -3,13 +3,15 @@ from .process import start_server
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification
 from .protocol import TextDocumentSyncKindNone
 from .rpc import Client, attach_stdio_client, Response
-from .settings import settings as global_settings
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
 from .types import ClientConfig, Settings
 from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator
 from contextlib import contextmanager
 import os
 import threading
+
+
+ACQUIRE_READY_LOCK_TIMEOUT = 3
 
 
 def get_initialize_params(workspace_folders: List[WorkspaceFolder], designated_folder: Optional[WorkspaceFolder],
@@ -108,7 +110,7 @@ class InitializeError(Exception):
 
     def __init__(self, session: 'Session') -> None:
         super().__init__("{} did not respond to the initialize request within {} seconds".format(
-            session.config.name, global_settings.initialize_timeout))
+            session.config.name, ACQUIRE_READY_LOCK_TIMEOUT))
         self.session = session
 
 
@@ -186,7 +188,7 @@ class Session(object):
 
     @contextmanager
     def acquire_timeout(self) -> Generator[None, None, None]:
-        acquired = self.ready_lock.acquire(True, global_settings.initialize_timeout)
+        acquired = self.ready_lock.acquire(True, ACQUIRE_READY_LOCK_TIMEOUT)
         if not acquired:
             raise InitializeError(self)
         yield

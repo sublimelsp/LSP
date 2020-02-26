@@ -439,9 +439,6 @@ class WorkspaceFolder:
             return self.name == other.name and self.path == other.path
         return False
 
-    def __hash__(self) -> int:
-        return hash(self.path)
-
     def to_lsp(self) -> Dict[str, str]:
         return {"name": self.name, "uri": self.uri()}
 

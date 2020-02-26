@@ -35,7 +35,6 @@ class SessionTest(unittest.TestCase):
             create_session(
                 config=TEST_CONFIG,
                 workspace_folders=folders,
-                designated_folder=folders[0],
                 env=dict(),
                 settings=Settings(),
                 bootstrap_client=bootstrap_client,
@@ -52,7 +51,7 @@ class SessionTest(unittest.TestCase):
         project_path = "/"
         folders = [WorkspaceFolder.from_path(project_path)]
         session = self.assert_if_none(
-            create_session(config, folders, folders[0], dict(), Settings()))
+            create_session(config, folders, dict(), Settings()))
         session.client.transport.close()
 
     def test_can_get_started_session(self):

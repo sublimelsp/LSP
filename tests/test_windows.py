@@ -32,16 +32,14 @@ except ImportError:
 
 def mock_start_session(window: MockWindow,
                        workspace_folders: 'List[WorkspaceFolder]',
-                       designated_folder: 'Optional[WorkspaceFolder]',
                        config: ClientConfig,
                        on_pre_initialize: 'Callable[[Session], None]',
-                       on_post_initialize: 'Callable[[Session, Optional[Dict[str, Any]]], None]',
+                       on_post_initialize: 'Callable[[Session], None]',
                        on_post_exit: 'Callable[[str], None]',
                        on_stderr_log: 'Optional[Callable[[str], None]]') -> 'Optional[Session]':
     return create_session(
         config=TEST_CONFIG,
         workspace_folders=workspace_folders,
-        designated_folder=designated_folder,
         env=dict(),
         settings=MockSettings(),
         bootstrap_client=MockClient(),
@@ -236,28 +234,3 @@ class WindowManagerTests(unittest.TestCase):
             wm.activate_view(another_view)
             _ = wm.get_session(TEST_CONFIG.name, outside_file)
             self.assertEqual(len(wm._sessions), 1)
-
-    def test_disables_server_for_workspace_folder(self):
-        with tempfile.TemporaryDirectory() as folder1:
-            with tempfile.TemporaryDirectory() as folder2:
-                file1 = os.path.join(folder1, "foo.txt")
-                with open(file1, "w") as fp:
-                    print("hello", file=fp)
-                file2 = os.path.join(folder2, "foo.txt")
-                with open(file2, "w") as fp:
-                    print("world", file=fp)
-                _, _, _, wm = self.make([[MockView(file1)]], [folder1, folder2])
-                wm._disable_temporarily(wm.get_session(TEST_CONFIG.name, file1), RuntimeError("bla"),
-                                        WorkspaceFolder.from_path(folder1))
-                self.assertIn(TEST_CONFIG.name, wm._blacklist)
-                self.assertIn(WorkspaceFolder.from_path(folder1), wm._blacklist[TEST_CONFIG.name])
-                # We should be able to start a session in another folder of the project
-                wm._initialize_on_open(MockView(file2))
-                self.assertIsNotNone(wm.get_session(TEST_CONFIG.name, file2))
-
-    def test_disables_server_entirely(self):
-        _, _, _, wm = self.make([[MockView(__file__)]])
-        folder = WorkspaceFolder.from_path(os.path.dirname(__file__))
-        wm._disable_temporarily(TEST_CONFIG.name, RuntimeError("hello"), folder)
-        self.assertEqual(len(wm._configs.all), 1)
-        self.assertFalse(wm._configs.all[0].enabled)

@@ -14,12 +14,12 @@ import threading
 ACQUIRE_READY_LOCK_TIMEOUT = 3
 
 
-def get_initialize_params(workspace_folders: List[WorkspaceFolder], designated_folder: Optional[WorkspaceFolder],
-                          config: ClientConfig) -> dict:
+def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: ClientConfig) -> dict:
+    first_folder = workspace_folders[0] if workspace_folders else None
     initializeParams = {
         "processId": os.getpid(),
-        "rootUri": designated_folder.uri() if designated_folder else None,
-        "rootPath": designated_folder.path if designated_folder else None,
+        "rootUri": first_folder.uri() if first_folder else None,
+        "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
         "capabilities": {
             "textDocument": {
@@ -108,20 +108,19 @@ def diff_folders(old: List[WorkspaceFolder],
 
 class InitializeError(Exception):
 
-    def __init__(self, session: 'Session') -> None:
-        super().__init__("{} did not respond to the initialize request within {} seconds".format(
-            session.config.name, ACQUIRE_READY_LOCK_TIMEOUT))
-        self.session = session
+    def __init__(self, config_name: str) -> None:
+        super().__init__("The server did not respond to the initialize request within {} seconds".format(
+            ACQUIRE_READY_LOCK_TIMEOUT))
+        self.name = config_name
 
 
 class Session(object):
     def __init__(self,
                  config: ClientConfig,
                  workspace_folders: List[WorkspaceFolder],
-                 designated_folder: Optional[WorkspaceFolder],
                  client: Client,
                  on_pre_initialize: 'Optional[Callable[[Session], None]]' = None,
-                 on_post_initialize: 'Optional[Callable[[Session, Optional[Dict[str, Any]]], None]]' = None,
+                 on_post_initialize: 'Optional[Callable[[Session], None]]' = None,
                  on_post_exit: Optional[Callable[[str], None]] = None) -> None:
         self.config = config
         self._on_post_initialize = on_post_initialize
@@ -130,7 +129,6 @@ class Session(object):
         self.client = client
         self.ready_lock = threading.Lock()
         self._workspace_folders = workspace_folders
-        self.designated_folder = designated_folder
         if on_pre_initialize:
             on_pre_initialize(self)
         self._initialize()
@@ -190,7 +188,7 @@ class Session(object):
     def acquire_timeout(self) -> Generator[None, None, None]:
         acquired = self.ready_lock.acquire(True, ACQUIRE_READY_LOCK_TIMEOUT)
         if not acquired:
-            raise InitializeError(self)
+            raise InitializeError(self.config.name)
         yield
         self.ready_lock.release()
 
@@ -223,7 +221,7 @@ class Session(object):
 
     def _initialize(self) -> None:
         self.ready_lock.acquire()  # released in _handle_initialize_result or _handle_initialize_error
-        params = get_initialize_params(self._workspace_folders, self.designated_folder, self.config)
+        params = get_initialize_params(self._workspace_folders, self.config)
         self.client.send_request(
             Request.initialize(params),
             self._handle_initialize_result,
@@ -247,8 +245,7 @@ class Session(object):
 
     def _handle_initialize_error(self, error: Any) -> None:
         self.ready_lock.release()  # acquired in _initialize
-        if self._on_post_initialize:
-            self._on_post_initialize(self, error)
+        self.end()
 
     def _handle_initialize_result(self, result: Any) -> None:
         self.capabilities.update(result.get('capabilities', dict()))
@@ -258,9 +255,8 @@ class Session(object):
             if self._unsafe_supports_workspace_folders():
                 debug('multi folder session:', self._workspace_folders)
             else:
-                assert self.designated_folder  # mypy
-                self._workspace_folders = [self.designated_folder]
-                debug('single folder session:', self._workspace_folders)
+                self._workspace_folders = self._workspace_folders[:1]
+                debug('single folder session:', self._workspace_folders[0])
         else:
             debug("session with no workspace folders")
 
@@ -272,7 +268,7 @@ class Session(object):
             self.client.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
 
         if self._on_post_initialize:
-            self._on_post_initialize(self, None)
+            self._on_post_initialize(self)
 
     def _handle_request_workspace_folders(self, _: Any, request_id: int) -> None:
         self.client.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))
@@ -300,11 +296,10 @@ class Session(object):
 
 def create_session(config: ClientConfig,
                    workspace_folders: List[WorkspaceFolder],
-                   designated_folder: Optional[WorkspaceFolder],
                    env: dict,
                    settings: Settings,
                    on_pre_initialize: Optional[Callable[[Session], None]] = None,
-                   on_post_initialize: Optional[Callable[[Session, Optional[Dict[str, Any]]], None]] = None,
+                   on_post_initialize: Optional[Callable[[Session], None]] = None,
                    on_post_exit: Optional[Callable[[str], None]] = None,
                    on_stderr_log: Optional[Callable[[str], None]] = None,
                    bootstrap_client: Optional[Any] = None) -> Optional[Session]:
@@ -313,7 +308,6 @@ def create_session(config: ClientConfig,
         return Session(
             config=config,
             workspace_folders=workspace_folders,
-            designated_folder=designated_folder,
             client=client,
             on_pre_initialize=on_pre_initialize,
             on_post_initialize=on_post_initialize,

@@ -1,7 +1,7 @@
 from .diagnostics import DiagnosticsStorage
 from .edit import parse_workspace_edit
-from .logging import debug, exception_log
-from .protocol import Notification, Response, WorkspaceFolder
+from .logging import debug
+from .protocol import Notification, Response
 from .rpc import Client
 from .sessions import Session, InitializeError
 from .types import ClientConfig
@@ -18,6 +18,7 @@ from .workspace import disable_in_project
 from .workspace import enable_in_project
 from .workspace import get_workspace_folders
 from .workspace import ProjectFolders
+from .workspace import sorted_workspace_folders
 import threading
 
 
@@ -318,7 +319,6 @@ class WindowManager(object):
         self._workspace = workspace
         self._workspace.on_changed = self._on_project_changed
         self._workspace.on_switched = self._on_project_switched
-        self._blacklist = {}  # type: Dict[str, Set[Optional[WorkspaceFolder]]]
 
     def _on_project_changed(self, folders: List[str]) -> None:
         workspace_folders = get_workspace_folders(self._workspace.folders)
@@ -334,8 +334,7 @@ class WindowManager(object):
         try:
             return self._find_session(config_name, file_path)
         except InitializeError as ex:
-            assert ex.session.config.name == config_name
-            self._disable_temporarily(ex.session, ex, self._workspace.designated(file_path))
+            self._disable_temporarily(ex.name, ex)
         return None
 
     def _find_session(self, config_name: str, file_path: str) -> Optional[Session]:
@@ -384,9 +383,11 @@ class WindowManager(object):
         new_configs = []
         for c in configs:
             sessions = self._sessions.get(c.name, None)
-            if not sessions:
+            if sessions is None:
                 new_configs.append(c)
                 continue
+            assert isinstance(sessions, list)
+            assert len(sessions) > 0
             first_session = sessions[0]
             if first_session.supports_workspace_folders():
                 # A workspace-aware language server handles any path, both inside and outside the workspace.
@@ -424,39 +425,19 @@ class WindowManager(object):
                     debug("window {} requests {} for {}".format(self._window.id(), config.name, file_path))
                     self._start_client(config, file_path)
 
-    def _disable_temporarily(self, session: Union[str, Session], ex: Exception,
-                             folder: Optional[WorkspaceFolder]) -> None:
-        if isinstance(session, Session):
-            # The process started, but failed to respond to the initialize request. Disable locally for the folder
+    def _disable_temporarily(self, name: str, e: Exception) -> None:
+        message = "\n\n".join([
+            "Could not start {}",
+            "{}",
+            "Server will be disabled for this window"
+        ]).format(name, str(e))
+        sessions = self._sessions.pop(name, [])
+        self._configs.disable_temporarily(name)
+        self._sublime.message_dialog(message)
+        for session in sessions:
             session.end()
-            name = session.config.name
-            config_sessions = self._sessions.get(name, [])
-            try:
-                config_sessions.remove(session)
-            except ValueError:
-                debug("should never end up here")
-                pass
-            path = folder.path if folder else "folderless window"
-            msg = "{} for {} did not initialize properly. Disabling until this window is restarted".format(name, path)
-            self._sublime.status_message(msg)
-            self._blacklist.setdefault(name, set()).add(folder)
-        else:
-            # The process did not even start. Disable the configuration.
-            name = session
-            msg = "\n\n".join(["Could not start {}", "{}", "Server will be disabled for this window"]).format(
-                name, str(ex))
-            sessions = self._sessions.pop(name, [])
-            self._configs.disable_temporarily(name)
-            self._sublime.message_dialog(msg)
-            for session in sessions:
-                session.end()
-        exception_log(msg, ex)
 
     def _start_client(self, config: ClientConfig, file_path: str) -> None:
-        designated_folder = self._workspace.designated(file_path)
-        if designated_folder in self._blacklist.get(config.name, set()):
-            debug(config.name, "failed to start for", designated_folder, "not attempting again until ST is restarted")
-            return
         session = self.get_session(config.name, file_path)
         if session is not None:
             debug(config.name, "was already started")
@@ -466,19 +447,18 @@ class WindowManager(object):
             return
 
         self._window.status_message("Starting " + config.name + "...")
+        workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
         try:
             session = self._start_session(
                 self._window,                  # window
-                self._workspace.all(),         # workspace_folders
-                designated_folder,             # designated_folder
+                workspace_folders,             # workspace_folders
                 config,                        # config
                 self._handle_pre_initialize,   # on_pre_initialize
                 self._handle_post_initialize,  # on_post_initialize
                 self._handle_post_exit,        # on_post_exit
                 lambda msg: self._handle_stderr_log(config.name, msg))  # on_stderr_log
         except Exception as e:
-            self._disable_temporarily(config.name, e, designated_folder)
-            return
+            self._disable_temporarily(config.name, e)
 
         if session:
             debug("window {} added session {}".format(self._window.id(), config.name))

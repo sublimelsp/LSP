@@ -1,7 +1,7 @@
 from .logging import debug
 from .protocol import WorkspaceFolder
 from .types import WindowLike
-from .typing import List, Optional, Any, Callable, Tuple
+from .typing import List, Optional, Any, Callable
 from os.path import commonprefix
 
 
@@ -14,19 +14,6 @@ class ProjectFolders(object):
         self.folders = []  # type: List[str]
         self._current_project_file_name = self._window.project_file_name()
         self._set_folders(window.folders())
-
-    def all(self) -> List[WorkspaceFolder]:
-        return [WorkspaceFolder.from_path(f) for f in self.folders]
-
-    def designated(self, file_path: str) -> Optional[WorkspaceFolder]:
-        try:
-            return WorkspaceFolder.from_path(max(self.folders, key=lambda f: len(f) if file_path.startswith(f) else -1))
-        except ValueError:
-            # folderless window
-            return None
-
-    def all_and_designated(self, file_path: str) -> Tuple[List[WorkspaceFolder], Optional[WorkspaceFolder]]:
-        return self.all(), self.designated(file_path)
 
     def update(self) -> None:
         new_folders = self._window.folders()
@@ -76,6 +63,16 @@ class ProjectFolders(object):
 
 def get_workspace_folders(folders: List[str]) -> List[WorkspaceFolder]:
     return [WorkspaceFolder.from_path(f) for f in folders]
+
+
+def sorted_workspace_folders(folders: List[str], file_path: str) -> List[WorkspaceFolder]:
+    sorted_folders = []  # type: List[WorkspaceFolder]
+    for folder in folders:
+        if file_path and file_path.startswith(folder):
+            sorted_folders.insert(0, WorkspaceFolder.from_path(folder))
+        else:
+            sorted_folders.append(WorkspaceFolder.from_path(folder))
+    return sorted_folders
 
 
 def enable_in_project(window: Any, config_name: str) -> None:

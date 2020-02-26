@@ -207,7 +207,7 @@ class TestGlobalConfigs(object):
 
 class MockConfigs(object):
     def __init__(self):
-        self.all = [copy.deepcopy(TEST_CONFIG)]
+        self.all = [TEST_CONFIG]
 
     def is_supported(self, view):
         return any(self.scope_configs(view))
@@ -243,8 +243,7 @@ class MockConfigs(object):
         pass
 
     def disable_temporarily(self, config_name: str) -> None:
-        if config_name == self.all[0].name:
-            self.all[0].enabled = False
+        pass
 
 
 class MockDocuments(DocumentHandler):

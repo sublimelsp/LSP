@@ -3,7 +3,7 @@ from .edit import parse_workspace_edit
 from .logging import debug
 from .protocol import Notification, Response
 from .rpc import Client
-from .sessions import Session, InitializeError
+from .sessions import Session
 from .types import ClientConfig
 from .types import config_supports_syntax
 from .types import ConfigRegistry
@@ -331,20 +331,20 @@ class WindowManager(object):
         self.end_sessions()
 
     def get_session(self, config_name: str, file_path: str) -> Optional[Session]:
-        try:
-            return self._find_session(config_name, file_path)
-        except InitializeError as ex:
-            self._disable_temporarily(ex.name, ex)
-        return None
+        return self._find_session(config_name, file_path)
+
+    def _can_start_config(self, config_name: str, file_path: str) -> bool:
+        return not bool(self._find_session(config_name, file_path))
 
     def _find_session(self, config_name: str, file_path: str) -> Optional[Session]:
         if file_path in self._workspace:
-            sessions = self._sessions.get(config_name, [])
-            for session in sessions:
-                if session.handles_path(file_path):
-                    return session
+            if config_name in self._sessions:
+                sessions = self._sessions.get(config_name, [])
+                for session in sessions:
+                    if session.handles_path(file_path):
+                        return session
         else:
-            sessions = self._sessions.get(config_name, [])
+            sessions = self._sessions.get(config_name, None)
             if not sessions:
                 return None
             return sessions[0]
@@ -425,28 +425,16 @@ class WindowManager(object):
                     debug("window {} requests {} for {}".format(self._window.id(), config.name, file_path))
                     self._start_client(config, file_path)
 
-    def _disable_temporarily(self, name: str, e: Exception) -> None:
-        message = "\n\n".join([
-            "Could not start {}",
-            "{}",
-            "Server will be disabled for this window"
-        ]).format(name, str(e))
-        sessions = self._sessions.pop(name, [])
-        self._configs.disable_temporarily(name)
-        self._sublime.message_dialog(message)
-        for session in sessions:
-            session.end()
-
     def _start_client(self, config: ClientConfig, file_path: str) -> None:
-        session = self.get_session(config.name, file_path)
-        if session is not None:
-            debug(config.name, "was already started")
+        if not self._can_start_config(config.name, file_path):
+            debug('Already starting on this window:', config.name)
             return
 
         if not self._handlers.on_start(config.name, self._window):
             return
 
         self._window.status_message("Starting " + config.name + "...")
+        session = None  # type: Optional[]
         workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
         try:
             session = self._start_session(
@@ -458,7 +446,14 @@ class WindowManager(object):
                 self._handle_post_exit,        # on_post_exit
                 lambda msg: self._handle_stderr_log(config.name, msg))  # on_stderr_log
         except Exception as e:
-            self._disable_temporarily(config.name, e)
+            message = "\n\n".join([
+                "Could not start {}",
+                "{}",
+                "Server will be disabled for this window"
+            ]).format(config.name, str(e))
+
+            self._configs.disable_temporarily(config.name)
+            self._sublime.message_dialog(message)
 
         if session:
             debug("window {} added session {}".format(self._window.id(), config.name))

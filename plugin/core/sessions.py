@@ -6,12 +6,8 @@ from .rpc import Client, attach_stdio_client, Response
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
 from .types import ClientConfig, ClientStates, Settings
 from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator
-from contextlib import contextmanager
 import os
 import threading
-
-
-ACQUIRE_READY_LOCK_TIMEOUT = 3
 
 
 def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: ClientConfig) -> dict:
@@ -106,14 +102,6 @@ def diff_folders(old: List[WorkspaceFolder],
     return added, removed
 
 
-@contextmanager
-def acquire_timeout(lock: threading.Lock, timeout: float) -> 'Generator[bool, None, None]':
-    result = lock.acquire(True, timeout)
-    yield result
-    if result:
-        lock.release()
-
-
 class Session(object):
     def __init__(self,
                  config: ClientConfig,
@@ -188,15 +176,12 @@ class Session(object):
     def handles_path(self, file_path: Optional[str]) -> bool:
         if not file_path:
             return False
-        with acquire_timeout(self.ready_lock, ACQUIRE_READY_LOCK_TIMEOUT) as acquired:
-            if not acquired:
-                raise TimeoutError("{} did not respond to the initialize request within {} seconds".format(
-                    self.config.name, ACQUIRE_READY_LOCK_TIMEOUT))
-        # We're in a window with folders, and we're a single-folder session.
-        for folder in self._workspace_folders:
-            if file_path.startswith(folder.path):
-                return True
-        return False
+        with self.ready_lock:
+            # We're in a window with folders, and we're a single-folder session.
+            for folder in self._workspace_folders:
+                if file_path.startswith(folder.path):
+                    return True
+            return False
 
     def update_folders(self, folders: List[WorkspaceFolder]) -> None:
         with self.ready_lock:

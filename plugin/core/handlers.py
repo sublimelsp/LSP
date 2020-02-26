@@ -5,6 +5,7 @@ import abc
 
 class LanguageHandler(metaclass=abc.ABCMeta):
     on_start = None  # type: Optional[Callable]
+    can_start = None  # type: Optional[Callable]
     on_initialized = None  # type: Optional[Callable]
 
     @abc.abstractproperty

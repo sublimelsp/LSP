@@ -9,10 +9,11 @@ from .sessions import Session
 from .settings import settings, client_configs
 from .types import ClientConfig, ClientStates, WindowLike
 from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
-from .typing import Optional, Callable, Dict, Any, Iterable
+from .typing import Optional, Callable, Dict, Any, Iterable, List
 
 
 client_start_listeners = {}  # type: Dict[str, Callable]
+client_can_start_listeners = {}  # type: Dict[str, Callable]
 client_initialization_listeners = {}  # type: Dict[str, Callable]
 
 
@@ -43,11 +44,13 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
 
 class LanguageHandlerDispatcher(object):
 
-    def on_start(self, config_name: str, window: WindowLike) -> bool:
+    def on_start(self, config_name: str, window: WindowLike, folders: List[str], file_path: str) -> List[str]:
         if config_name in client_start_listeners:
-            return client_start_listeners[config_name](window)
+            return folders if client_start_listeners[config_name](window) else []
+        elif config_name in client_can_start_listeners:
+            return client_can_start_listeners[config_name](window, folders, file_path)
         else:
-            return True
+            return folders
 
     def on_initialized(self, config_name: str, window: WindowLike, client: Client) -> None:
         if config_name in client_initialization_listeners:
@@ -64,9 +67,11 @@ def register_language_handler(handler: LanguageHandler) -> None:
     debug("received config {} from {}".format(handler.name, handler.__class__.__name__))
     client_configs.add_external_config(handler.config)
     if handler.on_start:
-        client_start_listeners[handler.name] = handler.on_start
+        client_start_listeners[handler.config.name] = handler.on_start
+    if handler.can_start:
+        client_can_start_listeners[handler.config.name] = handler.can_start
     if handler.on_initialized:
-        client_initialization_listeners[handler.name] = handler.on_initialized
+        client_initialization_listeners[handler.config.name] = handler.on_initialized
 
 
 def client_from_session(session: Optional[Session]) -> Optional[Client]:

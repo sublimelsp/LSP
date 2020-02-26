@@ -607,6 +607,10 @@ class WindowManager(object):
             "textDocument/publishDiagnostics",
             lambda params: self.diagnostics.receive(session.config.name, params))
 
+        client.on_notification(
+            "$/progress",
+            lambda params: self._show_progress(params))
+
         self._handlers.on_initialized(session.config.name, self._window, client)
 
         client.send_notification(Notification.initialized())
@@ -636,6 +640,13 @@ class WindowManager(object):
     def _check_window_closed(self) -> None:
         if not self._is_closing and not self._window.is_valid():
             self._handle_window_closed()
+
+    def _show_progress(self, params) -> None:
+        # $/progress: {'token': 'rustAnalyzer/cargoWatcher', 'value': {'kind': 'begin', 'cancellable': False, 'title': "Running 'cargo check'"}}
+        value = params.get('value', {})
+        if value:
+            if value.get('kind') == 'begin':
+                self._sublime.status_message(value.get('title'))
 
     def _handle_window_closed(self) -> None:
         debug('window {} closed, ending sessions'.format(self._window.id()))

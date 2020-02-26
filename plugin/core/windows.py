@@ -536,12 +536,7 @@ class WindowManager(object):
             "window/logMessage",
             lambda params: self._handle_log_message(session.config.name, params))
 
-    def _handle_post_initialize(self, session: Session, error: Optional[Dict[str, Any]]) -> None:
-        if error is not None:
-            message = error['message']
-            self._sublime.error_message(message)
-            self._disable_temporarily(session, RuntimeError(message), session.designated_folder)
-            return
+    def _handle_post_initialize(self, session: Session) -> None:
 
         # handle server requests and notifications
         session.on_request(

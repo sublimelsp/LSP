@@ -115,14 +115,3 @@ class WorkspaceFoldersTest(unittest.TestCase):
         assert on_switched.call_count == 0
 
         self.assertEqual(wf.folders, [])
-
-    def test_is_foreign(self) -> None:
-        on_changed = mock.Mock()
-        on_switched = mock.Mock()
-        window = MockWindow(folders=["/etc", "/var"])
-        wf = ProjectFolders(window)
-        wf.on_changed = on_changed
-        wf.on_switched = on_switched
-        wf.update()
-        self.assertTrue(wf.is_foreign("/bin/ls"))
-        self.assertTrue(wf.is_inside("/etc/profile"))

@@ -2,7 +2,6 @@ from .logging import debug
 from .protocol import WorkspaceFolder
 from .types import WindowLike
 from .typing import List, Optional, Any, Callable
-from os.path import commonprefix
 
 
 class ProjectFolders(object):
@@ -27,21 +26,11 @@ class ProjectFolders(object):
                 if self.on_switched:
                     self.on_switched(new_folders)
 
-    # def is_foreign(self, p: str) -> bool:
-    #     """Note that for a folderless window no path is foreign"""
-    #     return all(commonprefix((f, p)) != f for f in self.folders)
-
-    # def is_inside(self, p: str) -> bool:
-    #     """The negation of is_foreign"""
-    #     return not self.is_foreign(p)
-
-    # def __contains__(self, item: 'Any') -> bool:
-    #     if isinstance(item, str):
-    #         return self.is_inside(item)
-    #     elif item is None:
-    #         return True
-    #     else:
-    #         return getattr(item, "file_name")() in self
+    def includes_path(self, file_path: str) -> bool:
+        if self.folders:
+            return any(file_path.startswith(folder) for folder in self.folders)
+        else:
+            return True
 
     def _set_folders(self, folders: List[str]) -> None:
         self.folders = folders

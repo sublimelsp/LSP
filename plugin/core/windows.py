@@ -380,7 +380,8 @@ class WindowManager(object):
                     new_configs.append(c)
                 elif all(not s.handles_path(file_path) for s in self._sessions[c.name]):
                     debug('path not in existing {} session: {}'.format(c.name, file_path))
-                    new_configs.append(c)
+                    if self._workspace.includes_path(file_path):
+                        new_configs.append(c)
             return new_configs
 
         # have all sessions for this document been started?

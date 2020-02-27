@@ -186,7 +186,7 @@ class Session(object):
         return False
 
     def update_folders(self, folders: List[WorkspaceFolder]) -> None:
-        if self._unsafe_supports_workspace_folders():
+        if self._supports_workspace_folders():
             added, removed = diff_folders(self._workspace_folders, folders)
             params = {
                 "event": {

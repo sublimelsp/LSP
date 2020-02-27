@@ -102,10 +102,6 @@ class WindowManagerTests(unittest.TestCase):
             sublime=test_sublime,
             handler_dispatcher=dispatcher)
         wm.start_active_views()
-        for sessions in wm._sessions.values():
-            for session in sessions:
-                with session.ready_lock:
-                    pass
         return window, docs, dispatcher, wm
 
     def test_can_start_active_views(self):

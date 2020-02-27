@@ -149,10 +149,11 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.assertEqual(self.session.config.name, self.config.name)
 
         def condition() -> bool:
-            acquired = self.session.ready_lock.acquire(False)
-            if acquired:
-                self.session.ready_lock.release()
-            return acquired
+            return True
+            # acquired = self.session.ready_lock.acquire(False)
+            # if acquired:
+            #     self.session.ready_lock.release()
+            # return acquired
 
         yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
         yield from self.await_boilerplate_begin()

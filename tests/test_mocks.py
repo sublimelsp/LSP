@@ -8,7 +8,6 @@ from LSP.plugin.core.types import Settings
 from LSP.plugin.core.types import ViewLike
 from LSP.plugin.core.typing import Dict, Set, List, Optional, Any, Tuple, Callable
 from LSP.plugin.core.windows import DocumentHandler
-import copy
 import os
 import test_sublime
 
@@ -289,7 +288,7 @@ class TestDocumentHandlerFactory(object):
         return MockDocuments()
 
 
-class MockClient():
+class MockClient(object):
     def __init__(self, async_response=None) -> None:
         self.responses = basic_responses
         self._notifications = []  # type: List[Notification]

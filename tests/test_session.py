@@ -1,9 +1,9 @@
 from LSP.plugin.core.protocol import WorkspaceFolder
 from LSP.plugin.core.protocol import TextDocumentSyncKindFull, TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
-from LSP.plugin.core.sessions import create_session, Session, InitializeError, ACQUIRE_READY_LOCK_TIMEOUT
+from LSP.plugin.core.sessions import create_session, Session
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.types import Settings
-from LSP.plugin.core.typing import Callable, Optional
+from LSP.plugin.core.typing import Optional
 from test_mocks import MockClient
 from test_mocks import TEST_CONFIG
 from test_mocks import TEST_LANGUAGE
@@ -19,13 +19,13 @@ class SessionTest(unittest.TestCase):
         assert session  # mypy
         return session
 
-    def assert_initialized(self, session: Session) -> None:
-        try:
-            with session.acquire_timeout():
-                return
-        except InitializeError:
-            pass
-        self.fail("session failed to initialize")
+    # def assert_initialized(self, session: Session) -> None:
+    #     try:
+    #         with session.acquire_timeout():
+    #             return
+    #     except InitializeError:
+    #         pass
+    #     self.fail("session failed to initialize")
 
     def make_session(self, bootstrap_client, on_pre_initialize=None, on_post_initialize=None,
                      on_post_exit=None) -> Session:
@@ -60,7 +60,7 @@ class SessionTest(unittest.TestCase):
         session = self.make_session(
             MockClient(),
             on_post_initialize=post_initialize_callback)
-        self.assert_initialized(session)
+        # self.assert_initialized(session)
         self.assertIsNotNone(session.client)
         self.assertTrue(session.has_capability("testing"))
         self.assertTrue(session.get_capability("testing"))
@@ -73,7 +73,7 @@ class SessionTest(unittest.TestCase):
             MockClient(),
             on_pre_initialize=pre_initialize_callback,
             on_post_initialize=post_initialize_callback)
-        self.assert_initialized(session)
+        # self.assert_initialized(session)
         self.assertIsNotNone(session.client)
         self.assertTrue(session.has_capability("testing"))
         self.assertTrue(session.get_capability("testing"))
@@ -87,7 +87,7 @@ class SessionTest(unittest.TestCase):
             MockClient(),
             on_post_initialize=post_initialize_callback,
             on_post_exit=post_exit_callback)
-        self.assert_initialized(session)
+        # self.assert_initialized(session)
         self.assertIsNotNone(session.client)
         self.assertTrue(session.has_capability("testing"))
         assert post_initialize_callback.call_count == 1
@@ -97,17 +97,17 @@ class SessionTest(unittest.TestCase):
         self.assertIsNone(session.get_capability("testing"))
         assert post_exit_callback.call_count == 1
 
-    def test_initialize_failure(self):
+    # def test_initialize_failure(self):
 
-        def async_response(f: Callable[[], None]) -> None:
-            # resolve the request one second after the timeout triggers (so it's always too late).
-            timeout_ms = 1000 * (ACQUIRE_READY_LOCK_TIMEOUT + 1)
-            sublime.set_timeout(f, timeout_ms=timeout_ms)
+    #     def async_response(f: Callable[[], None]) -> None:
+    #         # resolve the request one second after the timeout triggers (so it's always too late).
+    #         timeout_ms = 1000 * (ACQUIRE_READY_LOCK_TIMEOUT + 1)
+    #         sublime.set_timeout(f, timeout_ms=timeout_ms)
 
-        client = MockClient(async_response=async_response)
-        session = self.make_session(client)
-        with self.assertRaises(InitializeError):
-            session.handles_path("foo")
+    #     client = MockClient(async_response=async_response)
+    #     session = self.make_session(client)
+    #     with self.assertRaises(InitializeError):
+    #         session.handles_path("foo")
 
     def test_document_sync_capabilities(self) -> None:
         client = MockClient()
@@ -118,7 +118,7 @@ class SessionTest(unittest.TestCase):
                         "openClose": True,
                         "change": TextDocumentSyncKindFull,
                         "save": True}}}}
-        session = Session(TEST_CONFIG, [], None, client)
+        session = Session(TEST_CONFIG, [], client)
         self.assertTrue(session.should_notify_did_open())
         self.assertTrue(session.should_notify_did_close())
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindFull)
@@ -136,7 +136,7 @@ class SessionTest(unittest.TestCase):
                         "save": {},
                         "willSave": True,
                         "willSaveWaitUntil": False}}}}
-        session = Session(TEST_CONFIG, [], None, client)
+        session = Session(TEST_CONFIG, [], client)
         self.assertFalse(session.should_notify_did_open())
         self.assertFalse(session.should_notify_did_close())
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindNone)
@@ -154,7 +154,7 @@ class SessionTest(unittest.TestCase):
                         "save": {"includeText": True},
                         "willSave": False,
                         "willSaveWaitUntil": True}}}}
-        session = Session(TEST_CONFIG, [], None, client)
+        session = Session(TEST_CONFIG, [], client)
         self.assertFalse(session.should_notify_did_open())
         self.assertFalse(session.should_notify_did_close())
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindIncremental)
@@ -167,7 +167,7 @@ class SessionTest(unittest.TestCase):
             'initialize': {
                 'capabilities': {  # backwards compatible :)
                     'textDocumentSync': TextDocumentSyncKindIncremental}}}
-        session = Session(TEST_CONFIG, [], None, client)
+        session = Session(TEST_CONFIG, [], client)
         self.assertTrue(session.should_notify_did_open())
         self.assertTrue(session.should_notify_did_close())
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindIncremental)
@@ -180,7 +180,7 @@ class SessionTest(unittest.TestCase):
             'initialize': {
                 'capabilities': {  # backwards compatible :)
                     'textDocumentSync': TextDocumentSyncKindNone}}}
-        session = Session(TEST_CONFIG, [], None, client)
+        session = Session(TEST_CONFIG, [], client)
         self.assertFalse(session.should_notify_did_open())
         self.assertFalse(session.should_notify_did_close())
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindNone)

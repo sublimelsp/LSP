@@ -5,9 +5,8 @@ from .protocol import TextDocumentSyncKindNone
 from .rpc import Client, attach_stdio_client, Response
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
 from .types import ClientConfig, ClientStates, Settings
-from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator
+from .typing import Callable, Dict, Any, Optional, List, Tuple
 import os
-import threading
 
 
 def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: ClientConfig) -> dict:
@@ -116,7 +115,6 @@ class Session(object):
         self._on_post_exit = on_post_exit
         self.capabilities = dict()  # type: Dict[str, Any]
         self.client = client
-        self.ready_lock = threading.Lock()
         self._workspace_folders = workspace_folders
         if on_pre_initialize:
             on_pre_initialize(self)
@@ -176,44 +174,41 @@ class Session(object):
     def handles_path(self, file_path: Optional[str]) -> bool:
         if not file_path:
             return False
-        with self.ready_lock:
-            # We're in a window with folders, and we're a single-folder session.
-            for folder in self._workspace_folders:
-                if file_path.startswith(folder.path):
-                    return True
-            return False
+
+        if not self._workspace_folders:
+            return True
+
+        # We're in a window with folders, and we're a single-folder session.
+        for folder in self._workspace_folders:
+            if file_path.startswith(folder.path):
+                return True
+
+        return False
 
     def update_folders(self, folders: List[WorkspaceFolder]) -> None:
-        with self.ready_lock:
-            if self._unsafe_supports_workspace_folders():
-                added, removed = diff_folders(self._workspace_folders, folders)
-                params = {
-                    "event": {
-                        "added": [a.to_lsp() for a in added],
-                        "removed": [r.to_lsp() for r in removed]
-                    }
+        if self._unsafe_supports_workspace_folders():
+            added, removed = diff_folders(self._workspace_folders, folders)
+            params = {
+                "event": {
+                    "added": [a.to_lsp() for a in added],
+                    "removed": [r.to_lsp() for r in removed]
                 }
-                notification = Notification.didChangeWorkspaceFolders(params)
-                self.client.send_notification(notification)
-                self._workspace_folders = folders
+            }
+            notification = Notification.didChangeWorkspaceFolders(params)
+            self.client.send_notification(notification)
+            self._workspace_folders = folders
 
     def _initialize(self) -> None:
-        self.ready_lock.acquire()  # released in _handle_initialize_result or _handle_initialize_error
         params = get_initialize_params(self._workspace_folders, self.config)
         self.client.send_request(
             Request.initialize(params),
             self._handle_initialize_result,
             self._handle_initialize_error)
 
-    def _unsafe_supports_workspace_folders(self) -> bool:
-        assert self.ready_lock.locked()
+    def _supports_workspace_folders(self) -> bool:
         workspace_cap = self.capabilities.get("workspace", {})
         workspace_folder_cap = workspace_cap.get("workspaceFolders", {})
         return workspace_folder_cap.get("supported")
-
-    def supports_workspace_folders(self) -> bool:
-        with self.ready_lock:
-            return self._unsafe_supports_workspace_folders()
 
     def on_request(self, method: str, handler: Callable) -> None:
         self.client.on_request(method, handler)
@@ -223,7 +218,6 @@ class Session(object):
 
     def _handle_initialize_error(self, error: Any) -> None:
         self.state = ClientStates.STOPPING
-        self.ready_lock.release()  # acquired in _initialize
         self.end()
 
     def _handle_initialize_result(self, result: Any) -> None:
@@ -231,7 +225,7 @@ class Session(object):
 
         # only keep supported amount of folders
         if self._workspace_folders:
-            if self._unsafe_supports_workspace_folders():
+            if self._supports_workspace_folders():
                 debug('multi folder session:', self._workspace_folders)
             else:
                 self._workspace_folders = self._workspace_folders[:1]
@@ -240,7 +234,6 @@ class Session(object):
             debug("session with no workspace folders")
 
         self.state = ClientStates.READY
-        self.ready_lock.release()  # acquired in _initialize
 
         self.on_request("workspace/workspaceFolders", self._handle_request_workspace_folders)
         self.on_request("workspace/configuration", self._handle_request_workspace_configuration)

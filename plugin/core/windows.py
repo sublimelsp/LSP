@@ -5,6 +5,7 @@ from .protocol import Notification, Response
 from .rpc import Client
 from .sessions import Session
 from .types import ClientConfig
+from .types import ClientStates
 from .types import config_supports_syntax
 from .types import ConfigRegistry
 from .types import GlobalConfigs
@@ -12,7 +13,7 @@ from .types import LanguageConfig
 from .types import Settings
 from .types import ViewLike
 from .types import WindowLike
-from .typing import Optional, List, Callable, Dict, Any, Protocol, Set, Union
+from .typing import Optional, List, Callable, Dict, Any, Protocol, Set
 from .views import did_change, did_close, did_open, did_save, will_save
 from .workspace import disable_in_project
 from .workspace import enable_in_project
@@ -133,19 +134,12 @@ class WindowDocumentHandler(object):
         sessions = []  # type: List[Session]
         syntax = view.settings().get("syntax")
 
-        def conditional_append(session: Session) -> None:
-            if config_supports_syntax(session.config, syntax):
-                sessions.append(session)
-
-        if view in self._workspace:
-            for sessions_per_config_name in self._sessions.values():
-                for session in sessions_per_config_name:
+        for config_name, config_sessions in self._sessions.items():
+            for session in config_sessions:
+                if config_supports_syntax(session.config, syntax):
                     if session.handles_path(view.file_name()):
-                        conditional_append(session)
-        else:
-            for sessions_per_config_name in self._sessions.values():
-                assert len(sessions_per_config_name) > 0
-                conditional_append(sessions_per_config_name[0])
+                        sessions.append(session)
+
         return sessions
 
     def _notify_open_documents(self, session: Session) -> None:
@@ -333,21 +327,18 @@ class WindowManager(object):
     def get_session(self, config_name: str, file_path: str) -> Optional[Session]:
         return self._find_session(config_name, file_path)
 
+    def _is_session_ready(self, config_name: str, file_path: str) -> bool:
+        maybe_session = self._find_session(config_name, file_path)
+        return maybe_session is not None and maybe_session.state == ClientStates.READY
+
     def _can_start_config(self, config_name: str, file_path: str) -> bool:
         return not bool(self._find_session(config_name, file_path))
 
     def _find_session(self, config_name: str, file_path: str) -> Optional[Session]:
-        if file_path in self._workspace:
-            if config_name in self._sessions:
-                sessions = self._sessions.get(config_name, [])
-                for session in sessions:
-                    if session.handles_path(file_path):
-                        return session
-        else:
-            sessions = self._sessions.get(config_name, None)
-            if not sessions:
-                return None
-            return sessions[0]
+        if config_name in self._sessions:
+            for session in self._sessions[config_name]:
+                if session.handles_path(file_path):
+                    return session
         return None
 
     def update_configs(self) -> None:
@@ -379,46 +370,29 @@ class WindowManager(object):
             self._workspace.update()
             self._initialize_on_open(view)
 
-    def needed_configs(self, file_path: str, configs: List[ClientConfig]) -> List[ClientConfig]:
-        new_configs = []
-        for c in configs:
-            sessions = self._sessions.get(c.name, None)
-            if sessions is None:
-                new_configs.append(c)
-                continue
-            assert isinstance(sessions, list)
-            assert len(sessions) > 0
-            first_session = sessions[0]
-            if first_session.supports_workspace_folders():
-                # A workspace-aware language server handles any path, both inside and outside the workspace.
-                continue
-            if file_path in self._workspace:
-                if any(s.handles_path(file_path) for s in sessions):
-                    # The file_path is inside the workspace, and there's a non-workspace-aware language server that can
-                    # handle this path. So no new session is needed.
-                    continue
-                # There is no non-workspace-aware language that handles this path, but it is inside the workspace. So
-                # we must start a new session.
-                new_configs.append(c)
-                continue
-            # We're now dealing with a non-workspace-aware language server, and the file_path is outside the workspace.
-            # Let us then take the first language server in the list that shall handle this path.
-            # (so no new session is needed).
-        return new_configs
-
     def _initialize_on_open(self, view: ViewLike) -> None:
         file_path = view.file_name() or ""
 
+        def needed_configs(configs: 'List[ClientConfig]') -> 'List[ClientConfig]':
+            new_configs = []
+            for c in configs:
+                if c.name not in self._sessions:
+                    new_configs.append(c)
+                elif all(not s.handles_path(file_path) for s in self._sessions[c.name]):
+                    debug('path not in existing {} session: {}'.format(c.name, file_path))
+                    new_configs.append(c)
+            return new_configs
+
         # have all sessions for this document been started?
         with self._initialization_lock:
-            new_configs = self.needed_configs(file_path, self._configs.syntax_configs(view, include_disabled=True))
+            new_configs = needed_configs(self._configs.syntax_configs(view, include_disabled=True))
 
             if any(new_configs):
                 # TODO: cannot observe project setting changes
                 # have to check project overrides every session request
                 self.update_configs()
 
-                startable_configs = self.needed_configs(file_path, self._configs.syntax_configs(view))
+                startable_configs = needed_configs(self._configs.syntax_configs(view))
 
                 for config in startable_configs:
 

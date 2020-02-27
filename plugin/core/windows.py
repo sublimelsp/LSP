@@ -408,7 +408,7 @@ class WindowManager(object):
             return
 
         self._window.status_message("Starting " + config.name + "...")
-        session = None  # type: Optional[]
+        session = None  # type: Optional[Session]
         workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
         try:
             session = self._start_session(

@@ -4,6 +4,11 @@ from .types import WindowLike
 from .typing import List, Optional, Any, Callable
 
 
+def is_subpath_of(file_path: str, potential_subpath: str) -> bool:
+    """ Case insensitive, file paths are not normalized when converted from uri"""
+    return file_path.lower().startswith(potential_subpath.lower())
+
+
 class ProjectFolders(object):
 
     def __init__(self, window: WindowLike) -> None:
@@ -28,7 +33,7 @@ class ProjectFolders(object):
 
     def includes_path(self, file_path: str) -> bool:
         if self.folders:
-            return any(file_path.startswith(folder) for folder in self.folders)
+            return any(is_subpath_of(file_path, folder) for folder in self.folders)
         else:
             return True
 
@@ -57,7 +62,7 @@ def get_workspace_folders(folders: List[str]) -> List[WorkspaceFolder]:
 def sorted_workspace_folders(folders: List[str], file_path: str) -> List[WorkspaceFolder]:
     sorted_folders = []  # type: List[WorkspaceFolder]
     for folder in folders:
-        if file_path and file_path.startswith(folder):
+        if file_path and is_subpath_of(file_path, folder):
             sorted_folders.insert(0, WorkspaceFolder.from_path(folder))
         else:
             sorted_folders.append(WorkspaceFolder.from_path(folder))

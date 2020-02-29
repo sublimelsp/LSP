@@ -6,6 +6,7 @@ from .rpc import Client, attach_stdio_client, Response
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
 from .types import ClientConfig, ClientStates, Settings
 from .typing import Callable, Dict, Any, Optional, List, Tuple
+from .workspace import is_subpath_of
 import os
 
 
@@ -178,9 +179,8 @@ class Session(object):
         if not self._workspace_folders:
             return True
 
-        # We're in a window with folders, and we're a single-folder session.
         for folder in self._workspace_folders:
-            if file_path.startswith(folder.path):
+            if is_subpath_of(file_path, folder.path):
                 return True
 
         return False

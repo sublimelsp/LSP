@@ -1,5 +1,5 @@
 from test_mocks import MockWindow
-from LSP.plugin.core.workspace import ProjectFolders, sorted_workspace_folders
+from LSP.plugin.core.workspace import ProjectFolders, sorted_workspace_folders, is_subpath_of
 from LSP.plugin.core.protocol import WorkspaceFolder
 import os
 from unittest import mock
@@ -34,6 +34,12 @@ class WorkspaceFolderTest(unittest.TestCase):
         workspace = WorkspaceFolder("LSP", "/foo/bar/baz")
         lsp_dict = workspace.to_lsp()
         self.assertEqual(lsp_dict, {"name": "LSP", "uri": "file:///foo/bar/baz"})
+
+
+class IsSubpathOfTest(unittest.TestCase):
+
+    def is_subpath_case_differs(self) -> None:
+        self.assertTrue(is_subpath_of(r"e:\WWW\nthu-ee-iframe\public\include\list_faculty_functions.php", r"E:\WWW\nthu-ee-iframe"))
 
 
 class WorkspaceFoldersTest(unittest.TestCase):

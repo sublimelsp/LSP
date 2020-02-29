@@ -373,6 +373,9 @@ class WindowManager(object):
     def _initialize_on_open(self, view: ViewLike) -> None:
         file_path = view.file_name() or ""
 
+        if not self._workspace.includes_path(file_path):
+            return
+
         def needed_configs(configs: 'List[ClientConfig]') -> 'List[ClientConfig]':
             new_configs = []
             for c in configs:
@@ -380,8 +383,8 @@ class WindowManager(object):
                     new_configs.append(c)
                 elif all(not s.handles_path(file_path) for s in self._sessions[c.name]):
                     debug('path not in existing {} session: {}'.format(c.name, file_path))
-                    if self._workspace.includes_path(file_path):
-                        new_configs.append(c)
+                    new_configs.append(c)
+
             return new_configs
 
         # have all sessions for this document been started?

@@ -643,7 +643,7 @@ There are at least two language servers, use either one.
 #### Palantir's Python Language Server
 
 ```sh
-pip install python-language-server
+pip install 'python-language-server[all]'
 ```
 
 Make sure you can run `pyls` in your terminal. If you've installed it into a virtualenv, you might need to override the path to `pyls` in global LSP settings (Package Settings -> LSP -> Settings):

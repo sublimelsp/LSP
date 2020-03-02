@@ -35,7 +35,7 @@ class LanguageHandlerListener(Protocol):
     def on_start(self, config_name: str, window: WindowLike) -> bool:
         ...
 
-    def on_initialized(self, config_name: str, window: WindowLike, client: Client) -> None:
+    def on_initialized(self, session: Session, window: WindowLike) -> None:
         ...
 
 
@@ -572,7 +572,7 @@ class WindowManager(object):
             "textDocument/publishDiagnostics",
             lambda params: self.diagnostics.receive(session.config.name, params))
 
-        self._handlers.on_initialized(session.config.name, self._window, session.client)
+        self._handlers.on_initialized(session, self._window)
 
         session.client.send_notification(Notification.initialized())
 

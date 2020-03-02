@@ -117,8 +117,8 @@ class MockHandlerDispatcher(object):
     def on_start(self, config_name: str, window) -> bool:
         return self._can_start
 
-    def on_initialized(self, config_name: str, window, client):
-        self._initialized.add(config_name)
+    def on_initialized(self, session: Session, window):
+        self._initialized.add(session.config.name)
 
 
 class MockWindow(object):

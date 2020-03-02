@@ -4,6 +4,7 @@ import abc
 
 
 class LanguageHandler(metaclass=abc.ABCMeta):
+    api_version = 1
     on_start = None  # type: Optional[Callable]
     on_initialized = None  # type: Optional[Callable]
 

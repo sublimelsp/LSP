@@ -14,6 +14,7 @@ from .typing import Optional, Callable, Dict, Any, Iterable
 
 client_start_listeners = {}  # type: Dict[str, Callable]
 client_initialization_listeners = {}  # type: Dict[str, Callable]
+client_initialization_listeners_v2 = {}  # type: Dict[str, Callable]
 
 
 class LSPViewEventListener(sublime_plugin.ViewEventListener):
@@ -49,9 +50,12 @@ class LanguageHandlerDispatcher(object):
         else:
             return True
 
-    def on_initialized(self, config_name: str, window: WindowLike, client: Client) -> None:
-        if config_name in client_initialization_listeners:
-            client_initialization_listeners[config_name](client)
+    def on_initialized(self, session: Session, window: WindowLike) -> None:
+        config_name = session.config.name
+        if config_name in client_initialization_listeners_v2:
+            client_initialization_listeners_v2[config_name](session, window)
+        elif config_name in client_initialization_listeners:
+            client_initialization_listeners[config_name](session.client)
 
 
 def load_handlers() -> None:
@@ -66,7 +70,10 @@ def register_language_handler(handler: LanguageHandler) -> None:
     if handler.on_start:
         client_start_listeners[handler.name] = handler.on_start
     if handler.on_initialized:
-        client_initialization_listeners[handler.name] = handler.on_initialized
+        if handler.api_version >= 2:
+            client_initialization_listeners_v2[handler.name] = handler.on_initialized
+        else:
+            client_initialization_listeners[handler.name] = handler.on_initialized
 
 
 def client_from_session(session: Optional[Session]) -> Optional[Client]:

@@ -200,10 +200,15 @@ class Session(object):
             if not self._workspace_folders or self._unsafe_supports_workspace_folders():
                 return True
         # We're in a window with folders, and we're a single-folder session.
+        return self.workspace_folder_from_path(file_path) is not None
+
+    def workspace_folder_from_path(self, file_path: str) -> Optional[WorkspaceFolder]:
+        candidate = None  # type: Optional[WorkspaceFolder]
         for folder in self._workspace_folders:
             if file_path.startswith(folder.path):
-                return True
-        return False
+                if candidate is None or len(folder.path) > len(candidate.path):
+                    candidate = folder
+        return candidate
 
     def update_folders(self, folders: List[WorkspaceFolder]) -> None:
         with self.acquire_timeout():

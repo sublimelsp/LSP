@@ -10,13 +10,16 @@ import tempfile
 class SortedWorkspaceFoldersTest(unittest.TestCase):
 
     def test_get_workspace_from_multi_folder_project(self) -> None:
-        first_project_path = os.path.dirname(__file__)
-        second_project_path = tempfile.gettempdir()
-        folders = sorted_workspace_folders([second_project_path, first_project_path], __file__)
-        first_folder = WorkspaceFolder.from_path(first_project_path)
-        second_folder = WorkspaceFolder.from_path(second_project_path)
-        self.assertEqual(folders[0], first_folder)
-        self.assertEqual(folders[1], second_folder)
+        nearest_project_path = os.path.dirname(__file__)
+        unrelated_project_path = tempfile.gettempdir()
+        parent_project_path = os.path.abspath(os.path.join(nearest_project_path, '..'))
+        folders = sorted_workspace_folders([unrelated_project_path, parent_project_path, nearest_project_path], __file__)
+        nearest_folder = WorkspaceFolder.from_path(nearest_project_path)
+        parent_folder = WorkspaceFolder.from_path(parent_project_path)
+        unrelated_folder = WorkspaceFolder.from_path(unrelated_project_path)
+        self.assertEqual(folders[0], nearest_folder)
+        self.assertEqual(folders[1], parent_folder)
+        self.assertEqual(folders[2], unrelated_folder)
 
 
 class WorkspaceFolderTest(unittest.TestCase):

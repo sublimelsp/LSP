@@ -60,13 +60,14 @@ def get_workspace_folders(folders: List[str]) -> List[WorkspaceFolder]:
 
 
 def sorted_workspace_folders(folders: List[str], file_path: str) -> List[WorkspaceFolder]:
-    sorted_folders = []  # type: List[WorkspaceFolder]
+    sorted_paths = []  # type: List[str]
     for folder in folders:
-        if file_path and is_subpath_of(file_path, folder):
-            sorted_folders.insert(0, WorkspaceFolder.from_path(folder))
+        if sorted_paths and file_path and is_subpath_of(file_path, folder) and len(folder) > len(sorted_paths[0]):
+            sorted_paths.insert(0, folder)
         else:
-            sorted_folders.append(WorkspaceFolder.from_path(folder))
-    return sorted_folders
+            sorted_paths.append(folder)
+
+    return [WorkspaceFolder.from_path(path) for path in sorted_paths]
 
 
 def enable_in_project(window: Any, config_name: str) -> None:

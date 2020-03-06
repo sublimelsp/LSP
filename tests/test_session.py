@@ -19,14 +19,6 @@ class SessionTest(unittest.TestCase):
         assert session  # mypy
         return session
 
-    # def assert_initialized(self, session: Session) -> None:
-    #     try:
-    #         with session.acquire_timeout():
-    #             return
-    #     except InitializeError:
-    #         pass
-    #     self.fail("session failed to initialize")
-
     def make_session(self, bootstrap_client, on_pre_initialize=None, on_post_initialize=None,
                      on_post_exit=None) -> Session:
         project_path = "/"
@@ -60,7 +52,6 @@ class SessionTest(unittest.TestCase):
         session = self.make_session(
             MockClient(),
             on_post_initialize=post_initialize_callback)
-        # self.assert_initialized(session)
         self.assertIsNotNone(session.client)
         self.assertTrue(session.has_capability("testing"))
         self.assertTrue(session.get_capability("testing"))
@@ -73,7 +64,6 @@ class SessionTest(unittest.TestCase):
             MockClient(),
             on_pre_initialize=pre_initialize_callback,
             on_post_initialize=post_initialize_callback)
-        # self.assert_initialized(session)
         self.assertIsNotNone(session.client)
         self.assertTrue(session.has_capability("testing"))
         self.assertTrue(session.get_capability("testing"))
@@ -87,7 +77,6 @@ class SessionTest(unittest.TestCase):
             MockClient(),
             on_post_initialize=post_initialize_callback,
             on_post_exit=post_exit_callback)
-        # self.assert_initialized(session)
         self.assertIsNotNone(session.client)
         self.assertTrue(session.has_capability("testing"))
         assert post_initialize_callback.call_count == 1
@@ -96,18 +85,6 @@ class SessionTest(unittest.TestCase):
         self.assertFalse(session.has_capability("testing"))
         self.assertIsNone(session.get_capability("testing"))
         assert post_exit_callback.call_count == 1
-
-    # def test_initialize_failure(self):
-
-    #     def async_response(f: Callable[[], None]) -> None:
-    #         # resolve the request one second after the timeout triggers (so it's always too late).
-    #         timeout_ms = 1000 * (ACQUIRE_READY_LOCK_TIMEOUT + 1)
-    #         sublime.set_timeout(f, timeout_ms=timeout_ms)
-
-    #     client = MockClient(async_response=async_response)
-    #     session = self.make_session(client)
-    #     with self.assertRaises(InitializeError):
-    #         session.handles_path("foo")
 
     def test_document_sync_capabilities(self) -> None:
         client = MockClient()

@@ -13,7 +13,8 @@ class SortedWorkspaceFoldersTest(unittest.TestCase):
         nearest_project_path = os.path.dirname(__file__)
         unrelated_project_path = tempfile.gettempdir()
         parent_project_path = os.path.abspath(os.path.join(nearest_project_path, '..'))
-        folders = sorted_workspace_folders([unrelated_project_path, parent_project_path, nearest_project_path], __file__)
+        folders = sorted_workspace_folders([unrelated_project_path, parent_project_path, nearest_project_path],
+                                           __file__)
         nearest_folder = WorkspaceFolder.from_path(nearest_project_path)
         parent_folder = WorkspaceFolder.from_path(parent_project_path)
         unrelated_folder = WorkspaceFolder.from_path(unrelated_project_path)

@@ -39,7 +39,8 @@ class WorkspaceFolderTest(unittest.TestCase):
 class IsSubpathOfTest(unittest.TestCase):
 
     def is_subpath_case_differs(self) -> None:
-        self.assertTrue(is_subpath_of(r"e:\WWW\nthu-ee-iframe\public\include\list_faculty_functions.php", r"E:\WWW\nthu-ee-iframe"))
+        self.assertTrue(is_subpath_of(r"e:\WWW\nthu-ee-iframe\public\include\list_faculty_functions.php",
+                                      r"E:\WWW\nthu-ee-iframe"))
 
 
 class WorkspaceFoldersTest(unittest.TestCase):

@@ -78,6 +78,7 @@ def get_active_views(window: WindowLike) -> List[ViewLike]:
     num_groups = window.num_groups()
     for group in range(0, num_groups):
         view = window.active_view_in_group(group)
+        debug("group {} view {}".format(group, view.file_name()))
         if window.active_group() == group:
             views.insert(0, view)
         else:
@@ -303,6 +304,7 @@ class WindowManager(object):
         self.documents = documents
         self.server_panel_factory = server_panel_factory
         self._sessions = dict()  # type: Dict[str, List[Session]]
+        self._next_initialize_views = list()  # type: List[ViewLike]
         self._start_session = session_starter
         self._sublime = sublime
         self._handlers = handler_dispatcher
@@ -370,6 +372,18 @@ class WindowManager(object):
             self._workspace.update()
             self._initialize_on_open(view)
 
+    def _open_after_initialize(self, view: ViewLike) -> None:
+        if any(v for v in self._next_initialize_views if v.id() == view.id()):
+            return
+        self._next_initialize_views.append(view)
+
+    def _open_pending_views(self) -> None:
+        opening = list(self._next_initialize_views)
+        self._next_initialize_views = []
+        for view in opening:
+            debug('opening after initialize', view.file_name())
+            self._initialize_on_open(view)
+
     def _initialize_on_open(self, view: ViewLike) -> None:
         file_path = view.file_name() or ""
 
@@ -381,9 +395,17 @@ class WindowManager(object):
             for c in configs:
                 if c.name not in self._sessions:
                     new_configs.append(c)
-                elif all(not s.handles_path(file_path) for s in self._sessions[c.name]):
-                    debug('path not in existing {} session: {}'.format(c.name, file_path))
-                    new_configs.append(c)
+                else:
+                    session = next((s for s in self._sessions[c.name] if s.handles_path(file_path)), None)
+                    if session:
+                        if session.state != ClientStates.READY:
+                            debug('scheduling for delayed open, session {} not ready: {}'.format(c.name, file_path))
+                            self._open_after_initialize(view)
+                        else:
+                            debug('found ready session {} for {}'.format(c.name, file_path))
+                    else:
+                        debug('path not in existing {} session: {}'.format(c.name, file_path))
+                        new_configs.append(c)
 
             return new_configs
 
@@ -528,6 +550,8 @@ class WindowManager(object):
         if document_sync:
             self.documents.add_session(session)
         self._window.status_message("{} initialized".format(session.config.name))
+
+        self._open_pending_views()
 
     def handle_view_closed(self, view: ViewLike) -> None:
         if view.file_name():

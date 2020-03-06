@@ -87,6 +87,9 @@ def config_supports_syntax(config: ClientConfig, syntax: str) -> bool:
 
 
 class ViewLike(Protocol):
+    def id(self) -> int:
+        ...
+
     def file_name(self) -> Optional[str]:
         ...
 

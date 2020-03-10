@@ -218,6 +218,22 @@ class WindowManagerTests(unittest.TestCase):
         _, _, _, wm = self.make([[MockView(__file__)]], [top_folder, parent_folder])
         self.assertEqual(top_folder, wm.get_project_path(file_path))
 
+    def test_opens_second_session_for_workspace_folder(self):
+        file_path = __file__
+        top_folder = os.path.dirname(file_path)
+        parent_folder = os.path.dirname(top_folder)
+        sibling_folder = os.path.join(parent_folder, "plugin")
+        sibling_file = os.path.join(sibling_folder, "test.py")
+
+        window, docs, _, wm = self.make([[MockView(__file__)], [MockView(sibling_file)]], [top_folder, sibling_folder])
+
+        session = wm.get_session(TEST_CONFIG.name, __file__)
+        self.assertIsNotNone(session)
+        session2 = wm.get_session(TEST_CONFIG.name, sibling_file)
+        self.assertIsNotNone(session2)
+
+        self.assertNotEqual(session, session2)
+
     def test_reuses_existing_session_for_foreign_file(self):
         top_folder = os.path.dirname(__file__)
         parent_folder = os.path.dirname(top_folder)

@@ -25,7 +25,12 @@ def get_line(window: Optional[sublime.Window], file_name: str, row: int) -> str:
 
 
 def point_to_offset(point: Point, view: sublime.View) -> int:
-    return view.text_point(point.row, point.col)
+    return view.text_point(
+        point.row,
+        # @see https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/#position
+        # If the character value is greater than the line length it defaults back to the line length.
+        min(point.col, len(view.line(view.text_point(point.row, 0))))
+    )
 
 
 def offset_to_point(view: sublime.View, offset: int) -> Point:

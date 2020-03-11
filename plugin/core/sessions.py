@@ -272,10 +272,10 @@ class Session(object):
         if self._on_post_initialize:
             self._on_post_initialize(self, None)
 
-    def _handle_request_workspace_folders(self, _: Any, request_id: int) -> None:
+    def _handle_request_workspace_folders(self, _: Any, request_id: Any) -> None:
         self.client.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))
 
-    def _handle_request_workspace_configuration(self, params: Dict[str, Any], request_id: int) -> None:
+    def _handle_request_workspace_configuration(self, params: Dict[str, Any], request_id: Any) -> None:
         items = []  # type: List[Any]
         requested_items = params.get("items") or []
         for requested_item in requested_items:

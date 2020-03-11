@@ -41,8 +41,8 @@ contexts:
           - - match: \(
               scope: punctuation.section.parens.begin.lsp
               set:
-                - match: \d+
-                  scope: constant.numeric.integer.decimal.lsp
+                - match: '[^\s)]+'
+                  scope: constant.numeric.lsp
                   set:
                     - match: \)
                       scope: punctuation.section.parens.end.lsp

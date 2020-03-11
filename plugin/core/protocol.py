@@ -194,7 +194,7 @@ class Response:
 
     __slots__ = ('request_id', 'result')
 
-    def __init__(self, request_id: int, result: Union[None, Mapping[str, Any], Iterable[Any]]) -> None:
+    def __init__(self, request_id: Any, result: Union[None, Mapping[str, Any], Iterable[Any]]) -> None:
         self.request_id = request_id
         self.result = result
 

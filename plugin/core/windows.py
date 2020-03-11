@@ -484,7 +484,7 @@ class WindowManager(object):
             debug("window {} added session {}".format(self._window.id(), config.name))
             self._sessions.setdefault(config.name, []).append(session)
 
-    def _handle_message_request(self, params: dict, client: Client, request_id: int) -> None:
+    def _handle_message_request(self, params: dict, client: Client, request_id: Any) -> None:
         actions = params.get("actions", [])
         titles = list(action.get("title") for action in actions)
 

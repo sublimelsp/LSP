@@ -2,7 +2,7 @@ from .logging import debug, exception_log
 from .protocol import Request, Notification, Response
 from .transports import StdioTransport, Transport
 from .types import Settings
-from .typing import Any, Dict, Tuple, Callable, Optional, Union, Mapping
+from .typing import Any, Dict, Tuple, Callable, Optional, Mapping
 from threading import Condition
 from threading import Lock
 import subprocess
@@ -42,16 +42,16 @@ class PreformattedPayloadLogger:
             message = "{}: {}".format(message, params)
         self.sink(message)
 
-    def format_response(self, direction: str, request_id: int) -> str:
+    def format_response(self, direction: str, request_id: Any) -> str:
         return "{} {} {}".format(direction, self.server_name, request_id)
 
-    def format_request(self, direction: str, method: str, request_id: int) -> str:
+    def format_request(self, direction: str, method: str, request_id: Any) -> str:
         return "{} {} {}({})".format(direction, self.server_name, method, request_id)
 
     def format_notification(self, direction: str, method: str) -> str:
         return "{} {} {}".format(direction, self.server_name, method)
 
-    def outgoing_response(self, request_id: int, params: Any) -> None:
+    def outgoing_response(self, request_id: Any, params: Any) -> None:
         if not self.settings.log_debug:
             return
         self.log(self.format_response(Direction.Outgoing, request_id), params, self.settings.log_payloads)
@@ -79,7 +79,7 @@ class PreformattedPayloadLogger:
             return
         self.log(self.format_response(Direction.Incoming, request_id), params, self.settings.log_payloads)
 
-    def incoming_request(self, request_id: int, method: str, params: Any, unhandled: bool) -> None:
+    def incoming_request(self, request_id: Any, method: str, params: Any, unhandled: bool) -> None:
         if not self.settings.log_debug:
             return
         direction = "unhandled" if unhandled else Direction.Incoming
@@ -96,7 +96,7 @@ class Client(object):
     def __init__(self, transport: Transport, settings: Settings) -> None:
         self.transport = transport  # type: Optional[Transport]
         self.transport.start(self.receive_payload, self.on_transport_closed)
-        self.request_id = 0
+        self.request_id = 0  # Our request IDs are always integers.
         self.logger = PreformattedPayloadLogger(settings, "server", debug)
         self._response_handlers = {}  # type: Dict[int, Tuple[Optional[Callable], Optional[Callable[[Any], None]]]]
         self._request_handlers = {}  # type: Dict[str, Callable]
@@ -245,20 +245,16 @@ class Client(object):
     def request_or_notification_handler(self, payload: Mapping[str, Any]) -> None:
         method = payload["method"]  # type: str
         params = payload.get("params")
-        request_id = payload.get("id")  # type: Union[str, int, None]
+        # Server request IDs can be either a string or an int.
+        request_id = payload.get("id")
         if request_id is not None:
-            request_id_int = int(request_id)
-
-            def log(method: str, params: Any, unhandled: bool) -> None:
-                nonlocal request_id_int
-                self.logger.incoming_request(request_id_int, method, params, unhandled)
-
-            self.handle(request_id_int, method, params, "request", self._request_handlers, log)
+            self.handle(request_id, method, params, "request", self._request_handlers,
+                        lambda a, b, c: self.logger.incoming_request(request_id, a, b, c))
         else:
             self.handle(None, method, params, "notification", self._notification_handlers,
                         self.logger.incoming_notification)
 
-    def handle(self, request_id: Optional[int], method: str, params: Any, typestr: str,
+    def handle(self, request_id: Any, method: str, params: Any, typestr: str,
                handlers: Mapping[str, Callable], log: Callable[[str, Any, bool], None]) -> None:
         handler = handlers.get(method)
         log(method, params, handler is None)

@@ -5,14 +5,10 @@ from LSP.plugin.core.rpc import Client
 from LSP.plugin.core.rpc import format_request
 from LSP.plugin.core.transports import Transport
 from LSP.plugin.core.types import Settings
+from LSP.plugin.core.typing import List, Tuple, Dict, Any
 from test_mocks import MockSettings
 import json
 import unittest
-try:
-    from typing import Any, List, Dict, Tuple, Callable, Optional
-    assert Any and List and Dict and Tuple and Callable and Optional
-except ImportError:
-    pass
 
 
 def return_empty_dict_result(message):
@@ -143,13 +139,29 @@ class ClientTest(unittest.TestCase):
         client = Client(transport, settings)
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
-        pings = []  # type: List[Tuple[int, Dict[str, Any]]]
+        pings = []  # type: List[Tuple[Any, Dict[str, Any]]]
         client.on_request(
             "ping",
             lambda params, request_id: pings.append((request_id, params)))
         transport.receive('{ "id": 42, "method": "ping"}')
         self.assertEqual(len(pings), 1)
+        self.assertIsInstance(pings[0][0], int)
         self.assertEqual(pings[0][0], 42)
+
+    def test_server_request_non_integer_request(self):
+        transport = MockTransport()
+        settings = MockSettings()
+        client = Client(transport, settings)
+        self.assertIsNotNone(client)
+        self.assertTrue(transport.has_started)
+        pings = []  # type: List[Tuple[Any, Dict[str, Any]]]
+        client.on_request(
+            "ping",
+            lambda params, request_id: pings.append((request_id, params)))
+        transport.receive('{ "id": "abcd-1234-efgh-5678", "method": "ping"}')
+        self.assertEqual(len(pings), 1)
+        self.assertIsInstance(pings[0][0], str)
+        self.assertEqual(pings[0][0], "abcd-1234-efgh-5678")
 
     def test_error_response_handler(self):
         transport = MockTransport(return_error)

@@ -24,12 +24,6 @@ def try_terminate_process(process: subprocess.Popen) -> None:
         pass  # process can be terminated already
 
 
-class Direction:
-    Incoming = '<--'
-    Outgoing = '-->'
-    OutgoingBlocking = '==>'
-
-
 class PreformattedPayloadLogger:
 
     def __init__(self, settings: Settings, server_name: str, sink: Callable[[str], None]) -> None:
@@ -54,12 +48,12 @@ class PreformattedPayloadLogger:
     def outgoing_response(self, request_id: Any, params: Any) -> None:
         if not self.settings.log_debug:
             return
-        self.log(self.format_response(Direction.Outgoing, request_id), params, self.settings.log_payloads)
+        self.log(self.format_response(">>>", request_id), params, self.settings.log_payloads)
 
     def outgoing_request(self, request_id: int, method: str, params: Any, blocking: bool) -> None:
         if not self.settings.log_debug:
             return
-        direction = Direction.OutgoingBlocking if blocking else Direction.Outgoing
+        direction = "==>" if blocking else "-->"
         self.log(self.format_request(direction, method, request_id), params, self.settings.log_payloads)
 
     def outgoing_notification(self, method: str, params: Any) -> None:
@@ -72,23 +66,23 @@ class PreformattedPayloadLogger:
             and method != "textDocument/didOpen"
         if log_payload and method == "textDocument/didSave" and isinstance(params, dict) and "text" in params:
             log_payload = False
-        self.log(self.format_notification(Direction.Outgoing, method), params, log_payload)
+        self.log(self.format_notification(" ->", method), params, log_payload)
 
     def incoming_response(self, request_id: int, params: Any) -> None:
         if not self.settings.log_debug:
             return
-        self.log(self.format_response(Direction.Incoming, request_id), params, self.settings.log_payloads)
+        self.log(self.format_response("<<<", request_id), params, self.settings.log_payloads)
 
     def incoming_request(self, request_id: Any, method: str, params: Any, unhandled: bool) -> None:
         if not self.settings.log_debug:
             return
-        direction = "unhandled" if unhandled else Direction.Incoming
+        direction = "<??" if unhandled else "<--"
         self.log(self.format_request(direction, method, request_id), params, self.settings.log_payloads)
 
     def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
         if not self.settings.log_debug or method == "window/logMessage":
             return
-        direction = "unhandled" if unhandled else Direction.Incoming
+        direction = "<? " if unhandled else "<- "
         self.log(self.format_notification(direction, method), params, self.settings.log_payloads)
 
 
@@ -249,7 +243,7 @@ class Client(object):
         request_id = payload.get("id")
         if request_id is not None:
             self.handle(request_id, method, params, "request", self._request_handlers,
-                        lambda a, b, c: self.logger.incoming_request(request_id, a, b, c))
+                        lambda *args: self.logger.incoming_request(request_id, *args))
         else:
             self.handle(None, method, params, "notification", self._notification_handlers,
                         self.logger.incoming_notification)

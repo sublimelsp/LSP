@@ -6,8 +6,9 @@ hidden: true
 scope: output.lsp.log
 
 variables:
-  method: '[[:alpha:]][[:alnum:]/]*'
+  method: '[[:alnum:]/$]+'
   servername: '[[:alnum:]_-]+'
+  id: '[^\s:]+'
 
 contexts:
   main:
@@ -22,65 +23,59 @@ contexts:
     - match: '^::'
       scope: punctuation.accessor.lsp
       push:
-      - - meta_scope: meta.group.lsp
-        - match: $
-          pop: true
-        # responses
-      - - match: \d+
-          scope: constant.numeric.integer.decimal.lsp
-          set:
-            - match: ':'
-              scope: punctuation.separator.lsp
-              set: maybe-payload
-            - match: ''
-              pop: true
-        # notifications or requests
-        - match: (?=\w)
-          set:
-            # requests
-          - - match: \(
-              scope: punctuation.section.parens.begin.lsp
-              set:
-                - match: '[^\s)]+'
-                  scope: constant.numeric.lsp
-                  set:
-                    - match: \)
-                      scope: punctuation.section.parens.end.lsp
-                      set:
-                        - match: ':'
-                          scope: punctuation.separator.lsp
-                          set: maybe-payload
-                        - match: ''
-                          pop: true
-            # notifications
-            - match: ':'
-              scope: punctuation.separator.lsp
-              set: maybe-payload
-            - match: ''
-              pop: true
-          - - match: '{{method}}'
-              scope: keyword.control.lsp
-              pop: true
-        # language server name
-      - - match: \S+
-          scope: variable.function.lsp
-          pop: true
-        # arrows
-      - - match: -->
+        - meta_scope: meta.group.lsp
+        - match: (?:==|--)>
           scope: storage.modifier.lsp
-          pop: true
+          set: [maybe-payload, request, server-name]
+        - match: ->
+          scope: storage.modifier.lsp
+          set: [maybe-payload, notification, server-name]
+        - match: '>>>'
+          scope: storage.modifier.lsp
+          set: [maybe-payload, response, server-name]
         - match: <--
           scope: storage.modifier.lsp
-          pop: true
-        - match: ==>
+          set: [maybe-payload, request, server-name]
+        - match: <-
           scope: storage.modifier.lsp
-          pop: true
-        - match: unhandled
+          set: [maybe-payload, notification, server-name]
+        - match: <<<
+          scope: storage.modifier.lsp
+          set: [maybe-payload, response, server-name]
+        - match: <\?\?
           scope: invalid.deprecated.lsp
-          pop: true
+          set: [maybe-payload, request, server-name]
+        - match: <\?
+          scope: invalid.deprecated.lsp
+          set: [maybe-payload, notification, server-name]
+
+  server-name:
+    - match: '{{servername}}'
+      scope: variable.function.lsp
+      pop: true
+
+  request:
+    - match: ({{method}})(\()({{id}})(\))
+      captures:
+        1: keyword.control.lsp
+        2: punctuation.section.parens.begin.lsp
+        3: constant.numeric.id.lsp
+        4: punctuation.section.parens.end.lsp
+      pop: true
+
+  notification:
+    - match: '{{method}}'
+      scope: keyword.control.lsp
+      pop: true
+
+  response:
+    - match: '{{id}}'
+      scope: constant.numeric.id.lsp
+      pop: true
 
   maybe-payload:
-    - match: \s*(?=\S)
+    - match: ':'
+      scope: punctuation.separator.lsp
       set:
         - match: $
           pop: true

@@ -73,7 +73,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], designated_f
             },
             "workspace": {
                 "applyEdit": True,
-                "didChangeConfiguration": {},
+                "didChangeConfiguration": True,
                 "executeCommand": {},
                 "workspaceFolders": True,
                 "symbol": {

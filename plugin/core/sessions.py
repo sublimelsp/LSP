@@ -279,12 +279,15 @@ class Session(object):
         items = []  # type: List[Any]
         requested_items = params.get("items") or []
         for requested_item in requested_items:
-            if requested_item['section'] in self.config.settings:
-                items.append(self.config.settings[requested_item['section']])
-            elif requested_item['section'] == '':  # required for ESLint server
-                items.append(self.config.settings)
+            if 'section' in requested_item:
+                if not requested_item['section']:
+                    items.append(self.config.settings)
+                elif requested_item['section'] in self.config.settings:
+                    items.append(self.config.settings[requested_item['section']])
+                else:
+                    items.append(None)
             else:
-                items.append(None)
+                items.append(self.config.settings)
         self.client.send_response(Response(request_id, items))
 
     def end(self) -> None:

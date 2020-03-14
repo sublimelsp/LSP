@@ -197,8 +197,8 @@ class ErrorCode:
     MethodNotFound = -32601
     InvalidParams = -32602
     InternalError = -32603
-    serverErrorStart = -32099
-    serverErrorEnd = -32000
+    ServerErrorStart = -32099
+    ServerErrorEnd = -32000
     ServerNotInitialized = -32002
     UnknownErrorCode = -32001
 

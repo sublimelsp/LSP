@@ -174,8 +174,16 @@ class ClientTest(unittest.TestCase):
         transport.receive('{ "id": "abcd-1234-efgh-5678", "method": "ping"}')
         self.assertEqual(len(transport.messages), 1)
         self.assertEqual(
-            transport.messages[0],
-            '{"error":{"message":"ping","code":-32601},"jsonrpc":"2.0","id":"abcd-1234-efgh-5678"}')
+            json.loads(transport.messages[0]),
+            {
+                "error": {
+                    "message": "ping",
+                    "code": -32601
+                },
+                "jsonrpc": "2.0",
+                "id": "abcd-1234-efgh-5678"
+            }
+        )
 
     def test_server_request_exception_during_handler(self):
         transport = MockTransport()
@@ -191,8 +199,16 @@ class ClientTest(unittest.TestCase):
         transport.receive('{ "id": "abcd-1234-efgh-5678", "method": "ping"}')
         self.assertEqual(len(transport.messages), 1)
         self.assertEqual(
-            transport.messages[0],
-            '{"error":{"message":"whoops","code":-32603},"jsonrpc":"2.0","id":"abcd-1234-efgh-5678"}')
+            json.loads(transport.messages[0]),
+            {
+                "error": {
+                    "message": "whoops",
+                    "code": -32603
+                },
+                "jsonrpc": "2.0",
+                "id": "abcd-1234-efgh-5678"
+            }
+        )
 
     def test_server_request_send_error(self):
         transport = MockTransport()
@@ -208,8 +224,16 @@ class ClientTest(unittest.TestCase):
         transport.receive('{ "id": "abcd-1234-efgh-5678", "method": "ping"}')
         self.assertEqual(len(transport.messages), 1)
         self.assertEqual(
-            transport.messages[0],
-            '{"error":{"message":"expected dict, got list","code":-32602},"jsonrpc":"2.0","id":"abcd-1234-efgh-5678"}')
+            json.loads(transport.messages[0]),
+            {
+                "error": {
+                    "message": "expected dict, got list",
+                    "code": -32602
+                },
+                "jsonrpc": "2.0",
+                "id": "abcd-1234-efgh-5678"
+            }
+        )
 
     def test_error_response_handler(self):
         transport = MockTransport(return_error)

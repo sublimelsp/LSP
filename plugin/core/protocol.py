@@ -190,6 +190,44 @@ class Request:
         }
 
 
+class ErrorCode:
+    # Defined by JSON RPC
+    ParseError = -32700
+    InvalidRequest = -32600
+    MethodNotFound = -32601
+    InvalidParams = -32602
+    InternalError = -32603
+    serverErrorStart = -32099
+    serverErrorEnd = -32000
+    ServerNotInitialized = -32002
+    UnknownErrorCode = -32001
+
+    # Defined by the protocol
+    RequestCancelled = -32800
+    ContentModified = -32801
+
+
+class Error(Exception):
+
+    def __init__(self, code: int, message: str, data: Any = None) -> None:
+        super().__init__(message)
+        self.code = code
+        self.data = data
+
+    def to_lsp(self) -> Dict[str, Any]:
+        result = {"code": self.code, "message": super().__str__()}
+        if self.data:
+            result["data"] = self.data
+        return result
+
+    def __str__(self) -> str:
+        return "{} ({})".format(super().__str__(), self.code)
+
+    @classmethod
+    def from_exception(cls, ex: Exception) -> 'Error':
+        return Error(ErrorCode.InternalError, str(ex))
+
+
 class Response:
 
     __slots__ = ('request_id', 'result')

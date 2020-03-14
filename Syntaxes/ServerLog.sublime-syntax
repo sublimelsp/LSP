@@ -33,6 +33,9 @@ contexts:
         - match: '>>>'
           scope: storage.modifier.lsp
           set: [maybe-payload, response, server-name]
+        - match: '~~>'
+          scope: invalid.illegal.lsp
+          set: [maybe-payload, response, server-name]
         - match: <--
           scope: storage.modifier.lsp
           set: [maybe-payload, request, server-name]
@@ -42,9 +45,9 @@ contexts:
         - match: <<<
           scope: storage.modifier.lsp
           set: [maybe-payload, response, server-name]
-        - match: <\?\?
-          scope: invalid.deprecated.lsp
-          set: [maybe-payload, request, server-name]
+        - match: <~~
+          scope: invalid.illegal.lsp
+          set: [maybe-payload, response, server-name]
         - match: <\?
           scope: invalid.deprecated.lsp
           set: [maybe-payload, notification, server-name]

@@ -453,11 +453,32 @@ Pkg.add("SymbolServer")
 ```js
 "julials": {
   "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
-  // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using LanguageServer; using SymbolServer; server=LanguageServer.LanguageServerInstance(stdin,stdout,false); run(server);"], // on Windows
+  // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using LanguageServer; using LanguageServer.SymbolServer; server=LanguageServer.LanguageServerInstance(stdin,stdout,false); run(server)"], // on Windows
   "languageId": "julia",
   "scopes": ["source.julia"],
   "settings": {
-    "runlinter": true
+    // Default values from VS Code:
+    "julia.format.calls": true,      // Format function calls
+    "julia.format.comments": true,   // Format comments
+    "julia.format.curly": true,      // Format braces
+    "julia.format.docs": true,       // Format inline documentation
+    "julia.format.indent": 4,        // Indent size for formatting
+    "julia.format.indents": true,    // Format file indents
+    "julia.format.iterOps": true,    // Format loop iterators
+    "julia.format.kw": true,         // Remove spaces around = in function keywords
+    "julia.format.lineends": false,  // [undocumented]
+    "julia.format.ops": true,        // Format whitespace around operators
+    "julia.format.tuples": true,     // Format tuples
+    "julia.lint.call": false,        // Check calls against existing methods (experimental)
+    "julia.lint.constif": true,      // Check for constant conditionals of if statements
+    "julia.lint.datadecl": false,    // [undocumented]
+    "julia.lint.iter": true,         // Check iterator syntax of loops
+    "julia.lint.lazy": true,         // Check for deterministic lazy boolean operators
+    "julia.lint.modname": true,      // Check for invalid submodule names
+    "julia.lint.nothingcomp": false, // [undocumented]
+    "julia.lint.pirates": true,      // Check for type piracy
+    "julia.lint.run": true,          // run the linter on active files
+    "julia.lint.typeparam": true     // Check for unused DataType parameters
   },
   "syntaxes": ["Packages/Julia/Julia.sublime-syntax"]
 }
@@ -478,6 +499,11 @@ Pkg.add("SymbolServer")
   "enabled": true,
   "languageId": "kotlin",
   "scopes": ["source.Kotlin"],
+  "settings": {
+    "kotlin": {
+      // put your server settings here
+    }
+  },
   "syntaxes": ["Packages/kotlin/Kotlin.tmLanguage"]
 }
 ```

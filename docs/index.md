@@ -458,27 +458,33 @@ Pkg.add("SymbolServer")
   "scopes": ["source.julia"],
   "settings": {
     // Default values from VS Code:
-    "julia.format.calls": true,      // Format function calls
-    "julia.format.comments": true,   // Format comments
-    "julia.format.curly": true,      // Format braces
-    "julia.format.docs": true,       // Format inline documentation
-    "julia.format.indent": 4,        // Indent size for formatting
-    "julia.format.indents": true,    // Format file indents
-    "julia.format.iterOps": true,    // Format loop iterators
-    "julia.format.kw": true,         // Remove spaces around = in function keywords
-    "julia.format.lineends": false,  // [undocumented]
-    "julia.format.ops": true,        // Format whitespace around operators
-    "julia.format.tuples": true,     // Format tuples
-    "julia.lint.call": false,        // Check calls against existing methods (experimental)
-    "julia.lint.constif": true,      // Check for constant conditionals of if statements
-    "julia.lint.datadecl": false,    // [undocumented]
-    "julia.lint.iter": true,         // Check iterator syntax of loops
-    "julia.lint.lazy": true,         // Check for deterministic lazy boolean operators
-    "julia.lint.modname": true,      // Check for invalid submodule names
-    "julia.lint.nothingcomp": false, // [undocumented]
-    "julia.lint.pirates": true,      // Check for type piracy
-    "julia.lint.run": true,          // run the linter on active files
-    "julia.lint.typeparam": true     // Check for unused DataType parameters
+    "julia": {
+      "format": {
+        "calls": true,        // Format function calls
+        "comments": true,     // Format comments
+        "curly": true,        // Format braces
+        "docs": true,         // Format inline documentation
+        "indent": 4,          // Indent size for formatting
+        "indents": true,      // Format file indents
+        "iterOps": true,      // Format loop iterators
+        "kw": true,           // Remove spaces around = in function keywords
+        "lineends": false,    // [undocumented]
+        "ops": true,          // Format whitespace around operators
+        "tuples": true,       // Format tuples
+      },
+      "lint": {
+        "call": false,        // Check calls against existing methods (experimental)
+        "constif": true,      // Check for constant conditionals of if statements
+        "datadecl": false,    // [undocumented]
+        "iter": true,         // Check iterator syntax of loops
+        "lazy": true,         // Check for deterministic lazy boolean operators
+        "modname": true,      // Check for invalid submodule names
+        "nothingcomp": false, // [undocumented]
+        "pirates": true,      // Check for type piracy
+        "run": true,          // run the linter on active files
+        "typeparam": true     // Check for unused DataType parameters
+      }
+    }
   },
   "syntaxes": ["Packages/Julia/Julia.sublime-syntax"]
 }
@@ -493,7 +499,7 @@ Pkg.add("SymbolServer")
 2. Install the [Kotlin Language Server](https://github.com/fwcd/KotlinLanguageServer) (requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUILDING.md) first).
 3. Add to LSP settings' clients:
 
-```json
+```js
 "kotlinls": {
   "command": ["PATH/TO/KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat"],
   "enabled": true,

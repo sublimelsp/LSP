@@ -1,5 +1,5 @@
 from .logging import debug, exception_log
-from .protocol import Request, Notification, Response
+from .protocol import Request, Notification, Response, Error, ErrorCode
 from .transports import StdioTransport, Transport
 from .types import Settings
 from .typing import Any, Dict, Tuple, Callable, Optional, Mapping
@@ -50,6 +50,11 @@ class PreformattedPayloadLogger:
             return
         self.log(self.format_response(">>>", request_id), params, self.settings.log_payloads)
 
+    def outgoing_error_response(self, request_id: Any, error: Error) -> None:
+        if not self.settings.log_debug:
+            return
+        self.log(self.format_response("~~>", request_id), error.to_lsp(), self.settings.log_payloads)
+
     def outgoing_request(self, request_id: int, method: str, params: Any, blocking: bool) -> None:
         if not self.settings.log_debug:
             return
@@ -73,11 +78,15 @@ class PreformattedPayloadLogger:
             return
         self.log(self.format_response("<<<", request_id), params, self.settings.log_payloads)
 
-    def incoming_request(self, request_id: Any, method: str, params: Any, unhandled: bool) -> None:
+    def incoming_error_response(self, request_id: Any, error: Any) -> None:
         if not self.settings.log_debug:
             return
-        direction = "<??" if unhandled else "<--"
-        self.log(self.format_request(direction, method, request_id), params, self.settings.log_payloads)
+        self.log(self.format_response('<~~', request_id), error, self.settings.log_payloads)
+
+    def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
+        if not self.settings.log_debug:
+            return
+        self.log(self.format_request("<--", method, request_id), params, self.settings.log_payloads)
 
     def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
         if not self.settings.log_debug or method == "window/logMessage":
@@ -154,6 +163,10 @@ class Client(object):
         self.logger.outgoing_response(response.request_id, response.result)
         self.send_payload(response.to_payload())
 
+    def send_error_response(self, request_id: Any, error: Error) -> None:
+        self.logger.outgoing_error_response(request_id, error)
+        self.send_payload({'jsonrpc': '2.0', 'id': request_id, 'error': error.to_lsp()})
+
     def exit(self) -> None:
         self.exiting = True
         self.send_notification(Notification.exit())
@@ -223,6 +236,7 @@ class Client(object):
                     self._sync_request_cvar.notify()
         elif "result" not in response and "error" in response:
             error = response["error"]
+            self.logger.incoming_error_response(request_id, error)
             if error_handler:
                 error_handler(error)
             else:
@@ -242,21 +256,31 @@ class Client(object):
         # Server request IDs can be either a string or an int.
         request_id = payload.get("id")
         if request_id is not None:
-            self.handle(request_id, method, params, "request", self._request_handlers,
-                        lambda *args: self.logger.incoming_request(request_id, *args))
+            handler = self._request_handlers.get(method)
+            self.logger.incoming_request(request_id, method, params)
+            if handler:
+                try:
+                    handler(params, request_id)
+                except Error as error:
+                    # The request handler raised this exception on purpose, so don't log this exception.
+                    self.send_error_response(request_id, error)
+                except Exception as ex:
+                    # The request handler didn't raise this exception on purpose, so log the exception.
+                    exception_log("Error handling request {}".format(method), ex)
+                    self.send_error_response(request_id, Error.from_exception(ex))
+            else:
+                self.send_error_response(request_id, Error(ErrorCode.MethodNotFound, method))
         else:
-            self.handle(None, method, params, "notification", self._notification_handlers,
-                        self.logger.incoming_notification)
-
-    def handle(self, request_id: Any, method: str, params: Any, typestr: str,
-               handlers: Mapping[str, Callable], log: Callable[[str, Any, bool], None]) -> None:
-        handler = handlers.get(method)
-        log(method, params, handler is None)
-        if handler:
-            try:
-                handler(params) if request_id is None else handler(params, request_id)
-            except Exception as err:
-                exception_log("Error handling {} {}".format(typestr, method), err)
+            handler = self._notification_handlers.get(method)
+            if handler:
+                try:
+                    handler(params)
+                    self.logger.incoming_notification(method, params, unhandled=False)
+                except Exception as err:
+                    exception_log("Error handling notification {}".format(method), err)
+                    self.logger.incoming_notification(method, params, unhandled=True)
+            else:
+                self.logger.incoming_notification(method, params, unhandled=True)
 
 
 def attach_stdio_client(process: subprocess.Popen, settings: Settings) -> Client:

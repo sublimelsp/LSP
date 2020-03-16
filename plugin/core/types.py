@@ -10,6 +10,7 @@ class Settings(object):
         self.show_diagnostics_count_in_view_status = False
         self.show_diagnostics_in_view_status = True
         self.show_diagnostics_severity_level = 2
+        self.show_highlights_severity_level = 3
         self.only_show_lsp_completions = False
         self.diagnostics_highlight_style = "underline"
         self.document_highlight_style = "stippled"

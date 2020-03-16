@@ -457,13 +457,9 @@ class WorkspaceFolder:
     def __init__(self, name: str, path: str) -> None:
         self.name = name
         self.path = path
-        assert self.name
-        assert self.path
 
     @classmethod
     def from_path(cls, path: str) -> 'WorkspaceFolder':
-        assert os.path.isdir(path)
-        assert os.path.isabs(path)
         return cls(os.path.basename(path) or path, path)
 
     def __repr__(self) -> str:

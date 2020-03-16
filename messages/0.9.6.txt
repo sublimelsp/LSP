@@ -3,7 +3,7 @@
 Documentation:
 
 * Improve python-language-server installation command
-  https://github.com/sublimelsp/LSP/pull/896 @(AmjadHD)
+  https://github.com/sublimelsp/LSP/pull/896 (@AmjadHD)
 
 * The rust analyzer binary was renamed from ra_lsp_server to rust-analyzer.
   If you haven't updated rust-analyzer, now would be a good time!

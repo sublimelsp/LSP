@@ -104,6 +104,16 @@ def diff_folders(old: List[WorkspaceFolder],
     return added, removed
 
 
+def get_dotted_value(current: Any, dotted: str) -> Any:
+    keys = dotted.split('.')
+    for key in keys:
+        if isinstance(current, dict):
+            current = current.get(key)
+        else:
+            return None
+    return current
+
+
 class InitializeError(Exception):
 
     def __init__(self, session: 'Session') -> None:
@@ -279,7 +289,14 @@ class Session(object):
         items = []  # type: List[Any]
         requested_items = params.get("items") or []
         for requested_item in requested_items:
-            items.append(self.config.settings)  # ???
+            if 'section' in requested_item:
+                section = requested_item['section']
+                if section:
+                    items.append(get_dotted_value(self.config.settings, section))
+                else:
+                    items.append(self.config.settings)
+            else:
+                items.append(self.config.settings)
         self.client.send_response(Response(request_id, items))
 
     def end(self) -> None:

@@ -453,11 +453,38 @@ Pkg.add("SymbolServer")
 ```js
 "julials": {
   "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
-  // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using LanguageServer; using SymbolServer; server=LanguageServer.LanguageServerInstance(stdin,stdout,false); run(server);"], // on Windows
+  // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using LanguageServer; using LanguageServer.SymbolServer; server=LanguageServer.LanguageServerInstance(stdin,stdout,false); run(server)"], // on Windows
   "languageId": "julia",
   "scopes": ["source.julia"],
   "settings": {
-    "runlinter": true
+    // Default values from VS Code:
+    "julia": {
+      "format": {
+        "calls": true,        // Format function calls
+        "comments": true,     // Format comments
+        "curly": true,        // Format braces
+        "docs": true,         // Format inline documentation
+        "indent": 4,          // Indent size for formatting
+        "indents": true,      // Format file indents
+        "iterOps": true,      // Format loop iterators
+        "kw": true,           // Remove spaces around = in function keywords
+        "lineends": false,    // [undocumented]
+        "ops": true,          // Format whitespace around operators
+        "tuples": true,       // Format tuples
+      },
+      "lint": {
+        "call": false,        // Check calls against existing methods (experimental)
+        "constif": true,      // Check for constant conditionals of if statements
+        "datadecl": false,    // [undocumented]
+        "iter": true,         // Check iterator syntax of loops
+        "lazy": true,         // Check for deterministic lazy boolean operators
+        "modname": true,      // Check for invalid submodule names
+        "nothingcomp": false, // [undocumented]
+        "pirates": true,      // Check for type piracy
+        "run": true,          // run the linter on active files
+        "typeparam": true     // Check for unused DataType parameters
+      }
+    }
   },
   "syntaxes": ["Packages/Julia/Julia.sublime-syntax"]
 }
@@ -472,12 +499,17 @@ Pkg.add("SymbolServer")
 2. Install the [Kotlin Language Server](https://github.com/fwcd/KotlinLanguageServer) (requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUILDING.md) first).
 3. Add to LSP settings' clients:
 
-```json
+```js
 "kotlinls": {
   "command": ["PATH/TO/KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat"],
   "enabled": true,
   "languageId": "kotlin",
   "scopes": ["source.Kotlin"],
+  "settings": {
+    "kotlin": {
+      // put your server settings here
+    }
+  },
   "syntaxes": ["Packages/kotlin/Kotlin.tmLanguage"]
 }
 ```

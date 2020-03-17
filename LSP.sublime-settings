@@ -314,6 +314,13 @@
         "Packages/Elixir/Syntaxes/Elixir.tmLanguage",
       ]
     },
+    "erlang-ls": {
+      "command"   : [ "/path/to/my/erlang_ls", "--transport", "stdio" ],
+      "enabled"   : true,
+      "languageId": "erlang",
+      "scopes"    : [ "source.erlang" ],
+      "syntaxes"  : ["Packages/Erlang/Erlang.sublime-syntax"]
+    },
     "flow":
     {
       "command": ["flow", "lsp"],
@@ -533,15 +540,15 @@
     },
     "vscode-css":
     {
-      "command": 
+      "command":
       [
         "css-languageserver", "--stdio"
       ],
-      "scopes": 
+      "scopes":
       [
         "source.css"
       ],
-      "syntaxes": 
+      "syntaxes":
       [
         "Packages/CSS/CSS.sublime-syntax"
       ],

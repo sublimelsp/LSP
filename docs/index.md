@@ -13,7 +13,7 @@ Language servers can be provided as standalone executables or might require a ru
 The [list below](index.md#language-servers) shows installation instructions and example configurations for several servers that have been tested and are known to work with the LSP package.
 Visit [Langserver.org](https://langserver.org/) or the [list of language server implementations](https://microsoft.github.io/language-server-protocol/implementors/servers/) maintained by Microsoft for a complete overview of available servers for various programming languages.
 
-For a few languages you can also find dedicated packages on Package Control, which can optionally be installed to simplify the configuration and installation process of a language server and might provide additional features such as automatic updates for the server: 
+For a few languages you can also find dedicated packages on Package Control, which can optionally be installed to simplify the configuration and installation process of a language server and might provide additional features such as automatic updates for the server:
 
 * [LSP-css](https://packagecontrol.io/packages/LSP-css)
 * [LSP-html](https://packagecontrol.io/packages/LSP-html)
@@ -276,6 +276,21 @@ dub run dls:bootstrap
 }
 ```
 
+### Erlang<a name="erlang"></a>
+
+1. See instructions for installing the [Erlang Language Server](https://github.com/erlang-ls/erlang_ls).
+2. Add to LSP settings' clients:
+
+```json
+"erlang-ls": {
+  "command"   : [ "/path/to/my/erlang_ls", "--transport", "stdio" ],
+  "enabled"   : true,
+  "languageId": "erlang",
+  "scopes"    : [ "source.erlang" ],
+  "syntaxes"  : ["Packages/Erlang/Erlang.sublime-syntax"]
+}
+```
+
 ### Flow (JavaScript)<a name="flow"></a>
 
 Official part of [flow-bin](https://github.com/facebook/flow):
@@ -292,7 +307,7 @@ npm install -g flow-language-server
 
 ### Fortran<a name="fortran"></a>
 
-1\. Install the [Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.  
+1\. Install the [Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.
 2\. Install the [Fortran Language Server](https://github.com/hansec/fortran-language-server) (requires Python):
 
 ```sh
@@ -439,7 +454,7 @@ npm install -g javascript-typescript-langserver
 
 ### Julia<a name="julia"></a>
 
-1\. Install the [Julia](https://packagecontrol.io/packages/Julia) package from Package Control for syntax highlighting.  
+1\. Install the [Julia](https://packagecontrol.io/packages/Julia) package from Package Control for syntax highlighting.
 2\. Install the `LanguageServer` and `SymbolServer` packages from the Julia REPL:
 
 ```julia

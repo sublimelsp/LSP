@@ -85,7 +85,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], designated_f
             }
         }
     }
-    if config.init_options:
+    if config.init_options is not None:
         initializeParams['initializationOptions'] = config.init_options
 
     return initializeParams

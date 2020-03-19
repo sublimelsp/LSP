@@ -291,6 +291,12 @@ dub run dls:bootstrap
 }
 ```
 
+3. Sometimes Erlang LS might take a little time to initialize. The default is 3 seconds so it is a good idea to increase the value for `"initialize_timeout"` in the LSP settings' clients:
+
+```json
+"initialize_timeout": 30
+```
+
 ### Flow (JavaScript)<a name="flow"></a>
 
 Official part of [flow-bin](https://github.com/facebook/flow):

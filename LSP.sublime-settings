@@ -315,8 +315,7 @@
       ]
     },
     "erlang-ls": {
-      "command"   : [ "/path/to/my/erlang_ls", "--transport", "stdio" ],
-      "enabled"   : true,
+      "command"   : [ "erlang_ls", "--transport", "stdio" ],
       "languageId": "erlang",
       "scopes"    : [ "source.erlang" ],
       "syntaxes"  : ["Packages/Erlang/Erlang.sublime-syntax"]

@@ -537,6 +537,12 @@
       //   "diagnostics": true
       // },
     },
+    "sorbet": {
+      "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman"],
+      "languageId": "ruby",
+      "scopes": ["source.ruby"],
+      "syntaxes": ["Packages/Ruby/Ruby.sublime-syntax"]
+    },
     "vscode-css":
     {
       "command":

@@ -13,9 +13,10 @@ Language servers can be provided as standalone executables or might require a ru
 The [list below](index.md#language-servers) shows installation instructions and example configurations for several servers that have been tested and are known to work with the LSP package.
 Visit [Langserver.org](https://langserver.org/) or the [list of language server implementations](https://microsoft.github.io/language-server-protocol/implementors/servers/) maintained by Microsoft for a complete overview of available servers for various programming languages.
 
-For a few languages you can also find dedicated packages on Package Control, which can optionally be installed to simplify the configuration and installation process of a language server and might provide additional features such as automatic updates for the server: 
+For a few languages you can also find dedicated packages on Package Control, which can optionally be installed to simplify the configuration and installation process of a language server and might provide additional features such as automatic updates for the server:
 
 * [LSP-css](https://packagecontrol.io/packages/LSP-css)
+* [LSP-eslint](https://packagecontrol.io/packages/LSP-eslint)
 * [LSP-html](https://packagecontrol.io/packages/LSP-html)
 * [LSP-intelephense](https://packagecontrol.io/packages/LSP-intelephense)
 * [LSP-json](https://packagecontrol.io/packages/LSP-json)
@@ -292,7 +293,7 @@ npm install -g flow-language-server
 
 ### Fortran<a name="fortran"></a>
 
-1\. Install the [Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.  
+1\. Install the [Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.
 2\. Install the [Fortran Language Server](https://github.com/hansec/fortran-language-server) (requires Python):
 
 ```sh
@@ -439,7 +440,7 @@ npm install -g javascript-typescript-langserver
 
 ### Julia<a name="julia"></a>
 
-1\. Install the [Julia](https://packagecontrol.io/packages/Julia) package from Package Control for syntax highlighting.  
+1\. Install the [Julia](https://packagecontrol.io/packages/Julia) package from Package Control for syntax highlighting.
 2\. Install the `LanguageServer` and `SymbolServer` packages from the Julia REPL:
 
 ```julia

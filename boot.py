@@ -4,6 +4,7 @@ from .plugin.code_actions import LspCodeActionsCommand
 from .plugin.color import LspColorListener
 from .plugin.completion import CompletionHandler
 from .plugin.completion import CompletionHelper
+from .plugin.completion import LspTrimCompletionCommand
 from .plugin.configuration import LspDisableLanguageServerGloballyCommand
 from .plugin.configuration import LspDisableLanguageServerInProjectCommand
 from .plugin.configuration import LspEnableLanguageServerGloballyCommand

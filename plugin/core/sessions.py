@@ -101,6 +101,7 @@ def diff_folders(old: List[WorkspaceFolder],
             added.append(folder)
     return added, removed
 
+
 def get_dotted_value(current: Any, dotted: str) -> Any:
     keys = dotted.split('.')
     for key in keys:
@@ -109,6 +110,7 @@ def get_dotted_value(current: Any, dotted: str) -> Any:
         else:
             return None
     return current
+
 
 class Session(object):
     def __init__(self,

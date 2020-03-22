@@ -1,7 +1,7 @@
 from .protocol import WorkspaceFolder
 from .sessions import create_session, Session
 from .settings import ClientConfig, settings
-from .typing import Any, List, Dict, Tuple, Callable, Optional
+from .typing import List, Dict, Tuple, Callable, Optional
 import os
 import sublime
 
@@ -28,17 +28,15 @@ def get_window_env(window: sublime.Window, config: ClientConfig) -> Tuple[List[s
 
 def start_window_config(window: sublime.Window,
                         workspace_folders: List[WorkspaceFolder],
-                        designated_folder: Optional[WorkspaceFolder],
                         config: ClientConfig,
                         on_pre_initialize: Callable[[Session], None],
-                        on_post_initialize: Callable[[Session, Optional[Dict[str, Any]]], None],
+                        on_post_initialize: Callable[[Session], None],
                         on_post_exit: Callable[[str], None],
                         on_stderr_log: Optional[Callable[[str], None]]) -> Optional[Session]:
     args, env = get_window_env(window, config)
     config.binary_args = args
     return create_session(config=config,
                           workspace_folders=workspace_folders,
-                          designated_folder=designated_folder,
                           env=env,
                           settings=settings,
                           on_pre_initialize=on_pre_initialize,

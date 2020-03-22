@@ -1,5 +1,5 @@
 from test_mocks import MockWindow
-from LSP.plugin.core.workspace import ProjectFolders
+from LSP.plugin.core.workspace import ProjectFolders, sorted_workspace_folders, is_subpath_of
 from LSP.plugin.core.protocol import WorkspaceFolder
 import os
 from unittest import mock
@@ -10,25 +10,17 @@ import tempfile
 class SortedWorkspaceFoldersTest(unittest.TestCase):
 
     def test_get_workspace_from_multi_folder_project(self) -> None:
-        first = os.path.dirname(__file__)
-        with tempfile.TemporaryDirectory() as second:
-            folders = ProjectFolders(MockWindow())
-            folders.folders = [second, first]
-            workspaces, designated = folders.all_and_designated(__file__)
-            self.assertListEqual(workspaces, [WorkspaceFolder.from_path(f) for f in (second, first)])
-            self.assertEqual(designated.path, first)
-
-    def test_nested_folders(self) -> None:
-        with tempfile.TemporaryDirectory() as first:
-            second = os.path.join(first, "foobar")
-            os.makedirs(second, exist_ok=True)
-            with tempfile.TemporaryDirectory() as third:
-                folders = ProjectFolders(MockWindow())
-                folders.folders = [first, second, third]  # [/tmp/asdf, /tmp/asdf/foobar, /tmp/qwerty]
-                file_path = os.path.join(second, "somefile.txt")
-                workspaces, designated = folders.all_and_designated(file_path)
-                self.assertListEqual(workspaces, [WorkspaceFolder.from_path(f) for f in (first, second, third)])
-                self.assertEqual(designated.path, second)
+        nearest_project_path = os.path.dirname(__file__)
+        unrelated_project_path = tempfile.gettempdir()
+        parent_project_path = os.path.abspath(os.path.join(nearest_project_path, '..'))
+        folders = sorted_workspace_folders([unrelated_project_path, parent_project_path, nearest_project_path],
+                                           __file__)
+        nearest_folder = WorkspaceFolder.from_path(nearest_project_path)
+        parent_folder = WorkspaceFolder.from_path(parent_project_path)
+        unrelated_folder = WorkspaceFolder.from_path(unrelated_project_path)
+        self.assertEqual(folders[0], nearest_folder)
+        self.assertEqual(folders[1], parent_folder)
+        self.assertEqual(folders[2], unrelated_folder)
 
 
 class WorkspaceFolderTest(unittest.TestCase):
@@ -46,6 +38,13 @@ class WorkspaceFolderTest(unittest.TestCase):
         workspace = WorkspaceFolder("LSP", "/foo/bar/baz")
         lsp_dict = workspace.to_lsp()
         self.assertEqual(lsp_dict, {"name": "LSP", "uri": "file:///foo/bar/baz"})
+
+
+class IsSubpathOfTest(unittest.TestCase):
+
+    def is_subpath_case_differs(self) -> None:
+        self.assertTrue(is_subpath_of(r"e:\WWW\nthu-ee-iframe\public\include\list_faculty_functions.php",
+                                      r"E:\WWW\nthu-ee-iframe"))
 
 
 class WorkspaceFoldersTest(unittest.TestCase):
@@ -127,14 +126,3 @@ class WorkspaceFoldersTest(unittest.TestCase):
         assert on_switched.call_count == 0
 
         self.assertEqual(wf.folders, [])
-
-    def test_is_foreign(self) -> None:
-        on_changed = mock.Mock()
-        on_switched = mock.Mock()
-        window = MockWindow(folders=["/etc", "/var"])
-        wf = ProjectFolders(window)
-        wf.on_changed = on_changed
-        wf.on_switched = on_switched
-        wf.update()
-        self.assertTrue(wf.is_foreign("/bin/ls"))
-        self.assertTrue(wf.is_inside("/etc/profile"))

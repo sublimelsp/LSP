@@ -13,7 +13,7 @@ Language servers can be provided as standalone executables or might require a ru
 The [list below](index.md#language-servers) shows installation instructions and example configurations for several servers that have been tested and are known to work with the LSP package.
 Visit [Langserver.org](https://langserver.org/) or the [list of language server implementations](https://microsoft.github.io/language-server-protocol/implementors/servers/) maintained by Microsoft for a complete overview of available servers for various programming languages.
 
-For a few languages you can also find dedicated packages on Package Control, which can optionally be installed to simplify the configuration and installation process of a language server and might provide additional features such as automatic updates for the server: 
+For a few languages you can also find dedicated packages on Package Control, which can optionally be installed to simplify the configuration and installation process of a language server and might provide additional features such as automatic updates for the server:
 
 * [LSP-css](https://packagecontrol.io/packages/LSP-css)
 * [LSP-html](https://packagecontrol.io/packages/LSP-html)
@@ -276,6 +276,27 @@ dub run dls:bootstrap
 }
 ```
 
+### Erlang<a name="erlang"></a>
+
+1. See instructions for installing the [Erlang Language Server](https://github.com/erlang-ls/erlang_ls).
+2. Add to LSP settings' clients:
+
+```json
+"erlang-ls": {
+  "command"   : [ "/path/to/my/erlang_ls", "--transport", "stdio" ],
+  "enabled"   : true,
+  "languageId": "erlang",
+  "scopes"    : [ "source.erlang" ],
+  "syntaxes"  : ["Packages/Erlang/Erlang.sublime-syntax"]
+}
+```
+
+3. Sometimes Erlang LS might take a little time to initialize. The default is 3 seconds so it is a good idea to increase the value for `"initialize_timeout"` in the LSP settings' clients:
+
+```json
+"initialize_timeout": 30
+```
+
 ### Flow (JavaScript)<a name="flow"></a>
 
 Official part of [flow-bin](https://github.com/facebook/flow):
@@ -292,7 +313,7 @@ npm install -g flow-language-server
 
 ### Fortran<a name="fortran"></a>
 
-1\. Install the [Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.  
+1\. Install the [Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.
 2\. Install the [Fortran Language Server](https://github.com/hansec/fortran-language-server) (requires Python):
 
 ```sh
@@ -439,7 +460,7 @@ npm install -g javascript-typescript-langserver
 
 ### Julia<a name="julia"></a>
 
-1\. Install the [Julia](https://packagecontrol.io/packages/Julia) package from Package Control for syntax highlighting.  
+1\. Install the [Julia](https://packagecontrol.io/packages/Julia) package from Package Control for syntax highlighting.
 2\. Install the `LanguageServer` and `SymbolServer` packages from the Julia REPL:
 
 ```julia
@@ -453,11 +474,38 @@ Pkg.add("SymbolServer")
 ```js
 "julials": {
   "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
-  // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using LanguageServer; using SymbolServer; server=LanguageServer.LanguageServerInstance(stdin,stdout,false); run(server);"], // on Windows
+  // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using LanguageServer; using LanguageServer.SymbolServer; server=LanguageServer.LanguageServerInstance(stdin,stdout,false); run(server)"], // on Windows
   "languageId": "julia",
   "scopes": ["source.julia"],
   "settings": {
-    "runlinter": true
+    // Default values from VS Code:
+    "julia": {
+      "format": {
+        "calls": true,        // Format function calls
+        "comments": true,     // Format comments
+        "curly": true,        // Format braces
+        "docs": true,         // Format inline documentation
+        "indent": 4,          // Indent size for formatting
+        "indents": true,      // Format file indents
+        "iterOps": true,      // Format loop iterators
+        "kw": true,           // Remove spaces around = in function keywords
+        "lineends": false,    // [undocumented]
+        "ops": true,          // Format whitespace around operators
+        "tuples": true,       // Format tuples
+      },
+      "lint": {
+        "call": false,        // Check calls against existing methods (experimental)
+        "constif": true,      // Check for constant conditionals of if statements
+        "datadecl": false,    // [undocumented]
+        "iter": true,         // Check iterator syntax of loops
+        "lazy": true,         // Check for deterministic lazy boolean operators
+        "modname": true,      // Check for invalid submodule names
+        "nothingcomp": false, // [undocumented]
+        "pirates": true,      // Check for type piracy
+        "run": true,          // run the linter on active files
+        "typeparam": true     // Check for unused DataType parameters
+      }
+    }
   },
   "syntaxes": ["Packages/Julia/Julia.sublime-syntax"]
 }
@@ -472,12 +520,17 @@ Pkg.add("SymbolServer")
 2. Install the [Kotlin Language Server](https://github.com/fwcd/KotlinLanguageServer) (requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUILDING.md) first).
 3. Add to LSP settings' clients:
 
-```json
+```js
 "kotlinls": {
   "command": ["PATH/TO/KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat"],
   "enabled": true,
   "languageId": "kotlin",
   "scopes": ["source.Kotlin"],
+  "settings": {
+    "kotlin": {
+      // put your server settings here
+    }
+  },
   "syntaxes": ["Packages/kotlin/Kotlin.tmLanguage"]
 }
 ```
@@ -643,7 +696,7 @@ There are at least two language servers, use either one.
 #### Palantir's Python Language Server
 
 ```sh
-pip install python-language-server
+pip install 'python-language-server[all]'
 ```
 
 Make sure you can run `pyls` in your terminal. If you've installed it into a virtualenv, you might need to override the path to `pyls` in global LSP settings (Package Settings -> LSP -> Settings):

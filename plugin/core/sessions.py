@@ -83,7 +83,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
             }
         }
     }
-    if config.init_options:
+    if config.init_options is not None:
         initializeParams['initializationOptions'] = config.init_options
 
     return initializeParams
@@ -101,6 +101,14 @@ def diff_folders(old: List[WorkspaceFolder],
             added.append(folder)
     return added, removed
 
+def get_dotted_value(current: Any, dotted: str) -> Any:
+    keys = dotted.split('.')
+    for key in keys:
+        if isinstance(current, dict):
+            current = current.get(key)
+        else:
+            return None
+    return current
 
 class Session(object):
     def __init__(self,
@@ -243,14 +251,21 @@ class Session(object):
         if self._on_post_initialize:
             self._on_post_initialize(self)
 
-    def _handle_request_workspace_folders(self, _: Any, request_id: int) -> None:
+    def _handle_request_workspace_folders(self, _: Any, request_id: Any) -> None:
         self.client.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))
 
-    def _handle_request_workspace_configuration(self, params: Dict[str, Any], request_id: int) -> None:
+    def _handle_request_workspace_configuration(self, params: Dict[str, Any], request_id: Any) -> None:
         items = []  # type: List[Any]
         requested_items = params.get("items") or []
         for requested_item in requested_items:
-            items.append(self.config.settings)  # ???
+            if 'section' in requested_item:
+                section = requested_item['section']
+                if section:
+                    items.append(get_dotted_value(self.config.settings, section))
+                else:
+                    items.append(self.config.settings)
+            else:
+                items.append(self.config.settings)
         self.client.send_response(Response(request_id, items))
 
     def end(self) -> None:

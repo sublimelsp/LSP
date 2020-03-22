@@ -1,6 +1,7 @@
 from LSP.plugin.core.protocol import WorkspaceFolder
 from LSP.plugin.core.protocol import TextDocumentSyncKindFull, TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
-from LSP.plugin.core.sessions import create_session, Session
+from LSP.plugin.core.sessions import create_session, Session, get_initialize_params
+from LSP.plugin.core.settings import settings as global_settings
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.types import Settings
 from LSP.plugin.core.typing import Optional
@@ -33,6 +34,20 @@ class SessionTest(unittest.TestCase):
                 on_pre_initialize=on_pre_initialize,
                 on_post_initialize=on_post_initialize,
                 on_post_exit=on_post_exit))
+
+    def test_initialize_params(self) -> None:
+        wf = WorkspaceFolder.from_path("/foo/bar/baz")
+        params = get_initialize_params(
+            [wf], wf, ClientConfig(name="test", binary_args=[""], tcp_port=None, init_options=None))
+        self.assertNotIn("initializationOptions", params)
+        params = get_initialize_params(
+            [wf], wf, ClientConfig(name="test", binary_args=[""], tcp_port=None, init_options={}))
+        self.assertIn("initializationOptions", params)
+        self.assertEqual(params["initializationOptions"], {})
+        params = get_initialize_params(
+            [wf], wf, ClientConfig(name="test", binary_args=[""], tcp_port=None, init_options={"foo": "bar"}))
+        self.assertIn("initializationOptions", params)
+        self.assertEqual(params["initializationOptions"], {"foo": "bar"})
 
     # @unittest.skip("need an example config")
     def test_can_create_session(self):

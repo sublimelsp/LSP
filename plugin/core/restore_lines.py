@@ -3,9 +3,10 @@ from .typing import List
 
 
 class RestoreLines:
-    saved_lines = []
+    saved_lines = []  # type: List[dict]
 
-    def save_lines(locations: List[int], view: sublime.View):
+    @staticmethod
+    def save_lines(locations: List[int], view: sublime.View) -> None:
         # Clear previously saved lines
         RestoreLines.clear()
 
@@ -20,7 +21,8 @@ class RestoreLines:
                 "cursor": point
             })
 
-    def restore_lines(edit: sublime.Edit, view: sublime.View):
+    @staticmethod
+    def restore_lines(edit: sublime.Edit, view: sublime.View) -> None:
         # insert back lines from the bottom to top
         RestoreLines.saved_lines.reverse()
 
@@ -38,5 +40,6 @@ class RestoreLines:
         # the lines are restored, clear them
         RestoreLines.clear()
 
-    def clear():
+    @staticmethod
+    def clear() -> None:
         RestoreLines.saved_lines = []

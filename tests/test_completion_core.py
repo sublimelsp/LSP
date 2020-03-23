@@ -1,6 +1,4 @@
 import unittest
-from os import path
-import json
 from LSP.plugin.core.completion import parse_completion_response
 try:
     from typing import Optional, Dict

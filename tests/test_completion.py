@@ -4,7 +4,11 @@ from setup import CI, SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove
 from unittesting import DeferrableTestCase
 import sublime
 
-from LSP.tests.intelephense_completion_sample import intelephense_before_state, intelephense_expected_state, intelephense_response
+from LSP.tests.intelephense_completion_sample import (
+    intelephense_before_state,
+    intelephense_expected_state,
+    intelephense_response
+)
 
 try:
     from typing import Dict, Optional, List, Generator

@@ -24,11 +24,16 @@ class Settings(object):
         self.show_symbol_action_links = False
         self.show_references_in_quick_panel = False
         self.disabled_capabilities = []  # type: List[str]
-        self.initialize_timeout = 3
         self.log_debug = True
         self.log_server = True
         self.log_stderr = False
         self.log_payloads = False
+
+
+class ClientStates(object):
+    STARTING = 0
+    READY = 1
+    STOPPING = 2
 
 
 class LanguageConfig(object):
@@ -80,6 +85,9 @@ def config_supports_syntax(config: ClientConfig, syntax: str) -> bool:
 
 
 class ViewLike(Protocol):
+    def id(self) -> int:
+        ...
+
     def file_name(self) -> Optional[str]:
         ...
 

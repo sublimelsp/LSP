@@ -68,10 +68,6 @@
   // "hover", "completion", "colorProvider", "documentHighlight", "signatureHelp"
   "disabled_capabilities": [],
 
-  // If the server doesn't respond after this many seconds for its initialize
-  // request, we consider the server faulty and disable it for the workspace folder.
-  "initialize_timeout": 3,
-
   // Show verbose debug messages in the sublime console.
   "log_debug": false,
 
@@ -172,9 +168,9 @@
       "syntaxes": ["Packages/Rust/Rust.sublime-syntax", "Packages/Rust Enhanced/RustEnhanced.sublime-syntax"],
       "languageId": "rust"
     },
-     "ra-lsp":
+     "rust-analyzer":
     {
-      "command": ["ra_lsp_server"],
+      "command": ["rust-analyzer"],
       "scopes": ["source.rust"],
       "syntaxes": ["Packages/Rust/Rust.sublime-syntax", "Packages/Rust Enhanced/RustEnhanced.sublime-syntax"],
       "languageId": "rust"
@@ -302,6 +298,12 @@
       "syntaxes": [
         "Packages/Elixir/Syntaxes/Elixir.tmLanguage",
       ]
+    },
+    "erlang-ls": {
+      "command"   : [ "erlang_ls", "--transport", "stdio" ],
+      "languageId": "erlang",
+      "scopes"    : [ "source.erlang" ],
+      "syntaxes"  : ["Packages/Erlang/Erlang.sublime-syntax"]
     },
     "flow":
     {
@@ -522,15 +524,15 @@
     },
     "vscode-css":
     {
-      "command": 
+      "command":
       [
         "css-languageserver", "--stdio"
       ],
-      "scopes": 
+      "scopes":
       [
         "source.css"
       ],
-      "syntaxes": 
+      "syntaxes":
       [
         "Packages/CSS/CSS.sublime-syntax"
       ],

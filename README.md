@@ -39,6 +39,7 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [Dart](https://lsp.readthedocs.io/en/latest/#dart)
 * [Elixir](https://lsp.readthedocs.io/en/latest/#elixir)
 * [Elm](https://lsp.readthedocs.io/en/latest/#elm)
+* [Erlang](https://lsp.readthedocs.io/en/latest/#erlang)
 * [Flow (JavaScript)](https://lsp.readthedocs.io/en/latest/#flow)
 * [Fortran](https://lsp.readthedocs.io/en/latest/#fortran)
 * [Go](https://lsp.readthedocs.io/en/latest/#go)

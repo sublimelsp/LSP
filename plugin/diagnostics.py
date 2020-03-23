@@ -219,6 +219,7 @@ class DiagnosticsPhantoms(object):
 
     def clear(self) -> None:
         if self._last_phantom_set:
+            self._last_phantom_set.view.settings().set('lsp_diagnostic_phantom', False)
             self._last_phantom_set.update([])
 
 

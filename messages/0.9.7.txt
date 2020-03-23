@@ -1,0 +1,7 @@
+=> 0.9.7
+
+Fixes:
+
+* Reply to all server requests, as per JSON-RPC spec.
+  This changes mostly nothing, except that we might reply with an
+  error response.

@@ -195,11 +195,49 @@ class Request:
         }
 
 
+class ErrorCode:
+    # Defined by JSON RPC
+    ParseError = -32700
+    InvalidRequest = -32600
+    MethodNotFound = -32601
+    InvalidParams = -32602
+    InternalError = -32603
+    ServerErrorStart = -32099
+    ServerErrorEnd = -32000
+    ServerNotInitialized = -32002
+    UnknownErrorCode = -32001
+
+    # Defined by the protocol
+    RequestCancelled = -32800
+    ContentModified = -32801
+
+
+class Error(Exception):
+
+    def __init__(self, code: int, message: str, data: Any = None) -> None:
+        super().__init__(message)
+        self.code = code
+        self.data = data
+
+    def to_lsp(self) -> Dict[str, Any]:
+        result = {"code": self.code, "message": super().__str__()}
+        if self.data:
+            result["data"] = self.data
+        return result
+
+    def __str__(self) -> str:
+        return "{} ({})".format(super().__str__(), self.code)
+
+    @classmethod
+    def from_exception(cls, ex: Exception) -> 'Error':
+        return Error(ErrorCode.InternalError, str(ex))
+
+
 class Response:
 
     __slots__ = ('request_id', 'result')
 
-    def __init__(self, request_id: int, result: Union[None, Mapping[str, Any], Iterable[Any]]) -> None:
+    def __init__(self, request_id: Any, result: Union[None, Mapping[str, Any], Iterable[Any]]) -> None:
         self.request_id = request_id
         self.result = result
 
@@ -424,13 +462,9 @@ class WorkspaceFolder:
     def __init__(self, name: str, path: str) -> None:
         self.name = name
         self.path = path
-        assert self.name
-        assert self.path
 
     @classmethod
     def from_path(cls, path: str) -> 'WorkspaceFolder':
-        assert os.path.isdir(path)
-        assert os.path.isabs(path)
         return cls(os.path.basename(path) or path, path)
 
     def __repr__(self) -> str:
@@ -443,9 +477,6 @@ class WorkspaceFolder:
         if isinstance(other, WorkspaceFolder):
             return self.name == other.name and self.path == other.path
         return False
-
-    def __hash__(self) -> int:
-        return hash(self.path)
 
     def to_lsp(self) -> Dict[str, str]:
         return {"name": self.name, "uri": self.uri()}

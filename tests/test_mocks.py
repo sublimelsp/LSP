@@ -8,7 +8,6 @@ from LSP.plugin.core.types import Settings
 from LSP.plugin.core.types import ViewLike
 from LSP.plugin.core.typing import Dict, Set, List, Optional, Any, Tuple, Callable
 from LSP.plugin.core.windows import DocumentHandler
-import copy
 import os
 import test_sublime
 
@@ -207,7 +206,7 @@ class TestGlobalConfigs(object):
 
 class MockConfigs(object):
     def __init__(self):
-        self.all = [copy.deepcopy(TEST_CONFIG)]
+        self.all = [TEST_CONFIG]
 
     def is_supported(self, view):
         return any(self.scope_configs(view))
@@ -243,8 +242,7 @@ class MockConfigs(object):
         pass
 
     def disable_temporarily(self, config_name: str) -> None:
-        if config_name == self.all[0].name:
-            self.all[0].enabled = False
+        pass
 
 
 class MockDocuments(DocumentHandler):
@@ -290,7 +288,7 @@ class TestDocumentHandlerFactory(object):
         return MockDocuments()
 
 
-class MockClient():
+class MockClient(object):
     def __init__(self, async_response=None) -> None:
         self.responses = basic_responses
         self._notifications = []  # type: List[Notification]

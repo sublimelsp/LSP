@@ -12,6 +12,7 @@ from .core.edit import parse_text_edit
 from .core.views import range_to_region
 from .core.typing import Any, List, Dict, Tuple, Optional, Union
 from .core.views import text_document_position_params
+from .core.restore_lines import RestoreLines
 
 
 class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
@@ -20,10 +21,9 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
 
         text_edit = item.get('textEdit')
         if text_edit:
-            # insert the removed command completion item prefix
+            # restore the lines
             # so we don't have to calculate the offset for the textEdit range
-            for sel in self.view.sel():
-                self.view.insert(edit, sel.begin(), CompletionHandler.last_prefix)
+            RestoreLines.restore_lines(edit, self.view)
 
             new_text = text_edit.get('newText')
 
@@ -86,8 +86,6 @@ class LspTrimCompletionCommand(sublime_plugin.TextCommand):
 
 
 class CompletionHandler(LSPViewEventListener):
-    last_prefix = ""
-
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self.initialized = False
@@ -147,35 +145,15 @@ class CompletionHandler(LSPViewEventListener):
         if not self.enabled:
             return None
 
-        prefix = self.include_special_chars(prefix, locations[0])
         completion_list = sublime.CompletionList()
 
-        self.do_request(completion_list, prefix, locations)
+        self.do_request(completion_list, locations)
 
         return completion_list
 
-    def include_special_chars(self, prefix: str, point: int) -> str:
-        """
-        Sanatize the prefix, sublime trims of special characters from the prefix
-        """
-        special_chars = ['$']
+    def do_request(self, completion_list: sublime.CompletionList, locations: List[int]) -> None:
+        RestoreLines.clear()  # delete saved lines
 
-        # prev char under cursor is a special char, $|
-        prev_char = self.view.substr(point - 1)
-        if prev_char in special_chars:
-            return prev_char
-
-        # char before the word is a special char, $hello|
-        word_region = self.view.word(point)
-        char_before_word = self.view.substr(word_region.begin() - 1)
-
-        if char_before_word in special_chars:
-            return char_before_word + prefix
-
-        # no special chars, hello|
-        return prefix
-
-    def do_request(self, completion_list: sublime.CompletionList, prefix: str, locations: List[int]) -> None:
         # don't store client so we can handle restarts
         client = client_from_session(session_for_view(self.view, 'completionProvider', locations[0]))
         if not client:
@@ -185,11 +163,11 @@ class CompletionHandler(LSPViewEventListener):
         document_position = text_document_position_params(self.view, locations[0])
         client.send_request(
             Request.complete(document_position),
-            lambda res: self.handle_response(res, completion_list, prefix),
+            lambda res: self.handle_response(res, completion_list, locations),
             self.handle_error)
 
     def handle_response(self, response: Optional[Union[dict, List]],
-                        completion_list: sublime.CompletionList, prefix: str) -> None:
+                        completion_list: sublime.CompletionList, locations: List[int]) -> None:
         response_items, response_incomplete = parse_completion_response(response)
         items = list(format_completion(item) for item in response_items)
 
@@ -200,9 +178,11 @@ class CompletionHandler(LSPViewEventListener):
 
         if response_incomplete:
             flags |= sublime.DYNAMIC_COMPLETIONS
-
         completion_list.set_completions(items, flags)
-        CompletionHandler.last_prefix = prefix
+
+        for point in locations:
+            # save the line to restore later (only when selecting a completion item with a TextEdit)
+            RestoreLines.save_line(point, self.view)
 
     def handle_error(self, error: dict) -> None:
         sublime.status_message('Completion error: ' + str(error.get('message')))

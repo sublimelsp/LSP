@@ -169,22 +169,23 @@ class CompletionHandler(LSPViewEventListener):
         return completion_list
 
     def do_request(self, completion_list: sublime.CompletionList, locations: List[int]) -> None:
-        RestoreLines.clear()  # delete saved lines
-
         # don't store client so we can handle restarts
         client = client_from_session(session_for_view(self.view, 'completionProvider', locations[0]))
         if not client:
             return
 
+        # save lines to restore them later (only when selecting a completion item with a TextEdit)
+        RestoreLines.save_lines(locations, self.view)
+
         self.manager.documents.purge_changes(self.view)
         document_position = text_document_position_params(self.view, locations[0])
         client.send_request(
             Request.complete(document_position),
-            lambda res: self.handle_response(res, completion_list, locations),
+            lambda res: self.handle_response(res, completion_list),
             self.handle_error)
 
     def handle_response(self, response: Optional[Union[dict, List]],
-                        completion_list: sublime.CompletionList, locations: List[int]) -> None:
+                        completion_list: sublime.CompletionList) -> None:
         response_items, response_incomplete = parse_completion_response(response)
         items = list(format_completion(item) for item in response_items)
 
@@ -196,10 +197,6 @@ class CompletionHandler(LSPViewEventListener):
         if response_incomplete:
             flags |= sublime.DYNAMIC_COMPLETIONS
         completion_list.set_completions(items, flags)
-
-        for point in locations:
-            # save the line to restore later (only when selecting a completion item with a TextEdit)
-            RestoreLines.save_line(point, self.view)
 
     def handle_error(self, error: dict) -> None:
         sublime.status_message('Completion error: ' + str(error.get('message')))

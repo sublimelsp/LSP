@@ -1,18 +1,24 @@
 import sublime
+from .typing import List
+
 
 class RestoreLines:
     saved_lines = []
 
-    def save_line(point, view):
-        text = view.substr(view.line(point))
-        row, _col = view.rowcol(point)
+    def save_lines(locations: List[int], view: sublime.View):
+        # Clear previously saved lines
+        RestoreLines.clear()
 
-        RestoreLines.saved_lines.append({
-            "row": row,
-            "text": text,
-            # cursor will be use retore the cursor the te exact position
-            "cursor": point
-        })
+        for point in locations:
+            text = view.substr(view.line(point))
+            row, _col = view.rowcol(point)
+
+            RestoreLines.saved_lines.append({
+                "row": row,
+                "text": text,
+                # cursor will be use retore the cursor the te exact position
+                "cursor": point
+            })
 
     def restore_lines(edit: sublime.Edit, view: sublime.View):
         # insert back lines from the bottom to top

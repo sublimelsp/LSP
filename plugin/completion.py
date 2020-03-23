@@ -47,9 +47,9 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
                 # we already inserted text to the first selection,
                 # we ignore the first selection
                 # and apply the diff text to other selections
-                _first_selection, *other_sections = self.view.sel()
-                other_sections.reverse()  # apply the edits from bottom to top
-                for sel in other_sections:
+                _first_selection, *other_selections = self.view.sel()
+                other_selections.reverse()  # apply the edits from bottom to top
+                for sel in other_selections:
                     self.view.insert(edit, sel.end(), diff_text)
 
         else:

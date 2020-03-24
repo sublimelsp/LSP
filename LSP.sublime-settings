@@ -367,16 +367,8 @@
         "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
         "languageId": "php"
     },
-    "eslint":
-    {
-      "command": ["node", "/Users/tomv/Projects/tomv564/vscode-eslint/eslint-server/src/server"],
-      "scopes": ["source.js"],
-      "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
-      "languageId": "javascript",
-      "initializationOptions": {
-        "nodePath": "/usr/local/bin/node"
-      }
-    },
+    //"eslint": { },
+    // Install the LSP-eslint package, which comes with its own settings file
     "lsp-tsserver":
     {
       "command": ["lsp-tsserver"],

@@ -533,6 +533,20 @@
       //   "diagnostics": true
       // },
     },
+    "sorbet": {
+      "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman"],
+      "languageId": "ruby",
+      "scopes": 
+      [
+        "source.ruby",
+        "source.ruby.rails"
+      ],
+      "syntaxes": [
+        "Packages/Ruby/Ruby.sublime-syntax",
+        "Packages/Rails/Ruby on Rails.sublime-syntax",
+        "Packages/Rails/HTML (Rails).sublime-syntax"
+      ]
+    },
     "vscode-css":
     {
       "command":

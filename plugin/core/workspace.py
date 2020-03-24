@@ -59,7 +59,7 @@ def get_workspace_folders(folders: List[str]) -> List[WorkspaceFolder]:
     return [WorkspaceFolder.from_path(f) for f in folders]
 
 
-def sorted_workspace_folders(folders: List[str], file_path: str) -> List[WorkspaceFolder]:
+def sorted_workspace_paths(folders: List[str], file_path: str) -> List[str]:
     matching_paths = []  # type: List[str]
     other_paths = []  # type: List[str]
 
@@ -73,7 +73,7 @@ def sorted_workspace_folders(folders: List[str], file_path: str) -> List[Workspa
         else:
             other_paths.append(folder)
 
-    return [WorkspaceFolder.from_path(path) for path in matching_paths + other_paths]
+    return matching_paths + other_paths
 
 
 def enable_in_project(window: Any, config_name: str) -> None:

@@ -430,19 +430,18 @@ class WindowManager(object):
             debug('Already starting on this window:', config.name)
             return
 
-        workspace_folders = sorted_workspace_paths(self._workspace.folders, file_path)
-        startable_folders = self._handlers.on_start(config.name, self._window, workspace_folders, file_path)
+        workspace_paths = sorted_workspace_paths(self._workspace.folders, file_path)
+        startable_folders = self._handlers.on_start(config.name, self._window, workspace_paths, file_path)
 
         if not startable_folders:
             return
 
         self._window.status_message("Starting " + config.name + "...")
         session = None  # type: Optional[Session]
-        workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
         try:
             session = self._start_session(
                 self._window,                  # window
-                [WorkspaceFolder.from_path(path) for path in workspace_folders],             # workspace_folders
+                [WorkspaceFolder.from_path(path) for path in workspace_paths],             # workspace_folders
                 config,                        # config
                 self._handle_pre_initialize,   # on_pre_initialize
                 self._handle_post_initialize,  # on_post_initialize

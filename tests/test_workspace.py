@@ -1,5 +1,5 @@
 from test_mocks import MockWindow
-from LSP.plugin.core.workspace import ProjectFolders, sorted_workspace_folders, is_subpath_of
+from LSP.plugin.core.workspace import ProjectFolders, sorted_workspace_paths, is_subpath_of
 from LSP.plugin.core.protocol import WorkspaceFolder
 import os
 from unittest import mock
@@ -13,18 +13,15 @@ class SortedWorkspaceFoldersTest(unittest.TestCase):
         nearest_project_path = os.path.dirname(__file__)
         unrelated_project_path = tempfile.gettempdir()
         parent_project_path = os.path.abspath(os.path.join(nearest_project_path, '..'))
-        folders = sorted_workspace_folders([unrelated_project_path, parent_project_path, nearest_project_path],
+        paths = sorted_workspace_paths([unrelated_project_path, parent_project_path, nearest_project_path],
                                            __file__)
-        nearest_folder = WorkspaceFolder.from_path(nearest_project_path)
-        parent_folder = WorkspaceFolder.from_path(parent_project_path)
-        unrelated_folder = WorkspaceFolder.from_path(unrelated_project_path)
-        self.assertEqual(folders[0], nearest_folder)
-        self.assertEqual(folders[1], parent_folder)
-        self.assertEqual(folders[2], unrelated_folder)
+        self.assertEqual(paths[0], nearest_project_path)
+        self.assertEqual(paths[1], parent_project_path)
+        self.assertEqual(paths[2], unrelated_project_path)
 
     def test_longest_prefix(self) -> None:
-        folders = sorted_workspace_folders(["/longer-path", "/short-path"], "/short-path/file.js")
-        self.assertEqual(folders[0].path, "/short-path")
+        paths = sorted_workspace_paths(["/longer-path", "/short-path"], "/short-path/file.js")
+        self.assertEqual(paths[0], "/short-path")
 
 
 class WorkspaceFolderTest(unittest.TestCase):

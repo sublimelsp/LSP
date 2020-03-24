@@ -3,7 +3,7 @@ from LSP.plugin.core.protocol import Notification, Request, WorkspaceFolder
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.settings import client_configs
-from LSP.plugin.core.types import ClientConfig, LanguageConfig
+from LSP.plugin.core.types import ClientConfig, LanguageConfig, ClientStates
 from os import environ
 from os.path import dirname
 from os.path import join
@@ -149,10 +149,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.assertEqual(self.session.config.name, self.config.name)
 
         def condition() -> bool:
-            acquired = self.session.ready_lock.acquire(False)
-            if acquired:
-                self.session.ready_lock.release()
-            return acquired
+            return self.session.state == ClientStates.READY
 
         yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
         yield from self.await_boilerplate_begin()

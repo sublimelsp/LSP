@@ -79,10 +79,6 @@
   // "hover", "completion", "colorProvider", "documentHighlight", "signatureHelp"
   "disabled_capabilities": [],
 
-  // If the server doesn't respond after this many seconds for its initialize
-  // request, we consider the server faulty and disable it for the workspace folder.
-  "initialize_timeout": 3,
-
   // Show verbose debug messages in the sublime console.
   "log_debug": false,
 

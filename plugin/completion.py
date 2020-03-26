@@ -109,6 +109,14 @@ class CompletionHandler(LSPViewEventListener):
         self.initialized = False
         self.enabled = False
 
+    def on_text_command(self, command_name, args):
+        if command_name == 'commit_completion':
+            # if the previous char is a trigger char
+            # commit_completion re-triggers the completion panel "forever"
+            # hide the autocomplete on commit_completion
+            # https://github.com/sublimelsp/LSP/pull/866#issuecomment-603466761
+            self.view.run_command("hide_auto_complete")
+    
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:
         if 'completion' in settings.disabled_capabilities:

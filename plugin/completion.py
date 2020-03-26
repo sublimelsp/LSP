@@ -16,14 +16,15 @@ from .core.restore_lines import RestoreLines
 
 
 class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
-    def run(self, edit: Any, **item: Any) -> None:
+    def run(self, edit: Any, item: Any, restore_lines_dict: dict) -> None:
         insert_text_format = item.get("insertTextFormat")
 
         text_edit = item.get('textEdit')
         if text_edit:
             # restore the lines
             # so we don't have to calculate the offset for the textEdit range
-            RestoreLines.restore_lines(edit, self.view)
+            restore_lines = RestoreLines.from_dict(restore_lines_dict)
+            restore_lines.restore_lines(edit, self.view)
 
             new_text = text_edit.get('newText')
 
@@ -175,19 +176,20 @@ class CompletionHandler(LSPViewEventListener):
             return
 
         # save lines to restore them later (only when selecting a completion item with a TextEdit)
-        RestoreLines.save_lines(locations, self.view)
+        restore_lines = RestoreLines()
+        restore_lines.save_lines(locations, self.view)
 
         self.manager.documents.purge_changes(self.view)
         document_position = text_document_position_params(self.view, locations[0])
         client.send_request(
             Request.complete(document_position),
-            lambda res: self.handle_response(res, completion_list),
+            lambda res: self.handle_response(res, completion_list, restore_lines),
             self.handle_error)
 
     def handle_response(self, response: Optional[Union[dict, List]],
-                        completion_list: sublime.CompletionList) -> None:
+                        completion_list: sublime.CompletionList, restore_lines: RestoreLines) -> None:
         response_items, response_incomplete = parse_completion_response(response)
-        items = list(format_completion(item) for item in response_items)
+        items = list(format_completion(item, restore_lines) for item in response_items)
 
         flags = 0
         if settings.only_show_lsp_completions:

@@ -1,4 +1,5 @@
 import sublime
+from .restore_lines import RestoreLines
 from .typing import Tuple, Optional, Dict, List, Union
 
 
@@ -31,7 +32,7 @@ completion_kinds = {
 }
 
 
-def format_completion(item: dict) -> sublime.CompletionItem:
+def format_completion(item: dict, restore_lines: RestoreLines) -> sublime.CompletionItem:
     trigger = item.get('label') or ""
     annotation = item.get('detail') or ""
     kind = sublime.KIND_AMBIGUOUS
@@ -50,7 +51,10 @@ def format_completion(item: dict) -> sublime.CompletionItem:
     return sublime.CompletionItem.command_completion(
         trigger,
         command="lsp_select_completion_item",
-        args=item,
+        args={
+            "item": item,
+            "restore_lines_dict": restore_lines.to_dict()
+        },
         annotation=annotation,
         kind=kind
     )

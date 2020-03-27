@@ -1,3 +1,5 @@
+from .configurations import ConfigManager
+from .configurations import WindowConfigManager
 from .diagnostics import DiagnosticsStorage
 from .edit import parse_workspace_edit
 from .logging import debug
@@ -6,11 +8,9 @@ from .rpc import Client
 from .sessions import Session
 from .types import ClientConfig
 from .types import ClientStates
-from .types import config_supports_syntax
-from .types import ConfigRegistry
-from .types import GlobalConfigs
 from .types import LanguageConfig
 from .types import Settings
+from .types import view2scope
 from .types import ViewLike
 from .types import WindowLike
 from .typing import Optional, List, Callable, Dict, Any, Protocol, Set
@@ -93,7 +93,7 @@ class DocumentHandlerFactory(object):
         self._settings = settings
 
     def for_window(self, window: WindowLike, workspace: ProjectFolders,
-                   configs: ConfigRegistry) -> DocumentHandler:
+                   configs: WindowConfigManager) -> DocumentHandler:
         return WindowDocumentHandler(self._sublime, self._settings, window, workspace, configs)
 
 
@@ -103,7 +103,7 @@ def nop() -> None:
 
 class WindowDocumentHandler(object):
     def __init__(self, sublime: Any, settings: Settings, window: WindowLike, workspace: ProjectFolders,
-                 configs: ConfigRegistry) -> None:
+                 configs: WindowConfigManager) -> None:
         self._sublime = sublime
         self._settings = settings
         self._configs = configs
@@ -133,13 +133,13 @@ class WindowDocumentHandler(object):
 
     def _get_applicable_sessions(self, view: ViewLike) -> List[Session]:
         sessions = []  # type: List[Session]
-        syntax = view.settings().get("syntax")
+        # ViewLike vs sublime.View
+        scope = view2scope(view)  # type: ignore
 
         for config_name, config_sessions in self._sessions.items():
             for session in config_sessions:
-                if config_supports_syntax(session.config, syntax):
-                    if session.handles_path(view.file_name()):
-                        sessions.append(session)
+                if session.config.supports(scope) and session.handles_path(view.file_name()):
+                    sessions.append(session)
 
         return sessions
 
@@ -149,8 +149,8 @@ class WindowDocumentHandler(object):
             if session.handles_path(file_name):
                 view = self._window.find_open_file(file_name)
                 if view:
-                    syntax = view.settings().get("syntax")
-                    if config_supports_syntax(session.config, syntax):
+                    # ViewLike vs sublime.View
+                    if session.config.supports(view2scope(view)):  # type: ignore
                         sessions = self._get_applicable_sessions(view)
                         self._attach_view(view, sessions)
                         for session in sessions:
@@ -158,10 +158,12 @@ class WindowDocumentHandler(object):
                                 self._notify_did_open(view, session)
 
     def _is_supported_view(self, view: ViewLike) -> bool:
-        return self._configs.syntax_supported(view)
+        # ViewLike vs sublime.View
+        return self._configs.syntax_supported(view)  # type: ignore
 
     def _config_languages(self, view: ViewLike) -> Dict[str, LanguageConfig]:
-        return self._configs.syntax_config_languages(view)
+        # ViewLike vs. sublime.View
+        return self._configs.syntax_config_languages(view)  # type: ignore
 
     def _attach_view(self, view: ViewLike, sessions: List[Session]) -> None:
         view.settings().set("show_definitions", False)
@@ -288,7 +290,7 @@ class WindowManager(object):
         window: WindowLike,
         workspace: ProjectFolders,
         settings: Settings,
-        configs: ConfigRegistry,
+        configs: WindowConfigManager,
         documents: DocumentHandler,
         diagnostics: DiagnosticsStorage,
         session_starter: Callable,
@@ -619,7 +621,7 @@ class WindowManager(object):
 
 
 class WindowRegistry(object):
-    def __init__(self, configs: GlobalConfigs, documents: Any,
+    def __init__(self, configs: ConfigManager, documents: Any,
                  session_starter: Callable, sublime: Any, handler_dispatcher: LanguageHandlerListener) -> None:
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs

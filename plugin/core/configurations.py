@@ -1,49 +1,9 @@
 import sublime
 from copy import deepcopy
 from .logging import debug
-from .types import ClientConfig, LanguageConfig, ViewLike, WindowLike, ConfigRegistry
-from .types import config_supports_syntax, syntax_language
-from .typing import Any, List, Dict, Tuple, Optional, Iterator
+from .types import ClientConfig, LanguageConfig, WindowLike, syntax2scope, view2scope
+from .typing import Any, List, Dict, Optional, Iterator
 from .workspace import get_project_config, enable_in_project, disable_in_project
-
-
-def get_scope_client_config(view: sublime.View, configs: List[ClientConfig],
-                            point: Optional[int] = None) -> Optional[ClientConfig]:
-    return next(get_scope_client_configs(view, configs, point), None)
-
-
-def get_scope_client_configs(view: sublime.View, configs: List[ClientConfig],
-                             point: Optional[int] = None) -> Iterator[ClientConfig]:
-    # When there are multiple server configurations, all of which are for
-    # similar scopes (e.g. 'source.json', 'source.json.sublime.settings') the
-    # configuration with the most specific scope (highest ranked selector)
-    # in the current position is preferred.
-    if point is None:
-        sel = view.sel()
-        if len(sel) > 0:
-            point = sel[0].begin()
-
-    languages = view.settings().get('lsp_language', None)
-    scope_configs = []  # type: List[Tuple[ClientConfig, Optional[int]]]
-
-    for config in configs:
-        if config.enabled:
-            if languages is None or config.name in languages:
-                for language in config.languages:
-                    for scope in language.scopes:
-                        score = 0
-                        if point is not None:
-                            score = view.score_selector(point, scope)
-                        if score > 0:
-                            scope_configs.append((config, score))
-                            # debug('scope {} score {}'.format(scope, score))
-
-    return (config_score[0] for config_score in sorted(
-        scope_configs, key=lambda config_score: config_score[1], reverse=True))
-
-
-def get_global_client_config(view: sublime.View, global_configs: List[ClientConfig]) -> Optional[ClientConfig]:
-    return get_scope_client_config(view, global_configs)
 
 
 def create_window_configs(window: WindowLike, global_configs: List[ClientConfig]) -> List[ClientConfig]:
@@ -62,7 +22,6 @@ def apply_project_overrides(client_config: ClientConfig, lsp_project_settings: d
             overrides.get("command", client_config.binary_args),
             overrides.get("tcp_port", client_config.tcp_port),
             [],
-            [],
             "",
             client_config.languages,
             overrides.get("enabled", client_config.enabled),
@@ -76,8 +35,9 @@ def apply_project_overrides(client_config: ClientConfig, lsp_project_settings: d
 
 
 def is_supported_syntax(syntax: str, configs: List[ClientConfig]) -> bool:
+    scope = syntax2scope(syntax)
     for config in configs:
-        if config_supports_syntax(config, syntax):
+        if config.supports(scope):
             return True
     return False
 
@@ -87,9 +47,9 @@ class ConfigManager(object):
 
     def __init__(self, global_configs: List[ClientConfig]) -> None:
         self._configs = global_configs
-        self._managers = {}  # type: Dict[int, ConfigRegistry]
+        self._managers = {}  # type: Dict[int, WindowConfigManager]
 
-    def for_window(self, window: WindowLike) -> ConfigRegistry:
+    def for_window(self, window: WindowLike) -> 'WindowConfigManager':
         window_configs = WindowConfigManager(window, self._configs)
         self._managers[window.id()] = window_configs
         return window_configs
@@ -111,26 +71,29 @@ class WindowConfigManager(object):
         return any(self.scope_configs(view))
 
     def scope_configs(self, view: Any, point: Optional[int] = None) -> Iterator[ClientConfig]:
-        return get_scope_client_configs(view, self.all, point)
+        scope = view.scope_name(point) if point is not None else view2scope(view)
+        for config in self.all:
+            if config.supports(scope):
+                yield config
 
     def syntax_configs(self, view: Any, include_disabled: bool = False) -> List[ClientConfig]:
-        syntax = view.settings().get("syntax")
-        return list(filter(lambda c: config_supports_syntax(c, syntax) and (c.enabled or include_disabled), self.all))
+        scope = view2scope(view)
+        return list(filter(lambda c: c.supports(scope) and (c.enabled or include_disabled), self.all))
 
-    def syntax_supported(self, view: ViewLike) -> bool:
-        syntax = view.settings().get("syntax")
-        for found in filter(lambda c: config_supports_syntax(c, syntax) and c.enabled, self.all):
+    def syntax_supported(self, view: sublime.View) -> bool:
+        scope = view2scope(view)
+        for found in filter(lambda c: c.supports(scope) and c.enabled, self.all):
             return True
         return False
 
-    def syntax_config_languages(self, view: ViewLike) -> Dict[str, LanguageConfig]:
-        syntax = view.settings().get("syntax")
+    def syntax_config_languages(self, view: sublime.View) -> Dict[str, LanguageConfig]:
+        scope = view2scope(view)
         config_languages = {}
         for config in self.all:
             if config.enabled:
-                language = syntax_language(config, syntax)
-                if language:
-                    config_languages[config.name] = language
+                for language in config.languages:
+                    if language.score(scope) > 0:
+                        config_languages[config.name] = language
         return config_languages
 
     def update(self) -> None:

@@ -124,10 +124,7 @@ def configs_for_scope(view: Any, point: Optional[int] = None) -> Iterable[Client
 
 def is_supported_view(view: sublime.View) -> bool:
     # TODO: perhaps make this check for a client instead of a config
-    if configs_for_scope(view):
-        return True
-    else:
-        return False
+    return bool(configs_for_scope(view))
 
 
 class LspTextCommand(sublime_plugin.TextCommand):

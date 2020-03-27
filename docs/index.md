@@ -45,8 +45,7 @@ Here is an example of the `LSP.sublime-settings` file with configurations for th
       "command": ["lsp-tsserver"],
       "enabled": true,
       "languageId": "typescript",
-      "scopes": ["source.ts", "source.tsx"],
-      "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"]
+      "scopes": ["source.ts", "source.tsx"]
     }
   }
 }
@@ -67,12 +66,10 @@ Some language servers support multiple languages, which can be specified in the 
       "enabled": true,
       "languages": [{
         "languageId": "javascript",
-        "scopes": ["source.js", "source.jsx"],
-        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"]
+        "scopes": ["source.js", "source.jsx"]
       }, {
         "languageId": "typescript",
-        "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"]
+        "scopes": ["source.ts", "source.tsx"]
       }]
     }
   }
@@ -86,10 +83,9 @@ Some language servers support multiple languages, which can be specified in the 
 | env | dict of environment variables to be injected into the language server's process (eg. PYTHONPATH) |
 | settings | per-project settings (equivalent to VS Code's Workspace Settings) |
 | initializationOptions | options to send to the server at startup (rarely used) |
-| scopes | add language flavours, eg. `source.js`, `source.jsx` |
-| syntaxes | syntaxes that enable LSP features on a document, eg. `Packages/Babel/JavaScript (Babel).tmLanguage` |
+| scopes | specifies which kind of files apply to which language server |
 | languageId | identifies the language for a document - see [LSP specifications](https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/#textDocumentItem) |
-| languages | group `scope`, `syntax` and `languageId` together for servers that support more than one language |
+| languages | group `scope` and `languageId` together for servers that support more than one language |
 | tcp_port | see instructions below |
 | tcp_host | see instructions below |
 | tcp_mode | see instructions below |
@@ -169,8 +165,7 @@ See the dedicated <a href="cplusplus"/>C/C++ guide</a> for using ccls, cquery or
   ],
   "enabled": true,
   "languageId": "csharp",
-  "scopes": ["source.cs"],
-  "syntaxes": ["Packages/C#/C#.sublime-syntax"]
+  "scopes": ["source.cs"]
 }
 ```
 
@@ -185,8 +180,7 @@ See the dedicated <a href="cplusplus"/>C/C++ guide</a> for using ccls, cquery or
   "enabled": true,
   "initializationOptions": {},
   "languageId": "clojure",
-  "scopes": ["source.clojure"],
-  "syntaxes": ["Packages/Clojure/Clojure.sublime-syntax"]
+  "scopes": ["source.clojure"]
 }
 ```
 
@@ -218,8 +212,7 @@ dub run dls:bootstrap
   "command": ["<PATH TO DLS EXECUTABLE>"],
   "enabled": true,
   "languageId": "d",
-  "scopes": ["source.d"],
-  "syntaxes": ["Packages/D/D.sublime-syntax"]
+  "scopes": ["source.d"]
 }
 ```
 
@@ -234,8 +227,7 @@ dub run dls:bootstrap
   "command": ["dart", "/usr/local/opt/dart/libexec/bin/snapshots/analysis_server.dart.snapshot", "--lsp"],
   "enabled": true,
   "languageId": "dart",
-  "scopes": ["source.dart"],
-  "syntaxes": ["Packages/Dart/Dart.tmLanguage"]
+  "scopes": ["source.dart"]
 }
 ```
 
@@ -253,8 +245,7 @@ dub run dls:bootstrap
   "command": ["/home/someUser/somePlace/elixir-ls/release/language_server.sh"],
   "enabled": true,
   "languageId": "elixir",
-  "scopes": ["source.elixir"],
-  "syntaxes": ["Packages/Elixir/Syntaxes/Elixir.tmLanguage"]
+  "scopes": ["source.elixir"]
 }
 ```
 
@@ -272,8 +263,7 @@ dub run dls:bootstrap
     "elmAnalyseTrigger": "change"
   },
   "languageId": "elm",
-  "scopes": ["source.elm"],
-  "syntaxes": ["Packages/Elm Syntax Highlighting/src/elm.sublime-syntax"]
+  "scopes": ["source.elm"]
 }
 ```
 
@@ -287,8 +277,7 @@ dub run dls:bootstrap
   "command"   : [ "/path/to/my/erlang_ls", "--transport", "stdio" ],
   "enabled"   : true,
   "languageId": "erlang",
-  "scopes"    : [ "source.erlang" ],
-  "syntaxes"  : ["Packages/Erlang/Erlang.sublime-syntax"]
+  "scopes"    : [ "source.erlang" ]
 }
 ```
 
@@ -331,10 +320,6 @@ pip install fortran-language-server
   "scopes": [
     "source.modern-fortran",
     "source.fixedform-fortran"
-  ],
-  "syntaxes": [
-    "Packages/Fortran/grammars/FortranModern.sublime-syntax",
-    "Packages/Fortran/grammars/FortranFixedForm.sublime-syntax"
   ]
 }
 ```
@@ -379,8 +364,7 @@ go get github.com/sourcegraph/go-langserver
   "enabled": true,
   "languageId": "haskell",
   "command": ["ghcide", "--lsp"],
-  "scopes": ["source.haskell"],
-  "syntaxes": ["Packages/Haskell/Haskell.sublime-syntax"]
+  "scopes": ["source.haskell"]
 }
 ```
 
@@ -418,8 +402,7 @@ go get github.com/sourcegraph/go-langserver
   ],
   "enabled": true,
   "languageId": "java",
-  "scopes": ["source.java"],
-  "syntaxes": ["Packages/Java/Java.sublime-syntax"]
+  "scopes": ["source.java"]
 }
 ```
 
@@ -432,7 +415,6 @@ Requires IntelliJ to be running.
   "command": [],
   "languageId": "java",
   "scopes": ["source.java"],
-  "syntaxes": ["Packages/Java/Java.sublime-syntax"],
   "tcp_port": 8080 // default port
 }
 ```
@@ -507,8 +489,7 @@ Pkg.add("SymbolServer")
         "typeparam": true     // Check for unused DataType parameters
       }
     }
-  },
-  "syntaxes": ["Packages/Julia/Julia.sublime-syntax"]
+  }
 }
 ```
 
@@ -531,8 +512,7 @@ Pkg.add("SymbolServer")
     "kotlin": {
       // put your server settings here
     }
-  },
-  "syntaxes": ["Packages/kotlin/Kotlin.tmLanguage"]
+  }
 }
 ```
 
@@ -547,12 +527,10 @@ Pkg.add("SymbolServer")
   "enabled": true,
   "languages": [{
     "languageId": "latex",
-    "scopes": ["text.tex.latex"],
-    "syntaxes": ["Packages/LaTeX/LaTeX.sublime-syntax"]
+    "scopes": ["text.tex.latex"]
   }, {
     "languageId": "bibtex",
-    "scopes": ["text.bibtex"],
-    "syntaxes": ["Packages/LaTeX/Bibtex.sublime-syntax"]
+    "scopes": ["text.bibtex"]
   }]
 }
 ```
@@ -571,8 +549,7 @@ Pkg.add("SymbolServer")
   "command": ["cl-lsp", "stdio"],
   "enabled": true,
   "languageId": "lisp",
-  "scopes": ["source.lisp"],
-  "syntaxes": ["Packages/Lisp/Lisp.sublime-syntax"]
+  "scopes": ["source.lisp"]
 }
 ```
 
@@ -589,8 +566,7 @@ Pkg.add("SymbolServer")
   ],
   "enabled": true,
   "languageId": "lua",
-  "scopes": ["source.lua"],
-  "syntaxes": ["Packages/Lua/Lua.sublime-syntax"]
+  "scopes": ["source.lua"]
 }
 ```
 
@@ -607,12 +583,7 @@ Alternatively you can use the less maintained [lua-lsp](https://github.com/Alloy
   "command": ["PATH/TO/reason-language-server.exe"],
   "enabled": true,
   "languageId": "reason",
-  "scopes": ["source.ocaml", "source.reason"],
-  "syntaxes": [
-    "Packages/Ocaml/OCaml.sublime-syntax",
-    "Packages/Reason/Reason.tmLanguage",
-    "Packages/sublime-reason/Reason.tmLanguage"
-  ]
+  "scopes": ["source.ocaml", "source.reason"]
 }
 ```
 
@@ -683,8 +654,7 @@ More info: [Polymer/polymer-editor-service](https://github.com/Polymer/polymer-e
   ],
   "enabled": true,
   "languageId": "powershell",
-  "scopes": ["source.powershell"],
-  "syntaxes": ["Packages/PowerShell/Support/PowershellSyntax.tmLanguage"]
+  "scopes": ["source.powershell"]
 }
 ```
 
@@ -800,8 +770,7 @@ Then the LSP plugin should launch as configured in `LSP.sublime-settings` using 
   "command": ["terraform-lsp"],
   "enabled": true,
   "languageId": "terraform",
-  "scopes": ["source.terraform"],
-  "syntaxes":  ["Packages/Terraform/Terraform.sublime-syntax"]
+  "scopes": ["source.terraform"]
 }
 ```
 
@@ -831,8 +800,7 @@ Be sure to install [Vue Syntax Highlight](https://packagecontrol.io/packages/Vue
   ],
   "enabled": true,
   "languageId": "xml",
-  "scopes": ["text.xml"],
-  "syntaxes": ["Packages/XML/XML.sublime-syntax"]
+  "scopes": ["text.xml"]
 }
 ```
 

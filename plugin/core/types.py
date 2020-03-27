@@ -1,4 +1,5 @@
-from .typing import Optional, List, Dict, Any, Iterator, Protocol
+from .typing import Optional, List, Dict, Any, Protocol
+import sublime
 
 
 class Settings(object):
@@ -39,10 +40,18 @@ class ClientStates(object):
 
 
 class LanguageConfig(object):
-    def __init__(self, language_id: str, scopes: List[str], syntaxes: List[str]) -> None:
+
+    __slots__ = ('id', 'scopes')
+
+    def __init__(self, language_id: str, scopes: List[str]) -> None:
         self.id = language_id
         self.scopes = scopes
-        self.syntaxes = syntaxes
+
+    def score(self, base_scope: str) -> int:
+        return sublime.score_selector(base_scope, "|".join(self.scopes))
+
+    def match(self, base_scope: str) -> bool:
+        return self.score(base_scope) > 0
 
 
 class ClientConfig(object):
@@ -51,7 +60,6 @@ class ClientConfig(object):
                  binary_args: List[str],
                  tcp_port: Optional[int],
                  scopes: List[str] = [],
-                 syntaxes: List[str] = [],
                  languageId: Optional[str] = None,
                  languages: List[LanguageConfig] = [],
                  enabled: bool = True,
@@ -66,24 +74,26 @@ class ClientConfig(object):
         self.tcp_host = tcp_host
         self.tcp_mode = tcp_mode
         if not languages:
-            languages = [LanguageConfig(languageId, scopes, syntaxes)] if languageId else []
+            languages = [LanguageConfig(languageId, scopes)] if languageId else []
         self.languages = languages
         self.enabled = enabled
         self.init_options = init_options
         self.settings = settings
         self.env = env
 
-
-def syntax_language(config: ClientConfig, syntax: str) -> Optional[LanguageConfig]:
-    for language in config.languages:
-        for lang_syntax in language.syntaxes:
-            if lang_syntax == syntax:
-                return language
-    return None
+    def supports(self, base_scope: str) -> bool:
+        for language in self.languages:
+            if language.match(base_scope):
+                return True
+        return False
 
 
-def config_supports_syntax(config: ClientConfig, syntax: str) -> bool:
-    return bool(syntax_language(config, syntax))
+def syntax2scope(syntax: str) -> str:
+    return next(filter(lambda d: d['path'] == syntax, sublime.list_syntaxes()))['scope']
+
+
+def view2scope(view: sublime.View) -> str:
+    return view.scope_name(0).strip().split()[0]
 
 
 class ViewLike(Protocol):
@@ -162,35 +172,4 @@ class WindowLike(Protocol):
         ...
 
     def run_command(self, command_name: str, command_args: Dict[str, Any]) -> None:
-        ...
-
-
-class ConfigRegistry(Protocol):
-    # todo: calls config_for_scope immediately.
-    all = []  # type: List[ClientConfig]
-
-    def is_supported(self, view: ViewLike) -> bool:
-        ...
-
-    def scope_configs(self, view: ViewLike, point: Optional[int] = None) -> Iterator[ClientConfig]:
-        ...
-
-    def syntax_configs(self, view: ViewLike, include_disabled: bool = False) -> List[ClientConfig]:
-        ...
-
-    def syntax_supported(self, view: ViewLike) -> bool:
-        ...
-
-    def syntax_config_languages(self, view: ViewLike) -> Dict[str, LanguageConfig]:
-        ...
-
-    def update(self) -> None:
-        ...
-
-    def disable_temporarily(self, config_name: str) -> None:
-        ...
-
-
-class GlobalConfigs(Protocol):
-    def for_window(self, window: WindowLike) -> ConfigRegistry:
         ...

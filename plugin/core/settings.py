@@ -162,8 +162,7 @@ def unload_settings() -> None:
 def read_language_config(config: dict) -> LanguageConfig:
     language_id = config.get("languageId", "")
     scopes = config.get("scopes", [])
-    syntaxes = config.get("syntaxes", [])
-    return LanguageConfig(language_id, scopes, syntaxes)
+    return LanguageConfig(language_id, scopes)
 
 
 def read_language_configs(client_config: dict) -> List[LanguageConfig]:
@@ -178,7 +177,6 @@ def read_client_config(name: str, client_config: Dict) -> ClientConfig:
         client_config.get("command", []),
         client_config.get("tcp_port", None),
         client_config.get("scopes", []),
-        client_config.get("syntaxes", []),
         client_config.get("languageId", ""),
         languages,
         client_config.get("enabled", False),
@@ -197,7 +195,6 @@ def update_client_config(config: ClientConfig, settings: dict) -> ClientConfig:
         settings.get("command", config.binary_args),
         settings.get("tcp_port", config.tcp_port),
         settings.get("scopes", default_language.scopes),
-        settings.get("syntaxes", default_language.syntaxes),
         settings.get("languageId", default_language.id),
         read_language_configs(settings) or config.languages,
         settings.get("enabled", config.enabled),

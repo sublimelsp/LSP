@@ -127,7 +127,7 @@ class LspHoverCommand(LspTextCommand):
             actions.append("<a href='{}'>{}</a>".format('references', 'References'))
         if self.has_client_with_capability('renameProvider'):
             actions.append("<a href='{}'>{}</a>".format('rename', 'Rename'))
-        return "<p>" + " | ".join(actions) + "</p>"
+        return "<p class='actions'>" + " | ".join(actions) + "</p>"
 
     def format_diagnostic_related_info(self, info: DiagnosticRelatedInformation) -> str:
         file_path = info.location.file_path

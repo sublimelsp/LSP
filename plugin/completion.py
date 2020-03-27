@@ -31,28 +31,27 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
             range = Range.from_lsp(text_edit['range'])
             edit_region = range_to_region(range, self.view)
 
-            # diff will be used to see what text has been inserted to the first selection
-            # and apply the new text to other selections
-            diff_region = sublime.Region(-1, -1)
-            diff_region.a = self.view.sel()[0].begin()
+            # calculate offset by comparing cursor position with edit_region.begin.
+            # by applying the offset to all selections
+            # the TextEdit becomes valid for all selections 
+            cursor = self.view.sel()[0].begin()  # type: int
 
-            self.view.erase(edit, edit_region)
+            offset_start = cursor - edit_region.begin()
+            offset_length = edit_region.end() - edit_region.begin()
+
+            # erease regions from bottom to top
+            for sel in reversed(self.view.sel()):
+                begin = sel.begin() - offset_start
+                end = begin + offset_length
+                r = sublime.Region(begin, end)
+                self.view.erase(edit, r)
+
             if insert_text_format == InsertTextFormat.Snippet:
                 self.view.run_command("insert_snippet", {"contents": new_text})
             else:
-                self.view.insert(edit, edit_region.begin(), new_text)
-
-                diff_region.b = self.view.sel()[0].begin()
-                diff_text = self.view.substr(diff_region)
-
-                # we already inserted text to the first selection,
-                # we ignore the first selection
-                # and apply the diff text to other selections
-                _first_selection, *other_selections = self.view.sel()
-                other_selections.reverse()  # apply the edits from bottom to top
-                for sel in other_selections:
-                    self.view.insert(edit, sel.end(), diff_text)
-
+                # insert text from bottom to top
+                for sel in reversed(self.view.sel()):
+                    self.view.insert(edit, sel.begin(), new_text)
         else:
             completion = item.get('insertText') or item.get('label') or ""
             if insert_text_format == InsertTextFormat.Snippet:

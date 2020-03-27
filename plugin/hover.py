@@ -196,7 +196,7 @@ class LspHoverCommand(LspTextCommand):
                 formatted.append(value)
 
         if formatted:
-            frontmatter_config = "---\nallow_code_wrap: true\n---\n"
+            frontmatter_config = mdpopups.format_frontmatter({'allow_code_wrap': True})
             return mdpopups.md2html(self.view, frontmatter_config + "\n".join(formatted))
 
         return ""

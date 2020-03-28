@@ -66,11 +66,16 @@ class PreformattedPayloadLogger:
             return
         # Do not log the payloads if any of these conditions occur because the payloads might contain the entire
         # content of the view.
-        log_payload = self.settings.log_payloads \
-            and method != "textDocument/didChange" \
-            and method != "textDocument/didOpen"
-        if log_payload and method == "textDocument/didSave" and isinstance(params, dict) and "text" in params:
+        log_payload = self.settings.log_payloads
+        if method.endswith("didOpen"):
             log_payload = False
+        elif method.endswith("didChange"):
+            content_changes = params.get("contentChanges")
+            if content_changes and "range" not in content_changes[0]:
+                log_payload = False
+        elif method.endswith("didSave"):
+            if isinstance(params, dict) and "text" in params:
+                log_payload = False
         self.log(self.format_notification(" ->", method), params, log_payload)
 
     def incoming_response(self, request_id: int, params: Any) -> None:

@@ -56,16 +56,18 @@ class WindowDocumentHandlerTests(unittest.TestCase):
 
         # change 1
         view._text = "asdf jklm"
-        handler.handle_did_change(view)
-        changes = handler._pending_buffer_changes[view.buffer_id()]
-        self.assertEqual(changes, dict(view=view, version=1))
+        handler.handle_did_change(view, [])
+        pending_buffer = handler._pending_buffer_changes[view.buffer_id()]
+        self.assertEqual(pending_buffer.view.id(), view.id())
+        self.assertEqual(pending_buffer.version, 1)
         self.assertEqual(len(client._notifications), 1)
 
         # change 2
         view._text = "asdf jklm qwer"
-        handler.handle_did_change(view)
-        changes = handler._pending_buffer_changes[view.buffer_id()]
-        self.assertEqual(changes, dict(view=view, version=2))
+        handler.handle_did_change(view, [])
+        pending_buffer = handler._pending_buffer_changes[view.buffer_id()]
+        self.assertEqual(pending_buffer.view.id(), view.id())
+        self.assertEqual(pending_buffer.version, 2)
         self.assertEqual(len(client._notifications), 1)
 
         # purge
@@ -74,8 +76,6 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         did_change = client._notifications[1]
         document = did_change.params.get("textDocument")
         self.assertEqual(document.get("version"), 3)  # increments when calling change_count() on the MockView
-        purged_changes = did_change.params["contentChanges"]
-        self.assertEqual(purged_changes[0].get("text"), view._text)
 
         # did save
         handler.handle_did_save(view)
@@ -133,5 +133,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         status_string = view._status.get("lsp_clients")
         if status_string:
             status_configs = status_string.split(", ")
+            self.assertIn("test", status_configs)
+            self.assertIn("test2", status_configs)
             self.assertIn("test", status_configs)
             self.assertIn("test2", status_configs)

@@ -1,7 +1,7 @@
 import sublime
 import linecache
 from .protocol import Point, Range, Notification, Request
-from .typing import Optional, Dict, Any
+from .typing import Optional, Dict, Any, Iterable, List
 from .url import filename_to_uri
 
 
@@ -91,11 +91,28 @@ def did_open_text_document_params(view: sublime.View, language_id: str) -> Dict[
     return {"textDocument": text_document_item(view, language_id)}
 
 
-def did_change_text_document_params(view: sublime.View) -> Dict[str, Any]:
+def render_text_change(change: sublime.TextChange) -> Dict[str, Any]:
+    # Note: cannot use protocol.Range because these are "historic" points.
     return {
-        "textDocument": versioned_text_document_identifier(view),
-        "contentChanges": [{"text": entire_content(view)}]
+        "range": {
+            "start": {"line": change.a.row, "character": change.a.col_utf16},
+            "end":   {"line": change.b.row, "character": change.b.col_utf16}},
+        "text": change.str
     }
+
+
+def did_change_text_document_params(view: sublime.View,
+                                    changes: Optional[Iterable[sublime.TextChange]] = None) -> Dict[str, Any]:
+    content_changes = []  # type: List[Dict[str, Any]]
+    result = {"textDocument": versioned_text_document_identifier(view), "contentChanges": content_changes}
+    if changes is None:
+        # TextDocumentSyncKindFull
+        content_changes.append({"text": entire_content(view)})
+    else:
+        # TextDocumentSyncKindIncremental
+        for change in changes:
+            content_changes.append(render_text_change(change))
+    return result
 
 
 def will_save_text_document_params(view: sublime.View, reason: int) -> Dict[str, Any]:
@@ -117,8 +134,8 @@ def did_open(view: sublime.View, language_id: str) -> Notification:
     return Notification.didOpen(did_open_text_document_params(view, language_id))
 
 
-def did_change(view: sublime.View) -> Notification:
-    return Notification.didChange(did_change_text_document_params(view))
+def did_change(view: sublime.View, changes: Optional[Iterable[sublime.TextChange]] = None) -> Notification:
+    return Notification.didChange(did_change_text_document_params(view, changes))
 
 
 def will_save(view: sublime.View, reason: int) -> Notification:

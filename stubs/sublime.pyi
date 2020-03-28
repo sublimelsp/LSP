@@ -836,3 +836,17 @@ class PhantomSet:
 
     def update(self, new_phantoms: Sequence[Phantom]) -> None:
         ...
+
+
+class HistoricPosition:
+    pt = ...  # type: int
+    row = ...  # type: int
+    col = ...  # type: int
+    col_utf16 = ...  # type: int
+    col_utf8 = ...  # type: int
+
+
+class TextChange:
+    a = ...  # type: HistoricPosition
+    b = ...  # type: HistoricPosition
+    str = ...  # type: str

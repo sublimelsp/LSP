@@ -1,7 +1,7 @@
 from LSP.plugin.completion import CompletionHandler
 from LSP.plugin.completion import CompletionState
 from LSP.plugin.core.registry import is_supported_view
-from setup import CI, SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove_config, text_config
+from setup import CI, TextDocumentTestCase, add_config, remove_config, text_config
 from unittesting import DeferrableTestCase
 import sublime
 
@@ -129,7 +129,7 @@ class InitializationTests(DeferrableTestCase):
         self.assertFalse(CompletionHandler.is_applicable(dict()))
 
     def test_is_applicable(self) -> None:
-        self.assertTrue(CompletionHandler.is_applicable(dict(syntax=SUPPORTED_SYNTAX)))
+        self.assertTrue(CompletionHandler.is_applicable(dict(syntax="Packages/Text/Plain text.tmLanguage")))
 
     def test_not_enabled(self) -> 'Generator':
         self.assertTrue(is_supported_view(self.view))

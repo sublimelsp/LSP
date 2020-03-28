@@ -21,8 +21,7 @@ workspace_folders = [WorkspaceFolder.from_path(project_path)]
 TIMEOUT_TIME = 10000 if CI else 2000
 PERIOD_TIME = 100 if CI else 1
 SUPPORTED_SCOPE = "text.plain"
-SUPPORTED_SYNTAX = "Packages/Text/Plain text.tmLanguage"
-text_language = LanguageConfig("text", [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX])
+text_language = LanguageConfig("text", [SUPPORTED_SCOPE])
 text_config = ClientConfig("textls", [], None, languages=[text_language])
 
 try:
@@ -52,10 +51,7 @@ def make_stdio_test_config() -> ClientConfig:
         name="TEST",
         binary_args=["python3", join("$packages", "LSP", "tests", "server.py")],
         tcp_port=None,
-        languages=[LanguageConfig(
-            language_id="txt",
-            scopes=[SUPPORTED_SCOPE],
-            syntaxes=[SUPPORTED_SYNTAX])],
+        languages=[LanguageConfig(language_id="txt", scopes=[SUPPORTED_SCOPE])],
         enabled=True)
 
 

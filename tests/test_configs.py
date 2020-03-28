@@ -24,11 +24,8 @@ class ConfigParsingTests(DeferrableTestCase):
     def test_can_parse_client_settings_with_languages(self):
         settings = {
             "command": ["pyls"],
-            "languages": [{
-                "scopes": ["source.python"],
-                "syntaxes": ["Packages/Python/Python.sublime-syntax"],
-                "languageId": "python"
-            }]
+            # Check that "scopes" will be "source.python"
+            "languages": [{"languageId": "python"}]
         }
         config = read_client_config("pyls", settings)
         self.assertEqual(len(config.languages), 1)

@@ -16,6 +16,7 @@ Visit [Langserver.org](https://langserver.org/) or the [list of language server 
 For a few languages you can also find dedicated packages on Package Control, which can optionally be installed to simplify the configuration and installation process of a language server and might provide additional features such as automatic updates for the server:
 
 * [LSP-css](https://packagecontrol.io/packages/LSP-css)
+* [LSP-eslint](https://packagecontrol.io/packages/LSP-eslint)
 * [LSP-html](https://packagecontrol.io/packages/LSP-html)
 * [LSP-intelephense](https://packagecontrol.io/packages/LSP-intelephense)
 * [LSP-json](https://packagecontrol.io/packages/LSP-json)
@@ -745,6 +746,10 @@ install.packages("languageserver")
 
 ### Ruby/Ruby on Rails<a name="ruby"></a>
 
+Different servers are available for Ruby:
+
+Solargraph:
+
 1\. Install the solargraph gem (see [github:castwide/solargraph](https://github.com/castwide/solargraph) for up-to-date installation instructions):
 
 ```sh
@@ -752,6 +757,20 @@ gem install solargraph
 ```
 
 2\. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `ruby`.
+
+Sorbet:
+
+1\. Install the sorbet and sorbet-runtime gem (see [github:sorbet/sorbet](https://github.com/sorbet/sorbet)):
+```sh
+gem install sorbet
+gem install sorbet-runtime
+```
+If you have a Gemfile, using bundler, add sorbet and sorbet-runtime to your Gemfile and run:
+```
+bundle install
+```
+
+2\. Run "LSP:Enable Language Server Globally" from the Command Palette and choose `sorbet`.
 
 ### Rust<a name="rust"></a>
 

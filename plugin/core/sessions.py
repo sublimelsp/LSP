@@ -14,6 +14,9 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
     first_folder = workspace_folders[0] if workspace_folders else None
     initializeParams = {
         "processId": os.getpid(),
+        "clientInfo": {
+            "name": "Sublime Text LSP",
+        },
         "rootUri": first_folder.uri() if first_folder else None,
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,

@@ -356,16 +356,8 @@
         "syntaxes": ["Packages/PHP/PHP.sublime-syntax"],
         "languageId": "php"
     },
-    "eslint":
-    {
-      "command": ["node", "/Users/tomv/Projects/tomv564/vscode-eslint/eslint-server/src/server"],
-      "scopes": ["source.js"],
-      "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
-      "languageId": "javascript",
-      "initializationOptions": {
-        "nodePath": "/usr/local/bin/node"
-      }
-    },
+    //"eslint": { },
+    // Install the LSP-eslint package, which comes with its own settings file
     "lsp-tsserver":
     {
       "command": ["lsp-tsserver"],
@@ -521,6 +513,20 @@
       // "initializationOptions": {
       //   "diagnostics": true
       // },
+    },
+    "sorbet": {
+      "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman"],
+      "languageId": "ruby",
+      "scopes": 
+      [
+        "source.ruby",
+        "source.ruby.rails"
+      ],
+      "syntaxes": [
+        "Packages/Ruby/Ruby.sublime-syntax",
+        "Packages/Rails/Ruby on Rails.sublime-syntax",
+        "Packages/Rails/HTML (Rails).sublime-syntax"
+      ]
     },
     "vscode-css":
     {

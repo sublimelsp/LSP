@@ -417,7 +417,8 @@
         "solargraph",
         "socket"
       ],
-      "languageId": "ruby", // will match source.ruby
+      "languageId": "ruby",
+      "scopes": ["source.ruby", "text.html.ruby"],
       "tcp_port": 7658,
       // Enable RuboCop linting
       // "initializationOptions": {
@@ -426,7 +427,8 @@
     },
     "sorbet": {
       "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman"],
-      "languageId": "ruby" // will match source.ruby
+      "languageId": "ruby",
+      "scopes": ["source.ruby", "text.html.ruby"]
     },
     "vscode-css":
     {

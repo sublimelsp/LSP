@@ -191,7 +191,7 @@ class CompletionHandler(LSPViewEventListener):
         client.send_request(
             Request.complete(document_position),
             lambda res: self.handle_response(res, completion_list, restore_lines),
-            self.handle_error)
+            lambda res: self.handle_error(res, completion_list))
 
     def handle_response(self, response: Optional[Union[dict, List]],
                         completion_list: sublime.CompletionList, restore_lines: RestoreLines) -> None:
@@ -207,5 +207,6 @@ class CompletionHandler(LSPViewEventListener):
             flags |= sublime.DYNAMIC_COMPLETIONS
         completion_list.set_completions(items, flags)
 
-    def handle_error(self, error: dict) -> None:
+    def handle_error(self, error: dict, completion_list: sublime.CompletionList) -> None:
+        completion_list.set_completions([])
         sublime.status_message('Completion error: ' + str(error.get('message')))

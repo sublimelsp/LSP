@@ -2,7 +2,7 @@ import sublime
 from copy import deepcopy
 from .logging import debug
 from .types import ClientConfig, LanguageConfig, WindowLike, syntax2scope, view2scope
-from .typing import Any, List, Dict, Optional, Iterator
+from .typing import Any, List, Dict, Optional, Iterator, Iterable
 from .workspace import get_project_config, enable_in_project, disable_in_project
 
 
@@ -34,11 +34,14 @@ def apply_project_overrides(client_config: ClientConfig, lsp_project_settings: d
     return client_config
 
 
-def is_supported_syntax(syntax: str, configs: List[ClientConfig]) -> bool:
-    scope = syntax2scope(syntax)
-    for config in configs:
-        if config.supports(scope):
-            return True
+def is_supported_syntax(syntax: str, configs: Iterable[ClientConfig]) -> bool:
+    try:
+        scope = syntax2scope(syntax)
+        for config in configs:
+            if config.supports(scope):
+                return True
+    except StopIteration:
+        debug(syntax, "is not in sublime.list_syntaxes()")
     return False
 
 
@@ -71,7 +74,7 @@ class WindowConfigManager(object):
         return any(self.scope_configs(view))
 
     def scope_configs(self, view: Any, point: Optional[int] = None) -> Iterator[ClientConfig]:
-        scope = view.scope_name(point) if point is not None else view2scope(view)
+        scope = view2scope(view, point)
         for config in self.all:
             if config.supports(scope):
                 yield config

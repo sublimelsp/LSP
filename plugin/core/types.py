@@ -1,3 +1,4 @@
+from .logging import debug
 from .typing import Optional, List, Dict, Any, Protocol
 import sublime
 
@@ -47,11 +48,18 @@ class LanguageConfig(object):
         self.id = language_id
         self.scopes = scopes
 
+    def selector(self) -> str:
+        return "|".join(['({})'.format(scope) for scope in self.scopes])
+
     def score(self, base_scope: str) -> int:
-        return sublime.score_selector(base_scope, "|".join(self.scopes))
+        return sublime.score_selector(base_scope, self.selector())
 
     def match(self, base_scope: str) -> bool:
-        return self.score(base_scope) > 0
+        # Every part of a x.y.z scope seems to contribute 8.
+        # An empty selector result in a score of 1.
+        # A non-matching non-empty selector results in a score of 0.
+        # We want to match at least one part of an x.y.z, and we don't want to match on empty selectors.
+        return self.score(base_scope) >= 8
 
 
 class ClientConfig(object):
@@ -74,7 +82,8 @@ class ClientConfig(object):
         self.tcp_host = tcp_host
         self.tcp_mode = tcp_mode
         if not languages:
-            languages = [LanguageConfig(languageId, scopes)] if languageId else []
+            languages = [LanguageConfig(
+                languageId, scopes)] if languageId else []
         self.languages = languages
         self.enabled = enabled
         self.init_options = init_options
@@ -92,8 +101,8 @@ def syntax2scope(syntax: str) -> str:
     return next(filter(lambda d: d['path'] == syntax, sublime.list_syntaxes()))['scope']
 
 
-def view2scope(view: sublime.View) -> str:
-    return view.scope_name(0).strip().split()[0]
+def view2scope(view: sublime.View, point: Optional[int] = None) -> str:
+    return view.scope_name(0 if point is None else point).strip().split()[0]
 
 
 class ViewLike(Protocol):

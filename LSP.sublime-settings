@@ -403,8 +403,7 @@
     {
       "command": ["polymer-editor-service"],
       "languages": [{
-          // Don't match on Vue files (use the LSP-vue package for Vue files).
-          "scopes": ["text.html - text.html.vue", "text.html.basic", "source.html - source.html.vue"],
+          "scopes": ["text.html.basic", "source.html"],
           "languageId": "html"
         },{
           "scopes": ["source.js"],

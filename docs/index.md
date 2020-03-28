@@ -206,7 +206,7 @@ dub run dls:bootstrap
 
 2\. Add to LSP settings' clients:
 
-```json
+```js
 "dls": {
   "command": ["<PATH TO DLS EXECUTABLE>"],
   "enabled": true,
@@ -220,7 +220,7 @@ dub run dls:bootstrap
 2. Install the [Dart SDK](https://dart.dev/get-dart) and locate path to `analysis_server.dart.snapshot` in the "snapshots/bin" directory.
 3. Add to LSP settings' clients (adjust the path if necessary):
 
-```json
+```js
 "dart": {
   "command": ["dart", "/usr/local/opt/dart/libexec/bin/snapshots/analysis_server.dart.snapshot", "--lsp"],
   "enabled": true,
@@ -533,7 +533,7 @@ Pkg.add("SymbolServer")
 1. Install [cc-lsp](https://github.com/cxxxr/cl-lsp) using Roswell.
 2. Add to LSP settings' clients:
 
-```json
+```js
 "cc-lsp": {
   "command": ["cl-lsp", "stdio"],
   "enabled": true,
@@ -546,7 +546,7 @@ Pkg.add("SymbolServer")
 1. Download the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=sumneko.lua).
 2. Add to LSP settings' clients:
 
-```json
+```js
 "lua-ls": {
   "command": [
     "PATH/TO/sumneko.lua-#.#.#/extension/server/bin/lua-language-server",
@@ -751,7 +751,7 @@ Then the LSP plugin should launch as configured in `LSP.sublime-settings` using 
 1. Download [terraform-lsp](https://github.com/juliosueiras/terraform-lsp/releases) binary and make it available in your PATH.
 2. Add to LSP settings' clients:
 
-```json
+```js
 "terraform": {
   "command": ["terraform-lsp"],
   "enabled": true,

@@ -69,7 +69,7 @@ class ClientConfig(object):
                  name: str,
                  binary_args: List[str],
                  tcp_port: Optional[int],
-                 scopes: List[str] = [],
+                 scopes: Optional[List[str]] = None,
                  languageId: Optional[str] = None,
                  languages: List[LanguageConfig] = [],
                  enabled: bool = True,
@@ -84,8 +84,7 @@ class ClientConfig(object):
         self.tcp_host = tcp_host
         self.tcp_mode = tcp_mode
         if not languages:
-            languages = [LanguageConfig(
-                languageId, scopes)] if languageId else []
+            languages = [LanguageConfig(languageId, scopes)] if languageId else []
         self.languages = languages
         self.enabled = enabled
         self.init_options = init_options

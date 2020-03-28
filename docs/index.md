@@ -179,8 +179,7 @@ See the dedicated <a href="cplusplus"/>C/C++ guide</a> for using ccls, cquery or
   "command": ["java", "-jar", "/PATH/TO/clojure-lsp"],
   "enabled": true,
   "initializationOptions": {},
-  "languageId": "clojure",
-  "scopes": ["source.clojure"]
+  "languageId": "clojure" // will match source.clojure
 }
 ```
 
@@ -211,8 +210,7 @@ dub run dls:bootstrap
 "dls": {
   "command": ["<PATH TO DLS EXECUTABLE>"],
   "enabled": true,
-  "languageId": "d",
-  "scopes": ["source.d"]
+  "languageId": "d" // will match source.d
 }
 ```
 
@@ -226,8 +224,7 @@ dub run dls:bootstrap
 "dart": {
   "command": ["dart", "/usr/local/opt/dart/libexec/bin/snapshots/analysis_server.dart.snapshot", "--lsp"],
   "enabled": true,
-  "languageId": "dart",
-  "scopes": ["source.dart"]
+  "languageId": "dart" // will match source.dart
 }
 ```
 
@@ -240,12 +237,11 @@ dub run dls:bootstrap
    This will get you a folder containing `language_server.sh` among other things.
 3. Add to LSP settings' clients (adjust the path if necessary):
 
-```json
+```js
 "elixir-ls": {
   "command": ["/home/someUser/somePlace/elixir-ls/release/language_server.sh"],
   "enabled": true,
-  "languageId": "elixir",
-  "scopes": ["source.elixir"]
+  "languageId": "elixir" // will match source.elixir
 }
 ```
 
@@ -255,15 +251,14 @@ dub run dls:bootstrap
 2. See instructions for installing the [elm-language-server](https://github.com/elm-tooling/elm-language-server).
 3. Add to LSP settings' clients:
 
-```json
+```js
 "elm": {
   "command": ["elm-language-server", "--stdio"],
   "enabled": true,
   "initializationOptions": {
     "elmAnalyseTrigger": "change"
   },
-  "languageId": "elm",
-  "scopes": ["source.elm"]
+  "languageId": "elm" // will match source.elm
 }
 ```
 
@@ -272,12 +267,11 @@ dub run dls:bootstrap
 1. See instructions for installing the [Erlang Language Server](https://github.com/erlang-ls/erlang_ls).
 2. Add to LSP settings' clients:
 
-```json
+```js
 "erlang-ls": {
   "command"   : [ "/path/to/my/erlang_ls", "--transport", "stdio" ],
   "enabled"   : true,
-  "languageId": "erlang",
-  "scopes"    : [ "source.erlang" ]
+  "languageId": "erlang" // will match source.erlang
 }
 ```
 
@@ -362,9 +356,8 @@ go get github.com/sourcegraph/go-langserver
 ```js
 "ghcide": {
   "enabled": true,
-  "languageId": "haskell",
-  "command": ["ghcide", "--lsp"],
-  "scopes": ["source.haskell"]
+  "languageId": "haskell", // will match source.haskell
+  "command": ["ghcide", "--lsp"]
 }
 ```
 
@@ -401,8 +394,7 @@ go get github.com/sourcegraph/go-langserver
     "<TEMP_DIR>/${project_base_name}/jdt_ws"
   ],
   "enabled": true,
-  "languageId": "java",
-  "scopes": ["source.java"]
+  "languageId": "java" // will match source.java
 }
 ```
 
@@ -413,8 +405,7 @@ Requires IntelliJ to be running.
 ```js
 "intellij": {
   "command": [],
-  "languageId": "java",
-  "scopes": ["source.java"],
+  "languageId": "java", // will match source.java
   "tcp_port": 8080 // default port
 }
 ```
@@ -458,8 +449,7 @@ Pkg.add("SymbolServer")
 "julials": {
   "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
   // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using LanguageServer; using LanguageServer.SymbolServer; server=LanguageServer.LanguageServerInstance(stdin,stdout,false); run(server)"], // on Windows
-  "languageId": "julia",
-  "scopes": ["source.julia"],
+  "languageId": "julia", // will match source.julia
   "settings": {
     // Default values from VS Code:
     "julia": {
@@ -506,8 +496,7 @@ Pkg.add("SymbolServer")
 "kotlinls": {
   "command": ["PATH/TO/KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat"],
   "enabled": true,
-  "languageId": "kotlin",
-  "scopes": ["source.Kotlin"],
+  "languageId": "kotlin", // will match source.kotlin
   "settings": {
     "kotlin": {
       // put your server settings here
@@ -548,8 +537,7 @@ Pkg.add("SymbolServer")
 "cc-lsp": {
   "command": ["cl-lsp", "stdio"],
   "enabled": true,
-  "languageId": "lisp",
-  "scopes": ["source.lisp"]
+  "languageId": "lisp" // will match source.lisp
 }
 ```
 
@@ -565,8 +553,7 @@ Pkg.add("SymbolServer")
     "-E", "PATH/TO/sumneko.lua-#.#.#/extension/server/main.lua"
   ],
   "enabled": true,
-  "languageId": "lua",
-  "scopes": ["source.lua"]
+  "languageId": "lua" // will match source.lua
 }
 ```
 
@@ -653,8 +640,7 @@ More info: [Polymer/polymer-editor-service](https://github.com/Polymer/polymer-e
     "-Stdio"
   ],
   "enabled": true,
-  "languageId": "powershell",
-  "scopes": ["source.powershell"]
+  "languageId": "powershell" // will match source.powershell
 }
 ```
 
@@ -769,8 +755,7 @@ Then the LSP plugin should launch as configured in `LSP.sublime-settings` using 
 "terraform": {
   "command": ["terraform-lsp"],
   "enabled": true,
-  "languageId": "terraform",
-  "scopes": ["source.terraform"]
+  "languageId": "terraform" // will match source.terraform
 }
 ```
 

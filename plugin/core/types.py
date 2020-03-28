@@ -42,17 +42,19 @@ class ClientStates(object):
 
 class LanguageConfig(object):
 
-    __slots__ = ('id', 'scopes')
+    __slots__ = ('id', 'scopes', '_selector')
 
-    def __init__(self, language_id: str, scopes: List[str]) -> None:
+    def __init__(self, language_id: str, scopes: Optional[List[str]] = None) -> None:
         self.id = language_id
-        self.scopes = scopes
-
-    def selector(self) -> str:
-        return "|".join(['({})'.format(scope) for scope in self.scopes])
+        if isinstance(scopes, list):
+            self.scopes = scopes
+            self._selector = "|".join(['({})'.format(scope) for scope in scopes])
+        else:
+            self.scopes = ["source.{}".format(self.id)]
+            self._selector = self.scopes[0]
 
     def score(self, base_scope: str) -> int:
-        return sublime.score_selector(base_scope, self.selector())
+        return sublime.score_selector(base_scope, self._selector)
 
     def match(self, base_scope: str) -> bool:
         # Every part of a x.y.z scope seems to contribute 8.

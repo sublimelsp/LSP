@@ -117,9 +117,19 @@
   //     // This is _the_ connection between your files and language servers. It's a list of scopes that are matched
   //     // against the current view's base scope. If one of the scopes in the list match with the base scope of the
   //     // the file, the associated language server is started.
+  //     // If the scope happens to be of the form "source.{languageId}" (which it is in many cases), then you can
+  //     // omit this "scopes" key altogether, and LSP will assume the scope is "source.{languageId}".
   //     "scopes": ["source.python"],
   //
-  //     // See: https://github.com/Microsoft/language-server-protocol/issues/213
+  //     // See: https://microsoft.github.io/language-server-protocol/specification#textDocumentItem
+  //     //
+  //     // This key servers two purposes:
+  //     // 1. It is sent to the language server so that it knows with what kind of file it is dealing with.
+  //     // 2. When "scopes" is not provided (see above), this is _the_ connection between your files and language
+  //     //    servers.
+  //     //
+  //     // In this particular example, we don't have to supply a "scopes" key, because the scope for a Python file
+  //     // is "source.python" (see above).
   //     "languageId": "python",
   //
   //     # TCP mode (off unless tcp_mode or tcp_port are set)
@@ -158,8 +168,7 @@
     "pyls":
     {
       "command": ["pyls"],
-      "scopes": ["source.python"],
-      "languageId": "python"
+      "languageId": "python" // will match source.python
       // "settings": {
       //   "pyls": {
       //       "configurationSources": ["flake8"],
@@ -174,14 +183,12 @@
     "rls":
     {
       "command": ["rustup", "run", "nightly", "rls"],
-      "scopes": ["source.rust"],
-      "languageId": "rust"
+      "languageId": "rust" // will match source.rust
     },
      "rust-analyzer":
     {
       "command": ["rust-analyzer"],
-      "scopes": ["source.rust"],
-      "languageId": "rust"
+      "languageId": "rust" // will match source.rust
     },
     "bashls":
     {
@@ -200,8 +207,7 @@
     {
       "command": ["clangd"],
       "languages": [{
-          "scopes": ["source.c"],
-          "languageId": "c"
+          "languageId": "c" // will match source.c
         },{
           "scopes": ["source.c++"],
           "languageId": "cpp"
@@ -228,8 +234,7 @@
       "languages":
       [
         {
-          "languageId": "c",
-          "scopes":["source.c"]
+          "languageId": "c" // will match source.c
         },
         {
           "languageId": "cpp",
@@ -250,25 +255,20 @@
         // Specify a dart command like the below in your LSP User settings.
         // "dart", "/usr/local/opt/dart/libexec/bin/snapshots/analysis_server.dart.snapshot", "--lsp"
       ],
-      "languageId": "dart",
-      "scopes": [
-        "source.dart"
-      ]
+      "languageId": "dart" // will match source.dart
     },
     "elixir-ls": {
       "command": [
         // Specify path to language_server.sh from https://github.com/elixir-lsp/elixir-ls here
         // "/home/someUser/somePlace/elixir-ls/release/language_server.sh"
       ],
-      "languageId": "elixir",
-      "scopes": ["source.elixir"],
+      "languageId": "elixir", // will match source.elixir
       "settings": {
       }
     },
     "erlang-ls": {
       "command"   : [ "erlang_ls", "--transport", "stdio" ],
-      "languageId": "erlang",
-      "scopes"    : [ "source.erlang" ]
+      "languageId": "erlang" // will match source.erlang
     },
     "flow":
     {
@@ -283,11 +283,7 @@
         "hie",
         "--lsp"
       ],
-      "languageId": "haskell",
-      "scopes":
-      [
-        "source.haskell"
-      ]
+      "languageId": "haskell" // will match source.haskell
     },
     "intelephense-ls":
     {
@@ -304,8 +300,7 @@
     "reason":
     {
       "command": ["ocaml-language-server", "--stdio"],
-      "scopes": ["source.reason"],
-      "languageId": "reason"
+      "languageId": "reason" // will match source.reason
     },
     "phpls":
     {
@@ -336,8 +331,7 @@
     "metals":
     {
       "command": ["metals-sublime"],
-      "languageId": "scala",
-      "scopes": ["source.scala"]
+      "languageId": "scala" // will match source.scala
     },
     "javascript-typescript-langserver":
     {
@@ -378,26 +372,22 @@
     "ocaml":
     {
       "command": ["ocaml-language-server", "--stdio"],
-      "scopes": ["source.ocaml"],
-      "languageId": "ocaml"
+      "languageId": "ocaml" // will match source.ocaml
     },
     "golsp":
     {
       "command": ["go-langserver"],
-      "scopes": ["source.go"],
-      "languageId": "go"
+      "languageId": "go" // will match source.go
     },
     "gopls":
     {
       "command": ["gopls"],
-      "scopes": ["source.go"],
-      "languageId": "go"
+      "languageId": "go" // will match source.go
     },
     "jdtls":
     {
       "command": ["java", "-jar", "PATH_TO_JDT_SERVER/plugins/org.eclipse.equinox.launcher_1.4.0.v20161219-1356.jar", "-configuration", "PATH_TO_CONFIG_DIR"],
-      "scopes": ["source.java"],
-      "languageId": "java"
+      "languageId": "java" // will match source.java
     },
     "polymer-ide":
     {
@@ -409,11 +399,9 @@
           "scopes": ["source.js"],
           "languageId": "javascript"
         },{
-          "scopes": ["source.css"],
-          "languageId": "css"
+          "languageId": "css" // will match source.css
         },{
-          "scopes": ["source.json"],
-          "languageId": "json"
+          "languageId": "json" // will match source.json
         }
       ],
       "settings": {
@@ -429,12 +417,7 @@
         "solargraph",
         "socket"
       ],
-      "languageId": "ruby",
-      "scopes":
-      [
-        "source.ruby"
-        // source.ruby.rails will also match
-      ],
+      "languageId": "ruby", // will match source.ruby
       "tcp_port": 7658,
       // Enable RuboCop linting
       // "initializationOptions": {
@@ -443,12 +426,7 @@
     },
     "sorbet": {
       "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman"],
-      "languageId": "ruby",
-      "scopes": 
-      [
-        "source.ruby"
-        // source.ruby.rails will also match
-      ],
+      "languageId": "ruby" // will match source.ruby
     },
     "vscode-css":
     {
@@ -456,11 +434,7 @@
       [
         "css-languageserver", "--stdio"
       ],
-      "scopes":
-      [
-        "source.css"
-      ],
-      "languageId": "css"
+      "languageId": "css" // will match source.css
     },
     "rlang":
     {
@@ -468,12 +442,7 @@
       [
         "R", "--slave", "-e", "languageserver::run()"
       ],
-      "scopes":
-      [
-        "source.r"
-      ],
-      "languageId": "r"
+      "languageId": "r" // will match source.r
     }
-
   }
 }

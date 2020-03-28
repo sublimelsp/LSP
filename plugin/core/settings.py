@@ -160,9 +160,9 @@ def unload_settings() -> None:
 
 
 def read_language_config(config: dict) -> LanguageConfig:
-    language_id = config.get("languageId", "")
-    scopes = config.get("scopes", [])
-    return LanguageConfig(language_id, scopes)
+    # "languageId" must exist, just raise a KeyError if it doesn't exist.
+    # "scopes" is optional.
+    return LanguageConfig(config["languageId"], config.get("scopes"))
 
 
 def read_language_configs(client_config: dict) -> List[LanguageConfig]:
@@ -176,7 +176,7 @@ def read_client_config(name: str, client_config: Dict) -> ClientConfig:
         name,
         client_config.get("command", []),
         client_config.get("tcp_port", None),
-        client_config.get("scopes", []),
+        client_config.get("scopes", None),
         client_config.get("languageId", ""),
         languages,
         client_config.get("enabled", False),

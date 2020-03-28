@@ -123,7 +123,7 @@
   //
   //     // See: https://microsoft.github.io/language-server-protocol/specification#textDocumentItem
   //     //
-  //     // This key servers two purposes:
+  //     // This key serves two purposes:
   //     // 1. It is sent to the language server so that it knows with what kind of file it is dealing with.
   //     // 2. When "scopes" is not provided (see above), this is _the_ connection between your files and language
   //     //    servers.

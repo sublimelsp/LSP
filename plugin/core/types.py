@@ -1,4 +1,3 @@
-from .logging import debug
 from .typing import Optional, List, Dict, Any, Protocol
 import sublime
 
@@ -98,8 +97,11 @@ class ClientConfig(object):
         return False
 
 
-def syntax2scope(syntax: str) -> str:
-    return next(filter(lambda d: d['path'] == syntax, sublime.list_syntaxes()))['scope']
+def syntax2scope(syntax: str) -> Optional[str]:
+    try:
+        return next(filter(lambda d: d['path'] == syntax, sublime.list_syntaxes()))['scope']
+    except StopIteration:
+        return None
 
 
 def view2scope(view: sublime.View, point: Optional[int] = None) -> str:

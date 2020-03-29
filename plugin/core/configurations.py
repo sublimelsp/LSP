@@ -35,13 +35,11 @@ def apply_project_overrides(client_config: ClientConfig, lsp_project_settings: d
 
 
 def is_supported_syntax(syntax: str, configs: Iterable[ClientConfig]) -> bool:
-    try:
-        scope = syntax2scope(syntax)
+    scope = syntax2scope(syntax)
+    if scope is not None:
         for config in configs:
             if config.supports(scope):
                 return True
-    except StopIteration:
-        debug(syntax, "is not in sublime.list_syntaxes()")
     return False
 
 

@@ -170,6 +170,9 @@ class TextDocumentTestCase(DeferrableTestCase):
         s("tab_size", 4)
         s("translate_tabs_to_spaces", False)
         s("word_wrap", False)
+        # ST4 removes completion items when "auto_complete_preserve_order" is not "none",
+        # see https://github.com/sublimelsp/LSP/pull/866#discussion_r380249385
+        s("auto_complete_preserve_order", "none")
 
     def get_view_event_listener(self, unique_attribute: str) -> 'Optional[ViewEventListener]':
         for listener in view_event_listeners[self.view.id()]:

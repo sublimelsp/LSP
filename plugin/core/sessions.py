@@ -32,7 +32,8 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
                 },
                 "completion": {
                     "completionItem": {
-                        "snippetSupport": True
+                        "snippetSupport": True,
+                        "deprecatedSupport": True
                     },
                     "completionItemKind": {
                         "valueSet": completion_item_kinds

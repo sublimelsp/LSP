@@ -303,7 +303,7 @@ class Notification:
 class Point(object):
     def __init__(self, row: int, col: int) -> None:
         self.row = int(row)
-        self.col = int(col)
+        self.col = int(col)  # in UTF-16
 
     def __repr__(self) -> str:
         return "{}:{}".format(self.row, self.col)

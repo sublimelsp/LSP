@@ -687,7 +687,19 @@ class View:
     def rowcol(self, tp: int) -> Tuple[int, int]:
         ...
 
+    def rowcol_utf8(self, tp: int) -> Tuple[int, int]:
+        ...
+
+    def rowcol_utf16(self, tp: int) -> Tuple[int, int]:
+        ...
+
     def text_point(self, row: int, col: int) -> int:
+        ...
+
+    def text_point_utf8(self, row: int, col_utf8: int) -> int:
+        ...
+
+    def text_point_utf16(self, row: int, col_utf16: int) -> int:
         ...
 
     def visible_region(self) -> Region:

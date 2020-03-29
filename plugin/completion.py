@@ -33,7 +33,7 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
 
             # calculate offset by comparing cursor position with edit_region.begin.
             # by applying the offset to all selections
-            # the TextEdit becomes valid for all selections 
+            # the TextEdit becomes valid for all selections
             cursor = self.view.sel()[0].begin()  # type: int
 
             offset_start = cursor - edit_region.begin()
@@ -107,7 +107,7 @@ class CompletionHandler(LSPViewEventListener):
         super().__init__(view)
         self.initialized = False
         self.enabled = False
-    
+
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:
         if 'completion' in settings.disabled_capabilities:

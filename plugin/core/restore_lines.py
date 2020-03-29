@@ -1,9 +1,9 @@
 import sublime
-from .typing import List
+from .typing import Any, Dict, List
 
 
 class RestoreLines:
-    def __init__(self):
+    def __init__(self) -> None:
         self.saved_lines = []  # type: List[dict]
 
     def save_lines(self, locations: List[int], view: sublime.View) -> None:
@@ -22,13 +22,13 @@ class RestoreLines:
                 "cursor": point
             })
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "saved_lines": self.saved_lines
         }
 
     @staticmethod
-    def from_dict(dictionary):
+    def from_dict(dictionary: Dict[str, Any]) -> 'RestoreLines':
         restore_lines = RestoreLines()
         restore_lines.saved_lines = dictionary["saved_lines"]
         return restore_lines

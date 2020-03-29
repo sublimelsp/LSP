@@ -79,6 +79,11 @@ class CompletionItemKind(object):
 completion_item_kinds = list(range(CompletionItemKind.Text, CompletionItemKind.TypeParameter + 1))
 
 
+class InsertTextFormat:
+    PlainText = 1
+    Snippet = 2
+
+
 class DocumentHighlightKind(object):
     Unknown = 0
     Text = 1

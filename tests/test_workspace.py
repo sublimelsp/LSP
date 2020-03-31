@@ -22,6 +22,10 @@ class SortedWorkspaceFoldersTest(unittest.TestCase):
         self.assertEqual(folders[1], parent_folder)
         self.assertEqual(folders[2], unrelated_folder)
 
+    def test_longest_prefix(self) -> None:
+        folders = sorted_workspace_folders(["/longer-path", "/short-path"], "/short-path/file.js")
+        self.assertEqual(folders[0].path, "/short-path")
+
 
 class WorkspaceFolderTest(unittest.TestCase):
 

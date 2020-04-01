@@ -3,7 +3,6 @@ import sublime
 import sublime_plugin
 import webbrowser
 import os
-import textwrap
 from html import escape
 from .code_actions import actions_manager, run_code_action_or_command
 from .code_actions import CodeActionOrCommand
@@ -191,16 +190,14 @@ class LspHoverCommand(LspTextCommand):
                 value = item.get("value")
                 language = item.get("language")
 
-            if '\n' not in value:
-                value = "\n".join(textwrap.wrap(value, 80))
-
             if language:
                 formatted.append("```{}\n{}\n```\n".format(language, value))
             else:
                 formatted.append(value)
 
         if formatted:
-            return mdpopups.md2html(self.view, "\n".join(formatted))
+            frontmatter_config = mdpopups.format_frontmatter({'allow_code_wrap': True})
+            return mdpopups.md2html(self.view, frontmatter_config + "\n".join(formatted))
 
         return ""
 

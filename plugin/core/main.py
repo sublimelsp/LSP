@@ -27,7 +27,6 @@ def startup() -> None:
     sublime.status_message("LSP initialized")
     start_active_window()
 
-
 def shutdown() -> None:
     # Also needs to handle package being disabled or removed
     # https://github.com/sublimelsp/LSP/issues/375

@@ -790,6 +790,11 @@ At this point LSP should complain in the logs
 Then run `sbt configureIDE` to create the `.dotty-ide.json` file
 Then the LSP plugin should launch as configured in `LSP.sublime-settings` using coursier.
 
+### Swift<a name="swift"></a>
+
+1. Install the [Swift](https://packagecontrol.io/packages/Swift) package from Package Control for syntax highlighting.
+2. Install Xcode 11.4 or later and ensure that `xcrun -find sourcekit-lsp` returns the path to sourcekit-lsp.
+
 ### Terraform<a name="terraform"></a>
 
 1. Download [terraform-lsp](https://github.com/juliosueiras/terraform-lsp/releases) binary and make it available in your PATH.

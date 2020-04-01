@@ -570,7 +570,12 @@
         "Packages/R/R.sublime-syntax"
       ],
       "languageId": "r"
-    }
-
+    },
+    "sourcekit-lsp": {
+      "command": ["xcrun", "sourcekit-lsp"],
+      "scopes": ["source.swift"],
+      "syntaxes": ["Packages/Swift/Syntaxes/Swift.tmLanguage"],
+      "languageId": "swift"
+    },
   }
 }

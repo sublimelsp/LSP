@@ -25,10 +25,9 @@ def get_line(window: Optional[sublime.Window], file_name: str, row: int) -> str:
 
 
 def point_to_offset(point: Point, view: sublime.View) -> int:
-    # TODO: How can we clamp the column in UTF-16?
     # @see https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/#position
     # If the character value is greater than the line length it defaults back to the line length.
-    return view.text_point_utf16(point.row, point.col)
+    return min(view.text_point_utf16(point.row, point.col), view.line(view.text_point(point.row, 0)).b)
 
 
 def offset_to_point(view: sublime.View, offset: int) -> Point:

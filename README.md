@@ -89,7 +89,7 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
   - ✅ didOpen
   - ✅ didChange
     - ✅ Full text sync
-    - ❌ Incremental text sync
+    - ✅ Incremental text sync
   - ✅ willSave
   - ✅ willSaveWaitUntil
   - ✅ didSave

@@ -3,7 +3,7 @@ import sublime
 from .configurations import is_supported_syntax
 from .registry import LSPViewEventListener
 from .settings import client_configs
-from .typing import Optional
+from .typing import Optional, Iterable
 
 
 SUBLIME_WORD_MASK = 515
@@ -68,9 +68,9 @@ class DocumentSyncListener(LSPViewEventListener):
             self.manager.activate_view(self.view)
             self.manager.documents.handle_did_open(self.view)
 
-    def on_modified(self) -> None:
+    def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
         if self.view.file_name():
-            self.manager.documents.handle_did_change(self.view)
+            self.manager.documents.handle_did_change(self.view, changes)
 
     def on_pre_save(self) -> None:
         if self.view.file_name():

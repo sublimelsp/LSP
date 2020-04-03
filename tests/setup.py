@@ -4,6 +4,7 @@ from LSP.plugin.core.registry import windows
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.types import ClientConfig, LanguageConfig, ClientStates
+from LSP.plugin.core.typing import Any, Optional, Generator
 from os import environ
 from os.path import dirname
 from os.path import join
@@ -25,16 +26,10 @@ SUPPORTED_SYNTAX = "Packages/Text/Plain text.tmLanguage"
 text_language = LanguageConfig("text", [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX])
 text_config = ClientConfig("textls", [], None, languages=[text_language])
 
-try:
-    from typing import Dict, List, Callable, Any, Optional, Generator
-    assert Dict and Callable and List and Any and Optional and Generator
-except ImportError:
-    pass
-
 
 class YieldPromise:
 
-    __slots__ = ('__done')
+    __slots__ = ('__done', '__result')
 
     def __init__(self) -> None:
         self.__done = False
@@ -42,9 +37,13 @@ class YieldPromise:
     def __call__(self) -> bool:
         return self.__done
 
-    def fulfill(self) -> None:
+    def fulfill(self, result: Any = None) -> None:
         assert not self.__done
+        self.__result = result
         self.__done = True
+
+    def result(self) -> Any:
+        return self.__result
 
 
 def make_stdio_test_config() -> ClientConfig:
@@ -181,14 +180,14 @@ class TextDocumentTestCase(DeferrableTestCase):
                 return listener
         return None
 
-    def await_message(self, method: str) -> 'Generator':
+    def await_message(self, method: str, promise: Optional[YieldPromise] = None) -> 'Generator':
         self.assertIsNotNone(self.session)
         assert self.session  # mypy
-        promise = YieldPromise()
+        if promise is None:
+            promise = YieldPromise()
 
-        def handler(params: 'Any') -> None:
-            assert params is None
-            promise.fulfill()
+        def handler(params: Any) -> None:
+            promise.fulfill(params)
 
         def error_handler(params: 'Any') -> None:
             debug("Got error:", params, "awaiting timeout :(")

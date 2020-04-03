@@ -10,7 +10,7 @@ from .core.configurations import is_supported_syntax
 from .core.sessions import Session
 from .core.edit import parse_text_edit
 from .core.views import range_to_region
-from .core.typing import Any, List, Dict, Tuple, Optional, Union
+from .core.typing import Any, List, Dict, Optional, Union
 from .core.views import text_document_position_params
 from .core.restore_lines import RestoreLines
 
@@ -92,14 +92,6 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
         debug('applying additional edits:', edits)
         self.view.run_command("lsp_apply_document_edit", {'changes': edits})
         sublime.status_message('Applied additional edits for completion')
-
-
-class LspTrimCompletionCommand(sublime_plugin.TextCommand):
-    def run(self, edit: sublime.Edit, range: Optional[Tuple[int, int]] = None) -> None:
-        if range:
-            start, end = range
-            region = sublime.Region(start, end)
-            self.view.erase(edit, region)
 
 
 class CompletionHandler(LSPViewEventListener):

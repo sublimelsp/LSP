@@ -96,11 +96,10 @@ class QueryCompletionsTests(TextDocumentTestCase):
     def read_file(self) -> str:
         return self.view.substr(sublime.Region(0, self.view.size()))
 
-    def verify(self, response: List[Dict[str, Any]], expected_text: str,
-               pre_insert_text: Optional[str] = None) -> Generator:
-        if isinstance(pre_insert_text, str):
-            self.type(pre_insert_text)
-        self.set_response("textDocument/completion", response)
+    def verify(self, *, completion_items: List[Dict[str, Any]], insert_text: str, expected_text: str) -> Generator:
+        if insert_text:
+            self.type(insert_text)
+        self.set_response("textDocument/completion", completion_items)
         yield from self.select_completion()
         yield from self.await_message("textDocument/completion")
         self.assertEqual(self.read_file(), expected_text)
@@ -111,173 +110,81 @@ class QueryCompletionsTests(TextDocumentTestCase):
         yield lambda: self.view.is_auto_complete_visible()
 
     def test_simple_label(self) -> 'Generator':
-        yield from self.verify([{'label': 'asdf'}, {'label': 'efcgh'}], 'asdf')
+        yield from self.verify(
+            completion_items=[{'label': 'asdf'}, {'label': 'efcgh'}],
+            insert_text='',
+            expected_text='asdf')
 
     def test_prefer_insert_text_over_label(self) -> 'Generator':
-        yield from self.verify([{"label": "Label text", "insertText": "Insert text"}], 'Insert text')
+        yield from self.verify(
+            completion_items=[{"label": "Label text", "insertText": "Insert text"}],
+            insert_text='',
+            expected_text='Insert text')
 
     def test_prefer_text_edit_over_insert_text(self) -> 'Generator':
-        yield from self.verify([{
-            "label": "Label text",
-            "insertText": "Insert text",
-            "textEdit": {
-                "newText": "Text edit",
-                "range": {
-                    "end": {
-                        "character": 5,
-                        "line": 0
-                    },
-                    "start": {
-                        "character": 0,
-                        "line": 0
+        yield from self.verify(
+            completion_items=[{
+                "label": "Label text",
+                "insertText": "Insert text",
+                "textEdit": {
+                    "newText": "Text edit",
+                    "range": {
+                        "end": {
+                            "character": 5,
+                            "line": 0
+                        },
+                        "start": {
+                            "character": 0,
+                            "line": 0
+                        }
                     }
                 }
-            }}], 'Text edit')
+            }],
+            insert_text='',
+            expected_text='Text edit')
 
     def test_simple_insert_text(self) -> 'Generator':
-        yield from self.verify([{'label': 'asdf', 'insertText': 'asdf()'}], 'asdf()', "a")
+        yield from self.verify(
+            completion_items=[{'label': 'asdf', 'insertText': 'asdf()'}],
+            insert_text="a",
+            expected_text='asdf()')
 
     def test_var_prefix_using_label(self) -> 'Generator':
-        yield from self.verify([{'label': '$what'}], "$what", "$")
+        yield from self.verify(completion_items=[{'label': '$what'}], insert_text="$", expected_text="$what")
 
     def test_var_prefix_added_in_insertText(self) -> 'Generator':
         """
         Powershell: label='true', insertText='$true' (see https://github.com/sublimelsp/LSP/issues/294)
         """
-        yield from self.verify([{
-            "insertText": "$true",
-            "label": "true",
-            "textEdit": {
-                "newText": "$true",
-                "range": {
-                    "end": {
-                        "character": 5,
-                        "line": 0
-                    },
-                    "start": {
-                        "character": 0,
-                        "line": 0
+        yield from self.verify(
+            completion_items=[{
+                "insertText": "$true",
+                "label": "true",
+                "textEdit": {
+                    "newText": "$true",
+                    "range": {
+                        "end": {
+                            "character": 5,
+                            "line": 0
+                        },
+                        "start": {
+                            "character": 0,
+                            "line": 0
+                        }
                     }
                 }
-            }}], "$true", "$")
+            }],
+            insert_text="$",
+            expected_text="$true")
 
     def test_var_prefix_added_in_label(self) -> 'Generator':
         """
         PHP language server: label='$someParam', textEdit='someParam' (https://github.com/sublimelsp/LSP/issues/368)
         """
-        yield from self.verify([{
-            'label': '$what',
-            'textEdit': {
-                'range': {
-                    'start': {
-                        'line': 0,
-                        'character': 0
-                    },
-                    'end': {
-                        'line': 0,
-                        'character': 1
-                    }
-                },
-                'newText': '$what'
-            }}], "$what", "$")
-
-    def test_space_added_in_label(self) -> 'Generator':
-        """
-        Clangd: label=" const", insertText="const" (https://github.com/sublimelsp/LSP/issues/368)
-        """
-        yield from self.verify([{'label': ' const', 'insertText': 'const'}], "const")
-
-    def test_dash_missing_from_label(self) -> 'Generator':
-        """
-        Powershell: label="UniqueId", insertText="-UniqueId" (https://github.com/sublimelsp/LSP/issues/572)
-        """
-        yield from self.verify([{
-            'label': 'UniqueId',
-            'insertText': '-UniqueId',
-            'textEdit': {
-                'range': {
-                    'start': {
-                        'character': 0,
-                        'line': 0
-                    },
-                    'end': {
-                        'character': 1,
-                        'line': 0
-                    }
-                },
-                'newText': '-UniqueId'
-            }}], "-UniqueId", "u")
-
-    def test_edit_before_cursor(self) -> 'Generator':
-        """
-        Metals: label="override def myFunction(): Unit"
-        """
-        yield from self.verify([{
-            'insertTextFormat': 2,
-            'label': 'override def myFunction(): Unit',
-            'textEdit': {
-                'newText': 'override def myFunction(): Unit = ${0:???}',
-                'range': {
-                    'start': {
-                        'line': 0,
-                        'character': 2
-                    },
-                    'end': {
-                        'line': 0,
-                        'character': 18
-                    }
-                }
-            }}], '  override def myFunction(): Unit = ???', '  def myF')
-
-    def test_edit_after_nonword(self) -> 'Generator':
-        """
-        Metals: List.| selects label instead of textedit
-        See https://github.com/sublimelsp/LSP/issues/645
-        """
-        yield from self.verify([{
-            'insertTextFormat': 2,
-            'label': 'apply[A](xs: A*): List[A]',
-            'textEdit': {
-                'newText': 'apply($0)',
-                'range': {
-                    'start': {
-                        'line': 0,
-                        'character': 5
-                    },
-                    'end': {
-                        'line': 0,
-                        'character': 5
-                    }
-                }
-            }}], 'List.apply()', "List.")
-
-    def test_implement_all_members_quirk(self) -> 'Generator':
-        """
-        Metals: "Implement all members" should just select the newText.
-        https://github.com/sublimelsp/LSP/issues/771
-        """
-        yield from self.verify([{
-            'insertTextFormat': 2,
-            'label': 'Implement all members',
-            'textEdit': {
-                'newText': 'def foo: Int \u003d ${0:???}\n   def boo: Int \u003d ${0:???}',
-                'range': {
-                    'start': {
-                        'line': 0,
-                        'character': 0
-                    },
-                    'end': {
-                        'line': 0,
-                        'character': 1
-                    }
-                }
-            }}], 'def foo: Int = ???\n   def boo: Int = ???', "I")
-
-    def test_additional_edits(self) -> 'Generator':
-        yield from self.verify([{
-            'label': 'asdf',
-            'additionalTextEdits': [
-                {
+        yield from self.verify(
+            completion_items=[{
+                'label': '$what',
+                'textEdit': {
                     'range': {
                         'start': {
                             'line': 0,
@@ -285,12 +192,148 @@ class QueryCompletionsTests(TextDocumentTestCase):
                         },
                         'end': {
                             'line': 0,
-                            'character': 0
+                            'character': 1
                         }
                     },
-                    'newText': 'import asdf;\n'
+                    'newText': '$what'
                 }
-            ]}], 'import asdf;\nasdf')
+            }],
+            insert_text="$",
+            expected_text="$what")
+
+    def test_space_added_in_label(self) -> 'Generator':
+        """
+        Clangd: label=" const", insertText="const" (https://github.com/sublimelsp/LSP/issues/368)
+        """
+        yield from self.verify(
+            completion_items=[{'label': ' const', 'insertText': 'const'}],
+            insert_text='',
+            expected_text="const")
+
+    def test_dash_missing_from_label(self) -> 'Generator':
+        """
+        Powershell: label="UniqueId", insertText="-UniqueId" (https://github.com/sublimelsp/LSP/issues/572)
+        """
+        yield from self.verify(
+            completion_items=[{
+                'label': 'UniqueId',
+                'insertText': '-UniqueId',
+                'textEdit': {
+                    'range': {
+                        'start': {
+                            'character': 0,
+                            'line': 0
+                        },
+                        'end': {
+                            'character': 1,
+                            'line': 0
+                        }
+                    },
+                    'newText': '-UniqueId'
+                }
+            }],
+            insert_text="u",
+            expected_text="-UniqueId")
+
+    def test_edit_before_cursor(self) -> 'Generator':
+        """
+        Metals: label="override def myFunction(): Unit"
+        """
+        yield from self.verify(
+            completion_items=[{
+                'insertTextFormat': 2,
+                'label': 'override def myFunction(): Unit',
+                'textEdit': {
+                    'newText': 'override def myFunction(): Unit = ${0:???}',
+                    'range': {
+                        'start': {
+                            'line': 0,
+                            'character': 2
+                        },
+                        'end': {
+                            'line': 0,
+                            'character': 18
+                        }
+                    }
+                }
+            }],
+            insert_text='  def myF',
+            expected_text='  override def myFunction(): Unit = ???')
+
+    def test_edit_after_nonword(self) -> 'Generator':
+        """
+        Metals: List.| selects label instead of textedit
+        See https://github.com/sublimelsp/LSP/issues/645
+        """
+        yield from self.verify(
+            completion_items=[{
+                'insertTextFormat': 2,
+                'label': 'apply[A](xs: A*): List[A]',
+                'textEdit': {
+                    'newText': 'apply($0)',
+                    'range': {
+                        'start': {
+                            'line': 0,
+                            'character': 5
+                        },
+                        'end': {
+                            'line': 0,
+                            'character': 5
+                        }
+                    }
+                }
+            }],
+            insert_text="List.",
+            expected_text='List.apply()')
+
+    def test_implement_all_members_quirk(self) -> 'Generator':
+        """
+        Metals: "Implement all members" should just select the newText.
+        https://github.com/sublimelsp/LSP/issues/771
+        """
+        yield from self.verify(
+            completion_items=[{
+                'insertTextFormat': 2,
+                'label': 'Implement all members',
+                'textEdit': {
+                    'newText': 'def foo: Int \u003d ${0:???}\n   def boo: Int \u003d ${0:???}',
+                    'range': {
+                        'start': {
+                            'line': 0,
+                            'character': 0
+                        },
+                        'end': {
+                            'line': 0,
+                            'character': 1
+                        }
+                    }
+                }
+            }],
+            insert_text="I",
+            expected_text='def foo: Int = ???\n   def boo: Int = ???')
+
+    def test_additional_edits(self) -> 'Generator':
+        yield from self.verify(
+            completion_items=[{
+                'label': 'asdf',
+                'additionalTextEdits': [
+                    {
+                        'range': {
+                            'start': {
+                                'line': 0,
+                                'character': 0
+                            },
+                            'end': {
+                                'line': 0,
+                                'character': 0
+                            }
+                        },
+                        'newText': 'import asdf;\n'
+                    }
+                ]
+            }],
+            insert_text='',
+            expected_text='import asdf;\nasdf')
 
     def test_resolve_for_additional_edits(self) -> 'Generator':
         self.set_response('textDocument/completion', [{'label': 'asdf'}, {'label': 'efcgh'}])

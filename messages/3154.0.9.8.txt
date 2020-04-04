@@ -1,4 +1,4 @@
-=> 3154.0.0
+=> 3154.0.9.8
 
 Documentation:
 - Remove outdated eslint config (#913) (Martin Staffa)
@@ -20,4 +20,4 @@ Fixes:
 
 Note: the version scheme is
 
-    <minimum-supported-ST-version> . <API-version> . <patch-version>
+    <minimum-supported-ST-version> . <semver>

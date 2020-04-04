@@ -1,6 +1,6 @@
 from LSP.plugin.completion import CompletionHandler
 from LSP.plugin.core.registry import is_supported_view
-from LSP.plugin.core.typing import Any, Generator, List, Dict, Optional
+from LSP.plugin.core.typing import Any, Generator, List, Dict
 from setup import CI, SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove_config, text_config
 from unittesting import DeferrableTestCase
 import sublime

@@ -132,6 +132,7 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
 
             range = Range.from_lsp(text_edit['range'])
             edit_region = range_to_region(range, self.view)
+            edit_text = self.view.substr(edit_region)
 
             # calculate offset by comparing cursor position with edit_region.begin.
             # by applying the offset to all selections
@@ -145,8 +146,21 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
             for sel in reversed(self.view.sel()):
                 begin = sel.begin() - offset_start
                 end = begin + offset_length
-                r = sublime.Region(begin, end)
-                self.view.erase(edit, r)
+
+                offset_edit_region = sublime.Region(begin, end)
+                offset_edit_text = self.view.substr(offset_edit_region)
+
+                if offset_edit_text != edit_text:
+                    # If the offset_edit_text doens't match edit_text,
+                    # in this case we cannot apply the TextEdit.range correctly to this line.
+                    # So we change the TextEdit.range.end to be the cursor postion,
+                    # this way we avoid accidentaly deleting more than we should.
+                    # For more info see:
+                    # https://github.com/microsoft/language-server-protocol/issues/950#issuecomment-608814427
+                    selection_cursor = sel.begin()
+                    offset_edit_region.b = selection_cursor
+
+                self.view.erase(edit, offset_edit_region)
 
             if insert_text_format == InsertTextFormat.Snippet:
                 self.view.run_command("insert_snippet", {"contents": new_text})

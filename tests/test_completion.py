@@ -392,42 +392,42 @@ class QueryCompletionsTests(TextDocumentTestCase):
         yield from self.verify(
             completion_items=[{
                 'insertTextFormat': 1,
-                'label': 'aaaaca',
-                'insertText': 'aaaaca'
+                'label': 'aaba',
+                'insertText': 'aaca'
             }],
             insert_text='aa',
-            expected_text='aaaaca')
+            expected_text='aaca')
 
     def test_fuzzy_match_plaintext_text_edit(self) -> 'Generator':
         yield from self.verify(
             completion_items=[{
                 'insertTextFormat': 1,
-                'label': 'aaaaca',
+                'label': 'aaba',
                 'textEdit': {
-                    'newText': 'aaaaca',
-                    'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 2}}}
+                    'newText': 'aaca',
+                    'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 3}}}
             }],
-            insert_text='aa',
-            expected_text='aaaaca')
+            insert_text='aab',
+            expected_text='aaca')
 
     def test_fuzzy_match_snippet_insert_text(self) -> 'Generator':
         yield from self.verify(
             completion_items=[{
                 'insertTextFormat': 2,
-                'label': 'aaaaca',
-                'insertText': 'aaaaca'
+                'label': 'aaba',
+                'insertText': 'aaca'
             }],
-            insert_text='aa',
-            expected_text='aaaaca')
+            insert_text='aab',
+            expected_text='aaca')
 
     def test_fuzzy_match_snippet_text_edit(self) -> 'Generator':
         yield from self.verify(
             completion_items=[{
                 'insertTextFormat': 2,
-                'label': 'aaaaca',
+                'label': 'aaba',
                 'textEdit': {
-                    'newText': 'aaaaca',
+                    'newText': 'aaca',
                     'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 2}}}
             }],
-            insert_text='aa',
-            expected_text='aaaaca')
+            insert_text='aab',
+            expected_text='aaca')

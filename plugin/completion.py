@@ -42,56 +42,7 @@ completion_kinds = {
 }
 
 
-class RestoreLines:
-    def __init__(self) -> None:
-        self.saved_lines = []  # type: List[dict]
-
-    def save_lines(self, locations: List[int], view: sublime.View) -> None:
-        change_id = view.change_id()
-
-        for point in locations:
-            line = view.line(point)
-            change_region = (line.begin(), line.end())
-            text = view.substr(line)
-
-            self.saved_lines.append({
-                "change_id": change_id,
-                "change_region": change_region,
-                "text": text,
-                # cursor will be use retore the cursor the te exact position
-                "cursor": point
-            })
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "saved_lines": self.saved_lines
-        }
-
-    @staticmethod
-    def from_dict(dictionary: Dict[str, Any]) -> 'RestoreLines':
-        restore_lines = RestoreLines()
-        restore_lines.saved_lines = dictionary["saved_lines"]
-        return restore_lines
-
-    def restore_lines(self, edit: sublime.Edit, view: sublime.View) -> None:
-        # restore lines contents
-        # insert back lines from the bottom to top
-        for saved_line in reversed(self.saved_lines):
-            change_id = saved_line['change_id']
-            begin, end = saved_line['change_region']
-            change_region = sublime.Region(begin, end)
-
-            transform_region = view.transform_region_from(change_region, change_id)
-            view.erase(edit, transform_region)
-            view.insert(edit, transform_region.begin(), saved_line['text'])
-
-        # restore old cursor position
-        view.sel().clear()
-        for saved_line in self.saved_lines:
-            view.sel().add(saved_line["cursor"])
-
-
-def format_completion(item: dict, restore_lines: RestoreLines) -> sublime.CompletionItem:
+def format_completion(item: dict, change_id: Any) -> sublime.CompletionItem:
     kind = sublime.KIND_AMBIGUOUS
 
     item_kind = item.get("kind")
@@ -105,62 +56,47 @@ def format_completion(item: dict, restore_lines: RestoreLines) -> sublime.Comple
         list_kind[2] = "⚠ {} - Deprecated".format(list_kind[2])
         kind = tuple(list_kind)  # type: ignore
 
+    item["change_id"] = change_id
+
     return sublime.CompletionItem.command_completion(
         trigger=item["label"],
         command="lsp_select_completion_item",
-        args={
-            "item": item,
-            "restore_lines_dict": restore_lines.to_dict()
-        },
+        args=item,
         annotation=item.get('detail') or "",
         kind=kind
     )
 
 
 class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
-    def run(self, edit: sublime.Edit, item: Any, restore_lines_dict: dict) -> None:
-        insert_text_format = item.get("insertTextFormat")
+    """
+    This command must handle four different kinds of LSP completion items:
 
+    1) plaintext + insertText
+    2) plaintext + textEdit
+    3) snippet + insertText
+    4) snippet + textEdit
+
+    For cases (3) and (4) we are forced to use the "insert_snippet" command.
+    """
+
+    def run(self, edit: sublime.Edit, **item: Any) -> None:
+        # Is it a textEdit or an insertText?
         text_edit = item.get('textEdit')
         if text_edit:
-            # restore the lines
-            # so we don't have to calculate the offset for the textEdit range
-            restore_lines = RestoreLines.from_dict(restore_lines_dict)
-            restore_lines.restore_lines(edit, self.view)
-
-            new_text = text_edit.get('newText')
-
-            range = Range.from_lsp(text_edit['range'])
-            edit_region = range_to_region(range, self.view)
-
-            # calculate offset by comparing cursor position with edit_region.begin.
-            # by applying the offset to all selections
-            # the TextEdit becomes valid for all selections
-            cursor = self.view.sel()[0].begin()  # type: int
-
-            offset_start = cursor - edit_region.begin()
-            offset_length = edit_region.end() - edit_region.begin()
-
-            # erease regions from bottom to top
-            for sel in reversed(self.view.sel()):
-                begin = sel.begin() - offset_start
-                end = begin + offset_length
-                r = sublime.Region(begin, end)
-                self.view.erase(edit, r)
-
-            if insert_text_format == InsertTextFormat.Snippet:
-                self.view.run_command("insert_snippet", {"contents": new_text})
-            else:
-                # insert text from bottom to top
-                for sel in reversed(self.view.sel()):
-                    self.view.insert(edit, sel.begin(), new_text)
+            new_text = text_edit['newText']
+            # this region was valid a few view.change_count() moments back ...
+            edit_region = range_to_region(Range.from_lsp(text_edit['range']), self.view)
+            # ... but this brings it to the present.
+            edit_region = self.view.transform_region_from(edit_region, item["change_id"])
+            self.view.erase(edit, edit_region)
         else:
-            completion = item.get('insertText') or item.get('label') or ""
-            if insert_text_format == InsertTextFormat.Snippet:
-                self.view.run_command("insert_snippet", {"contents": completion})
-            else:
-                for sel in self.view.sel():
-                    self.view.insert(edit, sel.begin(), completion)
+            new_text = item.get('insertText') or item.get('label') or ""
+
+        # Is it a plaintext or a snippet?
+        if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
+            self.view.run_command("insert_snippet", {"contents": new_text})
+        else:
+            self.view.run_command("insert", {"characters": new_text})
 
         # import statements, etc. some servers only return these after a resolve.
         additional_edits = item.get('additionalTextEdits')
@@ -194,6 +130,11 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
         debug('applying additional edits:', edits)
         self.view.run_command("lsp_apply_document_edit", {'changes': edits})
         sublime.status_message('Applied additional edits for completion')
+
+
+def resolve(completion_list: sublime.CompletionList, items: List[sublime.CompletionItem], flags: int = 0) -> None:
+    # Resolve the promise on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).
+    sublime.set_timeout(lambda: completion_list.set_completions(items, flags))
 
 
 class CompletionHandler(LSPViewEventListener):
@@ -261,18 +202,16 @@ class CompletionHandler(LSPViewEventListener):
         client = client_from_session(session_for_view(self.view, 'completionProvider', locations[0]))
         if not client:
             return None
-        restore_lines = RestoreLines()
-        restore_lines.save_lines(locations, self.view)
         self.manager.documents.purge_changes(self.view)
         completion_list = sublime.CompletionList()
         client.send_request(
             Request.complete(text_document_position_params(self.view, locations[0])),
-            lambda res: self.handle_response(res, completion_list, restore_lines),
+            lambda res: self.handle_response(res, completion_list, self.view.change_id()),
             lambda res: self.handle_error(res, completion_list))
         return completion_list
 
     def handle_response(self, response: Optional[Union[dict, List]],
-                        completion_list: sublime.CompletionList, restore_lines: RestoreLines) -> None:
+                        completion_list: sublime.CompletionList, change_id: Any) -> None:
         response_items = []  # type: List[Dict]
         incomplete = False
         if isinstance(response, dict):
@@ -289,8 +228,8 @@ class CompletionHandler(LSPViewEventListener):
 
         if incomplete:
             flags |= sublime.DYNAMIC_COMPLETIONS
-        completion_list.set_completions([format_completion(i, restore_lines) for i in response_items], flags)
+        resolve(completion_list, [format_completion(i, change_id) for i in response_items], flags)
 
     def handle_error(self, error: dict, completion_list: sublime.CompletionList) -> None:
-        completion_list.set_completions([])
+        resolve(completion_list, [])
         sublime.status_message('Completion error: ' + str(error.get('message')))

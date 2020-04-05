@@ -252,7 +252,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
                         },
                         'end': {
                             'line': 0,
-                            'character': 18
+                            'character': 7
                         }
                     }
                 }

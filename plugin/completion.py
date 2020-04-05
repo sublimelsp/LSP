@@ -71,10 +71,10 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
     """
     This command must handle four different kinds of LSP completion items:
 
-    1) plaintext + insertText
-    2) plaintext + textEdit
-    3) snippet + insertText
-    4) snippet + textEdit
+    1) plaintext + insertText   (e.g. pyls)
+    2) plaintext + textEdit     (examples?)
+    3) snippet   + insertText   (examples?)
+    4) snippet   + textEdit     (e.g. clangd)
 
     For cases (3) and (4) we are forced to use the "insert_snippet" command.
     """
@@ -90,7 +90,7 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
             edit_region = self.view.transform_region_from(edit_region, item["change_id"])
             self.view.erase(edit, edit_region)
         else:
-            new_text = item.get('insertText') or item.get('label') or ""
+            new_text = item.get('insertText') or item['label']
 
         # Is it a plaintext or a snippet?
         if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:

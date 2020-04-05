@@ -358,7 +358,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             self.read_file(),
             'import asdf;\nasdf')
 
-    def test_prefix_should_include_the_dollar_sign(self):
+    def test_prefix_should_include_the_dollar_sign(self) -> 'Generator':
         self.set_response(
             'textDocument/completion',
             {
@@ -387,3 +387,47 @@ class QueryCompletionsTests(TextDocumentTestCase):
         yield from self.await_message('textDocument/completion')
 
         self.assertEquals(self.read_file(), '<?php\n$hello = "world";\n$hello\n?>\n')
+
+    def test_fuzzy_match_plaintext_insert_text(self) -> 'Generator':
+        yield from self.verify(
+            completion_items=[{
+                'insertTextFormat': 1,
+                'label': 'aaaaca',
+                'insertText': 'aaaaca'
+            }],
+            insert_text='aa',
+            expected_text='aaaaca')
+
+    def test_fuzzy_match_plaintext_text_edit(self) -> 'Generator':
+        yield from self.verify(
+            completion_items=[{
+                'insertTextFormat': 1,
+                'label': 'aaaaca',
+                'textEdit': {
+                    'newText': 'aaaaca',
+                    'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 2}}}
+            }],
+            insert_text='aa',
+            expected_text='aaaaca')
+
+    def test_fuzzy_match_snippet_insert_text(self) -> 'Generator':
+        yield from self.verify(
+            completion_items=[{
+                'insertTextFormat': 2,
+                'label': 'aaaaca',
+                'insertText': 'aaaaca'
+            }],
+            insert_text='aa',
+            expected_text='aaaaca')
+
+    def test_fuzzy_match_snippet_text_edit(self) -> 'Generator':
+        yield from self.verify(
+            completion_items=[{
+                'insertTextFormat': 2,
+                'label': 'aaaaca',
+                'textEdit': {
+                    'newText': 'aaaaca',
+                    'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 2}}}
+            }],
+            insert_text='aa',
+            expected_text='aaaaca')

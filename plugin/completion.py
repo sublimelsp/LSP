@@ -166,8 +166,6 @@ class CompletionHandler(LSPViewEventListener):
             if trigger_chars:
                 self.register_trigger_chars(session, trigger_chars)
             # This is to make ST match with labels that have a weird prefix like a space character.
-            # It is unfortunately untestable as this problem will only show up when typing characters, not when
-            # running view.run_command('auto_complete') in a test. See: https://github.com/sublimelsp/LSP/issues/935
             self.view.settings().set("auto_complete_preserve_order", "none")
 
     def _view_language(self, config_name: str) -> Optional[str]:

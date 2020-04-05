@@ -196,6 +196,11 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
         sublime.status_message('Applied additional edits for completion')
 
 
+def resolve(completion_list: sublime.CompletionList, items: List[sublime.CompletionItem], flags: int = 0) -> None:
+    # Resolve the promise on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).
+    sublime.set_timeout(lambda: completion_list.set_completions(items, flags))
+
+
 class CompletionHandler(LSPViewEventListener):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
@@ -287,8 +292,8 @@ class CompletionHandler(LSPViewEventListener):
 
         if incomplete:
             flags |= sublime.DYNAMIC_COMPLETIONS
-        completion_list.set_completions([format_completion(i, restore_lines) for i in response_items], flags)
+        resolve(completion_list, [format_completion(i, restore_lines) for i in response_items], flags)
 
     def handle_error(self, error: dict, completion_list: sublime.CompletionList) -> None:
-        completion_list.set_completions([])
+        resolve(completion_list, [])
         sublime.status_message('Completion error: ' + str(error.get('message')))

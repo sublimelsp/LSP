@@ -224,6 +224,8 @@ class CompletionHandler(LSPViewEventListener):
                 'triggerCharacters') or []
             if trigger_chars:
                 self.register_trigger_chars(session, trigger_chars)
+            # This is to make ST match with labels that have a weird prefix like a space character.
+            self.view.settings().set("auto_complete_preserve_order", "none")
 
     def _view_language(self, config_name: str) -> Optional[str]:
         languages = self.view.settings().get('lsp_language')

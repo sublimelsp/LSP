@@ -1,9 +1,11 @@
-=> 3154.0.0
+=> 3154.0.9.8
 
 Documentation:
 - Remove outdated eslint config (#913) (Martin Staffa)
 - Add sorbet type checker to lsp (#922) (tvallois)
 - Add Erlang to Sublme LSP Client documentation (#916) (Juan Facorro)
+- Fix formatting and numbering for items, after having deleted trailing
+  whitespaces which signaled newlines (#924) (Juan Facorro)
 
 Fixes:
 - Narrow down imports (#919) (Raoul Wols)
@@ -18,4 +20,4 @@ Fixes:
 
 Note: the version scheme is
 
-    <minimum-supported-ST-version> . <API-verison> . <patch-version>
+    <minimum-supported-ST-version> . <semver>

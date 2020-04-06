@@ -252,7 +252,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
                         },
                         'end': {
                             'line': 0,
-                            'character': 18
+                            'character': 7
                         }
                     }
                 }
@@ -358,7 +358,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             self.read_file(),
             'import asdf;\nasdf')
 
-    def test_prefix_should_include_the_dollar_sign(self):
+    def test_prefix_should_include_the_dollar_sign(self) -> 'Generator':
         self.set_response(
             'textDocument/completion',
             {
@@ -387,3 +387,100 @@ class QueryCompletionsTests(TextDocumentTestCase):
         yield from self.await_message('textDocument/completion')
 
         self.assertEquals(self.read_file(), '<?php\n$hello = "world";\n$hello\n?>\n')
+
+    def test_fuzzy_match_plaintext_insert_text(self) -> 'Generator':
+        yield from self.verify(
+            completion_items=[{
+                'insertTextFormat': 1,
+                'label': 'aaba',
+                'insertText': 'aaca'
+            }],
+            insert_text='aa',
+            expected_text='aaca')
+
+    def test_fuzzy_match_plaintext_text_edit(self) -> 'Generator':
+        yield from self.verify(
+            completion_items=[{
+                'insertTextFormat': 1,
+                'label': 'aaba',
+                'textEdit': {
+                    'newText': 'aaca',
+                    'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 3}}}
+            }],
+            insert_text='aab',
+            expected_text='aaca')
+
+    def test_fuzzy_match_snippet_insert_text(self) -> 'Generator':
+        yield from self.verify(
+            completion_items=[{
+                'insertTextFormat': 2,
+                'label': 'aaba',
+                'insertText': 'aaca'
+            }],
+            insert_text='aab',
+            expected_text='aaca')
+
+    def test_fuzzy_match_snippet_text_edit(self) -> 'Generator':
+        yield from self.verify(
+            completion_items=[{
+                'insertTextFormat': 2,
+                'label': 'aaba',
+                'textEdit': {
+                    'newText': 'aaca',
+                    'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 2}}}
+            }],
+            insert_text='aab',
+            expected_text='aaca')
+
+    def verify_multi_cursor(self, completion: Dict[str, Any]) -> 'Generator':
+        """
+        This checks whether `fd` gets replaced by `fmod` when the cursor is at `fd|`.
+        Turning the `d` into an `m` is an important part of the test.
+        """
+        self.type('fd\nfd\nfd')
+        selection = self.view.sel()
+        selection.clear()
+        selection.add(sublime.Region(2, 2))
+        selection.add(sublime.Region(5, 5))
+        selection.add(sublime.Region(8, 8))
+        self.assertEqual(len(selection), 3)
+        for region in selection:
+            self.assertEqual(self.view.substr(self.view.line(region)), "fd")
+        self.set_response("textDocument/completion", [completion])
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
+        self.assertEqual(self.read_file(), 'fmod()\nfmod()\nfmod()')
+
+    def test_multi_cursor_plaintext_insert_text(self) -> 'Generator':
+        yield from self.verify_multi_cursor({
+            'insertTextFormat': 1,
+            'label': 'fmod(a, b)',
+            'insertText': 'fmod()'
+        })
+
+    def test_multi_cursor_plaintext_text_edit(self) -> 'Generator':
+        yield from self.verify_multi_cursor({
+            'insertTextFormat': 1,
+            'label': 'fmod(a, b)',
+            'textEdit': {
+                'newText': 'fmod()',
+                'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 2}}
+            }
+        })
+
+    def test_multi_cursor_snippet_insert_text(self) -> 'Generator':
+        yield from self.verify_multi_cursor({
+            'insertTextFormat': 2,
+            'label': 'fmod(a, b)',
+            'insertText': 'fmod($0)'
+        })
+
+    def test_multi_cursor_snippet_text_edit(self) -> 'Generator':
+        yield from self.verify_multi_cursor({
+            'insertTextFormat': 2,
+            'label': 'fmod(a, b)',
+            'textEdit': {
+                'newText': 'fmod($0)',
+                'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 2}}
+            }
+        })

@@ -21,7 +21,7 @@ def apply_project_overrides(client_config: ClientConfig, lsp_project_settings: d
             client_config.name,
             overrides.get("command", client_config.binary_args),
             overrides.get("tcp_port", client_config.tcp_port),
-            [],
+            None,
             "",
             client_config.languages,
             overrides.get("enabled", client_config.enabled),

@@ -1,6 +1,6 @@
 from .logging import debug
 from .types import Settings, ClientConfig, LanguageConfig
-from .typing import List, Optional, Dict, Callable
+from .typing import Any, List, Optional, Dict, Callable
 import sublime
 
 
@@ -157,10 +157,21 @@ def unload_settings() -> None:
         _settings_obj.clear_on_change("_on_new_client_settings")
 
 
+def normalize_selector(d: Dict[str, Any]) -> Optional[str]:
+    # "scopes" is optional.
+    # prefer "selector" over "scopes".
+    selector = d.get("selector")
+    if selector:
+        return selector
+    scopes = d.get("scopes")
+    if scopes:
+        return "|".join("({})".format(scope) for scope in scopes)
+    return None
+
+
 def read_language_config(config: dict) -> LanguageConfig:
     # "languageId" must exist, just raise a KeyError if it doesn't exist.
-    # "scopes" is optional.
-    return LanguageConfig(config["languageId"], config.get("scopes"))
+    return LanguageConfig(config["languageId"], normalize_selector(config))
 
 
 def read_language_configs(client_config: dict) -> List[LanguageConfig]:
@@ -169,12 +180,13 @@ def read_language_configs(client_config: dict) -> List[LanguageConfig]:
 
 def read_client_config(name: str, client_config: Dict) -> ClientConfig:
     languages = read_language_configs(client_config)
+    selector = normalize_selector(client_config)
 
     return ClientConfig(
         name,
         client_config.get("command", []),
         client_config.get("tcp_port", None),
-        client_config.get("scopes", None),
+        selector,
         client_config.get("languageId", ""),
         languages,
         client_config.get("enabled", False),
@@ -188,11 +200,14 @@ def read_client_config(name: str, client_config: Dict) -> ClientConfig:
 
 def update_client_config(config: ClientConfig, settings: dict) -> ClientConfig:
     default_language = config.languages[0]
+    selector = normalize_selector(settings)
+    if not selector:
+        selector = default_language.selector
     return ClientConfig(
         config.name,
         settings.get("command", config.binary_args),
         settings.get("tcp_port", config.tcp_port),
-        settings.get("scopes", default_language.scopes),
+        selector,
         settings.get("languageId", default_language.id),
         read_language_configs(settings) or config.languages,
         settings.get("enabled", config.enabled),

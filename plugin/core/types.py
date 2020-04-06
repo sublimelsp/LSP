@@ -39,19 +39,14 @@ class ClientStates(object):
 
 class LanguageConfig(object):
 
-    __slots__ = ('id', 'scopes', '_selector')
+    __slots__ = ('id', 'selector')
 
-    def __init__(self, language_id: str, scopes: Optional[List[str]] = None) -> None:
+    def __init__(self, language_id: str, selector: Optional[str] = None) -> None:
         self.id = language_id
-        if isinstance(scopes, list):
-            self.scopes = scopes
-            self._selector = "|".join(['({})'.format(scope) for scope in scopes])
-        else:
-            self.scopes = ["source.{}".format(self.id)]
-            self._selector = self.scopes[0]
+        self.selector = selector if selector else "source.{}".format(self.id)
 
     def score(self, base_scope: str) -> int:
-        return sublime.score_selector(base_scope, self._selector)
+        return sublime.score_selector(base_scope, self.selector)
 
     def match(self, base_scope: str) -> bool:
         # Every part of a x.y.z scope seems to contribute 8.
@@ -66,7 +61,7 @@ class ClientConfig(object):
                  name: str,
                  binary_args: List[str],
                  tcp_port: Optional[int],
-                 scopes: Optional[List[str]] = None,
+                 selector: Optional[str] = None,
                  languageId: Optional[str] = None,
                  languages: List[LanguageConfig] = [],
                  enabled: bool = True,
@@ -81,7 +76,7 @@ class ClientConfig(object):
         self.tcp_host = tcp_host
         self.tcp_mode = tcp_mode
         if not languages:
-            languages = [LanguageConfig(languageId, scopes)] if languageId else []
+            languages = [LanguageConfig(languageId, selector)] if languageId else []
         self.languages = languages
         self.enabled = enabled
         self.init_options = init_options

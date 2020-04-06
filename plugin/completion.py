@@ -8,6 +8,7 @@ from .core.protocol import Request, Range, InsertTextFormat
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.sessions import Session
 from .core.settings import settings, client_configs
+from .core.types import view2scope
 from .core.typing import Any, List, Dict, Optional, Union
 from .core.views import range_to_region
 from .core.views import text_document_position_params
@@ -237,24 +238,16 @@ class CompletionHandler(LSPViewEventListener):
         return languages.get(config_name) if languages else None
 
     def register_trigger_chars(self, session: Session, trigger_chars: List[str]) -> None:
-        completion_triggers = self.view.settings().get('auto_complete_triggers', []) or []  # type: List[Dict[str, str]]
-        view_language = self._view_language(session.config.name)
-        if view_language:
-            for language in session.config.languages:
-                if language.id == view_language:
-                    for scope in language.scopes:
-                        # debug("registering", trigger_chars, "for", scope)
-                        scope_trigger = next(
-                            (trigger for trigger in completion_triggers if trigger.get('selector', None) == scope),
-                            None
-                        )
-                        if not scope_trigger:  # do not override user's trigger settings.
-                            completion_triggers.append({
-                                'characters': "".join(trigger_chars),
-                                'selector': scope
-                            })
-
-            self.view.settings().set('auto_complete_triggers', completion_triggers)
+        settings = self.view.settings()
+        completion_triggers = settings.get('auto_complete_triggers', []) or []  # type: List[Dict[str, str]]
+        base_scope = view2scope(self.view)
+        for language in session.config.languages:
+            if language.match(base_scope):
+                completion_triggers.append({
+                    'characters': "".join(trigger_chars),
+                    'selector': '- comment'
+                })
+        settings.set('auto_complete_triggers', completion_triggers)
 
     def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[sublime.CompletionList]:
         if not self.initialized:

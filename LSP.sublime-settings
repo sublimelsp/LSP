@@ -103,12 +103,13 @@
   //     "command": ["pyls"],
   //
   //     // Use: "Show Scope Name" from Sublime's Developer menu
-  //     // This is _the_ connection between your files and language servers. It's a list of scopes that are matched
-  //     // against the current view's base scope. If one of the scopes in the list match with the base scope of the
+  //     // This is _the_ connection between your files and language servers. It's a selector that is matched
+  //     // against the current view's base scope. If the selector matches with the base scope of the
   //     // the file, the associated language server is started.
-  //     // If the scope happens to be of the form "source.{languageId}" (which it is in many cases), then you can
-  //     // omit this "scopes" key altogether, and LSP will assume the scope is "source.{languageId}".
-  //     "scopes": ["source.python"],
+  //     // If the selector happens to be of the form "source.{languageId}" (which it is in many cases), then you can
+  //     // omit this "selector" key altogether, and LSP will assume the selector is "source.{languageId}".
+  //     // For more information, see https://www.sublimetext.com/docs/3/selectors.html
+  //     "selector": "source.python",
   //
   //     // See: https://microsoft.github.io/language-server-protocol/specification#textDocumentItem
   //     //
@@ -187,10 +188,7 @@
             "start"
         ],
         "languageId": "bash",
-        "scopes":
-        [
-            "source.shell.bash"
-        ]
+        "selector": "source.shell.bash",
     },
     "clangd":
     {
@@ -198,13 +196,13 @@
       "languages": [{
           "languageId": "c" // will match source.c
         },{
-          "scopes": ["source.c++"],
+          "selector": "source.c++",
           "languageId": "cpp"
         },{
-          "scopes": ["source.objc"],
+          "selector": "source.objc",
           "languageId": "objective-c"
         },{
-          "scopes": ["source.objc++"],
+          "selector": "source.objc++",
           "languageId": "objective-cpp"
         },
       ]
@@ -227,15 +225,15 @@
         },
         {
           "languageId": "cpp",
-          "scopes":["source.c++"]
+          "selector": "source.c++"
         },
         {
           "languageId": "objective-c",
-          "scopes":["source.objc"]
+          "selector": "source.objc"
         },
         {
           "languageId": "objective-cpp",
-          "scopes":["source.objc++"]
+          "selector": "source.objc++"
         }
       ]
     },
@@ -262,7 +260,7 @@
     "flow":
     {
       "command": ["flow", "lsp"],
-      "scopes": ["source.js"],
+      "selector": "source.js",
       "languageId": "javascript"
     },
     "haskell-ide-engine":
@@ -277,7 +275,7 @@
     "intelephense-ls":
     {
         "command": ["intelephense", "--stdio"],
-        "scopes": ["source.php", "embedding.php"],
+        "selector": "source.php | embedding.php",
         "languageId": "php",
         "initializationOptions": {
         //   "clearCache": false,
@@ -294,7 +292,7 @@
     "phpls":
     {
         "command": ["php", "~/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"],
-        "scopes": ["source.php", "embedding.php"],
+        "selector": "source.php | embedding.php",
         "languageId": "php"
     },
     //"eslint": { },
@@ -303,16 +301,16 @@
     {
       "command": ["lsp-tsserver"],
       "languages": [{
-        "scopes": ["source.js"],
+        "selector": "source.js",
         "languageId": "javascript"
       }, {
-        "scopes": ["source.jsx"],
+        "selector": "source.jsx",
         "languageId": "javascriptreact"
       }, {
-        "scopes": ["source.ts"],
+        "selector": "source.ts",
         "languageId": "typescript"
       }, {
-        "scopes": ["source.tsx"],
+        "selector": "source.tsx",
         "languageId": "typescriptreact"
       }
       ]
@@ -326,16 +324,16 @@
     {
       "command": ["javascript-typescript-stdio"],
       "languages": [{
-        "scopes": ["source.js"],
+        "selector": "source.js",
         "languageId": "javascript"
       }, {
-        "scopes": ["source.jsx"],
+        "selector": "source.jsx",
         "languageId": "javascriptreact"
       }, {
-        "scopes": ["source.ts"],
+        "selector": "source.ts",
         "languageId": "typescript"
       }, {
-        "scopes": ["source.tsx"],
+        "selector": "source.tsx",
         "languageId": "typescriptreact"
       }
       ]
@@ -344,16 +342,16 @@
     {
       "command": ["typescript-language-server", "--stdio"],
       "languages": [{
-        "scopes": ["source.js"],
+        "selector": "source.js",
         "languageId": "javascript"
       }, {
-        "scopes": ["source.jsx"],
+        "selector": "source.jsx",
         "languageId": "javascriptreact"
       }, {
-        "scopes": ["source.ts"],
+        "selector": "source.ts",
         "languageId": "typescript"
       }, {
-        "scopes": ["source.tsx"],
+        "selector": "source.tsx",
         "languageId": "typescriptreact"
       }
       ]
@@ -382,10 +380,10 @@
     {
       "command": ["polymer-editor-service"],
       "languages": [{
-          "scopes": ["text.html.basic", "source.html"],
+          "selector": "text.html.basic | source.html",
           "languageId": "html"
         },{
-          "scopes": ["source.js"],
+          "selector": "source.js",
           "languageId": "javascript"
         },{
           "languageId": "css" // will match source.css
@@ -407,7 +405,7 @@
         "socket"
       ],
       "languageId": "ruby",
-      "scopes": ["source.ruby", "text.html.ruby"],
+      "selector": "source.ruby | text.html.ruby",
       "tcp_port": 7658,
       // Enable RuboCop linting
       // "initializationOptions": {
@@ -417,7 +415,7 @@
     "sorbet": {
       "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman"],
       "languageId": "ruby",
-      "scopes": ["source.ruby", "text.html.ruby"]
+      "selector": "source.ruby | text.html.ruby"
     },
     "vscode-css":
     {

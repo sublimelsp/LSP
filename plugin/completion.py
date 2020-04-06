@@ -92,18 +92,14 @@ class RestoreLines:
 
 
 def format_completion(item: dict, restore_lines: RestoreLines) -> sublime.CompletionItem:
-    kind = sublime.KIND_AMBIGUOUS
-
     item_kind = item.get("kind")
     if item_kind:
         kind = completion_kinds.get(item_kind, sublime.KIND_AMBIGUOUS)
+    else:
+        kind = sublime.KIND_AMBIGUOUS
 
-    is_deprecated = item.get("deprecated", False)
-    if is_deprecated:
-        list_kind = list(kind)
-        list_kind[1] = '⚠'
-        list_kind[2] = "⚠ {} - Deprecated".format(list_kind[2])
-        kind = tuple(list_kind)  # type: ignore
+    if item.get("deprecated", False):
+        kind = (kind[0], '⚠', "⚠ {} - Deprecated".format(kind[2]))
 
     return sublime.CompletionItem.command_completion(
         trigger=item["label"],

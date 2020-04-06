@@ -87,7 +87,9 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
             selection = self.view.sel()
             primary_cursor_position = selection[0].b
             for region in reversed(selection):
-                # This seems questionable...
+                # For each selection region, apply the same removal as for the "primary" region.
+                # To do that, translate, or offset, the LSP edit region into the non-"primary" regions.
+                # The concept of "primary" is our own, and there is no mention of it in the LSP spec.
                 translation = region.b - primary_cursor_position
                 self.view.erase(edit, sublime.Region(edit_region.a + translation, edit_region.b + translation))
         else:

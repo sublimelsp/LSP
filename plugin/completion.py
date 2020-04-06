@@ -88,7 +88,12 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
             edit_region = range_to_region(Range.from_lsp(text_edit['range']), self.view)
             # ... but this brings it to the present.
             edit_region = self.view.transform_region_from(edit_region, item["change_id"])
-            self.view.erase(edit, edit_region)  # TODO: Breaks with multi-cursors
+            selection = self.view.sel()
+            primary_cursor_position = selection[0].b
+            for region in reversed(selection):
+                # This seems questionable...
+                translation = region.b - primary_cursor_position
+                self.view.erase(edit, sublime.Region(edit_region.a + translation, edit_region.b + translation))
         else:
             new_text = item.get('insertText') or item['label']
 

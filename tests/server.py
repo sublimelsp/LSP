@@ -17,7 +17,7 @@ TODO: It should also understand TCP, both as slave and master.
 """
 from argparse import ArgumentParser
 from enum import IntEnum
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, Iterable
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, Iterable
 import asyncio
 import json
 import os
@@ -139,7 +139,7 @@ class Session:
 
         # properties used for testing purposes
         self._responses: Dict[str, PayloadLike] = {}
-        self._received: Set[str] = set()
+        self._received: Dict[str, PayloadLike] = {}
         self._received_cv = asyncio.Condition()
 
         self._install_handlers()
@@ -220,7 +220,7 @@ class Session:
         unhandled = True
         if not method.startswith("$test/"):
             async with self._received_cv:
-                self._received.add(method)
+                self._received[method] = params
                 self._received_cv.notify_all()
                 unhandled = False
         handler = handlers.get(method)
@@ -305,8 +305,7 @@ class Session:
         async with self._received_cv:
             while True:
                 try:
-                    self._received.remove(method)
-                    return None
+                    return self._received.pop(method)
                 except KeyError:
                     pass
                 await self._received_cv.wait()

@@ -1,22 +1,124 @@
 import sublime
 import sublime_plugin
 
-from .core.protocol import Request, Range, InsertTextFormat
-from .core.settings import settings, client_configs
-from .core.logging import debug
-from .core.completion import parse_completion_response, format_completion
-from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.configurations import is_supported_syntax
-from .core.sessions import Session
 from .core.edit import parse_text_edit
+from .core.logging import debug
+from .core.protocol import Request, Range, InsertTextFormat
+from .core.registry import session_for_view, client_from_session, LSPViewEventListener
+from .core.sessions import Session
+from .core.settings import settings, client_configs
+from .core.typing import Any, List, Dict, Optional, Union
 from .core.views import range_to_region
-from .core.typing import Any, List, Dict, Tuple, Optional, Union
 from .core.views import text_document_position_params
-from .core.restore_lines import RestoreLines
+
+
+completion_kinds = {
+    1: (sublime.KIND_ID_MARKUP, "Ξ", "Text"),
+    2: (sublime.KIND_ID_FUNCTION, "λ", "Method"),
+    3: (sublime.KIND_ID_FUNCTION, "λ", "Function"),
+    4: (sublime.KIND_ID_FUNCTION, "c", "Constructor"),
+    5: (sublime.KIND_ID_VARIABLE, "f", "Field"),
+    6: (sublime.KIND_ID_VARIABLE, "v", "Variable"),
+    7: (sublime.KIND_ID_TYPE, "c", "Class"),
+    8: (sublime.KIND_ID_TYPE, "i", "Interface"),
+    9: (sublime.KIND_ID_NAMESPACE, "◪", "Module"),
+    10: (sublime.KIND_ID_VARIABLE, "ρ", "Property"),
+    11: (sublime.KIND_ID_VARIABLE, "u", "Unit"),
+    12: (sublime.KIND_ID_VARIABLE, "ν", "Value"),
+    13: (sublime.KIND_ID_TYPE, "ε", "Enum"),
+    14: (sublime.KIND_ID_KEYWORD, "κ", "Keyword"),
+    15: (sublime.KIND_ID_SNIPPET, "s", "Snippet"),
+    16: (sublime.KIND_ID_AMBIGUOUS, "c", "Color"),
+    17: (sublime.KIND_ID_AMBIGUOUS, "#", "File"),
+    18: (sublime.KIND_ID_AMBIGUOUS, "⇢", "Reference"),
+    19: (sublime.KIND_ID_AMBIGUOUS, "ƒ", "Folder"),
+    20: (sublime.KIND_ID_TYPE, "ε", "EnumMember"),
+    21: (sublime.KIND_ID_VARIABLE, "π", "Constant"),
+    22: (sublime.KIND_ID_TYPE, "s", "Struct"),
+    23: (sublime.KIND_ID_FUNCTION, "e", "Event"),
+    24: (sublime.KIND_ID_KEYWORD, "ο", "Operator"),
+    25: (sublime.KIND_ID_TYPE, "τ", "Type Parameter")
+}
+
+
+class RestoreLines:
+    def __init__(self) -> None:
+        self.saved_lines = []  # type: List[dict]
+
+    def save_lines(self, locations: List[int], view: sublime.View) -> None:
+        change_id = view.change_id()
+
+        for point in locations:
+            line = view.line(point)
+            change_region = (line.begin(), line.end())
+            text = view.substr(line)
+
+            self.saved_lines.append({
+                "change_id": change_id,
+                "change_region": change_region,
+                "text": text,
+                # cursor will be use retore the cursor the te exact position
+                "cursor": point
+            })
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "saved_lines": self.saved_lines
+        }
+
+    @staticmethod
+    def from_dict(dictionary: Dict[str, Any]) -> 'RestoreLines':
+        restore_lines = RestoreLines()
+        restore_lines.saved_lines = dictionary["saved_lines"]
+        return restore_lines
+
+    def restore_lines(self, edit: sublime.Edit, view: sublime.View) -> None:
+        # restore lines contents
+        # insert back lines from the bottom to top
+        for saved_line in reversed(self.saved_lines):
+            change_id = saved_line['change_id']
+            begin, end = saved_line['change_region']
+            change_region = sublime.Region(begin, end)
+
+            transform_region = view.transform_region_from(change_region, change_id)
+            view.erase(edit, transform_region)
+            view.insert(edit, transform_region.begin(), saved_line['text'])
+
+        # restore old cursor position
+        view.sel().clear()
+        for saved_line in self.saved_lines:
+            view.sel().add(saved_line["cursor"])
+
+
+def format_completion(item: dict, restore_lines: RestoreLines) -> sublime.CompletionItem:
+    kind = sublime.KIND_AMBIGUOUS
+
+    item_kind = item.get("kind")
+    if item_kind:
+        kind = completion_kinds.get(item_kind, sublime.KIND_AMBIGUOUS)
+
+    is_deprecated = item.get("deprecated", False)
+    if is_deprecated:
+        list_kind = list(kind)
+        list_kind[1] = '⚠'
+        list_kind[2] = "⚠ {} - Deprecated".format(list_kind[2])
+        kind = tuple(list_kind)  # type: ignore
+
+    return sublime.CompletionItem.command_completion(
+        trigger=item["label"],
+        command="lsp_select_completion_item",
+        args={
+            "item": item,
+            "restore_lines_dict": restore_lines.to_dict()
+        },
+        annotation=item.get('detail') or "",
+        kind=kind
+    )
 
 
 class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
-    def run(self, edit: Any, item: Any, restore_lines_dict: dict) -> None:
+    def run(self, edit: sublime.Edit, item: Any, restore_lines_dict: dict) -> None:
         insert_text_format = item.get("insertTextFormat")
 
         text_edit = item.get('textEdit')
@@ -94,12 +196,9 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
         sublime.status_message('Applied additional edits for completion')
 
 
-class LspTrimCompletionCommand(sublime_plugin.TextCommand):
-    def run(self, edit: sublime.Edit, range: Optional[Tuple[int, int]] = None) -> None:
-        if range:
-            start, end = range
-            region = sublime.Region(start, end)
-            self.view.erase(edit, region)
+def resolve(completion_list: sublime.CompletionList, items: List[sublime.CompletionItem], flags: int = 0) -> None:
+    # Resolve the promise on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).
+    sublime.set_timeout(lambda: completion_list.set_completions(items, flags))
 
 
 class CompletionHandler(LSPViewEventListener):
@@ -130,6 +229,8 @@ class CompletionHandler(LSPViewEventListener):
                 'triggerCharacters') or []
             if trigger_chars:
                 self.register_trigger_chars(session, trigger_chars)
+            # This is to make ST match with labels that have a weird prefix like a space character.
+            self.view.settings().set("auto_complete_preserve_order", "none")
 
     def _view_language(self, config_name: str) -> Optional[str]:
         languages = self.view.settings().get('lsp_language')
@@ -158,47 +259,41 @@ class CompletionHandler(LSPViewEventListener):
     def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[sublime.CompletionList]:
         if not self.initialized:
             self.initialize()
-
         if not self.enabled:
             return None
-
-        completion_list = sublime.CompletionList()
-
-        self.do_request(completion_list, locations)
-
-        return completion_list
-
-    def do_request(self, completion_list: sublime.CompletionList, locations: List[int]) -> None:
-        # don't store client so we can handle restarts
         client = client_from_session(session_for_view(self.view, 'completionProvider', locations[0]))
         if not client:
-            return
-
-        # save lines to restore them later (only when selecting a completion item with a TextEdit)
+            return None
         restore_lines = RestoreLines()
         restore_lines.save_lines(locations, self.view)
-
         self.manager.documents.purge_changes(self.view)
-        document_position = text_document_position_params(self.view, locations[0])
+        completion_list = sublime.CompletionList()
         client.send_request(
-            Request.complete(document_position),
+            Request.complete(text_document_position_params(self.view, locations[0])),
             lambda res: self.handle_response(res, completion_list, restore_lines),
             lambda res: self.handle_error(res, completion_list))
+        return completion_list
 
     def handle_response(self, response: Optional[Union[dict, List]],
                         completion_list: sublime.CompletionList, restore_lines: RestoreLines) -> None:
-        response_items, response_incomplete = parse_completion_response(response)
-        items = list(format_completion(item, restore_lines) for item in response_items)
+        response_items = []  # type: List[Dict]
+        incomplete = False
+        if isinstance(response, dict):
+            response_items = response["items"] or []
+            incomplete = response.get("isIncomplete", False)
+        elif isinstance(response, list):
+            response_items = response
+        response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
 
         flags = 0
         if settings.only_show_lsp_completions:
             flags |= sublime.INHIBIT_WORD_COMPLETIONS
             flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
 
-        if response_incomplete:
+        if incomplete:
             flags |= sublime.DYNAMIC_COMPLETIONS
-        completion_list.set_completions(items, flags)
+        resolve(completion_list, [format_completion(i, restore_lines) for i in response_items], flags)
 
     def handle_error(self, error: dict, completion_list: sublime.CompletionList) -> None:
-        completion_list.set_completions([])
+        resolve(completion_list, [])
         sublime.status_message('Completion error: ' + str(error.get('message')))

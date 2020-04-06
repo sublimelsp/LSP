@@ -1,92 +1,15 @@
 from LSP.plugin.completion import CompletionHandler
 from LSP.plugin.core.registry import is_supported_view
+from LSP.plugin.core.typing import Any, Generator, List, Dict
 from setup import CI, TextDocumentTestCase, add_config, remove_config, text_config
 from unittesting import DeferrableTestCase
 import sublime
 
-from LSP.tests.intelephense_completion_sample import (
-    intelephense_before_state,
-    intelephense_expected_state,
-    intelephense_response
-)
 
-try:
-    from typing import Dict, Optional, List, Generator
-    assert Dict and Optional and List and Generator
-except ImportError:
-    pass
-
-completions_with_label = [{'label': 'asdf'}, {'label': 'efcgh'}]
-completions_with_label_and_insert_text = [
-    {
-        "label": "Label text",
-        "insertText": "Insert text"
-    }
-]
-completions_with_label_and_insert_text_and_text_edit = [
-    {
-        "label": "Label text",
-        "insertText": "Insert text",
-        "textEdit": {
-            "newText": "Text edit",
-            "range": {
-                "end": {
-                    "character": 5,
-                    "line": 0
-                },
-                "start": {
-                    "character": 0,
-                    "line": 0
-                }
-            }
-        }
-    }
-]
-completion_with_additional_edits = [
-    {
-        'label': 'asdf',
-        'additionalTextEdits': [
-            {
-                'range': {
-                    'start': {
-                        'line': 0,
-                        'character': 0
-                    },
-                    'end': {
-                        'line': 0,
-                        'character': 0
-                    }
-                },
-                'newText': 'import asdf;\n'
-            }
-        ]
-    }
-]
-insert_text_completions = [{'label': 'asdf', 'insertText': 'asdf()'}]
-var_completion_using_label = [{'label': '$what'}]
-var_prefix_added_in_insertText = [
-    {
-        "insertText": "$true",
-        "label": "true",
-        "textEdit": {
-            "newText": "$true",
-            "range": {
-                "end": {
-                    "character": 5,
-                    "line": 0
-                },
-                "start": {
-                    "character": 0,
-                    "line": 0
-                }
-            }
-        }
-    }
-]
-var_prefix_added_in_label = [
-    {
-        'label': '$what',
-        'textEdit': {
+additional_edits = {
+    'label': 'asdf',
+    'additionalTextEdits': [
+        {
             'range': {
                 'start': {
                     'line': 0,
@@ -94,94 +17,13 @@ var_prefix_added_in_label = [
                 },
                 'end': {
                     'line': 0,
-                    'character': 1
-                }
-            },
-            'newText': '$what'
-        }
-    }
-]
-space_added_in_label = [{'label': ' const', 'insertText': 'const'}]
-
-dash_missing_from_label = [
-    {
-        'label': 'UniqueId',
-        'textEdit': {
-            'range': {
-                'start': {
-                    'character': 0,
-                    'line': 0
-                },
-                'end': {
-                    'character': 1,
-                    'line': 0
-                }
-            },
-            'newText': '-UniqueId'
-        },
-        'insertText': '-UniqueId'
-    }
-]
-
-edit_before_cursor = [
-    {
-        'insertTextFormat': 2,
-        'label': 'override def myFunction(): Unit',
-        'textEdit': {
-            'newText': 'override def myFunction(): Unit = ${0:???}',
-            'range': {
-                'start': {
-                    'line': 0,
-                    'character': 2
-                },
-                'end': {
-                    'line': 0,
-                    'character': 18
-                }
-            }
-        }
-    }
-]
-
-edit_after_nonword = [
-    {
-        'insertTextFormat': 2,
-        'label': 'apply[A](xs: A*): List[A]',
-        'textEdit': {
-            'newText': 'apply($0)',
-            'range': {
-                'start': {
-                    'line': 0,
-                    'character': 5
-                },
-                'end': {
-                    'line': 0,
-                    'character': 5
-                }
-            }
-        }
-    }
-]
-
-metals_implement_all_members = [
-    {
-        'insertTextFormat': 2,
-        'label': 'Implement all members',
-        'textEdit': {
-            'newText': 'def foo: Int \u003d ${0:???}\n   def boo: Int \u003d ${0:???}',
-            'range': {
-                'start': {
-                    'line': 0,
                     'character': 0
-                },
-                'end': {
-                    'line': 0,
-                    'character': 1
                 }
-            }
+            },
+            'newText': 'import asdf;\n'
         }
-    }
-]
+    ]
+}
 
 
 class InitializationTests(DeferrableTestCase):
@@ -236,172 +78,266 @@ class QueryCompletionsTests(TextDocumentTestCase):
         s.add(point)
 
     def select_completion(self) -> 'Generator':
+        current_change_count = self.view.change_count()
         self.view.run_command('auto_complete')
+        committed = False
 
-        yield 100
-        self.view.run_command("commit_completion")
+        def commit_completion() -> bool:
+            if not self.view.is_auto_complete_visible():
+                return False
+            nonlocal committed
+            if not committed:
+                self.view.run_command("commit_completion")
+                committed = True
+            return self.view.change_count() > current_change_count
+
+        yield commit_completion
 
     def read_file(self) -> str:
         return self.view.substr(sublime.Region(0, self.view.size()))
 
-    def test_simple_label(self) -> 'Generator':
-        self.set_response("textDocument/completion", completions_with_label)
-
-        self.type("a")
+    def verify(self, *, completion_items: List[Dict[str, Any]], insert_text: str, expected_text: str) -> Generator:
+        if insert_text:
+            self.type(insert_text)
+        self.set_response("textDocument/completion", completion_items)
         yield from self.select_completion()
         yield from self.await_message("textDocument/completion")
+        self.assertEqual(self.read_file(), expected_text)
 
-        self.assertEquals(self.read_file(), 'asdf')
+    def test_none(self) -> 'Generator':
+        self.set_response("textDocument/completion", None)
+        self.view.run_command('auto_complete')
+        yield lambda: self.view.is_auto_complete_visible()
+
+    def test_simple_label(self) -> 'Generator':
+        yield from self.verify(
+            completion_items=[{'label': 'asdf'}, {'label': 'efcgh'}],
+            insert_text='',
+            expected_text='asdf')
 
     def test_prefer_insert_text_over_label(self) -> 'Generator':
-        self.set_response("textDocument/completion", completions_with_label_and_insert_text)
-
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
-
-        self.assertEquals(self.read_file(), 'Insert text')
+        yield from self.verify(
+            completion_items=[{"label": "Label text", "insertText": "Insert text"}],
+            insert_text='',
+            expected_text='Insert text')
 
     def test_prefer_text_edit_over_insert_text(self) -> 'Generator':
-        self.set_response("textDocument/completion", completions_with_label_and_insert_text_and_text_edit)
+        yield from self.verify(
+            completion_items=[{
+                "label": "Label text",
+                "insertText": "Insert text",
+                "textEdit": {
+                    "newText": "Text edit",
+                    "range": {
+                        "end": {
+                            "character": 5,
+                            "line": 0
+                        },
+                        "start": {
+                            "character": 0,
+                            "line": 0
+                        }
+                    }
+                }
+            }],
+            insert_text='',
+            expected_text='Text edit')
 
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
-
-        self.assertEquals(self.read_file(), 'Text edit')
-
-    def test_simple_inserttext(self) -> 'Generator':
-        self.set_response("textDocument/completion", insert_text_completions)
-
-        self.type("a")
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
-
-        self.assertEquals(
-            self.read_file(),
-            insert_text_completions[0]["insertText"])
+    def test_simple_insert_text(self) -> 'Generator':
+        yield from self.verify(
+            completion_items=[{'label': 'asdf', 'insertText': 'asdf()'}],
+            insert_text="a",
+            expected_text='asdf()')
 
     def test_var_prefix_using_label(self) -> 'Generator':
-        self.set_response("textDocument/completion", var_completion_using_label)
-        self.type("$")
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
-
-        self.assertEquals(self.read_file(), '$what')
+        yield from self.verify(completion_items=[{'label': '$what'}], insert_text="$", expected_text="$what")
 
     def test_var_prefix_added_in_insertText(self) -> 'Generator':
         """
-
         Powershell: label='true', insertText='$true' (see https://github.com/sublimelsp/LSP/issues/294)
-
         """
-        self.set_response("textDocument/completion", var_prefix_added_in_insertText)
-        self.type("$")
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
-
-        self.assertEquals(
-            self.read_file(), '$true')
+        yield from self.verify(
+            completion_items=[{
+                "insertText": "$true",
+                "label": "true",
+                "textEdit": {
+                    "newText": "$true",
+                    "range": {
+                        "end": {
+                            "character": 5,
+                            "line": 0
+                        },
+                        "start": {
+                            "character": 0,
+                            "line": 0
+                        }
+                    }
+                }
+            }],
+            insert_text="$",
+            expected_text="$true")
 
     def test_var_prefix_added_in_label(self) -> 'Generator':
         """
-
         PHP language server: label='$someParam', textEdit='someParam' (https://github.com/sublimelsp/LSP/issues/368)
-
         """
-        self.set_response("textDocument/completion", var_prefix_added_in_label)
-        self.type("$")
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
-
-        self.assertEquals(
-            self.read_file(), '$what')
+        yield from self.verify(
+            completion_items=[{
+                'label': '$what',
+                'textEdit': {
+                    'range': {
+                        'start': {
+                            'line': 0,
+                            'character': 0
+                        },
+                        'end': {
+                            'line': 0,
+                            'character': 1
+                        }
+                    },
+                    'newText': '$what'
+                }
+            }],
+            insert_text="$",
+            expected_text="$what")
 
     def test_space_added_in_label(self) -> 'Generator':
         """
-
         Clangd: label=" const", insertText="const" (https://github.com/sublimelsp/LSP/issues/368)
-
         """
-        self.set_response("textDocument/completion", space_added_in_label)
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
-
-        self.assertEquals(
-            self.read_file(), 'const')
+        yield from self.verify(
+            completion_items=[{'label': ' const', 'insertText': 'const'}],
+            insert_text='',
+            expected_text="const")
 
     def test_dash_missing_from_label(self) -> 'Generator':
         """
-
         Powershell: label="UniqueId", insertText="-UniqueId" (https://github.com/sublimelsp/LSP/issues/572)
-
         """
-        self.set_response("textDocument/completion", dash_missing_from_label)
-        self.type("u")
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
-
-        self.assertEquals(
-            self.read_file(),
-            '-UniqueId')
+        yield from self.verify(
+            completion_items=[{
+                'label': 'UniqueId',
+                'insertText': '-UniqueId',
+                'textEdit': {
+                    'range': {
+                        'start': {
+                            'character': 0,
+                            'line': 0
+                        },
+                        'end': {
+                            'character': 1,
+                            'line': 0
+                        }
+                    },
+                    'newText': '-UniqueId'
+                }
+            }],
+            insert_text="u",
+            expected_text="-UniqueId")
 
     def test_edit_before_cursor(self) -> 'Generator':
         """
-
         Metals: label="override def myFunction(): Unit"
-
         """
-        self.set_response("textDocument/completion", edit_before_cursor)
-        self.type('  def myF')
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
-
-        self.assertEquals(
-            self.read_file(),
-            '  override def myFunction(): Unit = ???')
+        yield from self.verify(
+            completion_items=[{
+                'insertTextFormat': 2,
+                'label': 'override def myFunction(): Unit',
+                'textEdit': {
+                    'newText': 'override def myFunction(): Unit = ${0:???}',
+                    'range': {
+                        'start': {
+                            'line': 0,
+                            'character': 2
+                        },
+                        'end': {
+                            'line': 0,
+                            'character': 18
+                        }
+                    }
+                }
+            }],
+            insert_text='  def myF',
+            expected_text='  override def myFunction(): Unit = ???')
 
     def test_edit_after_nonword(self) -> 'Generator':
         """
-
         Metals: List.| selects label instead of textedit
         See https://github.com/sublimelsp/LSP/issues/645
-
         """
-        self.set_response("textDocument/completion", edit_after_nonword)
-        self.type("List.")
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
-
-        self.assertEquals(
-            self.read_file(),
-            'List.apply()')
+        yield from self.verify(
+            completion_items=[{
+                'insertTextFormat': 2,
+                'label': 'apply[A](xs: A*): List[A]',
+                'textEdit': {
+                    'newText': 'apply($0)',
+                    'range': {
+                        'start': {
+                            'line': 0,
+                            'character': 5
+                        },
+                        'end': {
+                            'line': 0,
+                            'character': 5
+                        }
+                    }
+                }
+            }],
+            insert_text="List.",
+            expected_text='List.apply()')
 
     def test_implement_all_members_quirk(self) -> 'Generator':
         """
         Metals: "Implement all members" should just select the newText.
         https://github.com/sublimelsp/LSP/issues/771
         """
-        self.set_response("textDocument/completion", metals_implement_all_members)
-        self.type("I")
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
-
-        self.assertEquals(
-            self.read_file(),
-            'def foo: Int = ???\n   def boo: Int = ???')
+        yield from self.verify(
+            completion_items=[{
+                'insertTextFormat': 2,
+                'label': 'Implement all members',
+                'textEdit': {
+                    'newText': 'def foo: Int \u003d ${0:???}\n   def boo: Int \u003d ${0:???}',
+                    'range': {
+                        'start': {
+                            'line': 0,
+                            'character': 0
+                        },
+                        'end': {
+                            'line': 0,
+                            'character': 1
+                        }
+                    }
+                }
+            }],
+            insert_text="I",
+            expected_text='def foo: Int = ???\n   def boo: Int = ???')
 
     def test_additional_edits(self) -> 'Generator':
-        self.set_response("textDocument/completion", completion_with_additional_edits)
-
-        yield from self.select_completion()
-        yield from self.await_message("textDocument/completion")
-
-        self.assertEquals(
-            self.read_file(),
-            'import asdf;\nasdf')
+        yield from self.verify(
+            completion_items=[{
+                'label': 'asdf',
+                'additionalTextEdits': [
+                    {
+                        'range': {
+                            'start': {
+                                'line': 0,
+                                'character': 0
+                            },
+                            'end': {
+                                'line': 0,
+                                'character': 0
+                            }
+                        },
+                        'newText': 'import asdf;\n'
+                    }
+                ]
+            }],
+            insert_text='',
+            expected_text='import asdf;\nasdf')
 
     def test_resolve_for_additional_edits(self) -> 'Generator':
-        self.set_response('textDocument/completion', completions_with_label)
-        self.set_response('completionItem/resolve', completion_with_additional_edits[0])
+        self.set_response('textDocument/completion', [{'label': 'asdf'}, {'label': 'efcgh'}])
+        self.set_response('completionItem/resolve', additional_edits)
 
         yield from self.select_completion()
         yield from self.await_message('textDocument/completion')
@@ -412,8 +348,8 @@ class QueryCompletionsTests(TextDocumentTestCase):
             'import asdf;\nasdf')
 
     def test_apply_additional_edits_only_once(self) -> 'Generator':
-        self.set_response('textDocument/completion', completion_with_additional_edits)
-        self.set_response('completionItem/resolve', completion_with_additional_edits[0])
+        self.set_response('textDocument/completion', [{'label': 'asdf'}, {'label': 'efcgh'}])
+        self.set_response('completionItem/resolve', additional_edits)
 
         yield from self.select_completion()
         yield from self.await_message('textDocument/completion')
@@ -422,15 +358,32 @@ class QueryCompletionsTests(TextDocumentTestCase):
             self.read_file(),
             'import asdf;\nasdf')
 
-    def test__prefix_should_include_the_dollar_sign(self):
-        self.set_response('textDocument/completion', intelephense_response)
+    def test_prefix_should_include_the_dollar_sign(self):
+        self.set_response(
+            'textDocument/completion',
+            {
+                "items":
+                [
+                    {
+                        "label": "$hello",
+                        "textEdit":
+                        {
+                            "newText": "$hello",
+                            "range": {"end": {"line": 2, "character": 3}, "start": {"line": 2, "character": 0}}
+                        },
+                        "data": 2369386987913238,
+                        "detail": "int",
+                        "kind": 6,
+                        "sortText": "$hello"
+                    }
+                ],
+                "isIncomplete": False
+            })
 
-        self.type(intelephense_before_state)
+        self.type('<?php\n$hello = "world";\n$he\n?>\n')
         # move cursor after `$he|`
         self.move_cursor(2, 3)
         yield from self.select_completion()
         yield from self.await_message('textDocument/completion')
 
-        self.assertEquals(
-            self.read_file(),
-            intelephense_expected_state)
+        self.assertEquals(self.read_file(), '<?php\n$hello = "world";\n$hello\n?>\n')

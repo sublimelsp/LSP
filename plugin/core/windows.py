@@ -3,7 +3,7 @@ from .configurations import WindowConfigManager
 from .diagnostics import DiagnosticsStorage
 from .edit import parse_workspace_edit
 from .logging import debug
-from .protocol import Notification, Response
+from .protocol import Notification, Response, TextDocumentSyncKindNone, TextDocumentSyncKindFull
 from .rpc import Client
 from .sessions import Session
 from .types import ClientConfig
@@ -13,13 +13,14 @@ from .types import Settings
 from .types import view2scope
 from .types import ViewLike
 from .types import WindowLike
-from .typing import Optional, List, Callable, Dict, Any, Protocol, Set
+from .typing import Optional, List, Callable, Dict, Any, Protocol, Set, Iterable
 from .views import did_change, did_close, did_open, did_save, will_save
 from .workspace import disable_in_project
 from .workspace import enable_in_project
 from .workspace import get_workspace_folders
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
+import sublime
 import threading
 
 
@@ -54,7 +55,7 @@ class DocumentHandler(Protocol):
     def handle_did_open(self, view: ViewLike) -> None:
         ...
 
-    def handle_did_change(self, view: ViewLike) -> None:
+    def handle_did_change(self, view: ViewLike, changes: Iterable[sublime.TextChange]) -> None:
         ...
 
     def purge_changes(self, view: ViewLike) -> None:
@@ -101,6 +102,20 @@ def nop() -> None:
     pass
 
 
+class PendingBuffer:
+
+    __slots__ = ('view', 'version', 'changes')
+
+    def __init__(self, view: ViewLike, version: int, changes: Iterable[sublime.TextChange]) -> None:
+        self.view = view
+        self.version = version
+        self.changes = list(changes)
+
+    def update(self, version: int, changes: Iterable[sublime.TextChange]) -> None:
+        self.version = version
+        self.changes.extend(changes)
+
+
 class WindowDocumentHandler(object):
     def __init__(self, sublime: Any, settings: Settings, window: WindowLike, workspace: ProjectFolders,
                  configs: WindowConfigManager) -> None:
@@ -109,7 +124,7 @@ class WindowDocumentHandler(object):
         self._configs = configs
         self._window = window
         self._document_states = set()  # type: Set[str]
-        self._pending_buffer_changes = dict()  # type: Dict[int, Dict]
+        self._pending_buffer_changes = dict()  # type: Dict[int, PendingBuffer]
         self._sessions = dict()  # type: Dict[str, List[Session]]
         self._workspace = workspace
         self.changed = nop
@@ -241,43 +256,47 @@ class WindowDocumentHandler(object):
         else:
             debug('document not tracked', file_name)
 
-    def handle_did_change(self, view: ViewLike) -> None:
+    def handle_did_change(self, view: ViewLike, changes: Iterable[sublime.TextChange]) -> None:
         buffer_id = view.buffer_id()
         change_count = view.change_count()
-        if buffer_id in self._pending_buffer_changes:
-            self._pending_buffer_changes[buffer_id]["version"] = change_count
+        pending_buffer = self._pending_buffer_changes.get(buffer_id)
+        if pending_buffer is None:
+            self._pending_buffer_changes[buffer_id] = PendingBuffer(view, change_count, changes)
         else:
-            self._pending_buffer_changes[buffer_id] = {"view": view, "version": change_count}
+            pending_buffer.update(change_count, changes)
         self._sublime.set_timeout_async(lambda: self.purge_did_change(buffer_id, change_count), 500)
 
     def purge_changes(self, view: ViewLike) -> None:
         self.purge_did_change(view.buffer_id())
 
     def purge_did_change(self, buffer_id: int, buffer_version: Optional[int] = None) -> None:
-        if buffer_id not in self._pending_buffer_changes:
-            return
-
-        pending_buffer = self._pending_buffer_changes.get(buffer_id)
-
-        if pending_buffer:
-            if buffer_version is None or buffer_version == pending_buffer["version"]:
-                self.notify_did_change(pending_buffer["view"])
+        pending_buffer = self._pending_buffer_changes.get(buffer_id, None)
+        if pending_buffer is not None:
+            if buffer_version is None or buffer_version == pending_buffer.version:
+                self._pending_buffer_changes.pop(buffer_id, None)
+                self.notify_did_change(pending_buffer)
                 self.changed()
 
-    def notify_did_change(self, view: ViewLike) -> None:
+    def notify_did_change(self, pending_buffer: PendingBuffer) -> None:
+        view = pending_buffer.view
+        if not view.is_valid():
+            return
         file_name = view.file_name()
-        if file_name and view.window() == self._window:
-            # ensure view is opened.
-            if file_name not in self._document_states:
-                self.handle_did_open(view)
-
-            if view.buffer_id() in self._pending_buffer_changes:
-                del self._pending_buffer_changes[view.buffer_id()]
-                # mypy: expected sublime.View, got ViewLike
-                notification = did_change(view)  # type: ignore
-                for session in self._get_applicable_sessions(view):
-                    if session.client and file_name in self._document_states and session.should_notify_did_change():
-                        session.client.send_notification(notification)
+        if not file_name or view.window() != self._window:
+            return
+        # ensure view is opened.
+        if file_name not in self._document_states:
+            self.handle_did_open(view)
+        for session in self._get_applicable_sessions(view):
+            if not session.client:
+                continue
+            sync_kind = session.text_sync_kind()
+            if sync_kind == TextDocumentSyncKindNone:
+                continue
+            changes = None if sync_kind == TextDocumentSyncKindFull else pending_buffer.changes
+            # ViewLike vs sublime.View
+            notification = did_change(view, changes)  # type: ignore
+            session.client.send_notification(notification)
 
 
 def extract_message(params: Any) -> str:

@@ -434,6 +434,10 @@
         "R", "--slave", "-e", "languageserver::run()"
       ],
       "languageId": "r" // will match source.r
-    }
+    },
+    "sourcekit-lsp": {
+      "command": ["xcrun", "sourcekit-lsp"],
+      "languageId": "swift" // will match source.swift
+    },
   }
 }

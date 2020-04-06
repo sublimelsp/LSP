@@ -110,6 +110,9 @@ class ViewLike(Protocol):
     def id(self) -> int:
         ...
 
+    def is_valid(self) -> bool:
+        ...
+
     def file_name(self) -> Optional[str]:
         ...
 

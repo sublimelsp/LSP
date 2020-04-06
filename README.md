@@ -61,6 +61,7 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [Ruby](https://lsp.readthedocs.io/en/latest/#ruby)
 * [Rust](https://lsp.readthedocs.io/en/latest/#rust)
 * [Scala](https://lsp.readthedocs.io/en/latest/#scala)
+* [Swift](https://lsp.readthedocs.io/en/latest/#swift)
 * [Terraform](https://lsp.readthedocs.io/en/latest/#terraform)
 * [Vue (JavaScript)](https://lsp.readthedocs.io/en/latest/#vue)
 * [XML](https://lsp.readthedocs.io/en/latest/#xml)
@@ -88,7 +89,7 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
   - ✅ didOpen
   - ✅ didChange
     - ✅ Full text sync
-    - ❌ Incremental text sync
+    - ✅ Incremental text sync
   - ✅ willSave
   - ✅ willSaveWaitUntil
   - ✅ didSave

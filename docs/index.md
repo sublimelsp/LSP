@@ -267,19 +267,17 @@ dub run dls:bootstrap
 1. See instructions for installing the [Erlang Language Server](https://github.com/erlang-ls/erlang_ls).
 2. Add to LSP settings' clients:
 
-```js
-"erlang-ls": {
-  "command"   : [ "/path/to/my/erlang_ls", "--transport", "stdio" ],
-  "enabled"   : true,
-  "languageId": "erlang" // will match source.erlang
-}
-```
+         "erlang-ls": {
+           "command"   : [ "/path/to/my/erlang_ls", "--transport", "stdio" ],
+           "enabled"   : true,
+           "languageId": "erlang",
+           "scopes"    : [ "source.erlang" ]
+         }
 
 3. Sometimes Erlang LS might take a little time to initialize. The default is 3 seconds so it is a good idea to increase the value for `"initialize_timeout"` in the LSP settings' clients:
 
-```json
-"initialize_timeout": 30
-```
+        "initialize_timeout": 30
+
 
 ### Flow (JavaScript)<a name="flow"></a>
 
@@ -297,26 +295,22 @@ npm install -g flow-language-server
 
 ### Fortran<a name="fortran"></a>
 
-1\. Install the [Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.
-2\. Install the [Fortran Language Server](https://github.com/hansec/fortran-language-server) (requires Python):
+1. Install the [Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.
+2. Install the [Fortran Language Server](https://github.com/hansec/fortran-language-server) (requires Python):
 
-```sh
-pip install fortran-language-server
-```
+        pip install fortran-language-server
 
-3\. Add to LSP settings' clients:
+3. Add to LSP settings' clients:
 
-```json
-"fortls": {
-  "command": ["fortls"],
-  "enabled": true,
-  "languageId": "fortran",
-  "scopes": [
-    "source.modern-fortran",
-    "source.fixedform-fortran"
-  ]
-}
-```
+        "fortls": {
+          "command": ["fortls"],
+          "enabled": true,
+          "languageId": "fortran",
+          "scopes": [
+            "source.modern-fortran",
+            "source.fixedform-fortran"
+          ]
+        }
 
 > Note: See the [Language server settings](https://github.com/hansec/fortran-language-server#language-server-settings)
   documentation for a detailed description of available configuration options, for example
@@ -434,54 +428,51 @@ npm install -g javascript-typescript-langserver
 
 ### Julia<a name="julia"></a>
 
-1\. Install the [Julia](https://packagecontrol.io/packages/Julia) package from Package Control for syntax highlighting.
-2\. Install the `LanguageServer` and `SymbolServer` packages from the Julia REPL:
+1. Install the [Julia](https://packagecontrol.io/packages/Julia) package from Package Control for syntax highlighting.
+2. Install the `LanguageServer` and `SymbolServer` packages from the Julia REPL:
 
-```julia
-import Pkg;
-Pkg.add("LanguageServer")
-Pkg.add("SymbolServer")
-```
+        import Pkg;
+        Pkg.add("LanguageServer")
+        Pkg.add("SymbolServer")
 
-3\. Add to LSP settings' clients:
+3. Add to LSP settings' clients:
 
-```js
-"julials": {
-  "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
-  // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using LanguageServer; using LanguageServer.SymbolServer; server=LanguageServer.LanguageServerInstance(stdin,stdout,false); run(server)"], // on Windows
-  "languageId": "julia", // will match source.julia
-  "settings": {
-    // Default values from VS Code:
-    "julia": {
-      "format": {
-        "calls": true,        // Format function calls
-        "comments": true,     // Format comments
-        "curly": true,        // Format braces
-        "docs": true,         // Format inline documentation
-        "indent": 4,          // Indent size for formatting
-        "indents": true,      // Format file indents
-        "iterOps": true,      // Format loop iterators
-        "kw": true,           // Remove spaces around = in function keywords
-        "lineends": false,    // [undocumented]
-        "ops": true,          // Format whitespace around operators
-        "tuples": true,       // Format tuples
-      },
-      "lint": {
-        "call": false,        // Check calls against existing methods (experimental)
-        "constif": true,      // Check for constant conditionals of if statements
-        "datadecl": false,    // [undocumented]
-        "iter": true,         // Check iterator syntax of loops
-        "lazy": true,         // Check for deterministic lazy boolean operators
-        "modname": true,      // Check for invalid submodule names
-        "nothingcomp": false, // [undocumented]
-        "pirates": true,      // Check for type piracy
-        "run": true,          // run the linter on active files
-        "typeparam": true     // Check for unused DataType parameters
-      }
-    }
-  }
-}
-```
+        "julials": {
+          "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
+          // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using LanguageServer; using LanguageServer.SymbolServer; server=LanguageServer.LanguageServerInstance(stdin,stdout,false); run(server)"], // on Windows
+          "languageId": "julia",
+          "scopes": ["source.julia"],
+          "settings": {
+            // Default values from VS Code:
+            "julia": {
+              "format": {
+                "calls": true,        // Format function calls
+                "comments": true,     // Format comments
+                "curly": true,        // Format braces
+                "docs": true,         // Format inline documentation
+                "indent": 4,          // Indent size for formatting
+                "indents": true,      // Format file indents
+                "iterOps": true,      // Format loop iterators
+                "kw": true,           // Remove spaces around = in function keywords
+                "lineends": false,    // [undocumented]
+                "ops": true,          // Format whitespace around operators
+                "tuples": true,       // Format tuples
+              },
+              "lint": {
+                "call": false,        // Check calls against existing methods (experimental)
+                "constif": true,      // Check for constant conditionals of if statements
+                "datadecl": false,    // [undocumented]
+                "iter": true,         // Check iterator syntax of loops
+                "lazy": true,         // Check for deterministic lazy boolean operators
+                "modname": true,      // Check for invalid submodule names
+                "nothingcomp": false, // [undocumented]
+                "pirates": true,      // Check for type piracy
+                "run": true,          // run the linter on active files
+                "typeparam": true     // Check for unused DataType parameters
+              }
+            }
+          }
+        }
 
 <!-- Alternatively, install the [LSP-julia](https://github.com/randy3k/LSP-julia) package for Sublime Text. -->
 <!-- (Currently doesn't work with newest release of Julia's LanguageServer) -->
@@ -745,6 +736,11 @@ At this point LSP should complain in the logs
 `java.util.concurrent.CompletionException: java.io.FileNotFoundException: /Users/tomv/Projects/tomv564/dottytest/finagle/doc/src/sphinx/code/quickstart/.dotty-ide.json`
 Then run `sbt configureIDE` to create the `.dotty-ide.json` file
 Then the LSP plugin should launch as configured in `LSP.sublime-settings` using coursier.
+
+### Swift<a name="swift"></a>
+
+1. Install the [Swift](https://packagecontrol.io/packages/Swift) package from Package Control for syntax highlighting.
+2. Install Xcode 11.4 or later and ensure that `xcrun -find sourcekit-lsp` returns the path to sourcekit-lsp.
 
 ### Terraform<a name="terraform"></a>
 

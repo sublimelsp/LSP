@@ -9,9 +9,27 @@ from .typing import Callable, Dict, Any, Optional, List, Tuple
 from .workspace import is_subpath_of
 import os
 
+def find_root_folder(workspace_folder: Optional[WorkspaceFolder], config: ClientConfig) -> Optional[WorkspaceFolder]:
+    def find_flow_config(dirname):
+        if not dirname or dirname is '/':
+            return '/'
+
+        if os.path.isfile(os.path.join(dirname, '.flowconfig')):
+            return dirname
+
+        return find_flow_config(os.path.dirname(dirname))
+
+    if config.name == "flow":
+        rootpath = find_flow_config(workspace_folder.path)
+        return WorkspaceFolder.from_path(rootpath)
+
+    return workspace_folder
+
 
 def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: ClientConfig) -> dict:
     first_folder = workspace_folders[0] if workspace_folders else None
+    first_folder = find_root_folder(first_folder, config)
+
     initializeParams = {
         "processId": os.getpid(),
         "clientInfo": {

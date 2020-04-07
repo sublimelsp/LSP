@@ -9,9 +9,10 @@ from .typing import Callable, Dict, Any, Optional, List, Tuple
 from .workspace import is_subpath_of
 import os
 
+
 def find_root_folder(workspace_folder: WorkspaceFolder, config: ClientConfig) -> WorkspaceFolder:
     def find_flow_config(dirname: str) -> str:
-        if not dirname or dirname is '/':
+        if not dirname or dirname == '/':
             return '/'
 
         if os.path.isfile(os.path.join(dirname, '.flowconfig')):

@@ -108,7 +108,7 @@ class SessionTest(unittest.TestCase):
                     'textDocumentSync': {
                         "openClose": True,
                         "change": TextDocumentSyncKindFull,
-                        "save": True}}}}
+                        "save": True}}}}  # A boolean with value true means "send didSave"
         session = Session(TEST_CONFIG, [], client)
         self.assertTrue(session.should_notify_did_open())
         self.assertTrue(session.should_notify_did_close())
@@ -124,7 +124,7 @@ class SessionTest(unittest.TestCase):
                     'textDocumentSync': {
                         "openClose": False,
                         "change": TextDocumentSyncKindNone,
-                        "save": {},
+                        "save": {},  # An empty dict means "send didSave"
                         "willSave": True,
                         "willSaveWaitUntil": False}}}}
         session = Session(TEST_CONFIG, [], client)
@@ -163,9 +163,9 @@ class SessionTest(unittest.TestCase):
         self.assertTrue(session.should_notify_did_close())
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindIncremental)
         self.assertTrue(session.should_notify_did_change())
-        self.assertTrue(session.should_notify_will_save())
+        self.assertFalse(session.should_notify_will_save())  # old-style text sync will never send willSave
         self.assertFalse(session.should_request_will_save_wait_until())
-        self.assertEqual(session.should_notify_did_save(), (True, False))
+        self.assertEqual(session.should_notify_did_save(), (False, False))
 
         client.responses = {
             'initialize': {
@@ -176,6 +176,22 @@ class SessionTest(unittest.TestCase):
         self.assertFalse(session.should_notify_did_close())
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindNone)
         self.assertFalse(session.should_notify_did_change())
+        self.assertFalse(session.should_notify_will_save())
+        self.assertFalse(session.should_request_will_save_wait_until())
+        self.assertEqual(session.should_notify_did_save(), (False, False))
+
+        client.responses = {
+            'initialize': {
+                'capabilities': {
+                    'textDocumentSync': {
+                        "openClose": True,
+                        "save": False,
+                        "change": TextDocumentSyncKindIncremental}}}}
+        session = Session(TEST_CONFIG, [], client)
+        self.assertTrue(session.should_notify_did_open())
+        self.assertTrue(session.should_notify_did_close())
+        self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindIncremental)
+        self.assertTrue(session.should_notify_did_change())
         self.assertFalse(session.should_notify_will_save())
         self.assertFalse(session.should_request_will_save_wait_until())
         self.assertEqual(session.should_notify_did_save(), (False, False))

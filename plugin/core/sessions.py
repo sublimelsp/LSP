@@ -163,8 +163,6 @@ class Session(object):
         textsync = self.capabilities.get('textDocumentSync')
         if isinstance(textsync, dict):
             return bool(textsync.get('willSave'))
-        if isinstance(textsync, int):
-            return textsync > TextDocumentSyncKindNone
         return False
 
     def should_request_will_save_wait_until(self) -> bool:
@@ -177,9 +175,10 @@ class Session(object):
         textsync = self.capabilities.get('textDocumentSync')
         if isinstance(textsync, dict):
             options = textsync.get('save')
-            return True, bool(options.get('includeText')) if isinstance(options, dict) else False
-        if isinstance(textsync, int):
-            return textsync > TextDocumentSyncKindNone, False
+            if isinstance(options, dict):
+                return True, bool(options.get('includeText'))
+            elif isinstance(options, bool):
+                return options, False
         return False, False
 
     def should_notify_did_close(self) -> bool:

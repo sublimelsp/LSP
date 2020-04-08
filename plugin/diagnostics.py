@@ -97,7 +97,7 @@ class DiagnosticsCursorListener(LSPViewEventListener):
 
     def show_diagnostics_status(self, diagnostic: Diagnostic) -> None:
         self.has_status = True
-        spaced_message = re.sub(r'(\S\n)(\S)', r'\1 \2', diagnostic.message)
+        spaced_message = re.sub(r'(\S)\n(\S)', r'\1 \2', diagnostic.message)
         self.view.set_status('lsp_diagnostics', spaced_message)
 
     def clear_diagnostics_status(self) -> None:

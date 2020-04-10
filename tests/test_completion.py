@@ -1,6 +1,6 @@
 from LSP.plugin.completion import CompletionHandler
 from LSP.plugin.core.registry import is_supported_view
-from LSP.plugin.core.typing import Any, Generator, List, Dict
+from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable
 from setup import CI, SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove_config, text_config
 from unittesting import DeferrableTestCase
 import sublime
@@ -77,21 +77,25 @@ class QueryCompletionsTests(TextDocumentTestCase):
         s.clear()
         s.add(point)
 
-    def select_completion(self) -> 'Generator':
-        current_change_count = self.view.change_count()
-        self.view.run_command('auto_complete')
+    def create_commit_completion_closure(self) -> Callable[[], bool]:
         committed = False
+        current_change_count = self.view.change_count()
 
         def commit_completion() -> bool:
             if not self.view.is_auto_complete_visible():
                 return False
             nonlocal committed
+            nonlocal current_change_count
             if not committed:
                 self.view.run_command("commit_completion")
                 committed = True
             return self.view.change_count() > current_change_count
 
-        yield commit_completion
+        return commit_completion
+
+    def select_completion(self) -> 'Generator':
+        self.view.run_command('auto_complete')
+        yield self.create_commit_completion_closure()
 
     def read_file(self) -> str:
         return self.view.substr(sublime.Region(0, self.view.size()))
@@ -484,3 +488,79 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 2}}
             }
         })
+
+    def test_nontrivial_text_edit_removal(self) -> 'Generator':
+        self.type('#include <u>')
+        self.move_cursor(0, 11)  # Put the cursor inbetween 'u' and '>'
+        self.set_response("textDocument/completion", [{
+            'filterText': 'uchar.h>',
+            'label': ' uchar.h>',
+            'textEdit': {
+                # This range should remove "u>" and then insert "uchar.h>"
+                'range': {'start': {'line': 0, 'character': 10}, 'end': {'line': 0, 'character': 12}},
+                'newText': 'uchar.h>'
+            },
+            'insertText': 'uchar.h>',
+            'kind': 17,
+            'insertTextFormat': 2
+        }])
+        yield from self.select_completion()
+        yield from self.await_message("textDocument/completion")
+        self.assertEqual(self.read_file(), '#include <uchar.h>')
+
+    def test_nontrivial_text_edit_removal_with_buffer_modifications_clangd(self) -> 'Generator':
+        self.type('#include <u>')
+        self.move_cursor(0, 11)  # Put the cursor inbetween 'u' and '>'
+        self.set_response("textDocument/completion", [{
+            'filterText': 'uchar.h>',
+            'label': ' uchar.h>',
+            'textEdit': {
+                # This range should remove "u>" and then insert "uchar.h>"
+                'range': {'start': {'line': 0, 'character': 10}, 'end': {'line': 0, 'character': 12}},
+                'newText': 'uchar.h>'
+            },
+            'insertText': 'uchar.h>',
+            'kind': 17,
+            'insertTextFormat': 2
+        }])
+        self.view.run_command('auto_complete')  # show the AC widget
+        yield from self.await_message("textDocument/completion")
+        yield 100
+        self.view.run_command('insert', {'characters': 'c'})  # type characters
+        yield 100
+        self.view.run_command('insert', {'characters': 'h'})  # while the AC widget
+        yield 100
+        self.view.run_command('insert', {'characters': 'a'})  # is visible
+        yield 100
+        # Commit the completion. The buffer has been modified in the meantime, so the old text edit that says to
+        # remove "u>" is invalid. The code in completion.py must be able to handle this.
+        yield self.create_commit_completion_closure()
+        self.assertEqual(self.read_file(), '#include <uchar.h>')
+
+    def test_nontrivial_text_edit_removal_with_buffer_modifications_json(self) -> 'Generator':
+        self.type('{"k"}')
+        self.move_cursor(0, 3)  # Put the cursor inbetween 'k' and '"'
+        self.set_response("textDocument/completion", [{
+            'kind': 10,
+            'documentation': 'Array of single or multiple keys',
+            'insertTextFormat': 2,
+            'label': 'keys',
+            'textEdit': {
+                # This range should remove '"k"' and then insert '"keys": []'
+                'range': {'start': {'line': 0, 'character': 1}, 'end': {'line': 0, 'character': 4}},
+                'newText': '"keys": [$1]'
+            },
+            "filterText": '"keys"',
+            "insertText": 'keys": [$1]'
+        }])
+        self.view.run_command('auto_complete')  # show the AC widget
+        yield from self.await_message("textDocument/completion")
+        yield 100
+        self.view.run_command('insert', {'characters': 'e'})  # type characters
+        yield 100
+        self.view.run_command('insert', {'characters': 'y'})  # while the AC widget is open
+        yield 100
+        # Commit the completion. The buffer has been modified in the meantime, so the old text edit that says to
+        # remove '"k"' is invalid. The code in completion.py must be able to handle this.
+        yield self.create_commit_completion_closure()
+        self.assertEqual(self.read_file(), '{"keys": []}')

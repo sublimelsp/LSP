@@ -4,7 +4,7 @@ from LSP.plugin.core.protocol import ErrorCode
 from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.rpc import Client
-from LSP.plugin.core.rpc import format_request
+from LSP.plugin.core.rpc import json_format_request
 from LSP.plugin.core.transports import Transport
 from LSP.plugin.core.types import Settings
 from LSP.plugin.core.typing import List, Tuple, Dict, Any
@@ -61,7 +61,7 @@ class MockTransport(Transport):
 class FormatTests(unittest.TestCase):
 
     def test_converts_payload_to_string(self):
-        self.assertEqual("{}", format_request(dict()))
+        self.assertEqual("{}", json_format_request(dict()))
 
 
 class ClientTest(unittest.TestCase):

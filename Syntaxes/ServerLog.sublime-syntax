@@ -82,9 +82,7 @@ contexts:
       set:
         - match: $
           pop: true
-        - include: scope:source.python#constants  # e.g. shutdown request
-        - include: scope:source.python#lists
-        - include: scope:source.python#dictionaries-and-sets
+        - include: scope:source.json#main
     - match: ''
       pop: true
 ...

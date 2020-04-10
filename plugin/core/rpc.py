@@ -12,9 +12,9 @@ TCP_CONNECT_TIMEOUT = 5
 DEFAULT_SYNC_REQUEST_TIMEOUT = 1.0
 
 
-def format_request(payload: Dict[str, Any]) -> str:
+def json_format_request(payload: Dict[str, Any], compact: bool = True) -> str:
     """Converts the request into json"""
-    return json.dumps(payload, sort_keys=False, check_circular=False, separators=(',', ':'))
+    return json.dumps(payload, sort_keys=False, check_circular=False, separators=(',', ':') if compact else None)
 
 
 def try_terminate_process(process: subprocess.Popen) -> None:
@@ -33,7 +33,7 @@ class PreformattedPayloadLogger:
 
     def log(self, message: str, params: Any, log_payload: bool) -> None:
         if log_payload:
-            message = "{}: {}".format(message, params)
+            message = "{}: {}".format(message, json_format_request(params, compact=False))
         self.sink(message)
 
     def format_response(self, direction: str, request_id: Any) -> str:
@@ -190,7 +190,7 @@ class Client(object):
 
     def send_payload(self, payload: Dict[str, Any]) -> None:
         if self.transport:
-            message = format_request(payload)
+            message = json_format_request(payload)
             self.transport.send(message)
 
     def receive_payload(self, message: str) -> None:

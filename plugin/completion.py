@@ -73,11 +73,8 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
                 # To do that, translate, or offset, the LSP edit region into the non-"primary" regions.
                 # The concept of "primary" is our own, and there is no mention of it in the LSP spec.
                 translation = region.b - primary_cursor_position
-                a = edit_region.a + translation
-                b = edit_region.b + translation
-                r = sublime.Region(a, b)
                 # We will assume that the user was typing the same characters.
-                self.view.erase(edit, r)
+                self.view.erase(edit, sublime.Region(edit_region.a + translation, edit_region.b + translation))
         else:
             new_text = item.get('insertText') or item['label']
 
@@ -95,8 +92,7 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
             self.do_resolve(item)
 
     def do_resolve(self, item: dict) -> None:
-        session = session_for_view(
-            self.view, 'completionProvider', self.view.sel()[0].begin())
+        session = session_for_view(self.view, 'completionProvider', self.view.sel()[0].begin())
         if not session:
             return
 
@@ -107,8 +103,7 @@ class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
         completion_provider = session.get_capability('completionProvider')
         has_resolve_provider = completion_provider and completion_provider.get('resolveProvider', False)
         if has_resolve_provider:
-            client.send_request(Request.resolveCompletionItem(
-                item), self.handle_resolve_response)
+            client.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
 
     def handle_resolve_response(self, response: Optional[dict]) -> None:
         if response:
@@ -164,8 +159,7 @@ class CompletionHandler(LSPViewEventListener):
         return languages.get(config_name) if languages else None
 
     def register_trigger_chars(self, session: Session, trigger_chars: List[str]) -> None:
-        completion_triggers = self.view.settings().get(
-            'auto_complete_triggers', []) or []  # type: List[Dict[str, str]]
+        completion_triggers = self.view.settings().get('auto_complete_triggers', []) or []  # type: List[Dict[str, str]]
         view_language = self._view_language(session.config.name)
         if view_language:
             for language in session.config.languages:
@@ -228,7 +222,7 @@ class CompletionHandler(LSPViewEventListener):
             global _changes_since_sent
             for change in _changes_since_sent:
                 # Thus, adjust the range for each buffer change.
-                start_col_utf16, end_col_utf16 = transform_region(row, start_col_utf16, end_col_utf16, change)
+                start_col_utf16, end_col_utf16 = transform_region(start_col_utf16, end_col_utf16, change)
             # We don't have to use region_to_range. That function clamps the unreliable input, but having unreliable
             # (row, col) points for completions is pretty much disastrous. So we'll assume the (row, col) points are
             # correct. Blame the language server if the regions are incorrect.
@@ -270,7 +264,7 @@ class CompletionHandler(LSPViewEventListener):
         sublime.status_message('Completion error: ' + str(error.get('message')))
 
 
-def transform_region(row: int, col_a: int, col_b: int, change: sublime.TextChange) -> Tuple[int, int]:
+def transform_region(col_a: int, col_b: int, change: sublime.TextChange) -> Tuple[int, int]:
     """
     Here be dragons. Given an LSP region, and a change to the text buffer, transform the region into the coordinate
     space after that change has been applied. Note that this mirrors the algorithm that View.transform_region_from uses

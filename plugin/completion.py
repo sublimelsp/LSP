@@ -154,29 +154,15 @@ class CompletionHandler(LSPViewEventListener):
             # This is to make ST match with labels that have a weird prefix like a space character.
             self.view.settings().set("auto_complete_preserve_order", "none")
 
-    def _view_language(self, config_name: str) -> Optional[str]:
-        languages = self.view.settings().get('lsp_language')
-        return languages.get(config_name) if languages else None
-
     def register_trigger_chars(self, session: Session, trigger_chars: List[str]) -> None:
-        completion_triggers = self.view.settings().get('auto_complete_triggers', []) or []  # type: List[Dict[str, str]]
-        view_language = self._view_language(session.config.name)
-        if view_language:
-            for language in session.config.languages:
-                if language.id == view_language:
-                    for scope in language.scopes:
-                        # debug("registering", trigger_chars, "for", scope)
-                        scope_trigger = next(
-                            (trigger for trigger in completion_triggers if trigger.get('selector', None) == scope),
-                            None
-                        )
-                        if not scope_trigger:  # do not override user's trigger settings.
-                            completion_triggers.append({
-                                'characters': "".join(trigger_chars),
-                                'selector': scope
-                            })
+        completion_triggers = self.view.settings().get('auto_complete_triggers') or []  # type: List[Dict[str, str]]
 
-            self.view.settings().set('auto_complete_triggers', completion_triggers)
+        completion_triggers.append({
+            'characters': "".join(trigger_chars),
+            'selector': "- comment - punctuation.definition.string.end"
+        })
+
+        self.view.settings().set('auto_complete_triggers', completion_triggers)
 
     def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
         if self._request_in_flight:

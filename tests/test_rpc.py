@@ -1,4 +1,6 @@
 from LSP.plugin.core.logging import set_exception_logging
+from LSP.plugin.core.protocol import Error
+from LSP.plugin.core.protocol import ErrorCode
 from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.rpc import Client
@@ -6,7 +8,11 @@ from LSP.plugin.core.rpc import format_request
 from LSP.plugin.core.rpc import SyncRequestStatus
 from LSP.plugin.core.transports import Transport
 from LSP.plugin.core.types import Settings
+<<<<<<< HEAD
 from LSP.plugin.core.typing import Any, List, Dict, Tuple
+=======
+from LSP.plugin.core.typing import List, Tuple, Dict, Any
+>>>>>>> master
 from test_mocks import MockSettings
 import json
 import unittest
@@ -230,15 +236,105 @@ class ClientTest(unittest.TestCase):
         client = Client(transport, settings)
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
-        pings = []  # type: List[Tuple[int, Dict[str, Any]]]
+        pings = []  # type: List[Tuple[Any, Dict[str, Any]]]
         client.on_request(
             "ping",
             lambda params, request_id: pings.append((request_id, params)))
         transport.receive('{ "id": 42, "method": "ping"}')
         self.assertEqual(len(pings), 1)
+        self.assertIsInstance(pings[0][0], int)
         self.assertEqual(pings[0][0], 42)
 
+<<<<<<< HEAD
     def do_error_response_handler(self, method):
+=======
+    def test_server_request_non_integer_request(self):
+        transport = MockTransport()
+        settings = MockSettings()
+        client = Client(transport, settings)
+        self.assertIsNotNone(client)
+        self.assertTrue(transport.has_started)
+        pings = []  # type: List[Tuple[Any, Dict[str, Any]]]
+        client.on_request(
+            "ping",
+            lambda params, request_id: pings.append((request_id, params)))
+        transport.receive('{ "id": "abcd-1234-efgh-5678", "method": "ping"}')
+        self.assertEqual(len(pings), 1)
+        self.assertIsInstance(pings[0][0], str)
+        self.assertEqual(pings[0][0], "abcd-1234-efgh-5678")
+
+    def test_server_request_unknown(self):
+        transport = MockTransport()
+        settings = MockSettings()
+        client = Client(transport, settings)
+        self.assertIsNotNone(client)
+        self.assertTrue(transport.has_started)
+        transport.receive('{ "id": "abcd-1234-efgh-5678", "method": "ping"}')
+        self.assertEqual(len(transport.messages), 1)
+        self.assertEqual(
+            json.loads(transport.messages[0]),
+            {
+                "error": {
+                    "message": "ping",
+                    "code": -32601
+                },
+                "jsonrpc": "2.0",
+                "id": "abcd-1234-efgh-5678"
+            }
+        )
+
+    def test_server_request_exception_during_handler(self):
+        transport = MockTransport()
+        settings = MockSettings()
+        client = Client(transport, settings)
+        self.assertIsNotNone(client)
+        self.assertTrue(transport.has_started)
+
+        def always_raise_exception(params: Any, request_id: Any) -> None:
+            raise AttributeError("whoops")
+
+        client.on_request("ping", always_raise_exception)
+        transport.receive('{ "id": "abcd-1234-efgh-5678", "method": "ping"}')
+        self.assertEqual(len(transport.messages), 1)
+        self.assertEqual(
+            json.loads(transport.messages[0]),
+            {
+                "error": {
+                    "message": "whoops",
+                    "code": -32603
+                },
+                "jsonrpc": "2.0",
+                "id": "abcd-1234-efgh-5678"
+            }
+        )
+
+    def test_server_request_send_error(self):
+        transport = MockTransport()
+        settings = MockSettings()
+        client = Client(transport, settings)
+        self.assertIsNotNone(client)
+        self.assertTrue(transport.has_started)
+
+        def always_raise_exception(params: Any, request_id: Any) -> None:
+            raise Error(ErrorCode.InvalidParams, "expected dict, got list")
+
+        client.on_request("ping", always_raise_exception)
+        transport.receive('{ "id": "abcd-1234-efgh-5678", "method": "ping"}')
+        self.assertEqual(len(transport.messages), 1)
+        self.assertEqual(
+            json.loads(transport.messages[0]),
+            {
+                "error": {
+                    "message": "expected dict, got list",
+                    "code": -32602
+                },
+                "jsonrpc": "2.0",
+                "id": "abcd-1234-efgh-5678"
+            }
+        )
+
+    def test_error_response_handler(self):
+>>>>>>> master
         transport = MockTransport(return_error)
         settings = MockSettings()
         client = Client(transport, settings)

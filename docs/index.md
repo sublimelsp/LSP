@@ -13,13 +13,15 @@ Language servers can be provided as standalone executables or might require a ru
 The [list below](index.md#language-servers) shows installation instructions and example configurations for several servers that have been tested and are known to work with the LSP package.
 Visit [Langserver.org](https://langserver.org/) or the [list of language server implementations](https://microsoft.github.io/language-server-protocol/implementors/servers/) maintained by Microsoft for a complete overview of available servers for various programming languages.
 
-For a few languages you can also find dedicated packages on Package Control, which can optionally be installed to simplify the configuration and installation process of a language server and might provide additional features such as automatic updates for the server: 
+For a few languages you can also find dedicated packages on Package Control, which can optionally be installed to simplify the configuration and installation process of a language server and might provide additional features such as automatic updates for the server:
 
 * [LSP-css](https://packagecontrol.io/packages/LSP-css)
+* [LSP-eslint](https://packagecontrol.io/packages/LSP-eslint)
 * [LSP-html](https://packagecontrol.io/packages/LSP-html)
 * [LSP-intelephense](https://packagecontrol.io/packages/LSP-intelephense)
 * [LSP-json](https://packagecontrol.io/packages/LSP-json)
 * [LSP-vue](https://packagecontrol.io/packages/LSP-vue)
+* [LSP-metals](https://packagecontrol.io/packages/LSP-metals)
 
 ### Server Configuration<a name="client-config"></a>
 
@@ -173,6 +175,24 @@ See the dedicated <a href="cplusplus"/>C/C++ guide</a> for using ccls, cquery or
 }
 ```
 
+### Clojure<a name="clojure"</a>
+
+1. Download [clojure-lsp](https://github.com/snoe/clojure-lsp).
+2. Add to LSP settings' clients:
+
+```js
+"clojure-lsp": {
+  "command": ["java", "-jar", "/PATH/TO/clojure-lsp"],
+  "enabled": true,
+  "initializationOptions": {},
+  "languageId": "clojure",
+  "scopes": ["source.clojure"],
+  "syntaxes": ["Packages/Clojure/Clojure.sublime-syntax"]
+}
+```
+
+clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/clojure-lsp#initializationoptions).
+
 ### CSS<a name="css"></a>
 
 1\. Install the CSS language server from VS Code:
@@ -258,6 +278,25 @@ dub run dls:bootstrap
 }
 ```
 
+### Erlang<a name="erlang"></a>
+
+1. See instructions for installing the [Erlang Language Server](https://github.com/erlang-ls/erlang_ls).
+2. Add to LSP settings' clients:
+
+         "erlang-ls": {
+           "command"   : [ "/path/to/my/erlang_ls", "--transport", "stdio" ],
+           "enabled"   : true,
+           "languageId": "erlang",
+           "scopes"    : [ "source.erlang" ],
+           "syntaxes"  : ["Packages/Erlang/Erlang.sublime-syntax"]
+         }
+
+
+3. Sometimes Erlang LS might take a little time to initialize. The default is 3 seconds so it is a good idea to increase the value for `"initialize_timeout"` in the LSP settings' clients:
+
+        "initialize_timeout": 30
+
+
 ### Flow (JavaScript)<a name="flow"></a>
 
 Official part of [flow-bin](https://github.com/facebook/flow):
@@ -274,30 +313,26 @@ npm install -g flow-language-server
 
 ### Fortran<a name="fortran"></a>
 
-1\. Install the [Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.  
-2\. Install the [Fortran Language Server](https://github.com/hansec/fortran-language-server) (requires Python):
+1. Install the [Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.
+2. Install the [Fortran Language Server](https://github.com/hansec/fortran-language-server) (requires Python):
 
-```sh
-pip install fortran-language-server
-```
+        pip install fortran-language-server
 
-3\. Add to LSP settings' clients:
+3. Add to LSP settings' clients:
 
-```json
-"fortls": {
-  "command": ["fortls"],
-  "enabled": true,
-  "languageId": "fortran",
-  "scopes": [
-    "source.modern-fortran",
-    "source.fixedform-fortran"
-  ],
-  "syntaxes": [
-    "Packages/Fortran/grammars/FortranModern.sublime-syntax",
-    "Packages/Fortran/grammars/FortranFixedForm.sublime-syntax"
-  ]
-}
-```
+        "fortls": {
+          "command": ["fortls"],
+          "enabled": true,
+          "languageId": "fortran",
+          "scopes": [
+            "source.modern-fortran",
+            "source.fixedform-fortran"
+          ],
+          "syntaxes": [
+            "Packages/Fortran/grammars/FortranModern.sublime-syntax",
+            "Packages/Fortran/grammars/FortranFixedForm.sublime-syntax"
+          ]
+        }
 
 > Note: See the [Language server settings](https://github.com/hansec/fortran-language-server#language-server-settings)
   documentation for a detailed description of available configuration options, for example
@@ -328,6 +363,21 @@ go get github.com/sourcegraph/go-langserver
 2\. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `golsp`.
 
 > Note: Work on this language server has been deprioritized in favor of the gopls language server mentioned above.
+
+### Haskell
+
+1. Install [ghcide](https://github.com/digital-asset/ghcide).
+2. Add to LSP settings' clients:
+
+```js
+"ghcide": {
+  "enabled": true,
+  "languageId": "haskell",
+  "command": ["ghcide", "--lsp"],
+  "scopes": ["source.haskell"],
+  "syntaxes": ["Packages/Haskell/Haskell.sublime-syntax"]
+}
+```
 
 ### Java<a name="java"></a>
 
@@ -406,29 +456,53 @@ npm install -g javascript-typescript-langserver
 
 ### Julia<a name="julia"></a>
 
-1\. Install the [Julia](https://packagecontrol.io/packages/Julia) package from Package Control for syntax highlighting.  
-2\. Install the `LanguageServer` and `SymbolServer` packages from the Julia REPL:
+1. Install the [Julia](https://packagecontrol.io/packages/Julia) package from Package Control for syntax highlighting.
+2. Install the `LanguageServer` and `SymbolServer` packages from the Julia REPL:
 
-```julia
-import Pkg;
-Pkg.add("LanguageServer")
-Pkg.add("SymbolServer")
-```
+        import Pkg;
+        Pkg.add("LanguageServer")
+        Pkg.add("SymbolServer")
 
-3\. Add to LSP settings' clients:
+3. Add to LSP settings' clients:
 
-```js
-"julials": {
-  "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
-  // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using LanguageServer; using SymbolServer; server=LanguageServer.LanguageServerInstance(stdin,stdout,false); run(server);"], // on Windows
-  "languageId": "julia",
-  "scopes": ["source.julia"],
-  "settings": {
-    "runlinter": true
-  },
-  "syntaxes": ["Packages/Julia/Julia.sublime-syntax"]
-}
-```
+        "julials": {
+          "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
+          // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using LanguageServer; using LanguageServer.SymbolServer; server=LanguageServer.LanguageServerInstance(stdin,stdout,false); run(server)"], // on Windows
+          "languageId": "julia",
+          "scopes": ["source.julia"],
+          "settings": {
+            // Default values from VS Code:
+            "julia": {
+              "format": {
+                "calls": true,        // Format function calls
+                "comments": true,     // Format comments
+                "curly": true,        // Format braces
+                "docs": true,         // Format inline documentation
+                "indent": 4,          // Indent size for formatting
+                "indents": true,      // Format file indents
+                "iterOps": true,      // Format loop iterators
+                "kw": true,           // Remove spaces around = in function keywords
+                "lineends": false,    // [undocumented]
+                "ops": true,          // Format whitespace around operators
+                "tuples": true,       // Format tuples
+              },
+              "lint": {
+                "call": false,        // Check calls against existing methods (experimental)
+                "constif": true,      // Check for constant conditionals of if statements
+                "datadecl": false,    // [undocumented]
+                "iter": true,         // Check iterator syntax of loops
+                "lazy": true,         // Check for deterministic lazy boolean operators
+                "modname": true,      // Check for invalid submodule names
+                "nothingcomp": false, // [undocumented]
+                "pirates": true,      // Check for type piracy
+                "run": true,          // run the linter on active files
+                "typeparam": true     // Check for unused DataType parameters
+              }
+            }
+          },
+          "syntaxes": ["Packages/Julia/Julia.sublime-syntax"]
+        }
+
 
 <!-- Alternatively, install the [LSP-julia](https://github.com/randy3k/LSP-julia) package for Sublime Text. -->
 <!-- (Currently doesn't work with newest release of Julia's LanguageServer) -->
@@ -439,12 +513,17 @@ Pkg.add("SymbolServer")
 2. Install the [Kotlin Language Server](https://github.com/fwcd/KotlinLanguageServer) (requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUILDING.md) first).
 3. Add to LSP settings' clients:
 
-```json
+```js
 "kotlinls": {
   "command": ["PATH/TO/KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat"],
   "enabled": true,
   "languageId": "kotlin",
   "scopes": ["source.Kotlin"],
+  "settings": {
+    "kotlin": {
+      // put your server settings here
+    }
+  },
   "syntaxes": ["Packages/kotlin/Kotlin.tmLanguage"]
 }
 ```
@@ -610,7 +689,7 @@ There are at least two language servers, use either one.
 #### Palantir's Python Language Server
 
 ```sh
-pip install python-language-server
+pip install 'python-language-server[all]'
 ```
 
 Make sure you can run `pyls` in your terminal. If you've installed it into a virtualenv, you might need to override the path to `pyls` in global LSP settings (Package Settings -> LSP -> Settings):
@@ -659,6 +738,10 @@ install.packages("languageserver")
 
 ### Ruby/Ruby on Rails<a name="ruby"></a>
 
+Different servers are available for Ruby:
+
+Solargraph:
+
 1\. Install the solargraph gem (see [github:castwide/solargraph](https://github.com/castwide/solargraph) for up-to-date installation instructions):
 
 ```sh
@@ -666,6 +749,20 @@ gem install solargraph
 ```
 
 2\. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `ruby`.
+
+Sorbet:
+
+1\. Install the sorbet and sorbet-runtime gem (see [github:sorbet/sorbet](https://github.com/sorbet/sorbet)):
+```sh
+gem install sorbet
+gem install sorbet-runtime
+```
+If you have a Gemfile, using bundler, add sorbet and sorbet-runtime to your Gemfile and run:
+```
+bundle install
+```
+
+2\. Run "LSP:Enable Language Server Globally" from the Command Palette and choose `sorbet`.
 
 ### Rust<a name="rust"></a>
 
@@ -675,7 +772,7 @@ Alternatively, a newer [rust-analyzer](https://github.com/rust-analyzer/rust-ana
 
 ### Scala<a name="scala"></a>
 
-* **[Metals](https://scalameta.org/metals/)**: Most complete LSP server for Scala, see instructions [here](https://scalameta.org/metals/docs/editors/sublime.html) for installation.
+* **[Metals](https://scalameta.org/metals/)**: Most complete LSP server for Scala, see [LSP-metals](https://packagecontrol.io/packages/LSP-metals) for installation.
 * **[SBT](https://www.scala-sbt.org/)**: Version 1.x supports limited and *unmaintained* language server functionalities, setup is described [here](http://eed3si9n.com/sbt-server-with-sublime-text3).
 * **[Dotty](http://dotty.epfl.ch/)**: The future Scala compiler [contains LSP support](http://dotty.epfl.ch/docs/usage/ide-support.html).
 It is developed against VS Code, so ignore instructions related to VS Code.
@@ -684,6 +781,11 @@ At this point LSP should complain in the logs
 `java.util.concurrent.CompletionException: java.io.FileNotFoundException: /Users/tomv/Projects/tomv564/dottytest/finagle/doc/src/sphinx/code/quickstart/.dotty-ide.json`
 Then run `sbt configureIDE` to create the `.dotty-ide.json` file
 Then the LSP plugin should launch as configured in `LSP.sublime-settings` using coursier.
+
+### Swift<a name="swift"></a>
+
+1. Install the [Swift](https://packagecontrol.io/packages/Swift) package from Package Control for syntax highlighting.
+2. Install Xcode 11.4 or later and ensure that `xcrun -find sourcekit-lsp` returns the path to sourcekit-lsp.
 
 ### Terraform<a name="terraform"></a>
 

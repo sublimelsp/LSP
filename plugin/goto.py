@@ -56,7 +56,7 @@ class LspGotoCommand(LspTextCommand):
             debug("opening location", file_path_and_row_col)
             window.open_file(
                 file_path_and_row_col,
-                sublime.ENCODED_POSITION | sublime.FORCE_GROUP)
+                sublime.ENCODED_POSITION)
 
         def select_entry(
                 window: sublime.Window,
@@ -78,7 +78,7 @@ class LspGotoCommand(LspTextCommand):
             window.open_file(
                     file_path_and_row_col,
                     group=window.active_group(),
-                    flags=sublime.TRANSIENT | sublime.ENCODED_POSITION | sublime.FORCE_GROUP)
+                    flags=sublime.TRANSIENT | sublime.ENCODED_POSITION)
 
         window = sublime.active_window()
         view = self.view

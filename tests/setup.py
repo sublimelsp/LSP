@@ -21,8 +21,7 @@ test_file_path = join(project_path, "testfile.txt")
 workspace_folders = [WorkspaceFolder.from_path(project_path)]
 TIMEOUT_TIME = 10000 if CI else 2000
 PERIOD_TIME = 100 if CI else 1
-SUPPORTED_SCOPE = "text.plain"
-text_language = LanguageConfig("text", [SUPPORTED_SCOPE])
+text_language = LanguageConfig("text", "text.plain")
 text_config = ClientConfig("textls", [], None, languages=[text_language])
 
 
@@ -50,7 +49,7 @@ def make_stdio_test_config() -> ClientConfig:
         name="TEST",
         binary_args=["python3", join("$packages", "LSP", "tests", "server.py")],
         tcp_port=None,
-        languages=[LanguageConfig(language_id="txt", scopes=[SUPPORTED_SCOPE])],
+        languages=[LanguageConfig(language_id="txt", selector="text.plain")],
         enabled=True)
 
 
@@ -160,7 +159,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def init_view_settings(self) -> None:
         s = self.view.settings().set
-        s("auto_complete_selector", SUPPORTED_SCOPE)
+        s("auto_complete_selector", "text")
         s("ensure_newline_at_eof_on_save", False)
         s("rulers", [])
         s("tab_size", 4)

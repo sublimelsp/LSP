@@ -45,7 +45,7 @@ Here is an example of the `LSP.sublime-settings` file with configurations for th
       "command": ["lsp-tsserver"],
       "enabled": true,
       "languageId": "typescript",
-      "scopes": ["source.ts", "source.tsx"]
+      "selector": "source.ts | source.tsx"
     }
   }
 }
@@ -66,10 +66,10 @@ Some language servers support multiple languages, which can be specified in the 
       "enabled": true,
       "languages": [{
         "languageId": "javascript",
-        "scopes": ["source.js", "source.jsx"]
+        "selector": "source.js | source.jsx"
       }, {
         "languageId": "typescript",
-        "scopes": ["source.ts", "source.tsx"]
+        "selector": "source.ts | source.tsx"
       }]
     }
   }
@@ -83,9 +83,9 @@ Some language servers support multiple languages, which can be specified in the 
 | env | dict of environment variables to be injected into the language server's process (eg. PYTHONPATH) |
 | settings | per-project settings (equivalent to VS Code's Workspace Settings) |
 | initializationOptions | options to send to the server at startup (rarely used) |
-| scopes | specifies which kind of files apply to which language server |
+| selector | This is _the_ connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. If the selector happens to be of the form "source.{languageId}" (which it is in many cases), then you can omit this "selector" key altogether, and LSP will assume the selector is "source.{languageId}". For more information, see https://www.sublimetext.com/docs/3/selectors.html |
 | languageId | identifies the language for a document - see [LSP specifications](https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/#textDocumentItem) |
-| languages | group `scope` and `languageId` together for servers that support more than one language |
+| languages | group `selector` and `languageId` together for servers that support more than one language |
 | tcp_port | see instructions below |
 | tcp_host | see instructions below |
 | tcp_mode | see instructions below |
@@ -165,7 +165,7 @@ See the dedicated <a href="cplusplus"/>C/C++ guide</a> for using ccls, cquery or
   ],
   "enabled": true,
   "languageId": "csharp",
-  "scopes": ["source.cs"]
+  "selector": "source.cs"
 }
 ```
 
@@ -270,8 +270,7 @@ dub run dls:bootstrap
          "erlang-ls": {
            "command"   : [ "/path/to/my/erlang_ls", "--transport", "stdio" ],
            "enabled"   : true,
-           "languageId": "erlang",
-           "scopes"    : [ "source.erlang" ]
+           "languageId": "erlang"
          }
 
 3. Sometimes Erlang LS might take a little time to initialize. The default is 3 seconds so it is a good idea to increase the value for `"initialize_timeout"` in the LSP settings' clients:
@@ -306,10 +305,7 @@ npm install -g flow-language-server
           "command": ["fortls"],
           "enabled": true,
           "languageId": "fortran",
-          "scopes": [
-            "source.modern-fortran",
-            "source.fixedform-fortran"
-          ]
+          "selector": "source.modern-fortran | source.fixedform-fortran"
         }
 
 > Note: See the [Language server settings](https://github.com/hansec/fortran-language-server#language-server-settings)
@@ -441,7 +437,6 @@ npm install -g javascript-typescript-langserver
           "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
           // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using LanguageServer; using LanguageServer.SymbolServer; server=LanguageServer.LanguageServerInstance(stdin,stdout,false); run(server)"], // on Windows
           "languageId": "julia",
-          "scopes": ["source.julia"],
           "settings": {
             // Default values from VS Code:
             "julia": {
@@ -507,10 +502,10 @@ npm install -g javascript-typescript-langserver
   "enabled": true,
   "languages": [{
     "languageId": "latex",
-    "scopes": ["text.tex.latex"]
+    "selector": "text.tex.latex"
   }, {
     "languageId": "bibtex",
-    "scopes": ["text.bibtex"]
+    "selector": "text.bibtex"
   }]
 }
 ```
@@ -561,7 +556,7 @@ Alternatively you can use the less maintained [lua-lsp](https://github.com/Alloy
   "command": ["PATH/TO/reason-language-server.exe"],
   "enabled": true,
   "languageId": "reason",
-  "scopes": ["source.ocaml", "source.reason"]
+  "selector": "source.ocaml | source.reason"
 }
 ```
 
@@ -781,7 +776,7 @@ Be sure to install [Vue Syntax Highlight](https://packagecontrol.io/packages/Vue
   ],
   "enabled": true,
   "languageId": "xml",
-  "scopes": ["text.xml"]
+  "selector": "text.xml"
 }
 ```
 

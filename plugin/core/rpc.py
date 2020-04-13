@@ -362,6 +362,9 @@ class Client(object):
                         handler(result, req_id)
                     except Error as err:
                         self.send_error_response(req_id, err)
+                    except Exception as ex:
+                        self.send_error_response(req_id, Error.from_exception(ex))
+                        raise
             except Exception as err:
                 exception_log("Error handling {}".format(typestr), err)
 

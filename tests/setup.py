@@ -170,6 +170,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         s("tab_size", 4)
         s("translate_tabs_to_spaces", False)
         s("word_wrap", False)
+        s("lsp_format_on_save", False)
 
     def get_view_event_listener(self, unique_attribute: str) -> 'Optional[ViewEventListener]':
         for listener in view_event_listeners[self.view.id()]:

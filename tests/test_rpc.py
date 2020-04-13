@@ -8,11 +8,7 @@ from LSP.plugin.core.rpc import format_request
 from LSP.plugin.core.rpc import SyncRequestStatus
 from LSP.plugin.core.transports import Transport
 from LSP.plugin.core.types import Settings
-<<<<<<< HEAD
 from LSP.plugin.core.typing import Any, List, Dict, Tuple
-=======
-from LSP.plugin.core.typing import List, Tuple, Dict, Any
->>>>>>> master
 from test_mocks import MockSettings
 import json
 import unittest
@@ -245,9 +241,6 @@ class ClientTest(unittest.TestCase):
         self.assertIsInstance(pings[0][0], int)
         self.assertEqual(pings[0][0], 42)
 
-<<<<<<< HEAD
-    def do_error_response_handler(self, method):
-=======
     def test_server_request_non_integer_request(self):
         transport = MockTransport()
         settings = MockSettings()
@@ -333,8 +326,7 @@ class ClientTest(unittest.TestCase):
             }
         )
 
-    def test_error_response_handler(self):
->>>>>>> master
+    def do_error_response_handler(self, method):
         transport = MockTransport(return_error)
         settings = MockSettings()
         client = Client(transport, settings)

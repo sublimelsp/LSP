@@ -32,7 +32,10 @@ def format_completion(item: dict, word_col: int, settings: Settings) -> Tuple[st
     hint = get_completion_hint(item, settings)
 
     # label is an alternative for insertText if neither textEdit nor insertText is provided
-    replacement = text_edit_text(item, word_col) or item.get("insertText") or trigger
+    replacement = trigger
+
+    if settings.use_snippets:
+        replacement = text_edit_text(item, word_col) or item.get("insertText") or replacement
 
     if replacement[0] != trigger[0]:
         # fix some common cases when server sends different start on label and replacement.

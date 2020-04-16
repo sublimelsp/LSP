@@ -331,9 +331,9 @@ class Client(object):
         elif "id" in payload:
             response_id = int(payload["id"])
             handler, result = self.response_handler(response_id, payload)
-            responetup = (handler, result, None, None, None)
+            response_tuple = (handler, result, None, None, None)
             self.logger.incoming_response(response_id, result)
-            return responetup
+            return response_tuple
         else:
             debug("Unknown payload type: ", payload)
         return (None, None, None, None, None)

@@ -185,7 +185,8 @@ class ClientTest(unittest.TestCase):
         do_request = method.__get__(client, Client)
         do_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
         self.assertEqual(len(responses), 0)
-        self.assertEqual(len(errors), 0)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]["code"], ErrorCode.InvalidParams)
 
     def test_client_should_reject_response_when_both_result_and_error_are_present_async(self):
         self.do_client_should_reject_response_when_both_result_and_error_are_present(Client.send_request)
@@ -203,7 +204,8 @@ class ClientTest(unittest.TestCase):
         do_request = method.__get__(client, Client)
         do_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
         self.assertEqual(len(responses), 0)
-        self.assertEqual(len(errors), 0)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]["code"], ErrorCode.InvalidParams)
 
     def test_client_should_reject_response_when_both_result_and_error_keys_are_not_present_async(self):
         self.do_client_should_reject_response_when_both_result_and_error_keys_are_not_present(Client.send_request)

@@ -222,10 +222,8 @@ class Client(object):
                 self._sync_request_result.prepare(request_id)  # After this, is_requesting() returns True.
                 self.send_payload(request.to_payload(request_id))
                 # We go to sleep. We wake up once another thread calls .notify() on this condition variable.
-                timed_out = self._sync_request_cvar.wait_for(self._sync_request_result.is_ready, timeout)
-                if timed_out:
-                    message = "timeout on {}".format(request.method)
-                    error = {"code": ErrorCode.Timeout, "message": message, "data": request_id}
+                if not self._sync_request_cvar.wait_for(self._sync_request_result.is_ready, timeout):
+                    error = {"code": ErrorCode.Timeout, "message": "timeout on {}".format(request.method)}
                 elif self._sync_request_result.has_error():
                     error = self._sync_request_result.flush_error()
                 else:
@@ -381,8 +379,8 @@ class Client(object):
         elif "result" not in response and "error" in response:
             return self.handle_response(response_id, error_handler, response["error"], True)
         else:
-            debug('invalid response payload', response)
-            return (None, None)
+            error = {"code": ErrorCode.InvalidParams, "message": "invalid response payload"}
+            return self.handle_response(response_id, error_handler, error, True)
 
     def handle_response(self, response_id: int, handler: Optional[Callable],
                         result: Any, is_error: bool) -> Tuple[Optional[Callable], Any]:

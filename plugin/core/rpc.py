@@ -222,14 +222,14 @@ class Client(object):
                 self._sync_request_result.prepare(request_id)  # After this, is_requesting() returns True.
                 self.send_payload(request.to_payload(request_id))
                 # We go to sleep. We wake up once another thread calls .notify() on this condition variable.
-                self._sync_request_cvar.wait_for(self._sync_request_result.is_ready, timeout)
-                if self._sync_request_result.has_error():
+                timed_out = self._sync_request_cvar.wait_for(self._sync_request_result.is_ready, timeout)
+                if timed_out:
+                    message = "timeout on {}".format(request.method)
+                    error = {"code": ErrorCode.Timeout, "message": message, "data": request_id}
+                elif self._sync_request_result.has_error():
                     error = self._sync_request_result.flush_error()
                 else:
                     result = self._sync_request_result.flush()
-            except KeyError as ex:
-                exception = ex
-                debug('{}({}): TIMEOUT'.format(request.method, request_id))
             except Exception as ex:
                 exception = ex
             finally:

@@ -1,9 +1,11 @@
-from LSP.plugin.hover import _test_contents
+from copy import deepcopy
 from LSP.plugin.core.url import filename_to_uri
+from LSP.plugin.hover import _test_contents
 from setup import TextDocumentTestCase, TIMEOUT_TIME, PERIOD_TIME, CI
-import unittest
-import sublime
 import os
+import sublime
+import unittest
+import threading
 
 try:
     from typing import Generator, Optional, Iterable, Tuple, List
@@ -75,7 +77,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield from self.await_message("textDocument/didSave")
         yield from self.await_clear_view_and_save()
 
-    @unittest.skip("FIXME: this blocks the test driver")
+    @unittest.skip("FIXME: This fails")
     def test_formats_on_save(self) -> 'Generator':
         assert self.view
         self.view.settings().set("lsp_format_on_save", True)
@@ -85,16 +87,17 @@ class SingleDocumentTestCase(TextDocumentTestCase):
             'newText': "BBB",
             'range': {
                 'start': {'line': 0, 'character': 0},
-                'end': {'line': 0, 'character': 3}
+                'end': {'line': 0, 'character': 1}
             }
         }])
-        self.view.run_command("save")
+        t = threading.Thread(target=lambda: self.view.run_command("save"))
         yield from self.await_message("textDocument/formatting")
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
         text = self.view.substr(sublime.Region(0, self.view.size()))
         self.assertEquals("BBB", text)
         yield from self.await_clear_view_and_save()
+        t.join()
 
     def test_hover_info(self) -> 'Generator':
         assert self.view
@@ -242,29 +245,31 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield from self.__run_goto_test(GOTO_RESPONSE_LOCATION_LINK, 'implementation', 'implementation')
 
 
-# class WillSaveWaitUntilTestCase(TextDocumentTestCase):
+class WillSaveWaitUntilTestCase(TextDocumentTestCase):
 
-#     def get_test_server_capabilities(self) -> dict:
-#         capabilities = deepcopy(super().get_test_server_capabilities())
-#         capabilities['capabilities']['textDocumentSync']['willSaveWaitUntil'] = True
-#         return capabilities
+    def get_test_server_capabilities(self) -> dict:
+        capabilities = deepcopy(super().get_test_server_capabilities())
+        capabilities['capabilities']['textDocumentSync']['willSaveWaitUntil'] = True
+        return capabilities
 
-#     def test_will_save_wait_until(self) -> 'Generator':
-#         assert self.view
-#         self.insert_characters("A")
-#         yield from self.await_message("textDocument/didChange")
-#         self.set_response('textDocument/willSaveWaitUntil', [{
-#             'newText': "BBB",
-#             'range': {
-#                 'start': {'line': 0, 'character': 0},
-#                 'end': {'line': 0, 'character': 3}
-#             }
-#         }])
-#         self.view.settings().set("lsp_format_on_save", False)
-#         self.view.run_command("save")
-#         yield from self.await_message("textDocument/willSaveWaitUntil")
-#         yield from self.await_message("textDocument/didChange")
-#         yield from self.await_message("textDocument/didSave")
-#         text = self.view.substr(sublime.Region(0, self.view.size()))
-#         self.assertEquals("BBB", text)
-#         yield from self.await_clear_view_and_save()
+    @unittest.skip("FIXME: This fails")
+    def test_will_save_wait_until(self) -> 'Generator':
+        assert self.view
+        self.insert_characters("A")
+        yield from self.await_message("textDocument/didChange")
+        self.set_response('textDocument/willSaveWaitUntil', [{
+            'newText': "BBB",
+            'range': {
+                'start': {'line': 0, 'character': 0},
+                'end': {'line': 0, 'character': 1}
+            }
+        }])
+        self.view.settings().set("lsp_format_on_save", False)
+        t = threading.Thread(target=lambda: self.view.run_command("save"))
+        yield from self.await_message("textDocument/willSaveWaitUntil")
+        yield from self.await_message("textDocument/didChange")
+        yield from self.await_message("textDocument/didSave")
+        text = self.view.substr(sublime.Region(0, self.view.size()))
+        self.assertEquals("BBB", text)
+        yield from self.await_clear_view_and_save()
+        t.join()

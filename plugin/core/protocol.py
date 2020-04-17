@@ -206,6 +206,9 @@ class ErrorCode:
     RequestCancelled = -32800
     ContentModified = -32801
 
+    # Defined by us
+    Timeout = -40000
+
 
 class Error(Exception):
 

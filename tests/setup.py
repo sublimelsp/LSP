@@ -140,7 +140,6 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
         self.assertTrue(self.wm._configs.syntax_supported(self.view))
         self.init_view_settings()
-        self.wm.start_active_views()  # in case testfile.txt was already opened
         yield lambda: len(self.wm._sessions) > 0
         sessions = self.wm._sessions.get(self.config.name, [])
         self.assertEqual(len(sessions), 1)

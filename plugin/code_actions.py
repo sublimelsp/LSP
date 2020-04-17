@@ -46,16 +46,14 @@ class CodeActionsManager(object):
     def __init__(self) -> None:
         self._requests = {}  # type: Dict[str, CodeActionsAtLocation]
 
-    def request(self, view: sublime.View, point: int, actions_handler: Callable[[CodeActionsByConfigName], None],
-                diagnostics_by_config: Optional[Dict[str, List[Diagnostic]]] = None) -> None:
+    def request(self, view: sublime.View, point: int,
+                actions_handler: Callable[[CodeActionsByConfigName], None]) -> None:
         current_location = self.get_location_key(view, point)
         # debug("requesting actions for {}".format(current_location))
         if current_location in self._requests:
             self._requests[current_location].deliver(actions_handler)
         else:
             self._requests.clear()
-            if diagnostics_by_config is None:
-                diagnostics_by_config = filter_by_point(view_diagnostics(view), Point(*view.rowcol(point)))
             self._requests[current_location] = request_code_actions(view, point, actions_handler)
 
     def get_location_key(self, view: sublime.View, point: int) -> str:

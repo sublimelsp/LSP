@@ -380,13 +380,6 @@
       }
       ]
     },
-    "metals":
-    {
-      "command": ["metals-sublime"],
-      "languageId": "scala",
-      "scopes": ["source.scala"],
-      "syntaxes": ["Packages/Scala/Scala.sublime-syntax"]
-    },
     "javascript-typescript-langserver":
     {
       "command": ["javascript-typescript-stdio"],

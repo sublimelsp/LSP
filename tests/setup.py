@@ -137,10 +137,12 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.wm = windows.lookup(window)  # create just this single one for the test
         self.assertEqual(len(self.wm._sessions), 0)
         self.view = window.open_file(filename)
-        yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
+        if sublime.platform() == "osx":
+            yield 200
         self.assertTrue(self.wm._configs.syntax_supported(self.view))
         self.init_view_settings()
-        yield {"condition": lambda: len(self.wm._sessions) > 0, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
+        self.wm.start_active_views()  # in case testfile.txt was already opened
+        yield lambda: len(self.wm._sessions) > 0
         sessions = self.wm._sessions.get(self.config.name, [])
         self.assertEqual(len(sessions), 1)
         self.session = sessions[0]
@@ -169,7 +171,6 @@ class TextDocumentTestCase(DeferrableTestCase):
         s("tab_size", 4)
         s("translate_tabs_to_spaces", False)
         s("word_wrap", False)
-        s("lsp_format_on_save", False)
 
     def get_view_event_listener(self, unique_attribute: str) -> 'Optional[ViewEventListener]':
         for listener in view_event_listeners[self.view.id()]:

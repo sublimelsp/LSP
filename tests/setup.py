@@ -140,7 +140,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
         self.assertTrue(self.wm._configs.syntax_supported(self.view))
         self.init_view_settings()
-        yield lambda: len(self.wm._sessions) > 0
+        yield {"condition": lambda: len(self.wm._sessions) > 0, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
         sessions = self.wm._sessions.get(self.config.name, [])
         self.assertEqual(len(sessions), 1)
         self.session = sessions[0]

@@ -34,6 +34,32 @@ class SessionTest(unittest.TestCase):
                 on_post_initialize=on_post_initialize,
                 on_post_exit=on_post_exit))
 
+    def test_experimental_capabilities(self) -> None:
+        wf = WorkspaceFolder.from_path("/foo/bar/baz")
+        params = get_initialize_params(
+            [wf], ClientConfig(name="test", binary_args=[""], tcp_port=None, experimental_capabilities=None))
+        self.assertNotIn("experimental", params["capabilities"])
+
+        params = get_initialize_params(
+            [wf], ClientConfig(name="test", binary_args=[""], tcp_port=None, experimental_capabilities={}))
+        self.assertIn("experimental", params["capabilities"])
+        self.assertEqual(params["capabilities"]["experimental"], {})
+
+        experimental_capabilities = {
+            "foo": 1,
+            "bar": True,
+            "baz": "abc"
+        }
+        config = ClientConfig(
+            name="test",
+            binary_args=[""],
+            tcp_port=None,
+            experimental_capabilities=experimental_capabilities
+        )
+        params = get_initialize_params([wf], config)
+        self.assertIn("experimental", params["capabilities"])
+        self.assertEqual(params["capabilities"]["experimental"], experimental_capabilities)
+
     def test_initialize_params(self) -> None:
         wf = WorkspaceFolder.from_path("/foo/bar/baz")
         params = get_initialize_params(

@@ -2,7 +2,7 @@ from LSP.plugin.core.logging import debug, set_debug_logging
 from LSP.plugin.core.protocol import Notification, Request, WorkspaceFolder
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.sessions import Session
-from LSP.plugin.core.settings import client_configs
+from LSP.plugin.core.settings import client_configs, settings
 from LSP.plugin.core.types import ClientConfig, LanguageConfig, ClientStates
 from os import environ
 from os.path import dirname
@@ -32,6 +32,7 @@ except ImportError:
     pass
 
 set_debug_logging(True)
+settings.log_stderr = True
 
 
 class YieldPromise:

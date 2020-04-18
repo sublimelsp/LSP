@@ -2,7 +2,7 @@ from .diagnostics import DiagnosticsStorage
 from .edit import parse_workspace_edit
 from .logging import debug
 from .protocol import Notification, Response
-from .rpc import Client
+from .rpc import Client, SublimeLogger
 from .sessions import Session
 from .types import ClientConfig
 from .types import ClientStates
@@ -515,7 +515,7 @@ class WindowManager(object):
         client.set_crash_handler(lambda: self._handle_server_crash(session.config))
         client.set_error_display_handler(self._window.status_message)
 
-        if self.server_panel_factory:
+        if self.server_panel_factory and isinstance(client.logger, SublimeLogger):
             client.logger.server_name = session.config.name
             client.logger.sink = self._payload_log_sink
 

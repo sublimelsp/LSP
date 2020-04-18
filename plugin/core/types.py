@@ -59,7 +59,8 @@ class ClientConfig(object):
                  settings: dict = dict(),
                  env: dict = dict(),
                  tcp_host: Optional[str] = None,
-                 tcp_mode: Optional[str] = None) -> None:
+                 tcp_mode: Optional[str] = None,
+                 experimental_capabilities: dict = dict()) -> None:
         self.name = name
         self.binary_args = binary_args
         self.tcp_port = tcp_port
@@ -72,6 +73,7 @@ class ClientConfig(object):
         self.init_options = init_options
         self.settings = settings
         self.env = env
+        self.experimental_capabilities = experimental_capabilities
 
 
 def syntax_language(config: ClientConfig, syntax: str) -> Optional[LanguageConfig]:

@@ -12,6 +12,75 @@ import os
 
 def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: ClientConfig) -> dict:
     first_folder = workspace_folders[0] if workspace_folders else None
+    capabilities = {
+        "textDocument": {
+            "synchronization": {
+                "didSave": True,
+                "willSave": True,
+                "willSaveWaitUntil": True
+            },
+            "hover": {
+                "contentFormat": ["markdown", "plaintext"]
+            },
+            "completion": {
+                "completionItem": {
+                    "snippetSupport": True
+                },
+                "completionItemKind": {
+                    "valueSet": completion_item_kinds
+                }
+            },
+            "signatureHelp": {
+                "signatureInformation": {
+                    "documentationFormat": ["markdown", "plaintext"],
+                    "parameterInformation": {
+                        "labelOffsetSupport": True
+                    }
+                }
+            },
+            "references": {},
+            "documentHighlight": {},
+            "documentSymbol": {
+                "symbolKind": {
+                    "valueSet": symbol_kinds
+                }
+            },
+            "formatting": {},
+            "rangeFormatting": {},
+            "declaration": {"linkSupport": True},
+            "definition": {"linkSupport": True},
+            "typeDefinition": {"linkSupport": True},
+            "implementation": {"linkSupport": True},
+            "codeAction": {
+                "codeActionLiteralSupport": {
+                    "codeActionKind": {
+                        "valueSet": []
+                    }
+                }
+            },
+            "rename": {},
+            "colorProvider": {},
+            "publishDiagnostics": {
+                "relatedInformation": True
+            }
+        },
+        "workspace": {
+            "applyEdit": True,
+            "didChangeConfiguration": {},
+            "executeCommand": {},
+            "workspaceFolders": True,
+            "symbol": {
+                "symbolKind": {
+                    "valueSet": symbol_kinds
+                }
+            },
+            "configuration": True
+        }
+    }
+
+    if config.experimental_capabilities is not None:
+        capabilities['experimental'] = config.experimental_capabilities
+
     initializeParams = {
         "processId": os.getpid(),
         "clientInfo": {
@@ -20,71 +89,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
         "rootUri": first_folder.uri() if first_folder else None,
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
-        "capabilities": {
-            "textDocument": {
-                "synchronization": {
-                    "didSave": True,
-                    "willSave": True,
-                    "willSaveWaitUntil": True
-                },
-                "hover": {
-                    "contentFormat": ["markdown", "plaintext"]
-                },
-                "completion": {
-                    "completionItem": {
-                        "snippetSupport": True
-                    },
-                    "completionItemKind": {
-                        "valueSet": completion_item_kinds
-                    }
-                },
-                "signatureHelp": {
-                    "signatureInformation": {
-                        "documentationFormat": ["markdown", "plaintext"],
-                        "parameterInformation": {
-                            "labelOffsetSupport": True
-                        }
-                    }
-                },
-                "references": {},
-                "documentHighlight": {},
-                "documentSymbol": {
-                    "symbolKind": {
-                        "valueSet": symbol_kinds
-                    }
-                },
-                "formatting": {},
-                "rangeFormatting": {},
-                "declaration": {"linkSupport": True},
-                "definition": {"linkSupport": True},
-                "typeDefinition": {"linkSupport": True},
-                "implementation": {"linkSupport": True},
-                "codeAction": {
-                    "codeActionLiteralSupport": {
-                        "codeActionKind": {
-                            "valueSet": []
-                        }
-                    }
-                },
-                "rename": {},
-                "colorProvider": {},
-                "publishDiagnostics": {
-                    "relatedInformation": True
-                }
-            },
-            "workspace": {
-                "applyEdit": True,
-                "didChangeConfiguration": {},
-                "executeCommand": {},
-                "workspaceFolders": True,
-                "symbol": {
-                    "symbolKind": {
-                        "valueSet": symbol_kinds
-                    }
-                },
-                "configuration": True
-            }
-        }
+        "capabilities": capabilities
     }
     if config.init_options is not None:
         initializeParams['initializationOptions'] = config.init_options

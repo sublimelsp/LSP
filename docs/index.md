@@ -94,6 +94,7 @@ Some language servers support multiple languages, which can be specified in the 
 | tcp_port | see instructions below |
 | tcp_host | see instructions below |
 | tcp_mode | see instructions below |
+| experimental_capabilities | Turn on experimental capabilities of a language server. This is a dictionary and differs per language server |
 
 The default transport is stdio, but TCP is also supported.
 The port number can be inserted into the server's arguments by adding a `{port}` placeholder in `command`.

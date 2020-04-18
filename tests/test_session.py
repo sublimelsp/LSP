@@ -50,8 +50,13 @@ class SessionTest(unittest.TestCase):
             "bar": True,
             "baz": "abc"
         }
-        params = get_initialize_params(
-            [wf], ClientConfig(name="test", binary_args=[""], tcp_port=None, experimental_capabilities=experimental_capabilities))
+        config = ClientConfig(
+            name="test",
+            binary_args=[""],
+            tcp_port=None,
+            experimental_capabilities=experimental_capabilities
+        )
+        params = get_initialize_params([wf], config)
         self.assertIn("experimental", params["capabilities"])
         self.assertEqual(params["capabilities"]["experimental"], experimental_capabilities)
 

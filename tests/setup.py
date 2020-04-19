@@ -1,4 +1,4 @@
-from LSP.plugin.core.logging import debug, set_debug_logging
+from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification, Request, WorkspaceFolder
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.sessions import Session
@@ -30,8 +30,6 @@ try:
     assert Dict and Callable and List and Any and Optional and Generator
 except ImportError:
     pass
-
-set_debug_logging(True)
 
 
 class YieldPromise:

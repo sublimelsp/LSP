@@ -100,6 +100,9 @@ class ClientConfigs(object):
     def add_external_config(self, config: ClientConfig) -> None:
         self._external_configs[config.name] = config
 
+    def remove_external_config(self, name: str) -> None:
+        self._external_configs.pop(name, None)
+
     def update_configs(self) -> None:
         del self.all[:]
 

@@ -171,6 +171,38 @@ def get_dotted_value(current: Any, dotted: str) -> Any:
 
 
 class Session(Client):
+
+    @classmethod
+    def name(cls) -> str:
+        raise NotImplementedError()
+
+    @classmethod
+    def needs_update_or_installation(cls) -> bool:
+        return False
+
+    @classmethod
+    def install_or_update(cls) -> None:
+        pass
+
+    @classmethod
+    def standard_configuration(cls) -> ClientConfig:
+        raise NotImplementedError()
+
+    @classmethod
+    def adjust_configuration(cls, configuration: ClientConfig) -> ClientConfig:
+        return configuration
+
+    @classmethod
+    def can_start(cls, window: sublime.Window, initiating_view: sublime.View,
+                  workspace_folders: List[WorkspaceFolder], configuration: ClientConfig) -> Optional[str]:
+        return None
+
+    def on_initialized(self) -> None:
+        pass
+
+    def on_shutdown(self) -> None:
+        pass
+
     def __init__(self, manager: Manager, settings: Settings, workspace_folders: List[WorkspaceFolder],
                  config: ClientConfig) -> None:
         self.config = config
@@ -291,7 +323,7 @@ class Session(Client):
             debug("session with no workspace folders")
 
         self.state = ClientStates.READY
-
+        self.on_initialized()
         if self.config.settings:
             self.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
         mgr = self.manager()
@@ -343,6 +375,7 @@ class Session(Client):
         debug("stopping", self.config.name, "gracefully")
         self.capabilities.clear()
         self.state = ClientStates.STOPPING
+        self.on_shutdown()
         self.send_request(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
 
     def _handle_shutdown_result(self, _: Any) -> None:

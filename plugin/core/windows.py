@@ -4,6 +4,7 @@ from .logging import debug, exception_log
 from .message_request_handler import MessageRequestHandler
 from .protocol import Notification, Response, TextDocumentSyncKindNone, TextDocumentSyncKindFull
 from .rpc import Client
+from .settings import client_configs
 from .sessions import Manager, Session
 from .types import ClientConfig
 from .types import ClientStates
@@ -31,15 +32,6 @@ class SublimeLike(Protocol):
         ...
 
     def Region(self, a: int, b: int) -> 'Any':
-        ...
-
-
-class LanguageHandlerListener(Protocol):
-
-    def on_start(self, config_name: str, window: WindowLike) -> bool:
-        ...
-
-    def on_initialized(self, config_name: str, window: WindowLike, client: Client) -> None:
         ...
 
 
@@ -82,14 +74,26 @@ def register_session_type(session_type: Type[Session]) -> None:
     if issubclass(session_type, Session):
         try:
             global _session_types
-            _session_types[session_type.name()] = session_type
+            global client_configs
+            name = session_type.name()
+            config = session_type.standard_configuration()
+            _session_types[name] = session_type
+            client_configs.add_external_config(config)
+            print(client_configs._external_configs)
+            client_configs.update_configs()
+            print(client_configs.all)
+            debug("Registered", name)
         except Exception as ex:
-            exception_log("Failed to load session type", ex)
+            exception_log("Failed to register session type", ex)
 
 
 def unregister_session_type(session_type: Type[Session]) -> None:
     global _session_types
-    _session_types.pop(session_type.name(), None)
+    global client_configs
+    name = session_type.name()
+    client_configs.remove_external_config(name)
+    _session_types.pop(name, None)
+    debug("Unregistered", name)
 
 
 def get_session_type(name: str) -> Type[Session]:
@@ -333,7 +337,6 @@ class WindowManager(Manager):
         documents: DocumentHandler,
         diagnostics: DiagnosticsStorage,
         sublime: Any,
-        handler_dispatcher: LanguageHandlerListener,
         on_closed: Optional[Callable] = None,
         server_panel_factory: Optional[Callable] = None
     ) -> None:
@@ -346,7 +349,6 @@ class WindowManager(Manager):
         self._sessions = dict()  # type: Dict[str, List[Session]]
         self._next_initialize_views = list()  # type: List[ViewLike]
         self._sublime = sublime
-        self._handlers = handler_dispatcher
         self._restarting = False
         self._on_closed = on_closed
         self._is_closing = False
@@ -480,10 +482,6 @@ class WindowManager(Manager):
         if not self._can_start_config(config.name, file_path):
             debug('Already starting on this window:', config.name)
             return
-
-        if not self._handlers.on_start(config.name, self._window):
-            return
-
         self._window.status_message("Starting " + config.name + "...")
         try:
             workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
@@ -546,10 +544,6 @@ class WindowManager(Manager):
 
     def on_post_initialize(self, session: Session) -> None:
         with self._initialization_lock:
-            try:
-                self._handlers.on_initialized(session.config.name, self._window, session)
-            except Exception as ex:
-                exception_log("failure", ex)
             session.send_notification(Notification.initialized())
             document_sync = session.capabilities.get("textDocumentSync")
             if document_sync:
@@ -580,7 +574,7 @@ class WindowManager(Manager):
         debug('clients for window {} unloaded'.format(self._window.id()))
         if self._restarting:
             debug('window {} sessions unloaded - restarting'.format(self._window.id()))
-            self.start_active_views()
+            sublime.set_timeout(self.start_active_views, 0)
         elif not self._window.is_valid():
             debug('window {} closed and sessions unloaded'.format(self._window.id()))
             if self._on_closed:
@@ -645,13 +639,11 @@ class WindowManager(Manager):
 
 
 class WindowRegistry(object):
-    def __init__(self, configs: GlobalConfigs, documents: Any,
-                 sublime: Any, handler_dispatcher: LanguageHandlerListener) -> None:
+    def __init__(self, configs: GlobalConfigs, documents: Any, sublime: Any) -> None:
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs
         self._documents = documents
         self._sublime = sublime
-        self._handler_dispatcher = handler_dispatcher
         self._diagnostics_ui_class = None  # type: Optional[Callable]
         self._server_panel_factory = None  # type: Optional[Callable]
         self._settings = None  # type: Optional[Settings]
@@ -683,7 +675,6 @@ class WindowRegistry(object):
                 documents=window_documents,
                 diagnostics=DiagnosticsStorage(diagnostics_ui),
                 sublime=self._sublime,
-                handler_dispatcher=self._handler_dispatcher,
                 on_closed=lambda: self._on_closed(window),
                 server_panel_factory=self._server_panel_factory)
             self._windows[window.id()] = state

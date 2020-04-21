@@ -1,12 +1,11 @@
 import sublime
 import sublime_plugin
 from .configurations import ConfigManager, is_supported_syntax
-from .handlers import LanguageHandler
 from .logging import debug
 from .rpc import Client
 from .sessions import Session
 from .settings import settings, client_configs
-from .types import ClientConfig, ClientStates, WindowLike
+from .types import ClientConfig, ClientStates
 from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
 from .typing import Optional, Callable, Dict, Any, Iterable
 
@@ -38,34 +37,6 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
 
     def has_manager(self) -> bool:
         return self._manager is not None
-
-
-class LanguageHandlerDispatcher(object):
-
-    def on_start(self, config_name: str, window: WindowLike) -> bool:
-        if config_name in client_start_listeners:
-            return client_start_listeners[config_name](window)
-        else:
-            return True
-
-    def on_initialized(self, config_name: str, window: WindowLike, client: Client) -> None:
-        if config_name in client_initialization_listeners:
-            client_initialization_listeners[config_name](client)
-
-
-def load_handlers() -> None:
-    for handler in LanguageHandler.instantiate_all():
-        register_language_handler(handler)
-    client_configs.update_configs()
-
-
-def register_language_handler(handler: LanguageHandler) -> None:
-    debug("received config {} from {}".format(handler.name, handler.__class__.__name__))
-    client_configs.add_external_config(handler.config)
-    if handler.on_start:
-        client_start_listeners[handler.name] = handler.on_start
-    if handler.on_initialized:
-        client_initialization_listeners[handler.name] = handler.on_initialized
 
 
 def client_from_session(session: Optional[Session]) -> Optional[Client]:
@@ -109,8 +80,7 @@ def unload_sessions(window: sublime.Window) -> None:
 configs = ConfigManager(client_configs.all)
 client_configs.set_listener(configs.update)
 documents = DocumentHandlerFactory(sublime, settings)
-handlers_dispatcher = LanguageHandlerDispatcher()
-windows = WindowRegistry(configs, documents, sublime, handlers_dispatcher)
+windows = WindowRegistry(configs, documents, sublime)
 
 
 def configs_for_scope(view: Any, point: Optional[int] = None) -> Iterable[ClientConfig]:

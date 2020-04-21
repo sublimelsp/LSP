@@ -6,7 +6,7 @@ from ..highlights import remove_highlights
 from .logging import set_debug_logging, set_exception_logging
 from .panels import destroy_output_panels, ensure_panel, PanelName
 from .popups import popups
-from .registry import windows, load_handlers, unload_sessions
+from .registry import windows, unload_sessions
 from .settings import settings, load_settings, unload_settings
 from .typing import Optional
 from .sessions import Session
@@ -27,7 +27,6 @@ def startup() -> None:
     windows.set_diagnostics_ui(DiagnosticsPresenter)
     windows.set_server_panel_factory(ensure_server_panel)
     windows.set_settings_factory(settings)
-    load_handlers()
     sublime.status_message("LSP initialized")
     start_active_window()
 

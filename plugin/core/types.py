@@ -73,6 +73,21 @@ class ClientConfig(object):
         self.env = env
         self.experimental_capabilities = experimental_capabilities
 
+    def __repr__(self) -> str:
+        return '{}({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})'.format(
+            self.__class__.__name__,
+            repr(self.name),
+            repr(self.binary_args),
+            repr(self.tcp_port),
+            repr(self.languages),
+            repr(self.enabled),
+            repr(self.init_options),
+            repr(self.settings),
+            repr(self.env),
+            repr(self.tcp_host),
+            repr(self.tcp_mode),
+            repr(self.experimental_capabilities))
+
 
 def syntax_language(config: ClientConfig, syntax: str) -> Optional[LanguageConfig]:
     for language in config.languages:

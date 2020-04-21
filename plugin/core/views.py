@@ -94,6 +94,7 @@ def render_text_change(change: sublime.TextChange) -> Dict[str, Any]:
         "range": {
             "start": {"line": change.a.row, "character": change.a.col_utf16},
             "end":   {"line": change.b.row, "character": change.b.col_utf16}},
+        "rangeLength": abs(change.b.pt - change.a.pt),
         "text": change.str
     }
 

@@ -1,13 +1,68 @@
 from .logging import debug
+from .logging import debug
 from .process import start_server
-from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification
+from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification, Response
 from .protocol import TextDocumentSyncKindNone
-from .rpc import Client, attach_stdio_client, Response
-from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
+from .rpc import Client
 from .types import ClientConfig, ClientStates, Settings
-from .typing import Callable, Dict, Any, Optional, List, Tuple
+from .typing import Dict, Any, Optional, List, Tuple, Generator
 from .workspace import is_subpath_of
+from abc import ABCMeta, abstractmethod
 import os
+import sublime
+import weakref
+
+
+class Manager(metaclass=ABCMeta):
+    """
+    A Manager is a container of Sessions.
+    """
+
+    # Observers
+
+    @abstractmethod
+    def window(self) -> sublime.Window:
+        """
+        Get the window associated with this manager.
+        """
+        pass
+
+    @abstractmethod
+    def sessions(self, view: sublime.View, capability: Optional[str] = None) -> 'Generator[Session, None, None]':
+        """
+        Iterate over the sessions stored in this manager, applicable to the given view, with the given capability.
+        """
+        pass
+
+    # Mutators
+
+    @abstractmethod
+    def start(self, configuration: ClientConfig, initiating_view: sublime.View) -> None:
+        """
+        Start a new Session with the given configuration. The initiating view is the view that caused this method to
+        be called.
+
+        A normal flow of calls would be start -> on_post_initialize -> do language server things -> on_post_exit.
+        However, it is possible that the subprocess cannot start, in which case on_post_initialize will never be called.
+        """
+        pass
+
+    # Event callbacks
+
+    @abstractmethod
+    def on_post_exit(self, session: 'Session', exit_code: int, exception: Optional[Exception]) -> None:
+        """
+        The given Session has stopped with the given exit code.
+        """
+        pass
+
+    @abstractmethod
+    def on_post_initialize(self, session: 'Session') -> None:
+        """
+        The language server returned a response from the initialize request. The response is stored in
+        session.capabilities.
+        """
+        pass
 
 
 def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: ClientConfig) -> dict:
@@ -116,24 +171,15 @@ def get_dotted_value(current: Any, dotted: str) -> Any:
     return current
 
 
-class Session(object):
-    def __init__(self,
-                 config: ClientConfig,
-                 workspace_folders: List[WorkspaceFolder],
-                 client: Client,
-                 on_pre_initialize: 'Optional[Callable[[Session], None]]' = None,
-                 on_post_initialize: 'Optional[Callable[[Session], None]]' = None,
-                 on_post_exit: Optional[Callable[[str], None]] = None) -> None:
+class Session(Client):
+    def __init__(self, manager: Manager, settings: Settings, workspace_folders: List[WorkspaceFolder],
+                 config: ClientConfig) -> None:
         self.config = config
+        self.manager = weakref.ref(manager)
         self.state = ClientStates.STARTING
-        self._on_post_initialize = on_post_initialize
-        self._on_post_exit = on_post_exit
         self.capabilities = dict()  # type: Dict[str, Any]
-        self.client = client
         self._workspace_folders = workspace_folders
-        if on_pre_initialize:
-            on_pre_initialize(self)
-        self._initialize()
+        super().__init__(config, workspace_folders[0].path, manager.window(), settings)
 
     def has_capability(self, capability: str) -> bool:
         return capability in self.capabilities and self.capabilities[capability] is not False
@@ -208,30 +254,25 @@ class Session(object):
                 }
             }
             notification = Notification.didChangeWorkspaceFolders(params)
-            self.client.send_notification(notification)
+            self.send_notification(notification)
             self._workspace_folders = folders
 
-    def _initialize(self) -> None:
+    def initialize(self) -> None:
         params = get_initialize_params(self._workspace_folders, self.config)
-        self.client.send_request(
-            Request.initialize(params),
-            self._handle_initialize_result,
-            self._handle_initialize_error)
+        self.send_request(Request.initialize(params), self._handle_initialize_result, lambda _: self.end())
+
+    def call_manager(self, method: str, *args: Any) -> None:
+        mgr = self.manager()
+        if mgr:
+            getattr(mgr, method)(*args)
+
+    def on_stderr_message(self, message: str) -> None:
+        self.call_manager('handle_stderr_log', self, message)
 
     def _supports_workspace_folders(self) -> bool:
         workspace_cap = self.capabilities.get("workspace", {})
         workspace_folder_cap = workspace_cap.get("workspaceFolders", {})
         return workspace_folder_cap.get("supported")
-
-    def on_request(self, method: str, handler: Callable) -> None:
-        self.client.on_request(method, handler)
-
-    def on_notification(self, method: str, handler: Callable) -> None:
-        self.client.on_notification(method, handler)
-
-    def _handle_initialize_error(self, error: Any) -> None:
-        self.state = ClientStates.STOPPING
-        self.end()
 
     def _handle_initialize_result(self, result: Any) -> None:
         self.capabilities.update(result.get('capabilities', dict()))
@@ -248,18 +289,30 @@ class Session(object):
 
         self.state = ClientStates.READY
 
-        self.on_request("workspace/workspaceFolders", self._handle_request_workspace_folders)
-        self.on_request("workspace/configuration", self._handle_request_workspace_configuration)
         if self.config.settings:
-            self.client.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
+            self.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
+        mgr = self.manager()
+        if mgr:
+            mgr.on_post_initialize(self)
 
-        if self._on_post_initialize:
-            self._on_post_initialize(self)
+    def m_window_showMessageRequest(self, params: Any, request_id: Any) -> None:
+        """handles the window/showMessageRequest request"""
+        self.call_manager('handle_message_request', self, params, request_id)
 
-    def _handle_request_workspace_folders(self, _: Any, request_id: Any) -> None:
-        self.client.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))
+    def m_window_showMessage(self, params: Any) -> None:
+        """handles the window/showMessage notification"""
+        self.call_manager('handle_show_message', self, params)
 
-    def _handle_request_workspace_configuration(self, params: Dict[str, Any], request_id: Any) -> None:
+    def m_window_logMessage(self, params: Any) -> None:
+        """handles the window/logMessage notification"""
+        self.call_manager('handle_log_message', self, params)
+
+    def m_workspace_workspaceFolders(self, _: Any, request_id: Any) -> None:
+        """handles the workspace/workspaceFolders request"""
+        self.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))
+
+    def m_workspace_configuration(self, params: Dict[str, Any], request_id: Any) -> None:
+        """handles the workspace/configuration request"""
         items = []  # type: List[Any]
         requested_items = params.get("items") or []
         for requested_item in requested_items:
@@ -271,77 +324,30 @@ class Session(object):
                     items.append(self.config.settings)
             else:
                 items.append(self.config.settings)
-        self.client.send_response(Response(request_id, items))
+        self.send_response(Response(request_id, items))
+
+    def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:
+        """handles the workspace/applyEdit request"""
+        self.call_manager('_apply_workspace_edit', self, params, request_id)
+
+    def m_textDocument_publishDiagnostics(self, params: Any) -> None:
+        """handles textDocument/publishDiagnostics notification"""
+        mgr = self.manager()
+        if mgr:
+            mgr.diagnostics.receive(self.config.name, params)  # type: ignore
 
     def end(self) -> None:
-        self.state = ClientStates.STOPPING
-        self.client.send_request(
-            Request.shutdown(),
-            lambda result: self._handle_shutdown_result(),
-            lambda error: self._handle_shutdown_result())
-
-    def _handle_shutdown_result(self) -> None:
-        self.client.exit()
-        self.client = None  # type: ignore
+        debug("stopping", self.config.name, "gracefully")
         self.capabilities.clear()
-        if self._on_post_exit:
-            self._on_post_exit(self.config.name)
+        self.state = ClientStates.STOPPING
+        self.send_request(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
 
+    def _handle_shutdown_result(self, _: Any) -> None:
+        self.send_notification(Notification.exit())
 
-def create_session(config: ClientConfig,
-                   workspace_folders: List[WorkspaceFolder],
-                   env: dict,
-                   settings: Settings,
-                   on_pre_initialize: Optional[Callable[[Session], None]] = None,
-                   on_post_initialize: Optional[Callable[[Session], None]] = None,
-                   on_post_exit: Optional[Callable[[str], None]] = None,
-                   on_stderr_log: Optional[Callable[[str], None]] = None,
-                   bootstrap_client: Optional[Any] = None) -> Optional[Session]:
-
-    def with_client(client: Client) -> Session:
-        return Session(
-            config=config,
-            workspace_folders=workspace_folders,
-            client=client,
-            on_pre_initialize=on_pre_initialize,
-            on_post_initialize=on_post_initialize,
-            on_post_exit=on_post_exit)
-
-    session = None
-    if config.binary_args:
-        tcp_port = config.tcp_port
-        server_args = config.binary_args
-
-        if config.tcp_mode == "host":
-            socket = start_tcp_listener(tcp_port or 0)
-            tcp_port = socket.getsockname()[1]
-            server_args = list(s.replace("{port}", str(tcp_port)) for s in config.binary_args)
-
-        working_dir = workspace_folders[0].path if workspace_folders else None
-        process = start_server(server_args, working_dir, env, on_stderr_log)
-        if process:
-            if config.tcp_mode == "host":
-                client_socket, address = socket.accept()
-                transport = TCPTransport(client_socket)  # type: Transport
-                session = with_client(Client(transport, settings))
-            elif tcp_port:
-                transport = start_tcp_transport(tcp_port, config.tcp_host)
-                if transport:
-                    session = with_client(Client(transport, settings))
-                else:
-                    # try to terminate the process
-                    try:
-                        process.terminate()
-                    except Exception:
-                        pass
-            else:
-                session = with_client(attach_stdio_client(process, settings))
-    else:
-        if config.tcp_port:
-            transport = start_tcp_transport(config.tcp_port)
-            session = with_client(Client(transport, settings))
-        elif bootstrap_client:
-            session = with_client(bootstrap_client)
-        else:
-            debug("No way to start session")
-    return session
+    def on_transport_close(self, exit_code: int, exception: Optional[Exception]) -> None:
+        super().on_transport_close(exit_code, exception)
+        debug("stopped", self.config.name, "exit code", exit_code)
+        mgr = self.manager()
+        if mgr:
+            mgr.on_post_exit(self, exit_code, exception)

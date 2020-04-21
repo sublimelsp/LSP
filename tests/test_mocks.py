@@ -1,6 +1,7 @@
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request
+from LSP.plugin.core.protocol import Response
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.types import LanguageConfig
@@ -324,4 +325,7 @@ class MockClient(object):
         pass
 
     def exit(self) -> None:
+        pass
+
+    def send_response(self, response: Response) -> None:
         pass

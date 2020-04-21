@@ -14,7 +14,7 @@ from .types import LanguageConfig
 from .types import Settings
 from .types import ViewLike
 from .types import WindowLike
-from .typing import Optional, List, Callable, Dict, Any, Protocol, Set, Iterable, Generator
+from .typing import Optional, List, Callable, Dict, Any, Protocol, Set, Iterable, Generator, Type
 from .views import did_change, did_close, did_open, did_save, will_save
 from .workspace import disable_in_project
 from .workspace import enable_in_project
@@ -73,6 +73,28 @@ class DocumentHandler(Protocol):
 
     def has_document_state(self, file_name: str) -> bool:
         ...
+
+
+_session_types = {}  # type: Dict[str, Type[Session]]
+
+
+def register_session_type(session_type: Type[Session]) -> None:
+    if issubclass(session_type, Session):
+        try:
+            global _session_types
+            _session_types[session_type.name()] = session_type
+        except Exception as ex:
+            exception_log("Failed to load session type", ex)
+
+
+def unregister_session_type(session_type: Type[Session]) -> None:
+    global _session_types
+    _session_types.pop(session_type.name(), None)
+
+
+def get_session_type(name: str) -> Type[Session]:
+    global _session_types
+    return _session_types.get(name, Session)
 
 
 def get_active_views(window: WindowLike) -> List[ViewLike]:
@@ -465,7 +487,9 @@ class WindowManager(Manager):
         self._window.status_message("Starting " + config.name + "...")
         try:
             workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
-            session = Session(self, self._settings, workspace_folders, config)
+            session_type = get_session_type(config.name)
+            print(session_type.__name__)
+            session = session_type(self, self._settings, workspace_folders, config)
             if self.server_panel_factory:
                 session.logger.sink = self._payload_log_sink
             session.initialize()

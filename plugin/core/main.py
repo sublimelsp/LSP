@@ -9,6 +9,8 @@ from .popups import popups
 from .registry import windows, load_handlers, unload_sessions
 from .settings import settings, load_settings, unload_settings
 from .typing import Optional
+from .sessions import Session
+from .windows import register_session_type
 
 
 def ensure_server_panel(window: sublime.Window) -> Optional[sublime.View]:
@@ -20,6 +22,8 @@ def startup() -> None:
     popups.load_css()
     set_debug_logging(settings.log_debug)
     set_exception_logging(True)
+    for session_type in Session.__subclasses__():
+        register_session_type(session_type)
     windows.set_diagnostics_ui(DiagnosticsPresenter)
     windows.set_server_panel_factory(ensure_server_panel)
     windows.set_settings_factory(settings)

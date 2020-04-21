@@ -1,6 +1,5 @@
 import sublime
 import sublime_plugin
-from .clients import start_window_config
 from .configurations import ConfigManager, is_supported_syntax
 from .handlers import LanguageHandler
 from .logging import debug
@@ -70,7 +69,7 @@ def register_language_handler(handler: LanguageHandler) -> None:
 
 
 def client_from_session(session: Optional[Session]) -> Optional[Client]:
-    return session.client if session else None
+    return session if session else None
 
 
 def sessions_for_view(view: sublime.View, point: Optional[int] = None) -> Iterable[Session]:
@@ -111,7 +110,7 @@ configs = ConfigManager(client_configs.all)
 client_configs.set_listener(configs.update)
 documents = DocumentHandlerFactory(sublime, settings)
 handlers_dispatcher = LanguageHandlerDispatcher()
-windows = WindowRegistry(configs, documents, start_window_config, sublime, handlers_dispatcher)
+windows = WindowRegistry(configs, documents, sublime, handlers_dispatcher)
 
 
 def configs_for_scope(view: Any, point: Optional[int] = None) -> Iterable[ClientConfig]:

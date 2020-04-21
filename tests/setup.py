@@ -170,13 +170,13 @@ class TextDocumentTestCase(DeferrableTestCase):
         def error_handler(params: 'Any') -> None:
             debug("Got error:", params, "awaiting timeout :(")
 
-        self.session.client.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
+        self.session.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
         yield {"condition": promise, "timeout": TIMEOUT_TIME}
 
     def set_response(self, method: str, response: 'Any') -> None:
         self.assertIsNotNone(self.session)
         assert self.session  # mypy
-        self.session.client.send_notification(
+        self.session.send_notification(
             Notification("$test/setResponse", {"method": method, "response": response}))
 
     def await_boilerplate_begin(self) -> 'Generator':
@@ -187,7 +187,7 @@ class TextDocumentTestCase(DeferrableTestCase):
     def await_boilerplate_end(self) -> 'Generator':
         self.wm.end_config_sessions(self.config.name)  # TODO: Shouldn't this be automatic once the last view closes?
         if self.session:
-            yield lambda: self.session.client is None
+            yield lambda: self.session.state == ClientStates.STOPPING
 
     def await_clear_view_and_save(self) -> 'Generator':
         assert self.view  # type: Optional[sublime.View]

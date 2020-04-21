@@ -1,6 +1,4 @@
 from .logging import debug
-from .logging import debug
-from .process import start_server
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification, Response
 from .protocol import TextDocumentSyncKindNone
 from .rpc import Client
@@ -10,6 +8,7 @@ from .workspace import is_subpath_of
 from abc import ABCMeta, abstractmethod
 import os
 import sublime
+import tempfile
 import weakref
 
 
@@ -179,7 +178,11 @@ class Session(Client):
         self.state = ClientStates.STARTING
         self.capabilities = dict()  # type: Dict[str, Any]
         self._workspace_folders = workspace_folders
-        super().__init__(config, workspace_folders[0].path, manager.window(), settings)
+        if workspace_folders:
+            cwd = workspace_folders[0].path
+        else:
+            cwd = tempfile.gettempdir()
+        super().__init__(config, cwd, manager.window(), settings)
 
     def has_capability(self, capability: str) -> bool:
         return capability in self.capabilities and self.capabilities[capability] is not False

@@ -305,7 +305,8 @@ class Client(TransportCallbacks):
         # window/messageRequest -> m_window_messageRequest
         # $/progress -> m___progress
         # client/registerCapability -> m_client_registerCapability
-        return getattr(self, 'm_{}'.format(method.replace('/', '_').replace('$', '_')), None)
+        attr = 'm_' + ''.join([c if c.isalpha() else '_' for c in method])
+        return getattr(self, attr, None)
 
     def deduce_payload(
         self,
@@ -317,11 +318,11 @@ class Client(TransportCallbacks):
             result = payload.get("params")
             if "id" in payload:
                 req_id = payload["id"]
+                self.logger.incoming_request(req_id, method, result)
                 if handler is None:
                     self.send_error_response(req_id, Error(ErrorCode.MethodNotFound, method))
                 else:
                     tup = (handler, result, req_id, "request", method)
-                    self.logger.incoming_request(req_id, method, result)
                     return tup
             else:
                 if self._sync_request_result.is_idle():

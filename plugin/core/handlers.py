@@ -1,5 +1,6 @@
 from .types import ClientConfig
-from .typing import List, Callable, Optional, Type
+from .logging import exception_log
+from .typing import List, Callable, Optional
 import abc
 
 
@@ -17,10 +18,12 @@ class LanguageHandler(metaclass=abc.ABCMeta):
 
     @classmethod
     def instantiate_all(cls) -> 'List[LanguageHandler]':
-        return list(
-            instantiate(c) for c in cls.__subclasses__()
-            if issubclass(c, LanguageHandler))
-
-
-def instantiate(c: Type[LanguageHandler]) -> LanguageHandler:
-    return c()
+        result = []  # type: List[LanguageHandler]
+        for c in cls.__subclasses__():
+            if issubclass(c, LanguageHandler):
+                try:
+                    instance = c()
+                    result.append(instance)
+                except Exception as ex:
+                    exception_log("Failed to instantiate language handler {}".format(c.__name__), ex)
+        return result

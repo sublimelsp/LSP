@@ -137,14 +137,22 @@ class JsonRpcTransport(Transport):
         self._send_queue.put_nowait(None)
 
     def _end(self, exception: Optional[Exception]) -> None:
-        exit_code = -10000
-        try:
-            self._process.terminate()
-            exit_code = self._process.wait(2)
-        except (AttributeError, ProcessLookupError):
-            pass
-        except Exception as ex:
-            exception = ex  # TODO: Old captured exception is overwritten
+        exit_code = 0
+        if not exception:
+            try:
+                # Allow the process to stop itself.
+                exit_code = self._process.wait(1)
+            except (AttributeError, ProcessLookupError):
+                pass
+        if self._process:
+            try:
+                # The process didn't stop itself. Terminate!
+                self._process.terminate()
+                exit_code = self._process.wait()
+            except (AttributeError, ProcessLookupError):
+                pass
+            except Exception as ex:
+                exception = ex  # TODO: Old captured exception is overwritten
         callback_object = self._callback_object()
         if callback_object:
             callback_object.on_transport_close(exit_code, exception)

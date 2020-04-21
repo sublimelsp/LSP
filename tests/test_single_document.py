@@ -1,7 +1,7 @@
 from copy import deepcopy
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.hover import _test_contents
-from setup import TextDocumentTestCase, TIMEOUT_TIME, PERIOD_TIME
+from setup import TextDocumentTestCase, TIMEOUT_TIME
 import os
 import sublime
 import unittest
@@ -215,7 +215,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
                 return False
             return s[0].begin() > 0
 
-        yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
+        yield {"condition": condition, "timeout": TIMEOUT_TIME}
         first = self.view.sel()[0].begin()
         self.assertEqual(self.view.substr(sublime.Region(first, first + 1)), "F")
 

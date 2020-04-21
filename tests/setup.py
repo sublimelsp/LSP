@@ -20,7 +20,6 @@ project_path = dirname(__file__)
 test_file_path = join(project_path, "testfile.txt")
 workspace_folders = [WorkspaceFolder.from_path(project_path)]
 TIMEOUT_TIME = 10000 if CI else 2000
-PERIOD_TIME = 100 if CI else 10
 SUPPORTED_SCOPE = "text.plain"
 SUPPORTED_SYNTAX = "Packages/Text/Plain text.tmLanguage"
 text_language = LanguageConfig("text", [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX])
@@ -116,7 +115,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.wm = windows.lookup(window)
         self.wm._configs.all.append(self.config)
         self.view = window.open_file(filename)
-        yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
+        yield {"condition": lambda: not self.view.is_loading()}
         self.assertTrue(self.wm._configs.syntax_supported(self.view))
         self.init_view_settings()
         found_document_sync_listener = False
@@ -136,7 +135,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.session = self.wm.get_session(self.config.name, self.view.file_name())
         self.assertIsNotNone(self.session)
         self.assertEqual(self.session.config.name, self.config.name)
-        yield {"condition": lambda: self.session.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
+        yield {"condition": lambda: self.session.state == ClientStates.READY}
         yield from self.await_boilerplate_begin()
 
     def get_test_name(self) -> str:
@@ -171,7 +170,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             debug("Got error:", params, "awaiting timeout :(")
 
         self.session.client.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
-        yield {"condition": promise, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
+        yield {"condition": promise, "timeout": TIMEOUT_TIME}
 
     def set_response(self, method: str, response: 'Any') -> None:
         self.assertIsNotNone(self.session)
@@ -207,7 +206,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             v = self.view
             return v.change_count() == expected_change_count
 
-        yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
+        yield {"condition": condition, "timeout": TIMEOUT_TIME}
 
     def insert_characters(self, characters: str) -> int:
         assert self.view  # type: Optional[sublime.View]

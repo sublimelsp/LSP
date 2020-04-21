@@ -26,7 +26,7 @@ jobs:
     - run: |
         sh ci.sh bootstrap
         sh ci.sh install_package_control
-        subl &
+        subl --stay &
         sleep 8
         sh ci.sh run_tests --coverage
       name: Run UnitTesting tests

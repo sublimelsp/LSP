@@ -17,6 +17,6 @@ class MessageRequestHandlerTest(unittest.TestCase):
                 {'title': "def"}
             ]
         }
-        handler = MessageRequestHandler(view, client, "1", params)
+        handler = MessageRequestHandler(view, client, "1", params, 'lsp server')
         handler.show()
         self.assertTrue(view.is_popup_visible())

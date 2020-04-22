@@ -6,7 +6,7 @@ import sublime
 
 
 class MessageRequestHandler():
-    def __init__(self, view: sublime.View, client: Client, request_id: Any, params: dict) -> None:
+    def __init__(self, view: sublime.View, client: Client, request_id: Any, params: dict, source: str) -> None:
         self.client = client
         self.request_id = request_id
         self.request_sent = False
@@ -15,6 +15,7 @@ class MessageRequestHandler():
         self.titles = list(action.get("title") for action in actions)
         self.message = params.get('message', '')
         self.message_type = params.get('type', 4)
+        self.source = source
 
     def _send_user_choice(self, href: int = -1) -> None:
         if not self.request_sent:
@@ -31,6 +32,7 @@ class MessageRequestHandler():
     def show(self) -> None:
         show_notification(
             self.view,
+            self.source,
             self.message_type,
             self.message,
             self.titles,
@@ -39,7 +41,7 @@ class MessageRequestHandler():
         )
 
 
-def message_content(message_type: int, message: str, titles: List[str]) -> str:
+def message_content(source: str, message_type: int, message: str, titles: List[str]) -> str:
     formatted = []
     icons = {
         1: '❗',
@@ -48,6 +50,7 @@ def message_content(message_type: int, message: str, titles: List[str]) -> str:
         4: '📝'
     }
     icon = icons.get(message_type, '')
+    formatted.append("<h2>{}</h2>".format(source))
     formatted.append("<p class='message'>{} {}</p>".format(icon, message))
 
     buttons = []
@@ -59,10 +62,10 @@ def message_content(message_type: int, message: str, titles: List[str]) -> str:
     return "".join(formatted)
 
 
-def show_notification(view: sublime.View, message_type: int, message: str, titles: List[str],
+def show_notification(view: sublime.View, source: str, message_type: int, message: str, titles: List[str],
                       on_navigate: Callable, on_hide: Callable) -> None:
     stylesheet = sublime.load_resource("Packages/LSP/notification.css")
-    contents = message_content(message_type, message, titles)
+    contents = message_content(source, message_type, message, titles)
     mdpopups.show_popup(
         view,
         contents,

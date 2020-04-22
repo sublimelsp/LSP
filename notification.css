@@ -3,6 +3,7 @@
     padding: 1rem;
 }
 .notification .message {
+    margin-top: 1rem;
     margin-bottom: 3rem;
 }
 

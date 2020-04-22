@@ -460,8 +460,8 @@ class WindowManager(object):
             debug("window {} added session {}".format(self._window.id(), config.name))
             self._sessions.setdefault(config.name, []).append(session)
 
-    def _handle_message_request(self, params: dict, client: Client, request_id: Any) -> None:
-        handler = MessageRequestHandler(self._window.active_view(), client, request_id, params)  # type: ignore
+    def _handle_message_request(self, params: dict, source: str, client: Client, request_id: Any) -> None:
+        handler = MessageRequestHandler(self._window.active_view(), client, request_id, params, source)  # type: ignore
         handler.show()
 
     def restart_sessions(self) -> None:
@@ -511,7 +511,7 @@ class WindowManager(object):
 
         client.on_request(
             "window/showMessageRequest",
-            lambda params, request_id: self._handle_message_request(params, client, request_id))
+            lambda params, request_id: self._handle_message_request(params, session.config.name, client, request_id))
 
         client.on_notification(
             "window/showMessage",

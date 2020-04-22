@@ -21,6 +21,7 @@ For a few languages you can also find dedicated packages on Package Control, whi
 * [LSP-intelephense](https://packagecontrol.io/packages/LSP-intelephense)
 * [LSP-json](https://packagecontrol.io/packages/LSP-json)
 * [LSP-vue](https://packagecontrol.io/packages/LSP-vue)
+* [LSP-metals](https://packagecontrol.io/packages/LSP-metals)
 
 ### Server Configuration<a name="client-config"></a>
 
@@ -89,6 +90,7 @@ Some language servers support multiple languages, which can be specified in the 
 | tcp_port | see instructions below |
 | tcp_host | see instructions below |
 | tcp_mode | see instructions below |
+| experimental_capabilities | Turn on experimental capabilities of a language server. This is a dictionary and differs per language server |
 
 The default transport is stdio, but TCP is also supported.
 The port number can be inserted into the server's arguments by adding a `{port}` placeholder in `command`.
@@ -722,7 +724,7 @@ Alternatively, a newer [rust-analyzer](https://github.com/rust-analyzer/rust-ana
 
 ### Scala<a name="scala"></a>
 
-* **[Metals](https://scalameta.org/metals/)**: Most complete LSP server for Scala, see instructions [here](https://scalameta.org/metals/docs/editors/sublime.html) for installation.
+* **[Metals](https://scalameta.org/metals/)**: Most complete LSP server for Scala, see [LSP-metals](https://packagecontrol.io/packages/LSP-metals) for installation.
 * **[SBT](https://www.scala-sbt.org/)**: Version 1.x supports limited and *unmaintained* language server functionalities, setup is described [here](http://eed3si9n.com/sbt-server-with-sublime-text3).
 * **[Dotty](http://dotty.epfl.ch/)**: The future Scala compiler [contains LSP support](http://dotty.epfl.ch/docs/usage/ide-support.html).
 It is developed against VS Code, so ignore instructions related to VS Code.

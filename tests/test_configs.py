@@ -42,6 +42,22 @@ class ConfigParsingTests(DeferrableTestCase):
         config = update_client_config(config, {"enabled": True})
         self.assertEqual(config.enabled, True)
 
+    def test_can_read_experimental_capabilities(self):
+        experimental_capabilities = {
+            "foo": 1,
+            "bar": True,
+            "baz": "abc"
+        }
+        settings = {
+            "command": ["pyls"],
+            "scopes": ["source.python"],
+            "syntaxes": ["Packages/Python/Python.sublime-syntax"],
+            "languageId": "python",
+            "experimental_capabilities": experimental_capabilities
+        }
+        config = read_client_config("pyls", settings)
+        self.assertEqual(config.experimental_capabilities, experimental_capabilities)
+
 
 class ConfigTests(DeferrableTestCase):
 

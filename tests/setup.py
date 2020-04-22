@@ -20,7 +20,7 @@ project_path = dirname(__file__)
 test_file_path = join(project_path, "testfile.txt")
 workspace_folders = [WorkspaceFolder.from_path(project_path)]
 TIMEOUT_TIME = 10000 if CI else 2000
-PERIOD_TIME = 100 if CI else 1
+PERIOD_TIME = 100 if CI else 10
 text_language = LanguageConfig("text", "text.plain")
 text_config = ClientConfig("textls", [], None, languages=[text_language])
 

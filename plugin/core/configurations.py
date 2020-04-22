@@ -29,6 +29,7 @@ def apply_project_overrides(client_config: ClientConfig, lsp_project_settings: d
             client_settings,
             client_env,
             overrides.get("tcp_host", client_config.tcp_host),
+            overrides.get("experimental_capabilities", client_config.experimental_capabilities),
         )
 
     return client_config

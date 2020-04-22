@@ -1,5 +1,6 @@
 import html
 import os
+import re
 import sublime
 import sublime_plugin
 
@@ -96,7 +97,10 @@ class DiagnosticsCursorListener(LSPViewEventListener):
 
     def show_diagnostics_status(self, diagnostic: Diagnostic) -> None:
         self.has_status = True
-        self.view.set_status('lsp_diagnostics', diagnostic.message)
+        # Because set_status eats newlines, newlines that aren't surrounded by any space
+        # need to have some added, to stop words from becoming joined.
+        spaced_message = re.sub(r'(\S)\n(\S)', r'\1 \2', diagnostic.message)
+        self.view.set_status('lsp_diagnostics', spaced_message)
 
     def clear_diagnostics_status(self) -> None:
         self.view.erase_status('lsp_diagnostics')
@@ -247,7 +251,7 @@ class DiagnosticViewRegions(DiagnosticsUpdateWalk):
         self._relevant_file = False
 
     def end(self) -> None:
-        for severity in range(DiagnosticSeverity.Error, DiagnosticSeverity.Hint):
+        for severity in range(DiagnosticSeverity.Error, DiagnosticSeverity.Hint + 1):
             region_name = "lsp_" + format_severity(severity)
             if severity in self._regions:
                 regions = self._regions[severity]

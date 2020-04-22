@@ -315,11 +315,6 @@
       }
       ]
     },
-    "metals":
-    {
-      "command": ["metals-sublime"],
-      "languageId": "scala" // will match source.scala
-    },
     "javascript-typescript-langserver":
     {
       "command": ["javascript-typescript-stdio"],

@@ -12,85 +12,85 @@ import os
 
 def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: ClientConfig) -> dict:
     first_folder = workspace_folders[0] if workspace_folders else None
-    initializeParams = {
-        "processId": os.getpid(),
-        "clientInfo": {
-            "name": "Sublime Text LSP",
+    capabilities = {
+        "textDocument": {
+            "synchronization": {
+                "didSave": True,
+                "willSave": True,
+                "willSaveWaitUntil": True
+            },
+            "hover": {
+                "contentFormat": ["markdown", "plaintext"]
+            },
+            "completion": {
+                "completionItem": {
+                    "snippetSupport": True,
+                    "deprecatedSupport": True
+                },
+                "completionItemKind": {
+                    "valueSet": completion_item_kinds
+                }
+            },
+            "signatureHelp": {
+                "signatureInformation": {
+                    "documentationFormat": ["markdown", "plaintext"],
+                    "parameterInformation": {
+                        "labelOffsetSupport": True
+                    }
+                }
+            },
+            "references": {},
+            "documentHighlight": {},
+            "documentSymbol": {
+                "symbolKind": {
+                    "valueSet": symbol_kinds
+                }
+            },
+            "formatting": {},
+            "rangeFormatting": {},
+            "declaration": {"linkSupport": True},
+            "definition": {"linkSupport": True},
+            "typeDefinition": {"linkSupport": True},
+            "implementation": {"linkSupport": True},
+            "codeAction": {
+                "codeActionLiteralSupport": {
+                    "codeActionKind": {
+                        "valueSet": []
+                    }
+                }
+            },
+            "rename": {},
+            "colorProvider": {},
+            "publishDiagnostics": {
+                "relatedInformation": True
+            }
         },
+        "workspace": {
+            "applyEdit": True,
+            "didChangeConfiguration": {},
+            "executeCommand": {},
+            "workspaceFolders": True,
+            "symbol": {
+                "symbolKind": {
+                    "valueSet": symbol_kinds
+                }
+            },
+            "configuration": True
+        }
+    }
+    if config.experimental_capabilities is not None:
+        capabilities['experimental'] = config.experimental_capabilities
+    params = {
+        "processId": os.getpid(),
+        "clientInfo": {"name": "Sublime Text LSP"},
         "rootUri": first_folder.uri() if first_folder else None,
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
-        "capabilities": {
-            "textDocument": {
-                "synchronization": {
-                    "didSave": True,
-                    "willSave": True,
-                    "willSaveWaitUntil": True
-                },
-                "hover": {
-                    "contentFormat": ["markdown", "plaintext"]
-                },
-                "completion": {
-                    "completionItem": {
-                        "snippetSupport": True,
-                        "deprecatedSupport": True
-                    },
-                    "completionItemKind": {
-                        "valueSet": completion_item_kinds
-                    }
-                },
-                "signatureHelp": {
-                    "signatureInformation": {
-                        "documentationFormat": ["markdown", "plaintext"],
-                        "parameterInformation": {
-                            "labelOffsetSupport": True
-                        }
-                    }
-                },
-                "references": {},
-                "documentHighlight": {},
-                "documentSymbol": {
-                    "symbolKind": {
-                        "valueSet": symbol_kinds
-                    }
-                },
-                "formatting": {},
-                "rangeFormatting": {},
-                "declaration": {"linkSupport": True},
-                "definition": {"linkSupport": True},
-                "typeDefinition": {"linkSupport": True},
-                "implementation": {"linkSupport": True},
-                "codeAction": {
-                    "codeActionLiteralSupport": {
-                        "codeActionKind": {
-                            "valueSet": []
-                        }
-                    }
-                },
-                "rename": {},
-                "colorProvider": {},
-                "publishDiagnostics": {
-                    "relatedInformation": True
-                }
-            },
-            "workspace": {
-                "applyEdit": True,
-                "didChangeConfiguration": {},
-                "executeCommand": {},
-                "workspaceFolders": True,
-                "symbol": {
-                    "symbolKind": {
-                        "valueSet": symbol_kinds
-                    }
-                },
-                "configuration": True
-            }
-        }
+        "capabilities": capabilities
     }
     if config.init_options is not None:
-        initializeParams['initializationOptions'] = config.init_options
-
-    return initializeParams
+        params['initializationOptions'] = config.init_options
+    return params
 
 
 def diff_folders(old: List[WorkspaceFolder],
@@ -164,8 +164,6 @@ class Session(object):
         textsync = self.capabilities.get('textDocumentSync')
         if isinstance(textsync, dict):
             return bool(textsync.get('willSave'))
-        if isinstance(textsync, int):
-            return textsync > TextDocumentSyncKindNone
         return False
 
     def should_request_will_save_wait_until(self) -> bool:
@@ -178,9 +176,10 @@ class Session(object):
         textsync = self.capabilities.get('textDocumentSync')
         if isinstance(textsync, dict):
             options = textsync.get('save')
-            return True, bool(options.get('includeText')) if isinstance(options, dict) else False
-        if isinstance(textsync, int):
-            return textsync > TextDocumentSyncKindNone, False
+            if isinstance(options, dict):
+                return True, bool(options.get('includeText'))
+            elif isinstance(options, bool):
+                return options, False
         return False, False
 
     def should_notify_did_close(self) -> bool:

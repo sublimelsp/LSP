@@ -1,6 +1,6 @@
 from LSP.plugin.hover import _test_contents
 from LSP.plugin.core.url import filename_to_uri
-from setup import TextDocumentTestCase, YieldPromise, TIMEOUT_TIME, PERIOD_TIME, CI
+from setup import TextDocumentTestCase, TIMEOUT_TIME, PERIOD_TIME, CI
 import unittest
 import sublime
 import os

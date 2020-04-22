@@ -1,12 +1,12 @@
-import mdpopups
+from .protocol import Response
 from .rpc import Client
 from .typing import Any, List, Callable
-from .protocol import Response
-from sublime import View
+import mdpopups
+import sublime
 
 
-class MessageRequestHandler(object):
-    def __init__(self, view: View, client: Client, request_id: Any, params: dict) -> None:
+class MessageRequestHandler():
+    def __init__(self, view: sublime.View, client: Client, request_id: Any, params: dict) -> None:
         self.client = client
         self.request_id = request_id
         self.request_sent = False
@@ -42,10 +42,10 @@ class MessageRequestHandler(object):
 def message_content(message_type: int, message: str, titles: List[str]) -> str:
     formatted = []
     icons = {
-      1: '❗',
-      2: '⚠️',
-      3: 'ℹ️',
-      4: '📝'
+        1: '❗',
+        2: '⚠️',
+        3: 'ℹ️',
+        4: '📝'
     }
     icon = icons.get(message_type, '')
     formatted.append("<p class='message'>{} {}</p>".format(icon, message))
@@ -59,30 +59,14 @@ def message_content(message_type: int, message: str, titles: List[str]) -> str:
     return "".join(formatted)
 
 
-def show_notification(view: View, message_type: int, message: str, titles: List[str],
+def show_notification(view: sublime.View, message_type: int, message: str, titles: List[str],
                       on_navigate: Callable, on_hide: Callable) -> None:
-    myStyle = """
-    .notification {
-        margin: 0.5rem;
-        padding: 1rem;
-    }
-    .notification .message {
-        margin-bottom: 3rem;
-    }
-
-    .notification .actions a {
-        text-decoration: none;
-        padding: 0.5rem;
-        border: 2px solid color(var(--foreground) alpha(0.25));
-        color: var(--foreground);
-    }
-    """
-
+    stylesheet = sublime.load_resource("Packages/LSP/notification.css")
     contents = message_content(message_type, message, titles)
     mdpopups.show_popup(
         view,
         contents,
-        css=myStyle,
+        css=stylesheet,
         md=False,
         location=-1,
         wrapper_class='notification',

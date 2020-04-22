@@ -1,6 +1,7 @@
 from .diagnostics import DiagnosticsStorage
 from .edit import parse_workspace_edit
 from .logging import debug
+from .message_request_handler import MessageRequestHandler
 from .protocol import Notification, Response
 from .rpc import Client, SublimeLogger
 from .sessions import Session
@@ -21,7 +22,6 @@ from .workspace import get_workspace_folders
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
 import threading
-from .message_request_handler import MessageRequestHandler
 
 
 class SublimeLike(Protocol):

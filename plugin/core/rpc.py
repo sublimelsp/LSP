@@ -242,6 +242,39 @@ class Client(TransportCallbacks):
         except AttributeError:
             pass
 
+    def deduce_payload(
+        self,
+        payload: Dict[str, Any]
+    ) -> Tuple[Optional[Callable], Any, Optional[int], Optional[str], Optional[str]]:
+        if "method" in payload:
+            method = payload["method"]
+            handler = self._get_handler(method)
+            result = payload.get("params")
+            if "id" in payload:
+                req_id = payload["id"]
+                self.logger.incoming_request(req_id, method, result)
+                if handler is None:
+                    self.send_error_response(req_id, Error(ErrorCode.MethodNotFound, method))
+                else:
+                    tup = (handler, result, req_id, "request", method)
+                    return tup
+            else:
+                if self._sync_request_result.is_idle():
+                    res = (handler, result, None, "notification", method)
+                    self.logger.incoming_notification(method, result, res[0] is None)
+                    return res
+                else:
+                    self._deferred_notifications.append(payload)
+        elif "id" in payload:
+            response_id = int(payload["id"])
+            handler, result = self.response_handler(response_id, payload)
+            response_tuple = (handler, result, None, None, None)
+            self.logger.incoming_response(response_id, result)
+            return response_tuple
+        else:
+            debug("Unknown payload type: ", payload)
+        return (None, None, None, None, None)
+
     def on_payload(self, payload: Dict[str, Any]) -> None:
         with self._sync_request_cvar:
             handler, result, req_id, typestr, method = self.deduce_payload(payload)
@@ -308,39 +341,6 @@ class Client(TransportCallbacks):
         # client/registerCapability -> m_client_registerCapability
         attr = 'm_' + ''.join([c if c.isalpha() else '_' for c in method])
         return getattr(self, attr, None)
-
-    def deduce_payload(
-        self,
-        payload: Dict[str, Any]
-    ) -> Tuple[Optional[Callable], Any, Optional[int], Optional[str], Optional[str]]:
-        if "method" in payload:
-            method = payload["method"]
-            handler = self._get_handler(method)
-            result = payload.get("params")
-            if "id" in payload:
-                req_id = payload["id"]
-                self.logger.incoming_request(req_id, method, result)
-                if handler is None:
-                    self.send_error_response(req_id, Error(ErrorCode.MethodNotFound, method))
-                else:
-                    tup = (handler, result, req_id, "request", method)
-                    return tup
-            else:
-                if self._sync_request_result.is_idle():
-                    res = (handler, result, None, "notification", method)
-                    self.logger.incoming_notification(method, result, res[0] is None)
-                    return res
-                else:
-                    self._deferred_notifications.append(payload)
-        elif "id" in payload:
-            response_id = int(payload["id"])
-            handler, result = self.response_handler(response_id, payload)
-            response_tuple = (handler, result, None, None, None)
-            self.logger.incoming_response(response_id, result)
-            return response_tuple
-        else:
-            debug("Unknown payload type: ", payload)
-        return (None, None, None, None, None)
 
 
 class SublimeLogger(Logger):

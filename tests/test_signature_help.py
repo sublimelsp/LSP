@@ -165,6 +165,27 @@ class CreateSignatureHelpTests(unittest.TestCase):
             self.assertEqual(help._active_signature_index, 0)
             self.assertEqual(help._active_parameter_index, -1)
 
+    def test_dockerfile_signature_help(self):
+        info = parse_signature_information({
+            'label': 'RUN [ "command" "parameters", ... ]',
+            'parameters': [
+                {'label': '['},
+                {'label': '"command"'},
+                {'label': '"parameters"'},
+                {'label': '...'},
+                {'label': ']'}
+        ]})
+        self.assertEqual(info.label, 'RUN [ "command" "parameters", ... ]')
+        self.assertEqual(len(info.parameters), 5)
+        self.assertEqual(info.parameters[0].label, '[')
+        self.assertEqual(info.parameters[1].label, '"command"')
+        self.assertEqual(info.parameters[2].label, '"parameters"')
+        self.assertEqual(info.parameters[3].label, '...')
+        self.assertEqual(info.parameters[4].label, ']')
+        # There are no open and close parentheses.
+        self.assertEqual(info.open_paren_index, -1)
+        self.assertEqual(info.close_paren_index, -1)
+
 
 class RenderSignatureLabelTests(unittest.TestCase):
 

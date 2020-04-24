@@ -81,12 +81,16 @@ def parse_signature_label(signature_label: str, parameters: List[ParameterInform
         # if server said param was "x" while signature was "f(x: str, ...)"
         # then we should fast-forward to avoid matching the next parameter too early.
         if has_commas:
-            if signature_label[current_index] != ',':
-                next_comma_index = signature_label.find(',', current_index)
-                if next_comma_index > -1:
-                    # print('Found {} instead of comma at index {}, fast-forwarded to {}'.format(
-                    #     signature_label[current_index], current_index, next_comma_index))
-                    current_index = next_comma_index
+            try:
+                if signature_label[current_index] != ',':
+                    next_comma_index = signature_label.find(',', current_index)
+                    if next_comma_index > -1:
+                        # print('Found {} instead of comma at index {}, fast-forwarded to {}'.format(
+                        #     signature_label[current_index], current_index, next_comma_index))
+                        current_index = next_comma_index
+            except IndexError:
+                # bail
+                return (-1, -1)
 
     close_paren_index = signature_label.find(')', current_index)
 

@@ -1,13 +1,13 @@
 from .logging import debug, exception_log
 from .protocol import Request, Notification, Response, Error, ErrorCode
 from .transports import Transport, TransportCallbacks
-from .types import ClientConfig, Settings
+from .types import Settings
 from .typing import Any, Dict, Tuple, Callable, Optional, List
 from abc import ABCMeta, abstractmethod
 from threading import Condition, Lock
 import json
-import subprocess
 import sublime
+import subprocess
 
 
 TCP_CONNECT_TIMEOUT = 5
@@ -132,10 +132,10 @@ def print_to_status_bar(error: Dict[str, Any]) -> None:
 
 
 class Client(TransportCallbacks):
-    def __init__(self, config: ClientConfig, transport: Transport, settings: Settings) -> None:
-        self.transport = transport  # type: Optional[Transport]
+    def __init__(self, config_name: str, settings: Settings) -> None:
+        self.transport = None  # type: Optional[Transport]
         self.request_id = 0  # Our request IDs are always integers.
-        self.logger = SublimeLogger(settings, config.name, debug)
+        self.logger = SublimeLogger(settings, config_name, debug)
         self._response_handlers = {}  # type: Dict[int, Tuple[Callable, Optional[Callable[[Any], None]]]]
         self._deferred_notifications = []  # type: List[Any]
         self._deferred_responses = []  # type: List[Tuple[Optional[Callable], Any]]

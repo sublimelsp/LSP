@@ -5,11 +5,10 @@ from .rpc import Client
 from .types import ClientConfig, ClientStates, Settings
 from .typing import Dict, Any, Optional, List, Tuple, Generator
 from .workspace import is_subpath_of
-from .transports import create_transport
+from .transports import Transport
 from abc import ABCMeta, abstractmethod
 import os
 import sublime
-import tempfile
 import weakref
 
 
@@ -211,11 +210,7 @@ class Session(Client):
         self.state = ClientStates.STARTING
         self.capabilities = dict()  # type: Dict[str, Any]
         self._workspace_folders = workspace_folders
-        if workspace_folders:
-            cwd = workspace_folders[0].path
-        else:
-            cwd = tempfile.gettempdir()
-        super().__init__(config, create_transport(config, cwd, manager.window(), self), settings)
+        super().__init__(config.name, settings)
 
     def has_capability(self, capability: str) -> bool:
         return capability in self.capabilities and self.capabilities[capability] is not False
@@ -293,7 +288,8 @@ class Session(Client):
             self.send_notification(notification)
             self._workspace_folders = folders
 
-    def initialize(self) -> None:
+    def initialize(self, transport: Transport) -> None:
+        self.transport = transport
         params = get_initialize_params(self._workspace_folders, self.config)
         self.send_request(Request.initialize(params), self._handle_initialize_result, lambda _: self.end())
 

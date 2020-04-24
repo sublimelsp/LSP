@@ -4,8 +4,9 @@ from .logging import debug, exception_log
 from .message_request_handler import MessageRequestHandler
 from .protocol import Notification, Response, TextDocumentSyncKindNone, TextDocumentSyncKindFull
 from .rpc import Client
-from .settings import client_configs
 from .sessions import Manager, Session
+from .settings import client_configs  # noqa
+from .transports import create_transport
 from .types import ClientConfig
 from .types import ClientStates
 from .types import config_supports_syntax
@@ -23,6 +24,7 @@ from .workspace import get_workspace_folders
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
 import sublime
+import tempfile
 import threading
 
 
@@ -486,11 +488,15 @@ class WindowManager(Manager):
         try:
             workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
             session_type = get_session_type(config.name)
-            print(session_type.__name__)
             session = session_type(self, self._settings, workspace_folders, config)
             if self.server_panel_factory:
                 session.logger.sink = self._payload_log_sink
-            session.initialize()
+            if workspace_folders:
+                cwd = workspace_folders[0].path
+            else:
+                cwd = tempfile.gettempdir()
+            # WindowLike vs sublime.Window
+            session.initialize(create_transport(config, cwd, self._window, session))  # type: ignore
             self._sessions.setdefault(config.name, []).append(session)
             debug("window {} added session {}".format(self._window.id(), config.name))
         except Exception as e:

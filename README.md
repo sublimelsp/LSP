@@ -37,6 +37,7 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [CSS/LESS/SASS (SCSS only)](https://lsp.readthedocs.io/en/latest/#css)
 * [D](https://lsp.readthedocs.io/en/latest/#d)
 * [Dart](https://lsp.readthedocs.io/en/latest/#dart)
+* [Dockerfile](https://lsp.readthedocs.io/en/latest/#dockerfile)
 * [Elixir](https://lsp.readthedocs.io/en/latest/#elixir)
 * [Elm](https://lsp.readthedocs.io/en/latest/#elm)
 * [Erlang](https://lsp.readthedocs.io/en/latest/#erlang)

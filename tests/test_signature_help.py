@@ -174,7 +174,7 @@ class CreateSignatureHelpTests(unittest.TestCase):
                 {'label': '"parameters"'},
                 {'label': '...'},
                 {'label': ']'}
-        ]})
+            ]})
         self.assertEqual(info.label, 'RUN [ "command" "parameters", ... ]')
         self.assertEqual(len(info.parameters), 5)
         self.assertEqual(info.parameters[0].label, '[')

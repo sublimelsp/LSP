@@ -243,6 +243,42 @@ dub run dls:bootstrap
 
 > Note: The older [natebosch/dart_language_server](https://github.com/natebosch/dart_language_server) is now deprecated.
 
+### Dockerfile<a name="dockerfile"></a>
+
+1. Install the [Dockerfile Syntax Highlighting](https://packagecontrol.io/packages/Dockerfile%20Syntax%20Highlighting) package from Package Control for syntax highlighting.
+2. Install the [Dockerfile Language Server](https://github.com/rcjsuen/dockerfile-language-server-nodejs):
+
+        npm install -g dockerfile-language-server-nodejs
+
+3. Add to LSP settings' clients:
+
+```js
+"docker-langserver": {
+  "command": ["docker-langserver", "--stdio"],
+  "enabled": true,
+  "languageId": "dockerfile",
+  "scopes": ["source.dockerfile"],
+  "settings": {
+    "docker": {
+      "languageserver": {
+        "diagnostics": {
+          // string values must be equal to "ignore", "warning", or "error"
+          "deprecatedMaintainer": "warning",
+          "directiveCasing": "warning",
+          "emptyContinuationLine": "warning",
+          "instructionCasing": "warning",
+          "instructionCmdMultiple": "warning",
+          "instructionEntrypointMultiple": "warning",
+          "instructionHealthcheckMultiple": "warning",
+          "instructionJSONInSingleQuotes": "warning"
+        }
+      }
+    }
+  },
+  "syntaxes": ["Packages/Dockerfile Syntax Highlighting/Syntaxes/Dockerfile.sublime-syntax"]
+}
+```
+
 ### Elixir<a name="elixir"></a>
 
 1. Install the [Elixir](https://packagecontrol.io/packages/Elixir) package from Package Control for syntax highlighting.

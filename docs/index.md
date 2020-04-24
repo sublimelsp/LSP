@@ -20,8 +20,8 @@ For a few languages you can also find dedicated packages on Package Control, whi
 * [LSP-html](https://packagecontrol.io/packages/LSP-html)
 * [LSP-intelephense](https://packagecontrol.io/packages/LSP-intelephense)
 * [LSP-json](https://packagecontrol.io/packages/LSP-json)
-* [LSP-vue](https://packagecontrol.io/packages/LSP-vue)
 * [LSP-metals](https://packagecontrol.io/packages/LSP-metals)
+* [LSP-vue](https://packagecontrol.io/packages/LSP-vue)
 
 ### Server Configuration<a name="client-config"></a>
 
@@ -146,13 +146,11 @@ If you use or would like to use language servers that are not in this list, plea
 
 ### Bash<a name="bash"></a>
 
-1\. Install the [Bash Language Server](https://github.com/mads-hartmann/bash-language-server):
+1. Install the [Bash Language Server](https://github.com/mads-hartmann/bash-language-server):
 
-```sh
-npm i -g bash-language-server
-```
+        npm i -g bash-language-server
 
-2\. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `bashls`.
+2. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `bashls`.
 
 ### C/C++
 
@@ -176,7 +174,7 @@ See the dedicated <a href="cplusplus"/>C/C++ guide</a> for using ccls, cquery or
 }
 ```
 
-### Clojure<a name="clojure"</a>
+### Clojure<a name="clojure"></a>
 
 1. Download [clojure-lsp](https://github.com/snoe/clojure-lsp).
 2. Add to LSP settings' clients:
@@ -196,24 +194,20 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 
 ### CSS<a name="css"></a>
 
-1\. Install the CSS language server from VS Code:
+1. Install the CSS language server from VS Code:
 
-```sh
-npm install -g vscode-css-languageserver-bin
-```
+        npm install -g vscode-css-languageserver-bin
 
-2\. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `vscode-css`.
+2. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `vscode-css`.
 
 ### D<a name="d"></a>
 
-1\. Install the [D Language Server](https://github.com/d-language-server/dls):
+1. Install the [D Language Server](https://github.com/d-language-server/dls):
 
-```sh
-dub fetch dls
-dub run dls:bootstrap
-```
+        dub fetch dls
+        dub run dls:bootstrap
 
-2\. Add to LSP settings' clients:
+2. Add to LSP settings' clients:
 
 ```json
 "dls": {
@@ -241,7 +235,7 @@ dub run dls:bootstrap
 }
 ```
 
-> Note: The older [natebosch/dart_language_server](https://github.com/natebosch/dart_language_server) is now deprecated.
+> **Note**: The older [natebosch/dart_language_server](https://github.com/natebosch/dart_language_server) is now deprecated.
 
 ### Dockerfile<a name="dockerfile"></a>
 
@@ -320,16 +314,17 @@ dub run dls:bootstrap
 1. See instructions for installing the [Erlang Language Server](https://github.com/erlang-ls/erlang_ls).
 2. Add to LSP settings' clients:
 
-         "erlang-ls": {
-           "command"   : [ "/path/to/my/erlang_ls", "--transport", "stdio" ],
-           "enabled"   : true,
-           "languageId": "erlang",
-           "scopes"    : [ "source.erlang" ],
-           "syntaxes"  : ["Packages/Erlang/Erlang.sublime-syntax"]
-         }
+```json
+"erlang-ls": {
+  "command"   : [ "/path/to/my/erlang_ls", "--transport", "stdio" ],
+  "enabled"   : true,
+  "languageId": "erlang",
+  "scopes"    : [ "source.erlang" ],
+  "syntaxes"  : ["Packages/Erlang/Erlang.sublime-syntax"]
+}
+```
 
-
-3. Sometimes Erlang LS might take a little time to initialize. The default is 3 seconds so it is a good idea to increase the value for `"initialize_timeout"` in the LSP settings' clients:
+> **Note**: Sometimes Erlang LS might take a little time to initialize. The default is 3 seconds so it is a good idea to increase the value for `"initialize_timeout"` in the LSP settings' clients:
 
         "initialize_timeout": 30
 
@@ -357,21 +352,23 @@ npm install -g flow-language-server
 
 3. Add to LSP settings' clients:
 
-        "fortls": {
-          "command": ["fortls"],
-          "enabled": true,
-          "languageId": "fortran",
-          "scopes": [
-            "source.modern-fortran",
-            "source.fixedform-fortran"
-          ],
-          "syntaxes": [
-            "Packages/Fortran/grammars/FortranModern.sublime-syntax",
-            "Packages/Fortran/grammars/FortranFixedForm.sublime-syntax"
-          ]
-        }
+```json
+"fortls": {
+  "command": ["fortls"],
+  "enabled": true,
+  "languageId": "fortran",
+  "scopes": [
+    "source.modern-fortran",
+    "source.fixedform-fortran"
+  ],
+  "syntaxes": [
+    "Packages/Fortran/grammars/FortranModern.sublime-syntax",
+    "Packages/Fortran/grammars/FortranFixedForm.sublime-syntax"
+  ]
+}
+```
 
-> Note: See the [Language server settings](https://github.com/hansec/fortran-language-server#language-server-settings)
+> **Note**: See the [Language server settings](https://github.com/hansec/fortran-language-server#language-server-settings)
   documentation for a detailed description of available configuration options, for example
   `"command": ["fortls", "--lowercase_intrinsics"]` to use lowercase for autocomplete suggestions.
 
@@ -379,27 +376,23 @@ npm install -g flow-language-server
 
 #### Gopls
 
-1\. Install [gopls](https://github.com/golang/tools/tree/master/gopls), the official language server for the Go language:
+1. Install [gopls](https://github.com/golang/tools/tree/master/gopls), the official language server for the Go language:
 
-```sh
-go get golang.org/x/tools/gopls@latest
-```
+        go get golang.org/x/tools/gopls@latest
 
-2\. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `gopls`.
+2. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `gopls`.
 
-> Note: See the [User guide](https://github.com/golang/tools/blob/master/gopls/doc/user.md#user-guide) for detailed installation instructions and configurations.
+> **Note**: See the [User guide](https://github.com/golang/tools/blob/master/gopls/doc/user.md#user-guide) for detailed installation instructions and configurations.
 
 #### Sourcegraph's go-langserver
 
-1\. Install Sourcegraph's [Go Language Server](https://github.com/sourcegraph/go-langserver):
+1. Install Sourcegraph's [Go Language Server](https://github.com/sourcegraph/go-langserver):
 
-```sh
-go get github.com/sourcegraph/go-langserver
-```
+        go get github.com/sourcegraph/go-langserver
 
-2\. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `golsp`.
+2. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `golsp`.
 
-> Note: Work on this language server has been deprioritized in favor of the gopls language server mentioned above.
+> **Note**: Work on this language server has been deprioritized in favor of the gopls language server mentioned above.
 
 ### Haskell
 
@@ -502,44 +495,45 @@ npm install -g javascript-typescript-langserver
 
 3. Add to LSP settings' clients:
 
-        "julials": {
-          "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
-          // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using LanguageServer; using LanguageServer.SymbolServer; server=LanguageServer.LanguageServerInstance(stdin,stdout,false); run(server)"], // on Windows
-          "languageId": "julia",
-          "scopes": ["source.julia"],
-          "settings": {
-            // Default values from VS Code:
-            "julia": {
-              "format": {
-                "calls": true,        // Format function calls
-                "comments": true,     // Format comments
-                "curly": true,        // Format braces
-                "docs": true,         // Format inline documentation
-                "indent": 4,          // Indent size for formatting
-                "indents": true,      // Format file indents
-                "iterOps": true,      // Format loop iterators
-                "kw": true,           // Remove spaces around = in function keywords
-                "lineends": false,    // [undocumented]
-                "ops": true,          // Format whitespace around operators
-                "tuples": true,       // Format tuples
-              },
-              "lint": {
-                "call": false,        // Check calls against existing methods (experimental)
-                "constif": true,      // Check for constant conditionals of if statements
-                "datadecl": false,    // [undocumented]
-                "iter": true,         // Check iterator syntax of loops
-                "lazy": true,         // Check for deterministic lazy boolean operators
-                "modname": true,      // Check for invalid submodule names
-                "nothingcomp": false, // [undocumented]
-                "pirates": true,      // Check for type piracy
-                "run": true,          // run the linter on active files
-                "typeparam": true     // Check for unused DataType parameters
-              }
-            }
-          },
-          "syntaxes": ["Packages/Julia/Julia.sublime-syntax"]
-        }
-
+```js
+"julials": {
+  "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
+  // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using LanguageServer; using LanguageServer.SymbolServer; server=LanguageServer.LanguageServerInstance(stdin,stdout,false); run(server)"], // on Windows
+  "languageId": "julia",
+  "scopes": ["source.julia"],
+  "settings": {
+    // Default values from VS Code:
+    "julia": {
+      "format": {
+        "calls": true,        // Format function calls
+        "comments": true,     // Format comments
+        "curly": true,        // Format braces
+        "docs": true,         // Format inline documentation
+        "indent": 4,          // Indent size for formatting
+        "indents": true,      // Format file indents
+        "iterOps": true,      // Format loop iterators
+        "kw": true,           // Remove spaces around = in function keywords
+        "lineends": false,    // [undocumented]
+        "ops": true,          // Format whitespace around operators
+        "tuples": true        // Format tuples
+      },
+      "lint": {
+        "call": false,        // Check calls against existing methods (experimental)
+        "constif": true,      // Check for constant conditionals of if statements
+        "datadecl": false,    // [undocumented]
+        "iter": true,         // Check iterator syntax of loops
+        "lazy": true,         // Check for deterministic lazy boolean operators
+        "modname": true,      // Check for invalid submodule names
+        "nothingcomp": false, // [undocumented]
+        "pirates": true,      // Check for type piracy
+        "run": true,          // run the linter on active files
+        "typeparam": true     // Check for unused DataType parameters
+      }
+    }
+  },
+  "syntaxes": ["Packages/Julia/Julia.sublime-syntax"]
+}
+```
 
 <!-- Alternatively, install the [LSP-julia](https://github.com/randy3k/LSP-julia) package for Sublime Text. -->
 <!-- (Currently doesn't work with newest release of Julia's LanguageServer) -->
@@ -586,7 +580,7 @@ npm install -g javascript-typescript-langserver
 }
 ```
 
-> Note: To enable code completions while typing, ensure to have `text.tex.latex` (for LaTeX files) and/or `text.bibtex`
+> **Note**: To enable code completions while typing, ensure to have `text.tex.latex` (for LaTeX files) and/or `text.bibtex`
   (for BibTeX files) included in the `auto_complete_selector` setting in your `Preferences.sublime-settings` file.
   For further requirements see the [TexLab Docs](https://texlab.netlify.com/docs#requirements).
 
@@ -672,7 +666,7 @@ Global installation:
 npm install -g polymer-editor-service
 ```
 
-> Note: requires an up to date version of NodeJS. v6 is the minimum supported version as of 2017.
+> **Note**: requires an up to date version of NodeJS. v6 is the minimum supported version as of 2017.
 
 Features:
 
@@ -717,7 +711,7 @@ More info: [Polymer/polymer-editor-service](https://github.com/Polymer/polymer-e
 }
 ```
 
-> Note: For more details see this [issue](https://github.com/PowerShell/PowerShellEditorServices/issues/1057).
+> **Note**: For more details see this [issue](https://github.com/PowerShell/PowerShellEditorServices/issues/1057).
 
 ### Python<a name="python"></a>
 
@@ -765,13 +759,11 @@ Alternatively, use Microsoft Python Language Server (using .NET Core runtime). [
 
 ### R<a name="r"></a>
 
-1\. Install the `languageserver` package from CRAN (see the [CRAN mirrored package on GitHub](https://github.com/cran/languageserver) for more information and up-to-date installation instructions):
+1. Install the `languageserver` package from CRAN (see the [CRAN mirrored package on GitHub](https://github.com/cran/languageserver) for more information and up-to-date installation instructions):
 
-```r
-install.packages("languageserver")
-```
+        install.packages("languageserver")
 
-2\. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `rlang`.
+2. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `rlang`.
 
 ### Ruby/Ruby on Rails<a name="ruby"></a>
 
@@ -779,27 +771,24 @@ Different servers are available for Ruby:
 
 Solargraph:
 
-1\. Install the solargraph gem (see [github:castwide/solargraph](https://github.com/castwide/solargraph) for up-to-date installation instructions):
+1. Install the solargraph gem (see [github:castwide/solargraph](https://github.com/castwide/solargraph) for up-to-date installation instructions):
 
-```sh
-gem install solargraph
-```
+        gem install solargraph
 
-2\. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `ruby`.
+2. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `ruby`.
 
 Sorbet:
 
-1\. Install the sorbet and sorbet-runtime gem (see [github:sorbet/sorbet](https://github.com/sorbet/sorbet)):
-```sh
-gem install sorbet
-gem install sorbet-runtime
-```
-If you have a Gemfile, using bundler, add sorbet and sorbet-runtime to your Gemfile and run:
-```
-bundle install
-```
+1. Install the sorbet and sorbet-runtime gem (see [github:sorbet/sorbet](https://github.com/sorbet/sorbet)):
 
-2\. Run "LSP:Enable Language Server Globally" from the Command Palette and choose `sorbet`.
+        gem install sorbet
+        gem install sorbet-runtime
+
+    If you have a Gemfile, using bundler, add sorbet and sorbet-runtime to your Gemfile and run:
+
+        bundle install
+
+2. Run "LSP:Enable Language Server Globally" from the Command Palette and choose `sorbet`.
 
 ### Rust<a name="rust"></a>
 
@@ -870,4 +859,4 @@ Be sure to install [Vue Syntax Highlight](https://packagecontrol.io/packages/Vue
 }
 ```
 
-> Note: Discussed in [this issue](https://github.com/sublimelsp/LSP/issues/578).
+> **Note**: Discussed in [this issue](https://github.com/sublimelsp/LSP/issues/578).

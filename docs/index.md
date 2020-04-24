@@ -16,11 +16,14 @@ Visit [Langserver.org](https://langserver.org/) or the [list of language server 
 For a few languages you can also find dedicated packages on Package Control, which can optionally be installed to simplify the configuration and installation process of a language server and might provide additional features such as automatic updates for the server:
 
 * [LSP-css](https://packagecontrol.io/packages/LSP-css)
+* [LSP-elm](https://packagecontrol.io/packages/LSP-elm)
 * [LSP-eslint](https://packagecontrol.io/packages/LSP-eslint)
 * [LSP-html](https://packagecontrol.io/packages/LSP-html)
 * [LSP-intelephense](https://packagecontrol.io/packages/LSP-intelephense)
 * [LSP-json](https://packagecontrol.io/packages/LSP-json)
 * [LSP-metals](https://packagecontrol.io/packages/LSP-metals)
+* [LSP-serenata](https://packagecontrol.io/packages/LSP-serenata)
+* [LSP-typescript](https://packagecontrol.io/packages/LSP-typescript)
 * [LSP-vue](https://packagecontrol.io/packages/LSP-vue)
 
 ### Server Configuration<a name="client-config"></a>

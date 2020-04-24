@@ -109,6 +109,8 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
 class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
     def run(self, edit: sublime.Edit, prefix: str, message: str) -> None:
         with mutable(self.view):
+            message = message.replace("\r\n", "\n")  # normalize Windows eol
+            message = message.replace("\r", "\n")  # normalize MacOS eol
             self.view.insert(edit, self.view.size(), "{}: {}\n".format(prefix, message))
             total_lines, _ = self.view.rowcol(self.view.size())
             point = 0  # Starting from point 0 in the panel ...

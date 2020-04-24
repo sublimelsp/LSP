@@ -150,10 +150,11 @@ class Client(TransportCallbacks):
             handler: Callable[[Optional[Any]], None],
             error_handler: Optional[Callable[[Any], None]] = None,
     ) -> None:
-        self.request_id += 1
-        self.logger.outgoing_request(self.request_id, request.method, request.params, blocking=False)
-        self._response_handlers[self.request_id] = (handler, error_handler)
-        self.send_payload(request.to_payload(self.request_id))
+        with self._sync_request_cvar:
+            self.request_id += 1
+            self.logger.outgoing_request(self.request_id, request.method, request.params, blocking=False)
+            self._response_handlers[self.request_id] = (handler, error_handler)
+            self.send_payload(request.to_payload(self.request_id))
 
     def execute_request(
             self,
@@ -195,6 +196,25 @@ class Client(TransportCallbacks):
                 error_handler(error)
             else:
                 handler(result)
+
+    def flush_deferred_notifications(self) -> None:
+        for payload in self._deferred_notifications:
+            try:
+                handler = self._get_handler(payload["method"])
+                if handler:
+                    handler(payload["params"])
+            except Exception as err:
+                exception_log("Error handling server payload", err)
+        self._deferred_notifications.clear()
+
+    def flush_deferred_responses(self) -> None:
+        for handler, result in self._deferred_responses:
+            if handler:
+                try:
+                    handler(result)
+                except Exception as err:
+                    exception_log("Error handling server payload", err)
+        self._deferred_responses.clear()
 
     def send_notification(self, notification: Notification) -> None:
         self.logger.outgoing_notification(notification.method, notification.params)
@@ -248,25 +268,6 @@ class Client(TransportCallbacks):
 
     def on_transport_close(self, exit_code: int, exception: Optional[Exception]) -> None:
         self.transport = None
-
-    def flush_deferred_notifications(self) -> None:
-        for payload in self._deferred_notifications:
-            try:
-                handler = self._get_handler(payload["method"])
-                if handler:
-                    handler(payload["params"])
-            except Exception as err:
-                exception_log("Error handling server payload", err)
-        self._deferred_notifications.clear()
-
-    def flush_deferred_responses(self) -> None:
-        for handler, result in self._deferred_responses:
-            if handler:
-                try:
-                    handler(result)
-                except Exception as err:
-                    exception_log("Error handling server payload", err)
-        self._deferred_responses.clear()
 
     def response_handler(self, response_id: int, response: Dict[str, Any]) -> Tuple[Optional[Callable], Any]:
         handler, error_handler = self._response_handlers.pop(response_id, (None, None))

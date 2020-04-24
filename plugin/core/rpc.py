@@ -1,6 +1,6 @@
 from .logging import debug, exception_log
 from .protocol import Request, Notification, Response, Error, ErrorCode
-from .transports import create_transport, JsonRpcTransport, TransportCallbacks
+from .transports import Transport, TransportCallbacks
 from .types import ClientConfig, Settings
 from .typing import Any, Dict, Tuple, Callable, Optional, List
 from abc import ABCMeta, abstractmethod
@@ -132,8 +132,8 @@ def print_to_status_bar(error: Dict[str, Any]) -> None:
 
 
 class Client(TransportCallbacks):
-    def __init__(self, config: ClientConfig, cwd: str, window: sublime.Window, settings: Settings) -> None:
-        self.transport = create_transport(config, cwd, window, self)  # type: Optional[JsonRpcTransport]
+    def __init__(self, config: ClientConfig, transport: Transport, settings: Settings) -> None:
+        self.transport = transport  # type: Optional[Transport]
         self.request_id = 0  # Our request IDs are always integers.
         self.logger = SublimeLogger(settings, config.name, debug)
         self._response_handlers = {}  # type: Dict[int, Tuple[Callable, Optional[Callable[[Any], None]]]]

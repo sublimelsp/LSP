@@ -5,6 +5,7 @@ from .rpc import Client
 from .types import ClientConfig, ClientStates, Settings
 from .typing import Dict, Any, Optional, List, Tuple, Generator
 from .workspace import is_subpath_of
+from .transports import create_transport
 from abc import ABCMeta, abstractmethod
 import os
 import sublime
@@ -214,7 +215,7 @@ class Session(Client):
             cwd = workspace_folders[0].path
         else:
             cwd = tempfile.gettempdir()
-        super().__init__(config, cwd, manager.window(), settings)
+        super().__init__(config, create_transport(config, cwd, manager.window(), self), settings)
 
     def has_capability(self, capability: str) -> bool:
         return capability in self.capabilities and self.capabilities[capability] is not False

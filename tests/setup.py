@@ -115,7 +115,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.wm = windows.lookup(window)
         self.wm._configs.all.append(self.config)
         self.view = window.open_file(filename)
-        yield {"condition": lambda: not self.view.is_loading()}
+        yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
         self.assertTrue(self.wm._configs.syntax_supported(self.view))
         self.init_view_settings()
         found_document_sync_listener = False
@@ -135,7 +135,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.session = self.wm.get_session(self.config.name, self.view.file_name())
         self.assertIsNotNone(self.session)
         self.assertEqual(self.session.config.name, self.config.name)
-        yield {"condition": lambda: self.session.state == ClientStates.READY}
+        yield {"condition": lambda: self.session.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
         yield from self.await_boilerplate_begin()
 
     def get_test_name(self) -> str:

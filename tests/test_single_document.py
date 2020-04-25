@@ -50,7 +50,6 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         # -> "shutdown" -> client shut down
         pass
 
-    @unittest.skipIf(sublime.platform() == "osx" and CI, "FIXME: This timeouts on OSX CI")
     def test_did_close(self) -> 'Generator':
         assert self.view
         self.view.set_scratch(True)

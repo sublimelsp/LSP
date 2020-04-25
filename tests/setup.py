@@ -118,17 +118,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
         self.assertTrue(self.wm._configs.syntax_supported(self.view))
         self.init_view_settings()
-        found_document_sync_listener = False
-        for listener in view_event_listeners[self.view.id()]:
-            if isinstance(listener, DocumentSyncListener):
-                # Bug in ST3? Either that, or CI runs with ST window not in focus and that makes ST3 not trigger some
-                # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
-                # opening file (manager missing in DocumentSyncListener)
-                # Revisit this once we're on ST4.
-                sublime.set_timeout_async(listener.on_activated_async)
-                found_document_sync_listener = True
-                break
-        self.assertTrue(found_document_sync_listener)
+        yield {"condition": self.ensure_document_listener_created, "timeout": TIMEOUT_TIME}
         yield {
             "condition": lambda: self.wm.get_session(self.config.name, self.view.file_name()) is not None,
             "timeout": TIMEOUT_TIME}
@@ -156,6 +146,18 @@ class TextDocumentTestCase(DeferrableTestCase):
         s("translate_tabs_to_spaces", False)
         s("word_wrap", False)
         s("lsp_format_on_save", False)
+
+    def ensure_document_listener_created(self) -> bool:
+        assert self.view
+        # Bug in ST3? Either that, or CI runs with ST window not in focus and that makes ST3 not trigger some
+        # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
+        # opening file (manager missing in DocumentSyncListener)
+        # Revisit this once we're on ST4.
+        for listener in view_event_listeners[self.view.id()]:
+            if isinstance(listener, DocumentSyncListener):
+                sublime.set_timeout_async(listener.on_activated_async)
+                return True
+        return False
 
     def await_message(self, method: str) -> 'Generator':
         self.assertIsNotNone(self.session)

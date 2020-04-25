@@ -1,7 +1,7 @@
 from copy import deepcopy
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.hover import _test_contents
-from setup import TextDocumentTestCase, TIMEOUT_TIME, PERIOD_TIME, CI
+from setup import TextDocumentTestCase, TIMEOUT_TIME, PERIOD_TIME
 import os
 import sublime
 import unittest
@@ -50,7 +50,6 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         # -> "shutdown" -> client shut down
         pass
 
-    @unittest.skipIf(sublime.platform() == "osx" and CI, "FIXME: This timeouts on OSX CI")
     def test_did_close(self) -> 'Generator':
         assert self.view
         self.view.set_scratch(True)

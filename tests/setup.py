@@ -1,3 +1,4 @@
+from LSP.plugin.core.documents import DocumentSyncListener
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification, Request, WorkspaceFolder
 from LSP.plugin.core.registry import windows
@@ -7,7 +8,7 @@ from LSP.plugin.core.types import ClientConfig, LanguageConfig, ClientStates
 from os import environ
 from os.path import dirname
 from os.path import join
-from sublime_plugin import view_event_listeners, ViewEventListener
+from sublime_plugin import view_event_listeners
 from test_mocks import basic_responses
 from unittesting import DeferrableTestCase
 import sublime
@@ -67,14 +68,6 @@ def remove_config(config):
     client_configs.all.remove(config)
 
 
-def inject_session(wm, config, client) -> Session:
-    session = Session(config, workspace_folders, client, wm._handle_pre_initialize, wm._handle_post_initialize)
-    wm._sessions[config.name] = [session]
-    wm.update_configs()
-    wm._workspace_folders = workspace_folders
-    return session
-
-
 def close_test_view(view: sublime.View):
     if view:
         view.set_scratch(True)
@@ -119,37 +112,31 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.assertTrue(window)
         filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(test_name)), window)
         self.config.init_options["serverResponse"] = server_capabilities
-        window.run_command("close_all")
-        # Cleanly shut down all window managers by ending all their sessions
-        for wm in windows._windows.values():
-            wm.end_sessions()
-
-            def condition() -> bool:
-                nonlocal wm
-                return len(wm._sessions) == 0
-
-            yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
-        # The Sublime windows are actually still valid, so WindowManagers don't remove themselves from this global
-        # dictionary. We do it by hand.
-        windows._windows.clear()
-        client_configs.all.clear()
         add_config(self.config)
-        self.wm = windows.lookup(window)  # create just this single one for the test
-        self.assertEqual(len(self.wm._sessions), 0)
+        self.wm = windows.lookup(window)
+        self.wm._configs.all.append(self.config)
         self.view = window.open_file(filename)
         yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
         self.assertTrue(self.wm._configs.syntax_supported(self.view))
         self.init_view_settings()
-        yield lambda: len(self.wm._sessions) > 0
-        sessions = self.wm._sessions.get(self.config.name, [])
-        self.assertEqual(len(sessions), 1)
-        self.session = sessions[0]
+        found_document_sync_listener = False
+        for listener in view_event_listeners[self.view.id()]:
+            if isinstance(listener, DocumentSyncListener):
+                # Bug in ST3? Either that, or CI runs with ST window not in focus and that makes ST3 not trigger some
+                # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
+                # opening file (manager missing in DocumentSyncListener)
+                # Revisit this once we're on ST4.
+                sublime.set_timeout_async(listener.on_activated_async)
+                found_document_sync_listener = True
+                break
+        self.assertTrue(found_document_sync_listener)
+        yield {
+            "condition": lambda: self.wm.get_session(self.config.name, self.view.file_name()) is not None,
+            "timeout": TIMEOUT_TIME}
+        self.session = self.wm.get_session(self.config.name, self.view.file_name())
+        self.assertIsNotNone(self.session)
         self.assertEqual(self.session.config.name, self.config.name)
-
-        def condition() -> bool:
-            return self.session.state == ClientStates.READY
-
-        yield {"condition": condition, "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
+        yield {"condition": lambda: self.session.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
         yield from self.await_boilerplate_begin()
 
     def get_test_name(self) -> str:
@@ -170,12 +157,6 @@ class TextDocumentTestCase(DeferrableTestCase):
         s("translate_tabs_to_spaces", False)
         s("word_wrap", False)
         s("lsp_format_on_save", False)
-
-    def get_view_event_listener(self, unique_attribute: str) -> 'Optional[ViewEventListener]':
-        for listener in view_event_listeners[self.view.id()]:
-            if unique_attribute in dir(listener):
-                return listener
-        return None
 
     def await_message(self, method: str) -> 'Generator':
         self.assertIsNotNone(self.session)
@@ -204,7 +185,6 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield from self.await_message("textDocument/didOpen")
 
     def await_boilerplate_end(self) -> 'Generator':
-        close_test_view(self.view)
         self.wm.end_config_sessions(self.config.name)  # TODO: Shouldn't this be automatic once the last view closes?
         if self.session:
             yield lambda: self.session.client is None
@@ -240,5 +220,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def doCleanups(self) -> 'Generator':
         # restore the user's configs
-        client_configs.update_configs()
+        close_test_view(self.view)
+        remove_config(self.config)
+        self.wm._configs.all.remove(self.config)
         yield from super().doCleanups()

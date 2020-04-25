@@ -1,7 +1,7 @@
 from copy import deepcopy
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.hover import _test_contents
-from setup import TextDocumentTestCase, TIMEOUT_TIME, PERIOD_TIME, CI
+from setup import TextDocumentTestCase, TIMEOUT_TIME, PERIOD_TIME
 import os
 import sublime
 import unittest

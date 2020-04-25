@@ -122,7 +122,10 @@ class TextDocumentTestCase(DeferrableTestCase):
         found_document_sync_listener = False
         for listener in view_event_listeners[self.view.id()]:
             if isinstance(listener, DocumentSyncListener):
-                # Bug in ST3?
+                # Bug in ST3? Either that, or CI runs with ST window not in focus and that makes ST3 not trigger some
+                # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
+                # opening file (manager missing in DocumentSyncListener)
+                # Revisit this once we're on ST4.
                 sublime.set_timeout_async(listener.on_activated_async)
                 found_document_sync_listener = True
                 break

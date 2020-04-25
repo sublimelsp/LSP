@@ -109,11 +109,13 @@ class TextDocumentTestCase(DeferrableTestCase):
             self.assertFalse(True)
         window = sublime.active_window()
         self.assertTrue(window)
-        filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(test_name)), window)
         self.config.init_options["serverResponse"] = server_capabilities
         add_config(self.config)
         self.wm = windows.lookup(window)
         self.wm._configs.all.append(self.config)
+        filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(test_name)), window)
+        open_view = window.find_open_file(filename)
+        close_test_view(open_view)
         self.view = window.open_file(filename)
         yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
         self.assertTrue(self.wm._configs.syntax_supported(self.view))

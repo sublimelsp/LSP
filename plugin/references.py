@@ -76,6 +76,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
     def show_quick_panel(self, references_by_file: Dict[str, List[Tuple[Point, str]]]) -> None:
         selected_index = -1
         current_file_path = self.view.file_name()
+        self.reflist.clear()
         for file_path, references in references_by_file.items():
             for reference in references:
                 point, line = reference

@@ -4,6 +4,7 @@ from LSP.plugin.core.registry import is_supported_view
 from setup import CI, SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove_config, text_config
 from unittesting import DeferrableTestCase
 import sublime
+from sublime_plugin import view_event_listeners, ViewEventListener
 
 
 try:
@@ -150,6 +151,12 @@ class InitializationTests(DeferrableTestCase):
 
 
 class QueryCompletionsTests(TextDocumentTestCase):
+
+    def get_view_event_listener(self, unique_attribute: str) -> 'Optional[ViewEventListener]':
+        for listener in view_event_listeners[self.view.id()]:
+            if unique_attribute in dir(listener):
+                return listener
+        return None
 
     def init_view_settings(self) -> None:
         super().init_view_settings()

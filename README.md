@@ -37,8 +37,10 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [CSS/LESS/SASS (SCSS only)](https://lsp.readthedocs.io/en/latest/#css)
 * [D](https://lsp.readthedocs.io/en/latest/#d)
 * [Dart](https://lsp.readthedocs.io/en/latest/#dart)
+* [Dockerfile](https://lsp.readthedocs.io/en/latest/#dockerfile)
 * [Elixir](https://lsp.readthedocs.io/en/latest/#elixir)
 * [Elm](https://lsp.readthedocs.io/en/latest/#elm)
+* [Erlang](https://lsp.readthedocs.io/en/latest/#erlang)
 * [Flow (JavaScript)](https://lsp.readthedocs.io/en/latest/#flow)
 * [Fortran](https://lsp.readthedocs.io/en/latest/#fortran)
 * [Go](https://lsp.readthedocs.io/en/latest/#go)
@@ -60,6 +62,7 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [Ruby](https://lsp.readthedocs.io/en/latest/#ruby)
 * [Rust](https://lsp.readthedocs.io/en/latest/#rust)
 * [Scala](https://lsp.readthedocs.io/en/latest/#scala)
+* [Swift](https://lsp.readthedocs.io/en/latest/#swift)
 * [Terraform](https://lsp.readthedocs.io/en/latest/#terraform)
 * [Vue (JavaScript)](https://lsp.readthedocs.io/en/latest/#vue)
 * [XML](https://lsp.readthedocs.io/en/latest/#xml)
@@ -78,3 +81,54 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
 * The [#lsp](https://discordapp.com/channels/280102180189634562/645268178397560865) channel (join the [SublimeHQ Discord](https://discord.gg/RMkk5MR) first!)
 * By [searching or creating a new issue](https://github.com/sublimelsp/LSP/issues)
 * Search the [old Gitter chat](https://gitter.im/tomv564) (for live chat join Discord instead)
+
+## Capabilities
+
+### Text Document Capabilities
+
+- ✅ synchronization
+  - ✅ didOpen
+  - ✅ didChange
+    - ✅ Full text sync
+    - ❌ Incremental text sync
+  - ✅ willSave
+  - ✅ willSaveWaitUntil
+  - ✅ didSave
+    - ✅ Include text
+  - ✅ didClose
+- ✅ completion
+  - ❌ documentation field is ignored
+  - ❌ completionItem/resolve is not perfect
+  - ❌ various manual workarounds for textEdit
+- ✅ hover
+- ✅ signatureHelp
+- ✅ declaration
+  - ✅ link support
+- ✅ definition
+  - ✅ link support
+- ✅ typeDefinition
+  - ✅ link support
+- ✅ implementation
+  - ✅ link support
+- ✅ references
+- ✅ documentHighlight
+- ✅ documentSymbol
+- ✅ codeAction
+- ❌ codeLens
+- ❌ documentLink
+- ✅ colorProvider
+- ✅ formatting
+- ✅ rangeFormatting
+- ❌ onTypeFormatting
+- ✅ rename
+- ✅ publishDiagnostics
+- ❌ foldingRange
+
+### Workspace Capabilities
+
+- ✅ applyEdit
+- ✅ workspaceEdit
+- ✅ didChangeConfiguration
+- ❌ didChangeWatchedFiles
+- ✅ symbol
+- ✅ executeCommand

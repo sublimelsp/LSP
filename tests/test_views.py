@@ -1,9 +1,11 @@
+from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.typing import Generator
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import did_change
 from LSP.plugin.core.views import did_open
 from LSP.plugin.core.views import did_save
 from LSP.plugin.core.views import MissingFilenameError
+from LSP.plugin.core.views import point_to_offset
 from LSP.plugin.core.views import text_document_formatting
 from LSP.plugin.core.views import text_document_position_params
 from LSP.plugin.core.views import text_document_range_formatting
@@ -24,7 +26,7 @@ class ViewsTest(DeferrableTestCase):
         self.view.set_scratch(True)
         self.mock_file_name = "C:/Windows" if sublime.platform() == "windows" else "/etc"
         self.view.file_name = MagicMock(return_value=self.mock_file_name)
-        self.view.run_command("insert", {"characters": "hello world"})
+        self.view.run_command("insert", {"characters": "hello world\nfoo bar baz"})
 
     def tearDown(self) -> None:
         self.view.close()
@@ -40,7 +42,7 @@ class ViewsTest(DeferrableTestCase):
             "textDocument": {
                 "uri": filename_to_uri(self.mock_file_name),
                 "languageId": "python",
-                "text": "hello world",
+                "text": "hello world\nfoo bar baz",
                 "version": self.view.change_count()
             }
         })
@@ -51,7 +53,7 @@ class ViewsTest(DeferrableTestCase):
                 "uri": filename_to_uri(self.mock_file_name),
                 "version": self.view.change_count()
             },
-            "contentChanges": [{"text": "hello world"}]
+            "contentChanges": [{"text": "hello world\nfoo bar baz"}]
         })
 
     def test_will_save(self) -> None:
@@ -72,7 +74,7 @@ class ViewsTest(DeferrableTestCase):
         })
         self.assertEqual(did_save(self.view, include_text=True).params, {
             "textDocument": {"uri": filename_to_uri(self.mock_file_name)},
-            "text": "hello world"
+            "text": "hello world\nfoo bar baz"
         })
 
     def test_text_document_position_params(self) -> None:
@@ -95,3 +97,8 @@ class ViewsTest(DeferrableTestCase):
             "options": {"tabSize": 4321, "insertSpaces": False},
             "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 2}}
         })
+
+    def test_point_to_offset(self) -> None:
+        first_line_length = len(self.view.line(0))
+        self.assertEqual(point_to_offset(Point(1, 2), self.view), first_line_length + 3)
+        self.assertEqual(point_to_offset(Point(0, first_line_length + 9999), self.view), first_line_length)

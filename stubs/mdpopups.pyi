@@ -1,6 +1,6 @@
 import sublime
 try:
-    from typing import Callable, Optional
+    from typing import Callable, Dict, Optional
     assert Callable and Optional
 except ImportError:
     pass
@@ -35,6 +35,9 @@ def update_popup(
     nl2br: bool = True,
     allow_code_wrap: bool = False
 ) -> None: ...
+
+
+def format_frontmatter(values: Dict) -> str: ...
 
 
 def md2html(

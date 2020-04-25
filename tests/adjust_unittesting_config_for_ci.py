@@ -9,7 +9,7 @@ if __name__ == '__main__':
             "deferred": True,
             "verbosity": 2,
             "capture_console": True,
-            "failfast": True,
+            "failfast": False,
             "reload_package_on_testing": False,
             "start_coverage_after_reload": False,
             "show_reload_progress": False,

@@ -229,7 +229,7 @@ class StdioTransport(Transport):
                         content_length = 0
                     state = STATE_HEADERS
 
-            except IOError as err:
+            except (AttributeError, IOError) as err:
                 self.close()
                 exception_log("Failure reading stdout", err)
                 state = STATE_EOF
@@ -244,6 +244,8 @@ class StdioTransport(Transport):
             # We use the stdout thread to block and wait on the exiting process, or zombie processes may be the result.
             returncode = self.process.wait()
             debug("process {} exited with code {}".format(pid, returncode))
+            if returncode != 0:
+                self.close()
         self.send_queue.put(None)
 
     def send(self, content: str) -> None:

@@ -5,7 +5,7 @@ from .core.registry import LspTextCommand, LSPViewEventListener, session_for_vie
 from .core.registry import sessions_for_view
 from .core.sessions import Session
 from .core.settings import client_configs
-from .core.typing import List, Optional
+from .core.typing import Any, List, Optional
 from .core.views import will_save_wait_until, text_document_formatting, text_document_range_formatting
 
 
@@ -45,21 +45,22 @@ class FormatOnSaveListener(LSPViewEventListener):
             self.manager.documents.purge_changes(self.view)
             self._view_maybe_dirty = False
 
+    def _apply_and_purge(self, response: Any) -> None:
+        if response:
+            apply_response_to_view(response, self.view)
+            self._view_maybe_dirty = True
+
     def _will_save_wait_until(self, session: Session) -> None:
         client = client_from_session(session)
         if client:
-            response = client.execute_request(will_save_wait_until(self.view, 1))  # TextDocumentSaveReason.Manual
-            if response:
-                apply_response_to_view(response, self.view)
-                self._view_maybe_dirty = True
+            client.execute_request(will_save_wait_until(self.view, reason=1),  # TextDocumentSaveReason.Manual
+                                   lambda response: self._apply_and_purge(response))
 
     def _format_on_save(self) -> None:
         client = client_from_session(session_for_view(self.view, 'documentFormattingProvider'))
         if client:
-            response = client.execute_request(text_document_formatting(self.view))
-            if response:
-                apply_response_to_view(response, self.view)
-                self._view_maybe_dirty = True
+            client.execute_request(text_document_formatting(self.view),
+                                   lambda response: self._apply_and_purge(response))
 
 
 class LspFormatDocumentCommand(LspTextCommand):

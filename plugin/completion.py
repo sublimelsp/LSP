@@ -262,11 +262,11 @@ class CompletionHandler(LSPViewEventListener):
         if settings.complete_all_chars or self.is_after_trigger_character(locations[0]):
             self.manager.documents.purge_changes(self.view)
             document_position = text_document_position_params(self.view, locations[0])
+            self.state = CompletionState.REQUESTING
             client.send_request(
                 Request.complete(document_position),
                 self.handle_response,
                 self.handle_error)
-            self.state = CompletionState.REQUESTING
 
     def do_resolve(self, item: dict) -> None:
         view = self.view

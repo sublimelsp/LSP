@@ -1,10 +1,12 @@
 from .diagnostics import DiagnosticsStorage
 from .edit import parse_workspace_edit
-from .logging import debug, exception_log
-from .protocol import Notification, Response, WorkspaceFolder
-from .rpc import Client
-from .sessions import Session, InitializeError
+from .logging import debug
+from .message_request_handler import MessageRequestHandler
+from .protocol import Notification, Response
+from .rpc import Client, SublimeLogger
+from .sessions import Session
 from .types import ClientConfig
+from .types import ClientStates
 from .types import config_supports_syntax
 from .types import ConfigRegistry
 from .types import GlobalConfigs
@@ -12,12 +14,13 @@ from .types import LanguageConfig
 from .types import Settings
 from .types import ViewLike
 from .types import WindowLike
-from .typing import Optional, List, Callable, Dict, Any, Protocol, Set, Union
+from .typing import Optional, List, Callable, Dict, Any, Protocol, Set
 from .views import did_change, did_close, did_open, did_save, will_save
 from .workspace import disable_in_project
 from .workspace import enable_in_project
 from .workspace import get_workspace_folders
 from .workspace import ProjectFolders
+from .workspace import sorted_workspace_folders
 import threading
 
 
@@ -76,6 +79,7 @@ def get_active_views(window: WindowLike) -> List[ViewLike]:
     num_groups = window.num_groups()
     for group in range(0, num_groups):
         view = window.active_view_in_group(group)
+        debug("group {} view {}".format(group, view.file_name()))
         if window.active_group() == group:
             views.insert(0, view)
         else:
@@ -132,23 +136,17 @@ class WindowDocumentHandler(object):
         sessions = []  # type: List[Session]
         syntax = view.settings().get("syntax")
 
-        def conditional_append(session: Session) -> None:
-            if config_supports_syntax(session.config, syntax):
-                sessions.append(session)
-
-        if view in self._workspace:
-            for sessions_per_config_name in self._sessions.values():
-                for session in sessions_per_config_name:
+        for config_name, config_sessions in self._sessions.items():
+            for session in config_sessions:
+                if config_supports_syntax(session.config, syntax):
                     if session.handles_path(view.file_name()):
-                        conditional_append(session)
-        else:
-            for sessions_per_config_name in self._sessions.values():
-                assert len(sessions_per_config_name) > 0
-                conditional_append(sessions_per_config_name[0])
+                        sessions.append(session)
+
         return sessions
 
     def _notify_open_documents(self, session: Session) -> None:
-        for file_name in self._document_states:
+        # Note: a copy is made of self._document_states because it may be modified in another thread.
+        for file_name in list(self._document_states):
             if session.handles_path(file_name):
                 view = self._window.find_open_file(file_name)
                 if view:
@@ -307,6 +305,7 @@ class WindowManager(object):
         self.documents = documents
         self.server_panel_factory = server_panel_factory
         self._sessions = dict()  # type: Dict[str, List[Session]]
+        self._next_initialize_views = list()  # type: List[ViewLike]
         self._start_session = session_starter
         self._sublime = sublime
         self._handlers = handler_dispatcher
@@ -317,7 +316,6 @@ class WindowManager(object):
         self._workspace = workspace
         self._workspace.on_changed = self._on_project_changed
         self._workspace.on_switched = self._on_project_switched
-        self._blacklist = {}  # type: Dict[str, Set[Optional[WorkspaceFolder]]]
 
     def _on_project_changed(self, folders: List[str]) -> None:
         workspace_folders = get_workspace_folders(self._workspace.folders)
@@ -330,24 +328,20 @@ class WindowManager(object):
         self.end_sessions()
 
     def get_session(self, config_name: str, file_path: str) -> Optional[Session]:
-        try:
-            return self._find_session(config_name, file_path)
-        except InitializeError as ex:
-            assert ex.session.config.name == config_name
-            self._disable_temporarily(ex.session, ex, self._workspace.designated(file_path))
-        return None
+        return self._find_session(config_name, file_path)
+
+    def _is_session_ready(self, config_name: str, file_path: str) -> bool:
+        maybe_session = self._find_session(config_name, file_path)
+        return maybe_session is not None and maybe_session.state == ClientStates.READY
+
+    def _can_start_config(self, config_name: str, file_path: str) -> bool:
+        return not bool(self._find_session(config_name, file_path))
 
     def _find_session(self, config_name: str, file_path: str) -> Optional[Session]:
-        if file_path in self._workspace:
-            sessions = self._sessions.get(config_name, [])
-            for session in sessions:
+        if config_name in self._sessions:
+            for session in self._sessions[config_name]:
                 if session.handles_path(file_path):
                     return session
-        else:
-            sessions = self._sessions.get(config_name, [])
-            if not sessions:
-                return None
-            return sessions[0]
         return None
 
     def update_configs(self) -> None:
@@ -379,124 +373,96 @@ class WindowManager(object):
             self._workspace.update()
             self._initialize_on_open(view)
 
-    def needed_configs(self, file_path: str, configs: List[ClientConfig]) -> List[ClientConfig]:
-        new_configs = []
-        for c in configs:
-            sessions = self._sessions.get(c.name, None)
-            if not sessions:
-                new_configs.append(c)
-                continue
-            first_session = sessions[0]
-            if first_session.supports_workspace_folders():
-                # A workspace-aware language server handles any path, both inside and outside the workspace.
-                continue
-            if file_path in self._workspace:
-                if any(s.handles_path(file_path) for s in sessions):
-                    # The file_path is inside the workspace, and there's a non-workspace-aware language server that can
-                    # handle this path. So no new session is needed.
-                    continue
-                # There is no non-workspace-aware language that handles this path, but it is inside the workspace. So
-                # we must start a new session.
-                new_configs.append(c)
-                continue
-            # We're now dealing with a non-workspace-aware language server, and the file_path is outside the workspace.
-            # Let us then take the first language server in the list that shall handle this path.
-            # (so no new session is needed).
-        return new_configs
+    def _open_after_initialize(self, view: ViewLike) -> None:
+        if any(v for v in self._next_initialize_views if v.id() == view.id()):
+            return
+        self._next_initialize_views.append(view)
+
+    def _open_pending_views(self) -> None:
+        opening = list(self._next_initialize_views)
+        self._next_initialize_views = []
+        for view in opening:
+            debug('opening after initialize', view.file_name())
+            self._initialize_on_open(view)
 
     def _initialize_on_open(self, view: ViewLike) -> None:
         file_path = view.file_name() or ""
 
+        if not self._workspace.includes_path(file_path):
+            return
+
+        def needed_configs(configs: 'List[ClientConfig]') -> 'List[ClientConfig]':
+            new_configs = []
+            for c in configs:
+                if c.name not in self._sessions:
+                    new_configs.append(c)
+                else:
+                    session = next((s for s in self._sessions[c.name] if s.handles_path(file_path)), None)
+                    if session:
+                        if session.state != ClientStates.READY:
+                            debug('scheduling for delayed open, session {} not ready: {}'.format(c.name, file_path))
+                            self._open_after_initialize(view)
+                        else:
+                            debug('found ready session {} for {}'.format(c.name, file_path))
+                    else:
+                        debug('path not in existing {} session: {}'.format(c.name, file_path))
+                        new_configs.append(c)
+
+            return new_configs
+
         # have all sessions for this document been started?
         with self._initialization_lock:
-            new_configs = self.needed_configs(file_path, self._configs.syntax_configs(view, include_disabled=True))
+            new_configs = needed_configs(self._configs.syntax_configs(view, include_disabled=True))
 
             if any(new_configs):
                 # TODO: cannot observe project setting changes
                 # have to check project overrides every session request
                 self.update_configs()
 
-                startable_configs = self.needed_configs(file_path, self._configs.syntax_configs(view))
+                startable_configs = needed_configs(self._configs.syntax_configs(view))
 
                 for config in startable_configs:
 
                     debug("window {} requests {} for {}".format(self._window.id(), config.name, file_path))
                     self._start_client(config, file_path)
 
-    def _disable_temporarily(self, session: Union[str, Session], ex: Exception,
-                             folder: Optional[WorkspaceFolder]) -> None:
-        if isinstance(session, Session):
-            # The process started, but failed to respond to the initialize request. Disable locally for the folder
-            session.end()
-            name = session.config.name
-            config_sessions = self._sessions.get(name, [])
-            try:
-                config_sessions.remove(session)
-            except ValueError:
-                debug("should never end up here")
-                pass
-            path = folder.path if folder else "folderless window"
-            msg = "{} for {} did not initialize properly. Disabling until this window is restarted".format(name, path)
-            self._sublime.status_message(msg)
-            self._blacklist.setdefault(name, set()).add(folder)
-        else:
-            # The process did not even start. Disable the configuration.
-            name = session
-            msg = "\n\n".join(["Could not start {}", "{}", "Server will be disabled for this window"]).format(
-                name, str(ex))
-            sessions = self._sessions.pop(name, [])
-            self._configs.disable_temporarily(name)
-            self._sublime.message_dialog(msg)
-            for session in sessions:
-                session.end()
-        exception_log(msg, ex)
-
     def _start_client(self, config: ClientConfig, file_path: str) -> None:
-        designated_folder = self._workspace.designated(file_path)
-        if designated_folder in self._blacklist.get(config.name, set()):
-            debug(config.name, "failed to start for", designated_folder, "not attempting again until ST is restarted")
-            return
-        session = self.get_session(config.name, file_path)
-        if session is not None:
-            debug(config.name, "was already started")
+        if not self._can_start_config(config.name, file_path):
+            debug('Already starting on this window:', config.name)
             return
 
         if not self._handlers.on_start(config.name, self._window):
             return
 
         self._window.status_message("Starting " + config.name + "...")
+        session = None  # type: Optional[Session]
+        workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
         try:
             session = self._start_session(
                 self._window,                  # window
-                self._workspace.all(),         # workspace_folders
-                designated_folder,             # designated_folder
+                workspace_folders,             # workspace_folders
                 config,                        # config
                 self._handle_pre_initialize,   # on_pre_initialize
                 self._handle_post_initialize,  # on_post_initialize
                 self._handle_post_exit,        # on_post_exit
                 lambda msg: self._handle_stderr_log(config.name, msg))  # on_stderr_log
         except Exception as e:
-            self._disable_temporarily(config.name, e, designated_folder)
-            return
+            message = "\n\n".join([
+                "Could not start {}",
+                "{}",
+                "Server will be disabled for this window"
+            ]).format(config.name, str(e))
+
+            self._configs.disable_temporarily(config.name)
+            self._sublime.message_dialog(message)
 
         if session:
             debug("window {} added session {}".format(self._window.id(), config.name))
             self._sessions.setdefault(config.name, []).append(session)
 
-    def _handle_message_request(self, params: dict, client: Client, request_id: int) -> None:
-        actions = params.get("actions", [])
-        titles = list(action.get("title") for action in actions)
-
-        def send_user_choice(index: int) -> None:
-            # when noop; nothing was selected e.g. the user pressed escape
-            result = None
-            if index != -1:
-                result = {"title": titles[index]}
-            response = Response(request_id, result)
-            client.send_response(response)
-
-        if actions:
-            self._sublime.active_window().show_quick_panel(titles, send_user_choice)
+    def _handle_message_request(self, params: dict, source: str, client: Client, request_id: Any) -> None:
+        handler = MessageRequestHandler(self._window.active_view(), client, request_id, params, source)  # type: ignore
+        handler.show()
 
     def restart_sessions(self) -> None:
         self._restarting = True
@@ -531,14 +497,6 @@ class WindowManager(object):
         # reconstruct/get the actual Client object back. Maybe we can (ab)use our homebrew event system for this?
         client.send_response(Response(request_id, {"applied": True}))
 
-    def _get_session_config(self, params: Dict[str, Any], session: Session, client: Client, request_id: int) -> None:
-        items = []  # type: List[Any]
-        requested_items = params.get("items") or []
-        for requested_item in requested_items:
-            items.append(session.config.settings)
-
-        client.send_response(Response(request_id, items))
-
     def _payload_log_sink(self, message: str) -> None:
         self._sublime.set_timeout_async(lambda: self._handle_server_message(":", message), 0)
 
@@ -547,13 +505,13 @@ class WindowManager(object):
         client.set_crash_handler(lambda: self._handle_server_crash(session.config))
         client.set_error_display_handler(self._window.status_message)
 
-        if self.server_panel_factory:
+        if self.server_panel_factory and isinstance(client.logger, SublimeLogger):
             client.logger.server_name = session.config.name
             client.logger.sink = self._payload_log_sink
 
         client.on_request(
             "window/showMessageRequest",
-            lambda params, request_id: self._handle_message_request(params, client, request_id))
+            lambda params, request_id: self._handle_message_request(params, session.config.name, client, request_id))
 
         client.on_notification(
             "window/showMessage",
@@ -563,43 +521,27 @@ class WindowManager(object):
             "window/logMessage",
             lambda params: self._handle_log_message(session.config.name, params))
 
-    def _handle_post_initialize(self, session: Session, error: Optional[Dict[str, Any]]) -> None:
-        if error is not None:
-            message = error['message']
-            self._sublime.error_message(message)
-            self._disable_temporarily(session, RuntimeError(message), session.designated_folder)
-            return
-
-        client = session.client
+    def _handle_post_initialize(self, session: Session) -> None:
 
         # handle server requests and notifications
-        client.on_request(
+        session.on_request(
             "workspace/applyEdit",
-            lambda params, request_id: self._apply_workspace_edit(params, client, request_id))
+            lambda params, request_id: self._apply_workspace_edit(params, session.client, request_id))
 
-        client.on_request(
-            "workspace/configuration",
-            lambda params, request_id: self._get_session_config(params, session, client, request_id))
-
-        client.on_notification(
+        session.on_notification(
             "textDocument/publishDiagnostics",
             lambda params: self.diagnostics.receive(session.config.name, params))
 
-        self._handlers.on_initialized(session.config.name, self._window, client)
+        self._handlers.on_initialized(session.config.name, self._window, session.client)
 
-        client.send_notification(Notification.initialized())
+        session.client.send_notification(Notification.initialized())
 
         document_sync = session.capabilities.get("textDocumentSync")
         if document_sync:
             self.documents.add_session(session)
-
-        if session.config.settings:
-            configParams = {
-                'settings': session.config.settings
-            }
-            client.send_notification(Notification.didChangeConfiguration(configParams))
-
         self._window.status_message("{} initialized".format(session.config.name))
+
+        self._open_pending_views()
 
     def handle_view_closed(self, view: ViewLike) -> None:
         if view.file_name():

@@ -1,3 +1,4 @@
+from LSP.plugin.core.documents import DocumentSyncListener
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification, Request, WorkspaceFolder
 from LSP.plugin.core.registry import windows
@@ -7,6 +8,7 @@ from LSP.plugin.core.types import ClientConfig, LanguageConfig, ClientStates
 from os import environ
 from os.path import dirname
 from os.path import join
+from sublime_plugin import view_event_listeners
 from test_mocks import basic_responses
 from unittesting import DeferrableTestCase
 import sublime
@@ -117,6 +119,14 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME, "period": PERIOD_TIME}
         self.assertTrue(self.wm._configs.syntax_supported(self.view))
         self.init_view_settings()
+        found_document_sync_listener = False
+        for listener in view_event_listeners[self.view.id()]:
+            if isinstance(listener, DocumentSyncListener):
+                # Bug in ST3?
+                sublime.set_timeout_async(listener.on_activated_async)
+                found_document_sync_listener = True
+                break
+        self.assertTrue(found_document_sync_listener)
         yield {
             "condition": lambda: self.wm.get_session(self.config.name, self.view.file_name()) is not None,
             "timeout": TIMEOUT_TIME}

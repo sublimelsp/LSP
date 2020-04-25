@@ -185,7 +185,6 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield from self.await_message("textDocument/didOpen")
 
     def await_boilerplate_end(self) -> 'Generator':
-        close_test_view(self.view)
         self.wm.end_config_sessions(self.config.name)  # TODO: Shouldn't this be automatic once the last view closes?
         if self.session:
             yield lambda: self.session.client is None

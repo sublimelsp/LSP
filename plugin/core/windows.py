@@ -1,8 +1,10 @@
 from .diagnostics import DiagnosticsStorage
 from .edit import parse_workspace_edit
 from .logging import debug
+from .message_request_handler import MessageRequestHandler
 from .protocol import Notification, Response, TextDocumentSyncKindNone, TextDocumentSyncKindFull
 from .rpc import Client
+from .rpc import Client, SublimeLogger
 from .sessions import Session
 from .types import ClientConfig
 from .types import ClientStates
@@ -478,20 +480,9 @@ class WindowManager(object):
             debug("window {} added session {}".format(self._window.id(), config.name))
             self._sessions.setdefault(config.name, []).append(session)
 
-    def _handle_message_request(self, params: dict, client: Client, request_id: Any) -> None:
-        actions = params.get("actions", [])
-        titles = list(action.get("title") for action in actions)
-
-        def send_user_choice(index: int) -> None:
-            # when noop; nothing was selected e.g. the user pressed escape
-            result = None
-            if index != -1:
-                result = {"title": titles[index]}
-            response = Response(request_id, result)
-            client.send_response(response)
-
-        if actions:
-            self._sublime.active_window().show_quick_panel(titles, send_user_choice)
+    def _handle_message_request(self, params: dict, source: str, client: Client, request_id: Any) -> None:
+        handler = MessageRequestHandler(self._window.active_view(), client, request_id, params, source)  # type: ignore
+        handler.show()
 
     def restart_sessions(self) -> None:
         self._restarting = True
@@ -534,13 +525,13 @@ class WindowManager(object):
         client.set_crash_handler(lambda: self._handle_server_crash(session.config))
         client.set_error_display_handler(self._window.status_message)
 
-        if self.server_panel_factory:
+        if self.server_panel_factory and isinstance(client.logger, SublimeLogger):
             client.logger.server_name = session.config.name
             client.logger.sink = self._payload_log_sink
 
         client.on_request(
             "window/showMessageRequest",
-            lambda params, request_id: self._handle_message_request(params, client, request_id))
+            lambda params, request_id: self._handle_message_request(params, session.config.name, client, request_id))
 
         client.on_notification(
             "window/showMessage",

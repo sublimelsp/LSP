@@ -508,8 +508,8 @@ class WindowManager(Manager):
             self._sublime.message_dialog(message)
 
     def handle_message_request(self, session: Session, params: Any, request_id: Any) -> None:
-        handler = MessageRequestHandler(self._window.active_view(), session, request_id, params,
-                                        session.config.name)  # type: ignore
+        handler = MessageRequestHandler(self._window.active_view(), session, request_id, params,  # type: ignore
+                                        session.config.name)
         handler.show()
 
     def restart_sessions(self) -> None:

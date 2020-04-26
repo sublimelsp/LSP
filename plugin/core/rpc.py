@@ -137,11 +137,11 @@ class Client(TransportCallbacks):
         self.request_id = 0  # Our request IDs are always integers.
         self.logger = SublimeLogger(settings, config_name, debug)
         self._response_handlers = {}  # type: Dict[int, Tuple[Callable, Optional[Callable[[Any], None]]]]
-        self._deferred_notifications = []  # type: List[Any]
-        self._deferred_responses = []  # type: List[Tuple[Optional[Callable], Any]]
         self._sync_request_result = SyncRequestStatus()
         self._sync_request_lock = Lock()
         self._sync_request_cvar = Condition(self._sync_request_lock)
+        self._deferred_notifications = []  # type: List[Any]
+        self._deferred_responses = []  # type: List[Tuple[Optional[Callable], Any]]
         self.exiting = False
 
     def send_request(

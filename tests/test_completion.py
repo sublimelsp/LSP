@@ -4,7 +4,6 @@ from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable
 from setup import CI, SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove_config, text_config
 from unittesting import DeferrableTestCase
 import sublime
-from sublime_plugin import view_event_listeners, ViewEventListener
 
 
 additional_edits = {

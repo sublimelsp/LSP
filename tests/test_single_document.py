@@ -1,11 +1,13 @@
 from copy import deepcopy
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.hover import _test_contents
-from setup import TextDocumentTestCase, TIMEOUT_TIME
+from setup import TextDocumentTestCase
+from setup import TIMEOUT_TIME
+from setup import YieldPromise
 import os
 import sublime
-import unittest
 import threading
+import unittest
 
 try:
     from typing import Generator, Optional, Iterable, Tuple, List

@@ -3,7 +3,6 @@ from .edit import parse_workspace_edit
 from .logging import debug, exception_log
 from .message_request_handler import MessageRequestHandler
 from .protocol import Notification, Response, TextDocumentSyncKindNone, TextDocumentSyncKindFull
-from .rpc import Client
 from .sessions import Manager, Session
 from .settings import client_configs  # noqa
 from .transports import create_transport

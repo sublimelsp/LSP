@@ -80,9 +80,7 @@ def register_session_type(session_type: Type[Session]) -> None:
             config = session_type.standard_configuration()
             _session_types[name] = session_type
             client_configs.add_external_config(config)
-            print(client_configs._external_configs)
             client_configs.update_configs()
-            print(client_configs.all)
             debug("Registered", name)
         except Exception as ex:
             exception_log("Failed to register session type", ex)

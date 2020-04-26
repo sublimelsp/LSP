@@ -152,9 +152,10 @@ class Client(TransportCallbacks):
     ) -> None:
         with self._sync_request_cvar:
             self.request_id += 1
-            self._response_handlers[self.request_id] = (handler, error_handler)
-        self.logger.outgoing_request(self.request_id, request.method, request.params, blocking=False)
-        self.send_payload(request.to_payload(self.request_id))
+            request_id = self.request_id
+            self._response_handlers[request_id] = (handler, error_handler)
+        self.logger.outgoing_request(request_id, request.method, request.params, blocking=False)
+        self.send_payload(request.to_payload(request_id))
 
     def execute_request(
             self,

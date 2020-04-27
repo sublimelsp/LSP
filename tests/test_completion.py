@@ -1,7 +1,7 @@
 from LSP.plugin.completion import CompletionHandler
 from LSP.plugin.completion import CompletionState
 from LSP.plugin.core.registry import is_supported_view
-from setup import CI, SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove_config, text_config
+from setup import SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove_config, text_config
 from unittesting import DeferrableTestCase
 import sublime
 from sublime_plugin import view_event_listeners, ViewEventListener
@@ -162,11 +162,6 @@ class QueryCompletionsTests(TextDocumentTestCase):
         super().init_view_settings()
         assert self.view
         self.view.settings().set("auto_complete_selector", "text.plain")
-
-    def await_message(self, msg: str) -> 'Generator':
-        if CI:
-            yield 500
-        yield from super().await_message(msg)
 
     def test_simple_label(self) -> 'Generator':
         self.set_response('textDocument/completion', label_completions)

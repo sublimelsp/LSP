@@ -194,7 +194,6 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.assertEquals(edited_content, ''.join(expected))
 
     def __run_goto_test(self, response: list, text_document_request: str, subl_command_suffix: str) -> 'Generator':
-        yield 100
         assert self.view
         self.insert_characters(GOTO_CONTENT)
         # Put the cursor back at the start of the buffer, otherwise is_at_word fails in goto.py.
@@ -202,9 +201,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.view.sel().add(sublime.Region(0, 0))
         method = 'textDocument/{}'.format(text_document_request)
         self.set_response(method, response)
-        yield 100
         self.view.run_command('lsp_symbol_{}'.format(subl_command_suffix))
-        yield 100
         yield from self.await_message(method)
 
         def condition() -> bool:

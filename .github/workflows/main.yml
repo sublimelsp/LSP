@@ -50,7 +50,7 @@ jobs:
       - uses: actions/checkout@v1
       - run: echo ::add-path::$HOME/.local/bin
       - run: sudo apt update
-      - run: sudo apt install --no-install-recommends -y x11-xserver-utils imagemagick python3-pip
+      - run: sudo apt install --no-install-recommends -y x11-xserver-utils python3-pip
       - run: sh -e /etc/init.d/xvfb start
       - run: curl -OL https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/github.sh
       - run: python3 tests/server.py --version

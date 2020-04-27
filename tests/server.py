@@ -205,22 +205,14 @@ class Session:
     def _on_notification(self, notification_method: str, handler: Callable) -> None:
         self._notification_handlers[notification_method] = handler
 
-    def _handle_notification_handler_exception(self, fut: asyncio.Future) -> None:
-        try:
-            ex = fut.exception()
-        except asyncio.CancelledError:
-            return
-        if ex and not self._received_shutdown:
-            self._notify("window/logMessage", {"type": MessageType.error, "message": str(ex)})
-
     async def _handle(self, typestr: str, message: 'Dict[str, Any]', handlers: Dict[str, Callable],
                       request_id: Optional[int]) -> None:
         method = message.get("method", "")
         params = message.get("params")
         unhandled = True
         if not method.startswith("$test/"):
+            self._received.add(method)
             async with self._received_cv:
-                self._received.add(method)
                 self._received_cv.notify_all()
                 unhandled = False
         handler = handlers.get(method)
@@ -245,8 +237,13 @@ class Session:
                     ErrorCode.InternalError, str(ex)))
         else:
             # handle notification
-            task = asyncio.get_event_loop().create_task(handler(params))
-            task.add_done_callback(self._handle_notification_handler_exception)
+            try:
+                await handler(params)
+            except asyncio.CancelledError:
+                return
+            except Exception as ex:
+                if not self._received_shutdown:
+                    self._notify("window/logMessage", {"type": MessageType.error, "message": str(ex)})
 
     async def _handle_body(self, body: bytes) -> None:
         try:

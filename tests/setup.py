@@ -109,33 +109,25 @@ class TextDocumentTestCase(DeferrableTestCase):
             self.assertFalse(True)
         window = sublime.active_window()
         self.assertTrue(window)
-        filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(test_name)), window)
         self.config.init_options["serverResponse"] = server_capabilities
         add_config(self.config)
         self.wm = windows.lookup(window)
         self.wm._configs.all.append(self.config)
+        filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(test_name)), window)
+        open_view = window.find_open_file(filename)
+        close_test_view(open_view)
         self.view = window.open_file(filename)
-        yield {"condition": lambda: not self.view.is_loading()}
+        yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
         self.assertTrue(self.wm._configs.syntax_supported(self.view))
         self.init_view_settings()
-        found_document_sync_listener = False
-        for listener in view_event_listeners[self.view.id()]:
-            if isinstance(listener, DocumentSyncListener):
-                # Bug in ST3? Either that, or CI runs with ST window not in focus and that makes ST3 not trigger some
-                # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
-                # opening file (manager missing in DocumentSyncListener)
-                # Revisit this once we're on ST4.
-                sublime.set_timeout_async(listener.on_activated_async)
-                found_document_sync_listener = True
-                break
-        self.assertTrue(found_document_sync_listener)
+        yield {"condition": self.ensure_document_listener_created, "timeout": TIMEOUT_TIME}
         yield {
             "condition": lambda: self.wm.get_session(self.config.name, self.view.file_name()) is not None,
             "timeout": TIMEOUT_TIME}
         self.session = self.wm.get_session(self.config.name, self.view.file_name())
         self.assertIsNotNone(self.session)
         self.assertEqual(self.session.config.name, self.config.name)
-        yield {"condition": lambda: self.session.state == ClientStates.READY}
+        yield {"condition": lambda: self.session.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
         yield from self.await_boilerplate_begin()
 
     def get_test_name(self) -> str:
@@ -156,6 +148,18 @@ class TextDocumentTestCase(DeferrableTestCase):
         s("translate_tabs_to_spaces", False)
         s("word_wrap", False)
         s("lsp_format_on_save", False)
+
+    def ensure_document_listener_created(self) -> bool:
+        assert self.view
+        # Bug in ST3? Either that, or CI runs with ST window not in focus and that makes ST3 not trigger some
+        # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
+        # opening file (manager missing in DocumentSyncListener)
+        # Revisit this once we're on ST4.
+        for listener in view_event_listeners[self.view.id()]:
+            if isinstance(listener, DocumentSyncListener):
+                sublime.set_timeout_async(listener.on_activated_async)
+                return True
+        return False
 
     def await_message(self, method: str) -> 'Generator':
         self.assertIsNotNone(self.session)

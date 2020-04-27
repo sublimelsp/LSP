@@ -1,3 +1,5 @@
+import html
+import mdpopups
 import sublime
 import sublime_plugin
 
@@ -191,6 +193,19 @@ class CompletionHandler(LSPViewEventListener):
             lambda res: self.handle_error(res, completion_list))
         return completion_list
 
+    def normalized_documentation(self, lsp_item: Dict[str, Any]) -> str:
+        lsp_documentation = lsp_item.get("documentation")
+        if isinstance(lsp_documentation, str):
+            return html.escape(lsp_documentation.replace('\n', ' '))
+        elif isinstance(lsp_documentation, dict):
+            value = lsp_documentation.get("value", '')
+            if lsp_documentation.get("kind") == "markdown":
+                return mdpopups.md2html(self.view, value)
+            else:
+                return html.escape(value.replace('\n', ' '))
+        else:
+            return ''
+
     def format_completion(self, item: dict) -> sublime.CompletionItem:
         item_kind = item.get("kind")
         if item_kind:
@@ -220,12 +235,29 @@ class CompletionHandler(LSPViewEventListener):
             convert = self.view.text_point_utf16
             item["native_region"] = (convert(row, start_col_utf16), convert(row, end_col_utf16))
 
+        lsp_label = item["label"]
+        lsp_filter_text = item.get("filterText")
+        lsp_detail = item.get("detail", "").replace('\n', ' ')
+        if lsp_filter_text:
+            st_trigger = lsp_filter_text
+            st_annotation = lsp_label
+            # Try to keep fields non-empty. If there's no `detail` field, attempt to use the `documentation` field.
+            if lsp_detail:
+                st_details = html.escape(lsp_detail)
+            else:
+                st_details = self.normalized_documentation(item)
+        else:
+            st_trigger = lsp_label
+            st_annotation = lsp_detail
+            st_details = self.normalized_documentation(item)
+
         return sublime.CompletionItem.command_completion(
-            trigger=item["label"],
+            trigger=st_trigger,
             command="lsp_select_completion_item",
             args=item,
-            annotation=item.get('detail') or "",
-            kind=kind
+            annotation=st_annotation,
+            kind=kind,
+            details=st_details
         )
 
     def handle_response(self, response: Optional[Union[dict, List]], completion_list: sublime.CompletionList) -> None:

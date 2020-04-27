@@ -329,6 +329,29 @@ class QueryCompletionsTests(TextDocumentTestCase):
             insert_text='e',
             expected_text='def foo: Int \u003d ???\n   def boo: Int \u003d ???')
 
+    def test_additional_edits(self) -> 'Generator':
+        yield from self.verify(
+            completion_items=[{
+                'label': 'asdf',
+                'additionalTextEdits': [
+                    {
+                        'range': {
+                            'start': {
+                                'line': 0,
+                                'character': 0
+                            },
+                            'end': {
+                                'line': 0,
+                                'character': 0
+                            }
+                        },
+                        'newText': 'import asdf;\n'
+                    }
+                ]
+            }],
+            insert_text='',
+            expected_text='import asdf;\nasdf')
+
     def test_resolve_for_additional_edits(self) -> 'Generator':
         self.set_response('textDocument/completion', [{'label': 'asdf'}, {'label': 'efcgh'}])
         self.set_response('completionItem/resolve', additional_edits)

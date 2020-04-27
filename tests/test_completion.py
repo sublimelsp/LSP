@@ -4,7 +4,6 @@ from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable
 from setup import CI, SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove_config, text_config
 from unittesting import DeferrableTestCase
 import sublime
-from sublime_plugin import view_event_listeners, ViewEventListener
 
 
 additional_edits = {
@@ -292,54 +291,43 @@ class QueryCompletionsTests(TextDocumentTestCase):
             insert_text="List.",
             expected_text='List.apply()')
 
-    def test_implement_all_members_quirk(self) -> 'Generator':
+    def test_filter_text_is_not_a_prefix_of_label(self) -> 'Generator':
         """
-        Metals: "Implement all members" should just select the newText.
+        Metals: "Implement all members"
+
+        The filterText is 'e', so when the user types 'e', one of the completion items should be
+        "Implement all members".
+
+        VSCode doesn't show the filterText in this case; it'll only show "Implement all members".
+        c.f. https://github.com/microsoft/language-server-protocol/issues/898#issuecomment-593968008
+
+        In SublimeText, we always show the filterText (a.k.a. trigger).
+
+        This is one of the more confusing and contentious completion items.
+
         https://github.com/sublimelsp/LSP/issues/771
         """
         yield from self.verify(
             completion_items=[{
-                'insertTextFormat': 2,
-                'label': 'Implement all members',
-                'textEdit': {
-                    'newText': 'def foo: Int \u003d ${0:???}\n   def boo: Int \u003d ${0:???}',
-                    'range': {
-                        'start': {
-                            'line': 0,
-                            'character': 0
-                        },
-                        'end': {
-                            'line': 0,
-                            'character': 1
-                        }
-                    }
+                "label": "Implement all members",
+                "kind": 12,
+                "sortText": "00002",
+                "filterText": "e",
+                "insertTextFormat": 2,
+                "textEdit": {
+                    "range": {
+                        "start": {"line": 9, "character": 3},
+                        "end": {"line": 9, "character": 4}
+                    },
+                    "newText": "def foo: Int \u003d ${0:???}\n   def boo: Int \u003d ${0:???}"
+                },
+                "data": {
+                    "target": "file:/Users/ckipp/Documents/scala-workspace/test-project/?id\u003droot",
+                    "symbol": "local6"
                 }
             }],
-            insert_text="I",
-            expected_text='def foo: Int = ???\n   def boo: Int = ???')
-
-    def test_additional_edits(self) -> 'Generator':
-        yield from self.verify(
-            completion_items=[{
-                'label': 'asdf',
-                'additionalTextEdits': [
-                    {
-                        'range': {
-                            'start': {
-                                'line': 0,
-                                'character': 0
-                            },
-                            'end': {
-                                'line': 0,
-                                'character': 0
-                            }
-                        },
-                        'newText': 'import asdf;\n'
-                    }
-                ]
-            }],
-            insert_text='',
-            expected_text='import asdf;\nasdf')
+            insert_text='e',
+            expected_text='def foo: Int \u003d ???\n   def boo: Int \u003d ???')
 
     def test_resolve_for_additional_edits(self) -> 'Generator':
         self.set_response('textDocument/completion', [{'label': 'asdf'}, {'label': 'efcgh'}])

@@ -352,7 +352,7 @@ class Range(object):
         }
 
     def contains(self, point: Point) -> bool:
-        return self.start.row <= point.row and \
+        return self.start.row <= point.row <= self.end.row and \
             (self.end.row > point.row or self.start.col <= point.col <= self.end.col)
 
     def intersects(self, rge: 'Range') -> bool:

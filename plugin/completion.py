@@ -79,7 +79,9 @@ class LspCompleteTextEditCommand(LspCompleteCommand):
             self.view.run_command("insert_snippet", {"contents": new_text})
         else:
             for region in self.translated_regions(edit_region):
-                self.view.replace(edit, region, new_text)
+                # NOTE: Cannot do .replace, because ST will select the replacement.
+                self.view.erase(edit, region)
+                self.view.insert(edit, region.a, new_text)
         self.handle_additional_edits(item)
 
     def translated_regions(self, edit_region: sublime.Region) -> Generator[sublime.Region, None, None]:

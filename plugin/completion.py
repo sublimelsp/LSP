@@ -1,5 +1,4 @@
 import html
-import mdpopups
 import sublime
 import sublime_plugin
 
@@ -193,20 +192,8 @@ class CompletionHandler(LSPViewEventListener):
             lambda res: self.handle_error(res, completion_list))
         return completion_list
 
-    def normalized_documentation(self, lsp_item: Dict[str, Any]) -> str:
-        lsp_documentation = lsp_item.get("documentation")
-        if isinstance(lsp_documentation, str):
-            return html.escape(lsp_documentation.replace('\n', ' '))
-        elif isinstance(lsp_documentation, dict):
-            value = lsp_documentation.get("value", '')
-            if lsp_documentation.get("kind") == "markdown":
-                return mdpopups.md2html(self.view, value)
-            else:
-                return html.escape(value.replace('\n', ' '))
-        else:
-            return ''
-
     def format_completion(self, item: dict) -> sublime.CompletionItem:
+        # This is a hot function. Don't do heavy computations or IO in this function.
         item_kind = item.get("kind")
         if item_kind:
             kind = completion_kinds.get(item_kind, sublime.KIND_AMBIGUOUS)
@@ -237,19 +224,15 @@ class CompletionHandler(LSPViewEventListener):
 
         lsp_label = item["label"]
         lsp_filter_text = item.get("filterText")
-        lsp_detail = item.get("detail", "").replace('\n', ' ')
+        lsp_detail = item.get("detail") or ""
         if lsp_filter_text:
             st_trigger = lsp_filter_text
             st_annotation = lsp_label
-            # Try to keep fields non-empty. If there's no `detail` field, attempt to use the `documentation` field.
-            if lsp_detail:
-                st_details = html.escape(lsp_detail)
-            else:
-                st_details = self.normalized_documentation(item)
+            st_details = html.escape(lsp_detail.replace('\n', ' '))
         else:
             st_trigger = lsp_label
             st_annotation = lsp_detail
-            st_details = self.normalized_documentation(item)
+            st_details = ''
 
         return sublime.CompletionItem.command_completion(
             trigger=st_trigger,

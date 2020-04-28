@@ -159,83 +159,124 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
     def test_var_prefix_added_in_insertText(self) -> 'Generator':
         """
-        Powershell: label='true', insertText='$true' (see https://github.com/sublimelsp/LSP/issues/294)
-        """
-        yield from self.verify(
-            completion_items=[{
-                "insertText": "$true",
-                "label": "true",
-                "textEdit": {
-                    "newText": "$true",
-                    "range": {
-                        "end": {
-                            "character": 5,
-                            "line": 0
-                        },
-                        "start": {
-                            "character": 0,
-                            "line": 0
-                        }
-                    }
-                }
-            }],
-            insert_text="$",
-            expected_text="$true")
+        https://github.com/sublimelsp/LSP/issues/294
 
-    def test_var_prefix_added_in_label(self) -> 'Generator':
-        """
-        PHP language server: label='$someParam', textEdit='someParam' (https://github.com/sublimelsp/LSP/issues/368)
+        User types '$env:U', server replaces '$env:U' with '$env:USERPROFILE'
         """
         yield from self.verify(
             completion_items=[{
-                'label': '$what',
+                'filterText': '$env:USERPROFILE',
+                'insertText': '$env:USERPROFILE',
+                'sortText': '0006USERPROFILE',
+                'label': 'USERPROFILE',
+                'additionalTextEdits': None,
+                'detail': None,
+                'data': None,
+                'kind': 6,
+                'command': None,
                 'textEdit': {
+                    'newText': '$env:USERPROFILE',
                     'range': {
-                        'start': {
-                            'line': 0,
-                            'character': 0
-                        },
-                        'end': {
-                            'line': 0,
-                            'character': 1
-                        }
-                    },
-                    'newText': '$what'
-                }
+                        'end': {'line': 0, 'character': 6},
+                        'start': {'line': 0, 'character': 0}
+                    }
+                },
+                'commitCharacters': None,
+                'range': None,
+                'documentation': None
             }],
-            insert_text="$",
-            expected_text="$what")
+            insert_text="$env:U",
+            expected_text="$env:USERPROFILE")
+
+    def test_pure_insertion_text_edit(self) -> 'Generator':
+        """
+        https://github.com/sublimelsp/LSP/issues/368
+
+        User types '$so', server returns pure insertion completion 'meParam', completing it to '$someParam'.
+
+        THIS TEST FAILS
+        """
+        yield from self.verify(
+            completion_items=[{
+                'textEdit': {
+                    'newText': 'meParam',
+                    'range': {
+                        'end': {'character': 4, 'line': 0},
+                        'start': {'character': 4, 'line': 0}  # pure insertion!
+                    }
+                },
+                'label': '$someParam',
+                'filterText': None,
+                'data': None,
+                'command': None,
+                'detail': 'null',
+                'insertText': None,
+                'additionalTextEdits': None,
+                'sortText': None,
+                'documentation': None,
+                'kind': 6
+            }],
+            insert_text="$so",
+            expected_text="$someParam")
 
     def test_space_added_in_label(self) -> 'Generator':
         """
         Clangd: label=" const", insertText="const" (https://github.com/sublimelsp/LSP/issues/368)
         """
         yield from self.verify(
-            completion_items=[{'label': ' const', 'insertText': 'const'}],
-            insert_text='',
-            expected_text="const")
+            completion_items=[{
+                "label": " const",
+                "sortText": "3f400000const",
+                "kind": 14,
+                "textEdit": {
+                    "newText": "const",
+                    "range": {
+                        "end": {
+                            "character": 1,
+                            "line": 0
+                        },
+                        "start": {
+                            "character": 3,
+                            "line": 0
+                        }
+                    }
+                },
+                "insertTextFormat": 2,
+                "insertText": "const",
+                "filterText": "const",
+                "score": 6
+            }],
+            insert_text=' co',
+            expected_text=" const")  # NOT 'const'
 
     def test_dash_missing_from_label(self) -> 'Generator':
         """
-        Powershell: label="UniqueId", insertText="-UniqueId" (https://github.com/sublimelsp/LSP/issues/572)
+        Powershell: label="UniqueId", trigger="-UniqueIdd, text to be inserted = "-UniqueId"
+
+        (https://github.com/sublimelsp/LSP/issues/572)
         """
         yield from self.verify(
             completion_items=[{
-                'label': 'UniqueId',
-                'insertText': '-UniqueId',
-                'textEdit': {
-                    'range': {
-                        'start': {
-                            'character': 0,
-                            'line': 0
-                        },
-                        'end': {
-                            'character': 1,
-                            'line': 0
-                        }
+                "filterText": "-UniqueId",
+                "documentation": None,
+                "textEdit": {
+                    "range": {
+                        "start": {"character": 14, "line": 0},
+                        "end": {"character": 15, "line": 0}
                     },
-                    'newText': '-UniqueId'
-                }
+                    "newText": "-UniqueId"
+                },
+                "commitCharacters": None,
+                "command": None,
+                "label": "UniqueId",
+                "insertText": "-UniqueId",
+                "additionalTextEdits": None,
+                "data": None,
+                "range": None,
+                "insertTextFormat": 1,
+                "sortText": "0001UniqueId",
+                "kind": 6,
+                "detail": "[string[]]"
             }],
             insert_text="u",
             expected_text="-UniqueId")
@@ -267,26 +308,33 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
     def test_edit_after_nonword(self) -> 'Generator':
         """
-        Metals: List.| selects label instead of textedit
-        See https://github.com/sublimelsp/LSP/issues/645
+        https://github.com/sublimelsp/LSP/issues/645
         """
         yield from self.verify(
             completion_items=[{
-                'insertTextFormat': 2,
-                'label': 'apply[A](xs: A*): List[A]',
-                'textEdit': {
-                    'newText': 'apply($0)',
-                    'range': {
-                        'start': {
-                            'line': 0,
-                            'character': 5
+                "textEdit": {
+                    "newText": "apply($0)",
+                    "range": {
+                        "end": {
+                            "line": 0,
+                            "character": 5
                         },
-                        'end': {
-                            'line': 0,
-                            'character': 5
+                        "start": {
+                            "line": 0,
+                            "character": 5
                         }
                     }
-                }
+                },
+                "label": "apply[A](xs: A*): List[A]",
+                "sortText": "00000",
+                "preselect": True,
+                "insertTextFormat": 2,
+                "filterText": "apply",
+                "data": {
+                    "symbol": "scala/collection/immutable/List.apply().",
+                    "target": "file:/home/user/workspace/testproject/?id=root"
+                },
+                "kind": 2
             }],
             insert_text="List.",
             expected_text='List.apply()')

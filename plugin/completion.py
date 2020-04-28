@@ -232,7 +232,7 @@ class CompletionHandler(LSPViewEventListener):
     def handle_response(self, response: Optional[Union[dict, List]], completion_list: sublime.CompletionList,
                         can_resolve_completion_items: bool) -> None:
         response_items = []  # type: List[Dict]
-        flags = sublime.INHIBIT_REORDER
+        flags = 0
         if settings.only_show_lsp_completions:
             flags |= sublime.INHIBIT_WORD_COMPLETIONS
             flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS

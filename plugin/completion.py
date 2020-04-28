@@ -260,4 +260,5 @@ class CompletionHandler(LSPViewEventListener):
         resolve(completion_list, items, flags)
 
     def handle_error(self, error: dict, completion_list: sublime.CompletionList) -> None:
+        resolve(completion_list, [])
         sublime.status_message('Completion error: ' + str(error.get('message')))

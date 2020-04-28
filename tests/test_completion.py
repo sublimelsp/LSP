@@ -261,8 +261,8 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 "documentation": None,
                 "textEdit": {
                     "range": {
-                        "start": {"character": 14, "line": 0},
-                        "end": {"character": 15, "line": 0}
+                        "start": {"character": 0, "line": 0},
+                        "end": {"character": 1, "line": 0}
                     },
                     "newText": "-UniqueId"
                 },
@@ -283,18 +283,28 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
     def test_edit_before_cursor(self) -> 'Generator':
         """
-        Metals: label="override def myFunction(): Unit"
+        https://github.com/sublimelsp/LSP/issues/536
         """
         yield from self.verify(
             completion_items=[{
                 'insertTextFormat': 2,
+                'data': {
+                    'symbol': 'example/Foo#myFunction().',
+                    'target': 'file:/home/ayoub/workspace/testproject/?id=root'
+                },
+                'detail': 'override def myFunction(): Unit',
+                'sortText': '00000',
+                'filterText': 'override def myFunction',  # the filterText is tricky here
+                'preselect': True,
                 'label': 'override def myFunction(): Unit',
+                'kind': 2,
+                'additionalTextEdits': [],
                 'textEdit': {
                     'newText': 'override def myFunction(): Unit = ${0:???}',
                     'range': {
                         'start': {
                             'line': 0,
-                            'character': 2
+                            'character': 0
                         },
                         'end': {
                             'line': 0,
@@ -303,8 +313,8 @@ class QueryCompletionsTests(TextDocumentTestCase):
                     }
                 }
             }],
-            insert_text='  def myF',
-            expected_text='  override def myFunction(): Unit = ???')
+            insert_text='def myF',
+            expected_text='override def myFunction(): Unit = ???')
 
     def test_edit_after_nonword(self) -> 'Generator':
         """
@@ -400,29 +410,6 @@ class QueryCompletionsTests(TextDocumentTestCase):
             insert_text='',
             expected_text='import asdf;\nasdf')
 
-    def test_resolve_for_additional_edits(self) -> 'Generator':
-        self.set_response('textDocument/completion', [{'label': 'asdf'}, {'label': 'efcgh'}])
-        self.set_response('completionItem/resolve', additional_edits)
-
-        yield from self.select_completion()
-        yield from self.await_message('textDocument/completion')
-        yield from self.await_message('completionItem/resolve')
-
-        self.assertEquals(
-            self.read_file(),
-            'import asdf;\nasdf')
-
-    def test_apply_additional_edits_only_once(self) -> 'Generator':
-        self.set_response('textDocument/completion', [{'label': 'asdf'}, {'label': 'efcgh'}])
-        self.set_response('completionItem/resolve', additional_edits)
-
-        yield from self.select_completion()
-        yield from self.await_message('textDocument/completion')
-
-        self.assertEquals(
-            self.read_file(),
-            'import asdf;\nasdf')
-
     def test_prefix_should_include_the_dollar_sign(self) -> 'Generator':
         self.set_response(
             'textDocument/completion',
@@ -492,7 +479,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 'label': 'aaba',
                 'textEdit': {
                     'newText': 'aaca',
-                    'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 2}}}
+                    'range': {'start': {'line': 0, 'character': 0}, 'end': {'line': 0, 'character': 3}}}
             }],
             insert_text='aab',
             expected_text='aaca')

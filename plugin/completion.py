@@ -61,7 +61,7 @@ class LspCompleteCommand(sublime_plugin.TextCommand):
 class LspCompleteInsertTextCommand(LspCompleteCommand):
 
     def run(self, edit: sublime.Edit, **item: Any) -> None:
-        insert_text = item["insertText"]
+        insert_text = item.get("insertText") or item["label"]
         if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
             self.view.run_command("insert_snippet", {"contents": insert_text})
         else:
@@ -228,7 +228,7 @@ class CompletionHandler(LSPViewEventListener):
                 details=st_details)
         else:
             # A snippet completion suffices for insertText with no additionalTextEdits.
-            snippet = item["insertText"]
+            snippet = item.get("insertText") or item["label"]
             if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.PlainText:
                 snippet = snippet.replace('$', '\\$')
             completion = sublime.CompletionItem.snippet_completion(

@@ -44,6 +44,36 @@ class RangeTests(unittest.TestCase):
         self.assertEqual(lsp_range['end']['line'], 11)
         self.assertEqual(lsp_range['end']['character'], 3)
 
+    def test_contains(self):
+        range = Range.from_lsp(LSP_RANGE)
+        point = Point.from_lsp(LSP_START_POSITION)
+        self.assertTrue(range.contains(point))
+        range = Range.from_lsp(LSP_RANGE)
+        point = Point.from_lsp({'line': 10, 'character': 1})
+        self.assertTrue(range.contains(point))
+
+    def test_intersects(self):
+        # range2 fully contained within range1
+        range1 = Range.from_lsp({
+            'start': {'line': 0, 'character': 0},
+            'end': {'line': 1, 'character': 4}
+        })
+        range2 = Range.from_lsp({
+            'start': {'line': 0, 'character': 4},
+            'end': {'line': 0, 'character': 2}
+        })
+        # range2 intersecting end of range 1
+        self.assertTrue(range2.intersects(range1))
+        range1 = Range.from_lsp({
+            'start': {'line': 0, 'character': 0},
+            'end': {'line': 0, 'character': 3}
+        })
+        range2 = Range.from_lsp({
+            'start': {'line': 0, 'character': 2},
+            'end': {'line': 0, 'character': 4}
+        })
+        self.assertTrue(range2.intersects(range1))
+
 
 class DiagnosticTests(unittest.TestCase):
 

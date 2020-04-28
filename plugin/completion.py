@@ -43,7 +43,8 @@ completion_kinds = {
 class LspResolveDocsCommand(sublime_plugin.TextCommand):
 
     def run(self, edit: sublime.Edit) -> None:
-        self.view.show_popup('coming soon (╯°□°)╯︵ ┻━┻', sublime.COOPERATE_WITH_AUTO_COMPLETE)
+        self.view.show_popup('<div style="padding: 10px;">coming soon (╯°□°)╯︵ ┻━┻</div>',
+                             sublime.COOPERATE_WITH_AUTO_COMPLETE)
 
 
 class LspCompleteCommand(sublime_plugin.TextCommand):
@@ -226,13 +227,12 @@ class CompletionHandler(LSPViewEventListener):
                 kind=kind,
                 details=st_details)
 
-        completion.flags |= sublime.INHIBIT_REORDER
         return completion
 
     def handle_response(self, response: Optional[Union[dict, List]], completion_list: sublime.CompletionList,
                         can_resolve_completion_items: bool) -> None:
         response_items = []  # type: List[Dict]
-        flags = 0
+        flags = sublime.INHIBIT_REORDER
         if settings.only_show_lsp_completions:
             flags |= sublime.INHIBIT_WORD_COMPLETIONS
             flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS

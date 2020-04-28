@@ -356,8 +356,8 @@ class Range(object):
             (self.end.row > point.row or self.start.col <= point.col <= self.end.col)
 
     def intersects(self, rge: 'Range') -> bool:
-        return rge.start.row <= self.end.row and rge.start.col <= self.end.col and \
-            rge.end.row >= self.start.row and rge.end.col >= self.start.col
+        return self.contains(rge.start) or self.contains(rge.end) or \
+            rge.contains(self.start) or rge.contains(self.end)
 
 
 class ContentChange(object):

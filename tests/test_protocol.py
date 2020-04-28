@@ -59,6 +59,13 @@ class RangeTests(unittest.TestCase):
         })
         point = Point.from_lsp({'line': 12, 'character': 0})
         self.assertFalse(range.contains(point))
+        # Point within first line of range.
+        range = Range.from_lsp({
+            'start': {'line': 0, 'character': 0},
+            'end': {'line': 1, 'character': 4}
+        })
+        point = Point.from_lsp({'line': 0, 'character': 4})
+        self.assertTrue(range.contains(point))
 
     def test_intersects(self):
         # range2 fully contained within range1
@@ -67,11 +74,11 @@ class RangeTests(unittest.TestCase):
             'end': {'line': 1, 'character': 4}
         })
         range2 = Range.from_lsp({
-            'start': {'line': 0, 'character': 4},
-            'end': {'line': 0, 'character': 2}
+            'start': {'line': 0, 'character': 2},
+            'end': {'line': 0, 'character': 3}
         })
-        # range2 intersecting end of range 1
         self.assertTrue(range2.intersects(range1))
+        # range2 intersecting end of range 1
         range1 = Range.from_lsp({
             'start': {'line': 0, 'character': 0},
             'end': {'line': 0, 'character': 3}
@@ -82,7 +89,6 @@ class RangeTests(unittest.TestCase):
         })
         self.assertTrue(range2.intersects(range1))
         # range2 fully outside of range 1
-        self.assertTrue(range2.intersects(range1))
         range1 = Range.from_lsp({
             'start': {'line': 0, 'character': 0},
             'end': {'line': 0, 'character': 3}
@@ -92,6 +98,16 @@ class RangeTests(unittest.TestCase):
             'end': {'line': 3, 'character': 0}
         })
         self.assertFalse(range2.intersects(range1))
+        # range2 fully within range 1
+        range1 = Range.from_lsp({
+            'start': {'line': 0, 'character': 10},
+            'end': {'line': 1, 'character': 20}
+        })
+        range2 = Range.from_lsp({
+            'start': {'line': 0, 'character': 21},
+            'end': {'line': 0, 'character': 22}
+        })
+        self.assertTrue(range1.intersects(range2))
 
 
 class DiagnosticTests(unittest.TestCase):

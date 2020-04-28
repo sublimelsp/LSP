@@ -183,7 +183,7 @@ class CompletionHandler(LSPViewEventListener):
         lsp_detail = html.escape(lsp_detail.replace('\n', ' '))
 
         if can_resolve_completion_items or "documentation" in item:
-            doc_link = '<a href="subl:lsp_resolve_docs">Docs...</a>'
+            doc_link = '<a href="subl:lsp_resolve_docs">Documentation</a>'
         else:
             doc_link = ''
 

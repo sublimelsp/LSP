@@ -25,6 +25,7 @@ For a few languages you can also find dedicated packages on Package Control, whi
 * [LSP-serenata](https://packagecontrol.io/packages/LSP-serenata)
 * [LSP-typescript](https://packagecontrol.io/packages/LSP-typescript)
 * [LSP-vue](https://packagecontrol.io/packages/LSP-vue)
+* [LSP-yaml](https://packagecontrol.io/packages/LSP-yaml)
 
 ### Server Configuration<a name="client-config"></a>
 

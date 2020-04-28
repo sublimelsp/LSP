@@ -236,6 +236,7 @@ class CompletionHandler(LSPViewEventListener):
         if settings.only_show_lsp_completions:
             flags |= sublime.INHIBIT_WORD_COMPLETIONS
             flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
+            flags |= sublime.INHIBIT_REORDER
         if isinstance(response, dict):
             response_items = response["items"] or []
             if response.get("isIncomplete", False):

@@ -6,8 +6,6 @@ from setup import TIMEOUT_TIME
 from setup import YieldPromise
 import os
 import sublime
-import threading
-import unittest
 
 try:
     from typing import Generator, Optional, Iterable, Tuple, List
@@ -72,12 +70,12 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield from self.await_message("textDocument/didChange", promise)
         self.assertEqual(promise.result(), {
             'contentChanges': [
-                {'range': {'start': {'line': 0, 'character': 1}, 'end': {'line': 0, 'character': 1}}, 'text': 'B'},
-                {'range': {'start': {'line': 0, 'character': 2}, 'end': {'line': 0, 'character': 2}}, 'text': '\n'},
-                {'range': {'start': {'line': 1, 'character': 0}, 'end': {'line': 1, 'character': 0}}, 'text': '🙂'},
+                {'rangeLength': 0, 'range': {'start': {'line': 0, 'character': 1}, 'end': {'line': 0, 'character': 1}}, 'text': 'B'},   # noqa
+                {'rangeLength': 0, 'range': {'start': {'line': 0, 'character': 2}, 'end': {'line': 0, 'character': 2}}, 'text': '\n'},  # noqa
+                {'rangeLength': 0, 'range': {'start': {'line': 1, 'character': 0}, 'end': {'line': 1, 'character': 0}}, 'text': '🙂'},  # noqa
                 # Note that this is character offset (2) is correct (UTF-16).
-                {'range': {'start': {'line': 1, 'character': 2}, 'end': {'line': 1, 'character': 2}}, 'text': '\n'},
-                {'range': {'start': {'line': 2, 'character': 0}, 'end': {'line': 2, 'character': 0}}, 'text': 'D'}],
+                {'rangeLength': 0, 'range': {'start': {'line': 1, 'character': 2}, 'end': {'line': 1, 'character': 2}}, 'text': '\n'},  # noqa
+                {'rangeLength': 0, 'range': {'start': {'line': 2, 'character': 0}, 'end': {'line': 2, 'character': 0}}, 'text': 'D'}],  # noqa
             'textDocument': {
                 'version': self.view.change_count(),
                 'uri': filename_to_uri(TEST_FILE_PATH)
@@ -93,7 +91,6 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield from self.await_message("textDocument/didSave")
         yield from self.await_clear_view_and_save()
 
-    @unittest.skip("FIXME: This fails")
     def test_formats_on_save(self) -> 'Generator':
         assert self.view
         self.view.settings().set("lsp_format_on_save", True)
@@ -106,14 +103,13 @@ class SingleDocumentTestCase(TextDocumentTestCase):
                 'end': {'line': 0, 'character': 1}
             }
         }])
-        t = threading.Thread(target=lambda: self.view.run_command("save"))
+        self.view.run_command("save")
         yield from self.await_message("textDocument/formatting")
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
         text = self.view.substr(sublime.Region(0, self.view.size()))
         self.assertEquals("BBB", text)
         yield from self.await_clear_view_and_save()
-        t.join()
 
     def test_hover_info(self) -> 'Generator':
         assert self.view
@@ -211,7 +207,6 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.assertEquals(edited_content, ''.join(expected))
 
     def __run_goto_test(self, response: list, text_document_request: str, subl_command_suffix: str) -> 'Generator':
-        yield 100
         assert self.view
         self.insert_characters(GOTO_CONTENT)
         # Put the cursor back at the start of the buffer, otherwise is_at_word fails in goto.py.
@@ -219,9 +214,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.view.sel().add(sublime.Region(0, 0))
         method = 'textDocument/{}'.format(text_document_request)
         self.set_response(method, response)
-        yield 100
         self.view.run_command('lsp_symbol_{}'.format(subl_command_suffix))
-        yield 100
         yield from self.await_message(method)
 
         def condition() -> bool:
@@ -268,7 +261,6 @@ class WillSaveWaitUntilTestCase(TextDocumentTestCase):
         capabilities['capabilities']['textDocumentSync']['willSaveWaitUntil'] = True
         return capabilities
 
-    @unittest.skip("FIXME: This fails")
     def test_will_save_wait_until(self) -> 'Generator':
         assert self.view
         self.insert_characters("A")
@@ -281,11 +273,10 @@ class WillSaveWaitUntilTestCase(TextDocumentTestCase):
             }
         }])
         self.view.settings().set("lsp_format_on_save", False)
-        t = threading.Thread(target=lambda: self.view.run_command("save"))
+        self.view.run_command("save")
         yield from self.await_message("textDocument/willSaveWaitUntil")
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
         text = self.view.substr(sublime.Region(0, self.view.size()))
         self.assertEquals("BBB", text)
         yield from self.await_clear_view_and_save()
-        t.join()

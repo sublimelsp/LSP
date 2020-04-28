@@ -364,8 +364,8 @@ class QueryCompletionsTests(TextDocumentTestCase):
                 "insertTextFormat": 2,
                 "textEdit": {
                     "range": {
-                        "start": {"line": 9, "character": 3},
-                        "end": {"line": 9, "character": 4}
+                        "start": {"line": 0, "character": 0},
+                        "end": {"line": 0, "character": 1}
                     },
                     "newText": "def foo: Int \u003d ${0:???}\n   def boo: Int \u003d ${0:???}"
                 },

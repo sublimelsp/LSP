@@ -77,7 +77,7 @@ class RangeTests(unittest.TestCase):
             'start': {'line': 0, 'character': 2},
             'end': {'line': 0, 'character': 3}
         })
-        self.assertTrue(range2.intersects(range1))
+        self.assertTrue(range1.intersects(range2))
         # range2 intersecting end of range 1
         range1 = Range.from_lsp({
             'start': {'line': 0, 'character': 0},
@@ -87,7 +87,7 @@ class RangeTests(unittest.TestCase):
             'start': {'line': 0, 'character': 2},
             'end': {'line': 0, 'character': 4}
         })
-        self.assertTrue(range2.intersects(range1))
+        self.assertTrue(range1.intersects(range2))
         # range2 fully outside of range 1
         range1 = Range.from_lsp({
             'start': {'line': 0, 'character': 0},
@@ -97,7 +97,7 @@ class RangeTests(unittest.TestCase):
             'start': {'line': 2, 'character': 0},
             'end': {'line': 3, 'character': 0}
         })
-        self.assertFalse(range2.intersects(range1))
+        self.assertFalse(range1.intersects(range2))
         # range2 fully within range 1
         range1 = Range.from_lsp({
             'start': {'line': 0, 'character': 10},

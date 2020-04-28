@@ -4,7 +4,6 @@ import sublime_plugin
 
 from .core.configurations import is_supported_syntax
 from .core.edit import parse_text_edit
-from .core.logging import debug
 from .core.protocol import Request, InsertTextFormat, Range
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.settings import settings, client_configs

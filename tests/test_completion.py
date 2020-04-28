@@ -1,7 +1,7 @@
 from LSP.plugin.completion import CompletionHandler
 from LSP.plugin.core.registry import is_supported_view
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable
-from setup import CI, SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove_config, text_config
+from setup import SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove_config, text_config
 from unittesting import DeferrableTestCase
 import sublime
 
@@ -61,11 +61,6 @@ class QueryCompletionsTests(TextDocumentTestCase):
         super().init_view_settings()
         assert self.view
         self.view.settings().set("auto_complete_selector", "text.plain")
-
-    def await_message(self, msg: str) -> 'Generator':
-        if CI:
-            yield 500
-        yield from super().await_message(msg)
 
     def type(self, text: str) -> None:
         self.view.run_command('append', {'characters': text})

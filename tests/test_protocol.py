@@ -81,6 +81,17 @@ class RangeTests(unittest.TestCase):
             'end': {'line': 0, 'character': 4}
         })
         self.assertTrue(range2.intersects(range1))
+        # range2 fully outside of range 1
+        self.assertTrue(range2.intersects(range1))
+        range1 = Range.from_lsp({
+            'start': {'line': 0, 'character': 0},
+            'end': {'line': 0, 'character': 3}
+        })
+        range2 = Range.from_lsp({
+            'start': {'line': 2, 'character': 0},
+            'end': {'line': 3, 'character': 0}
+        })
+        self.assertFalse(range2.intersects(range1))
 
 
 class DiagnosticTests(unittest.TestCase):

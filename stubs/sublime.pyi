@@ -264,7 +264,8 @@ class CompletionItem:
                            command: str,
                            args: dict = {},
                            annotation: str = "",
-                           kind: Tuple[int, str, str] = KIND_AMBIGUOUS
+                           kind: Tuple[int, str, str] = KIND_AMBIGUOUS,
+                           details: str = ""
                            ) -> 'CompletionItem':
         ...
 

@@ -1,3 +1,4 @@
+import html
 import sublime
 import sublime_plugin
 
@@ -192,6 +193,7 @@ class CompletionHandler(LSPViewEventListener):
         return completion_list
 
     def format_completion(self, item: dict) -> sublime.CompletionItem:
+        # This is a hot function. Don't do heavy computations or IO in this function.
         item_kind = item.get("kind")
         if item_kind:
             kind = completion_kinds.get(item_kind, sublime.KIND_AMBIGUOUS)
@@ -220,12 +222,25 @@ class CompletionHandler(LSPViewEventListener):
             convert = self.view.text_point_utf16
             item["native_region"] = (convert(row, start_col_utf16), convert(row, end_col_utf16))
 
+        lsp_label = item["label"]
+        lsp_filter_text = item.get("filterText")
+        lsp_detail = item.get("detail") or ""
+        if lsp_filter_text:
+            st_trigger = lsp_filter_text
+            st_annotation = lsp_label
+            st_details = html.escape(lsp_detail.replace('\n', ' '))
+        else:
+            st_trigger = lsp_label
+            st_annotation = lsp_detail
+            st_details = ''
+
         return sublime.CompletionItem.command_completion(
-            trigger=item["label"],
+            trigger=st_trigger,
             command="lsp_select_completion_item",
             args=item,
-            annotation=item.get('detail') or "",
-            kind=kind
+            annotation=st_annotation,
+            kind=kind,
+            details=st_details
         )
 
     def handle_response(self, response: Optional[Union[dict, List]], completion_list: sublime.CompletionList) -> None:

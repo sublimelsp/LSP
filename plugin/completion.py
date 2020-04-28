@@ -53,9 +53,7 @@ class LspCompleteCommand(sublime_plugin.TextCommand):
         additional_edits = item.get('additionalTextEdits')
         if additional_edits:
             edits = [parse_text_edit(additional_edit) for additional_edit in additional_edits]
-            debug('applying additional edits:', edits)
             self.view.run_command("lsp_apply_document_edit", {'changes': edits})
-            sublime.status_message('Applied additional edits for completion')
 
 
 class LspCompleteInsertTextCommand(LspCompleteCommand):
@@ -76,9 +74,12 @@ class LspCompleteTextEditCommand(LspCompleteCommand):
         new_text = text_edit['newText']
         edit_region = range_to_region(Range.from_lsp(text_edit['range']), self.view)
         if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
-            self.handle_text_edit_snippet(edit, edit_region, new_text)
+            for region in self.translated_regions(edit_region):
+                self.view.erase(edit, region)
+            self.view.run_command("insert_snippet", {"contents": new_text})
         else:
-            self.handle_text_edit_plaintext(edit, edit_region, new_text)
+            for region in self.translated_regions(edit_region):
+                self.view.replace(edit, region, new_text)
         self.handle_additional_edits(item)
 
     def translated_regions(self, edit_region: sublime.Region) -> Generator[sublime.Region, None, None]:
@@ -91,18 +92,6 @@ class LspCompleteTextEditCommand(LspCompleteCommand):
             translation = region.b - primary_cursor_position
             translated_edit_region = sublime.Region(edit_region.a + translation, edit_region.b + translation)
             yield translated_edit_region
-
-    def handle_text_edit_snippet(self, edit: sublime.Edit, edit_region: sublime.Region, new_text: str) -> None:
-        for region in self.translated_regions(edit_region):
-            self.view.erase(edit, region)
-        self.view.run_command("insert_snippet", {"contents": new_text})
-
-    def handle_text_edit_plaintext(self, edit: sublime.Edit, edit_region: sublime.Region, new_text: str) -> None:
-        for region in self.translated_regions(edit_region):
-            if len(region) == 0:
-                self.view.insert(edit, region.b, new_text)
-            else:
-                self.view.replace(edit, region, new_text)
 
 
 def resolve(completion_list: sublime.CompletionList, items: List[sublime.CompletionItem], flags: int = 0) -> None:

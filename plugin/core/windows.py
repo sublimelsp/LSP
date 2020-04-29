@@ -4,7 +4,7 @@ from .logging import debug
 from .message_request_handler import MessageRequestHandler
 from .protocol import Notification, Response, TextDocumentSyncKindNone, TextDocumentSyncKindFull
 from .rpc import Client
-from .rpc import Client, SublimeLogger
+from .rpc import SublimeLogger
 from .sessions import Session
 from .types import ClientConfig
 from .types import ClientStates
@@ -15,7 +15,7 @@ from .types import LanguageConfig
 from .types import Settings
 from .types import ViewLike
 from .types import WindowLike
-from .typing import Optional, List, Callable, Dict, Any, Protocol, Set, Iterable
+from .typing import Optional, List, Callable, Dict, Any, Protocol, Set, Iterable, Sequence
 from .views import did_change, did_close, did_open, did_save, will_save
 from .workspace import disable_in_project
 from .workspace import enable_in_project
@@ -57,7 +57,7 @@ class DocumentHandler(Protocol):
     def handle_did_open(self, view: ViewLike) -> None:
         ...
 
-    def handle_did_change(self, view: ViewLike, changes: Iterable[sublime.TextChange]) -> None:
+    def handle_did_change(self, view: ViewLike, changes: Sequence[sublime.TextChange]) -> None:
         ...
 
     def purge_changes(self, view: ViewLike) -> None:
@@ -108,12 +108,12 @@ class PendingBuffer:
 
     __slots__ = ('view', 'version', 'changes')
 
-    def __init__(self, view: ViewLike, version: int, changes: Iterable[sublime.TextChange]) -> None:
+    def __init__(self, view: ViewLike, version: int, changes: Sequence[sublime.TextChange]) -> None:
         self.view = view
         self.version = version
         self.changes = list(changes)
 
-    def update(self, version: int, changes: Iterable[sublime.TextChange]) -> None:
+    def update(self, version: int, changes: Sequence[sublime.TextChange]) -> None:
         self.version = version
         self.changes.extend(changes)
 
@@ -256,7 +256,7 @@ class WindowDocumentHandler(object):
         else:
             debug('document not tracked', file_name)
 
-    def handle_did_change(self, view: ViewLike, changes: Iterable[sublime.TextChange]) -> None:
+    def handle_did_change(self, view: ViewLike, changes: Sequence[sublime.TextChange]) -> None:
         buffer_id = view.buffer_id()
         change_count = view.change_count()
         pending_buffer = self._pending_buffer_changes.get(buffer_id)

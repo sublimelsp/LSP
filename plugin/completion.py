@@ -189,7 +189,7 @@ class CompletionHandler(LSPViewEventListener):
         else:
             doc_link = ''
 
-        if lsp_filter_text:
+        if lsp_filter_text and lsp_filter_text != lsp_label:
             st_trigger = lsp_filter_text
             st_annotation = lsp_label
             st_details = '{} {}'.format(doc_link, lsp_detail) if doc_link else lsp_detail

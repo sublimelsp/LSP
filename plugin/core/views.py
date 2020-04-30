@@ -1,7 +1,7 @@
 import sublime
 import linecache
 from .protocol import Point, Range, Notification, Request
-from .typing import Optional, Dict, Any, Iterable, List, Sequence
+from .typing import Optional, Dict, Any, Iterable, List
 from .url import filename_to_uri
 
 
@@ -100,25 +100,15 @@ def render_text_change(change: sublime.TextChange) -> Dict[str, Any]:
 
 
 def did_change_text_document_params(view: sublime.View,
-                                    changes: Optional[Sequence[sublime.TextChange]] = None) -> Dict[str, Any]:
+                                    changes: Optional[Iterable[sublime.TextChange]] = None) -> Dict[str, Any]:
     content_changes = []  # type: List[Dict[str, Any]]
     result = {"textDocument": versioned_text_document_identifier(view), "contentChanges": content_changes}
     if changes is None:
         # TextDocumentSyncKindFull
         content_changes.append({"text": entire_content(view)})
-    elif len(changes) > 0:
+    else:
         # TextDocumentSyncKindIncremental
-        stitched_changes = []
-        current = changes[0]
-        for i in range(1, len(changes)):
-            candidate = changes[i]
-            if candidate.a.pt == candidate.b.pt and current.b.pt + len(current.str) == candidate.a.pt:
-                current.str += candidate.str
-            else:
-                stitched_changes.append(current)
-                current = candidate
-        stitched_changes.append(current)
-        for change in stitched_changes:
+        for change in changes:
             content_changes.append(render_text_change(change))
     return result
 
@@ -142,7 +132,7 @@ def did_open(view: sublime.View, language_id: str) -> Notification:
     return Notification.didOpen(did_open_text_document_params(view, language_id))
 
 
-def did_change(view: sublime.View, changes: Optional[Sequence[sublime.TextChange]] = None) -> Notification:
+def did_change(view: sublime.View, changes: Optional[Iterable[sublime.TextChange]] = None) -> Notification:
     return Notification.didChange(did_change_text_document_params(view, changes))
 
 

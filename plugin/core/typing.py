@@ -13,7 +13,6 @@ try:
     from typing import List
     from typing import Mapping
     from typing import Optional
-    from typing import Sequence
     from typing import Set
     from typing import Tuple
     from typing import Type
@@ -76,9 +75,6 @@ except ImportError:
         pass
 
     class Optional(Type):  # type: ignore
-        pass
-
-    class Sequence(Type):  # type: ignore
         pass
 
     class Set(Type):  # type: ignore

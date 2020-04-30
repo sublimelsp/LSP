@@ -112,8 +112,7 @@ def did_change_text_document_params(view: sublime.View,
         current = changes[0]
         for i in range(1, len(changes)):
             candidate = changes[i]
-            length = len(current.str)
-            if current.b.pt + length == candidate.a.pt and candidate.a.pt == candidate.b.pt:
+            if candidate.a.pt == candidate.b.pt and current.b.pt + len(current.str) == candidate.a.pt:
                 current.str += candidate.str
             else:
                 stitched_changes.append(current)

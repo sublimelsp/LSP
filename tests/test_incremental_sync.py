@@ -35,12 +35,35 @@ class TestIncrementalSync(TextDocumentTestCase):
 
     def test_neighboring_inserts(self) -> Generator:
         self.insert_characters("a")
-        yield 40
         self.insert_characters("b")
-        yield 40
         self.insert_characters("c")
         yield from self.verify(
             (0, 0, 0, 0, 0, 'abc')
+        )
+
+    def test_insertions_and_then_backspace(self) -> Generator:
+        self.insert_characters("a")
+        self.insert_characters("b")
+        self.insert_characters("c")
+        self.view.run_command("left_delete")
+        yield from self.verify(
+            # TODO: These two can be stitched into one single insertion 'ab'
+            (0, 0, 0, 0, 0, 'abc'),
+            (1, 0, 2, 0, 3, '')
+        )
+
+    def test_insertions_and_then_two_backspace(self) -> Generator:
+        self.insert_characters("a")
+        self.insert_characters("b")
+        self.insert_characters("c")
+        self.insert_characters("d")
+        self.view.run_command("left_delete")
+        self.view.run_command("left_delete")
+        yield from self.verify(
+            # TODO: It should be possible to stitch all this together into one insertion 'ab'
+            (0, 0, 0, 0, 0, 'abcd'),
+            (1, 0, 3, 0, 4, ''),
+            (1, 0, 2, 0, 3, '')
         )
 
     def test_did_change(self) -> 'Generator':

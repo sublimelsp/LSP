@@ -4,7 +4,7 @@ from .logging import debug, exception_log
 from .message_request_handler import MessageRequestHandler
 from .protocol import Notification, Response, TextDocumentSyncKindNone, TextDocumentSyncKindFull
 from .sessions import Manager, Session
-from .settings import client_configs  # noqa
+from .settings import client_configs
 from .transports import create_transport
 from .types import ClientConfig
 from .types import ClientStates
@@ -74,25 +74,25 @@ _session_types = {}  # type: Dict[str, Type[Session]]
 def register_session_type(session_type: Type[Session]) -> None:
     if issubclass(session_type, Session):
         try:
-            global _session_types
-            global client_configs
             name = session_type.name()
-            config = session_type.standard_configuration()
-            _session_types[name] = session_type
-            client_configs.add_external_config(config)
-            client_configs.update_configs()
-            debug("Registered", name)
+            if name not in _session_types:
+                config = session_type.standard_configuration()
+                _session_types[name] = session_type
+                client_configs.add_external_config(config)
+                client_configs.update_configs()
+                debug("Registered", name)
         except Exception as ex:
             exception_log("Failed to register session type", ex)
 
 
 def unregister_session_type(session_type: Type[Session]) -> None:
-    global _session_types
-    global client_configs
     name = session_type.name()
-    client_configs.remove_external_config(name)
-    _session_types.pop(name, None)
-    debug("Unregistered", name)
+    try:
+        _session_types.pop(name)
+        client_configs.remove_external_config(name)
+        debug("Unregistered", name)
+    except KeyError:
+        pass
 
 
 def get_session_type(name: str) -> Type[Session]:

@@ -9,7 +9,7 @@ from .popups import popups
 from .registry import windows, unload_sessions
 from .sessions import Session
 from .settings import settings, load_settings, unload_settings
-from .typing import Optional
+from .typing import List, Optional, Type
 from .windows import register_session_type
 
 
@@ -17,12 +17,27 @@ def ensure_server_panel(window: sublime.Window) -> Optional[sublime.View]:
     return ensure_panel(window, PanelName.LanguageServers, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
 
 
+def get_final_subclasses(derived: List[Type], results: List[Type]) -> None:
+    for d in derived:
+        d_subclasses = d.__subclasses__()
+        if len(d_subclasses) > 0:
+            get_final_subclasses(d_subclasses, results)
+        else:
+            results.append(d)
+
+
 def startup() -> None:
     load_settings()
     popups.load_css()
     set_debug_logging(settings.log_debug)
     set_exception_logging(True)
-    for session_type in Session.__subclasses__():
+    final_subclasses = []  # type: List[Type[Session]]
+    get_final_subclasses(Session.__subclasses__(), final_subclasses)
+    for session_type in final_subclasses:
+        # Unfortunately we need to do this ourselves instead of helper packages registering themselves in plugin_loaded
+        # and unregistering themselves in plugin_unloaded. This is because this base LSP package is loaded before
+        # the helper packages. If the helper packages were loaded before this package, we would not have to do this.
+        # Perhaps we can come up with a scheme to load the helper packages before this package?
         register_session_type(session_type)
     windows.set_diagnostics_ui(DiagnosticsPresenter)
     windows.set_server_panel_factory(ensure_server_panel)

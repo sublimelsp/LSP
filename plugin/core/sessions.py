@@ -1,4 +1,4 @@
-from .logging import debug
+from .logging import debug, printf
 from .process import start_server
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification
 from .protocol import TextDocumentSyncKindNone
@@ -189,6 +189,9 @@ class Session(object):
     def should_notify_did_close(self) -> bool:
         return self.should_notify_did_open()
 
+    def should_notify_did_change_workspace_folders(self) -> bool:
+        return bool(self.capabilities.get("workspace", {}).get("workspaceFolders", {}).get("changeNotifications"))
+
     def handles_path(self, file_path: Optional[str]) -> bool:
         if not file_path:
             return False
@@ -203,7 +206,7 @@ class Session(object):
         return False
 
     def update_folders(self, folders: List[WorkspaceFolder]) -> None:
-        if self._supports_workspace_folders():
+        if self.should_notify_did_change_workspace_folders():
             added, removed = diff_folders(self._workspace_folders, folders)
             params = {
                 "event": {
@@ -213,6 +216,7 @@ class Session(object):
             }
             notification = Notification.didChangeWorkspaceFolders(params)
             self.client.send_notification(notification)
+        if self._supports_workspace_folders():
             self._workspace_folders = folders
 
     def _initialize(self) -> None:
@@ -254,6 +258,8 @@ class Session(object):
 
         self.on_request("workspace/workspaceFolders", self._handle_request_workspace_folders)
         self.on_request("workspace/configuration", self._handle_request_workspace_configuration)
+        self.on_request("client/registerCapability", self._handle_register_capability)
+        self.on_request("client/unregisterCapability", self._handle_unregister_capability)
         if self.config.settings:
             self.client.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
 
@@ -276,6 +282,30 @@ class Session(object):
             else:
                 items.append(self.config.settings)
         self.client.send_response(Response(request_id, items))
+
+    def _handle_register_capability(self, params: Any, request_id: Any) -> None:
+        registrations = params["registrations"]
+        for registration in registrations:
+            method = registration["method"]
+            if method == "workspace/didChangeWorkspaceFolders":
+                self.capabilities.setdefault(
+                    "workspace", {}).setdefault(
+                        "workspaceFolders", {})["changeNotifications"] = registration["id"]
+            else:
+                printf("WARNING: unknown registration method '{}' from {}".format(method, self.config.name))
+        self.client.send_response(Response(request_id, None))
+
+    def _handle_unregister_capability(self, params: Any, request_id: Any) -> None:
+        unregistrations = params["unregisterations"]  # typo in the official specification
+        for unregistration in unregistrations:
+            method = unregistration["method"]
+            if method == "workspace/didChangeWorkspaceFolders":
+                workspace = self.capabilities.get("workspace", {})
+                # Who cares about the ID?
+                workspace.get("workspaceFolders", {}).pop("changeNotifications", None)
+            else:
+                printf("WARNING: unknown unregistration method '{}' from {}".format(method, self.config.name))
+        self.client.send_response(Response(request_id, None))
 
     def end(self) -> None:
         self.state = ClientStates.STOPPING

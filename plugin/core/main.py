@@ -7,9 +7,9 @@ from .logging import set_debug_logging, set_exception_logging
 from .panels import destroy_output_panels, ensure_panel, PanelName
 from .popups import popups
 from .registry import windows, unload_sessions
+from .sessions import Session
 from .settings import settings, load_settings, unload_settings
 from .typing import Optional
-from .sessions import Session
 from .windows import register_session_type
 
 

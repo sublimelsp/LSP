@@ -128,12 +128,6 @@ class SyncRequestStatusTest(unittest.TestCase):
 
 class ClientTest(unittest.TestCase):
 
-    def test_can_create_client(self):
-        transport = MockTransport()
-        client = Client(transport, Settings())
-        self.assertIsNotNone(client)
-        self.assertTrue(transport.has_started)
-
     def do_client_request_with_none_response(self, method):
         transport = MockTransport(return_null_result)
         settings = MockSettings()

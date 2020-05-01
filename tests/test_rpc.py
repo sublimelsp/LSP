@@ -134,26 +134,6 @@ class ClientTest(unittest.TestCase):
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
 
-    def do_client_request_response(self, method):
-        transport = MockTransport(return_empty_dict_result)
-        settings = MockSettings()
-        client = Client(transport, settings)
-        self.assertIsNotNone(client)
-        self.assertTrue(transport.has_started)
-        req = Request.initialize(dict())
-        responses = []
-        do_request = method.__get__(client, Client)
-        do_request(req, lambda resp: responses.append(resp))
-        self.assertGreater(len(responses), 0)
-        # Make sure the response handler dict does not grow.
-        self.assertEqual(len(client._response_handlers), 0)
-
-    def test_client_request_response_async(self):
-        self.do_client_request_response(Client.send_request)
-
-    def test_client_request_response_sync(self):
-        self.do_client_request_response(Client.execute_request)
-
     def do_client_request_with_none_response(self, method):
         transport = MockTransport(return_null_result)
         settings = MockSettings()

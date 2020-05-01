@@ -361,8 +361,6 @@ class Session(object):
         self.on_request("workspace/configuration", self._handle_request_workspace_configuration)
         self.on_request("client/registerCapability", self._handle_register_capability)
         self.on_request("client/unregisterCapability", self._handle_unregister_capability)
-        if self.config.settings:
-            self.client.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
 
         if self._on_post_initialize:
             self._on_post_initialize(self)
@@ -387,10 +385,14 @@ class Session(object):
     def _handle_register_capability(self, params: Any, request_id: Any) -> None:
         registrations = params["registrations"]
         for registration in registrations:
-            capability_path, registration_path = method_to_capability(registration["method"])
+            method = registration["method"]
+            capability_path, registration_path = method_to_capability(method)
             debug("{}: registering capability:".format(self.config.name), capability_path)
             set_dotted_value(self.capabilities, capability_path, registration["registerOptions"])
             set_dotted_value(self.capabilities, registration_path, registration["id"])
+            if method == "workspace/didChangeConfiguration":
+                # The mega-exceptional case.
+                self.client.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
         self.client.send_response(Response(request_id, None))
 
     def _handle_unregister_capability(self, params: Any, request_id: Any) -> None:

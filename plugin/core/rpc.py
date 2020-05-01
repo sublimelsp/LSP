@@ -362,10 +362,10 @@ class Client(object):
                 self._sync_request_cvar.notify()
             else:
                 self._deferred_responses.append((handler, result))
-            return (None, None)
+            return (None, result)
         else:  # self._sync_request_result.is_ready()
             self._deferred_responses.append((handler, result))
-            return (None, result)
+            return (None, None)
         if handler:
             return (handler, result)
         elif is_error:

@@ -44,7 +44,7 @@ class Logger(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def incoming_response(self, request_id: int, params: Any, blocking: Optional[bool] = False) -> None:
+    def incoming_response(self, request_id: int, params: Any, blocking: bool = False) -> None:
         pass
 
     @abstractmethod
@@ -437,7 +437,7 @@ class SublimeLogger(Logger):
             log_payload = False
         self.log(self.format_notification(" ->", method), params, log_payload)
 
-    def incoming_response(self, request_id: int, params: Any, blocking: Optional[bool] = False) -> None:
+    def incoming_response(self, request_id: int, params: Any, blocking: bool = False) -> None:
         if not self.settings.log_debug:
             return
         direction = "<==" if blocking else "<<<"

@@ -22,6 +22,7 @@ from .workspace import enable_in_project
 from .workspace import get_workspace_folders
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
+import os
 import sublime
 import tempfile
 import threading
@@ -490,8 +491,10 @@ class WindowManager(Manager):
                 session.logger.sink = self._payload_log_sink
             if workspace_folders:
                 cwd = workspace_folders[0].path
+            elif file_path:
+                cwd = os.path.dirname(file_path)
             else:
-                cwd = tempfile.gettempdir()
+                cwd = tempfile.tempdir
             # WindowLike vs sublime.Window
             session.initialize(create_transport(config, cwd, self._window, session))  # type: ignore
             self._sessions.setdefault(config.name, []).append(session)

@@ -79,7 +79,9 @@ class LspCompleteTextEditCommand(LspCompleteCommand):
             self.view.run_command("insert_snippet", {"contents": new_text})
         else:
             for region in self.translated_regions(edit_region):
-                self.view.replace(edit, region, new_text)
+                # NOTE: Cannot do .replace, because ST will select the replacement.
+                self.view.erase(edit, region)
+                self.view.insert(edit, region.a, new_text)
         self.handle_additional_edits(item)
 
     def translated_regions(self, edit_region: sublime.Region) -> Generator[sublime.Region, None, None]:
@@ -187,7 +189,7 @@ class CompletionHandler(LSPViewEventListener):
         else:
             doc_link = ''
 
-        if lsp_filter_text:
+        if lsp_filter_text and lsp_filter_text != lsp_label:
             st_trigger = lsp_filter_text
             st_annotation = lsp_label
             st_details = '{} {}'.format(doc_link, lsp_detail) if doc_link else lsp_detail

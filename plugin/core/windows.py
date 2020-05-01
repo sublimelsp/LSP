@@ -316,7 +316,7 @@ class WindowManager(object):
         self._workspace = workspace
         self._workspace.on_changed = self._on_project_changed
         self._workspace.on_switched = self._on_project_switched
-        self._progress_title = str()
+        self._progress_title = dict()  # type: Dict[str, str]
 
     def _on_project_changed(self, folders: List[str]) -> None:
         workspace_folders = get_workspace_folders(self._workspace.folders)
@@ -567,36 +567,34 @@ class WindowManager(object):
             self._handle_window_closed()
 
     def _receive_progress_token(self, params: Dict[str, Any], client: Client, request_id: int) -> None:
-        # we ignore progress token for now
-        # token = params.get('token')
-        client.send_response(Response(request_id, None))
+        token = params.get('token')
+        if token:
+            self._progress_title[token] = None
+            client.send_response(Response(request_id, None))
 
-    def _show_progress(self, params) -> None:
-        # $/progress: {'token': 'rustAnalyzer/cargoWatcher', 'value': {'kind': 'begin', 'cancellable': False, 'title': "Running 'cargo check'"}}
-        value = params.get('value', {})
-        if value:
+    def _show_progress(self, params: Dict[str, Any]) -> None:
+        token = params.get('token')
+        value = params.get('value')
+        if token and value:
             if value.get('kind') == 'begin':
-                status_msg = value.get('title')  # mandatory
-                self._progress_title = status_msg
-                progress_message = value.get('message')  # optional
-                progress_percentage = value.get('percentage')  # optional
-                if progress_message:
-                    status_msg += ": " + progress_message
-                if progress_percentage:
-                    status_msg += "(" + str(progress_percentage) + "%)"
-                self._sublime.status_message(status_msg)
+                self._progress_title[token] = value.get('title')  # mandatory
+                self._sublime.status_message(self._progress_string(token, value))
             elif value.get('kind') == 'report':
-                progress_message = value.get('message')  # optional
-                progress_percentage = value.get('percentage')  # optional
-                status_msg = self._progress_title
-                if progress_message:
-                    status_msg += ": " + progress_message
-                if progress_percentage:
-                    status_msg += "(" + str(progress_percentage) + "%)"
-                self._sublime.status_message(status_msg)
-            elif value.get('kind') == 'done':
-                # reset progress title
-                self._progress_title = str()
+                self._sublime.status_message(self._progress_string(token, value))
+            elif value.get('kind') == 'end':
+                self._progress_title[token] = None
+
+    def _progress_string(self, token: str, value: Dict[str, Any]) -> str:
+        status_msg = self._progress_title.get(token)
+        if not status_msg:
+            return 'unknown $/progress token: {}'.format(token)
+        progress_message = value.get('message')  # optional
+        progress_percentage = value.get('percentage')  # optional
+        if progress_message:
+            status_msg += ': ' + progress_message
+        if progress_percentage:
+            status_msg += ' (' + str(progress_percentage) + '%)'
+        return status_msg
 
     def _handle_window_closed(self) -> None:
         debug('window {} closed, ending sessions'.format(self._window.id()))

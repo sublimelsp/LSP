@@ -438,7 +438,7 @@ class Diagnostic(object):
             lsp_diagnostic.get('severity', DiagnosticSeverity.Error),
             lsp_diagnostic.get('source'),
             lsp_diagnostic,
-            [DiagnosticRelatedInformation.from_lsp(info) for info in lsp_diagnostic.get('relatedInformation', [])]
+            [DiagnosticRelatedInformation.from_lsp(info) for info in lsp_diagnostic.get('relatedInformation') or []]
         )
 
     def to_lsp(self) -> Dict[str, Any]:

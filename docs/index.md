@@ -15,6 +15,7 @@ Visit [Langserver.org](https://langserver.org/) or the [list of language server 
 
 For a few languages you can also find dedicated packages on Package Control, which can optionally be installed to simplify the configuration and installation process of a language server and might provide additional features such as automatic updates for the server:
 
+* [LSP-bash](https://packagecontrol.io/packages/LSP-bash)
 * [LSP-css](https://packagecontrol.io/packages/LSP-css)
 * [LSP-dockerfile](https://packagecontrol.io/packages/LSP-dockerfile)
 * [LSP-elm](https://packagecontrol.io/packages/LSP-elm)

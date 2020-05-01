@@ -6,26 +6,30 @@ Uses the asyncio module and mypy types, so you'll need a modern Python.
 
 To make this server reply to requests, send the $test/setResponse notification.
 
+To make this server do a request, send the $test/fakeRequest request.
+
+To make this server do a notification, send the $test/fakeNotification notification.
+
 To await a method that this server should eventually (or already has) received,
 send the $test/getReceived request. If the method was already received, it will
 return None immediately. Otherwise, it will wait for the method. You should
 have a timeout in your tests to ensure your tests won't hang forever.
 
-TODO: Make this server send out notifications somehow.
 TODO: Untested on Windows.
 TODO: It should also understand TCP, both as slave and master.
 """
 from argparse import ArgumentParser
 from enum import IntEnum
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, Iterable
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, Iterable, Awaitable
 import asyncio
 import json
 import os
 import sys
+import uuid
 
 
 __package__ = "server"
-__version__ = "0.9.3"
+__version__ = "1.0.0"
 
 
 if sys.version_info[0] < 3:
@@ -68,6 +72,10 @@ class Error(Exception):
     def to_lsp(self) -> StringDict:
         return {"code": self.code, "message": super().__str__()}
 
+    @classmethod
+    def from_lsp(cls, d: StringDict) -> 'Error':
+        return Error(d["code"], d["message"])
+
     def __str__(self) -> str:
         return f"{super().__str__()} ({self.code})"
 
@@ -76,11 +84,11 @@ def jsonrpc() -> StringDict:
     return {"jsonrpc": "2.0"}
 
 
-def make_response(request_id: int, params: PayloadLike) -> StringDict:
+def make_response(request_id: Any, params: PayloadLike) -> StringDict:
     return {**jsonrpc(), "id": request_id, "result": params}
 
 
-def make_error_response(request_id: int, err: Error) -> StringDict:
+def make_error_response(request_id: Any, err: Error) -> StringDict:
     return {**jsonrpc(), "id": request_id, "error": err.to_lsp()}
 
 
@@ -88,7 +96,7 @@ def make_notification(method: str, params: PayloadLike) -> StringDict:
     return {**jsonrpc(), "method": method, "params": params}
 
 
-def make_request(method: str, request_id: int, params: PayloadLike) -> StringDict:
+def make_request(method: str, request_id: Any, params: PayloadLike) -> StringDict:
     return {**jsonrpc(), "method": method, "id": request_id, "params": params}
 
 
@@ -122,17 +130,42 @@ class StopLoopException(Exception):
     pass
 
 
+class Request:
+
+    async def on_error(self, err: Error) -> None:
+        pass
+
+    async def on_result(self, params: PayloadLike) -> None:
+        pass
+
+
+class SimpleRequest(Request):
+
+    def __init__(self) -> None:
+        self.cv = asyncio.Condition()
+        self.result = None  # type: PayloadLike
+        self.error = None  # type: Optional[Error]
+
+    async def on_result(self, params: PayloadLike) -> None:
+        self.result = params
+        async with self.cv:
+            self.cv.notify()
+
+    async def on_error(self, err: Error) -> None:
+        self.error = err
+        async with self.cv:
+            self.cv.notify()
+
+
 class Session:
 
     def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         self._reader = reader
         self._writer = writer
 
-        self._response_handlers: Dict[int, Tuple[Callable, Callable]]
-        self._request_handlers: Dict[str,
-                                     Callable[[PayloadLike], PayloadLike]] = {}
-        self._notification_handlers: Dict[str,
-                                          Callable[[PayloadLike], None]] = {}
+        self._response_handlers: Dict[Any, Request] = {}
+        self._request_handlers: Dict[str, Callable[[PayloadLike], Awaitable[PayloadLike]]] = {}
+        self._notification_handlers: Dict[str, Callable[[PayloadLike], Awaitable[None]]] = {}
 
         # initialize/shutdown/exit dance
         self._received_shutdown = False
@@ -152,20 +185,30 @@ class Session:
         asyncio.get_event_loop().create_task(self._send_payload(
             make_notification(method, params)))
 
-    def _reply(self, request_id: int, params: PayloadLike) -> None:
+    def _reply(self, request_id: Any, params: PayloadLike) -> None:
         asyncio.get_event_loop().create_task(self._send_payload(
             make_response(request_id, params)))
 
-    def _error(self, request_id: int, err: Error) -> None:
+    def _error(self, request_id: Any, err: Error) -> None:
         asyncio.get_event_loop().create_task(self._send_payload(
             make_error_response(request_id, err)))
+
+    async def request(self, method: str, params: PayloadLike) -> PayloadLike:
+        request = SimpleRequest()
+        request_id = str(uuid.uuid4())
+        self._response_handlers[request_id] = request
+        async with request.cv:
+            await self._send_payload(make_request(method, request_id, params))
+            await request.cv.wait()
+        if isinstance(request.error, Error):
+            raise request.error
+        return request.result
 
     async def _send_payload(self, payload: StringDict) -> None:
         body = dump(payload)
         content = (
             f"Content-Length: {len(body)}\r\n".encode(ENCODING),
-            f"Content-Type: application/vscode-jsonrpc; charset=utf-8\r\n\r\n".encode(
-                ENCODING),
+            f"Content-Type: application/vscode-jsonrpc; charset=utf-8\r\n\r\n".encode(ENCODING),
             body)
         self._writer.writelines(content)
         await self._writer.drain()
@@ -174,7 +217,7 @@ class Session:
         try:
             if "method" in payload:
                 if "id" in payload:
-                    await self._handle("request", payload, self._request_handlers, int(payload["id"]))
+                    await self._handle("request", payload, self._request_handlers, payload["id"])
                 else:
                     await self._handle("notification", payload, self._notification_handlers, None)
             elif "id" in payload:
@@ -185,27 +228,21 @@ class Session:
             self._log(f"Error handling server payload: {err}")
 
     async def _response_handler(self, response: StringDict) -> None:
-        request_id = int(response["id"])
-        handler, error_handler = self._response_handlers.pop(
-            request_id, (None, None))
-        assert handler
+        request = self._response_handlers.pop(response["id"])
         if "result" in response and "error" not in response:
-            if handler:
-                await handler(response["result"])
-            else:
-                self._log(f"no response for request {request_id}")
+            await request.on_result(response["result"])
         elif "result" not in response and "error" in response:
-            error = response["error"]
-            if error_handler:
-                await error_handler(error)
+            await request.on_error(Error.from_lsp(response["error"]))
+        else:
+            await request.on_error(Error(ErrorCode.InvalidRequest, ''))
 
-    def _on_request(self, request_method: str, handler: Callable) -> None:
+    def _on_request(self, request_method: str, handler: Callable[[PayloadLike], Awaitable[PayloadLike]]) -> None:
         self._request_handlers[request_method] = handler
 
-    def _on_notification(self, notification_method: str, handler: Callable) -> None:
+    def _on_notification(self, notification_method: str, handler: Callable[[PayloadLike], Awaitable[None]]) -> None:
         self._notification_handlers[notification_method] = handler
 
-    async def _handle(self, typestr: str, message: 'Dict[str, Any]', handlers: Dict[str, Callable],
+    async def _handle(self, typestr: str, message: Dict[str, Any], handlers: Dict[str, Callable],
                       request_id: Optional[int]) -> None:
         method = message.get("method", "")
         params = message.get("params")
@@ -233,8 +270,7 @@ class Session:
             except Error as ex:
                 self._error(request_id, ex)
             except Exception as ex:
-                self._error(request_id, Error(
-                    ErrorCode.InternalError, str(ex)))
+                self._error(request_id, Error(ErrorCode.InternalError, str(ex)))
         else:
             # handle notification
             try:
@@ -283,7 +319,9 @@ class Session:
         self._on_notification("exit", self._on_exit)
 
         self._on_request("$test/getReceived", self._get_received)
+        self._on_request("$test/fakeRequest", self._fake_request)
         self._on_notification("$test/setResponse", self._on_set_response)
+        self._on_notification("$test/fakeNotification", self._on_fake_notification)
 
     async def _on_set_response(self, params: PayloadLike) -> None:
         if isinstance(params, dict):
@@ -306,6 +344,24 @@ class Session:
                 except KeyError:
                     pass
                 await self._received_cv.wait()
+
+    async def _fake_request(self, params: PayloadLike) -> PayloadLike:
+        if isinstance(params, dict):
+            method = params["method"]
+            delay = params["delay"]
+            request_params = params["params"]
+            await asyncio.sleep(delay)
+            return await self.request(method, request_params)
+        raise Error(ErrorCode.InvalidParams, 'expected dict')
+
+    async def _on_fake_notification(self, params: PayloadLike) -> None:
+        if isinstance(params, dict):
+            method = params["method"]
+            delay = params["delay"]
+            notification_params = params["params"]
+            await asyncio.sleep(delay)
+            self._notify(method, notification_params)
+        raise Error(ErrorCode.InvalidParams, 'expected dict')
 
     async def _initialize(self, params: PayloadLike) -> PayloadLike:
         if not isinstance(params, dict):

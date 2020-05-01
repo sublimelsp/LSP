@@ -173,6 +173,26 @@ class TextDocumentTestCase(DeferrableTestCase):
             debug("Got error:", params, "awaiting timeout :(")
 
         self.session.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
+        yield from self.await_promise(promise)
+
+    def make_server_do_fake_request(self, method: str, params: Any, delay: float = 0) -> YieldPromise:
+        promise = YieldPromise()
+
+        def on_result(params: Any) -> None:
+            promise.fulfill(params)
+
+        def on_error(params: Any) -> None:
+            promise.fulfill(params)
+
+        req = Request("$test/fakeRequest", {"method": method, "params": params, "delay": delay})
+        self.session.send_request(req, on_result, on_error)
+        return promise
+
+    def make_server_do_fake_notification(self, method: str, params: Any, delay: float = 0) -> None:
+        notification = Notification("$test/fakeNotification", {"method": method, "params": params, "delay": delay})
+        self.session.send_notification(notification)
+
+    def await_promise(self, promise: YieldPromise) -> Generator:
         yield {"condition": promise, "timeout": TIMEOUT_TIME}
 
     def set_response(self, method: str, response: 'Any') -> None:

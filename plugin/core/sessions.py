@@ -1,11 +1,12 @@
+from .edit import parse_workspace_edit
 from .logging import debug
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification, Response
-from .protocol import TextDocumentSyncKindNone
+from .protocol import Error, ErrorCode, TextDocumentSyncKindNone
 from .rpc import Client
+from .transports import Transport
 from .types import ClientConfig, ClientStates, Settings
 from .typing import Dict, Any, Optional, List, Tuple, Generator
 from .workspace import is_subpath_of
-from .transports import Transport
 from abc import ABCMeta, abstractmethod
 import os
 import sublime
@@ -360,7 +361,14 @@ class Session(Client):
 
     def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:
         """handles the workspace/applyEdit request"""
-        self.call_manager('_apply_workspace_edit', self, params, request_id)
+        mgr = self.manager()
+        if not mgr:
+            return self.send_error_response(request_id, Error(ErrorCode.InternalError, "no window"))
+        window = mgr.window()
+        edit = params.get('edit', {})
+        window.run_command('lsp_apply_workspace_edit', {'changes': parse_workspace_edit(edit)})
+        # TODO: We should ideally wait for all changes to have been applied. This is currently not "async".
+        self.send_response(Response(request_id, {"applied": True}))
 
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles textDocument/publishDiagnostics notification"""

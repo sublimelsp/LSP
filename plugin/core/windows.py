@@ -535,16 +535,6 @@ class WindowManager(Manager):
                     candidate = folder
         return candidate
 
-    def _apply_workspace_edit(self, params: Dict[str, Any], session: Session, request_id: int) -> None:
-        edit = params.get('edit', dict())
-        changes = parse_workspace_edit(edit)
-        self._window.run_command('lsp_apply_workspace_edit', {'changes': changes})
-        # TODO: We should ideally wait for all changes to have been applied.
-        # This however seems overly complicated, because we have to bring along a string representation of the
-        # client through the sublime-command invocations (as well as the request ID, but that is easy), and then
-        # reconstruct/get the actual Client object back. Maybe we can (ab)use our homebrew event system for this?
-        session.send_response(Response(request_id, {"applied": True}))
-
     def _payload_log_sink(self, message: str) -> None:
         self._sublime.set_timeout_async(lambda: self.handle_server_message(":", message), 0)
 

@@ -616,12 +616,6 @@ class WindowManager(Manager):
         if not self._sessions:
             self._handle_all_sessions_ended()
 
-    def _handle_server_crash(self, config: ClientConfig) -> None:
-        msg = "Language server {} has crashed, do you want to restart it?".format(config.name)
-        result = self._sublime.ok_cancel_dialog(msg, ok_title="Restart")
-        if result == self._sublime.DIALOG_YES:
-            self.restart_sessions()
-
     def handle_server_message(self, server_name: str, message: str) -> None:
         if not self.server_panel_factory:
             return

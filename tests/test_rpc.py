@@ -128,27 +128,6 @@ class SyncRequestStatusTest(unittest.TestCase):
 
 class ClientTest(unittest.TestCase):
 
-    def do_client_request_with_none_response(self, method):
-        transport = MockTransport(return_null_result)
-        settings = MockSettings()
-        client = Client(transport, settings)
-        self.assertIsNotNone(client)
-        self.assertTrue(transport.has_started)
-        req = Request.shutdown()
-        responses = []
-        errors = []
-        # https://stackoverflow.com/questions/1015307/python-bind-an-unbound-method
-        do_request = method.__get__(client, Client)
-        do_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
-        self.assertEqual(len(responses), 1)
-        self.assertEqual(len(errors), 0)
-
-    def test_client_request_with_none_response_async(self):
-        self.do_client_request_with_none_response(Client.send_request)
-
-    def test_client_request_with_none_response_sync(self):
-        self.do_client_request_with_none_response(Client.execute_request)
-
     def do_client_should_reject_response_when_both_result_and_error_are_present(self, method):
         transport = MockTransport(lambda x: '{"id": 1, "result": {"key": "value"}, "error": {"message": "oops"}}')
         settings = MockSettings()

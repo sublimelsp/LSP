@@ -55,7 +55,9 @@ CLASS_LINE_END = ...  # type: int
 CLASS_EMPTY_LINE = ...  # type: int
 INHIBIT_WORD_COMPLETIONS = ...  # type: int
 INHIBIT_EXPLICIT_COMPLETIONS = ...  # type: int
+INHIBIT_REORDER = ...  # type: int
 DYNAMIC_COMPLETIONS = ...  # type: int
+COMPLETION_FLAG_KEEP_PREFIX = ...  # type: int
 DIALOG_CANCEL = ...  # type: int
 DIALOG_YES = ...  # type: int
 DIALOG_NO = ...  # type: int
@@ -260,13 +262,26 @@ def list_syntaxes() -> Sequence[Dict[str, Any]]:
     ...
 
 class CompletionItem:
+    flags = ...  # type: int
+
+    @classmethod
+    def snippet_completion(
+            cls,
+            trigger: str,
+            snippet: str,
+            annotation: str = " ",
+            kind: Tuple[int, str, str] = KIND_SNIPPET,
+            details: str = "") -> 'CompletionItem':
+        ...
+
     @classmethod
     def command_completion(cls,
                            trigger: str,
                            command: str,
                            args: dict = {},
                            annotation: str = "",
-                           kind: Tuple[int, str, str] = KIND_AMBIGUOUS
+                           kind: Tuple[int, str, str] = KIND_AMBIGUOUS,
+                           details: str = ""
                            ) -> 'CompletionItem':
         ...
 

@@ -1,4 +1,4 @@
-from .logging import exception_log
+from .logging import debug
 from .types import ClientConfig
 from .typing import List, Callable, Optional
 import abc
@@ -18,13 +18,25 @@ class LanguageHandler(metaclass=abc.ABCMeta):
 
     @classmethod
     def instantiate_all(cls) -> 'List[LanguageHandler]':
-        result = []
-        for c in cls.__subclasses__():
-            if issubclass(c, LanguageHandler):
-                try:
-                    instance = c()
-                except Exception as ex:
-                    exception_log("Failed to instantiate LanguageHandler", ex)
-                    continue
-                result.append(instance)
-        return result
+        def get_final_subclasses(derived: 'List[Type[LanguageHandler]]',
+                                 results: 'List[Type[LanguageHandler]]') -> None:
+            for d in derived:
+                d_subclasses = d.__subclasses__()
+                if len(d_subclasses) > 0:
+                    get_final_subclasses(d_subclasses, results)
+                else:
+                    results.append(d)
+
+        subclasses = []  # type: List[Type[LanguageHandler]]
+        get_final_subclasses(cls.__subclasses__(), subclasses)
+        instantiated = []
+        for c in subclasses:
+            try:
+                instantiated.append(instantiate(c))
+            except Exception as e:
+                debug('LanguageHandler instantiation crashed!', e)
+        return instantiated
+
+
+def instantiate(c: Type[LanguageHandler]) -> LanguageHandler:
+    return c()

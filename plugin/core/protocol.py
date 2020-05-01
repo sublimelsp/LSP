@@ -211,6 +211,9 @@ class ErrorCode:
     RequestCancelled = -32800
     ContentModified = -32801
 
+    # Defined by us
+    Timeout = -40000
+
 
 class Error(Exception):
 
@@ -354,11 +357,12 @@ class Range(object):
         }
 
     def contains(self, point: Point) -> bool:
-        return self.start.row <= point.row <= self.end.row and self.start.col <= point.col <= self.end.col
+        return self.start.row <= point.row <= self.end.row and \
+            (self.end.row > point.row or self.start.col <= point.col <= self.end.col)
 
     def intersects(self, rge: 'Range') -> bool:
-        return rge.start.row <= self.end.row and rge.start.col <= self.end.col and \
-            rge.end.row >= self.start.row and rge.end.col >= self.start.col
+        return self.contains(rge.start) or self.contains(rge.end) or \
+            rge.contains(self.start) or rge.contains(self.end)
 
 
 class Location(object):

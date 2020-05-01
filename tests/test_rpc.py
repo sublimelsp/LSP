@@ -5,9 +5,10 @@ from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.rpc import Client
 from LSP.plugin.core.rpc import format_request
+from LSP.plugin.core.rpc import SyncRequestStatus
 from LSP.plugin.core.transports import Transport
 from LSP.plugin.core.types import Settings
-from LSP.plugin.core.typing import List, Tuple, Dict, Any
+from LSP.plugin.core.typing import Any, List, Dict, Tuple
 from test_mocks import MockSettings
 import json
 import unittest
@@ -64,6 +65,67 @@ class FormatTests(unittest.TestCase):
         self.assertEqual("{}", format_request(dict()))
 
 
+class SyncRequestStatusTest(unittest.TestCase):
+
+    def test_tiny_state_machine(self):
+        sync = SyncRequestStatus()
+        self.assertTrue(sync.is_idle())
+        self.assertFalse(sync.is_requesting())
+        self.assertFalse(sync.is_ready())
+
+        sync.prepare(1)
+        self.assertFalse(sync.is_idle())
+        self.assertTrue(sync.is_requesting())
+        self.assertFalse(sync.is_ready())
+
+        sync.set(1, {"foo": "bar"})
+        self.assertFalse(sync.is_idle())
+        self.assertFalse(sync.is_requesting())
+        self.assertTrue(sync.is_ready())
+        self.assertFalse(sync.has_error())
+
+        payload = sync.flush()
+        self.assertTrue(sync.is_idle())
+        self.assertFalse(sync.is_requesting())
+        self.assertFalse(sync.is_ready())
+        self.assertDictEqual(payload, {"foo": "bar"})
+
+    def test_error_response(self):
+        sync = SyncRequestStatus()
+        sync.prepare(1)
+
+        sync.set_error(1, {"code": 1243, "message": "everything is broken!"})
+        self.assertFalse(sync.is_idle())
+        self.assertFalse(sync.is_requesting())
+        self.assertTrue(sync.is_ready())
+        self.assertTrue(sync.has_error())
+
+        error = sync.flush_error()
+        self.assertTrue(sync.is_idle())
+        self.assertFalse(sync.is_requesting())
+        self.assertFalse(sync.is_ready())
+        self.assertDictEqual(error, {"code": 1243, "message": "everything is broken!"})
+
+    def test_exception_during_requesting(self):
+        sync = SyncRequestStatus()
+        sync.prepare(1)
+        try:
+            raise RuntimeError("oops")
+            sync.set(1234, {"foo": "bar"})  # never reached
+        except Exception:
+            sync.reset()
+        # sync should be usable again
+        self.assertTrue(sync.is_idle())
+        self.assertFalse(sync.is_requesting())
+        self.assertFalse(sync.is_ready())
+
+    def test_assertion_error(self):
+        sync = SyncRequestStatus()
+        sync.prepare(4321)
+        with self.assertRaises(AssertionError):
+            sync.set(4322, {"foo": "bar"})
+
+
 class ClientTest(unittest.TestCase):
 
     def test_can_create_client(self):
@@ -72,7 +134,7 @@ class ClientTest(unittest.TestCase):
         self.assertIsNotNone(client)
         self.assertTrue(transport.has_started)
 
-    def test_client_request_response(self):
+    def do_client_request_response(self, method):
         transport = MockTransport(return_empty_dict_result)
         settings = MockSettings()
         client = Client(transport, settings)
@@ -80,12 +142,19 @@ class ClientTest(unittest.TestCase):
         self.assertTrue(transport.has_started)
         req = Request.initialize(dict())
         responses = []
-        client.send_request(req, lambda resp: responses.append(resp))
+        do_request = method.__get__(client, Client)
+        do_request(req, lambda resp: responses.append(resp))
         self.assertGreater(len(responses), 0)
         # Make sure the response handler dict does not grow.
         self.assertEqual(len(client._response_handlers), 0)
 
-    def test_client_request_with_none_response(self):
+    def test_client_request_response_async(self):
+        self.do_client_request_response(Client.send_request)
+
+    def test_client_request_response_sync(self):
+        self.do_client_request_response(Client.execute_request)
+
+    def do_client_request_with_none_response(self, method):
         transport = MockTransport(return_null_result)
         settings = MockSettings()
         client = Client(transport, settings)
@@ -94,31 +163,55 @@ class ClientTest(unittest.TestCase):
         req = Request.shutdown()
         responses = []
         errors = []
-        client.send_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
+        # https://stackoverflow.com/questions/1015307/python-bind-an-unbound-method
+        do_request = method.__get__(client, Client)
+        do_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
         self.assertEqual(len(responses), 1)
         self.assertEqual(len(errors), 0)
 
-    def test_client_should_reject_response_when_both_result_and_error_are_present(self):
+    def test_client_request_with_none_response_async(self):
+        self.do_client_request_with_none_response(Client.send_request)
+
+    def test_client_request_with_none_response_sync(self):
+        self.do_client_request_with_none_response(Client.execute_request)
+
+    def do_client_should_reject_response_when_both_result_and_error_are_present(self, method):
         transport = MockTransport(lambda x: '{"id": 1, "result": {"key": "value"}, "error": {"message": "oops"}}')
         settings = MockSettings()
         client = Client(transport, settings)
         req = Request.initialize(dict())
         responses = []
         errors = []
-        client.send_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
+        do_request = method.__get__(client, Client)
+        do_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
         self.assertEqual(len(responses), 0)
-        self.assertEqual(len(errors), 0)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]["code"], ErrorCode.InvalidParams)
 
-    def test_client_should_reject_response_when_both_result_and_error_keys_are_not_present(self):
+    def test_client_should_reject_response_when_both_result_and_error_are_present_async(self):
+        self.do_client_should_reject_response_when_both_result_and_error_are_present(Client.send_request)
+
+    def test_client_should_reject_response_when_both_result_and_error_are_present_sync(self):
+        self.do_client_should_reject_response_when_both_result_and_error_are_present(Client.execute_request)
+
+    def do_client_should_reject_response_when_both_result_and_error_keys_are_not_present(self, method):
         transport = MockTransport(lambda x: '{"id": 1}')
         settings = MockSettings()
         client = Client(transport, settings)
         req = Request.initialize(dict())
         responses = []
         errors = []
-        client.send_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
+        do_request = method.__get__(client, Client)
+        do_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
         self.assertEqual(len(responses), 0)
-        self.assertEqual(len(errors), 0)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]["code"], ErrorCode.InvalidParams)
+
+    def test_client_should_reject_response_when_both_result_and_error_keys_are_not_present_async(self):
+        self.do_client_should_reject_response_when_both_result_and_error_keys_are_not_present(Client.send_request)
+
+    def test_client_should_reject_response_when_both_result_and_error_keys_are_not_present_sync(self):
+        self.do_client_should_reject_response_when_both_result_and_error_keys_are_not_present(Client.execute_request)
 
     def test_client_notification(self):
         transport = MockTransport(notify_pong)
@@ -235,7 +328,7 @@ class ClientTest(unittest.TestCase):
             }
         )
 
-    def test_error_response_handler(self):
+    def do_error_response_handler(self, method):
         transport = MockTransport(return_error)
         settings = MockSettings()
         client = Client(transport, settings)
@@ -244,12 +337,19 @@ class ClientTest(unittest.TestCase):
         req = Request.initialize(dict())
         errors = []
         responses = []
-        client.send_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
+        do_request = method.__get__(client, Client)
+        do_request(req, lambda resp: responses.append(resp), lambda err: errors.append(err))
         self.assertEqual(len(responses), 0)
         self.assertGreater(len(errors), 0)
         self.assertEqual(len(client._response_handlers), 0)
 
-    def test_error_display_handler(self):
+    def test_error_response_handler_async(self):
+        self.do_error_response_handler(Client.send_request)
+
+    def test_error_response_handler_sync(self):
+        self.do_error_response_handler(Client.execute_request)
+
+    def do_error_display_handler(self, method):
         transport = MockTransport(return_error)
         settings = MockSettings()
         client = Client(transport, settings)
@@ -259,10 +359,17 @@ class ClientTest(unittest.TestCase):
         errors = []
         client.set_error_display_handler(lambda err: errors.append(err))
         responses = []
-        client.send_request(req, lambda resp: responses.append(resp))
+        do_request = method.__get__(client, Client)
+        do_request(req, lambda resp: responses.append(resp))
         self.assertEqual(len(responses), 0)
         self.assertGreater(len(errors), 0)
         self.assertEqual(len(client._response_handlers), 0)
+
+    def test_error_display_handler_async(self):
+        self.do_error_display_handler(Client.send_request)
+
+    def test_error_display_handler_sync(self):
+        self.do_error_display_handler(Client.execute_request)
 
     def test_handles_transport_closed_unexpectedly(self):
         set_exception_logging(False)

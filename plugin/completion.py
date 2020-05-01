@@ -1,14 +1,14 @@
+import html
 import sublime
 import sublime_plugin
 
 from .core.configurations import is_supported_syntax
 from .core.edit import parse_text_edit
-from .core.logging import debug
-from .core.protocol import Request, InsertTextFormat
+from .core.protocol import Request, InsertTextFormat, Range
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.settings import settings, client_configs
-from .core.typing import Any, List, Dict, Optional, Union, Iterable, Tuple
-from .core.views import text_document_position_params
+from .core.typing import Any, List, Dict, Optional, Union, Generator
+from .core.views import text_document_position_params, range_to_region
 
 
 completion_kinds = {
@@ -40,81 +40,60 @@ completion_kinds = {
 }
 
 
-_changes_since_sent = []  # type: List[sublime.TextChange]
-_change_id = None  # type: Any
+class LspResolveDocsCommand(sublime_plugin.TextCommand):
+
+    def run(self, edit: sublime.Edit) -> None:
+        self.view.show_popup('<div style="padding: 10px;">coming soon (╯°□°)╯︵ ┻━┻</div>',
+                             sublime.COOPERATE_WITH_AUTO_COMPLETE)
 
 
-class LspSelectCompletionItemCommand(sublime_plugin.TextCommand):
-    """
-    This command must handle four different kinds of LSP completion items:
+class LspCompleteCommand(sublime_plugin.TextCommand):
 
-    1) plaintext + insertText   (e.g. pyls)
-    2) plaintext + textEdit     (e.g. intelephense)
-    3) snippet   + insertText   (???)
-    4) snippet   + textEdit     (e.g. clangd, intelephense)
-
-    For cases (3) and (4) we are forced to use the "insert_snippet" command.
-    """
-
-    def run(self, edit: sublime.Edit, **item: Any) -> None:
-        # Is it a textEdit or an insertText?
-        text_edit = item.get('textEdit')
-        if text_edit:
-            new_text = text_edit['newText']
-            old_region = item.pop("native_region")  # type: Tuple[int, int]
-            # This brings the historic sublime.Region to the present.
-            global _change_id
-            edit_region = self.view.transform_region_from(sublime.Region(old_region[0], old_region[1]), _change_id)
-            selection = self.view.sel()
-            primary_cursor_position = selection[0].b
-            for region in reversed(selection):
-                # For each selection region, apply the same removal as for the "primary" region.
-                # To do that, translate, or offset, the LSP edit region into the non-"primary" regions.
-                # The concept of "primary" is our own, and there is no mention of it in the LSP spec.
-                translation = region.b - primary_cursor_position
-                # We will assume that the user was typing the same characters.
-                self.view.erase(edit, sublime.Region(edit_region.a + translation, edit_region.b + translation))
-        else:
-            new_text = item.get('insertText') or item['label']
-
-        # Is it a plaintext or a snippet?
-        if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
-            self.view.run_command("insert_snippet", {"contents": new_text})
-        else:
-            self.view.run_command("insert", {"characters": new_text})
-
-        # import statements, etc. some servers only return these after a resolve.
+    def handle_additional_edits(self, item: Dict[str, Any]) -> None:
         additional_edits = item.get('additionalTextEdits')
         if additional_edits:
-            self.apply_additional_edits(additional_edits)
+            edits = [parse_text_edit(additional_edit) for additional_edit in additional_edits]
+            self.view.run_command("lsp_apply_document_edit", {'changes': edits})
+
+
+class LspCompleteInsertTextCommand(LspCompleteCommand):
+
+    def run(self, edit: sublime.Edit, **item: Any) -> None:
+        insert_text = item.get("insertText") or item["label"]
+        if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
+            self.view.run_command("insert_snippet", {"contents": insert_text})
         else:
-            self.do_resolve(item)
+            self.view.run_command("insert", {"characters": insert_text})
+        self.handle_additional_edits(item)
 
-    def do_resolve(self, item: dict) -> None:
-        session = session_for_view(self.view, 'completionProvider', self.view.sel()[0].begin())
-        if not session:
-            return
 
-        client = client_from_session(session)
-        if not client:
-            return
+class LspCompleteTextEditCommand(LspCompleteCommand):
 
-        completion_provider = session.get_capability('completionProvider')
-        has_resolve_provider = completion_provider and completion_provider.get('resolveProvider', False)
-        if has_resolve_provider:
-            client.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
+    def run(self, edit: sublime.Edit, **item: Any) -> None:
+        text_edit = item["textEdit"]
+        new_text = text_edit['newText']
+        edit_region = range_to_region(Range.from_lsp(text_edit['range']), self.view)
+        if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
+            for region in self.translated_regions(edit_region):
+                self.view.erase(edit, region)
+            self.view.run_command("insert_snippet", {"contents": new_text})
+        else:
+            for region in self.translated_regions(edit_region):
+                # NOTE: Cannot do .replace, because ST will select the replacement.
+                self.view.erase(edit, region)
+                self.view.insert(edit, region.a, new_text)
+        self.handle_additional_edits(item)
 
-    def handle_resolve_response(self, response: Optional[dict]) -> None:
-        if response:
-            additional_edits = response.get('additionalTextEdits')
-            if additional_edits:
-                self.apply_additional_edits(additional_edits)
-
-    def apply_additional_edits(self, additional_edits: List[dict]) -> None:
-        edits = list(parse_text_edit(additional_edit) for additional_edit in additional_edits)
-        debug('applying additional edits:', edits)
-        self.view.run_command("lsp_apply_document_edit", {'changes': edits})
-        sublime.status_message('Applied additional edits for completion')
+    def translated_regions(self, edit_region: sublime.Region) -> Generator[sublime.Region, None, None]:
+        selection = self.view.sel()
+        primary_cursor_position = selection[0].b
+        for region in reversed(selection):
+            # For each selection region, apply the same removal as for the "primary" region.
+            # To do that, translate, or offset, the LSP edit region into the non-"primary" regions.
+            # The concept of "primary" is our own, and there is no mention of it in the LSP spec.
+            translation = region.b - primary_cursor_position
+            translated_edit_region = sublime.Region(edit_region.a + translation, edit_region.b + translation)
+            yield translated_edit_region
 
 
 def resolve(completion_list: sublime.CompletionList, items: List[sublime.CompletionItem], flags: int = 0) -> None:
@@ -127,7 +106,6 @@ class CompletionHandler(LSPViewEventListener):
         super().__init__(view)
         self.initialized = False
         self.enabled = False
-        self._request_in_flight = False
 
     def __del__(self) -> None:
         settings = self.view.settings()
@@ -169,29 +147,29 @@ class CompletionHandler(LSPViewEventListener):
             # This is to make ST match with labels that have a weird prefix like a space character.
             settings.set("auto_complete_preserve_order", "none")
 
-    def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
-        if self._request_in_flight:
-            global _changes_since_sent
-            _changes_since_sent.extend(changes)
-
     def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[sublime.CompletionList]:
         if not self.initialized:
             self.initialize()
         if not self.enabled:
             return None
-        client = client_from_session(session_for_view(self.view, 'completionProvider', locations[0]))
+        session = session_for_view(self.view, 'completionProvider', locations[0])
+        if not session:
+            return None
+        client = client_from_session(session)
         if not client:
             return None
         self.manager.documents.purge_changes(self.view)
         completion_list = sublime.CompletionList()
-        self._request_in_flight = True
+        capability = session.get_capability('completionProvider') or {}
+        can_resolve_completion_items = bool(capability.get('resolveProvider', False))
         client.send_request(
             Request.complete(text_document_position_params(self.view, locations[0])),
-            lambda res: self.handle_response(res, completion_list),
+            lambda res: self.handle_response(res, completion_list, can_resolve_completion_items),
             lambda res: self.handle_error(res, completion_list))
         return completion_list
 
-    def format_completion(self, item: dict) -> sublime.CompletionItem:
+    def format_completion(self, item: dict, can_resolve_completion_items: bool) -> sublime.CompletionItem:
+        # This is a hot function. Don't do heavy computations or IO in this function.
         item_kind = item.get("kind")
         if item_kind:
             kind = completion_kinds.get(item_kind, sublime.KIND_AMBIGUOUS)
@@ -201,77 +179,77 @@ class CompletionHandler(LSPViewEventListener):
         if item.get("deprecated", False):
             kind = (kind[0], '⚠', "⚠ {} - Deprecated".format(kind[2]))
 
-        text_edit = item.get("textEdit")
-        if text_edit:
-            r = text_edit["range"]
-            start, end = r["start"], r["end"]
-            # From the LSP spec: the range of the edit must be a single line range and it must contain the position at
-            # which completion has been requested.
-            row, start_col_utf16, end_col_utf16 = start["line"], start["character"], end["character"]
-            # The TextEdit from the language server might apply to an old version of the buffer. The user may have
-            # entered more characters in the meantime.
-            global _changes_since_sent
-            for change in _changes_since_sent:
-                # Thus, adjust the range for each buffer change.
-                start_col_utf16, end_col_utf16 = transform_region(start_col_utf16, end_col_utf16, change)
-            # We don't have to use region_to_range. That function clamps the unreliable input, but having unreliable
-            # (row, col) points for completions is pretty much disastrous. So we'll assume the (row, col) points are
-            # correct. Blame the language server if the regions are incorrect.
-            convert = self.view.text_point_utf16
-            item["native_region"] = (convert(row, start_col_utf16), convert(row, end_col_utf16))
+        lsp_label = item["label"]
+        lsp_filter_text = item.get("filterText")
+        lsp_detail = item.get("detail") or ""
+        lsp_detail = html.escape(lsp_detail.replace('\n', ' '))
 
-        return sublime.CompletionItem.command_completion(
-            trigger=item["label"],
-            command="lsp_select_completion_item",
-            args=item,
-            annotation=item.get('detail') or "",
-            kind=kind
-        )
+        if can_resolve_completion_items or "documentation" in item:
+            doc_link = '<a href="subl:lsp_resolve_docs">Documentation</a>'
+        else:
+            doc_link = ''
 
-    def handle_response(self, response: Optional[Union[dict, List]], completion_list: sublime.CompletionList) -> None:
-        self._request_in_flight = False
+        if lsp_filter_text and lsp_filter_text != lsp_label:
+            st_trigger = lsp_filter_text
+            st_annotation = lsp_label
+            st_details = '{} {}'.format(doc_link, lsp_detail) if doc_link else lsp_detail
+        else:
+            st_trigger = lsp_label
+            st_annotation = lsp_detail
+            st_details = doc_link
+
+        if "textEdit" in item:
+            # text edits are complex and can do anything. Use a command completion.
+            completion = sublime.CompletionItem.command_completion(
+                trigger=st_trigger,
+                command="lsp_complete_text_edit",
+                args=item,
+                annotation=st_annotation,
+                kind=kind,
+                details=st_details)
+            completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
+        elif "additionalTextEdits" in item:
+            # It's an insertText, but additionalEdits requires us to use a command completion.
+            completion = sublime.CompletionItem.command_completion(
+                trigger=st_trigger,
+                command="lsp_complete_insert_text",
+                args=item,
+                annotation=st_annotation,
+                kind=kind,
+                details=st_details)
+        else:
+            # A snippet completion suffices for insertText with no additionalTextEdits.
+            snippet = item.get("insertText") or item["label"]
+            if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.PlainText:
+                snippet = snippet.replace('$', '\\$')
+            completion = sublime.CompletionItem.snippet_completion(
+                trigger=st_trigger,
+                snippet=snippet,
+                annotation=st_annotation,
+                kind=kind,
+                details=st_details)
+
+        return completion
+
+    def handle_response(self, response: Optional[Union[dict, List]], completion_list: sublime.CompletionList,
+                        can_resolve_completion_items: bool) -> None:
         response_items = []  # type: List[Dict]
         flags = 0
         if settings.only_show_lsp_completions:
             flags |= sublime.INHIBIT_WORD_COMPLETIONS
             flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
+            flags |= sublime.INHIBIT_REORDER
         if isinstance(response, dict):
             response_items = response["items"] or []
             if response.get("isIncomplete", False):
                 flags |= sublime.DYNAMIC_COMPLETIONS
         elif isinstance(response, list):
             response_items = response
-        global _change_id
-        _change_id = self.view.change_id()
         response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
-        items = list(map(self.format_completion, response_items))
-        _changes_since_sent.clear()
+        items = [self.format_completion(response_item, can_resolve_completion_items)
+                 for response_item in response_items]
         resolve(completion_list, items, flags)
 
     def handle_error(self, error: dict, completion_list: sublime.CompletionList) -> None:
-        self._request_in_flight = False
-        _changes_since_sent.clear()
         resolve(completion_list, [])
         sublime.status_message('Completion error: ' + str(error.get('message')))
-
-
-def transform_region(col_a: int, col_b: int, change: sublime.TextChange) -> Tuple[int, int]:
-    """
-    Here be dragons. Given an LSP region, and a change to the text buffer, transform the region into the coordinate
-    space after that change has been applied. Note that this mirrors the algorithm that View.transform_region_from uses
-    internally.
-
-    Returns the adjusted col_a and col_b.
-    """
-    a = change.a.col_utf16
-    b = change.b.col_utf16
-    length_utf16 = len(change.str.encode("UTF-16")) // 2
-    if a <= col_a <= b:
-        col_a = a
-    elif a > col_a:
-        col_a += length_utf16 + b - a
-    if a <= col_b < b:
-        col_b = a
-    elif a >= col_b:
-        col_a += length_utf16 + b - a
-    return col_a, col_b

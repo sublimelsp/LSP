@@ -1,7 +1,5 @@
-.coveragerc export-ignore
 .github/ export-ignore
 .style.yapf export-ignore
-.travis.yml export-ignore
 codecov.yml export-ignore
 docs/ export-ignore
 mkdocs.yml export-ignore

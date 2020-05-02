@@ -198,7 +198,8 @@ class CompletionHandler(LSPViewEventListener):
             st_annotation = lsp_detail
             st_details = doc_link
 
-        if "textEdit" in item:
+        # NOTE: Some servers return "textEdit": null. We have to check if it's truthy.
+        if item.get("textEdit"):
             # text edits are complex and can do anything. Use a command completion.
             completion = sublime.CompletionItem.command_completion(
                 trigger=st_trigger,
@@ -208,7 +209,7 @@ class CompletionHandler(LSPViewEventListener):
                 kind=kind,
                 details=st_details)
             completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
-        elif "additionalTextEdits" in item:
+        elif item.get("additionalTextEdits"):
             # It's an insertText, but additionalEdits requires us to use a command completion.
             completion = sublime.CompletionItem.command_completion(
                 trigger=st_trigger,

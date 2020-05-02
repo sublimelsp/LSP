@@ -1,0 +1,6 @@
+=> 4070-0.10.0
+
+This release contains everything from 3154-0.10.0, as well as:
+
+- Rewritten completions
+- Incremental text sync

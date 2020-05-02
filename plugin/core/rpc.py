@@ -44,7 +44,7 @@ class Logger(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def incoming_response(self, request_id: int, params: Any) -> None:
+    def incoming_response(self, request_id: int, params: Any, blocking: bool) -> None:
         pass
 
     @abstractmethod
@@ -296,7 +296,8 @@ class Client(object):
             response_id = int(payload["id"])
             handler, result = self.response_handler(response_id, payload)
             response_tuple = (handler, result, None, None, None)
-            self.logger.incoming_response(response_id, result)
+            blocking = self._sync_request_result.is_ready()
+            self.logger.incoming_response(response_id, result, blocking)
             return response_tuple
         else:
             debug("Unknown payload type: ", payload)
@@ -361,7 +362,7 @@ class Client(object):
                 self._sync_request_cvar.notify()
             else:
                 self._deferred_responses.append((handler, result))
-            return (None, None)
+            return (None, result)
         else:  # self._sync_request_result.is_ready()
             self._deferred_responses.append((handler, result))
             return (None, None)
@@ -436,10 +437,11 @@ class SublimeLogger(Logger):
             log_payload = False
         self.log(self.format_notification(" ->", method), params, log_payload)
 
-    def incoming_response(self, request_id: int, params: Any) -> None:
+    def incoming_response(self, request_id: int, params: Any, blocking: bool) -> None:
         if not self.settings.log_debug:
             return
-        self.log(self.format_response("<<<", request_id), params, self.settings.log_payloads)
+        direction = "<==" if blocking else "<<<"
+        self.log(self.format_response(direction, request_id), params, self.settings.log_payloads)
 
     def incoming_error_response(self, request_id: Any, error: Any) -> None:
         if not self.settings.log_debug:

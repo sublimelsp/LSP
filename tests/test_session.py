@@ -14,7 +14,6 @@ import unittest
 import unittest.mock
 
 
-
 class MiscFunctions(unittest.TestCase):
 
     def test_set_and_clear_dotted_values(self) -> None:

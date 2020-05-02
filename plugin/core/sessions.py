@@ -293,6 +293,9 @@ class Session(object):
     def should_notify_did_change_workspace_folders(self) -> bool:
         return bool(self.capabilities.get("workspace", {}).get("workspaceFolders", {}).get("changeNotifications"))
 
+    def should_notify_did_change_configuration(self) -> bool:
+        return "didChangeConfigurationProvider" in self.capabilities
+
     def handles_path(self, file_path: Optional[str]) -> bool:
         if not file_path:
             return False
@@ -383,6 +386,7 @@ class Session(object):
         self.client.send_response(Response(request_id, items))
 
     def _handle_register_capability(self, params: Any, request_id: Any) -> None:
+        send_did_change_configuration = False
         registrations = params["registrations"]
         for registration in registrations:
             method = registration["method"]
@@ -391,9 +395,12 @@ class Session(object):
             set_dotted_value(self.capabilities, capability_path, registration["registerOptions"])
             set_dotted_value(self.capabilities, registration_path, registration["id"])
             if method == "workspace/didChangeConfiguration":
-                # The mega-exceptional case.
-                self.client.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
+                send_did_change_configuration = True  # The mega-exceptional case.
         self.client.send_response(Response(request_id, None))
+        if send_did_change_configuration:
+            # We send the notification after resolving the server request.
+            # This avoids risking confusing the server.
+            self.client.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
 
     def _handle_unregister_capability(self, params: Any, request_id: Any) -> None:
         unregistrations = params["unregisterations"]  # typo in the official specification

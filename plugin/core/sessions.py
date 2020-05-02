@@ -1,7 +1,7 @@
-from .logging import debug, printf
+from .logging import debug
 from .process import start_server
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification
-from .protocol import TextDocumentSyncKindNone
+from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
 from .rpc import Client, attach_stdio_client, Response
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
 from .types import ClientConfig, ClientStates, Settings
@@ -15,14 +15,17 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
     capabilities = {
         "textDocument": {
             "synchronization": {
+                "dynamicRegistration": True,  # exceptional
                 "didSave": True,
                 "willSave": True,
                 "willSaveWaitUntil": True
             },
             "hover": {
+                "dynamicRegistration": True,
                 "contentFormat": ["markdown", "plaintext"]
             },
             "completion": {
+                "dynamicRegistration": True,
                 "completionItem": {
                     "snippetSupport": True
                 },
@@ -31,6 +34,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
                 }
             },
             "signatureHelp": {
+                "dynamicRegistration": True,
                 "signatureInformation": {
                     "documentationFormat": ["markdown", "plaintext"],
                     "parameterInformation": {
@@ -38,38 +42,67 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
                     }
                 }
             },
-            "references": {},
-            "documentHighlight": {},
+            "references": {
+                "dynamicRegistration": True
+            },
+            "documentHighlight": {
+                "dynamicRegistration": True
+            },
             "documentSymbol": {
+                "dynamicRegistration": True,
                 "symbolKind": {
                     "valueSet": symbol_kinds
                 }
             },
-            "formatting": {},
-            "rangeFormatting": {},
-            "declaration": {"linkSupport": True},
-            "definition": {"linkSupport": True},
-            "typeDefinition": {"linkSupport": True},
-            "implementation": {"linkSupport": True},
+            "formatting": {
+                "dynamicRegistration": True  # exceptional
+            },
+            "rangeFormatting": {
+                "dynamicRegistration": True
+            },
+            "declaration": {
+                "dynamicRegistration": True,
+                "linkSupport": True
+            },
+            "definition": {
+                "dynamicRegistration": True,
+                "linkSupport": True
+            },
+            "typeDefinition": {
+                "dynamicRegistration": True,
+                "linkSupport": True
+            },
+            "implementation": {
+                "dynamicRegistration": True,
+                "linkSupport": True
+            },
             "codeAction": {
+                "dynamicRegistration": True,
                 "codeActionLiteralSupport": {
                     "codeActionKind": {
                         "valueSet": []
                     }
                 }
             },
-            "rename": {},
-            "colorProvider": {},
+            "rename": {
+                "dynamicRegistration": True
+            },
+            "colorProvider": {
+                "dynamicRegistration": True  # exceptional
+            },
             "publishDiagnostics": {
                 "relatedInformation": True
             }
         },
         "workspace": {
             "applyEdit": True,
-            "didChangeConfiguration": {},
+            "didChangeConfiguration": {
+                "dynamicRegistration": True
+            },
             "executeCommand": {},
             "workspaceFolders": True,
             "symbol": {
+                "dynamicRegistration": True,  # exceptional
                 "symbolKind": {
                     "valueSet": symbol_kinds
                 }
@@ -97,6 +130,43 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
     return initializeParams
 
 
+# method -> (capability dotted path, optional registration dotted path)
+# these are the EXCEPTIONS. The general rule is: method foo/bar --> (barProvider, barProvider.id)
+METHOD_TO_CAPABILITY_EXCEPTIONS = {
+    'workspace/symbol': ('workspaceSymbolProvider', None),
+    'workspace/didChangeWorkspaceFolders': ('workspace.workspaceFolders',
+                                            'workspace.workspaceFolders.changeNotifications'),
+    'textDocument/didOpen': ('textDocumentSync.openClose', None),
+    'textDocument/didChange': ('textDocumentSync.change', None),
+    'textDocument/didSave': ('textDocumentSync.save', None),
+    'textDocument/willSave': ('textDocumentSync.willSave', None),
+    'textDocument/willSaveWaitUntil': ('textDocumentSync.willSaveWaitUntil', None),
+    'textDocument/formatting': ('documentFormattingProvider', None),
+    'textDocument/documentColor': ('colorProvider', None)
+}  # type: Dict[str, Tuple[str, Optional[str]]]
+
+
+def method_to_capability(method: str) -> Tuple[str, str]:
+    """
+    Given a method, returns the corresponding capability path, and the associated path to stash the registration key.
+
+    Examples:
+
+        textDocument/definition --> (definitionProvider, definitionProvider.id)
+        textDocument/references --> (referencesProvider, referencesProvider.id)
+        textDocument/didOpen --> (textDocumentSync.openClose, textDocumentSync.openClose.id)
+    """
+    capability_path, registration_path = METHOD_TO_CAPABILITY_EXCEPTIONS.get(method, (None, None))
+    if capability_path is None:
+        capability_path = method.split('/')[1] + "Provider"
+    if registration_path is None:
+        # This path happens to coincide with the StaticRegistrationOptions' id, which is on purpose. As a consequence,
+        # if a server made a "registration" via the initialize response, it can call client/unregisterCapability at
+        # a later date, and the capability will pop from the capabilities dict.
+        registration_path = capability_path + ".id"
+    return capability_path, registration_path
+
+
 def diff_folders(old: List[WorkspaceFolder],
                  new: List[WorkspaceFolder]) -> Tuple[List[WorkspaceFolder], List[WorkspaceFolder]]:
     added = []  # type: List[WorkspaceFolder]
@@ -118,6 +188,29 @@ def get_dotted_value(current: Any, dotted: str) -> Any:
         else:
             return None
     return current
+
+
+def set_dotted_value(current: dict, dotted: str, value: Any) -> None:
+    keys = dotted.split('.')
+    for i in range(0, len(keys) - 1):
+        key = keys[i]
+        next_current = current.get(key)
+        if not isinstance(next_current, dict):
+            next_current = {}
+            current[key] = next_current
+        current = next_current
+    current[keys[-1]] = value
+
+
+def clear_dotted_value(current: dict, dotted: str) -> None:
+    keys = dotted.split('.')
+    for i in range(0, len(keys) - 1):
+        key = keys[i]
+        next_current = current.get(key)
+        if not isinstance(next_current, dict):
+            return
+        current = next_current
+    current.pop(keys[-1], None)
 
 
 class Session(object):
@@ -148,7 +241,10 @@ class Session(object):
     def should_notify_did_open(self) -> bool:
         textsync = self.capabilities.get('textDocumentSync')
         if isinstance(textsync, dict):
-            return bool(textsync.get('openClose'))
+            open_close = textsync.get('openClose')
+            if isinstance(open_close, dict):
+                return True  # dynamic registration
+            return bool(open_close)
         if isinstance(textsync, int):
             return textsync > TextDocumentSyncKindNone
         return False
@@ -156,7 +252,11 @@ class Session(object):
     def text_sync_kind(self) -> int:
         textsync = self.capabilities.get('textDocumentSync')
         if isinstance(textsync, dict):
-            return int(textsync.get('change', TextDocumentSyncKindNone))
+            change = textsync.get('change', TextDocumentSyncKindNone)
+            if isinstance(change, dict):
+                # dynamic registration
+                return TextDocumentSyncKindIncremental  # or TextDocumentSyncKindFull?
+            return int(change)
         if isinstance(textsync, int):
             return textsync
         return TextDocumentSyncKindNone
@@ -167,13 +267,19 @@ class Session(object):
     def should_notify_will_save(self) -> bool:
         textsync = self.capabilities.get('textDocumentSync')
         if isinstance(textsync, dict):
-            return bool(textsync.get('willSave'))
+            will_save = textsync.get('willSave')
+            if isinstance(will_save, dict):
+                return True  # dynamic registration
+            return bool(will_save)
         return False
 
     def should_request_will_save_wait_until(self) -> bool:
         textsync = self.capabilities.get('textDocumentSync')
         if isinstance(textsync, dict):
-            return bool(textsync.get('willSaveWaitUntil'))
+            wswu = textsync.get('willSaveWaitUntil')
+            if isinstance(wswu, dict):
+                return True  # dynamic registration
+            return bool(wswu)
         return False
 
     def should_notify_did_save(self) -> Tuple[bool, bool]:
@@ -191,6 +297,9 @@ class Session(object):
 
     def should_notify_did_change_workspace_folders(self) -> bool:
         return bool(self.capabilities.get("workspace", {}).get("workspaceFolders", {}).get("changeNotifications"))
+
+    def should_notify_did_change_configuration(self) -> bool:
+        return "didChangeConfigurationProvider" in self.capabilities
 
     def handles_path(self, file_path: Optional[str]) -> bool:
         if not file_path:
@@ -287,24 +396,19 @@ class Session(object):
         registrations = params["registrations"]
         for registration in registrations:
             method = registration["method"]
-            if method == "workspace/didChangeWorkspaceFolders":
-                self.capabilities.setdefault(
-                    "workspace", {}).setdefault(
-                        "workspaceFolders", {})["changeNotifications"] = registration["id"]
-            else:
-                printf("WARNING: unknown registration method '{}' from {}".format(method, self.config.name))
+            capability_path, registration_path = method_to_capability(method)
+            debug("{}: registering capability:".format(self.config.name), capability_path)
+            set_dotted_value(self.capabilities, capability_path, registration["registerOptions"])
+            set_dotted_value(self.capabilities, registration_path, registration["id"])
         self.client.send_response(Response(request_id, None))
 
     def _handle_unregister_capability(self, params: Any, request_id: Any) -> None:
         unregistrations = params["unregisterations"]  # typo in the official specification
         for unregistration in unregistrations:
-            method = unregistration["method"]
-            if method == "workspace/didChangeWorkspaceFolders":
-                workspace = self.capabilities.get("workspace", {})
-                # Who cares about the ID?
-                workspace.get("workspaceFolders", {}).pop("changeNotifications", None)
-            else:
-                printf("WARNING: unknown unregistration method '{}' from {}".format(method, self.config.name))
+            capability_path, registration_path = method_to_capability(unregistration["method"])
+            debug("{}: unregistering capability:".format(self.config.name), capability_path)
+            clear_dotted_value(self.capabilities, capability_path)
+            clear_dotted_value(self.capabilities, registration_path)
         self.client.send_response(Response(request_id, None))
 
     def end(self) -> None:

@@ -129,7 +129,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
 
 
 # method -> (capability dotted path, optional registration dotted path)
-# these are the EXCEPTIONS. The general rule is: method foo/bar --> (barProvider, barProvider._id)
+# these are the EXCEPTIONS. The general rule is: method foo/bar --> (barProvider, barProvider.id)
 _method_to_capability_exceptions = {
     'workspace/symbol': ('workspaceSymbolProvider', None),
     'workspace/didChangeWorkspaceFolders': ('workspace.workspaceFolders',
@@ -150,15 +150,18 @@ def method_to_capability(method: str) -> Tuple[str, str]:
 
     Examples:
 
-        textDocument/definition --> (definitionProvider, definitionProvider._id)
-        textDocument/references --> (referencesProvider, referencesProvider._id)
-        textDocument/didOpen --> (textDocumentSync.openClose, textDocumentSync.openClose._id)
+        textDocument/definition --> (definitionProvider, definitionProvider.id)
+        textDocument/references --> (referencesProvider, referencesProvider.id)
+        textDocument/didOpen --> (textDocumentSync.openClose, textDocumentSync.openClose.id)
     """
     capability_path, registration_path = _method_to_capability_exceptions.get(method, (None, None))
     if capability_path is None:
         capability_path = method.split('/')[1] + "Provider"
     if registration_path is None:
-        registration_path = capability_path + "._id"
+        # This path happens to coincide with the StaticRegistrationOptions' id, which is on purpose. As a consequence,
+        # if a server made a "registration" via the initialize response, it can call client/unregisterCapability at
+        # a later date, and the capability will pop from the capabilities dict.
+        registration_path = capability_path + ".id"
     return capability_path, registration_path
 
 

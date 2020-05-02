@@ -497,7 +497,7 @@ class Session(Client):
             method = registration["method"]
             capability_path, registration_path = method_to_capability(method)
             debug("{}: registering capability:".format(self.config.name), capability_path)
-            set_dotted_value(self.capabilities, capability_path, registration["registerOptions"])
+            set_dotted_value(self.capabilities, capability_path, registration.get("registerOptions"))
             set_dotted_value(self.capabilities, registration_path, registration["id"])
         self.send_response(Response(request_id, None))
 

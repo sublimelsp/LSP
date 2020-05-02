@@ -393,7 +393,6 @@ class Session(object):
         self.client.send_response(Response(request_id, items))
 
     def _handle_register_capability(self, params: Any, request_id: Any) -> None:
-        send_did_change_configuration = False
         registrations = params["registrations"]
         for registration in registrations:
             method = registration["method"]

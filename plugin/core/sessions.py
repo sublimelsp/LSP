@@ -130,7 +130,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
 
 # method -> (capability dotted path, optional registration dotted path)
 # these are the EXCEPTIONS. The general rule is: method foo/bar --> (barProvider, barProvider.id)
-_method_to_capability_exceptions = {
+METHOD_TO_CAPABILITY_EXCEPTIONS = {
     'workspace/symbol': ('workspaceSymbolProvider', None),
     'workspace/didChangeWorkspaceFolders': ('workspace.workspaceFolders',
                                             'workspace.workspaceFolders.changeNotifications'),
@@ -154,7 +154,7 @@ def method_to_capability(method: str) -> Tuple[str, str]:
         textDocument/references --> (referencesProvider, referencesProvider.id)
         textDocument/didOpen --> (textDocumentSync.openClose, textDocumentSync.openClose.id)
     """
-    capability_path, registration_path = _method_to_capability_exceptions.get(method, (None, None))
+    capability_path, registration_path = METHOD_TO_CAPABILITY_EXCEPTIONS.get(method, (None, None))
     if capability_path is None:
         capability_path = method.split('/')[1] + "Provider"
     if registration_path is None:

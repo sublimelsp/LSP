@@ -31,3 +31,39 @@ class ServerRequests(TextDocumentTestCase):
         yield from self.verify("workspace/applyEdit", params, {"applied": True})
         yield lambda: self.view.change_count() > old_change_count
         self.assertEqual(self.view.substr(sublime.Region(0, self.view.size())), "hello\nthere\n")
+
+    def test_m_client_registerCapability(self) -> Generator:
+        yield from self.verify(
+            "client/registerCapability",
+            {
+                "registrations":
+                [
+                    {"method": "foo/bar", "id": "hello"},
+                    {"method": "bar/baz", "id": "world", "registerOptions": {"frobnicatable": True}},
+                    {"method": "workspace/didChangeWorkspaceFolders", "id": "asdf"},
+                    {"method": "textDocument/didOpen", "id": "1"},
+                    {"method": "textDocument/willSaveWaitUntil", "id": "2",
+                     "registerOptions": {"documentSelector": {}}}  # TODO: DocumentSelector someday?
+                ]
+            },
+            None)
+        self.assertIn("barProvider", self.session.capabilities)
+        self.assertEqual(self.session.capabilities["barProvider"]["id"], "hello")
+        self.assertIn("bazProvider", self.session.capabilities)
+        self.assertEqual(self.session.capabilities["bazProvider"], {"id": "world", "frobnicatable": True})
+        self.assertEqual(self.session.capabilities["workspace"]["workspaceFolders"]["changeNotifications"], "asdf")
+        self.assertEqual(self.session.capabilities["textDocumentSync"]["openClose"], {"id": "1"})
+        self.assertEqual(self.session.capabilities["textDocumentSync"]["willSaveWaitUntil"],
+                         {"id": "2", "documentSelector": {}})
+
+    def test_m_client_unregisterCapability(self) -> Generator:
+        yield from self.verify(
+            "client/registerCapability",
+            {"registrations": [{"method": "foo/bar", "id": "hello"}]},
+            None)
+        self.assertIn("barProvider", self.session.capabilities)
+        yield from self.verify(
+            "client/unregisterCapability",
+            {"unregisterations": [{"method": "foo/bar", "id": "asdf"}]},  # the ID doesn't matter for us (?)
+            None)
+        self.assertNotIn("barProvider", self.session.capabilities)

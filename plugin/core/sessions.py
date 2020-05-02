@@ -369,8 +369,7 @@ class Session(object):
         self.on_request("workspace/configuration", self._handle_request_workspace_configuration)
         self.on_request("client/registerCapability", self._handle_register_capability)
         self.on_request("client/unregisterCapability", self._handle_unregister_capability)
-
-        if self.config.settings is not None:
+        if self.config.settings:
             self.client.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
 
         if self._on_post_initialize:

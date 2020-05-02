@@ -42,7 +42,7 @@ contexts:
         - match: <-
           scope: storage.modifier.lsp
           set: [maybe-payload, notification, server-name]
-        - match: <<<
+        - match: <(?:<<|==)
           scope: storage.modifier.lsp
           set: [maybe-payload, response, server-name]
         - match: <~~

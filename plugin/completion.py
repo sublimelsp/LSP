@@ -43,7 +43,7 @@ completion_kinds = {
 class LspResolveDocsCommand(sublime_plugin.TextCommand):
 
     def run(self, edit: sublime.Edit) -> None:
-        self.view.show_popup('<div style="padding: 10px;">coming soon (╯°□°)╯︵ ┻━┻</div>',
+        self.view.show_popup('<div style="padding: 10px;">Showing documentation is under construction</div>',
                              sublime.COOPERATE_WITH_AUTO_COMPLETE)
 
 

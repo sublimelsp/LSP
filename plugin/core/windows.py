@@ -316,7 +316,7 @@ class WindowManager(object):
         self._workspace = workspace
         self._workspace.on_changed = self._on_project_changed
         self._workspace.on_switched = self._on_project_switched
-        self._progress_title = dict()  # type: Dict[str, str]
+        self._progress = dict()
 
     def _on_project_changed(self, folders: List[str]) -> None:
         workspace_folders = get_workspace_folders(self._workspace.folders)
@@ -566,32 +566,44 @@ class WindowManager(object):
         if not self._is_closing and not self._window.is_valid():
             self._handle_window_closed()
 
-    def _receive_progress_token(self, params: Dict[str, Any], client: Client, request_id: int) -> None:
-        token = params.get('token')
+    def _receive_progress_token(self, params: Dict[str, Any], client: Client, request_id: Any) -> None:
+        token = params.get('token')  # number | string
         if token:
-            self._progress_title[token] = None
-            client.send_response(Response(request_id, None))
+            self._progress[token] = dict()
+        client.send_response(Response(request_id, None))
 
     def _show_progress(self, params: Dict[str, Any]) -> None:
         token = params.get('token')
         value = params.get('value')
         if token and value:
             if value.get('kind') == 'begin':
-                self._progress_title[token] = value.get('title')  # mandatory
-                self._sublime.status_message(self._progress_string(token, value))
+                if not token in self._progress:
+                    self._progress[token] = dict()
+                self._progress[token]['title'] = value.get('title')  # mandatory
+                self._progress[token]['message'] = value.get('message')  # optional
+                status_msg = self._progress_string(token, value)
+                if status_msg:
+                    self._sublime.status_message(status_msg)
             elif value.get('kind') == 'report':
-                self._sublime.status_message(self._progress_string(token, value))
+                status_msg = self._progress_string(token, value)
+                if status_msg:
+                    self._sublime.status_message(status_msg)
             elif value.get('kind') == 'end':
-                self._progress_title[token] = None
+                self._progress[token] = dict()  # erase stored title and message for token
 
     def _progress_string(self, token: str, value: Dict[str, Any]) -> str:
-        status_msg = self._progress_title.get(token)
-        if not status_msg:
-            return 'unknown $/progress token: {}'.format(token)
+        progress = self._progress.get(token)
+        if not progress:
+            debug('unknown $/progress token: {}'.format(token))
+            return ''
+        status_msg = progress.get('title')
         progress_message = value.get('message')  # optional
         progress_percentage = value.get('percentage')  # optional
         if progress_message:
+            self._progress[token]['message'] = progress_message
             status_msg += ': ' + progress_message
+        elif self._progress[token]['message']:  # reuse last known message if not present
+            status_msg += ': ' + self._progress[token]['message']
         if progress_percentage:
             status_msg += ' (' + str(progress_percentage) + '%)'
         return status_msg

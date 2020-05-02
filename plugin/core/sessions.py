@@ -96,7 +96,9 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
         },
         "workspace": {
             "applyEdit": True,
-            "didChangeConfiguration": {},
+            "didChangeConfiguration": {
+                "dynamicRegistration": True
+            },
             "executeCommand": {},
             "workspaceFolders": True,
             "symbol": {
@@ -368,6 +370,9 @@ class Session(object):
         self.on_request("client/registerCapability", self._handle_register_capability)
         self.on_request("client/unregisterCapability", self._handle_unregister_capability)
 
+        if self.config.settings is not None:
+            self.client.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
+
         if self._on_post_initialize:
             self._on_post_initialize(self)
 
@@ -397,13 +402,7 @@ class Session(object):
             debug("{}: registering capability:".format(self.config.name), capability_path)
             set_dotted_value(self.capabilities, capability_path, registration["registerOptions"])
             set_dotted_value(self.capabilities, registration_path, registration["id"])
-            if method == "workspace/didChangeConfiguration":
-                send_did_change_configuration = True  # The mega-exceptional case.
         self.client.send_response(Response(request_id, None))
-        if send_did_change_configuration:
-            # We send the notification after resolving the server request.
-            # This avoids risking confusing the server.
-            self.client.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
 
     def _handle_unregister_capability(self, params: Any, request_id: Any) -> None:
         unregistrations = params["unregisterations"]  # typo in the official specification

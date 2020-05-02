@@ -3,3 +3,14 @@ coverage:
   status:
     patch: false
     project: true
+ignore:
+  - .github
+  - Commands
+  - docs
+  - icons
+  - Keymaps
+  - Menus
+  - messages
+  - stubs
+  - Syntaxes
+  - tests

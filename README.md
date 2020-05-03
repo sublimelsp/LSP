@@ -132,3 +132,4 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
 - ❌ didChangeWatchedFiles
 - ✅ symbol
 - ✅ executeCommand
+- ✅ documentChanges

@@ -577,7 +577,7 @@ class WindowManager(object):
         value = params.get('value')
         if token and value:
             if value.get('kind') == 'begin':
-                if not token in self._progress:
+                if token not in self._progress:
                     self._progress[token] = dict()
                 self._progress[token]['title'] = value.get('title')  # mandatory
                 self._progress[token]['message'] = value.get('message')  # optional

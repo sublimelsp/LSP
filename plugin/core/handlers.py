@@ -1,6 +1,6 @@
 from .logging import debug
 from .types import ClientConfig
-from .typing import List, Callable, Optional
+from .typing import List, Callable, Optional, Type
 import abc
 
 

@@ -155,7 +155,7 @@ class WindowDocumentHandler(object):
 
         for config_name, config_sessions in self._sessions.items():
             for session in config_sessions:
-                if session.config.supports(scope) and session.handles_path(view.file_name()):
+                if session.config.match_document(scope) and session.handles_path(view.file_name()):
                     sessions.append(session)
 
         return sessions
@@ -167,20 +167,12 @@ class WindowDocumentHandler(object):
                 view = self._window.find_open_file(file_name)
                 if view:
                     # ViewLike vs sublime.View
-                    if session.config.supports(view2scope(view)):  # type: ignore
+                    if session.config.match_document(view2scope(view)):  # type: ignore
                         sessions = self._get_applicable_sessions(view)
                         self._attach_view(view, sessions)
                         for session in sessions:
                             if session.should_notify_did_open():
                                 self._notify_did_open(view, session)
-
-    def _is_supported_view(self, view: ViewLike) -> bool:
-        # ViewLike vs sublime.View
-        return self._configs.syntax_supported(view)  # type: ignore
-
-    def _config_languages(self, view: ViewLike) -> Dict[str, LanguageConfig]:
-        # ViewLike vs. sublime.View
-        return self._configs.syntax_config_languages(view)  # type: ignore
 
     def _attach_view(self, view: ViewLike, sessions: List[Session]) -> None:
         view.settings().set("show_definitions", False)
@@ -194,21 +186,27 @@ class WindowDocumentHandler(object):
     def _view_language(self, view: ViewLike, config_name: str) -> str:
         return view.settings().get('lsp_language')[config_name]
 
-    def _set_view_languages(self, view: ViewLike, config_languages: Dict[str, LanguageConfig]) -> None:
+    def _set_view_languages(self, view: ViewLike, configurations: Iterable[ClientConfig]) -> None:
+        # HACK! languageId <--> view base scope should be UNIQUE
         languages = {}
-        for config_name, language in config_languages.items():
-            languages[config_name] = language.id
-        view.settings().set('lsp_language', languages)
+        base_scope = view2scope(view)  # type: ignore
+        for config in configurations:
+            for language in config.languages:
+                if language.match_document(base_scope):
+                    # bad :( all values should be exactly the same language.id
+                    languages[config.name] = language.id
+                    break
+        view.settings().set('lsp_language', languages)  # TODO: this should be a single languageId
         view.settings().set('lsp_active', True)
 
     def handle_did_open(self, view: ViewLike) -> None:
         file_name = view.file_name()
         if file_name and file_name not in self._document_states:
-            config_languages = self._config_languages(view)
-            if len(config_languages) > 0:
+            configurations = list(self._configs.match_view(view))  # type: ignore
+            if len(configurations) > 0:
                 # always register a supported document
                 self._document_states.add(file_name)
-                self._set_view_languages(view, config_languages)
+                self._set_view_languages(view, configurations)
 
                 # the sessions may not be available yet,
                 # the document will get synced when a session is added.
@@ -413,7 +411,7 @@ class WindowManager(object):
         if not self._workspace.includes_path(file_path):
             return
 
-        def needed_configs(configs: 'List[ClientConfig]') -> 'List[ClientConfig]':
+        def needed_configs(configs: Iterable[ClientConfig]) -> List[ClientConfig]:
             new_configs = []
             for c in configs:
                 if c.name not in self._sessions:
@@ -434,14 +432,12 @@ class WindowManager(object):
 
         # have all sessions for this document been started?
         with self._initialization_lock:
-            new_configs = needed_configs(self._configs.syntax_configs(view, include_disabled=True))
-
-            if any(new_configs):
+            if any(needed_configs(self._configs.match_view(view, include_disabled=True))):  # type: ignore
                 # TODO: cannot observe project setting changes
                 # have to check project overrides every session request
                 self.update_configs()
 
-                startable_configs = needed_configs(self._configs.syntax_configs(view))
+                startable_configs = needed_configs(self._configs.match_view(view))  # type: ignore
 
                 for config in startable_configs:
 

@@ -7,9 +7,9 @@ from .logging import debug
 from .rpc import Client
 from .sessions import Session
 from .settings import settings, client_configs
-from .types import ClientConfig, ClientStates, WindowLike
+from .types import ClientConfig, ClientStates, WindowLike, view2scope
 from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
-from .typing import Optional, Callable, Dict, Any, Iterable
+from .typing import Optional, Callable, Dict, Any, Generator
 
 
 client_start_listeners = {}  # type: Dict[str, Callable]
@@ -73,33 +73,32 @@ def client_from_session(session: Optional[Session]) -> Optional[Client]:
     return session.client if session else None
 
 
-def sessions_for_view(view: sublime.View, point: Optional[int] = None) -> Iterable[Session]:
-    return _sessions_for_view_and_window(view, view.window(), point)
+def sessions_for_view(view: sublime.View) -> Generator[Session, None, None]:
+    yield from _sessions_for_view_and_window(view, view.window())
 
 
-def session_for_view(view: sublime.View,
-                     capability: str,
-                     point: Optional[int] = None) -> Optional[Session]:
-    return next((session for session in sessions_for_view(view, point)
-                 if session.has_capability(capability)), None)
+def session_for_view(view: sublime.View, capability: str, point: int) -> Optional[Session]:
+    """
+    returns the "best matching" session for that particular point. This is determined by the feature_selector property
+    of the relevant LanguageConfig.
+    """
+    sessions = [s for s in sessions_for_view(view) if s.has_capability(capability)]
+    if not sessions:
+        return None
+    scope = view2scope(view)
+    return max(sessions, key=lambda session: session.config.score_feature(scope))
 
 
-def _sessions_for_view_and_window(view: sublime.View, window: Optional[sublime.Window],
-                                  point: Optional[int] = None) -> Iterable[Session]:
-    if not window:
-        debug("no window for view", view.file_name())
-        return []
-
-    file_path = view.file_name()
-    if not file_path:
-        # debug("no session for unsaved file")
-        return []
-
-    manager = windows.lookup(window)
-    scope_configs = manager._configs.scope_configs(view, point)
-    sessions = (manager.get_session(config.name, file_path) for config in scope_configs)
-    ready_sessions = (session for session in sessions if session and session.state == ClientStates.READY)
-    return ready_sessions
+def _sessions_for_view_and_window(view: sublime.View,
+                                  window: Optional[sublime.Window]) -> Generator[Session, None, None]:
+    if window:
+        file_path = view.file_name()
+        if file_path:
+            manager = windows.lookup(window)
+            for config in manager._configs.match_view(view):
+                session = manager.get_session(config.name, file_path)
+                if session and session.state == ClientStates.READY:
+                    yield session
 
 
 def unload_sessions(window: sublime.Window) -> None:
@@ -114,17 +113,16 @@ handlers_dispatcher = LanguageHandlerDispatcher()
 windows = WindowRegistry(configs, documents, start_window_config, sublime, handlers_dispatcher)
 
 
-def configs_for_scope(view: Any, point: Optional[int] = None) -> Iterable[ClientConfig]:
+def configurations_for_view(view: sublime.View) -> Generator[ClientConfig, None, None]:
     window = view.window()
     if window:
         # todo: don't expose _configs
-        return windows.lookup(window)._configs.scope_configs(view, point)
-    return []
+        yield from windows.lookup(window)._configs.match_view(view)
 
 
 def is_supported_view(view: sublime.View) -> bool:
     # TODO: perhaps make this check for a client instead of a config
-    return bool(configs_for_scope(view))
+    return any(configurations_for_view(view))
 
 
 class LspTextCommand(sublime_plugin.TextCommand):
@@ -135,10 +133,10 @@ class LspTextCommand(sublime_plugin.TextCommand):
         return is_supported_view(self.view)
 
     def has_client_with_capability(self, capability: str) -> bool:
-        return session_for_view(self.view, capability) is not None
+        return session_for_view(self.view, capability, self.view.sel()[0]) is not None
 
     def client_with_capability(self, capability: str) -> Optional[Client]:
-        return client_from_session(session_for_view(self.view, capability))
+        return client_from_session(session_for_view(self.view, capability, self.view.sel()[0]))
 
 
 class LspRestartClientCommand(sublime_plugin.TextCommand):

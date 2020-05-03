@@ -109,7 +109,7 @@
   //     // If the selector happens to be of the form "source.{languageId}" (which it is in many cases), then you can
   //     // omit this "selector" key altogether, and LSP will assume the selector is "source.{languageId}".
   //     // For more information, see https://www.sublimetext.com/docs/3/selectors.html
-  //     "selector": "source.python",
+  //     "document_selector": "source.python",
   //
   //     // See: https://microsoft.github.io/language-server-protocol/specification#textDocumentItem
   //     //
@@ -188,7 +188,7 @@
             "start"
         ],
         "languageId": "bash",
-        "selector": "source.shell.bash",
+        "document_selector": "source.shell.bash",
     },
     "clangd":
     {
@@ -196,13 +196,13 @@
       "languages": [{
           "languageId": "c" // will match source.c
         },{
-          "selector": "source.c++",
+          "document_selector": "source.c++",
           "languageId": "cpp"
         },{
-          "selector": "source.objc",
+          "document_selector": "source.objc",
           "languageId": "objective-c"
         },{
-          "selector": "source.objc++",
+          "document_selector": "source.objc++",
           "languageId": "objective-cpp"
         },
       ]
@@ -225,15 +225,15 @@
         },
         {
           "languageId": "cpp",
-          "selector": "source.c++"
+          "document_selector": "source.c++"
         },
         {
           "languageId": "objective-c",
-          "selector": "source.objc"
+          "document_selector": "source.objc"
         },
         {
           "languageId": "objective-cpp",
-          "selector": "source.objc++"
+          "document_selector": "source.objc++"
         }
       ]
     },
@@ -260,7 +260,7 @@
     "flow":
     {
       "command": ["flow", "lsp"],
-      "selector": "source.js",
+      "document_selector": "source.js",
       "languageId": "javascript"
     },
     "haskell-ide-engine":
@@ -275,7 +275,7 @@
     "intelephense-ls":
     {
         "command": ["intelephense", "--stdio"],
-        "selector": "source.php | embedding.php",
+        "document_selector": "source.php | embedding.php",
         "languageId": "php",
         "initializationOptions": {
         //   "clearCache": false,
@@ -292,7 +292,7 @@
     "phpls":
     {
         "command": ["php", "~/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"],
-        "selector": "source.php | embedding.php",
+        "document_selector": "source.php | embedding.php",
         "languageId": "php"
     },
     //"eslint": { },
@@ -301,16 +301,16 @@
     {
       "command": ["lsp-tsserver"],
       "languages": [{
-        "selector": "source.js",
+        "document_selector": "source.js",
         "languageId": "javascript"
       }, {
-        "selector": "source.jsx",
+        "document_selector": "source.jsx",
         "languageId": "javascriptreact"
       }, {
-        "selector": "source.ts",
+        "document_selector": "source.ts",
         "languageId": "typescript"
       }, {
-        "selector": "source.tsx",
+        "document_selector": "source.tsx",
         "languageId": "typescriptreact"
       }
       ]
@@ -319,16 +319,16 @@
     {
       "command": ["javascript-typescript-stdio"],
       "languages": [{
-        "selector": "source.js",
+        "document_selector": "source.js",
         "languageId": "javascript"
       }, {
-        "selector": "source.jsx",
+        "document_selector": "source.jsx",
         "languageId": "javascriptreact"
       }, {
-        "selector": "source.ts",
+        "document_selector": "source.ts",
         "languageId": "typescript"
       }, {
-        "selector": "source.tsx",
+        "document_selector": "source.tsx",
         "languageId": "typescriptreact"
       }
       ]
@@ -337,16 +337,16 @@
     {
       "command": ["typescript-language-server", "--stdio"],
       "languages": [{
-        "selector": "source.js",
+        "document_selector": "source.js",
         "languageId": "javascript"
       }, {
-        "selector": "source.jsx",
+        "document_selector": "source.jsx",
         "languageId": "javascriptreact"
       }, {
-        "selector": "source.ts",
+        "document_selector": "source.ts",
         "languageId": "typescript"
       }, {
-        "selector": "source.tsx",
+        "document_selector": "source.tsx",
         "languageId": "typescriptreact"
       }
       ]
@@ -375,10 +375,10 @@
     {
       "command": ["polymer-editor-service"],
       "languages": [{
-          "selector": "text.html.basic | source.html",
+          "document_selector": "text.html.basic | source.html",
           "languageId": "html"
         },{
-          "selector": "source.js",
+          "document_selector": "source.js",
           "languageId": "javascript"
         },{
           "languageId": "css" // will match source.css
@@ -400,7 +400,7 @@
         "socket"
       ],
       "languageId": "ruby",
-      "selector": "source.ruby | text.html.ruby",
+      "document_selector": "source.ruby | text.html.ruby",
       "tcp_port": 7658,
       // Enable RuboCop linting
       // "initializationOptions": {
@@ -410,7 +410,7 @@
     "sorbet": {
       "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman"],
       "languageId": "ruby",
-      "selector": "source.ruby | text.html.ruby"
+      "document_selector": "source.ruby | text.html.ruby"
     },
     "vscode-css":
     {

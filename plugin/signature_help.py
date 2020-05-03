@@ -61,7 +61,7 @@ class SignatureHelpListener(LSPViewEventListener):
             return False
 
     def initialize(self) -> None:
-        session = session_for_view(self.view, 'signatureHelpProvider')
+        session = session_for_view(self.view, 'signatureHelpProvider', self.view.sel()[0].b)
         if session:
             signatureHelpProvider = session.get_capability(
                 'signatureHelpProvider')

@@ -123,7 +123,7 @@ class CompletionHandler(LSPViewEventListener):
 
     def initialize(self) -> None:
         self.initialized = True
-        session = session_for_view(self.view, 'completionProvider')
+        session = session_for_view(self.view, 'completionProvider', self.view.sel()[0].b)
         if session:
             capability = session.get_capability('completionProvider') or dict()  # type: dict
             # A language server may have an empty dict as CompletionOptions. In that case,

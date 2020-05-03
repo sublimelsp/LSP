@@ -51,7 +51,7 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
 
     def _initialize(self) -> None:
         self._initialized = True
-        session = session_for_view(self.view, "documentHighlightProvider")
+        session = session_for_view(self.view, "documentHighlightProvider", self.view.sel()[0].b)
         if session:
             self._enabled = True
 
@@ -79,7 +79,7 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
         if word_at_sel & SUBLIME_WORD_MASK:
             if self.view.match_selector(point, NO_HIGHLIGHT_SCOPES):
                 return
-            client = client_from_session(session_for_view(self.view, "documentHighlightProvider"))
+            client = client_from_session(session_for_view(self.view, "documentHighlightProvider", point))
             if client:
                 params = text_document_position_params(self.view, point)
                 request = Request.documentHighlight(params)

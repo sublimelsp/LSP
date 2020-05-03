@@ -75,7 +75,7 @@ def request_code_actions_with_diagnostics(view: sublime.View, diagnostics_by_con
 
     actions_at_location = CodeActionsAtLocation(actions_handler)
 
-    for session in sessions_for_view(view, point):
+    for session in sessions_for_view(view):
 
         if session.has_capability('codeActionProvider'):
             if session.config.name in diagnostics_by_config:

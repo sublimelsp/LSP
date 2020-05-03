@@ -39,31 +39,38 @@ class ClientStates(object):
 
 class LanguageConfig(object):
 
-    __slots__ = ('id', 'selector')
+    __slots__ = ('id', 'document_selector', 'feature_selector')
 
-    def __init__(self, language_id: str, selector: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        language_id: str,
+        document_selector: Optional[str] = None,
+        feature_selector: Optional[str] = None
+    ) -> None:
         self.id = language_id
-        self.selector = selector if selector else "source.{}".format(self.id)
+        self.document_selector = document_selector if document_selector else "source.{}".format(self.id)
+        self.feature_selector = feature_selector if feature_selector else self.document_selector
 
-    def score(self, base_scope: str) -> int:
-        return sublime.score_selector(base_scope, self.selector)
+    def score_document(self, scope: str) -> int:
+        return sublime.score_selector(scope, self.document_selector)
 
-    def match(self, base_scope: str) -> bool:
+    def score_feature(self, scope: str) -> int:
+        return sublime.score_selector(scope, self.feature_selector)
+
+    def match_document(self, scope: str) -> bool:
         # Every part of a x.y.z scope seems to contribute 8.
         # An empty selector result in a score of 1.
         # A non-matching non-empty selector results in a score of 0.
         # We want to match at least one part of an x.y.z, and we don't want to match on empty selectors.
-        return self.score(base_scope) >= 8
+        return self.score_document(scope) >= 8
 
 
 class ClientConfig(object):
     def __init__(self,
                  name: str,
                  binary_args: List[str],
+                 languages: List[LanguageConfig],
                  tcp_port: Optional[int],
-                 selector: Optional[str] = None,
-                 languageId: Optional[str] = None,
-                 languages: List[LanguageConfig] = [],
                  enabled: bool = True,
                  init_options: dict = dict(),
                  settings: dict = dict(),
@@ -73,20 +80,26 @@ class ClientConfig(object):
                  experimental_capabilities: dict = dict()) -> None:
         self.name = name
         self.binary_args = binary_args
+        self.languages = languages
         self.tcp_port = tcp_port
         self.tcp_host = tcp_host
         self.tcp_mode = tcp_mode
-        if not languages:
-            languages = [LanguageConfig(languageId, selector)] if languageId else []
-        self.languages = languages
         self.enabled = enabled
         self.init_options = init_options
         self.settings = settings
         self.env = env
         self.experimental_capabilities = experimental_capabilities
 
-    def supports(self, base_scope: str) -> bool:
-        return any(language.match(base_scope) for language in self.languages)
+    def match_document(self, scope: str) -> bool:
+        return any(language.match_document(scope) for language in self.languages)
+
+    def score_feature(self, scope: str) -> int:
+        highest_score = 0
+        for language in self.languages:
+            score = language.score_feature(scope)
+            if score > highest_score:
+                highest_score = score
+        return highest_score
 
 
 def syntax2scope(syntax: str) -> Optional[str]:
@@ -97,7 +110,7 @@ def syntax2scope(syntax: str) -> Optional[str]:
 
 
 def view2scope(view: sublime.View, point: Optional[int] = None) -> str:
-    return view.scope_name(0 if point is None else point).strip().split()[0]
+    return view.scope_name(0 if point is None else point)
 
 
 class ViewLike(Protocol):

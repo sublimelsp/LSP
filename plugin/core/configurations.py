@@ -2,7 +2,7 @@ import sublime
 from copy import deepcopy
 from .logging import debug
 from .types import ClientConfig, LanguageConfig, WindowLike, syntax2scope, view2scope
-from .typing import Any, List, Dict, Optional, Iterator, Iterable
+from .typing import Any, Generator, List, Dict, Optional, Iterable
 from .workspace import get_project_config, enable_in_project, disable_in_project
 
 
@@ -18,18 +18,17 @@ def apply_project_overrides(client_config: ClientConfig, lsp_project_settings: d
         client_settings = _merge_dicts(client_config.settings, overrides.get("settings", {}))
         client_env = _merge_dicts(client_config.env, overrides.get("env", {}))
         return ClientConfig(
-            client_config.name,
-            overrides.get("command", client_config.binary_args),
-            overrides.get("tcp_port", client_config.tcp_port),
-            None,
-            "",
-            client_config.languages,
-            overrides.get("enabled", client_config.enabled),
-            overrides.get("initializationOptions", client_config.init_options),
-            client_settings,
-            client_env,
-            overrides.get("tcp_host", client_config.tcp_host),
-            overrides.get("experimental_capabilities", client_config.experimental_capabilities),
+            name=client_config.name,
+            binary_args=overrides.get("command", client_config.binary_args),
+            languages=client_config.languages,
+            tcp_port=overrides.get("tcp_port", client_config.tcp_port),
+            enabled=overrides.get("enabled", client_config.enabled),
+            init_options=overrides.get("initializationOptions", client_config.init_options),
+            settings=client_settings,
+            env=client_env,
+            tcp_host=overrides.get("tcp_host", client_config.tcp_host),
+            experimental_capabilities=overrides.get(
+                "experimental_capabilities", client_config.experimental_capabilities),
         )
 
     return client_config
@@ -38,9 +37,7 @@ def apply_project_overrides(client_config: ClientConfig, lsp_project_settings: d
 def is_supported_syntax(syntax: str, configs: Iterable[ClientConfig]) -> bool:
     scope = syntax2scope(syntax)
     if scope is not None:
-        for config in configs:
-            if config.supports(scope):
-                return True
+        return any(config.match_document(scope) for config in configs)
     return False
 
 
@@ -69,34 +66,28 @@ class WindowConfigManager(object):
         self._temp_disabled_configs = []  # type: List[str]
         self.all = create_window_configs(window, global_configs)
 
-    def is_supported(self, view: Any) -> bool:
-        return any(self.scope_configs(view))
-
-    def scope_configs(self, view: Any, point: Optional[int] = None) -> Iterator[ClientConfig]:
-        scope = view2scope(view, point)
+    def match_document(self, scope: str) -> Generator[ClientConfig, None, None]:
+        """
+        Yields configurations which match one of their document selectors to the given scope.
+        """
         for config in self.all:
-            if config.supports(scope):
+            if config.match_document(scope):
                 yield config
 
-    def syntax_configs(self, view: Any, include_disabled: bool = False) -> List[ClientConfig]:
-        scope = view2scope(view)
-        return list(filter(lambda c: c.supports(scope) and (c.enabled or include_disabled), self.all))
+    def match_view(self, view: sublime.View, include_disabled: bool = False) -> Generator[ClientConfig, None, None]:
+        """
+        Yields configurations matching with the language's document_selector
+        """
+        configs = self.match_document(view2scope(view))
+        if include_disabled:
+            yield from configs
+        else:
+            for config in configs:
+                if config.enabled:
+                    yield config
 
-    def syntax_supported(self, view: sublime.View) -> bool:
-        scope = view2scope(view)
-        for found in filter(lambda c: c.supports(scope) and c.enabled, self.all):
-            return True
-        return False
-
-    def syntax_config_languages(self, view: sublime.View) -> Dict[str, LanguageConfig]:
-        scope = view2scope(view)
-        config_languages = {}
-        for config in self.all:
-            if config.enabled:
-                for language in config.languages:
-                    if language.score(scope) > 0:
-                        config_languages[config.name] = language
-        return config_languages
+    def is_supported(self, view: Any) -> bool:
+        return any(self.match_view(view))
 
     def update(self) -> None:
         self.all = create_window_configs(self._window, self._global_configs)

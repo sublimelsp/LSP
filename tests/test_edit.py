@@ -25,12 +25,13 @@ LSP_EDIT_DOCUMENT_CHANGES = {
 class TextEditTests(unittest.TestCase):
 
     def test_parse_from_lsp(self):
-        (start, end, newText) = parse_text_edit(LSP_TEXT_EDIT)
+        (start, end, newText, version) = parse_text_edit(LSP_TEXT_EDIT, 0)
         self.assertEqual(newText, 'newText')
         self.assertEqual(start[0], 10)
         self.assertEqual(start[1], 4)
         self.assertEqual(end[0], 11)
         self.assertEqual(end[1], 3)
+        self.assertEqual(version, 0)
 
 
 class WorkspaceEditTests(unittest.TestCase):

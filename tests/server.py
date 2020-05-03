@@ -283,11 +283,23 @@ class Session:
         self._on_notification("exit", self._on_exit)
 
         self._on_request("$test/getReceived", self._get_received)
+        self._on_request("$test/sendNotification", self._on_send_notification)
         self._on_notification("$test/setResponse", self._on_set_response)
 
     async def _on_set_response(self, params: PayloadLike) -> None:
         if isinstance(params, dict):
             self._responses[params["method"]] = params["response"]
+
+    async def _on_send_notification(self, params: PayloadLike) -> None:
+        if not isinstance(params, dict):
+            raise Error(ErrorCode.InvalidParams, "expected params to be a dictionary")
+        if "method" not in params:
+            raise Error(ErrorCode.InvalidParams, 'expected "method" key')
+        method = params["method"]
+        if not isinstance(method, str):
+            raise Error(ErrorCode.InvalidParams, 'expected "method" key to be a string')
+        self._notify(method, params.get('params'))
+        return None
 
     async def _get_received(self, params: PayloadLike) -> PayloadLike:
         if not isinstance(params, dict):

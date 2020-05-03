@@ -1,3 +1,4 @@
+from .. import __version__
 from .logging import debug
 from .process import start_server
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification
@@ -115,7 +116,10 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
         capabilities['experimental'] = config.experimental_capabilities
     params = {
         "processId": os.getpid(),
-        "clientInfo": {"name": "Sublime Text LSP"},
+        "clientInfo": {
+            "name": "Sublime Text LSP",
+            "version": ".".join(map(str, __version__))
+        },
         "rootUri": first_folder.uri() if first_folder else None,
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,

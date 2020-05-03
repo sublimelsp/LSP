@@ -115,10 +115,10 @@
   //     //
   //     // This key serves two purposes:
   //     // 1. It is sent to the language server so that it knows with what kind of file it is dealing with.
-  //     // 2. When "scopes" is not provided (see above), this is _the_ connection between your files and language
+  //     // 2. When "selector" is not provided (see above), this is _the_ connection between your files and language
   //     //    servers.
   //     //
-  //     // In this particular example, we don't have to supply a "scopes" key, because the scope for a Python file
+  //     // In this particular example, we don't have to supply a "selector" key, because the selector for a Python file
   //     // is "source.python" (see above).
   //     "languageId": "python",
   //

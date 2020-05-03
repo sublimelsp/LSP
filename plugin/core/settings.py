@@ -1,5 +1,5 @@
-from .logging import debug
-from .types import Settings, ClientConfig, LanguageConfig
+from .logging import debug, printf
+from .types import Settings, ClientConfig, LanguageConfig, syntax2scope
 from .typing import Any, List, Optional, Dict, Callable
 import sublime
 
@@ -158,14 +158,23 @@ def unload_settings() -> None:
 
 
 def normalize_selector(d: Dict[str, Any]) -> Optional[str]:
-    # "scopes" is optional.
-    # prefer "selector" over "scopes".
+    # "syntaxes" is deprecated.
+    # prefer "selector" over "syntaxes".
     selector = d.get("selector")
-    if selector:
+    if isinstance(selector, str) and selector:
         return selector
-    scopes = d.get("scopes")
-    if scopes:
-        return "|".join("({})".format(scope) for scope in scopes)
+    syntaxes = d.get("syntaxes")
+    if isinstance(syntaxes, list) and syntaxes:
+        scopes = set()
+        for syntax in syntaxes:
+            scope = syntax2scope(syntax)
+            if scope:
+                scopes.add(scope)
+        if scopes:
+            selector = "|".join(scopes)
+            printf('"syntaxes" is deprecated, use "selector" instead. The selector for', syntaxes,
+                   'was deduced to "{}"'.format(selector), prefix="DEPRECATION")
+            return selector
     return None
 
 

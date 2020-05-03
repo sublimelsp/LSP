@@ -86,10 +86,7 @@ class ClientConfig(object):
         self.experimental_capabilities = experimental_capabilities
 
     def supports(self, base_scope: str) -> bool:
-        for language in self.languages:
-            if language.match(base_scope):
-                return True
-        return False
+        return any(language.match(base_scope) for language in self.languages)
 
 
 def syntax2scope(syntax: str) -> Optional[str]:

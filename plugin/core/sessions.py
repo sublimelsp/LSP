@@ -100,8 +100,10 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
             "didChangeConfiguration": {
                 "dynamicRegistration": True
             },
-            "documentChanges": True,
             "executeCommand": {},
+            "workspaceEdit": {
+                "documentChanges": True,
+            },
             "workspaceFolders": True,
             "symbol": {
                 "dynamicRegistration": True,  # exceptional

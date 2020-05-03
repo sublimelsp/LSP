@@ -1,3 +1,4 @@
+from .logging import debug
 from .typing import List, Dict, Any, Iterable, Optional, Tuple
 from .url import uri_to_filename
 import operator
@@ -13,6 +14,9 @@ def parse_workspace_edit(workspace_edit: Dict[str, Any]) -> Dict[str, List[TextE
             changes[uri_to_filename(uri)] = list(parse_text_edit(change) for change in file_changes)
     if 'documentChanges' in workspace_edit:
         for document_change in workspace_edit.get('documentChanges', []):
+            if 'kind' in document_change:
+                debug('Ignoring unsupported "resourceOperations" edit type')
+                continue
             uri = document_change.get('textDocument').get('uri')
             version = document_change.get('textDocument').get('version')
             text_edit = list(parse_text_edit(change, version) for change in document_change.get('edits'))

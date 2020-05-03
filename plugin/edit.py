@@ -1,10 +1,8 @@
 import sublime
 import sublime_plugin
-from .core.edit import sort_by_application_order
+from .core.edit import sort_by_application_order, TextEdit
 from .core.logging import debug
-from .core.typing import List, Dict, Optional, Any, Tuple
-
-TextEdit = Tuple[Tuple[int, int], Tuple[int, int], str]
+from .core.typing import List, Dict, Optional, Any
 
 
 class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
@@ -45,7 +43,10 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         if changes:
             last_row, last_col = self.view.rowcol(self.view.size())
             for change in reversed(sort_by_application_order(changes)):
-                start, end, newText = change
+                start, end, newText, version = change
+                if version is not None and version != self.view.change_count():
+                    debug('ignoring edit due to non-matching document version')
+                    continue
                 region = sublime.Region(self.view.text_point(*start), self.view.text_point(*end))
 
                 if start[0] > last_row and newText[0] != '\n':

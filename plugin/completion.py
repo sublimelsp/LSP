@@ -192,7 +192,7 @@ class CompletionHandler(LSPViewEventListener):
             edit = item.get('textEdit')
             if edit:
                 parsed_edit = parse_text_edit(edit)
-                start, end, newText = parsed_edit
+                start, end, newText, version = parsed_edit
                 edit_start_loc = self.view.text_point(*start)
 
                 # if the edit started before the word, we need to trim back to the start of the edit.

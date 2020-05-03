@@ -591,7 +591,7 @@ class WindowManager(object):
             elif value.get('kind') == 'end':
                 self._progress.pop(token, None)  # erase stored title and message for token
 
-    def _progress_string(self, token: str, value: Dict[str, Any]) -> str:
+    def _progress_string(self, token: Any, value: Dict[str, Any]) -> str:
         progress = self._progress.get(token)
         if not progress:
             debug('unknown $/progress token: {}'.format(token))

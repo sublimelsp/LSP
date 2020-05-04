@@ -261,7 +261,7 @@ class Session:
                 self._reply(request_id, self._responses.pop(method))
             elif request_id is not None:
                 self._error(request_id, Error(
-                    ErrorCode.MethodNotFound, "method not found"))
+                    ErrorCode.MethodNotFound, "method '{}' not found".format(method)))
             else:
                 if unhandled:
                     self._log(f"unhandled {typestr} {method}")

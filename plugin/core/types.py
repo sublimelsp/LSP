@@ -30,6 +30,8 @@ class Settings(object):
         self.log_server = True
         self.log_stderr = False
         self.log_payloads = False
+        self.lsp_code_actions_on_save = {}  # type: Dict[str, bool]
+        self.code_action_on_save_timeout_ms = 2000
 
 
 class ClientStates(object):

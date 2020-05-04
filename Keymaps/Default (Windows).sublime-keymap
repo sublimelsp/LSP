@@ -62,4 +62,7 @@
 
     // Symbol Hover
     // {"keys": ["UNBOUND"], "command": "lsp_hover", "context": [{"key": "setting.lsp_active"}]},
+
+    // Override native save to handle Code-Actions-On-Save
+    { "keys": ["ctrl+s"], "command": "lsp_save", "context": [{ "key": "setting.lsp_active"}] },
 ]

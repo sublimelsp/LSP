@@ -1,13 +1,12 @@
 from LSP.plugin.core.documents import DocumentSyncListener
 from LSP.plugin.core.logging import debug
-from LSP.plugin.core.protocol import Notification, Request, WorkspaceFolder
+from LSP.plugin.core.protocol import Notification, Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.types import ClientConfig, LanguageConfig, ClientStates
 from LSP.plugin.core.typing import Any, Optional, Generator
 from os import environ
-from os.path import dirname
 from os.path import join
 from sublime_plugin import view_event_listeners
 from test_mocks import basic_responses
@@ -17,9 +16,6 @@ import sublime
 
 CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 
-project_path = dirname(__file__)
-test_file_path = join(project_path, "testfile.txt")
-workspace_folders = [WorkspaceFolder.from_path(project_path)]
 TIMEOUT_TIME = 10000 if CI else 2000
 text_language = LanguageConfig(language_id="text", document_selector="text.plain")
 text_config = ClientConfig(

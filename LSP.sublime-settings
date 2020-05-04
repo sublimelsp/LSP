@@ -8,6 +8,22 @@
   // Valid values are "never", "always" and "saved"
   "auto_show_diagnostics_panel": "saved",
 
+  // A dictionary of code action identifiers that should be triggered on save.
+  //
+  // Code action identifiers are not officially standardized so refer to specific
+  // server's documentation on what is supported but `source.fixAll` is commonly
+  // used to apply fix-on-save code action.
+  //
+  // It's also supported to set this in project-specific settings in which case
+  // it will only apply in that specific project. Setting it here will apply globally,
+  // unless overridden by project-specific settings.
+  //
+  // Only "source.*" actions are supported.
+  "lsp_code_actions_on_save": {},
+
+  // The amount of time the code actions on save are allowed to run for.
+  "code_action_on_save_timeout_ms": 2000,
+
   // Open the diagnostics panel automatically
   // when diagnostics level is equal to or less than:
   // error: 1

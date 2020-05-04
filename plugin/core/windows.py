@@ -579,13 +579,13 @@ class WindowManager(object):
         if value['kind'] == 'begin':
             self._progress[token]['title'] = value['title']  # mandatory
             self._progress[token]['message'] = value.get('message')  # optional
-            self._sublime.status_message(self._progress_string(token, value))
+            self._window.status_message(self._progress_string(token, value))
         elif value['kind'] == 'report':
-            self._sublime.status_message(self._progress_string(token, value))
+            self._window.status_message(self._progress_string(token, value))
         elif value['kind'] == 'end':
             if value.get('message'):
                 status_msg = self._progress[token]['title'] + ': ' + value['message']
-                self._sublime.status_message(status_msg)
+                self._window.status_message(status_msg)
             self._progress.pop(token, None)
 
     def _progress_string(self, token: Any, value: Dict[str, Any]) -> str:

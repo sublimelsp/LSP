@@ -109,8 +109,8 @@ def syntax2scope(syntax: str) -> Optional[str]:
         return None
 
 
-def view2scope(view: sublime.View, point: Optional[int] = None) -> str:
-    return view.scope_name(0 if point is None else point)
+def view2scope(view: sublime.View) -> str:
+    return view.scope_name(0).split()[0]
 
 
 class ViewLike(Protocol):

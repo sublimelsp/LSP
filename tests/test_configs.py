@@ -19,23 +19,23 @@ class ConfigParsingTests(DeferrableTestCase):
         }
         config = read_client_config("pyls", settings)
         self.assertEqual(len(config.languages), 1)
-        self.assertEqual(config.languages[0].scopes, ["source.python"])
+        self.assertEqual(config.languages[0].document_selector, "source.python")
 
     def test_can_parse_client_settings_with_languages(self):
         settings = {
             "command": ["pyls"],
-            # Check that "scopes" will be "source.python"
+            # Check that "document_selector" will be "source.python"
             "languages": [{"languageId": "python"}]
         }
         config = read_client_config("pyls", settings)
         self.assertEqual(len(config.languages), 1)
-        self.assertEqual(config.languages[0].scopes, ["source.python"])
+        self.assertEqual(config.languages[0].document_selector, "source.python")
+        self.assertEqual(config.languages[0].feature_selector, "source.python")
 
     def test_can_update_config(self):
         settings = {
             "command": ["pyls"],
-            "scopes": ["source.python"],
-            "syntaxes": ["Packages/Python/Python.sublime-syntax"],
+            "document_selector": "source.python",
             "languageId": "python"
         }
         config = read_client_config("pyls", settings)
@@ -50,46 +50,9 @@ class ConfigParsingTests(DeferrableTestCase):
         }
         settings = {
             "command": ["pyls"],
-            "scopes": ["source.python"],
-            "syntaxes": ["Packages/Python/Python.sublime-syntax"],
+            "document_selector": "source.python",
             "languageId": "python",
             "experimental_capabilities": experimental_capabilities
         }
         config = read_client_config("pyls", settings)
         self.assertEqual(config.experimental_capabilities, experimental_capabilities)
-
-
-class ConfigTests(DeferrableTestCase):
-
-    @unittest.skip('only at develop-time')
-    def test_defaults(self):
-        self.assertEqual(len(client_configs.all), 15)
-        for config in client_configs.all:
-            self.assertFalse(config.enabled)
-            self.assertEqual(1, len(config.languages))
-
-
-class WindowConfigTests(DeferrableTestCase):
-
-    def setUp(self):
-        super().setUp()
-        w, windows._windows = windows._windows, {}
-        for window_id, wm in w.items():
-            wm.end_sessions()
-            yield lambda: len(wm._sessions) == 0
-        self.view = sublime.active_window().open_file(test_file_path)
-
-    def test_window_without_configs(self):
-        yield 100
-        wm = windows.lookup(sublime.active_window())
-        self.assertFalse(wm._configs.syntax_supported(self.view))
-
-    def test_window_with_config(self):
-        pass
-
-    def doCleanups(self):
-        if hasattr(self, "view") and self.view:
-            self.view.set_scratch(True)
-            self.view.window().focus_view(self.view)
-            self.view.window().run_command("close_file")
-        yield from super().doCleanups()

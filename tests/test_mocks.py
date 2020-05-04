@@ -13,9 +13,9 @@ import os
 import test_sublime
 
 
-TEST_LANGUAGE = LanguageConfig("test", ["text.plain"])
-TEST_CONFIG = ClientConfig("test", [], None, languages=[TEST_LANGUAGE])
-DISABLED_CONFIG = ClientConfig("test", [], None, languages=[TEST_LANGUAGE], enabled=False)
+TEST_LANGUAGE = LanguageConfig("test", "text.plain")
+TEST_CONFIG = ClientConfig(name="test", binary_args=[], languages=[TEST_LANGUAGE], tcp_port=None)
+DISABLED_CONFIG = ClientConfig("test", binary_args=[], languages=[TEST_LANGUAGE], tcp_port=None, enabled=False)
 
 basic_responses = {
     'initialize': {

@@ -85,7 +85,7 @@ def session_for_view(view: sublime.View, capability: str, point: int) -> Optiona
     sessions = [s for s in sessions_for_view(view) if s.has_capability(capability)]
     if not sessions:
         return None
-    scope = view2scope(view)
+    scope = view.scope_name(point)
     return max(sessions, key=lambda session: session.config.score_feature(scope))
 
 

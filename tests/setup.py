@@ -21,10 +21,12 @@ project_path = dirname(__file__)
 test_file_path = join(project_path, "testfile.txt")
 workspace_folders = [WorkspaceFolder.from_path(project_path)]
 TIMEOUT_TIME = 10000 if CI else 2000
-SUPPORTED_SCOPE = "text.plain"
-SUPPORTED_SYNTAX = "Packages/Text/Plain text.tmLanguage"
-text_language = LanguageConfig("text", "text.plain")
-text_config = ClientConfig("textls", [], None, languages=[text_language])
+text_language = LanguageConfig(language_id="text", document_selector="text.plain")
+text_config = ClientConfig(
+    name="textls",
+    binary_args=[],
+    tcp_port=None,
+    languages=[text_language])
 
 
 class YieldPromise:
@@ -51,7 +53,7 @@ def make_stdio_test_config() -> ClientConfig:
         name="TEST",
         binary_args=["python3", join("$packages", "LSP", "tests", "server.py")],
         tcp_port=None,
-        languages=[LanguageConfig(language_id="txt", selector="text.plain")],
+        languages=[LanguageConfig(language_id="txt", document_selector="text.plain")],
         enabled=True)
 
 
@@ -114,7 +116,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         close_test_view(open_view)
         self.view = window.open_file(filename)
         yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
-        self.assertTrue(self.wm._configs.syntax_supported(self.view))
+        self.assertTrue(self.wm._configs.match_view(self.view))
         self.init_view_settings()
         yield {"condition": self.ensure_document_listener_created, "timeout": TIMEOUT_TIME}
         yield {

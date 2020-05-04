@@ -106,7 +106,7 @@ class WindowDocumentHandlerTests(unittest.TestCase):
             create_session(TEST_CONFIG, folders, dict(), MockSettings(),
                            bootstrap_client=client))
         client2 = MockClient()
-        test_config2 = ClientConfig("test2", [], None, languages=[TEST_LANGUAGE])
+        test_config2 = ClientConfig(name="test2", binary_args=[], tcp_port=None, languages=[TEST_LANGUAGE])
         configs.all.append(test_config2)
         session2 = self.assert_if_none(
             create_session(test_config2, folders, dict(), MockSettings(),

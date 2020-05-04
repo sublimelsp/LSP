@@ -571,22 +571,22 @@ class WindowManager(object):
         client.send_response(Response(request_id, None))
 
     def _handle_progress_notification(self, params: Dict[str, Any]) -> None:
-        token = params.get('token')
+        token = params['token']
         if token not in self._progress:
             debug('unknown $/progress token: {}'.format(token))
             return
-        value = params.get('value')
+        value = params['value']
         if not value:
             return
-        if value.get('kind') == 'begin':
-            self._progress[token]['title'] = value.get('title')  # mandatory
+        if value['kind'] == 'begin':
+            self._progress[token]['title'] = value['title']  # mandatory
             self._progress[token]['message'] = value.get('message')  # optional
             self._sublime.status_message(self._progress_string(token, value))
-        elif value.get('kind') == 'report':
+        elif value['kind'] == 'report':
             self._sublime.status_message(self._progress_string(token, value))
-        elif value.get('kind') == 'end':
+        elif value['kind'] == 'end':
             if value.get('message'):
-                status_msg = self._progress[token]['title'] + ': ' + value.get('message')
+                status_msg = self._progress[token]['title'] + ': ' + value['message']
                 self._sublime.status_message(status_msg)
             self._progress.pop(token, None)
 

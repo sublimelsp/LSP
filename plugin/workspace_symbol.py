@@ -10,9 +10,6 @@ from .symbols import format_symbol_kind
 
 class SymbolQueryInput(sublime_plugin.TextInputHandler):
 
-    def validate(self, txt: str) -> bool:
-        return txt != ""
-
     def placeholder(self) -> str:
         return "Symbol"
 

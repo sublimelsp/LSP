@@ -11,7 +11,7 @@ from .symbols import format_symbol_kind
 class SymbolQueryInput(sublime_plugin.TextInputHandler):
 
     def placeholder(self) -> str:
-        return "Symbol"
+        return "Symbol (leave empty to request all symbols)"
 
 
 class LspWorkspaceSymbolsCommand(LspTextCommand):

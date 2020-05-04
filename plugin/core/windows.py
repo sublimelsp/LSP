@@ -576,8 +576,6 @@ class WindowManager(object):
             debug('unknown $/progress token: {}'.format(token))
             return
         value = params['value']
-        if not value:
-            return
         if value['kind'] == 'begin':
             self._progress[token]['title'] = value['title']  # mandatory
             self._progress[token]['message'] = value.get('message')  # optional

@@ -14,6 +14,7 @@ if __name__ == '__main__':
             "start_coverage_after_reload": False,
             "show_reload_progress": False,
             "output": None,
+            "pattern": "test_code_actions.py",
             "generate_html_report": False
         }
         json.dump(config, fp, indent=4)

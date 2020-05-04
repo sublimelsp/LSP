@@ -82,7 +82,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
                 "dynamicRegistration": True,
                 "codeActionLiteralSupport": {
                     "codeActionKind": {
-                        "valueSet": []
+                        "valueSet": ["quickfix", "refactor"]
                     }
                 }
             },
@@ -367,6 +367,10 @@ class Session(object):
         execute_commands = self.get_capability('executeCommandProvider.commands')
         if execute_commands:
             debug("{}: Supported execute commands: {}".format(self.config.name, execute_commands))
+
+        code_action_kinds = self.get_capability('codeActionProvider.codeActionKinds')
+        if code_action_kinds:
+            debug('{}: supported code action kinds: {}'.format(self.config.name, code_action_kinds))
 
     def _handle_request_workspace_folders(self, _: Any, request_id: Any) -> None:
         self.client.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))

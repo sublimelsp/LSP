@@ -30,6 +30,7 @@ class Settings(object):
         self.log_server = True
         self.log_stderr = False
         self.log_payloads = False
+        self.lsp_code_actions_on_save = {}  # type: Dict[str, bool]
 
 
 class ClientStates(object):

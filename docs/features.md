@@ -99,6 +99,7 @@ https://stackoverflow.com/questions/16235706/sublime-3-set-key-map-for-function-
 Add these settings to your Sublime settings, Syntax-specific settings and/or in Project files.
 
 * `lsp_format_on_save` `false` *run the server's formatProvider (if supported) on a document before saving.*
+* `lsp_code_actions_on_save` `{}` *request code actions with specified identifiers to trigger before saving.*
 
 ### Package settings (LSP)
 

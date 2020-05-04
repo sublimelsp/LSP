@@ -107,7 +107,7 @@ class LspHoverCommand(LspTextCommand):
                     lambda response: self.handle_response(response, point))
 
     def request_code_actions(self, point: int) -> None:
-        actions_manager.request(self.view, point, lambda response: self.handle_code_actions(response, point))
+        actions_manager.request(self.view, lambda response: self.handle_code_actions(response, point), point)
 
     def handle_code_actions(self, responses: Dict[str, List[CodeActionOrCommand]], point: int) -> None:
         self._actions_by_config = responses

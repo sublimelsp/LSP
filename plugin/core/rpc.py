@@ -356,14 +356,18 @@ class Client(object):
         elif self._sync_request_result.is_requesting():
             if self._sync_request_result.request_id() == response_id:
                 if is_error:
+                    print('DEFERRED is_error', is_error, result)
                     self._sync_request_result.set_error(response_id, result)
                 else:
+                    print('DEFERRED set result', result)
                     self._sync_request_result.set(response_id, result)
                 self._sync_request_cvar.notify()
             else:
+                print('DEFERRED defer response (is_requesting)', response_id, result)
                 self._deferred_responses.append((handler, result))
             return (None, result)
         else:  # self._sync_request_result.is_ready()
+            print('DEFERRED defer response (is_ready)', response_id, result)
             self._deferred_responses.append((handler, result))
             return (None, None)
         if handler:

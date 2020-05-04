@@ -102,6 +102,10 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
                 "dynamicRegistration": True
             },
             "executeCommand": {},
+            "workspaceEdit": {
+                "documentChanges": True,
+                "failureHandling": "abort",
+            },
             "workspaceFolders": True,
             "symbol": {
                 "dynamicRegistration": True,  # exceptional
@@ -110,6 +114,9 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
                 }
             },
             "configuration": True
+        },
+        "window": {
+            "workDoneProgress": True
         }
     }
     if config.experimental_capabilities is not None:

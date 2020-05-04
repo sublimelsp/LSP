@@ -336,6 +336,7 @@ class WindowManager(object):
         self._workspace = workspace
         self._workspace.on_changed = self._on_project_changed
         self._workspace.on_switched = self._on_project_switched
+        self._progress = dict()  # type: Dict[Any, Any]
 
     def _on_project_changed(self, folders: List[str]) -> None:
         workspace_folders = get_workspace_folders(self._workspace.folders)
@@ -546,9 +547,17 @@ class WindowManager(object):
             "workspace/applyEdit",
             lambda params, request_id: self._apply_workspace_edit(params, session.client, request_id))
 
+        session.on_request(
+            "window/workDoneProgress/create",
+            lambda params, request_id: self._receive_progress_token(params, session.client, request_id))
+
         session.on_notification(
             "textDocument/publishDiagnostics",
             lambda params: self.diagnostics.receive(session.config.name, params))
+
+        session.on_notification(
+            "$/progress",
+            lambda params: self._handle_progress_notification(params))
 
         self._handlers.on_initialized(session.config.name, self._window, session.client)
 
@@ -574,6 +583,42 @@ class WindowManager(object):
     def _check_window_closed(self) -> None:
         if not self._is_closing and not self._window.is_valid():
             self._handle_window_closed()
+
+    def _receive_progress_token(self, params: Dict[str, Any], client: Client, request_id: Any) -> None:
+        self._progress[params['token']] = dict()
+        client.send_response(Response(request_id, None))
+
+    def _handle_progress_notification(self, params: Dict[str, Any]) -> None:
+        token = params['token']
+        if token not in self._progress:
+            debug('unknown $/progress token: {}'.format(token))
+            return
+        value = params['value']
+        if value['kind'] == 'begin':
+            self._progress[token]['title'] = value['title']  # mandatory
+            self._progress[token]['message'] = value.get('message')  # optional
+            self._window.status_message(self._progress_string(token, value))
+        elif value['kind'] == 'report':
+            self._window.status_message(self._progress_string(token, value))
+        elif value['kind'] == 'end':
+            if value.get('message'):
+                status_msg = self._progress[token]['title'] + ': ' + value['message']
+                self._window.status_message(status_msg)
+            self._progress.pop(token, None)
+
+    def _progress_string(self, token: Any, value: Dict[str, Any]) -> str:
+        status_msg = self._progress[token]['title']
+        progress_message = value.get('message')  # optional
+        progress_percentage = value.get('percentage')  # optional
+        if progress_message:
+            self._progress[token]['message'] = progress_message
+            status_msg += ': ' + progress_message
+        elif self._progress[token]['message']:  # reuse last known message if not present
+            status_msg += ': ' + self._progress[token]['message']
+        if progress_percentage:
+            fmt = ' ({:.1f}%)' if isinstance(progress_percentage, float) else ' ({}%)'
+            status_msg += fmt.format(progress_percentage)
+        return status_msg
 
     def _handle_window_closed(self) -> None:
         debug('window {} closed, ending sessions'.format(self._window.id()))

@@ -14,7 +14,7 @@ except ImportError:
 TEST_FILE_URI = filename_to_uri(TEST_FILE_PATH)
 
 
-def create_test_code_actions(title: str, document_version: int, edits: 'List[Tuple[str, Range]]') -> 'Dict':
+def create_test_code_actions(document_version: int, edits: 'List[Tuple[str, Range]]') -> 'Dict':
     def edit_to_lsp(edit: 'Tuple[str, Range]') -> 'Dict':
         new_text, range = edit
         return {
@@ -22,7 +22,7 @@ def create_test_code_actions(title: str, document_version: int, edits: 'List[Tup
             "range": range.to_lsp()
         }
     return {
-        "title": title,
+        "title": "Fix errors",
         "edit": {
             "documentChanges": [
                 {
@@ -41,7 +41,7 @@ class CodeActionsTestCase(TextDocumentTestCase):
     def test_applies_code_actions(self) -> 'Generator':
         self.insert_characters('a\nb')
         yield from self.await_message("textDocument/didChange")
-        code_actions = create_test_code_actions("Fix errors", self.view.change_count(), [
+        code_actions = create_test_code_actions(self.view.change_count(), [
             ("c", Range(Point(0, 0), Point(0, 1))),
             ("d", Range(Point(1, 0), Point(1, 1))),
         ])
@@ -52,7 +52,7 @@ class CodeActionsTestCase(TextDocumentTestCase):
         initial_content = 'a\nb'
         self.insert_characters(initial_content)
         yield from self.await_message("textDocument/didChange")
-        code_actions = create_test_code_actions("Fix errors", 0, [
+        code_actions = create_test_code_actions(0, [
             ("c", Range(Point(0, 0), Point(0, 1))),
             ("d", Range(Point(1, 0), Point(1, 1))),
         ])

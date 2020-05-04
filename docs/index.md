@@ -504,7 +504,7 @@ npm install -g javascript-typescript-langserver
 ```js
 "julials": {
   "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
-  // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using LanguageServer; using LanguageServer.SymbolServer; server=LanguageServer.LanguageServerInstance(stdin,stdout,false); run(server)"], // on Windows
+  // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using Pkg; using LanguageServer; using LanguageServer.SymbolServer; env_path=dirname(Pkg.Types.Context().env.project_file); server=LanguageServer.LanguageServerInstance(stdin,stdout,false,env_path); run(server)"], // on Windows
   "languageId": "julia",
   "scopes": ["source.julia"],
   "settings": {

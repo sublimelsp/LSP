@@ -113,6 +113,9 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
                 }
             },
             "configuration": True
+        },
+        "window": {
+            "workDoneProgress": True
         }
     }
 

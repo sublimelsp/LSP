@@ -567,9 +567,7 @@ class WindowManager(object):
             self._handle_window_closed()
 
     def _receive_progress_token(self, params: Dict[str, Any], client: Client, request_id: Any) -> None:
-        token = params.get('token')  # number | string
-        if token:
-            self._progress[token] = dict()
+        self._progress[params['token']] = dict()
         client.send_response(Response(request_id, None))
 
     def _show_progress(self, params: Dict[str, Any]) -> None:

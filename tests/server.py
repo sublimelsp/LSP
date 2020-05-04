@@ -11,7 +11,11 @@ send the $test/getReceived request. If the method was already received, it will
 return None immediately. Otherwise, it will wait for the method. You should
 have a timeout in your tests to ensure your tests won't hang forever.
 
-TODO: Make this server send out notifications somehow.
+To make server send out a notification, send the $test/sendNotification request
+with expected notification method in params['method'] and params in params['params'].
+Tests can await this request to make sure that they receive notification before code
+resumes (since response to request will arrive after requested notification).
+
 TODO: Untested on Windows.
 TODO: It should also understand TCP, both as slave and master.
 """
@@ -283,34 +287,20 @@ class Session:
         self._on_notification("exit", self._on_exit)
 
         self._on_request("$test/getReceived", self._get_received)
-        self._on_request("$test/sendNotification", self._on_send_notification)
+        self._on_request("$test/sendNotification", self._send_notification)
         self._on_notification("$test/setResponse", self._on_set_response)
 
     async def _on_set_response(self, params: PayloadLike) -> None:
         if isinstance(params, dict):
             self._responses[params["method"]] = params["response"]
 
-    async def _on_send_notification(self, params: PayloadLike) -> None:
-        if not isinstance(params, dict):
-            raise Error(ErrorCode.InvalidParams, "expected params to be a dictionary")
-        if "method" not in params:
-            raise Error(ErrorCode.InvalidParams, 'expected "method" key')
-        method = params["method"]
-        if not isinstance(method, str):
-            raise Error(ErrorCode.InvalidParams, 'expected "method" key to be a string')
-        self._notify(method, params.get('params'))
+    async def _send_notification(self, params: PayloadLike) -> None:
+        method, payload = self._validate_request_params(params)
+        self._notify(method, payload)
         return None
 
     async def _get_received(self, params: PayloadLike) -> PayloadLike:
-        if not isinstance(params, dict):
-            raise Error(ErrorCode.InvalidParams,
-                        "expected params to be a dictionary")
-        if "method" not in params:
-            raise Error(ErrorCode.InvalidParams, 'expected "method" key')
-        method = params["method"]
-        if not isinstance(method, str):
-            raise Error(ErrorCode.InvalidParams,
-                        'expected "method" key to be a string')
+        method, payload = self._validate_request_params(params)
         async with self._received_cv:
             while True:
                 try:
@@ -319,6 +309,15 @@ class Session:
                 except KeyError:
                     pass
                 await self._received_cv.wait()
+
+    def _validate_request_params(self, params: PayloadLike) -> Tuple[str, Optional[Union[Dict, List]]]:
+        if not isinstance(params, dict):
+            raise Error(ErrorCode.InvalidParams, "expected params to be a dictionary")
+        if "method" not in params:
+            raise Error(ErrorCode.InvalidParams, 'expected "method" key')
+        if not isinstance(params["method"], str):
+            raise Error(ErrorCode.InvalidParams, 'expected "method" key to be a string')
+        return (params["method"], params.get('params'))
 
     async def _initialize(self, params: PayloadLike) -> PayloadLike:
         if not isinstance(params, dict):

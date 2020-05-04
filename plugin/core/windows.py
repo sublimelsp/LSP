@@ -539,7 +539,7 @@ class WindowManager(object):
 
         session.on_notification(
             "$/progress",
-            lambda params: self._show_progress(params))
+            lambda params: self._handle_progress_notification(params))
 
         self._handlers.on_initialized(session.config.name, self._window, session.client)
 
@@ -570,35 +570,28 @@ class WindowManager(object):
         self._progress[params['token']] = dict()
         client.send_response(Response(request_id, None))
 
-    def _show_progress(self, params: Dict[str, Any]) -> None:
+    def _handle_progress_notification(self, params: Dict[str, Any]) -> None:
         token = params.get('token')
+        if token not in self._progress:
+            debug('unknown $/progress token: {}'.format(token))
+            return
         value = params.get('value')
-        if token and value:
-            if value.get('kind') == 'begin':
-                if token not in self._progress:
-                    self._progress[token] = dict()
-                self._progress[token]['title'] = value.get('title')  # mandatory
-                self._progress[token]['message'] = value.get('message')  # optional
-                status_msg = self._progress_string(token, value)
-                if status_msg:
-                    self._sublime.status_message(status_msg)
-            elif value.get('kind') == 'report':
-                status_msg = self._progress_string(token, value)
-                if status_msg:
-                    self._sublime.status_message(status_msg)
-            elif value.get('kind') == 'end':
-                if value.get('message'):
-                    status_msg = self._progress_string(token, value)
-                    if status_msg:
-                        self._sublime.status_message(status_msg)
-                self._progress.pop(token, None)  # erase stored title and message for token
+        if not value:
+            return
+        if value.get('kind') == 'begin':
+            self._progress[token]['title'] = value.get('title')  # mandatory
+            self._progress[token]['message'] = value.get('message')  # optional
+            self._sublime.status_message(self._progress_string(token, value))
+        elif value.get('kind') == 'report':
+            self._sublime.status_message(self._progress_string(token, value))
+        elif value.get('kind') == 'end':
+            if value.get('message'):
+                status_msg = self._progress[token]['title'] + ': ' + value.get('message')
+                self._sublime.status_message(status_msg)
+            self._progress.pop(token, None)
 
     def _progress_string(self, token: Any, value: Dict[str, Any]) -> str:
-        progress = self._progress.get(token)
-        if not progress:
-            debug('unknown $/progress token: {}'.format(token))
-            return ''
-        status_msg = progress.get('title')
+        status_msg = self._progress[token]['title']
         progress_message = value.get('message')  # optional
         progress_percentage = value.get('percentage')  # optional
         if progress_message:

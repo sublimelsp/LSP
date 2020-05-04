@@ -598,7 +598,8 @@ class WindowManager(object):
         elif self._progress[token]['message']:  # reuse last known message if not present
             status_msg += ': ' + self._progress[token]['message']
         if progress_percentage:
-            status_msg += ' (' + str(progress_percentage) + '%)'
+            fmt = ' ({:.1f}%)' if isinstance(progress_percentage, float) else ' ({}%)'
+            status_msg += fmt.format(progress_percentage)
         return status_msg
 
     def _handle_window_closed(self) -> None:

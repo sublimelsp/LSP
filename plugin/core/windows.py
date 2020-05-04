@@ -587,6 +587,10 @@ class WindowManager(object):
                 if status_msg:
                     self._sublime.status_message(status_msg)
             elif value.get('kind') == 'end':
+                if value.get('message'):
+                    status_msg = self._progress_string(token, value)
+                    if status_msg:
+                        self._sublime.status_message(status_msg)
                 self._progress.pop(token, None)  # erase stored title and message for token
 
     def _progress_string(self, token: Any, value: Dict[str, Any]) -> str:

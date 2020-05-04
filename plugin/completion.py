@@ -1,6 +1,7 @@
-import html
 import sublime
 import sublime_plugin
+import mdpopups
+import html
 
 from .core.configurations import is_supported_syntax
 from .core.edit import parse_text_edit
@@ -40,11 +41,100 @@ completion_kinds = {
 }
 
 
-class LspResolveDocsCommand(sublime_plugin.TextCommand):
+class LspAutoCompleteListener(sublime_plugin.ViewEventListener):
+    def on_post_text_command(self, command, args):
+        if not self.view.is_popup_visible():
+            return
 
-    def run(self, edit: sublime.Edit) -> None:
-        self.view.show_popup('<div style="padding: 10px;">Showing documentation is under construction</div>',
-                             sublime.COOPERATE_WITH_AUTO_COMPLETE)
+        if command in ["hide_auto_complete", "move"]:
+            # hide the popup when `esc` or arrows are pressed pressed
+            self.view.hide_popup()
+
+    def on_modified_async(self):
+        if self.view.is_popup_visible():
+            # hide the docs popup on each keystoke
+            self.view.hide_popup()
+
+
+class LspResolveDocsCommand(sublime_plugin.TextCommand):
+    def run(self, edit: sublime.Edit, item) -> None:
+        detail = item.get('detail')
+        documentation = self.normalized_documentation(item)
+
+        # don't show the detail in the cooperate AC popup,
+        # if it is alread shown in the AC details filed.
+        self.is_detail_shown = bool(detail)
+
+        content = self.get_content(documentation, detail)
+        self.show_popup(content)
+
+        if not detail or not documentation:
+            # To make sure that the details or documentation fields don't exist
+            # we resove the completion item.
+            # If those fields appear after the item is resolved
+            # update the popup.
+            self.do_resolve(item)
+
+    def show_popup(self, content):
+        mdpopups.show_popup(
+            self.view,
+            content,
+            flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
+            max_width=480,
+            max_height=333,
+            allow_code_wrap=True
+        )
+
+    def update_popup(self, content):
+        mdpopups.update_popup(
+            self.view,
+            content
+        )
+
+    def do_resolve(self, item: dict) -> None:
+        session = session_for_view(self.view, 'completionProvider', self.view.sel()[0].begin())
+        if not session:
+            return
+
+        client = client_from_session(session)
+        if not client:
+            return
+
+        completion_provider = session.get_capability('completionProvider')
+        has_resolve_provider = completion_provider and completion_provider.get('resolveProvider', False)
+        if has_resolve_provider:
+            client.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
+
+    def handle_resolve_response(self, item):
+        documentation = self.normalized_documentation(item)
+        detail = item.get('detail')
+
+        content = self.get_content(documentation, detail)
+        self.show_popup(content)
+
+    def get_content(self, documentation, detail):
+        content = ""
+        if detail and not self.is_detail_shown:
+            content += """<div class='highlight' style='margin: 10px 10px 0 10px;'>
+                <p>{}</p>
+            </div>""".format(detail)
+
+        if documentation:
+            content += """<div style='margin: 10px 10px 0 10px;'>
+                <p>{}</p>
+            </div>""".format(documentation)
+
+        return content
+
+    def normalized_documentation(self, item: Dict[str, Any]) -> str:
+        lsp_documentation = item.get("documentation")
+        if isinstance(lsp_documentation, str):
+            return mdpopups.md2html(self.view, lsp_documentation)
+        elif isinstance(lsp_documentation, dict):
+            value = lsp_documentation.get("value", '')
+            return mdpopups.md2html(self.view, value)
+        else:
+            return ''
 
 
 class LspCompleteCommand(sublime_plugin.TextCommand):
@@ -99,6 +189,17 @@ class LspCompleteTextEditCommand(LspCompleteCommand):
 def resolve(completion_list: sublime.CompletionList, items: List[sublime.CompletionItem], flags: int = 0) -> None:
     # Resolve the promise on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).
     sublime.set_timeout(lambda: completion_list.set_completions(items, flags))
+
+
+def deep_escape(what):
+    if isinstance(what, dict):
+        return {key: deep_escape(value) for key, value in what.items()}
+    elif isinstance(what, list):
+        return [deep_escape(value) for value in what]
+    elif isinstance(what, str):
+        return html.escape(what)
+    else:
+        return what
 
 
 class CompletionHandler(LSPViewEventListener):
@@ -181,22 +282,23 @@ class CompletionHandler(LSPViewEventListener):
 
         lsp_label = item["label"]
         lsp_filter_text = item.get("filterText")
-        lsp_detail = item.get("detail") or ""
-        lsp_detail = html.escape(lsp_detail.replace('\n', ' '))
-
-        if can_resolve_completion_items or "documentation" in item:
-            doc_link = '<a href="subl:lsp_resolve_docs">Documentation</a>'
-        else:
-            doc_link = ''
+        lsp_detail = html.escape(item.get("detail", "").replace('\n', ' '))
 
         if lsp_filter_text and lsp_filter_text != lsp_label:
             st_trigger = lsp_filter_text
             st_annotation = lsp_label
-            st_details = '{} {}'.format(doc_link, lsp_detail) if doc_link else lsp_detail
         else:
             st_trigger = lsp_label
-            st_annotation = lsp_detail
-            st_details = doc_link
+            st_annotation = ""
+
+        st_details = ""
+        if can_resolve_completion_items or "documentation" in item:
+            args = {
+                "item": deep_escape(item)
+            }
+            st_details += "<a href='subl:lsp_resolve_docs {}'>Δ</a>".format(sublime.encode_value(args))
+
+        st_details += "<p> {}</p>".format(lsp_detail)
 
         # NOTE: Some servers return "textEdit": null. We have to check if it's truthy.
         if item.get("textEdit"):

@@ -156,20 +156,19 @@ class LspRestartAllServersCommand(sublime_plugin.TextCommand):
 class LspRestartServerCommand(sublime_plugin.TextCommand):
     def is_enabled(self) -> bool:
         window = self.view.window()
-        lsp_servers = bool()
-        if window:
-            lsp_servers = True if windows.lookup(window).get_sessions() else False
-        return is_supported_view(self.view) and lsp_servers
+        if not window:
+            return False
+        return is_supported_view(self.view) and windows.lookup(window).has_active_sessions()
 
     def run(self, edit: Any) -> None:
-        window = self.view.window()
-        if window:
-            self.lsp_server_window = windows.lookup(window)
-            self.lsp_servers = self.lsp_server_window.get_sessions()
+        self.window = self.view.window()
+        if not self.window:
+            return
 
-            if self.lsp_servers:
-                window.show_quick_panel(self.lsp_servers, self.restart_server)
+        self.lsp_sessions = windows.lookup(self.window).get_sessions()
+        if self.lsp_sessions:
+            self.window.show_quick_panel(self.lsp_sessions, self.restart_server)
 
     def restart_server(self, index) -> None:
-        self.lsp_server_window.restart_session(config_name=self.lsp_servers[index])
+        windows.lookup(self.window).restart_session(config_name=self.lsp_sessions[index])
         return

@@ -51,7 +51,12 @@
     },
     {
         "caption": "LSP: Restart Servers",
-        "command": "lsp_restart_client",
+        "command": "lsp_restart_servers",
+        "args": {}
+    },
+    {
+        "caption": "LSP: Restart Specific Server",
+        "command": "lsp_restart_server",
         "args": {}
     },
     {

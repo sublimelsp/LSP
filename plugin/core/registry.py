@@ -144,7 +144,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
         return client_from_session(session_for_view(self.view, capability))
 
 
-class LspRestartClientCommand(sublime_plugin.TextCommand):
+class LspRestartServersCommand(sublime_plugin.TextCommand):
     def is_enabled(self) -> bool:
         return is_supported_view(self.view)
 
@@ -152,3 +152,25 @@ class LspRestartClientCommand(sublime_plugin.TextCommand):
         window = self.view.window()
         if window:
             windows.lookup(window).restart_sessions()
+
+
+class LspRestartServerCommand(sublime_plugin.TextCommand):
+    def is_enabled(self) -> bool:
+        window = self.view.window()
+        lsp_servers = bool()
+        if window:
+            lsp_servers = True if windows.lookup(window).get_sessions() else False
+        return is_supported_view(self.view) and lsp_servers
+
+    def run(self, edit: Any) -> None:
+        window = self.view.window()
+        if window:
+            self.lsp_server_window = windows.lookup(window)
+            self.lsp_servers = self.lsp_server_window.get_sessions()
+
+            if self.lsp_servers:
+                window.show_quick_panel(self.lsp_servers, self.restart_server)
+
+    def restart_server(self, index) -> None:
+        self.lsp_server_window.restart_session(config_name=self.lsp_servers[index])
+        return

@@ -351,6 +351,9 @@ class WindowManager(object):
     def get_session(self, config_name: str, file_path: str) -> Optional[Session]:
         return self._find_session(config_name, file_path)
 
+    def get_sessions(self):
+        return list(self._sessions)
+
     def _is_session_ready(self, config_name: str, file_path: str) -> bool:
         maybe_session = self._find_session(config_name, file_path)
         return maybe_session is not None and maybe_session.state == ClientStates.READY
@@ -485,9 +488,20 @@ class WindowManager(object):
         handler = MessageRequestHandler(self._window.active_view(), client, request_id, params, source)  # type: ignore
         handler.show()
 
+    def restart_session(self, config_name: str) -> None:
+        self._restarting = True
+        self.end_session(config_name=config_name)
+
     def restart_sessions(self) -> None:
         self._restarting = True
         self.end_sessions()
+
+    def end_session(self, config_name: str) -> None:
+        # todo check what this does
+        self.documents.reset()
+
+        if config_name in self._sessions.keys():
+            self.end_config_sessions(config_name)
 
     def end_sessions(self) -> None:
         self.documents.reset()

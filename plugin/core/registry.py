@@ -11,7 +11,6 @@ from .types import ClientConfig, ClientStates, WindowLike
 from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
 from .typing import Optional, Callable, Dict, Any, Iterable
 
-
 client_start_listeners = {}  # type: Dict[str, Callable]
 client_initialization_listeners = {}  # type: Dict[str, Callable]
 
@@ -144,7 +143,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
         return client_from_session(session_for_view(self.view, capability))
 
 
-class LspRestartServersCommand(sublime_plugin.TextCommand):
+class LspRestartAllServersCommand(sublime_plugin.TextCommand):
     def is_enabled(self) -> bool:
         return is_supported_view(self.view)
 

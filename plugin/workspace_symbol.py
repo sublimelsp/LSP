@@ -24,24 +24,30 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
         name = "{} ({}) - {} -- {}".format(s['name'], symbol_kind, s.get('containerName', ""), file_name)
         return name
 
-    def _open_file(self, symbols: List[Dict[str, Any]], index: int) -> None:
+    def _open_file(self, symbol: Dict[str, Any]) -> None:
+        start = symbol['location']['range']['start']
+        file_name = uri_to_filename(symbol['location']['uri'])
+        encoded_file_name = "{}:{}:{}".format(file_name, start['line'], start['character'])
+        window = self.view.window()
+        if window:
+            window.open_file(encoded_file_name, sublime.ENCODED_POSITION)
+
+    def _on_selected(self, symbols: List[Dict[str, Any]], index: int) -> None:
         if index != -1:
             symbol = symbols[index]
-            start = symbol['location']['range']['start']
-            file_name = uri_to_filename(symbol['location']['uri'])
-            encoded_file_name = "{}:{}:{}".format(file_name, start['line'], start['character'])
-            window = self.view.window()
-            if window:
-                window.open_file(encoded_file_name, sublime.ENCODED_POSITION)
+            self._open_file(symbol)
 
     def _handle_response(self, query: str, response: Optional[List[Dict[str, Any]]]) -> None:
         self.view.erase_status("lsp_workspace_symbols")
         if response:
             matches = response
-            choices = list(map(lambda s: self._format(s), matches))
-            window = self.view.window()
-            if window:
-                window.show_quick_panel(choices, lambda i: self._open_file(matches, i))
+            if len(matches) == 1:
+                self._open_file(matches[0])
+            else:
+                choices = list(map(lambda s: self._format(s), matches))
+                window = self.view.window()
+                if window:
+                    window.show_quick_panel(choices, lambda i: self._on_selected(matches, i))
         else:
             sublime.message_dialog("No matches found for query string: '{}'".format(query))
 

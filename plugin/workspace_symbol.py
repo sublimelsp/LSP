@@ -44,7 +44,7 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
             if len(matches) == 1:
                 self._open_file(matches[0])
             else:
-                choices = list(map(lambda s: self._format(s), matches))
+                choices = list(map(self._format, matches))
                 window = self.view.window()
                 if window:
                     window.show_quick_panel(choices, lambda i: self._on_selected(matches, i))

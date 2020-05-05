@@ -64,9 +64,8 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
         return SymbolQueryInput()
 
     def run(self, edit: Any, symbol_query_input: str = "") -> None:
-        if symbol_query_input:
-            request = Request.workspaceSymbol({"query": symbol_query_input})
-            client = self.client_with_capability('workspaceSymbolProvider')
-            if client:
-                self.view.set_status("lsp_workspace_symbols", "Searching for '{}'...".format(symbol_query_input))
-                client.send_request(request, lambda r: self._handle_response(symbol_query_input, r), self._handle_error)
+        request = Request.workspaceSymbol({"query": symbol_query_input})
+        client = self.client_with_capability('workspaceSymbolProvider')
+        if client:
+            self.view.set_status("lsp_workspace_symbols", "Searching for '{}'...".format(symbol_query_input))
+            client.send_request(request, lambda r: self._handle_response(symbol_query_input, r), self._handle_error)

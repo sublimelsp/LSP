@@ -201,6 +201,22 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.session.send_notification(
             Notification("$test/setResponse", {"method": method, "response": response}))
 
+    def await_client_notification(self, method: str, params: 'Any' = None) -> 'Generator':
+        self.assertIsNotNone(self.session)
+        assert self.session  # mypy
+        promise = YieldPromise()
+
+        def handler(params: 'Any') -> None:
+            assert params is None
+            promise.fulfill()
+
+        def error_handler(params: 'Any') -> None:
+            debug("Got error:", params, "awaiting timeout :(")
+
+        self.session.client.send_request(
+            Request("$test/sendNotification", {"method": method, "params": params}), handler, error_handler)
+        yield {"condition": promise, "timeout": TIMEOUT_TIME}
+
     def await_boilerplate_begin(self) -> 'Generator':
         yield from self.await_message("initialize")
         yield from self.await_message("initialized")

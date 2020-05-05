@@ -1,3 +1,4 @@
+from .. import __version__
 from .edit import parse_workspace_edit
 from .logging import debug
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification, Response
@@ -157,6 +158,10 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
                 "dynamicRegistration": True
             },
             "executeCommand": {},
+            "workspaceEdit": {
+                "documentChanges": True,
+                "failureHandling": "abort",
+            },
             "workspaceFolders": True,
             "symbol": {
                 "dynamicRegistration": True,  # exceptional
@@ -165,13 +170,19 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
                 }
             },
             "configuration": True
+        },
+        "window": {
+            "workDoneProgress": True
         }
     }
     if config.experimental_capabilities is not None:
         capabilities['experimental'] = config.experimental_capabilities
     params = {
         "processId": os.getpid(),
-        "clientInfo": {"name": "Sublime Text LSP"},
+        "clientInfo": {
+            "name": "Sublime Text LSP",
+            "version": ".".join(map(str, __version__))
+        },
         "rootUri": first_folder.uri() if first_folder else None,
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
@@ -302,9 +313,11 @@ class Session(Client):
                  config: ClientConfig) -> None:
         self.config = config
         self.manager = weakref.ref(manager)
+        self.window = manager.window()
         self.state = ClientStates.STARTING
         self.capabilities = dict()  # type: Dict[str, Any]
         self._workspace_folders = workspace_folders
+        self._progress = {}  # type: Dict[Any, Dict[str, str]]
         super().__init__(config.name, settings)
 
     def has_capability(self, capability: str) -> bool:
@@ -475,12 +488,8 @@ class Session(Client):
 
     def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:
         """handles the workspace/applyEdit request"""
-        mgr = self.manager()
-        if not mgr:
-            return self.send_error_response(request_id, Error(ErrorCode.InternalError, "no window"))
-        window = mgr.window()
         edit = params.get('edit', {})
-        window.run_command('lsp_apply_workspace_edit', {'changes': parse_workspace_edit(edit)})
+        self.window.run_command('lsp_apply_workspace_edit', {'changes': parse_workspace_edit(edit)})
         # TODO: We should ideally wait for all changes to have been applied. This is currently not "async".
         self.send_response(Response(request_id, {"applied": True}))
 
@@ -510,6 +519,44 @@ class Session(Client):
             clear_dotted_value(self.capabilities, capability_path)
             clear_dotted_value(self.capabilities, registration_path)
         self.send_response(Response(request_id, None))
+
+    def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
+        """handles the window/workDoneProgress/create request"""
+        self._progress[params['token']] = dict()
+        self.send_response(Response(request_id, None))
+
+    def m___progress(self, params: Any) -> None:
+        """handles the $/progress notification"""
+        token = params['token']
+        if token not in self._progress:
+            debug('unknown $/progress token: {}'.format(token))
+            return
+        value = params['value']
+        if value['kind'] == 'begin':
+            self._progress[token]['title'] = value['title']  # mandatory
+            self._progress[token]['message'] = value.get('message')  # optional
+            self.window.status_message(self._progress_string(token, value))
+        elif value['kind'] == 'report':
+            self.window.status_message(self._progress_string(token, value))
+        elif value['kind'] == 'end':
+            if value.get('message'):
+                status_msg = self._progress[token]['title'] + ': ' + value['message']
+                self.window.status_message(status_msg)
+            self._progress.pop(token, None)
+
+    def _progress_string(self, token: Any, value: Dict[str, Any]) -> str:
+        status_msg = self._progress[token]['title']
+        progress_message = value.get('message')  # optional
+        progress_percentage = value.get('percentage')  # optional
+        if progress_message:
+            self._progress[token]['message'] = progress_message
+            status_msg += ': ' + progress_message
+        elif self._progress[token]['message']:  # reuse last known message if not present
+            status_msg += ': ' + self._progress[token]['message']
+        if progress_percentage:
+            fmt = ' ({:.1f}%)' if isinstance(progress_percentage, float) else ' ({}%)'
+            status_msg += fmt.format(progress_percentage)
+        return status_msg
 
     def end(self) -> None:
         debug("stopping", self.config.name, "gracefully")

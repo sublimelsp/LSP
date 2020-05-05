@@ -128,7 +128,16 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
 
 - ✅ applyEdit
 - ✅ workspaceEdit
+  - ✅ documentChanges
+  - ❌ resourceOperations
+  - ❌ failureHandling
 - ✅ didChangeConfiguration
 - ❌ didChangeWatchedFiles
 - ✅ symbol
 - ✅ executeCommand
+
+### Window Capabilities
+
+- ✅ workDoneProgress
+  - ✅ create
+  - ❌ cancel

@@ -8,12 +8,15 @@ To make this server reply to requests, send the $test/setResponse notification.
 
 To make this server do a request, send the $test/fakeRequest request.
 
-To make this server do a notification, send the $test/fakeNotification notification.
-
 To await a method that this server should eventually (or already has) received,
 send the $test/getReceived request. If the method was already received, it will
 return None immediately. Otherwise, it will wait for the method. You should
 have a timeout in your tests to ensure your tests won't hang forever.
+
+To make server send out a notification, send the $test/sendNotification request
+with expected notification method in params['method'] and params in params['params'].
+Tests can await this request to make sure that they receive notification before code
+resumes (since response to request will arrive after requested notification).
 
 TODO: Untested on Windows.
 TODO: It should also understand TCP, both as slave and master.
@@ -320,23 +323,20 @@ class Session:
 
         self._on_request("$test/getReceived", self._get_received)
         self._on_request("$test/fakeRequest", self._fake_request)
+        self._on_request("$test/sendNotification", self._send_notification)
         self._on_notification("$test/setResponse", self._on_set_response)
-        self._on_notification("$test/fakeNotification", self._on_fake_notification)
 
     async def _on_set_response(self, params: PayloadLike) -> None:
         if isinstance(params, dict):
             self._responses[params["method"]] = params["response"]
 
+    async def _send_notification(self, params: PayloadLike) -> PayloadLike:
+        method, payload = self._validate_request_params(params)
+        self._notify(method, payload)
+        return None
+
     async def _get_received(self, params: PayloadLike) -> PayloadLike:
-        if not isinstance(params, dict):
-            raise Error(ErrorCode.InvalidParams,
-                        "expected params to be a dictionary")
-        if "method" not in params:
-            raise Error(ErrorCode.InvalidParams, 'expected "method" key')
-        method = params["method"]
-        if not isinstance(method, str):
-            raise Error(ErrorCode.InvalidParams,
-                        'expected "method" key to be a string')
+        method, payload = self._validate_request_params(params)
         async with self._received_cv:
             while True:
                 try:
@@ -346,22 +346,17 @@ class Session:
                 await self._received_cv.wait()
 
     async def _fake_request(self, params: PayloadLike) -> PayloadLike:
-        if isinstance(params, dict):
-            method = params["method"]
-            delay = params["delay"]
-            request_params = params["params"]
-            await asyncio.sleep(delay)
-            return await self.request(method, request_params)
-        raise Error(ErrorCode.InvalidParams, 'expected dict')
+        method, payload = self._validate_request_params(params)
+        return await self.request(method, payload)
 
-    async def _on_fake_notification(self, params: PayloadLike) -> None:
-        if isinstance(params, dict):
-            method = params["method"]
-            delay = params["delay"]
-            notification_params = params["params"]
-            await asyncio.sleep(delay)
-            self._notify(method, notification_params)
-        raise Error(ErrorCode.InvalidParams, 'expected dict')
+    def _validate_request_params(self, params: PayloadLike) -> Tuple[str, Optional[Union[Dict, List]]]:
+        if not isinstance(params, dict):
+            raise Error(ErrorCode.InvalidParams, "expected params to be a dictionary")
+        if "method" not in params:
+            raise Error(ErrorCode.InvalidParams, 'expected "method" key')
+        if not isinstance(params["method"], str):
+            raise Error(ErrorCode.InvalidParams, 'expected "method" key to be a string')
+        return (params["method"], params.get('params'))
 
     async def _initialize(self, params: PayloadLike) -> PayloadLike:
         if not isinstance(params, dict):

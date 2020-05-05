@@ -115,12 +115,12 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
     def get_content(self, documentation, detail):
         content = ""
         if detail and not self.is_detail_shown:
-            content += """<div class='highlight' style='margin: 10px 10px 0 10px;'>
+            content += """<div class='highlight' style='margin: 10px'>
                 <p>{}</p>
             </div>""".format(detail)
 
         if documentation:
-            content += """<div style='margin: 10px 10px 0 10px;'>
+            content += """<div style='margin: 10px'>
                 <p>{}</p>
             </div>""".format(documentation)
 

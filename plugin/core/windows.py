@@ -4,7 +4,7 @@ from .logging import debug
 from .message_request_handler import MessageRequestHandler
 from .protocol import Notification, Response, TextDocumentSyncKindNone, TextDocumentSyncKindFull
 from .rpc import Client
-from .rpc import Client, SublimeLogger
+from .rpc import SublimeLogger
 from .sessions import Session
 from .types import ClientConfig
 from .types import ClientStates
@@ -493,18 +493,12 @@ class WindowManager(object):
 
     def restart_session(self, config_name: str) -> None:
         self._restarting = True
-        self.end_session(config_name=config_name)
+        self.documents.reset()
+        self.end_config_sessions(config_name=config_name)
 
     def restart_sessions(self) -> None:
         self._restarting = True
         self.end_sessions()
-
-    def end_session(self, config_name: str) -> None:
-        # todo check what this does
-        self.documents.reset()
-
-        if config_name in self._sessions.keys():
-            self.end_config_sessions(config_name)
 
     def end_sessions(self) -> None:
         self.documents.reset()

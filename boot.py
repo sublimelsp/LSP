@@ -16,7 +16,7 @@ from .plugin.core.main import startup as plugin_loaded
 from .plugin.core.panels import LspClearPanelCommand
 from .plugin.core.panels import LspUpdatePanelCommand
 from .plugin.core.panels import LspUpdateServerPanelCommand
-from .plugin.core.registry import LspRestartServersCommand
+from .plugin.core.registry import LspRestartAllServersCommand
 from .plugin.core.registry import LspRestartServerCommand
 from .plugin.diagnostics import DiagnosticsCursorListener
 from .plugin.diagnostics import LspClearDiagnosticsCommand

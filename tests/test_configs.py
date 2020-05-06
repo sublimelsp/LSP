@@ -1,9 +1,7 @@
-from unittesting import DeferrableTestCase
-import unittest
-import sublime
-from os.path import dirname
-from LSP.plugin.core.settings import client_configs, read_client_config, update_client_config
 from LSP.plugin.core.registry import windows
+from LSP.plugin.core.settings import client_configs, read_client_config, update_client_config
+from os.path import dirname
+from unittesting import DeferrableTestCase
 
 test_file_path = dirname(__file__) + "/testfile.txt"
 

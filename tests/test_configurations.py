@@ -2,12 +2,12 @@ from LSP.plugin.core.configurations import _merge_dicts
 from LSP.plugin.core.configurations import ConfigManager
 from LSP.plugin.core.configurations import is_supported_syntax
 from LSP.plugin.core.configurations import WindowConfigManager
-import sublime
-import unittest
-from unittest.mock import MagicMock
 from test_mocks import DISABLED_CONFIG
 from test_mocks import TEST_CONFIG
 from test_mocks import TEST_LANGUAGE
+from unittest.mock import MagicMock
+import sublime
+import unittest
 
 
 class GlobalConfigManagerTests(unittest.TestCase):

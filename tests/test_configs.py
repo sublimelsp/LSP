@@ -1,5 +1,4 @@
-from LSP.plugin.core.registry import windows
-from LSP.plugin.core.settings import client_configs, read_client_config, update_client_config
+from LSP.plugin.core.settings import read_client_config, update_client_config
 from os.path import dirname
 from unittesting import DeferrableTestCase
 

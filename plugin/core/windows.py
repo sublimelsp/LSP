@@ -9,7 +9,6 @@ from .rpc import Client, SublimeLogger
 from .sessions import Session
 from .types import ClientConfig
 from .types import ClientStates
-from .types import LanguageConfig
 from .types import Settings
 from .types import view2scope
 from .types import ViewLike

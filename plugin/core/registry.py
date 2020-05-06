@@ -7,7 +7,7 @@ from .logging import debug
 from .rpc import Client
 from .sessions import Session
 from .settings import settings, client_configs
-from .types import ClientConfig, ClientStates, WindowLike, view2scope
+from .types import ClientConfig, ClientStates, WindowLike
 from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
 from .typing import Optional, Callable, Dict, Any, Generator
 

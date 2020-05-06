@@ -1,8 +1,8 @@
 import sublime
 from copy import deepcopy
 from .logging import debug
-from .types import ClientConfig, LanguageConfig, WindowLike, syntax2scope, view2scope
-from .typing import Any, Generator, List, Dict, Optional, Iterable
+from .types import ClientConfig, WindowLike, syntax2scope, view2scope
+from .typing import Any, Generator, List, Dict, Iterable
 from .workspace import get_project_config, enable_in_project, disable_in_project
 
 

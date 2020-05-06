@@ -29,69 +29,6 @@ class WindowDocumentHandlerTests(unittest.TestCase):
         self.assertIsNotNone(session)
         return session
 
-    def test_sends_did_open_to_session(self):
-        view = MockView(__file__)
-        window = MockWindow([[view]])
-        project_path = "/"
-        folders = [WorkspaceFolder.from_path(project_path)]
-        view.set_window(window)
-        workspace = ProjectFolders(window)
-        handler = WindowDocumentHandler(test_sublime, MockSettings(), window, workspace, MockConfigs())
-        client = MockClient()
-        session = self.assert_if_none(
-            create_session(TEST_CONFIG, folders, dict(), MockSettings(),
-                           bootstrap_client=client))
-        handler.add_session(session)
-
-        # open
-        handler.handle_did_open(view)
-        self.assertTrue(handler.has_document_state(__file__))
-        self.assertEqual(len(client._notifications), 1)
-        did_open = client._notifications[0]
-        document = did_open.params["textDocument"]
-        self.assertEqual(document.get("languageId"), "test")
-        self.assertEqual(document.get("text"), "asdf")
-        self.assertEqual(document.get("version"), 0)
-        self.assertEqual(view._status.get("lsp_clients"), "test")
-
-        # change 1
-        view._text = "asdf jklm"
-        handler.handle_did_change(view, [])
-        pending_buffer = handler._pending_buffer_changes[view.buffer_id()]
-        self.assertEqual(pending_buffer.view.id(), view.id())
-        self.assertEqual(pending_buffer.version, 1)
-        self.assertEqual(len(client._notifications), 1)
-
-        # change 2
-        view._text = "asdf jklm qwer"
-        handler.handle_did_change(view, [])
-        pending_buffer = handler._pending_buffer_changes[view.buffer_id()]
-        self.assertEqual(pending_buffer.view.id(), view.id())
-        self.assertEqual(pending_buffer.version, 2)
-        self.assertEqual(len(client._notifications), 1)
-
-        # purge
-        test_sublime._run_timeout()
-        self.assertEqual(len(client._notifications), 2)
-        did_change = client._notifications[1]
-        document = did_change.params.get("textDocument")
-        self.assertEqual(document.get("version"), 3)  # increments when calling change_count() on the MockView
-
-        # did save
-        handler.handle_did_save(view)
-        self.assertEqual(len(client._notifications), 3)
-        did_save = client._notifications[2]
-        document = did_save.params.get("textDocument")
-        self.assertIn(basename(__file__), document.get("uri"))
-
-        # did close
-        handler.handle_did_close(view)
-        self.assertEqual(len(client._notifications), 4)
-        did_close = client._notifications[3]
-        document = did_close.params.get("textDocument")
-        self.assertIn(basename(__file__), document.get("uri"))
-        self.assertFalse(__file__ in handler._document_states)
-
     def test_sends_did_open_to_multiple_sessions(self):
         view = MockView(__file__)
         window = MockWindow([[view]])

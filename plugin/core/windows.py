@@ -354,6 +354,9 @@ class WindowManager(object):
     def get_sessions(self):
         return list(self._sessions)
 
+    def has_active_sessions(self) -> bool:
+        return bool(self._sessions)
+
     def _is_session_ready(self, config_name: str, file_path: str) -> bool:
         maybe_session = self._find_session(config_name, file_path)
         return maybe_session is not None and maybe_session.state == ClientStates.READY

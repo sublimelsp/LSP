@@ -3,8 +3,7 @@ from .edit import parse_workspace_edit
 from .logging import debug
 from .message_request_handler import MessageRequestHandler
 from .protocol import Notification, Response, TextDocumentSyncKindNone, TextDocumentSyncKindFull
-from .rpc import Client
-from .rpc import SublimeLogger
+from .rpc import Client, SublimeLogger
 from .sessions import Session
 from .types import ClientConfig
 from .types import ClientStates

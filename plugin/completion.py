@@ -109,7 +109,7 @@ class CompletionHandler(LSPViewEventListener):
 
     def __del__(self) -> None:
         settings = self.view.settings()
-        triggers = settings.get("auto_complete_triggers")  # type: List[Dict[str, str]]
+        triggers = settings.get("auto_complete_triggers") or []  # type: List[Dict[str, str]]
         triggers = [trigger for trigger in triggers if 'server' not in trigger]
         settings.set("auto_complete_triggers", triggers)
 

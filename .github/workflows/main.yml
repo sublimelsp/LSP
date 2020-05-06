@@ -3,48 +3,45 @@ name: main
 on:
   push:
     branches:
-    - master
+      - master
+      - st4000-exploration
   pull_request:
     branches:
-    - master
+      - master
+      - st4000-exploration
+
+env:
+  CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
+  SUBLIME_TEXT_VERSION: "3"
+  SUBLIME_TEXT_ARCH: x64
+  PACKAGE: LSP
 
 jobs:
   macOS:
-    runs-on: macOS-latest
-    env:
-      CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
-      SUBLIME_TEXT_VERSION: "3"
-      SUBLIME_TEXT_ARCH: x64
-      PACKAGE: LSP
+    runs-on: macos-latest
+    if: github.ref == 'refs/heads/master' || github.base_ref == 'master'
     steps:
-    - run: echo ::add-path::$HOME/.local/bin
-    - run: echo ::add-path::$HOME/Library/Python/3.7/bin
-    - uses: actions/checkout@v1
-    - run: python3 tests/server.py --version
-    - run: python3 tests/adjust_unittesting_config_for_ci.py && cat unittesting.json
-    - run: curl --silent https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/ci.sh --output ci.sh
-    - run: |
-        sh ci.sh bootstrap
-        sh ci.sh install_package_control
-        subl --stay &
-        sleep 8
-        sh ci.sh run_tests --coverage
-      name: Run UnitTesting tests
-    - run: pip3 install mypy==0.750 flake8==3.7.9 yapf==0.29.0 --user
-    - run: mypy -p plugin
-    - run: flake8 plugin tests
-    - run: yapf --diff plugin/core/main.py
-    - run: |
-        pip3 install coverage==4.5.4 codecov==2.0.15
-        codecov
+      - run: echo ::add-path::$HOME/.local/bin
+      - run: echo ::add-path::$HOME/Library/Python/3.7/bin
+      - uses: actions/checkout@v1
+      - run: python3 tests/server.py --version
+      - run: python3 tests/adjust_unittesting_config_for_ci.py && cat unittesting.json
+      - run: curl --silent https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/ci.sh --output ci.sh
+      - run: |
+          sh ci.sh bootstrap
+          sh ci.sh install_package_control
+          subl --stay &
+          sleep 8
+          sh ci.sh run_tests --coverage
+        name: Run UnitTesting tests
+      - run: |
+          pip3 install coverage==4.5.4 codecov==2.0.15
+          codecov
+
   Linux:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || github.base_ref == 'master'
     container: sublimetext/unittesting
-    env:
-      CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
-      SUBLIME_TEXT_VERSION: "3"
-      SUBLIME_TEXT_ARCH: x64
-      PACKAGE: LSP
     steps:
       - uses: actions/checkout@v1
       - run: echo ::add-path::$HOME/.local/bin
@@ -60,10 +57,18 @@ jobs:
           sh github.sh install_package_control
           sh github.sh run_tests --coverage
         name: Run UnitTesting tests
+      - run: |
+          pip3 install coverage==4.5.4 codecov==2.0.15
+          codecov
+
+  Lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: echo ::add-path::$HOME/.local/bin
+      - run: sudo apt update
+      - run: sudo apt install --no-install-recommends -y x11-xserver-utils python3-pip
       - run: pip3 install mypy==0.750 flake8==3.7.9 yapf==0.29.0 --user
       - run: mypy -p plugin
       - run: flake8 plugin tests
       - run: yapf --diff plugin/core/main.py
-      - run: |
-          pip3 install coverage==4.5.4 codecov==2.0.15
-          codecov

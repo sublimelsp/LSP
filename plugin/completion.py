@@ -290,7 +290,7 @@ class CompletionHandler(LSPViewEventListener):
             st_annotation = ""
 
         st_details = ""
-        if can_resolve_completion_items or "documentation" in item:
+        if can_resolve_completion_items or item.get("documentation"):
             args = {
                 "item": deep_escape(item)
             }

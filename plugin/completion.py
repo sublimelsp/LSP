@@ -9,7 +9,7 @@ from .core.protocol import Request, InsertTextFormat, Range
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.settings import settings, client_configs
 from .core.typing import Any, List, Dict, Optional, Union, Generator
-from .core.views import text_document_position_params, range_to_region
+from .core.views import text_document_position_params, range_to_region, minihtml
 
 
 completion_kinds = {
@@ -44,7 +44,7 @@ completion_kinds = {
 class LspResolveDocsCommand(sublime_plugin.TextCommand):
     def run(self, edit: sublime.Edit, item: dict) -> None:
         detail = item.get('detail') or ""
-        documentation = self.normalized_documentation(item)
+        documentation = minihtml(item.get("documentation"), self.view)
 
         # don't show the detail in the cooperate AC popup,
         # if it is alread shown in the AC details filed.
@@ -91,7 +91,7 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
             client.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
 
     def handle_resolve_response(self, item: dict) -> None:
-        documentation = self.normalized_documentation(item)
+        documentation = minihtml(item.get("documentation"), self.view)
         detail = item.get('detail') or ""
 
         content = self.get_content(documentation, detail)
@@ -110,16 +110,6 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
             </div>""".format(documentation)
 
         return content
-
-    def normalized_documentation(self, item: Dict[str, Any]) -> str:
-        lsp_documentation = item.get("documentation")
-        if isinstance(lsp_documentation, str):
-            return mdpopups.md2html(self.view, lsp_documentation)
-        elif isinstance(lsp_documentation, dict):
-            value = lsp_documentation.get("value", '')
-            return mdpopups.md2html(self.view, value)
-        else:
-            return ''
 
 
 class LspCompleteCommand(sublime_plugin.TextCommand):

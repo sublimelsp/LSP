@@ -1,7 +1,9 @@
-import sublime
+import html
 import linecache
+import mdpopups
+import sublime
 from .protocol import Point, Range, Notification, Request
-from .typing import Optional, Dict, Any, Iterable, List
+from .typing import Optional, Dict, Any, Iterable, List, Union
 from .url import filename_to_uri
 
 
@@ -172,3 +174,22 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
         "options": formatting_options(view.settings()),
         "range": region_to_range(view, region).to_lsp()
     })
+
+
+def minihtml(content: Union[str, dict], view: sublime.View) -> str:
+    """ Content can be a string or MarkupContent """
+    if isinstance(content, str):
+        return html.escape(content)
+
+    elif isinstance(content, dict):
+        value = content.get("value") or ""
+        kind = content.get("kind")
+
+        if kind == "markdown":
+            return mdpopups.md2html(view, value)
+        else:
+            # must be plaintext
+            return html.escape(value)
+    else:
+        return ''
+

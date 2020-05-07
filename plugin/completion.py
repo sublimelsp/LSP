@@ -1,7 +1,7 @@
+import html
+import mdpopups
 import sublime
 import sublime_plugin
-import mdpopups
-import html
 
 from .core.configurations import is_supported_syntax
 from .core.edit import parse_text_edit

@@ -294,7 +294,8 @@ class CompletionHandler(LSPViewEventListener):
             args = {
                 "item": deep_escape(item)
             }
-            st_details += "<a href='subl:lsp_resolve_docs {}'>More</a> ".format(sublime.encode_value(args))
+            st_details += "<a href='subl:lsp_resolve_docs {}'>More</a>".format(sublime.encode_value(args))
+            st_details += " | " if lsp_detail else ""
 
         st_details += "<p>{}</p>".format(lsp_detail)
 

@@ -60,7 +60,7 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
             # update the popup.
             self.do_resolve(item)
 
-    def show_popup(self, content):
+    def show_popup(self, content: str) -> None:
         mdpopups.show_popup(
             self.view,
             content,
@@ -70,7 +70,7 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
             allow_code_wrap=True
         )
 
-    def update_popup(self, content):
+    def update_popup(self, content: str) -> None:
         mdpopups.update_popup(
             self.view,
             content
@@ -90,14 +90,14 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
         if has_resolve_provider:
             client.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
 
-    def handle_resolve_response(self, item):
+    def handle_resolve_response(self, item: dict) -> None:
         documentation = self.normalized_documentation(item)
-        detail = item.get('detail')
+        detail = item.get('detail') or ""
 
         content = self.get_content(documentation, detail)
         self.show_popup(content)
 
-    def get_content(self, documentation, detail):
+    def get_content(self, documentation: str, detail: str) -> str:
         content = ""
         if detail and not self.is_detail_shown:
             content += """<div class='highlight' style='margin: 10px'>

@@ -80,7 +80,7 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         self.view.run_command("insert", {"characters": "a"})
         yield from self.await_message("textDocument/didChange")
         status_string = self.view.get_status("lsp_clients")
-        self.assertEqual(status_string, "TEST, foobar")
+        self.assertEqual(set(s.strip() for s in status_string.split(',')), set(("TEST", "foobar")))
         close_test_view(self.view)
         yield from self.await_message("textDocument/didClose")
         remove_config(self.config2)

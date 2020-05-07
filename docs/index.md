@@ -52,7 +52,7 @@ Here is an example of the `LSP.sublime-settings` file with configurations for th
       "command": ["lsp-tsserver"],
       "enabled": true,
       "languageId": "typescript",
-      "selector": "source.ts | source.tsx"
+      "document_selector": "source.ts | source.tsx"
     }
   }
 }
@@ -73,10 +73,10 @@ Some language servers support multiple languages, which can be specified in the 
       "enabled": true,
       "languages": [{
         "languageId": "javascript",
-        "selector": "source.js | source.jsx"
+        "document_selector": "source.js | source.jsx"
       }, {
         "languageId": "typescript",
-        "selector": "source.ts | source.tsx"
+        "document_selector": "source.ts | source.tsx"
       }]
     }
   }
@@ -90,9 +90,9 @@ Some language servers support multiple languages, which can be specified in the 
 | env | dict of environment variables to be injected into the language server's process (eg. PYTHONPATH) |
 | settings | per-project settings (equivalent to VS Code's Workspace Settings) |
 | initializationOptions | options to send to the server at startup (rarely used) |
-| selector | This is _the_ connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. If the selector happens to be of the form "source.{languageId}" (which it is in many cases), then you can omit this "selector" key altogether, and LSP will assume the selector is "source.{languageId}". For more information, see https://www.sublimetext.com/docs/3/selectors.html |
+| document_selector | This is _the_ connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. If the selector happens to be of the form "source.{languageId}" (which it is in many cases), then you can omit this "document_selector" key altogether, and LSP will assume the selector is "source.{languageId}". For more information, see https://www.sublimetext.com/docs/3/selectors.html |
 | languageId | identifies the language for a document - see [LSP specifications](https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/#textDocumentItem) |
-| languages | group `selector` and `languageId` together for servers that support more than one language |
+| languages | group `document_selector` and `languageId` together for servers that support more than one language |
 | tcp_port | see instructions below |
 | tcp_host | see instructions below |
 | tcp_mode | see instructions below |
@@ -171,7 +171,7 @@ See the dedicated <a href="cplusplus"/>C/C++ guide</a> for using ccls, cquery or
   ],
   "enabled": true,
   "languageId": "csharp",
-  "selector": "source.cs"
+  "document_selector": "source.cs"
 }
 ```
 
@@ -341,7 +341,7 @@ npm install -g flow-language-server
   "command": ["fortls"],
   "enabled": true,
   "languageId": "fortran",
-  "selector": "source.modern-fortran | source.fixedform-fortran"
+  "document_selector": "source.modern-fortran | source.fixedform-fortran"
 }
 ```
 
@@ -537,10 +537,10 @@ npm install -g javascript-typescript-langserver
   "enabled": true,
   "languages": [{
     "languageId": "latex",
-    "selector": "text.tex.latex"
+    "document_selector": "text.tex.latex"
   }, {
     "languageId": "bibtex",
-    "selector": "text.bibtex"
+    "document_selector": "text.bibtex"
   }]
 }
 ```
@@ -591,7 +591,7 @@ Alternatively you can use the less maintained [lua-lsp](https://github.com/Alloy
   "command": ["PATH/TO/reason-language-server.exe"],
   "enabled": true,
   "languageId": "reason",
-  "selector": "source.ocaml | source.reason"
+  "document_selector": "source.ocaml | source.reason"
 }
 ```
 
@@ -806,7 +806,7 @@ Be sure to install [Vue Syntax Highlight](https://packagecontrol.io/packages/Vue
   ],
   "enabled": true,
   "languageId": "xml",
-  "selector": "text.xml"
+  "document_selector": "text.xml"
 }
 ```
 

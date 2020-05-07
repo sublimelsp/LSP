@@ -6,7 +6,6 @@ from .plugin.completion import CompletionHandler
 from .plugin.completion import LspCompleteInsertTextCommand
 from .plugin.completion import LspCompleteTextEditCommand
 from .plugin.completion import LspResolveDocsCommand
-from .plugin.completion import LspAutoCompleteListener
 from .plugin.configuration import LspDisableLanguageServerGloballyCommand
 from .plugin.configuration import LspDisableLanguageServerInProjectCommand
 from .plugin.configuration import LspEnableLanguageServerGloballyCommand

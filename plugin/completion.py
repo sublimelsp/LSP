@@ -41,24 +41,9 @@ completion_kinds = {
 }
 
 
-class LspAutoCompleteListener(sublime_plugin.ViewEventListener):
-    def on_post_text_command(self, command, args):
-        if not self.view.is_popup_visible():
-            return
-
-        if command in ["hide_auto_complete", "move"]:
-            # hide the popup when `esc` or arrows are pressed pressed
-            self.view.hide_popup()
-
-    def on_modified_async(self):
-        if self.view.is_popup_visible():
-            # hide the docs popup on each keystoke
-            self.view.hide_popup()
-
-
 class LspResolveDocsCommand(sublime_plugin.TextCommand):
-    def run(self, edit: sublime.Edit, item) -> None:
-        detail = item.get('detail')
+    def run(self, edit: sublime.Edit, item: dict) -> None:
+        detail = item.get('detail') or ""
         documentation = self.normalized_documentation(item)
 
         # don't show the detail in the cooperate AC popup,
@@ -247,6 +232,19 @@ class CompletionHandler(LSPViewEventListener):
                 settings.set('auto_complete_triggers', completion_triggers)
             # This is to make ST match with labels that have a weird prefix like a space character.
             settings.set("auto_complete_preserve_order", "none")
+
+    def on_post_text_command(self, command: str, args: dict) -> None:
+        if not self.view.is_popup_visible():
+            return
+
+        if command in ["hide_auto_complete", "move"]:
+            # hide the popup when `esc` or arrows are pressed pressed
+            self.view.hide_popup()
+
+    def on_modified_async(self) -> None:
+        if self.view.is_popup_visible():
+            # hide the docs popup on each keystoke
+            self.view.hide_popup()
 
     def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[sublime.CompletionList]:
         if not self.initialized:

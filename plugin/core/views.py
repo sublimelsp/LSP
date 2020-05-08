@@ -180,11 +180,9 @@ def minihtml(content: Union[str, dict], view: sublime.View) -> str:
     """ Content can be a string or MarkupContent """
     if isinstance(content, str):
         return html.escape(content)
-
     elif isinstance(content, dict):
         value = content.get("value") or ""
         kind = content.get("kind")
-
         if kind == "markdown":
             return mdpopups.md2html(view, value)
         else:
@@ -192,4 +190,3 @@ def minihtml(content: Union[str, dict], view: sublime.View) -> str:
             return html.escape(value)
     else:
         return ''
-

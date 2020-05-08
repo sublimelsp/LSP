@@ -242,21 +242,17 @@ class Session(object):
         self._initialize()
 
     def has_capability(self, capability: str) -> bool:
-        return capability in self.capabilities and self.capabilities[capability] is not False
+        value = self.get_capability(capability)
+        return value is not False and value is not None
 
     def get_capability(self, capability: str) -> Optional[Any]:
-        return self.capabilities.get(capability)
+        return get_dotted_value(self.capabilities, capability)
 
     def should_notify_did_open(self) -> bool:
-        textsync = self.capabilities.get('textDocumentSync')
-        if isinstance(textsync, dict):
-            open_close = textsync.get('openClose')
-            if isinstance(open_close, dict):
-                return True  # dynamic registration
-            return bool(open_close)
-        if isinstance(textsync, int):
-            return textsync > TextDocumentSyncKindNone
-        return False
+        if self.has_capability('textDocumentSync.openClose'):
+            return True
+        textsync = self.get_capability('textDocumentSync')
+        return isinstance(textsync, int) and textsync > TextDocumentSyncKindNone
 
     def text_sync_kind(self) -> int:
         textsync = self.capabilities.get('textDocumentSync')
@@ -274,22 +270,7 @@ class Session(object):
         return self.text_sync_kind() > TextDocumentSyncKindNone
 
     def should_notify_will_save(self) -> bool:
-        textsync = self.capabilities.get('textDocumentSync')
-        if isinstance(textsync, dict):
-            will_save = textsync.get('willSave')
-            if isinstance(will_save, dict):
-                return True  # dynamic registration
-            return bool(will_save)
-        return False
-
-    def should_request_will_save_wait_until(self) -> bool:
-        textsync = self.capabilities.get('textDocumentSync')
-        if isinstance(textsync, dict):
-            wswu = textsync.get('willSaveWaitUntil')
-            if isinstance(wswu, dict):
-                return True  # dynamic registration
-            return bool(wswu)
-        return False
+        return self.has_capability('textDocumentSync.willSave')
 
     def should_notify_did_save(self) -> Tuple[bool, bool]:
         textsync = self.capabilities.get('textDocumentSync')
@@ -305,10 +286,10 @@ class Session(object):
         return self.should_notify_did_open()
 
     def should_notify_did_change_workspace_folders(self) -> bool:
-        return bool(self.capabilities.get("workspace", {}).get("workspaceFolders", {}).get("changeNotifications"))
+        return self.has_capability("workspace.workspaceFolders.changeNotifications")
 
     def should_notify_did_change_configuration(self) -> bool:
-        return "didChangeConfigurationProvider" in self.capabilities
+        return self.has_capability("didChangeConfigurationProvider")
 
     def handles_path(self, file_path: Optional[str]) -> bool:
         if not file_path:
@@ -345,9 +326,7 @@ class Session(object):
             self._handle_initialize_error)
 
     def _supports_workspace_folders(self) -> bool:
-        workspace_cap = self.capabilities.get("workspace", {})
-        workspace_folder_cap = workspace_cap.get("workspaceFolders", {})
-        return workspace_folder_cap.get("supported")
+        return self.has_capability("workspace.workspaceFolders.supported")
 
     def on_request(self, method: str, handler: Callable) -> None:
         self.client.on_request(method, handler)

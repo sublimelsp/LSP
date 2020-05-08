@@ -273,9 +273,7 @@ class CompletionHandler(LSPViewEventListener):
 
         st_details = ""
         if can_resolve_completion_items or item.get("documentation"):
-            st_details += "<a href='subl:lsp_resolve_docs {}'>More</a>".format(sublime.encode_value({
-                "index": index
-            }))
+            st_details += "<a href='subl:lsp_resolve_docs {{\"index\": {}}}'>More</a>".format(index)
             st_details += " | " if lsp_detail else ""
 
         st_details += "<p>{}</p>".format(lsp_detail)

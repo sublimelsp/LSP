@@ -177,7 +177,7 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
     })
 
 
-def minihtml(content: Union[str, dict], view: sublime.View) -> str:
+def minihtml(content: Optional[Union[str, dict]], view: sublime.View) -> str:
     """ Content can be a string or MarkupContent """
     if isinstance(content, str):
         return text2html(content)

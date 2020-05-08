@@ -46,18 +46,15 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
         detail = item.get('detail') or ""
         documentation = minihtml(item.get("documentation"), self.view)
 
-        # don't show the detail in the cooperate AC popup,
-        # if it is alread shown in the AC details filed.
+        # don't show the detail in the cooperate AC popup if it is already shown in the AC details filed.
         self.is_detail_shown = bool(detail)
 
         content = self.get_content(documentation, detail)
         self.show_popup(content)
 
         if not detail or not documentation:
-            # To make sure that the details or documentation fields don't exist
-            # we resove the completion item.
-            # If those fields appear after the item is resolved
-            # update the popup.
+            # To make sure that the detail or documentation fields doesn't exist we need to resove the completion item.
+            # If those fields appear after the item is resolved we show them in the popup.
             self.do_resolve(item)
 
     def show_popup(self, content: str) -> None:

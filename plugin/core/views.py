@@ -2,6 +2,7 @@ import html
 import linecache
 import mdpopups
 import sublime
+import re
 from .protocol import Point, Range, Notification, Request
 from .typing import Optional, Dict, Any, Iterable, List, Union
 from .url import filename_to_uri
@@ -179,7 +180,7 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
 def minihtml(content: Union[str, dict], view: sublime.View) -> str:
     """ Content can be a string or MarkupContent """
     if isinstance(content, str):
-        return html.escape(content).replace('\n', '<br>')
+        return text2html(content)
     elif isinstance(content, dict):
         value = content.get("value") or ""
         kind = content.get("kind")
@@ -187,6 +188,29 @@ def minihtml(content: Union[str, dict], view: sublime.View) -> str:
             return mdpopups.md2html(view, value)
         else:
             # must be plaintext
-            return html.escape(value).replace('\n', '<br>')
+            return text2html(value)
     else:
         return ''
+
+
+def text2html(content: str) -> str:
+    content = html.escape(content).replace('\n', '<br>')
+
+    def repalce_url_with_link(matchObj: Any) -> str:
+        href_tag, url = matchObj.groups()
+        if href_tag:
+            # Since it has an href tag, this isn't what we want to change,
+            # so return the whole match.
+            return matchObj.group(0)
+        else:
+            return "<a href='{}'>{}</a>".format(url, url)
+
+    pattern = re.compile(
+        r'((?:<a href[^>]+>)|(?:<a href="))?'
+        r'((?:https?):(?:(?://)|(?:\\\\))+'
+        r"(?:[\w\d:#@%/;$()~_?\+\-=\\\.&](?:#!)?)*)",
+        flags=re.IGNORECASE)
+    result = re.sub(pattern, repalce_url_with_link, content)
+
+    return result
+

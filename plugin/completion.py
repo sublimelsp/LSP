@@ -92,7 +92,10 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
         detail = item.get('detail') or ""
 
         content = self.get_content(documentation, detail)
-        self.show_popup(content)
+        if self.view.is_popup_visible():
+            self.update_popup(content)
+        else:
+            self.show_popup(content)
 
     def get_content(self, documentation: str, detail: str) -> str:
         content = ""

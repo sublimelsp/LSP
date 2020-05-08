@@ -179,7 +179,7 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
 def minihtml(content: Union[str, dict], view: sublime.View) -> str:
     """ Content can be a string or MarkupContent """
     if isinstance(content, str):
-        return html.escape(content)
+        return html.escape(content).replace('\n', '<br>')
     elif isinstance(content, dict):
         value = content.get("value") or ""
         kind = content.get("kind")
@@ -187,6 +187,6 @@ def minihtml(content: Union[str, dict], view: sublime.View) -> str:
             return mdpopups.md2html(view, value)
         else:
             # must be plaintext
-            return html.escape(value)
+            return html.escape(value).replace('\n', '<br>')
     else:
         return ''

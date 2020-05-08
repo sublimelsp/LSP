@@ -42,8 +42,9 @@ completion_kinds = {
 
 
 class LspResolveDocsCommand(sublime_plugin.TextCommand):
-    def run(self, edit: sublime.Edit, item: dict) -> None:
-        detail = item.get('detail') or ""
+    def run(self, edit: sublime.Edit, index: int) -> None:
+        item = CompletionHandler.completions[index]
+        detail = minihtml(item.get('detail'), self.view)
         documentation = minihtml(item.get("documentation"), self.view)
 
         # don't show the detail in the cooperate AC popup if it is already shown in the AC details filed.
@@ -63,7 +64,7 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
             content,
             flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
             max_width=480,
-            max_height=333,
+            max_height=400,
             allow_code_wrap=True
         )
 
@@ -88,8 +89,8 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
             client.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
 
     def handle_resolve_response(self, item: dict) -> None:
+        detail = minihtml(item.get('detail'), self.view)
         documentation = minihtml(item.get("documentation"), self.view)
-        detail = item.get('detail') or ""
 
         content = self.get_content(documentation, detail)
         if self.view.is_popup_visible():
@@ -100,7 +101,7 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
     def get_content(self, documentation: str, detail: str) -> str:
         content = ""
         if detail and not self.is_detail_shown:
-            content += """<div class='highlight' style='margin: 10px'>
+            content += """<div class='highlight' style='margin: 4px'>
                 <div>{}</div>
             </div>""".format(detail)
 
@@ -166,18 +167,9 @@ def resolve(completion_list: sublime.CompletionList, items: List[sublime.Complet
     sublime.set_timeout(lambda: completion_list.set_completions(items, flags))
 
 
-def deep_escape(what):
-    if isinstance(what, dict):
-        return {key: deep_escape(value) for key, value in what.items()}
-    elif isinstance(what, list):
-        return [deep_escape(value) for value in what]
-    elif isinstance(what, str):
-        return html.escape(what)
-    else:
-        return what
-
-
 class CompletionHandler(LSPViewEventListener):
+    completions = []  # type: List[dict]
+
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self.initialized = False
@@ -257,7 +249,7 @@ class CompletionHandler(LSPViewEventListener):
             lambda res: self.handle_error(res, completion_list))
         return completion_list
 
-    def format_completion(self, item: dict, can_resolve_completion_items: bool) -> sublime.CompletionItem:
+    def format_completion(self, item: dict, index: int, can_resolve_completion_items: bool) -> sublime.CompletionItem:
         # This is a hot function. Don't do heavy computations or IO in this function.
         item_kind = item.get("kind")
         if item_kind:
@@ -281,10 +273,9 @@ class CompletionHandler(LSPViewEventListener):
 
         st_details = ""
         if can_resolve_completion_items or item.get("documentation"):
-            args = {
-                "item": deep_escape(item)
-            }
-            st_details += "<a href='subl:lsp_resolve_docs {}'>More</a>".format(sublime.encode_value(args))
+            st_details += "<a href='subl:lsp_resolve_docs {}'>More</a>".format(sublime.encode_value({
+                "index": index
+            }))
             st_details += " | " if lsp_detail else ""
 
         st_details += "<p>{}</p>".format(lsp_detail)
@@ -338,10 +329,12 @@ class CompletionHandler(LSPViewEventListener):
         elif isinstance(response, list):
             response_items = response
         response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
-        items = [self.format_completion(response_item, can_resolve_completion_items)
-                 for response_item in response_items]
+        CompletionHandler.completions = response_items
+        items = [self.format_completion(response_item, index, can_resolve_completion_items)
+                 for index, response_item in enumerate(response_items)]
         resolve(completion_list, items, flags)
 
     def handle_error(self, error: dict, completion_list: sublime.CompletionList) -> None:
         resolve(completion_list, [])
+        CompletionHandler.completions = []
         sublime.status_message('Completion error: ' + str(error.get('message')))

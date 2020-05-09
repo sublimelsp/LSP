@@ -495,7 +495,7 @@ class WindowManager(Manager):
             elif file_path:
                 cwd = os.path.dirname(file_path)
             else:
-                cwd = tempfile.tempdir
+                cwd = tempfile.gettempdir()
             # WindowLike vs sublime.Window
             session.initialize(create_transport(config, cwd, self._window, session))  # type: ignore
             self._sessions.setdefault(config.name, []).append(session)

@@ -5,25 +5,9 @@ from .types import Settings
 from .typing import Any, Dict, Tuple, Callable, Optional, List
 from abc import ABCMeta, abstractmethod
 from threading import Condition, Lock
-import json
 import sublime
-import subprocess
 
-
-TCP_CONNECT_TIMEOUT = 5
 DEFAULT_SYNC_REQUEST_TIMEOUT = 1.0
-
-
-def format_request(payload: Dict[str, Any]) -> str:
-    """Converts the request into json"""
-    return json.dumps(payload, sort_keys=False, check_circular=False, separators=(',', ':'))
-
-
-def try_terminate_process(process: subprocess.Popen) -> None:
-    try:
-        process.terminate()
-    except ProcessLookupError:
-        pass  # process can be terminated already
 
 
 class Logger(metaclass=ABCMeta):

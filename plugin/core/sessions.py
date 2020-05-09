@@ -2,7 +2,6 @@ from .. import __version__
 from .edit import parse_workspace_edit
 from .logging import debug
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification, Response
-from .protocol import Error, ErrorCode, TextDocumentSyncKindNone
 from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
 from .rpc import Client
 from .transports import Transport
@@ -412,7 +411,7 @@ class Session(Client):
                 }
             }
             notification = Notification.didChangeWorkspaceFolders(params)
-            self.client.send_notification(notification)
+            self.send_notification(notification)
         if self._supports_workspace_folders():
             self._workspace_folders = folders
 

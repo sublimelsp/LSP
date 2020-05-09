@@ -41,18 +41,6 @@ def format_symbol_kind(kind: int) -> str:
     return symbol_kind_names.get(kind, str(kind))
 
 
-def format_container(container: Optional[str]) -> str:
-    return "Contained in {}".format(container) if container else ''
-
-
-def format_symbol(item: dict) -> List[str]:
-    """
-    items may be a list of strings, or a list of string lists.
-    In the latter case, each entry in the quick panel will show multiple rows
-    """
-    return [item["name"], format_symbol_kind(item.get("kind") or 0), format_container(item.get("containerName"))]
-
-
 class LspSelectionClear(sublime_plugin.TextCommand):
     """
     Selections may not be modified outside the run method of a text command. Thus, to allow modification in an async

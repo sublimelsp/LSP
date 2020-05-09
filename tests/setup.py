@@ -175,7 +175,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.session.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
         yield from self.await_promise(promise)
 
-    def make_server_do_fake_request(self, method: str, params: Any, delay: float = 0) -> YieldPromise:
+    def make_server_do_fake_request(self, method: str, params: Any) -> YieldPromise:
         promise = YieldPromise()
 
         def on_result(params: Any) -> None:
@@ -184,13 +184,9 @@ class TextDocumentTestCase(DeferrableTestCase):
         def on_error(params: Any) -> None:
             promise.fulfill(params)
 
-        req = Request("$test/fakeRequest", {"method": method, "params": params, "delay": delay})
+        req = Request("$test/fakeRequest", {"method": method, "params": params})
         self.session.send_request(req, on_result, on_error)
         return promise
-
-    def make_server_do_fake_notification(self, method: str, params: Any, delay: float = 0) -> None:
-        notification = Notification("$test/fakeNotification", {"method": method, "params": params, "delay": delay})
-        self.session.send_notification(notification)
 
     def await_promise(self, promise: YieldPromise) -> Generator:
         yield {"condition": promise, "timeout": TIMEOUT_TIME}
@@ -201,21 +197,20 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.session.send_notification(
             Notification("$test/setResponse", {"method": method, "response": response}))
 
-    def await_client_notification(self, method: str, params: 'Any' = None) -> 'Generator':
+    def await_client_notification(self, method: str, params: Any = None) -> 'Generator':
         self.assertIsNotNone(self.session)
         assert self.session  # mypy
         promise = YieldPromise()
 
-        def handler(params: 'Any') -> None:
-            assert params is None
-            promise.fulfill()
+        def handler(params: Any) -> None:
+            promise.fulfill(params)
 
-        def error_handler(params: 'Any') -> None:
+        def error_handler(params: Any) -> None:
             debug("Got error:", params, "awaiting timeout :(")
 
-        self.session.client.send_request(
+        self.session.send_request(
             Request("$test/sendNotification", {"method": method, "params": params}), handler, error_handler)
-        yield {"condition": promise, "timeout": TIMEOUT_TIME}
+        yield from self.await_promise(promise)
 
     def await_boilerplate_begin(self) -> 'Generator':
         yield from self.await_message("initialize")

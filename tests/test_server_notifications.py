@@ -8,7 +8,7 @@ class ServerNotifications(TextDocumentTestCase):
 
     def test_publish_diagnostics(self) -> Generator:
         self.insert_characters("a b c\n")
-        self.make_server_do_fake_notification("textDocument/publishDiagnostics", {
+        yield from self.await_client_notification("textDocument/publishDiagnostics", {
             'uri': filename_to_uri(self.view.file_name()),
             'diagnostics': [
                 {

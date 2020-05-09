@@ -41,7 +41,7 @@ def format_symbol_kind(kind: int) -> str:
     return symbol_kind_names.get(kind, str(kind))
 
 
-class LspSelectionClear(sublime_plugin.TextCommand):
+class LspSelectionClearCommand(sublime_plugin.TextCommand):
     """
     Selections may not be modified outside the run method of a text command. Thus, to allow modification in an async
     context we need to have dedicated commands for this.
@@ -53,7 +53,7 @@ class LspSelectionClear(sublime_plugin.TextCommand):
         self.view.sel().clear()
 
 
-class LspSelectionAdd(sublime_plugin.TextCommand):
+class LspSelectionAddCommand(sublime_plugin.TextCommand):
 
     def run(self, _: sublime.Edit, regions: List[Tuple[int, int]]) -> None:
         for region in regions:

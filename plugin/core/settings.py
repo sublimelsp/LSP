@@ -1,4 +1,4 @@
-from .logging import debug, printf
+from .logging import debug
 from .types import Settings, ClientConfig, LanguageConfig, syntax2scope
 from .typing import Any, List, Optional, Dict, Callable
 import sublime
@@ -167,8 +167,8 @@ def convert_syntaxes_to_selector(d: Dict[str, Any]) -> Optional[str]:
                 scopes.add(scope)
         if scopes:
             selector = "|".join(scopes)
-            printf('"syntaxes" is deprecated, use "document_selector" instead. The document_selector for', syntaxes,
-                   'was deduced to "{}"'.format(selector), prefix="DEPRECATION")
+            debug('"syntaxes" is deprecated, use "document_selector" instead. The document_selector for', syntaxes,
+                  'was deduced to "{}"'.format(selector))
             return selector
     return None
 

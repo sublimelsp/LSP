@@ -1,11 +1,10 @@
 import sublime
-from .core.logging import debug
+import sublime_plugin
 from .core.protocol import Request, Range
 from .core.protocol import SymbolKind
 from .core.registry import LspTextCommand
-from .core.url import filename_to_uri
-from .core.views import range_to_region
-from .core.typing import List, Optional
+from .core.views import range_to_region, text_document_identifier
+from .core.typing import Any, List, Optional, Tuple, Dict
 
 
 symbol_kind_names = {
@@ -42,53 +41,130 @@ def format_symbol_kind(kind: int) -> str:
     return symbol_kind_names.get(kind, str(kind))
 
 
+def format_container(container: Optional[str]) -> str:
+    return "Contained in {}".format(container) if container else ''
+
+
 def format_symbol(item: dict) -> List[str]:
     """
     items may be a list of strings, or a list of string lists.
     In the latter case, each entry in the quick panel will show multiple rows
     """
-    prefix = item.get("containerName", "")
-    label = prefix + "." + item.get("name") if prefix else item.get("name")
-    return [label, format_symbol_kind(item.get("kind") or 0)]
+    return [item["name"], format_symbol_kind(item.get("kind") or 0), format_container(item.get("containerName"))]
+
+
+class LspSelectionClear(sublime_plugin.TextCommand):
+    """
+    Selections may not be modified outside the run method of a text command. Thus, to allow modification in an async
+    context we need to have dedicated commands for this.
+
+    https://github.com/sublimehq/sublime_text/issues/485#issuecomment-337480388
+    """
+
+    def run(self, _: sublime.Edit) -> None:
+        self.view.sel().clear()
+
+
+class LspSelectionAdd(sublime_plugin.TextCommand):
+
+    def run(self, _: sublime.Edit, regions: List[Tuple[int, int]]) -> None:
+        for region in regions:
+            self.view.sel().add(sublime.Region(*region))
 
 
 class LspDocumentSymbolsCommand(LspTextCommand):
+
+    REGIONS_KEY = 'lsp_document_symbols'
+
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
+        self.old_regions = []  # type: List[sublime.Region]
+        self.regions = []  # type: List[Tuple[sublime.Region, Optional[sublime.Region]]]
+        self.found_at_least_one_nonempty_detail = False
+        self.is_first_selection = False
 
     def is_enabled(self, event: Optional[dict] = None) -> bool:
         return self.has_client_with_capability('documentSymbolProvider')
 
     def run(self, edit: sublime.Edit) -> None:
         client = self.client_with_capability('documentSymbolProvider')
-        file_path = self.view.file_name()
-        if client and file_path:
-            params = {
-                "textDocument": {
-                    "uri": filename_to_uri(file_path)
-                }
-            }
-            request = Request.documentSymbols(params)
-            client.send_request(request, self.handle_response)
+        if client:
+            client.send_request(
+                Request.documentSymbols({"textDocument": text_document_identifier(self.view)}), self.handle_response)
 
-    def handle_response(self, response: Optional[List]) -> None:
-        response_list = response or []
-        symbols = list(format_symbol(item) for item in response_list)
-        self.symbols = response_list
+    def handle_response(self, response: Any) -> None:
         window = self.view.window()
-        if window:
-            window.show_quick_panel(symbols, self.on_symbol_selected)
+        if window and isinstance(response, list) and len(response) > 0:
+            self.old_regions = [sublime.Region(r.a, r.b) for r in self.view.sel()]
+            self.is_first_selection = True
+            window.show_quick_panel(
+                self.process_symbols(response),
+                self.on_symbol_selected,
+                sublime.KEEP_OPEN_ON_FOCUS_LOST,
+                0,
+                self.on_highlighted)
+            self.view.run_command("lsp_selection_clear")
 
-    def on_symbol_selected(self, symbol_index: int) -> None:
-        if symbol_index == -1:
+    def region(self, index: int) -> sublime.Region:
+        return self.regions[index][0]
+
+    def selection_region(self, index: int) -> Optional[sublime.Region]:
+        return self.regions[index][1]
+
+    def on_symbol_selected(self, index: int) -> None:
+        if index == -1:
+            if len(self.old_regions) > 0:
+                self.view.run_command("lsp_selection_add", {"regions": [(r.a, r.b) for r in self.old_regions]})
+                self.view.show_at_center(self.old_regions[0].b)
+        else:
+            region = self.selection_region(index) or self.region(index)
+            self.view.run_command("lsp_selection_add", {"regions": [(region.a, region.a)]})
+            self.view.show_at_center(region.a)
+        self.view.erase_regions(self.REGIONS_KEY)
+        self.old_regions.clear()
+        self.regions.clear()
+
+    def on_highlighted(self, index: int) -> None:
+        if self.is_first_selection:
+            self.is_first_selection = False
             return
-        selected_symbol = self.symbols[symbol_index]
-        range = selected_symbol.get('location', selected_symbol.get('range'))
-        range = range.get('range', range)
-        if not range:
-            debug('could not recognize the type: expected either SymbolInformation or DocumentSymbol')
-            return
-        region = range_to_region(Range.from_lsp(range), self.view)
-        self.view.show_at_center(region)
-        self.view.sel().clear()
-        self.view.sel().add(region)
+        region = self.region(index)
+        self.view.show_at_center(region.a)
+        self.view.add_regions(self.REGIONS_KEY, [region], 'comment', '', sublime.DRAW_NO_FILL)
+
+    def process_symbols(self, items: List[Dict[str, Any]]) -> List[List[str]]:
+        self.regions.clear()
+        if 'selectionRange' in items[0]:
+            return self.process_document_symbols(items)
+        else:
+            return self.process_symbol_informations(items)
+
+    def process_document_symbols(self, items: List[Dict[str, Any]]) -> List[List[str]]:
+        quick_panel_items = []  # type: List[List[str]]
+        self.found_at_least_one_nonempty_detail = False
+        for item in items:
+            self.process_document_symbol_recursive(quick_panel_items, item, 0)
+        if self.found_at_least_one_nonempty_detail:
+            return quick_panel_items
+        else:
+            return [[item[0], item[1]] for item in quick_panel_items]
+
+    def process_document_symbol_recursive(self, quick_panel_items: List[List[str]], item: Dict[str, Any],
+                                          depth: int) -> None:
+        self.regions.append((range_to_region(Range.from_lsp(item['range']), self.view),
+                             range_to_region(Range.from_lsp(item['selectionRange']), self.view)))
+        name = ' ' * (4 * depth) + item['name']
+        quick_panel_item = [name, format_symbol_kind(item['kind']), item.get('detail') or '']
+        if quick_panel_item[2]:
+            self.found_at_least_one_nonempty_detail = True
+        quick_panel_items.append(quick_panel_item)
+        children = item.get('children') or []
+        for child in children:
+            self.process_document_symbol_recursive(quick_panel_items, child, depth + 1)
+
+    def process_symbol_informations(self, items: List[Dict[str, Any]]) -> List[List[str]]:
+        quick_panel_items = []  # type: List[List[str]]
+        for item in items:
+            self.regions.append((range_to_region(Range.from_lsp(item['location']['range']), self.view), None))
+            quick_panel_items.append([item['name'], format_symbol_kind(item['kind'])])
+        return quick_panel_items

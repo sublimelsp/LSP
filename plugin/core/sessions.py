@@ -51,6 +51,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
             },
             "documentSymbol": {
                 "dynamicRegistration": True,
+                "hierarchicalDocumentSymbolSupport": True,
                 "symbolKind": {
                     "valueSet": symbol_kinds
                 }

@@ -115,6 +115,13 @@ def print_to_status_bar(error: Dict[str, Any]) -> None:
     sublime.status_message(error["message"])
 
 
+def method2attr(method: str) -> str:
+    # window/messageRequest -> m_window_messageRequest
+    # $/progress -> m___progress
+    # client/registerCapability -> m_client_registerCapability
+    return 'm_' + ''.join(map(lambda c: c if c.isalpha() else '_', method))
+
+
 class Client(TransportCallbacks):
     def __init__(self, config_name: str, settings: Settings) -> None:
         self.transport = None  # type: Optional[Transport]
@@ -161,6 +168,7 @@ class Client(TransportCallbacks):
                 self.logger.outgoing_request(request_id, request.method, request.params, blocking=True)
                 self._sync_request_result.prepare(request_id)  # After this, is_requesting() returns True.
                 self.send_payload(request.to_payload(request_id))
+                self._response_handlers[request_id] = (handler, error_handler)
                 # We go to sleep. We wake up once another thread calls .notify() on this condition variable.
                 if not self._sync_request_cvar.wait_for(self._sync_request_result.is_ready, timeout):
                     error = {"code": ErrorCode.Timeout, "message": "timeout on {}".format(request.method)}
@@ -322,11 +330,7 @@ class Client(TransportCallbacks):
             return (None, None)
 
     def _get_handler(self, method: str) -> Optional[Callable]:
-        # window/messageRequest -> m_window_messageRequest
-        # $/progress -> m___progress
-        # client/registerCapability -> m_client_registerCapability
-        attr = 'm_' + ''.join([c if c.isalpha() else '_' for c in method])
-        return getattr(self, attr, None)
+        return getattr(self, method2attr(method), None)
 
 
 class SublimeLogger(Logger):

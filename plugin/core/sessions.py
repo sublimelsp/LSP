@@ -1,4 +1,3 @@
-from .. import __version__
 from .edit import parse_workspace_edit
 from .logging import debug
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification, Response
@@ -12,6 +11,9 @@ from abc import ABCMeta, abstractmethod
 import os
 import sublime
 import weakref
+
+
+__version__ = (0, 10, 1)
 
 
 class Manager(metaclass=ABCMeta):

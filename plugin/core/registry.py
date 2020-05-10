@@ -73,8 +73,8 @@ def client_from_session(session: Optional[Session]) -> Optional[Client]:
     return session.client if session else None
 
 
-def sessions_for_view(view: sublime.View) -> Generator[Session, None, None]:
-    yield from _sessions_for_view_and_window(view, view.window())
+def sessions_for_view(view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
+    yield from _sessions_for_view_and_window(view, view.window(), capability)
 
 
 def session_for_view(view: sublime.View, capability: str, point: int) -> Optional[Session]:
@@ -82,15 +82,15 @@ def session_for_view(view: sublime.View, capability: str, point: int) -> Optiona
     returns the "best matching" session for that particular point. This is determined by the feature_selector property
     of the relevant LanguageConfig.
     """
-    sessions = [s for s in sessions_for_view(view) if s.has_capability(capability)]
+    sessions = [s for s in sessions_for_view(view, capability) if s.has_capability(capability)]
     if not sessions:
         return None
     scope = view.scope_name(point)
     return max(sessions, key=lambda session: session.config.score_feature(scope))
 
 
-def _sessions_for_view_and_window(view: sublime.View,
-                                  window: Optional[sublime.Window]) -> Generator[Session, None, None]:
+def _sessions_for_view_and_window(view: sublime.View, window: Optional[sublime.Window],
+                                  capability: Optional[str]) -> Generator[Session, None, None]:
     if window:
         file_path = view.file_name()
         if file_path:
@@ -98,7 +98,8 @@ def _sessions_for_view_and_window(view: sublime.View,
             for config in manager._configs.match_view(view):
                 session = manager.get_session(config.name, file_path)
                 if session and session.state == ClientStates.READY:
-                    yield session
+                    if capability is None or session.has_capability(capability):
+                        yield session
 
 
 def unload_sessions(window: sublime.Window) -> None:

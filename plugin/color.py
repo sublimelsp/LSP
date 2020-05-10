@@ -40,12 +40,11 @@ class LspColorListener(sublime_plugin.ViewEventListener):
         configs = configs_for_scope(self.view)
         if not configs:
             self.initialized = True  # no server enabled, re-open file to activate feature.
-        sessions = list(sessions_for_view(self.view))
+        sessions = list(sessions_for_view(self.view, 'colorProvider'))
         if sessions:
             self.initialized = True
-            if any(session.has_capability('colorProvider') for session in sessions):
-                self.enabled = True
-                self.send_color_request()
+            self.enabled = True
+            self.send_color_request()
         elif not is_retry:
             # session may be starting, try again once in a second.
             sublime.set_timeout_async(lambda: self.initialize(is_retry=True), 1000)

@@ -94,9 +94,13 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
         completion_provider = session.get_capability('completionProvider')
         has_resolve_provider = completion_provider and completion_provider.get('resolveProvider', False)
         if has_resolve_provider:
-            client.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
+            client.send_request(
+                Request.resolveCompletionItem(item),
+                lambda res: self.handle_resolve_response(res))
 
-    def handle_resolve_response(self, item: dict) -> None:
+    def handle_resolve_response(self, item: Optional[dict]) -> None:
+        if not item:
+            return
         detail = minihtml(item.get('detail') or "", self.view)
         documentation = minihtml(item.get("documentation") or "", self.view)
 

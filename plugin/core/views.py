@@ -198,7 +198,7 @@ def text2html(content: str) -> str:
         spaces = match.group(0)
         return "&nbsp;" * len(spaces)
 
-    content = html.escape(content).replace('\n', '<br>')
+    content = html.escape(content).replace('\n', '<br>').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
     # if there are 2 or more spaces, replace them with &nbsp;
     content = re.sub(r"( {2,})", replace_npbs, content)
 

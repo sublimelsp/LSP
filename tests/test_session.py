@@ -145,7 +145,6 @@ class SessionTest(unittest.TestCase):
         session.client.transport.close()
 
     def test_can_get_started_session(self):
-
         post_initialize_callback = unittest.mock.Mock()
         session = self.make_session(
             MockClient(),
@@ -199,7 +198,6 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindFull)
         self.assertTrue(session.should_notify_did_change())
         self.assertFalse(session.should_notify_will_save())
-        self.assertFalse(session.should_request_will_save_wait_until())
         self.assertEqual(session.should_notify_did_save(), (True, False))
 
         client.responses = {
@@ -217,8 +215,13 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindNone)
         self.assertFalse(session.should_notify_did_change())
         self.assertTrue(session.should_notify_will_save())
-        self.assertFalse(session.should_request_will_save_wait_until())
         self.assertEqual(session.should_notify_did_save(), (True, False))
+        # Nested capabilities.
+        self.assertTrue(session.has_capability('textDocumentSync.change'))
+        self.assertTrue(session.has_capability('textDocumentSync.save'))
+        self.assertTrue(session.has_capability('textDocumentSync.willSave'))
+        self.assertFalse(session.has_capability('textDocumentSync.willSaveUntil'))
+        self.assertFalse(session.has_capability('textDocumentSync.aintthere'))
 
         client.responses = {
             'initialize': {
@@ -235,7 +238,6 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindIncremental)
         self.assertTrue(session.should_notify_did_change())
         self.assertFalse(session.should_notify_will_save())
-        self.assertTrue(session.should_request_will_save_wait_until())
         self.assertEqual(session.should_notify_did_save(), (True, True))
 
         client.responses = {
@@ -248,7 +250,6 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindIncremental)
         self.assertTrue(session.should_notify_did_change())
         self.assertFalse(session.should_notify_will_save())  # old-style text sync will never send willSave
-        self.assertFalse(session.should_request_will_save_wait_until())
         self.assertEqual(session.should_notify_did_save(), (False, False))
 
         client.responses = {
@@ -261,7 +262,6 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindNone)
         self.assertFalse(session.should_notify_did_change())
         self.assertFalse(session.should_notify_will_save())
-        self.assertFalse(session.should_request_will_save_wait_until())
         self.assertEqual(session.should_notify_did_save(), (False, False))
 
         client.responses = {
@@ -277,5 +277,4 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindIncremental)
         self.assertTrue(session.should_notify_did_change())
         self.assertFalse(session.should_notify_will_save())
-        self.assertFalse(session.should_request_will_save_wait_until())
         self.assertEqual(session.should_notify_did_save(), (False, False))

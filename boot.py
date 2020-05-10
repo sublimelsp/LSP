@@ -41,4 +41,6 @@ from .plugin.references import LspSymbolReferencesCommand
 from .plugin.rename import LspSymbolRenameCommand
 from .plugin.signature_help import SignatureHelpListener
 from .plugin.symbols import LspDocumentSymbolsCommand
+from .plugin.symbols import LspSelectionAddCommand
+from .plugin.symbols import LspSelectionClearCommand
 from .plugin.workspace_symbol import LspWorkspaceSymbolsCommand

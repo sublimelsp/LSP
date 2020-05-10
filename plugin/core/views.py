@@ -1,8 +1,8 @@
 import html
 import linecache
 import mdpopups
-import sublime
 import re
+import sublime
 from .protocol import Point, Range, Notification, Request
 from .typing import Optional, Dict, Any, Iterable, List, Union
 from .url import filename_to_uri
@@ -194,8 +194,8 @@ def minihtml(content: Union[str, dict], view: sublime.View) -> str:
 
 
 def text2html(content: str) -> str:
-    # content += "<a href='https://dasd.dsad'>,dsadas</dsad>"
-    content = html.escape(content).replace('\n', '<br>')
+    content = html.escape(content) \
+        .replace('\n', '<br>').replace(' ', '&nbsp;').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
 
     def replace_url_with_link(match: Any) -> str:
         url = match.group(0)

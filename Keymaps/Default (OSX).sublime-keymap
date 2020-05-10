@@ -55,7 +55,7 @@
     // {"keys": ["UNBOUND"], "command": "lsp_format_document_range", "context": [{"key": "setting.lsp_active"}]},
 
     // Document Symbols (a replacement for ST's "Goto Symbol")
-    // {"keys": ["ctrl+r"], "command": "lsp_document_symbols", "context": [{"key": "setting.lsp_active"}]},
+    // {"keys": ["super+r"], "command": "lsp_document_symbols", "context": [{"key": "setting.lsp_active"}]},
 
     // Workspace Symbols
     // {"keys": ["UNBOUND"], "command": "lsp_workspace_symbols", "context": [{"key": "setting.lsp_active"}]},

@@ -118,7 +118,10 @@ class LspCodeActionBulbListener(sublime_plugin.ViewEventListener):
         self.schedule_request()
 
     def schedule_request(self) -> None:
-        current_region = self.view.sel()[0]
+        try:
+            current_region = self.view.sel()[0]
+        except IndexError:
+            return
         if self._stored_region != current_region:
             self._stored_region = current_region
             sublime.set_timeout_async(lambda: self.fire_request(current_region), 800)

@@ -6,7 +6,7 @@ import sublime_plugin
 from .core.configurations import is_supported_syntax
 from .core.edit import parse_text_edit
 from .core.protocol import Request, InsertTextFormat, Range
-from .core.registry import session_for_view, client_from_session, LSPViewEventListener
+from .core.registry import session_for_view, client_from_session, LSPViewEventListener, sessions_for_view
 from .core.settings import settings, client_configs
 from .core.typing import Any, List, Dict, Optional, Union, Generator
 from .core.views import text_document_position_params, range_to_region, minihtml
@@ -79,18 +79,8 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
         )
 
     def do_resolve(self, item: dict) -> None:
-        session = session_for_view(self.view, 'completionProvider', self.view.sel()[0].begin())
-        if not session:
-            return
-
-        client = client_from_session(session)
-        if not client:
-            return
-
-        completion_provider = session.get_capability('completionProvider')
-        has_resolve_provider = completion_provider and completion_provider.get('resolveProvider', False)
-        if has_resolve_provider:
-            client.send_request(
+        for session in sessions_for_view(self.view, 'completionProvider.resolveProvider'):
+            session.client.send_request(
                 Request.resolveCompletionItem(item),
                 lambda res: self.handle_resolve_response(res))
 

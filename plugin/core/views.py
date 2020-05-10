@@ -3,6 +3,7 @@ import linecache
 import mdpopups
 import re
 import sublime
+import textwrap
 from .protocol import Point, Range, Notification, Request
 from .typing import Optional, Dict, Any, Iterable, List, Union
 from .url import filename_to_uri
@@ -198,6 +199,8 @@ def text2html(content: str) -> str:
         spaces = match.group(0)
         return "&nbsp;" * len(spaces)
 
+    content = "\n".join(textwrap.wrap(content, width=54,
+                                      replace_whitespace=False, break_long_words=False, break_on_hyphens=False))
     content = html.escape(content).replace('\n', '<br>').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
     # if there are 2 or more spaces, replace them with &nbsp;
     content = re.sub(r"( {2,})", replace_npbs, content)

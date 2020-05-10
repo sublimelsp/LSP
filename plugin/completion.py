@@ -74,7 +74,7 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
             content,
             flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
             max_width=480,
-            max_height=300,
+            max_height=410,
             allow_code_wrap=True
         )
 

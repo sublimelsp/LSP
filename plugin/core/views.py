@@ -194,6 +194,7 @@ def minihtml(content: Union[str, dict], view: sublime.View) -> str:
 
 
 def text2html(content: str) -> str:
+    # content += "<a href='https://dasd.dsad'>,dsadas</dsad>"
     content = html.escape(content).replace('\n', '<br>')
 
     def replace_url_with_link(match: Any) -> str:
@@ -201,8 +202,7 @@ def text2html(content: str) -> str:
         return "<a href='{}'>{}</a>".format(url, url)
 
     FIND_URL = re.compile(
-        # match from `http` till the first escaped ", ', <, > or space character
-        r'(https?:(?://|\\\\).+?(?=(&quot;|&#x27;|&lt;|&gt;|\s)))',
+        r'(https?:(?://|\\\\)(?:[\w\d:#@%/;$()~_?\+\-=\\\.&](?:#!)?)*)',
         flags=re.IGNORECASE)
-    return re.sub(FIND_URL, replace_url_with_link, content)
 
+    return re.sub(FIND_URL, replace_url_with_link, content)

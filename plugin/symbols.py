@@ -103,7 +103,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         if index == -1:
             if len(self.old_regions) > 0:
                 self.view.run_command("lsp_selection_add", {"regions": [(r.a, r.b) for r in self.old_regions]})
-                self.view.show_at_center(self.old_regions[0].b)
+                self.view.show_at_center(self.old_regions[0].begin())
         else:
             region = self.selection_region(index) or self.region(index)
             self.view.run_command("lsp_selection_add", {"regions": [(region.a, region.a)]})

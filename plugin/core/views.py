@@ -196,21 +196,13 @@ def minihtml(content: Union[str, dict], view: sublime.View) -> str:
 def text2html(content: str) -> str:
     content = html.escape(content).replace('\n', '<br>')
 
-    def repalce_url_with_link(matchObj: Any) -> str:
-        href_tag, url = matchObj.groups()
-        if href_tag:
-            # Since it has an href tag, this isn't what we want to change,
-            # so return the whole match.
-            return matchObj.group(0)
-        else:
-            return "<a href='{}'>{}</a>".format(url, url)
+    def replace_url_with_link(match: Any) -> str:
+        url = match.group(0)
+        return "<a href='{}'>{}</a>".format(url, url)
 
-    pattern = re.compile(
-        r'((?:<a href[^>]+>)|(?:<a href="))?'
-        r'((?:https?):(?:(?://)|(?:\\\\))+'
-        r"(?:[\w\d:#@%/;$()~_?\+\-=\\\.&](?:#!)?)*)",
+    FIND_URL = re.compile(
+        # match from `http` till the first escaped ", ', <, > or space character
+        r'(https?:(?://|\\\\).+?(?=(&quot;|&#x27;|&lt;|&gt;|\s)))',
         flags=re.IGNORECASE)
-    result = re.sub(pattern, repalce_url_with_link, content)
-
-    return result
+    return re.sub(FIND_URL, replace_url_with_link, content)
 

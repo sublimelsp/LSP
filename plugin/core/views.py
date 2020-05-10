@@ -203,7 +203,7 @@ def text2html(content: str) -> str:
     content = re.sub(r"( {2,})", replace_npbs, content)
 
     FIND_URL = re.compile(
-        r'(https?:(?://|\\\\)(?:[\w\d:#@%/;$()~_?\+\-=\\\.&](?:#!)?)*)',
+        r'(https?://(?:[\w\d:#@%/;$()~_?\+\-=\\\.&](?:#!)?)*)',
         flags=re.IGNORECASE)
 
     def replace_url_with_link(match: Any) -> str:

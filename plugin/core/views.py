@@ -202,12 +202,12 @@ def text2html(content: str, wrap_width: Optional[int] = None) -> str:
         content = "<br>".join(textwrap.wrap(content, width=wrap_width,
                               replace_whitespace=False, break_long_words=False, break_on_hyphens=False))
 
-    def replace_npbs(match: Any) -> str:
+    def replace_nbsp(match: Any) -> str:
         spaces = match.group(0)
         return "&nbsp;" * len(spaces)
 
     # if there are 2 or more spaces, replace them with &nbsp;
-    content = re.sub(r"( {2,})", replace_npbs, content)
+    content = re.sub(r"( {2,})", replace_nbsp, content)
 
     def replace_url_with_link(match: Any) -> str:
         url = match.group(0)

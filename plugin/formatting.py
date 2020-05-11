@@ -56,7 +56,7 @@ class FormatOnSaveListener(LSPViewEventListener):
                                    lambda response: self._apply_and_purge(response))
 
     def _format_on_save(self) -> None:
-        client = client_from_session(session_for_view(self.view, 'documentFormattingProvider', self.view.sel()[0].b))
+        client = client_from_session(session_for_view(self.view, 'documentFormattingProvider'))
         if client:
             client.execute_request(text_document_formatting(self.view),
                                    lambda response: self._apply_and_purge(response))

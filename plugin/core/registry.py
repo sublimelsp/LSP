@@ -80,11 +80,18 @@ def sessions_for_view(view: sublime.View, capability: Optional[str] = None) -> G
     yield from _sessions_for_view_and_window(view, view.window(), capability)
 
 
-def session_for_view(view: sublime.View, capability: str, point: int) -> Optional[Session]:
+def session_for_view(view: sublime.View, capability: str, point: Optional[int] = None) -> Optional[Session]:
     """
     returns the "best matching" session for that particular point. This is determined by the feature_selector property
     of the relevant LanguageConfig.
+
+    If point is None, then the point is understood to be the position of the first cursor.
     """
+    if point is None:
+        try:
+            point = view.sel()[0].b
+        except IndexError:
+            return None
     scope = view.scope_name(point)
     try:
         return max(sessions_for_view(view, capability), key=lambda session: session.config.score_feature(scope))
@@ -137,10 +144,10 @@ class LspTextCommand(sublime_plugin.TextCommand):
         return is_supported_view(self.view)
 
     def has_client_with_capability(self, capability: str) -> bool:
-        return session_for_view(self.view, capability, self.view.sel()[0].b) is not None
+        return session_for_view(self.view, capability) is not None
 
     def client_with_capability(self, capability: str) -> Optional[Client]:
-        return client_from_session(session_for_view(self.view, capability, self.view.sel()[0].b))
+        return client_from_session(session_for_view(self.view, capability))
 
 
 class LspRestartClientCommand(sublime_plugin.TextCommand):

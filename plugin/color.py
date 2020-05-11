@@ -72,7 +72,7 @@ class LspColorListener(sublime_plugin.ViewEventListener):
         if is_transient_view(self.view):
             return
 
-        client = client_from_session(session_for_view(self.view, 'colorProvider', self.view.sel()[0].b))
+        client = client_from_session(session_for_view(self.view, 'colorProvider'))
         if client:
             file_path = self.view.file_name()
             if file_path:

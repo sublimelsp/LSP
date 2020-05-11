@@ -51,7 +51,7 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
 
     def _initialize(self) -> None:
         self._initialized = True
-        session = session_for_view(self.view, "documentHighlightProvider", self.view.sel()[0].b)
+        session = session_for_view(self.view, "documentHighlightProvider")
         if session:
             self._enabled = True
 

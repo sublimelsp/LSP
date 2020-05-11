@@ -49,9 +49,8 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
 
         # don't show the detail in the cooperate AC popup if it is already shown in the AC details filed.
         self.is_detail_shown = bool(detail)
-
-        content = self.get_content(documentation, detail)
-        self.show_popup(content)
+        minihtml_content = self.get_content(documentation, detail)
+        self.show_popup(minihtml_content)
 
         if not detail or not documentation:
             # To make sure that the detail or documentation fields doesn't exist we need to resove the completion item.
@@ -62,16 +61,14 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
         content = ""
         if detail and not self.is_detail_shown:
             content += "<div class='highlight' style='margin: 4px'>{}</div>".format(detail)
-
         if documentation:
             content += "<div style='margin: 10px'>{}</div>".format(documentation)
-
         return content
 
-    def show_popup(self, content: str) -> None:
+    def show_popup(self, minihtml_content: str) -> None:
         mdpopups.show_popup(
             self.view,
-            content,
+            minihtml_content,
             flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
             max_width=480,
             max_height=410,
@@ -82,11 +79,9 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
         session = session_for_view(self.view, 'completionProvider', self.view.sel()[0].begin())
         if not session:
             return
-
         client = client_from_session(session)
         if not client:
             return
-
         completion_provider = session.get_capability('completionProvider')
         has_resolve_provider = completion_provider and completion_provider.get('resolveProvider', False)
         if has_resolve_provider:
@@ -99,15 +94,14 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
             return
         detail = minihtml(self.view, item.get('detail') or "", wrap_width=DOCS_WRAP_WIDTH)
         documentation = minihtml(self.view, item.get("documentation") or "", wrap_width=DOCS_WRAP_WIDTH)
-
-        content = self.get_content(documentation, detail)
+        minihtml_content = self.get_content(documentation, detail)
         if self.view.is_popup_visible():
-            self.update_popup(content)
+            self.update_popup(minihtml_content)
         else:
-            self.show_popup(content)
+            self.show_popup(minihtml_content)
 
-    def update_popup(self, content: str) -> None:
-        mdpopups.update_popup(self.view, content)
+    def update_popup(self, minihtml_content: str) -> None:
+        mdpopups.update_popup(self.view, minihtml_content)
 
 
 class LspCompleteCommand(sublime_plugin.TextCommand):

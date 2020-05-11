@@ -3,7 +3,6 @@ import linecache
 import mdpopups
 import re
 import sublime
-import textwrap
 from .protocol import Point, Range, Notification, Request
 from .typing import Optional, Dict, Any, Iterable, List, Union
 from .url import filename_to_uri
@@ -195,8 +194,6 @@ def minihtml(content: Union[str, dict], view: sublime.View) -> str:
 
 
 def text2html(content: str) -> str:
-    content = "\n".join(textwrap.wrap(content, width=54,
-                                      replace_whitespace=False, break_long_words=False, break_on_hyphens=False))
     content = html.escape(content).replace('\n', '<br>').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
 
     def replace_npbs(match: Any) -> str:

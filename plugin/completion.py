@@ -214,7 +214,7 @@ class CompletionHandler(LSPViewEventListener):
     def on_post_text_command(self, command: str, args: dict) -> None:
         if not self.view.is_popup_visible():
             return
-        if command in ["hide_auto_complete", "move"] or 'delete' in command:
+        if command in ["hide_auto_complete", "move", "commit_completion"] or 'delete' in command:
             # hide the popup when `esc` or arrows are pressed pressed
             self.view.hide_popup()
 

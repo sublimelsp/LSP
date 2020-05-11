@@ -757,7 +757,7 @@ If you use a virtualenv for your current project, add a path to it in your [proj
 }
 ```
 
-A basic configuration below can be used for bootstraping your own:
+A basic configuration below can be used for bootstrapping your own:
 
 ```js
   //...
@@ -792,7 +792,7 @@ A basic configuration below can be used for bootstraping your own:
           ],
         },
         "jedi_completion": {
-          "fuzzy": false,  // Enable fuzzy when requesting autocomplete
+          "fuzzy": true,  // Enable fuzzy when requesting autocomplete
         },
         "pycodestyle": {
           "enabled": true,

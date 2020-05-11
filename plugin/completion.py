@@ -2,6 +2,7 @@ import html
 import mdpopups
 import sublime
 import sublime_plugin
+import webbrowser
 
 from .core.configurations import is_supported_syntax
 from .core.edit import parse_text_edit
@@ -72,8 +73,12 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
             flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
             max_width=480,
             max_height=410,
-            allow_code_wrap=True
+            allow_code_wrap=True,
+            on_navigate=self.on_navigate
         )
+
+    def on_navigate(self, url: str) -> None:
+        webbrowser.open(url)
 
     def do_resolve(self, item: dict) -> None:
         session = session_for_view(self.view, 'completionProvider', self.view.sel()[0].begin())

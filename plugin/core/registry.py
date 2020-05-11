@@ -7,7 +7,7 @@ from .logging import debug
 from .rpc import Client
 from .sessions import Session
 from .settings import settings, client_configs
-from .types import ClientConfig, ClientStates, WindowLike
+from .types import ClientConfig, ClientStates, WindowLike, view2scope
 from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
 from .typing import Optional, Callable, Dict, Any, Generator
 
@@ -105,11 +105,13 @@ def _sessions_for_view_and_window(view: sublime.View, window: Optional[sublime.W
         file_path = view.file_name()
         if file_path:
             manager = windows.lookup(window)
-            for config in manager._configs.match_view(view):
-                session = manager.get_session(config.name, file_path)
-                if session and session.state == ClientStates.READY:
-                    if capability is None or session.has_capability(capability):
-                        yield session
+            scope = view2scope(view)
+            for sessions in manager._sessions.values():
+                for session in sessions:
+                    if session.state == ClientStates.READY and session.config.match_document(scope):
+                        if session.handles_path(file_path):
+                            if capability is None or session.has_capability(capability):
+                                yield session
 
 
 def unload_sessions(window: sublime.Window) -> None:

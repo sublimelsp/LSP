@@ -74,6 +74,9 @@ def client_from_session(session: Optional[Session]) -> Optional[Client]:
 
 
 def sessions_for_view(view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
+    """
+    Returns all sessions for this view, optionally matching the capability path.
+    """
     yield from _sessions_for_view_and_window(view, view.window(), capability)
 
 
@@ -82,11 +85,11 @@ def session_for_view(view: sublime.View, capability: str, point: int) -> Optiona
     returns the "best matching" session for that particular point. This is determined by the feature_selector property
     of the relevant LanguageConfig.
     """
-    sessions = [s for s in sessions_for_view(view, capability) if s.has_capability(capability)]
-    if not sessions:
-        return None
     scope = view.scope_name(point)
-    return max(sessions, key=lambda session: session.config.score_feature(scope))
+    try:
+        return max(sessions_for_view(view, capability), key=lambda session: session.config.score_feature(scope))
+    except ValueError:
+        return None
 
 
 def _sessions_for_view_and_window(view: sublime.View, window: Optional[sublime.Window],

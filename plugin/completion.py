@@ -79,9 +79,18 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
         )
 
     def do_resolve(self, item: dict) -> None:
-        session = session_for_view(self.view, 'completionProvider.resolveProvider')
-        if session:
-            session.client.send_request(
+        session = session_for_view(self.view, 'completionProvider', self.view.sel()[0].begin())
+        if not session:
+            return
+
+        client = client_from_session(session)
+        if not client:
+            return
+
+        completion_provider = session.get_capability('completionProvider')
+        has_resolve_provider = completion_provider and completion_provider.get('resolveProvider', False)
+        if has_resolve_provider:
+            client.send_request(
                 Request.resolveCompletionItem(item),
                 lambda res: self.handle_resolve_response(res))
 

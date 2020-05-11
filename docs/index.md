@@ -757,7 +757,59 @@ If you use a virtualenv for your current project, add a path to it in your [proj
 }
 ```
 
-See: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
+A pyls configuration in `LSP.sublime-settings` that is convenient for novices:
+
+```js
+{
+  //...
+  
+	"clients":
+	{
+        "pyls": {
+            "enabled": true,
+            "command": ["pyls"],
+            "scopes": ["source.python"],
+            "syntaxes": ["Packages/Python/Python.sublime-syntax", "Packages/MagicPython/grammars/MagicPython.tmLanguage", "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage"],
+            "languageId": "python",
+            "settings": {
+                "pyls": {
+                    "configurationSources": ["flake8"],
+                    "plugins": {
+                        "jedi": {
+                            "enabled": true,  // Turn on automatic completion by Jedi
+                            "extra_paths": [
+                                // "The directory where the pip installation package is located",
+                            ],
+                        },
+                        "pyflakes": {"enabled": true,},
+                        "pycodestyle": {
+                            "enabled": true,
+                            "ignore": [
+                                "E501",   // ignore lint
+                            ]
+                        },
+                        "pydocstyle": {"enabled": false,},
+                        "autopep8": {"enabled": false},
+                        "yapf": {"enabled": false},
+                        "pylint": {"enabled": false,},
+                        // pyls' 3rd Party Plugins, Mypy type checking for Python 3, Must be installed via pip before enabling
+                        "pyls_mypy": {
+                            "enabled": false,
+                            "live_mode": true,
+                        },
+                    }
+                }
+            }
+        },
+
+	}
+}
+
+```
+
+If an error occurs in the automatic completion of `pyls`, it may be due to incompatible versions of some packages that `pyls` depends on.
+
+View more information: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
 
 #### Microsoft's Python Language Server
 

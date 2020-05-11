@@ -9,7 +9,7 @@ from .core.protocol import Request, InsertTextFormat, Range
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.settings import settings, client_configs
 from .core.typing import Any, List, Dict, Optional, Union, Generator
-from .core.views import text_document_position_params, range_to_region, minihtml
+from .core.views import text_document_position_params, range_to_region, minihtml, DOCS_WRAP_WIDTH
 
 
 completion_kinds = {
@@ -44,8 +44,8 @@ completion_kinds = {
 class LspResolveDocsCommand(sublime_plugin.TextCommand):
     def run(self, edit: sublime.Edit, index: int) -> None:
         item = CompletionHandler.completions[index]
-        detail = minihtml(self.view, item.get('detail') or "")
-        documentation = minihtml(self.view, item.get("documentation") or "")
+        detail = minihtml(self.view, item.get('detail') or "", wrap_width=DOCS_WRAP_WIDTH)
+        documentation = minihtml(self.view, item.get("documentation") or "", wrap_width=DOCS_WRAP_WIDTH)
 
         # don't show the detail in the cooperate AC popup if it is already shown in the AC details filed.
         self.is_detail_shown = bool(detail)
@@ -88,8 +88,8 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
     def handle_resolve_response(self, item: Optional[dict]) -> None:
         if not item:
             return
-        detail = minihtml(self.view, item.get('detail') or "")
-        documentation = minihtml(self.view, item.get("documentation") or "")
+        detail = minihtml(self.view, item.get('detail') or "", wrap_width=DOCS_WRAP_WIDTH)
+        documentation = minihtml(self.view, item.get("documentation") or "", wrap_width=DOCS_WRAP_WIDTH)
 
         content = self.get_content(documentation, detail)
         if self.view.is_popup_visible():

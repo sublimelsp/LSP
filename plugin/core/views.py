@@ -3,9 +3,12 @@ import linecache
 import mdpopups
 import re
 import sublime
+import textwrap
 from .protocol import Point, Range, Notification, Request
 from .typing import Optional, Dict, Any, Iterable, List, Union
 from .url import filename_to_uri
+
+DOCS_WRAP_WIDTH = 58
 
 
 def get_line(window: Optional[sublime.Window], file_name: str, row: int) -> str:
@@ -177,10 +180,10 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
     })
 
 
-def minihtml(view: sublime.View, content: Union[str, dict]) -> str:
-    """ Content can be a string or MarkupContent """
+def minihtml(view: sublime.View, content: Union[str, dict], wrap_width: Optional[int] = None) -> str:
+    """ Content can be a string or MarkupContent. `wrap_width` will only wrap content parsed with text2html. """
     if isinstance(content, str):
-        return text2html(content)
+        return text2html(content, wrap_width)
     elif isinstance(content, dict):
         value = content.get("value") or ""
         kind = content.get("kind")
@@ -188,13 +191,16 @@ def minihtml(view: sublime.View, content: Union[str, dict]) -> str:
             return mdpopups.md2html(view, value)
         else:
             # must be plaintext
-            return text2html(value)
+            return text2html(value, wrap_width)
     else:
         return ''
 
 
-def text2html(content: str) -> str:
+def text2html(content: str, wrap_width: Optional[int] = None) -> str:
     content = html.escape(content).replace('\n', '<br>').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
+    if wrap_width is not None:
+        content = "<br>".join(textwrap.wrap(content, width=wrap_width,
+                              replace_whitespace=False, break_long_words=False, break_on_hyphens=False))
 
     def replace_npbs(match: Any) -> str:
         spaces = match.group(0)

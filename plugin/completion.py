@@ -60,9 +60,9 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
     def get_content(self, documentation: str, detail: str) -> str:
         content = ""
         if detail and not self.is_detail_shown:
-            content += "<div class='highlight' style='margin: 4px'>{}</div>".format(detail)
+            content += "<div class='highlight' style='margin: 6px'>{}</div>".format(detail)
         if documentation:
-            content += "<div style='margin: 10px'>{}</div>".format(documentation)
+            content += "<div style='margin: 6px'>{}</div>".format(documentation)
         return content
 
     def show_popup(self, minihtml_content: str) -> None:

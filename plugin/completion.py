@@ -209,13 +209,8 @@ class CompletionHandler(LSPViewEventListener):
     def on_post_text_command(self, command: str, args: dict) -> None:
         if not self.view.is_popup_visible():
             return
-        if command in ["hide_auto_complete", "move"]:
+        if command in ["hide_auto_complete", "move"] or 'delete' in command:
             # hide the popup when `esc` or arrows are pressed pressed
-            self.view.hide_popup()
-
-    def on_modified_async(self) -> None:
-        if self.view.is_popup_visible():
-            # hide the docs popup on each keystoke
             self.view.hide_popup()
 
     def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[sublime.CompletionList]:

@@ -757,7 +757,70 @@ If you use a virtualenv for your current project, add a path to it in your [proj
 }
 ```
 
-See: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
+A basic configuration below can be used for bootstrapping your own:
+
+```js
+  //...
+"pyls": {
+  "enabled": true,
+  "command": ["pyls"],
+  "languageId": "python",
+  "scopes": ["source.python"],
+  "syntaxes": [
+    "Packages/Python/Python.sublime-syntax",
+    "Packages/MagicPython/grammars/MagicPython.tmLanguage",
+    "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage",
+  ],
+  "settings": {
+    "pyls": {
+      "env":
+      {
+        // Making Sublime's own libs available to the linters.
+        // "PYTHONPATH": "/Applications/Sublime Text.app/Contents/MacOS/Lib/python33",
+      },
+      // Configuration is computed first from user configuration (in home directory),
+      // overridden by configuration passed in by the language client,
+      // and then overridden by configuration discovered in the workspace.
+      "configurationSources": [
+        "pycodestyle",  // discovered in ~/.config/pycodestyle, setup.cfg, tox.ini and pycodestyle.cfg
+        // "flake8",  // discovered in ~/.config/flake8, setup.cfg, tox.ini and flake8.cfg
+      ],
+      "plugins": {
+        "jedi": {
+          "extra_paths": [
+            // The directory where the pip installation package is located
+          ],
+        },
+        "jedi_completion": {
+          "fuzzy": true,  // Enable fuzzy when requesting autocomplete
+        },
+        "pycodestyle": {
+          "enabled": true,
+          "exclude": [  // Exclude files or directories which match these patterns
+          ],
+          "ignore": [  // Ignore errors and warnings
+            // "E501",  // Line too long (82 &gt; 79 characters)
+          ],
+          // "maxLineLength": 80,  // Set maximum allowed line length
+        },
+        "pydocstyle": {"enabled": false},
+        "pyflakes": {"enabled": true},
+        "pylint": {"enabled": false},
+        "yapf": {"enabled": true},
+        // pyls' 3rd Party Plugins, Mypy type checking for Python 3, Must be installed via pip before enabling
+        "pyls_mypy": {  // Install with: pip install pyls-mypy
+          "enabled": false,
+          "live_mode": true,
+        },
+      }
+    }
+  }
+},
+```
+
+See pylint documentation: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
+
+Description of all built-in settings: https://github.com/palantir/python-language-server/blob/develop/vscode-client/package.json
 
 #### Microsoft's Python Language Server
 

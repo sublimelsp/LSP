@@ -66,12 +66,14 @@ actions_manager = CodeActionsManager()
 def request_code_actions(view: sublime.View, point: int,
                          actions_handler: Callable[[CodeActionsByConfigName], None]) -> CodeActionsAtLocation:
     diagnostics_by_config = filter_by_point(view_diagnostics(view), Point(*view.rowcol(point)))
-    return request_code_actions_with_diagnostics(view, diagnostics_by_config, point, actions_handler)
+    return request_code_actions_with_diagnostics(view, diagnostics_by_config, actions_handler)
 
 
-def request_code_actions_with_diagnostics(view: sublime.View, diagnostics_by_config: Dict[str, List[Diagnostic]],
-                                          point: int, actions_handler: Callable[[CodeActionsByConfigName], None]
-                                          ) -> CodeActionsAtLocation:
+def request_code_actions_with_diagnostics(
+    view: sublime.View,
+    diagnostics_by_config: Dict[str, List[Diagnostic]],
+    actions_handler: Callable[[CodeActionsByConfigName], None]
+) -> CodeActionsAtLocation:
     actions_at_location = CodeActionsAtLocation(actions_handler)
     for session in sessions_for_view(view, 'codeActionProvider'):
         if session.config.name in diagnostics_by_config:

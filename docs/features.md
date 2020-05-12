@@ -1,14 +1,14 @@
 
 ## Commands and shortcuts
 
-**Plugin commands**
+### Plugin commands
 
 * Restart Servers: kills all language servers belonging to the active window
     * This command only works when in a supported document.
     * It may change in the future to be always available, or only kill the relevant language server.
 * LSP Settings: Opens package settings.
 
-**Document actions**
+### Document actions
 
 * Show Code Actions: `super+.`
 * Symbol References: `shift+f12`
@@ -21,13 +21,13 @@
 * Format Selection: UNBOUND
 * Document Symbols: UNBOUND
 
-**Workspace actions**
+### Workspace actions
 
 * Show Diagnostics Panel: `super+shift+M` / `ctr+alt+M`
 * Next/Previous Diagnostic From panel: `F4` / `shift+F4`
 * Workspace Symbol Search: via command Palette `LSP: workspace symbol`
 
-**Overriding keybindings**
+### Overriding keybindings
 
 Sublime's keybindings can be edited from the `Preferences: Key Bindings` command.
 The following example overrides `f12` to use LSP's go to definition when in javascript/typescript:
@@ -54,7 +54,7 @@ More useful keybindings (OS-X), edit Package Settings -> LSP -> Key Bindings
   { "keys": ["super+option+h"], "command": "lsp_hover"}
 ```
 
-**Show autocomplete documentation**
+### Show autocomplete documentation
 
 Some completion items can have documentation associated with them.
 
@@ -73,7 +73,7 @@ You can change the default keybinding by remaping the command bellow:
 },
 ```
 
-**Mouse map configuration**
+### Mouse map configuration
 
 See below link, but bind to `lsp_symbol_definition` command
 https://stackoverflow.com/questions/16235706/sublime-3-set-key-map-for-function-goto-definition

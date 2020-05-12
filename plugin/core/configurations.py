@@ -3,35 +3,7 @@ from copy import deepcopy
 from .logging import debug
 from .types import ClientConfig, WindowLike, syntax2scope, view2scope
 from .typing import Any, Generator, List, Dict, Iterable
-from .workspace import get_project_config, enable_in_project, disable_in_project
-
-
-def create_window_configs(window: WindowLike, global_configs: List[ClientConfig]) -> List[ClientConfig]:
-    window_config = get_project_config(window)
-    return list(map(lambda c: apply_project_overrides(c, window_config), global_configs))
-
-
-def apply_project_overrides(client_config: ClientConfig, lsp_project_settings: dict) -> ClientConfig:
-    if client_config.name in lsp_project_settings:
-        overrides = lsp_project_settings[client_config.name]
-        debug('window has override for {}'.format(client_config.name), overrides)
-        client_settings = _merge_dicts(client_config.settings, overrides.get("settings", {}))
-        client_env = _merge_dicts(client_config.env, overrides.get("env", {}))
-        return ClientConfig(
-            name=client_config.name,
-            binary_args=overrides.get("command", client_config.binary_args),
-            languages=client_config.languages,
-            tcp_port=overrides.get("tcp_port", client_config.tcp_port),
-            enabled=overrides.get("enabled", client_config.enabled),
-            init_options=overrides.get("initializationOptions", client_config.init_options),
-            settings=client_settings,
-            env=client_env,
-            tcp_host=overrides.get("tcp_host", client_config.tcp_host),
-            experimental_capabilities=overrides.get(
-                "experimental_capabilities", client_config.experimental_capabilities),
-        )
-
-    return client_config
+from .workspace import enable_in_project, disable_in_project
 
 
 def is_supported_syntax(syntax: str, configs: Iterable[ClientConfig]) -> bool:
@@ -64,7 +36,7 @@ class WindowConfigManager(object):
         self._window = window
         self._global_configs = global_configs
         self._temp_disabled_configs = []  # type: List[str]
-        self.all = create_window_configs(window, global_configs)
+        self.all = self._create_window_configs()
 
     def match_document(self, scope: str) -> Generator[ClientConfig, None, None]:
         """
@@ -90,7 +62,7 @@ class WindowConfigManager(object):
         return any(self.match_view(view))
 
     def update(self) -> None:
-        self.all = create_window_configs(self._window, self._global_configs)
+        self.all = self._create_window_configs()
         for config in self.all:
             if config.name in self._temp_disabled_configs:
                 config.enabled = False
@@ -106,6 +78,32 @@ class WindowConfigManager(object):
     def disable_temporarily(self, config_name: str) -> None:
         self._temp_disabled_configs.append(config_name)
         self.update()
+
+    def _create_window_configs(self) -> List[ClientConfig]:
+        project_clients_dict = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
+        return [self._apply_project_overrides(c, project_clients_dict) for c in self._global_configs]
+
+    def _apply_project_overrides(self, client_config: ClientConfig, project_clients: Dict[str, Any]) -> ClientConfig:
+        overrides = project_clients.get(client_config.name)
+        if overrides:
+            debug('window has override for {}'.format(client_config.name), overrides)
+            client_settings = _merge_dicts(client_config.settings, overrides.get("settings", {}))
+            client_env = _merge_dicts(client_config.env, overrides.get("env", {}))
+            return ClientConfig(
+                name=client_config.name,
+                binary_args=overrides.get("command", client_config.binary_args),
+                languages=client_config.languages,
+                tcp_port=overrides.get("tcp_port", client_config.tcp_port),
+                enabled=overrides.get("enabled", client_config.enabled),
+                init_options=overrides.get("initializationOptions", client_config.init_options),
+                settings=client_settings,
+                env=client_env,
+                tcp_host=overrides.get("tcp_host", client_config.tcp_host),
+                experimental_capabilities=overrides.get(
+                    "experimental_capabilities", client_config.experimental_capabilities),
+            )
+
+        return client_config
 
 
 def _merge_dicts(dict_a: dict, dict_b: dict) -> dict:

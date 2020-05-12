@@ -72,15 +72,15 @@ def client_from_session(session: Optional[Session]) -> Optional[Client]:
     return session.client if session else None
 
 
-def sessions_for_view(view: sublime.View, point: Optional[int] = None) -> Iterable[Session]:
-    return _sessions_for_view_and_window(view, view.window(), point)
+def sessions_for_view(view: sublime.View, capability: Optional[str] = None,
+                      point: Optional[int] = None) -> Iterable[Session]:
+    return (session for session in _sessions_for_view_and_window(view, view.window(), point)
+            if not capability or session.has_capability(capability))
 
 
-def session_for_view(view: sublime.View,
-                     capability: str,
+def session_for_view(view: sublime.View, capability: Optional[str],
                      point: Optional[int] = None) -> Optional[Session]:
-    return next((session for session in sessions_for_view(view, point)
-                 if session.has_capability(capability)), None)
+    return next((session for session in sessions_for_view(view, capability, point)), None)
 
 
 def _sessions_for_view_and_window(view: sublime.View, window: Optional[sublime.Window],

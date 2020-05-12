@@ -98,14 +98,3 @@ def disable_in_project(window: Any, config_name: str) -> None:
         window.set_project_data(project_data)
     else:
         debug('non-dict returned in project_settings: ', project_data)
-
-
-def get_project_config(window: Any) -> dict:
-    project_data = window.project_data() or dict()
-    if isinstance(project_data, dict):
-        project_settings = project_data.setdefault('settings', dict())
-        project_lsp_settings = project_settings.setdefault('LSP', dict())
-        return project_lsp_settings
-    else:
-        debug('non-dict returned in project_settings: ', project_data)
-        return dict()

@@ -54,6 +54,25 @@ More useful keybindings (OS-X), edit Package Settings -> LSP -> Key Bindings
   { "keys": ["super+option+h"], "command": "lsp_hover"}
 ```
 
+**Show autocomplete documentation**
+
+Some completion items can have documentation associated with them.
+
+![documentation popup](images/show-docs-popup.png)
+
+To show the documentation popup you can click the **More**(if available) link in the bottom of the autocomplete,
+or you can use the default sublime keybinding `f12` to trigger it.
+
+You can change the default keybinding by remaping the command bellow:
+
+```
+{ "keys": ["f12"], "command": "auto_complete_open_link", "context":
+	[
+		{ "key": "auto_complete_visible", "operator": "equal", "operand": true },
+	]
+},
+```
+
 **Mouse map configuration**
 
 See below link, but bind to `lsp_symbol_definition` command

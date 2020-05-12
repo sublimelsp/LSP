@@ -10,7 +10,7 @@ from .core.protocol import Request, InsertTextFormat, Range
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.settings import settings, client_configs
 from .core.typing import Any, List, Dict, Optional, Union, Generator
-from .core.views import text_document_position_params, range_to_region, minihtml, DOCS_WRAP_WIDTH
+from .core.views import text_document_position_params, range_to_region, minihtml, DOCS_POPUP_WIDTH
 
 
 completion_kinds = {
@@ -45,8 +45,8 @@ completion_kinds = {
 class LspResolveDocsCommand(sublime_plugin.TextCommand):
     def run(self, edit: sublime.Edit, index: int) -> None:
         item = CompletionHandler.completions[index]
-        detail = minihtml(self.view, item.get('detail') or "", wrap_width=DOCS_WRAP_WIDTH)
-        documentation = minihtml(self.view, item.get("documentation") or "", wrap_width=DOCS_WRAP_WIDTH)
+        detail = minihtml(self.view, item.get('detail') or "", popup_width=DOCS_POPUP_WIDTH)
+        documentation = minihtml(self.view, item.get("documentation") or "", popup_width=DOCS_POPUP_WIDTH)
 
         # don't show the detail in the cooperate AC popup if it is already shown in the AC details filed.
         self.is_detail_shown = bool(detail)
@@ -71,7 +71,7 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
             self.view,
             minihtml_content,
             flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
-            max_width=480,
+            max_width=DOCS_POPUP_WIDTH,
             max_height=410,
             allow_code_wrap=True,
             on_navigate=self.on_navigate
@@ -90,8 +90,8 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
     def handle_resolve_response(self, item: Optional[dict]) -> None:
         if not item:
             return
-        detail = minihtml(self.view, item.get('detail') or "", wrap_width=DOCS_WRAP_WIDTH)
-        documentation = minihtml(self.view, item.get("documentation") or "", wrap_width=DOCS_WRAP_WIDTH)
+        detail = minihtml(self.view, item.get('detail') or "", popup_width=DOCS_POPUP_WIDTH)
+        documentation = minihtml(self.view, item.get("documentation") or "", popup_width=DOCS_POPUP_WIDTH)
         minihtml_content = self.get_content(documentation, detail)
         if self.view.is_popup_visible():
             self.update_popup(minihtml_content)

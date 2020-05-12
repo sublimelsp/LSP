@@ -60,7 +60,7 @@ Some completion items can have documentation associated with them.
 
 ![documentation popup](images/show-docs-popup.png)
 
-To show the documentation popup you can click the **More**(if available) link in the bottom of the autocomplete,
+To show the documentation popup you can click the **More** link in the bottom of the autocomplete,
 or you can use the default sublime keybinding `f12` to trigger it.
 
 You can change the default keybinding by remaping the command bellow:

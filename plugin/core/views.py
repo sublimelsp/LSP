@@ -8,6 +8,7 @@ from .protocol import Point, Range, Notification, Request
 from .typing import Optional, Dict, Any, Iterable, List, Union
 from .url import filename_to_uri
 
+
 DOCS_POPUP_WIDTH = 480
 
 

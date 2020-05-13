@@ -1,7 +1,10 @@
-import sublime
+import html
 import linecache
+import mdpopups
+import re
+import sublime
 from .protocol import Point, Range, Notification, Request
-from .typing import Optional, Dict, Any, Iterable, List
+from .typing import Optional, Dict, Any, Iterable, List, Union
 from .url import filename_to_uri
 
 
@@ -172,3 +175,37 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
         "options": formatting_options(view.settings()),
         "range": region_to_range(view, region).to_lsp()
     })
+
+
+def minihtml(view: sublime.View, content: Union[str, dict]) -> str:
+    """ Content can be a string or MarkupContent. """
+    if isinstance(content, str):
+        return text2html(content)
+    elif isinstance(content, dict):
+        value = content.get("value") or ""
+        kind = content.get("kind")
+        if kind == "markdown":
+            return mdpopups.md2html(view, value)
+        else:
+            # must be plaintext
+            return text2html(value)
+    else:
+        return ''
+
+
+def text2html(content: str) -> str:
+    content = html.escape(content).replace('\n', '<br>').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
+
+    def replace_nbsp(match: Any) -> str:
+        spaces = match.group(0)
+        return "&nbsp;" * len(spaces)
+
+    # if there are 2 or more spaces, replace them with &nbsp;
+    content = re.sub(r"( {2,})", replace_nbsp, content)
+
+    def replace_url_with_link(match: Any) -> str:
+        url = match.group(0)
+        return "<a href='{}'>{}</a>".format(url, url)
+
+    FIND_URL = re.compile(r'(https?://(?:[\w\d:#@%/;$()~_?\+\-=\\\.&](?:#!)?)*)', flags=re.IGNORECASE)
+    return re.sub(FIND_URL, replace_url_with_link, content)

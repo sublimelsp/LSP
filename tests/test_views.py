@@ -12,6 +12,7 @@ from LSP.plugin.core.views import text_document_range_formatting
 from LSP.plugin.core.views import uri_from_view
 from LSP.plugin.core.views import will_save
 from LSP.plugin.core.views import will_save_wait_until
+from LSP.plugin.core.views import text2html
 from unittest.mock import MagicMock
 from unittesting import DeferrableTestCase
 import sublime
@@ -112,3 +113,41 @@ class ViewsTest(DeferrableTestCase):
         # When we move two UTF-16 points further, we should encompass the beer emoji.
         # So that means that the code point offsets should have a difference of 1.
         self.assertEqual(point_to_offset(Point(1, foobarbaz_length + 2), self.view) - offset, 1)
+
+    def test_text2html_replaces_tabs_with_br(self) -> None:
+        self.assertEqual(text2html("Hello,\t world "), "Hello,&nbsp;&nbsp;&nbsp;&nbsp; world ")
+
+    def test_text2html_non_breaking_space_and_control_char_with_entity(self) -> None:
+        self.assertEqual(text2html("no\xc2\xa0breaks"), "no&nbsp;&nbsp;breaks")
+
+    def test_text2html_replaces_two_or_more_spaces_with_nbsp(self) -> None:
+        content = " One  Two   Three One    Four"
+        expect = " One&nbsp;&nbsp;Two&nbsp;&nbsp;&nbsp;Three One&nbsp;&nbsp;&nbsp;&nbsp;Four"
+        self.assertEqual(text2html(content), expect)
+
+    def test_text2html_does_not_replace_one_space_with_nbsp(self) -> None:
+        content = " John has one apple "
+        self.assertEqual(text2html(content), content)
+
+    def test_text2html_replaces_newlines_with_br(self) -> None:
+        self.assertEqual(text2html("a\nb"), "a<br>b")
+
+    def test_text2html_parses_link_simple(self) -> None:
+        content = "https://github.com/sublimelsp/LSP"
+        expect = "<a href='https://github.com/sublimelsp/LSP'>https://github.com/sublimelsp/LSP</a>"
+        self.assertEqual(text2html(content), expect)
+
+    def test_text2html_parses_link_in_angle_brackets(self) -> None:
+        content = "<https://github.com/sublimelsp/LSP>"
+        expect = "&lt;<a href='https://github.com/sublimelsp/LSP'>https://github.com/sublimelsp/LSP</a>&gt;"
+        self.assertEqual(text2html(content), expect)
+
+    def test_text2html_parses_link_in_double_quotes(self) -> None:
+        content = "\"https://github.com/sublimelsp/LSP\""
+        expect = "\"<a href='https://github.com/sublimelsp/LSP'>https://github.com/sublimelsp/LSP</a>\""
+        self.assertEqual(text2html(content), expect)
+
+    def test_text2html_parses_link_in_single_quotes(self) -> None:
+        content = "'https://github.com/sublimelsp/LSP'"
+        expect = "'<a href='https://github.com/sublimelsp/LSP'>https://github.com/sublimelsp/LSP</a>'"
+        self.assertEqual(text2html(content), expect)

@@ -1,3 +1,5 @@
+from .configurations import ConfigManager
+from .configurations import WindowConfigManager
 from .diagnostics import DiagnosticsStorage
 from .logging import debug, exception_log
 from .message_request_handler import MessageRequestHandler
@@ -8,11 +10,8 @@ from .settings import client_configs
 from .transports import create_transport
 from .types import ClientConfig
 from .types import ClientStates
-from .types import config_supports_syntax
-from .types import ConfigRegistry
-from .types import GlobalConfigs
-from .types import LanguageConfig
 from .types import Settings
+from .types import view2scope
 from .types import ViewLike
 from .types import WindowLike
 from .typing import Optional, List, Callable, Dict, Any, Protocol, Set, Iterable, Generator, Type
@@ -22,6 +21,8 @@ from .workspace import enable_in_project
 from .workspace import get_workspace_folders
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
+from weakref import ref
+from weakref import WeakValueDictionary
 import os
 import sublime
 import tempfile
@@ -121,7 +122,7 @@ class DocumentHandlerFactory(object):
         self._settings = settings
 
     def for_window(self, window: WindowLike, workspace: ProjectFolders,
-                   configs: ConfigRegistry) -> DocumentHandler:
+                   configs: WindowConfigManager) -> DocumentHandler:
         return WindowDocumentHandler(self._sublime, self._settings, window, workspace, configs)
 
 
@@ -145,7 +146,7 @@ class PendingBuffer:
 
 class WindowDocumentHandler(object):
     def __init__(self, sublime: Any, settings: Settings, window: WindowLike, workspace: ProjectFolders,
-                 configs: ConfigRegistry) -> None:
+                 configs: WindowConfigManager) -> None:
         self._sublime = sublime
         self._settings = settings
         self._configs = configs
@@ -175,13 +176,13 @@ class WindowDocumentHandler(object):
 
     def _get_applicable_sessions(self, view: ViewLike) -> List[Session]:
         sessions = []  # type: List[Session]
-        syntax = view.settings().get("syntax")
+        # ViewLike vs sublime.View
+        scope = view2scope(view)  # type: ignore
 
         for config_name, config_sessions in self._sessions.items():
             for session in config_sessions:
-                if config_supports_syntax(session.config, syntax):
-                    if session.handles_path(view.file_name()):
-                        sessions.append(session)
+                if session.config.match_document(scope) and session.handles_path(view.file_name()):
+                    sessions.append(session)
 
         return sessions
 
@@ -191,19 +192,13 @@ class WindowDocumentHandler(object):
             if session.handles_path(file_name):
                 view = self._window.find_open_file(file_name)
                 if view:
-                    syntax = view.settings().get("syntax")
-                    if config_supports_syntax(session.config, syntax):
+                    # ViewLike vs sublime.View
+                    if session.config.match_document(view2scope(view)):  # type: ignore
                         sessions = self._get_applicable_sessions(view)
                         self._attach_view(view, sessions)
                         for session in sessions:
                             if session.should_notify_did_open():
                                 self._notify_did_open(view, session)
-
-    def _is_supported_view(self, view: ViewLike) -> bool:
-        return self._configs.syntax_supported(view)
-
-    def _config_languages(self, view: ViewLike) -> Dict[str, LanguageConfig]:
-        return self._configs.syntax_config_languages(view)
 
     def _attach_view(self, view: ViewLike, sessions: List[Session]) -> None:
         view.settings().set("show_definitions", False)
@@ -217,21 +212,27 @@ class WindowDocumentHandler(object):
     def _view_language(self, view: ViewLike, config_name: str) -> str:
         return view.settings().get('lsp_language')[config_name]
 
-    def _set_view_languages(self, view: ViewLike, config_languages: Dict[str, LanguageConfig]) -> None:
+    def _set_view_languages(self, view: ViewLike, configurations: Iterable[ClientConfig]) -> None:
+        # HACK! languageId <--> view base scope should be UNIQUE
         languages = {}
-        for config_name, language in config_languages.items():
-            languages[config_name] = language.id
-        view.settings().set('lsp_language', languages)
+        base_scope = view2scope(view)  # type: ignore
+        for config in configurations:
+            for language in config.languages:
+                if language.match_document(base_scope):
+                    # bad :( all values should be exactly the same language.id
+                    languages[config.name] = language.id
+                    break
+        view.settings().set('lsp_language', languages)  # TODO: this should be a single languageId
         view.settings().set('lsp_active', True)
 
     def handle_did_open(self, view: ViewLike) -> None:
         file_name = view.file_name()
         if file_name and file_name not in self._document_states:
-            config_languages = self._config_languages(view)
-            if len(config_languages) > 0:
+            configurations = list(self._configs.match_view(view))  # type: ignore
+            if len(configurations) > 0:
                 # always register a supported document
                 self._document_states.add(file_name)
-                self._set_view_languages(view, config_languages)
+                self._set_view_languages(view, configurations)
 
                 # the sessions may not be available yet,
                 # the document will get synced when a session is added.
@@ -333,11 +334,10 @@ class WindowManager(Manager):
         window: WindowLike,
         workspace: ProjectFolders,
         settings: Settings,
-        configs: ConfigRegistry,
+        configs: WindowConfigManager,
         documents: DocumentHandler,
         diagnostics: DiagnosticsStorage,
         sublime: Any,
-        on_closed: Optional[Callable] = None,
         server_panel_factory: Optional[Callable] = None
     ) -> None:
         self._window = window
@@ -350,12 +350,27 @@ class WindowManager(Manager):
         self._next_initialize_views = list()  # type: List[ViewLike]
         self._sublime = sublime
         self._restarting = False
-        self._on_closed = on_closed
         self._is_closing = False
         self._initialization_lock = threading.Lock()
         self._workspace = workspace
-        self._workspace.on_changed = self._on_project_changed
-        self._workspace.on_switched = self._on_project_switched
+        weakself = ref(self)
+
+        # A weak reference is needed, otherwise self._workspace will have a strong reference to self, meaning a
+        # cyclic dependency.
+        def on_changed(folders: List[str]) -> None:
+            this = weakself()
+            if this is not None:
+                this._on_project_changed(folders)
+
+        # A weak reference is needed, otherwise self._workspace will have a strong reference to self, meaning a
+        # cyclic dependency.
+        def on_switched(folders: List[str]) -> None:
+            this = weakself()
+            if this is not None:
+                this._on_project_switched(folders)
+
+        self._workspace.on_changed = on_changed
+        self._workspace.on_switched = on_switched
         self._progress = dict()  # type: Dict[Any, Any]
 
     def window(self) -> sublime.Window:
@@ -444,7 +459,7 @@ class WindowManager(Manager):
         if not self._workspace.includes_path(file_path):
             return
 
-        def needed_configs(configs: 'List[ClientConfig]') -> 'List[ClientConfig]':
+        def needed_configs(configs: Iterable[ClientConfig]) -> List[ClientConfig]:
             new_configs = []
             for c in configs:
                 if c.name not in self._sessions:
@@ -465,16 +480,12 @@ class WindowManager(Manager):
 
         # have all sessions for this document been started?
         with self._initialization_lock:
-            new_configs = needed_configs(self._configs.syntax_configs(view, include_disabled=True))
-
-            if any(new_configs):
+            if any(needed_configs(self._configs.match_view(view, include_disabled=True))):  # type: ignore
                 # TODO: cannot observe project setting changes
                 # have to check project overrides every session request
                 self.update_configs()
-                startable_configs = needed_configs(self._configs.syntax_configs(view))
-
+                startable_configs = needed_configs(self._configs.match_view(view))  # type: ignore
                 for config in startable_configs:
-
                     debug("window {} requests {} for {}".format(self._window.id(), config.name, file_path))
                     self.start(config, view)  # type: ignore
 
@@ -572,10 +583,6 @@ class WindowManager(Manager):
         if self._restarting:
             debug('window {} sessions unloaded - restarting'.format(self._window.id()))
             sublime.set_timeout(self.start_active_views, 0)
-        elif not self._window.is_valid():
-            debug('window {} closed and sessions unloaded'.format(self._window.id()))
-            if self._on_closed:
-                self._on_closed()
 
     def on_post_exit(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
         sublime.set_timeout(lambda: self._on_post_exit_main_thread(session, exit_code, exception))
@@ -630,8 +637,8 @@ class WindowManager(Manager):
 
 
 class WindowRegistry(object):
-    def __init__(self, configs: GlobalConfigs, documents: Any, sublime: Any) -> None:
-        self._windows = {}  # type: Dict[int, WindowManager]
+    def __init__(self, configs: ConfigManager, documents: Any, sublime: Any) -> None:
+        self._windows = WeakValueDictionary()  # type: WeakValueDictionary[int, WindowManager]
         self._configs = configs
         self._documents = documents
         self._sublime = sublime
@@ -666,11 +673,6 @@ class WindowRegistry(object):
                 documents=window_documents,
                 diagnostics=DiagnosticsStorage(diagnostics_ui),
                 sublime=self._sublime,
-                on_closed=lambda: self._on_closed(window),
                 server_panel_factory=self._server_panel_factory)
             self._windows[window.id()] = state
         return state
-
-    def _on_closed(self, window: WindowLike) -> None:
-        if window.id() in self._windows:
-            del self._windows[window.id()]

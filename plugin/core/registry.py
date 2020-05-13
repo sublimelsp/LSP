@@ -5,9 +5,9 @@ from .logging import debug
 from .rpc import Client
 from .sessions import Session
 from .settings import settings, client_configs
-from .types import ClientConfig, ClientStates
+from .types import ClientConfig, ClientStates, view2scope
 from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
-from .typing import Optional, Callable, Dict, Any, Iterable
+from .typing import Optional, Callable, Dict, Any, Generator
 
 
 client_start_listeners = {}  # type: Dict[str, Callable]
@@ -43,33 +43,45 @@ def client_from_session(session: Optional[Session]) -> Optional[Client]:
     return session if session else None
 
 
-def sessions_for_view(view: sublime.View, point: Optional[int] = None) -> Iterable[Session]:
-    return _sessions_for_view_and_window(view, view.window(), point)
+def sessions_for_view(view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
+    """
+    Returns all sessions for this view, optionally matching the capability path.
+    """
+    yield from _sessions_for_view_and_window(view, view.window(), capability)
 
 
-def session_for_view(view: sublime.View,
-                     capability: str,
-                     point: Optional[int] = None) -> Optional[Session]:
-    return next((session for session in sessions_for_view(view, point)
-                 if session.has_capability(capability)), None)
+def session_for_view(view: sublime.View, capability: str, point: Optional[int] = None) -> Optional[Session]:
+    """
+    returns the "best matching" session for that particular point. This is determined by the feature_selector property
+    of the relevant LanguageConfig.
+
+    If point is None, then the point is understood to be the position of the first cursor.
+    """
+    if point is None:
+        try:
+            point = view.sel()[0].b
+        except IndexError:
+            return None
+    scope = view.scope_name(point)
+    try:
+        return max(sessions_for_view(view, capability), key=lambda session: session.config.score_feature(scope))
+    except ValueError:
+        return None
 
 
 def _sessions_for_view_and_window(view: sublime.View, window: Optional[sublime.Window],
-                                  point: Optional[int] = None) -> Iterable[Session]:
-    if not window:
-        debug("no window for view", view.file_name())
-        return []
-
-    file_path = view.file_name()
-    if not file_path:
-        # debug("no session for unsaved file")
-        return []
-
-    manager = windows.lookup(window)
-    scope_configs = manager._configs.scope_configs(view, point)
-    sessions = (manager.get_session(config.name, file_path) for config in scope_configs)
-    ready_sessions = (session for session in sessions if session and session.state == ClientStates.READY)
-    return ready_sessions
+                                  capability: Optional[str]) -> Generator[Session, None, None]:
+    if window:
+        file_path = view.file_name()
+        if file_path:
+            manager = windows.lookup(window)
+            scope = view2scope(view)
+            for sessions in manager._sessions.values():
+                for session in sessions:
+                    if session.state == ClientStates.READY and session.config.match_document(scope):
+                        if session.handles_path(file_path):
+                            if capability is None or session.has_capability(capability):
+                                yield session
 
 
 def unload_sessions(window: sublime.Window) -> None:
@@ -83,20 +95,16 @@ documents = DocumentHandlerFactory(sublime, settings)
 windows = WindowRegistry(configs, documents, sublime)
 
 
-def configs_for_scope(view: Any, point: Optional[int] = None) -> Iterable[ClientConfig]:
+def configurations_for_view(view: sublime.View) -> Generator[ClientConfig, None, None]:
     window = view.window()
     if window:
         # todo: don't expose _configs
-        return windows.lookup(window)._configs.scope_configs(view, point)
-    return []
+        yield from windows.lookup(window)._configs.match_view(view)
 
 
 def is_supported_view(view: sublime.View) -> bool:
     # TODO: perhaps make this check for a client instead of a config
-    if configs_for_scope(view):
-        return True
-    else:
-        return False
+    return any(configurations_for_view(view))
 
 
 class LspTextCommand(sublime_plugin.TextCommand):

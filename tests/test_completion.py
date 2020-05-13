@@ -1,7 +1,8 @@
 from LSP.plugin.completion import CompletionHandler
 from LSP.plugin.core.registry import is_supported_view
+from LSP.plugin.core.registry import windows
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable
-from setup import SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove_config, text_config
+from setup import TextDocumentTestCase, add_config, remove_config, text_config
 from unittesting import DeferrableTestCase
 import sublime
 
@@ -29,15 +30,21 @@ additional_edits = {
 class InitializationTests(DeferrableTestCase):
     def setUp(self) -> 'Generator':
         self.view = sublime.active_window().new_file()
-        add_config(text_config)
 
     def test_is_not_applicable(self) -> None:
         self.assertFalse(CompletionHandler.is_applicable(dict()))
 
     def test_is_applicable(self) -> None:
-        self.assertTrue(CompletionHandler.is_applicable(dict(syntax=SUPPORTED_SYNTAX)))
+        add_config(text_config)
+        self.assertTrue(CompletionHandler.is_applicable(dict(syntax="Packages/Text/Plain text.tmLanguage")))
+        try:
+            remove_config(text_config)
+        except Exception:
+            pass
 
     def test_not_enabled(self) -> 'Generator':
+        wm = windows.lookup(self.view.window())
+        wm._configs.all.append(text_config)
         self.assertTrue(is_supported_view(self.view))
         handler = CompletionHandler(self.view)
         self.assertFalse(handler.initialized)
@@ -47,8 +54,13 @@ class InitializationTests(DeferrableTestCase):
         yield lambda: not handler.enabled
         self.assertIsNone(result)
 
-    def tearDown(self) -> 'Generator':
-        remove_config(text_config)
+    def doCleanups(self) -> 'Generator':
+        yield from super().doCleanups()
+        wm = windows.lookup(self.view.window())
+        try:
+            wm._configs.all.remove(text_config)
+        except ValueError:
+            pass
         if self.view:
             self.view.set_scratch(True)
             self.view.window().focus_view(self.view)

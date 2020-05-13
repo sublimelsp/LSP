@@ -1,7 +1,9 @@
-import sublime
 import linecache
+import mdpopups
+import re
+import sublime
 from .protocol import Point, Range, Notification, Request
-from .typing import Optional, Dict, Any, Iterable, List
+from .typing import Optional, Dict, Any, Iterable, List, Union
 from .url import filename_to_uri
 
 
@@ -172,3 +174,52 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
         "options": formatting_options(view.settings()),
         "range": region_to_range(view, region).to_lsp()
     })
+
+
+def minihtml(view: sublime.View, content: Union[str, dict]) -> str:
+    """ Content can be a string or MarkupContent. """
+    if isinstance(content, str):
+        return text2html(content)
+    elif isinstance(content, dict):
+        value = content.get("value") or ""
+        kind = content.get("kind")
+        if kind == "markdown":
+            return mdpopups.md2html(view, value)
+        else:
+            # must be plaintext
+            return text2html(value)
+    else:
+        return ''
+
+
+REPLACEMENT_MAP = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\t": 4 * "&nbsp;",
+    "\n": "<br>",
+    "\xa0": "&nbsp;",  # non-breaking space
+    "\xc2": "&nbsp;",  # control character
+}
+
+PATTERNS = [
+    r'(?P<special>[{}])'.format(''.join(REPLACEMENT_MAP.keys())),
+    r'(?P<url>https?://(?:[\w\d:#@%/;$()~_?\+\-=\\\.&](?:#!)?)*)',
+    r'(?P<multispace> {2,})',
+]
+
+REPLACEMENT_RE = re.compile('|'.join(PATTERNS), flags=re.IGNORECASE)
+
+
+def _replace_match(match: Any) -> str:
+    special_match = match.group('special')
+    if special_match:
+        return REPLACEMENT_MAP[special_match]
+    url = match.group('url')
+    if url:
+        return "<a href='{}'>{}</a>".format(url, url)
+    return len(match.group('multispace')) * '&nbsp;'
+
+
+def text2html(content: str) -> str:
+    return re.sub(REPLACEMENT_RE, _replace_match, content)

@@ -1,4 +1,5 @@
-from .typing import Optional, List, Dict, Any, Iterator, Protocol
+from .typing import Optional, List, Dict, Any, Protocol
+import sublime
 
 
 class Settings(object):
@@ -37,21 +38,39 @@ class ClientStates(object):
 
 
 class LanguageConfig(object):
-    def __init__(self, language_id: str, scopes: List[str], syntaxes: List[str]) -> None:
+
+    __slots__ = ('id', 'document_selector', 'feature_selector')
+
+    def __init__(
+        self,
+        language_id: str,
+        document_selector: Optional[str] = None,
+        feature_selector: Optional[str] = None
+    ) -> None:
         self.id = language_id
-        self.scopes = scopes
-        self.syntaxes = syntaxes
+        self.document_selector = document_selector if document_selector else "source.{}".format(self.id)
+        self.feature_selector = feature_selector if feature_selector else self.document_selector
+
+    def score_document(self, scope: str) -> int:
+        return sublime.score_selector(scope, self.document_selector)
+
+    def score_feature(self, scope: str) -> int:
+        return sublime.score_selector(scope, self.feature_selector)
+
+    def match_document(self, scope: str) -> bool:
+        # Every part of a x.y.z scope seems to contribute 8.
+        # An empty selector result in a score of 1.
+        # A non-matching non-empty selector results in a score of 0.
+        # We want to match at least one part of an x.y.z, and we don't want to match on empty selectors.
+        return self.score_document(scope) >= 8
 
 
 class ClientConfig(object):
     def __init__(self,
                  name: str,
                  binary_args: List[str],
+                 languages: List[LanguageConfig],
                  tcp_port: Optional[int],
-                 scopes: List[str] = [],
-                 syntaxes: List[str] = [],
-                 languageId: Optional[str] = None,
-                 languages: List[LanguageConfig] = [],
                  enabled: bool = True,
                  init_options: dict = dict(),
                  settings: dict = dict(),
@@ -61,29 +80,37 @@ class ClientConfig(object):
                  experimental_capabilities: dict = dict()) -> None:
         self.name = name
         self.binary_args = binary_args
+        self.languages = languages
         self.tcp_port = tcp_port
         self.tcp_host = tcp_host
         self.tcp_mode = tcp_mode
-        if not languages:
-            languages = [LanguageConfig(languageId, scopes, syntaxes)] if languageId else []
-        self.languages = languages
         self.enabled = enabled
         self.init_options = init_options
         self.settings = settings
         self.env = env
         self.experimental_capabilities = experimental_capabilities
 
+    def match_document(self, scope: str) -> bool:
+        return any(language.match_document(scope) for language in self.languages)
 
-def syntax_language(config: ClientConfig, syntax: str) -> Optional[LanguageConfig]:
-    for language in config.languages:
-        for lang_syntax in language.syntaxes:
-            if lang_syntax == syntax:
-                return language
-    return None
+    def score_feature(self, scope: str) -> int:
+        highest_score = 0
+        for language in self.languages:
+            score = language.score_feature(scope)
+            if score > highest_score:
+                highest_score = score
+        return highest_score
 
 
-def config_supports_syntax(config: ClientConfig, syntax: str) -> bool:
-    return bool(syntax_language(config, syntax))
+def syntax2scope(syntax: str) -> Optional[str]:
+    try:
+        return next(filter(lambda d: d['path'] == syntax, sublime.list_syntaxes()))['scope']
+    except StopIteration:
+        return None
+
+
+def view2scope(view: sublime.View) -> str:
+    return view.scope_name(0).split()[0]
 
 
 class ViewLike(Protocol):
@@ -165,35 +192,4 @@ class WindowLike(Protocol):
         ...
 
     def run_command(self, command_name: str, command_args: Dict[str, Any]) -> None:
-        ...
-
-
-class ConfigRegistry(Protocol):
-    # todo: calls config_for_scope immediately.
-    all = []  # type: List[ClientConfig]
-
-    def is_supported(self, view: ViewLike) -> bool:
-        ...
-
-    def scope_configs(self, view: ViewLike, point: Optional[int] = None) -> Iterator[ClientConfig]:
-        ...
-
-    def syntax_configs(self, view: ViewLike, include_disabled: bool = False) -> List[ClientConfig]:
-        ...
-
-    def syntax_supported(self, view: ViewLike) -> bool:
-        ...
-
-    def syntax_config_languages(self, view: ViewLike) -> Dict[str, LanguageConfig]:
-        ...
-
-    def update(self) -> None:
-        ...
-
-    def disable_temporarily(self, config_name: str) -> None:
-        ...
-
-
-class GlobalConfigs(Protocol):
-    def for_window(self, window: WindowLike) -> ConfigRegistry:
         ...

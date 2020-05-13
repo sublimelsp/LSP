@@ -56,7 +56,10 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
             self._enabled = True
 
     def _queue(self) -> None:
-        current_point = self.view.sel()[0].begin()
+        try:
+            current_point = self.view.sel()[0].begin()
+        except IndexError:
+            return
         if self._stored_point != current_point:
             self._clear_regions()
             self._stored_point = current_point
@@ -79,7 +82,7 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
         if word_at_sel & SUBLIME_WORD_MASK:
             if self.view.match_selector(point, NO_HIGHLIGHT_SCOPES):
                 return
-            client = client_from_session(session_for_view(self.view, "documentHighlightProvider"))
+            client = client_from_session(session_for_view(self.view, "documentHighlightProvider", point))
             if client:
                 params = text_document_position_params(self.view, point)
                 request = Request.documentHighlight(params)

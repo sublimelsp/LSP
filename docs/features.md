@@ -27,6 +27,27 @@
 * Next/Previous Diagnostic From panel: `F4` / `shift+F4`
 * Workspace Symbol Search: via command Palette `LSP: workspace symbol`
 
+**Execute server commands**
+
+For LSP servers that can handle [workspace/executeCommand](https://microsoft.github.io/language-server-protocol/specification#workspace_executeCommand), you can make these commands available into the sublime palette by adding an entry to your existing `.sublime-commands` file or by creating a new one.
+
+Example:
+
+```json
+[
+  // ...
+  {
+    "caption": "Thread First",
+    "command": "lsp_execute",
+    "args": { 
+    	"command_name": "thread-first",
+    	"command_args":["file:///tmp/foo.clj", 0, 0] 
+    }
+  }
+]
+```
+Note: `command_args` is optional depending on the `workspace/executeCommand` that are supported by the LSP server. 
+
 **Overriding keybindings**
 
 Sublime's keybindings can be edited from the `Preferences: Key Bindings` command.

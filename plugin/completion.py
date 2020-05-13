@@ -245,7 +245,7 @@ class CompletionHandler(LSPViewEventListener):
 
         lsp_label = item["label"]
         lsp_filter_text = item.get("filterText")
-        lsp_detail = html.escape(item.get("detail", "").replace('\n', ' '))
+        lsp_detail = html.escape(item.get("detail") or "").replace('\n', ' ')
 
         if lsp_filter_text and lsp_filter_text != lsp_label:
             st_trigger = lsp_filter_text

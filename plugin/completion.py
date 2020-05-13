@@ -1,6 +1,8 @@
 import html
+import mdpopups
 import sublime
 import sublime_plugin
+import webbrowser
 
 from .core.configurations import is_supported_syntax
 from .core.edit import parse_text_edit
@@ -8,7 +10,7 @@ from .core.protocol import Request, InsertTextFormat, Range
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.settings import settings, client_configs
 from .core.typing import Any, List, Dict, Optional, Union, Generator
-from .core.views import text_document_position_params, range_to_region
+from .core.views import text_document_position_params, range_to_region, minihtml
 
 
 completion_kinds = {
@@ -41,10 +43,63 @@ completion_kinds = {
 
 
 class LspResolveDocsCommand(sublime_plugin.TextCommand):
+    def run(self, edit: sublime.Edit, index: int) -> None:
+        item = CompletionHandler.completions[index]
+        detail = minihtml(self.view, item.get('detail') or "")
+        documentation = minihtml(self.view, item.get("documentation") or "")
 
-    def run(self, edit: sublime.Edit) -> None:
-        self.view.show_popup('<div style="padding: 10px;">Showing documentation is under construction</div>',
-                             sublime.COOPERATE_WITH_AUTO_COMPLETE)
+        # don't show the detail in the cooperate AC popup if it is already shown in the AC details filed.
+        self.is_detail_shown = bool(detail)
+        minihtml_content = self.get_content(documentation, detail)
+        self.show_popup(minihtml_content)
+
+        if not detail or not documentation:
+            # To make sure that the detail or documentation fields doesn't exist we need to resove the completion item.
+            # If those fields appear after the item is resolved we show them in the popup.
+            self.do_resolve(item)
+
+    def get_content(self, documentation: str, detail: str) -> str:
+        content = ""
+        if detail and not self.is_detail_shown:
+            content += "<div class='highlight' style='margin: 6px'>{}</div>".format(detail)
+        if documentation:
+            content += "<div style='margin: 6px'>{}</div>".format(documentation)
+        return content
+
+    def show_popup(self, minihtml_content: str) -> None:
+        mdpopups.show_popup(
+            self.view,
+            minihtml_content,
+            flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
+            max_width=480,
+            max_height=410,
+            allow_code_wrap=True,
+            on_navigate=self.on_navigate
+        )
+
+    def on_navigate(self, url: str) -> None:
+        webbrowser.open(url)
+
+    def do_resolve(self, item: dict) -> None:
+        session = session_for_view(self.view, 'completionProvider.resolveProvider')
+        if session:
+            session.client.send_request(
+                Request.resolveCompletionItem(item),
+                lambda res: self.handle_resolve_response(res))
+
+    def handle_resolve_response(self, item: Optional[dict]) -> None:
+        if not item:
+            return
+        detail = minihtml(self.view, item.get('detail') or "")
+        documentation = minihtml(self.view, item.get("documentation") or "")
+        minihtml_content = self.get_content(documentation, detail)
+        if self.view.is_popup_visible():
+            self.update_popup(minihtml_content)
+        else:
+            self.show_popup(minihtml_content)
+
+    def update_popup(self, minihtml_content: str) -> None:
+        mdpopups.update_popup(self.view, minihtml_content)
 
 
 class LspCompleteCommand(sublime_plugin.TextCommand):
@@ -102,6 +157,8 @@ def resolve(completion_list: sublime.CompletionList, items: List[sublime.Complet
 
 
 class CompletionHandler(LSPViewEventListener):
+    completions = []  # type: List[dict]
+
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self.initialized = False
@@ -147,6 +204,13 @@ class CompletionHandler(LSPViewEventListener):
             # This is to make ST match with labels that have a weird prefix like a space character.
             settings.set("auto_complete_preserve_order", "none")
 
+    def on_post_text_command(self, command: str, args: dict) -> None:
+        if not self.view.is_popup_visible():
+            return
+        if command in ["hide_auto_complete", "move", "commit_completion"] or 'delete' in command:
+            # hide the popup when `esc` or arrows are pressed pressed
+            self.view.hide_popup()
+
     def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[sublime.CompletionList]:
         if not self.initialized:
             self.initialize()
@@ -168,7 +232,7 @@ class CompletionHandler(LSPViewEventListener):
             lambda res: self.handle_error(res, completion_list))
         return completion_list
 
-    def format_completion(self, item: dict, can_resolve_completion_items: bool) -> sublime.CompletionItem:
+    def format_completion(self, item: dict, index: int, can_resolve_completion_items: bool) -> sublime.CompletionItem:
         # This is a hot function. Don't do heavy computations or IO in this function.
         item_kind = item.get("kind")
         if item_kind:
@@ -181,22 +245,21 @@ class CompletionHandler(LSPViewEventListener):
 
         lsp_label = item["label"]
         lsp_filter_text = item.get("filterText")
-        lsp_detail = item.get("detail") or ""
-        lsp_detail = html.escape(lsp_detail.replace('\n', ' '))
-
-        if can_resolve_completion_items or "documentation" in item:
-            doc_link = '<a href="subl:lsp_resolve_docs">Documentation</a>'
-        else:
-            doc_link = ''
+        lsp_detail = html.escape(item.get("detail", "").replace('\n', ' '))
 
         if lsp_filter_text and lsp_filter_text != lsp_label:
             st_trigger = lsp_filter_text
             st_annotation = lsp_label
-            st_details = '{} {}'.format(doc_link, lsp_detail) if doc_link else lsp_detail
         else:
             st_trigger = lsp_label
-            st_annotation = lsp_detail
-            st_details = doc_link
+            st_annotation = ""
+
+        st_details = ""
+        if can_resolve_completion_items or item.get("documentation"):
+            st_details += "<a href='subl:lsp_resolve_docs {{\"index\": {}}}'>More</a>".format(index)
+            st_details += " | " if lsp_detail else ""
+
+        st_details += "<p>{}</p>".format(lsp_detail)
 
         # NOTE: Some servers return "textEdit": null. We have to check if it's truthy.
         if item.get("textEdit"):
@@ -247,10 +310,12 @@ class CompletionHandler(LSPViewEventListener):
         elif isinstance(response, list):
             response_items = response
         response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
-        items = [self.format_completion(response_item, can_resolve_completion_items)
-                 for response_item in response_items]
+        CompletionHandler.completions = response_items
+        items = [self.format_completion(response_item, index, can_resolve_completion_items)
+                 for index, response_item in enumerate(response_items)]
         resolve(completion_list, items, flags)
 
     def handle_error(self, error: dict, completion_list: sublime.CompletionList) -> None:
         resolve(completion_list, [])
+        CompletionHandler.completions = []
         sublime.status_message('Completion error: ' + str(error.get('message')))

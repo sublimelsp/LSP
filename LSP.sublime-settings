@@ -49,7 +49,7 @@
   },
 
   // Gutter marker for code diagnostics.
-  // Valid values are "bookmark", "circle", "cross", "dot", "sign" or ""
+  // Valid values are "dot", "circle", "bookmark", "sign" or ""
   "diagnostics_gutter_marker": "dot",
 
   // Show a bulb in the gutter when code actions are available

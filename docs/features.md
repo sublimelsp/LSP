@@ -82,7 +82,7 @@ Add these settings to your Sublime settings, Syntax-specific settings and/or in 
 * `highlight_active_signature_parameter`: *highlight the active parameter of the currently active signature*
 * `document_highlight_style`: *document highlight style: "underline", "stippled", "squiggly" or ""*
 * `document_highlight_scopes`: *customize your sublime text scopes for document highlighting*
-* `diagnostics_gutter_marker` `"dot"` *gutter marker for code diagnostics: "dot", "circle", "bookmark", "cross", "sign" or ""*
+* `diagnostics_gutter_marker` `"dot"` *gutter marker for code diagnostics: "dot", "circle", "bookmark", "sign" or ""*
 * `show_code_actions_bulb` `false` *show a bulb in the gutter when code actions are available*
 * `show_symbol_action_links` `false` *show links to symbol actions like go to, references and rename in the hover popup*
 * `disabled_capabilities`, `[]` *Turn off client capabilities (features): "hover", "completion", "documentHighlight", "colorProvider", "signatureHelp"

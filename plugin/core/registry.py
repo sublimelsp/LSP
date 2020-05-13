@@ -1,7 +1,6 @@
 import sublime
 import sublime_plugin
 from .configurations import ConfigManager, is_supported_syntax
-from .logging import debug
 from .rpc import Client
 from .sessions import Session
 from .settings import settings, client_configs

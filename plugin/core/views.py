@@ -1,4 +1,3 @@
-import html
 import linecache
 import mdpopups
 import re
@@ -193,19 +192,34 @@ def minihtml(view: sublime.View, content: Union[str, dict]) -> str:
         return ''
 
 
-def text2html(content: str) -> str:
-    content = html.escape(content).replace('\n', '<br>').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
+REPLACEMENT_MAP = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\t": 4 * "&nbsp;",
+    "\n": "<br>",
+    "\xa0": "&nbsp;",  # non-breaking space
+    "\xc2": "&nbsp;",  # control character
+}
 
-    def replace_nbsp(match: Any) -> str:
-        spaces = match.group(0)
-        return "&nbsp;" * len(spaces)
+PATTERNS = [
+    r'(?P<special>[{}])'.format(''.join(REPLACEMENT_MAP.keys())),
+    r'(?P<url>https?://(?:[\w\d:#@%/;$()~_?\+\-=\\\.&](?:#!)?)*)',
+    r'(?P<multispace> {2,})',
+]
 
-    # if there are 2 or more spaces, replace them with &nbsp;
-    content = re.sub(r"( {2,})", replace_nbsp, content)
+REPLACEMENT_RE = re.compile('|'.join(PATTERNS), flags=re.IGNORECASE)
 
-    def replace_url_with_link(match: Any) -> str:
-        url = match.group(0)
+
+def _replace_match(match: Any) -> str:
+    special_match = match.group('special')
+    if special_match:
+        return REPLACEMENT_MAP[special_match]
+    url = match.group('url')
+    if url:
         return "<a href='{}'>{}</a>".format(url, url)
+    return len(match.group('multispace')) * '&nbsp;'
 
-    FIND_URL = re.compile(r'(https?://(?:[\w\d:#@%/;$()~_?\+\-=\\\.&](?:#!)?)*)', flags=re.IGNORECASE)
-    return re.sub(FIND_URL, replace_url_with_link, content)
+
+def text2html(content: str) -> str:
+    return re.sub(REPLACEMENT_RE, _replace_match, content)

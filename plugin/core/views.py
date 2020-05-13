@@ -176,20 +176,58 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
     })
 
 
-def minihtml(view: sublime.View, content: Union[str, dict]) -> str:
-    """ Content can be a string or MarkupContent. """
+def minihtml(view: sublime.View, content: Union[str, dict, list], prefer_plain_text: bool) -> str:
+    """
+    Formats provided input into markup accepted by minihtml.
+
+    Content can be in one of those formats:
+     - string: treated as plain text
+     - MarkedString: string | { language: string; value: string }
+     - MarkedString[]
+     - MarkupContent: { kind: MarkupKind, value: string }
+
+    Since we can't distinguish between plain text string and a MarkedString in a string form, we
+    need to be told explicitly which one to use for string input.
+
+    :param view
+    :param content
+    :param prefer_plain_text: Whether to treat *string* input as plain text (True) or markdown (False).
+
+    :returns: Formatted string
+    """
     if isinstance(content, str):
-        return text2html(content)
-    elif isinstance(content, dict):
-        value = content.get("value") or ""
+        return text2html(content) if prefer_plain_text else mdpopups.md2html(view, content)
+    if isinstance(content, list):
+        formatted = []
+        for item in content:
+            value = ""
+            language = None
+            if isinstance(item, str):
+                value = item
+            else:
+                value = item.get("value") or ""
+                language = item.get("language")
+
+            if language:
+                formatted.append("```{}\n{}\n```\n".format(language, value))
+            else:
+                formatted.append(value)
+
+        frontmatter_config = mdpopups.format_frontmatter({'allow_code_wrap': True})
+        return mdpopups.md2html(view, frontmatter_config + "\n".join(formatted))
+    if isinstance(content, dict):
+        language = content.get("language")
         kind = content.get("kind")
-        if kind == "markdown":
-            return mdpopups.md2html(view, value)
-        else:
-            # must be plaintext
-            return text2html(value)
-    else:
-        return ''
+        value = content.get("value") or ""
+        if kind:
+            # MarkupContent
+            return mdpopups.md2html(view, value) if kind == "markdown" else text2html(value)
+        if language:
+            # MarkedString (dict)
+            return mdpopups.md2html(view, "```{}\n{}\n```\n".format(language, value))
+        # MarkedString (string)
+        return mdpopups.md2html(view, value)
+    return ''
 
 
 REPLACEMENT_MAP = {

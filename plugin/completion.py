@@ -45,8 +45,8 @@ completion_kinds = {
 class LspResolveDocsCommand(sublime_plugin.TextCommand):
     def run(self, edit: sublime.Edit, index: int) -> None:
         item = CompletionHandler.completions[index]
-        detail = minihtml(self.view, item.get('detail') or "")
-        documentation = minihtml(self.view, item.get("documentation") or "")
+        detail = minihtml(self.view, item.get('detail') or "", prefer_plain_text=True)
+        documentation = minihtml(self.view, item.get("documentation") or "", prefer_plain_text=True)
 
         # don't show the detail in the cooperate AC popup if it is already shown in the AC details filed.
         self.is_detail_shown = bool(detail)
@@ -90,8 +90,8 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
     def handle_resolve_response(self, item: Optional[dict]) -> None:
         if not item:
             return
-        detail = minihtml(self.view, item.get('detail') or "")
-        documentation = minihtml(self.view, item.get("documentation") or "")
+        detail = minihtml(self.view, item.get('detail') or "", prefer_plain_text=True)
+        documentation = minihtml(self.view, item.get("documentation") or "", prefer_plain_text=True)
         minihtml_content = self.get_content(documentation, detail)
         if self.view.is_popup_visible():
             self.update_popup(minihtml_content)

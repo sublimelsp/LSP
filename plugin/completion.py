@@ -67,11 +67,12 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
         return content
 
     def show_popup(self, minihtml_content: str) -> None:
+        viewport_width = self.view.viewport_extent()[0]
         mdpopups.show_popup(
             self.view,
             minihtml_content,
             flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
-            max_width=800,
+            max_width=viewport_width,
             allow_code_wrap=True,
             on_navigate=self.on_navigate
         )

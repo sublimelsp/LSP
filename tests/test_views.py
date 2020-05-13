@@ -117,6 +117,9 @@ class ViewsTest(DeferrableTestCase):
     def test_text2html_replaces_tabs_with_br(self) -> None:
         self.assertEqual(text2html("Hello,\t world "), "Hello,&nbsp;&nbsp;&nbsp;&nbsp; world ")
 
+    def test_text2html_non_breaking_space_and_control_char_with_entity(self) -> None:
+        self.assertEqual(text2html("no\xc2\xa0breaks"), "no&nbsp;&nbsp;breaks")
+
     def test_text2html_replaces_two_or_more_spaces_with_nbsp(self) -> None:
         content = " One  Two   Three One    Four"
         expect = " One&nbsp;&nbsp;Two&nbsp;&nbsp;&nbsp;Three One&nbsp;&nbsp;&nbsp;&nbsp;Four"
@@ -126,9 +129,25 @@ class ViewsTest(DeferrableTestCase):
         content = " John has one apple "
         self.assertEqual(text2html(content), content)
 
-    def test_text2html_replaces_tabs_parses_links(self) -> None:
-        content = "Here is a url https://github.com/sublimelsp/LSP\n" \
-            "Issues: https://github.com/sublimelsp/LSP/issues ."
-        expect = "Here is a url <a href='https://github.com/sublimelsp/LSP'>https://github.com/sublimelsp/LSP</a><br>" \
-            "Issues: <a href='https://github.com/sublimelsp/LSP/issues'>https://github.com/sublimelsp/LSP/issues</a> ."
+    def test_text2html_replaces_newlines_with_br(self) -> None:
+        self.assertEqual(text2html("a\nb"), "a<br>b")
+
+    def test_text2html_parses_link_simple(self) -> None:
+        content = "https://github.com/sublimelsp/LSP"
+        expect = "<a href='https://github.com/sublimelsp/LSP'>https://github.com/sublimelsp/LSP</a>"
+        self.assertEqual(text2html(content), expect)
+
+    def test_text2html_parses_link_in_angle_brackets(self) -> None:
+        content = "<https://github.com/sublimelsp/LSP>"
+        expect = "&lt;<a href='https://github.com/sublimelsp/LSP'>https://github.com/sublimelsp/LSP</a>&gt;"
+        self.assertEqual(text2html(content), expect)
+
+    def test_text2html_parses_link_in_double_quotes(self) -> None:
+        content = "\"https://github.com/sublimelsp/LSP\""
+        expect = "\"<a href='https://github.com/sublimelsp/LSP'>https://github.com/sublimelsp/LSP</a>\""
+        self.assertEqual(text2html(content), expect)
+
+    def test_text2html_parses_link_in_single_quotes(self) -> None:
+        content = "'https://github.com/sublimelsp/LSP'"
+        expect = "'<a href='https://github.com/sublimelsp/LSP'>https://github.com/sublimelsp/LSP</a>'"
         self.assertEqual(text2html(content), expect)

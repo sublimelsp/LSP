@@ -1,9 +1,10 @@
-import sublime
-from copy import deepcopy
+from .collections import DottedDict
 from .logging import debug
 from .types import ClientConfig, WindowLike, syntax2scope, view2scope
 from .typing import Any, Generator, List, Dict, Iterable
 from .workspace import enable_in_project, disable_in_project
+from copy import deepcopy
+import sublime
 
 
 def is_supported_syntax(syntax: str, configs: Iterable[ClientConfig]) -> bool:
@@ -87,9 +88,11 @@ class WindowConfigManager(object):
         overrides = project_clients.get(client_config.name)
         if overrides:
             debug('applying .sublime-project override for', client_config.name)
-            client_config.settings.update(overrides.get("settings", {}))
+            settings = DottedDict(deepcopy(client_config.settings.get()))
+            settings.update(overrides.get("settings", {}))
+            env = deepcopy(client_config.env)
             for key, value in overrides.get("env", {}).items():
-                client_config.env[key] = value
+                env[key] = value
             return ClientConfig(
                 name=client_config.name,
                 binary_args=overrides.get("command", client_config.binary_args),
@@ -97,8 +100,8 @@ class WindowConfigManager(object):
                 tcp_port=overrides.get("tcp_port", client_config.tcp_port),
                 enabled=overrides.get("enabled", client_config.enabled),
                 init_options=overrides.get("initializationOptions", client_config.init_options),
-                settings=client_config.settings,
-                env=client_config.env,
+                settings=settings,
+                env=env,
                 tcp_host=overrides.get("tcp_host", client_config.tcp_host),
                 experimental_capabilities=overrides.get(
                     "experimental_capabilities", client_config.experimental_capabilities),

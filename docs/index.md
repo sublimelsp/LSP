@@ -243,8 +243,7 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 "docker-langserver": {
   "command": ["docker-langserver", "--stdio"],
   "enabled": true,
-  "languageId": "dockerfile",
-  "scopes": ["source.dockerfile"],
+  "languageId": "dockerfile", // will match source.dockerfile
   "settings": {
     // string values must be equal to "ignore", "warning", or "error"
     "docker.languageserver.diagnostics.deprecatedMaintainer": "warning",
@@ -256,7 +255,6 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
     "docker.languageserver.diagnostics.instructionHealthcheckMultiple": "warning",
     "docker.languageserver.diagnostics.instructionJSONInSingleQuotes": "warning"
   },
-  "syntaxes": ["Packages/Dockerfile Syntax Highlighting/Syntaxes/Dockerfile.sublime-syntax"]
 }
 ```
 

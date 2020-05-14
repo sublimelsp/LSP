@@ -245,8 +245,7 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 "docker-langserver": {
   "command": ["docker-langserver", "--stdio"],
   "enabled": true,
-  "languageId": "dockerfile",
-  "scopes": ["source.dockerfile"],
+  "languageId": "dockerfile", // will match source.dockerfile
   "settings": {
     "docker": {
       "languageserver": {
@@ -264,7 +263,6 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
       }
     }
   },
-  "syntaxes": ["Packages/Dockerfile Syntax Highlighting/Syntaxes/Dockerfile.sublime-syntax"]
 }
 ```
 

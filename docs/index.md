@@ -129,9 +129,7 @@ Any global language server settings can be overridden per project by adding an L
       },
       "eslintls": {
         "settings": {
-          "eslint": {
-            "autoFixOnSave": true
-          }
+          "eslint.autoFixOnSave": true
         }
       }
     }
@@ -248,21 +246,15 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
   "languageId": "dockerfile",
   "scopes": ["source.dockerfile"],
   "settings": {
-    "docker": {
-      "languageserver": {
-        "diagnostics": {
-          // string values must be equal to "ignore", "warning", or "error"
-          "deprecatedMaintainer": "warning",
-          "directiveCasing": "warning",
-          "emptyContinuationLine": "warning",
-          "instructionCasing": "warning",
-          "instructionCmdMultiple": "warning",
-          "instructionEntrypointMultiple": "warning",
-          "instructionHealthcheckMultiple": "warning",
-          "instructionJSONInSingleQuotes": "warning"
-        }
-      }
-    }
+    // string values must be equal to "ignore", "warning", or "error"
+    "docker.languageserver.diagnostics.deprecatedMaintainer": "warning",
+    "docker.languageserver.diagnostics.directiveCasing": "warning",
+    "docker.languageserver.diagnostics.emptyContinuationLine": "warning",
+    "docker.languageserver.diagnostics.instructionCasing": "warning",
+    "docker.languageserver.diagnostics.instructionCmdMultiple": "warning",
+    "docker.languageserver.diagnostics.instructionEntrypointMultiple": "warning",
+    "docker.languageserver.diagnostics.instructionHealthcheckMultiple": "warning",
+    "docker.languageserver.diagnostics.instructionJSONInSingleQuotes": "warning"
   },
   "syntaxes": ["Packages/Dockerfile Syntax Highlighting/Syntaxes/Dockerfile.sublime-syntax"]
 }
@@ -473,33 +465,27 @@ npm install -g javascript-typescript-langserver
   "languageId": "julia",
   "settings": {
     // Default values from VS Code:
-    "julia": {
-      "format": {
-        "calls": true,        // Format function calls
-        "comments": true,     // Format comments
-        "curly": true,        // Format braces
-        "docs": true,         // Format inline documentation
-        "indent": 4,          // Indent size for formatting
-        "indents": true,      // Format file indents
-        "iterOps": true,      // Format loop iterators
-        "kw": true,           // Remove spaces around = in function keywords
-        "lineends": false,    // [undocumented]
-        "ops": true,          // Format whitespace around operators
-        "tuples": true        // Format tuples
-      },
-      "lint": {
-        "call": false,        // Check calls against existing methods (experimental)
-        "constif": true,      // Check for constant conditionals of if statements
-        "datadecl": false,    // [undocumented]
-        "iter": true,         // Check iterator syntax of loops
-        "lazy": true,         // Check for deterministic lazy boolean operators
-        "modname": true,      // Check for invalid submodule names
-        "nothingcomp": false, // [undocumented]
-        "pirates": true,      // Check for type piracy
-        "run": true,          // run the linter on active files
-        "typeparam": true     // Check for unused DataType parameters
-      }
-    }
+    "julia.format.calls": true,      // Format function calls
+    "julia.format.comments": true,   // Format comments
+    "julia.format.curly": true,      // Format braces
+    "julia.format.docs": true,       // Format inline documentation
+    "julia.format.indent": 4,        // Indent size for formatting
+    "julia.format.indents": true,    // Format file indents
+    "julia.format.iterOps": true,    // Format loop iterators
+    "julia.format.kw": true,         // Remove spaces around = in function keywords
+    "julia.format.lineends": false,  // [undocumented]
+    "julia.format.ops": true,        // Format whitespace around operators
+    "julia.format.tuples": true      // Format tuples
+    "julia.lint.call": false,        // Check calls against existing methods (experimental)
+    "julia.lint.constif": true,      // Check for constant conditionals of if statements
+    "julia.lint.datadecl": false,    // [undocumented]
+    "julia.lint.iter": true,         // Check iterator syntax of loops
+    "julia.lint.lazy": true,         // Check for deterministic lazy boolean operators
+    "julia.lint.modname": true,      // Check for invalid submodule names
+    "julia.lint.nothingcomp": false, // [undocumented]
+    "julia.lint.pirates": true,      // Check for type piracy
+    "julia.lint.run": true,          // run the linter on active files
+    "julia.lint.typeparam": true     // Check for unused DataType parameters
   }
 }
 ```
@@ -720,48 +706,37 @@ A basic configuration below can be used for bootstrapping your own:
     "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage",
   ],
   "settings": {
-    "pyls": {
-      "env":
-      {
-        // Making Sublime's own libs available to the linters.
-        // "PYTHONPATH": "/Applications/Sublime Text.app/Contents/MacOS/Lib/python33",
-      },
-      // Configuration is computed first from user configuration (in home directory),
-      // overridden by configuration passed in by the language client,
-      // and then overridden by configuration discovered in the workspace.
-      "configurationSources": [
-        "pycodestyle",  // discovered in ~/.config/pycodestyle, setup.cfg, tox.ini and pycodestyle.cfg
-        // "flake8",  // discovered in ~/.config/flake8, setup.cfg, tox.ini and flake8.cfg
-      ],
-      "plugins": {
-        "jedi": {
-          "extra_paths": [
-            // The directory where the pip installation package is located
-          ],
-        },
-        "jedi_completion": {
-          "fuzzy": true,  // Enable fuzzy when requesting autocomplete
-        },
-        "pycodestyle": {
-          "enabled": true,
-          "exclude": [  // Exclude files or directories which match these patterns
-          ],
-          "ignore": [  // Ignore errors and warnings
-            // "E501",  // Line too long (82 &gt; 79 characters)
-          ],
-          // "maxLineLength": 80,  // Set maximum allowed line length
-        },
-        "pydocstyle": {"enabled": false},
-        "pyflakes": {"enabled": true},
-        "pylint": {"enabled": false},
-        "yapf": {"enabled": true},
-        // pyls' 3rd Party Plugins, Mypy type checking for Python 3, Must be installed via pip before enabling
-        "pyls_mypy": {  // Install with: pip install pyls-mypy
-          "enabled": false,
-          "live_mode": true,
-        },
-      }
-    }
+    "pyls.env": {
+      // Making Sublime's own libs available to the linters.
+      // "PYTHONPATH": "/Applications/Sublime Text.app/Contents/MacOS/Lib/python33",
+    },
+    // Configuration is computed first from user configuration (in home directory),
+    // overridden by configuration passed in by the language client,
+    // and then overridden by configuration discovered in the workspace.
+    "pyls.configurationSources": [
+      "pycodestyle", // discovered in ~/.config/pycodestyle, setup.cfg, tox.ini and pycodestyle.cfg
+      // "flake8",   // discovered in ~/.config/flake8, setup.cfg, tox.ini and flake8.cfg
+    ],
+    "pyls.plugins.jedi.extra_paths": [
+      // The directory where the pip installation package is located
+    ],
+    // Enable fuzzy matches when requesting autocomplete
+    "pyls.plugins.jedi.jedi_completion.fuzzy": true,
+    "pyls.plugins.jedi.pycodestyle.enabled": true,
+    "pyls.plugins.jedi.pycodestyle.exclude": [
+      // Exclude files or directories which match these patterns
+    ],
+    "pyls.plugins.jedi.pycodestyle.ignore": [
+      // Exclude files or directories which match these patterns
+    ],
+    // "pyls.plugins.jedi.pycodestyle.maxLineLength: 80" // set maximum allowed line length
+    "pyls.plugins.pydocstyle.enabled" false,
+    "pyls.plugins.pyflakes.enabled": true,
+    "pyls.plugins.pylint.enabled": false,
+    "pyls.plugins.yapf.enabled": true,
+    // pyls' 3rd Party Plugins, Mypy type checking for Python 3, Must be installed via pip before enabling
+    "pyls.plugins.pyls_mypy.enabled": false, // Install with: pip install pyls-mypy
+    "pyls.plugins.pyls_mypy.live_mode": true
   }
 },
 ```

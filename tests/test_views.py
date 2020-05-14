@@ -138,7 +138,13 @@ class ViewsTest(DeferrableTestCase):
 
     def test_minihtml_handles_marked_content(self) -> None:
         content = {'value': 'import json', 'language': 'python'}
-        expect = '<div class="highlight"><pre><span>import</span><span>&nbsp;</span><span>json</span><br></pre></div>'
+        expect = '<div class="highlight"><pre><span>import</span><span> </span><span>json</span><br></pre></div>'
+        formatted = minihtml(self.view, content, prefer_plain_text=True)
+        self.assertEqual(self._strip_style_attributes(formatted), expect)
+
+    def test_minihtml_handles_marked_content_mutiple_spaces(self) -> None:
+        content = {'value': 'import  json', 'language': 'python'}
+        expect = '<div class="highlight"><pre><span>import</span><span>&nbsp; </span><span>json</span><br></pre></div>'
         formatted = minihtml(self.view, content, prefer_plain_text=True)
         self.assertEqual(self._strip_style_attributes(formatted), expect)
 

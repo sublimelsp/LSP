@@ -195,9 +195,12 @@ def minihtml(view: sublime.View, content: Union[str, dict, list], prefer_plain_t
 
     :returns: Formatted string
     """
+    is_plain_text = True
+    result = ''
     if isinstance(content, str):
         # plain text string or MarkedString
-        return text2html(content) if prefer_plain_text else mdpopups.md2html(view, content)
+        is_plain_text = prefer_plain_text
+        result = content
     if isinstance(content, list):
         # MarkedString[]
         formatted = []
@@ -215,8 +218,8 @@ def minihtml(view: sublime.View, content: Union[str, dict, list], prefer_plain_t
             else:
                 formatted.append(value)
 
-        frontmatter_config = mdpopups.format_frontmatter({'allow_code_wrap': True})
-        return mdpopups.md2html(view, frontmatter_config + "\n".join(formatted))
+        is_plain_text = False
+        result = "\n".join(formatted)
     if isinstance(content, dict):
         # MarkupContent or MarkedString (dict)
         language = content.get("language")
@@ -224,11 +227,17 @@ def minihtml(view: sublime.View, content: Union[str, dict, list], prefer_plain_t
         value = content.get("value") or ""
         if kind:
             # MarkupContent
-            return mdpopups.md2html(view, value) if kind == "markdown" else text2html(value)
+            is_plain_text = kind != "markdown"
+            result = value
         if language:
             # MarkedString (dict)
-            return mdpopups.md2html(view, "```{}\n{}\n```\n".format(language, value))
-    return ''
+            is_plain_text = False
+            result = "```{}\n{}\n```\n".format(language, value)
+    if is_plain_text:
+        return text2html(result)
+    else:
+        frontmatter_config = mdpopups.format_frontmatter({'allow_code_wrap': True})
+        return mdpopups.md2html(view, frontmatter_config + result)
 
 
 REPLACEMENT_MAP = {

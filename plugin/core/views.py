@@ -182,7 +182,7 @@ def minihtml(view: sublime.View, content: Union[str, dict, list], prefer_plain_t
 
     Content can be in one of those formats:
      - string: treated as plain text
-     - MarkedString: string | { language: string; value: string }
+     - MarkedString: string or { language: string; value: string }
      - MarkedString[]
      - MarkupContent: { kind: MarkupKind, value: string }
 
@@ -196,8 +196,10 @@ def minihtml(view: sublime.View, content: Union[str, dict, list], prefer_plain_t
     :returns: Formatted string
     """
     if isinstance(content, str):
+        # plain text string or MarkedString
         return text2html(content) if prefer_plain_text else mdpopups.md2html(view, content)
     if isinstance(content, list):
+        # MarkedString[]
         formatted = []
         for item in content:
             value = ""
@@ -216,6 +218,7 @@ def minihtml(view: sublime.View, content: Union[str, dict, list], prefer_plain_t
         frontmatter_config = mdpopups.format_frontmatter({'allow_code_wrap': True})
         return mdpopups.md2html(view, frontmatter_config + "\n".join(formatted))
     if isinstance(content, dict):
+        # MarkupContent or MarkedString (dict)
         language = content.get("language")
         kind = content.get("kind")
         value = content.get("value") or ""
@@ -225,8 +228,6 @@ def minihtml(view: sublime.View, content: Union[str, dict, list], prefer_plain_t
         if language:
             # MarkedString (dict)
             return mdpopups.md2html(view, "```{}\n{}\n```\n".format(language, value))
-        # MarkedString (string)
-        return mdpopups.md2html(view, value)
     return ''
 
 

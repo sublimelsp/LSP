@@ -171,7 +171,7 @@ class LspHoverCommand(LspTextCommand):
         return "".join(formatted)
 
     def hover_content(self) -> str:
-        content = self._hover if isinstance(self._hover, dict) else ''
+        content = (self._hover.get('contents') or '') if isinstance(self._hover, dict) else ''
         return minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT)
 
     def request_show_hover(self, point: int) -> None:

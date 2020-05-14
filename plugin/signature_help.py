@@ -11,6 +11,7 @@ from .core.settings import client_configs, settings
 from .core.signature_help import create_signature_help, SignatureHelp
 from .core.typing import List, Dict, Optional
 from .core.views import text_document_position_params
+from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
 
 
 class ColorSchemeScopeRenderer(object):
@@ -30,7 +31,7 @@ class ColorSchemeScopeRenderer(object):
         return self._wrap_with_scope_style(content, "variable.parameter", emphasize)
 
     def markdown(self, content: str) -> str:
-        return mdpopups.md2html(self._view, content)
+        return minihtml(self._view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
 
     def _wrap_with_scope_style(self, content: str, scope: str, emphasize: bool = False, escape: bool = True) -> str:
         color = self._scope_styles[scope]["color"]

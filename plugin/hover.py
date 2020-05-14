@@ -13,6 +13,7 @@ from .core.registry import session_for_view, LspTextCommand, windows
 from .core.settings import client_configs, settings
 from .core.typing import List, Optional, Any, Dict
 from .core.views import text_document_position_params
+from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .diagnostics import filter_by_point, view_diagnostics
 
 
@@ -169,35 +170,8 @@ class LspHoverCommand(LspTextCommand):
         return "".join(formatted)
 
     def hover_content(self) -> str:
-        contents = []  # type: List[Any]
-        if isinstance(self._hover, dict):
-            response_content = self._hover.get('contents')
-            if response_content:
-                if isinstance(response_content, list):
-                    contents = response_content
-                else:
-                    contents = [response_content]
-
-        formatted = []
-        for item in contents:
-            value = ""
-            language = None
-            if isinstance(item, str):
-                value = item
-            else:
-                value = item.get("value")
-                language = item.get("language")
-
-            if language:
-                formatted.append("```{}\n{}\n```\n".format(language, value))
-            else:
-                formatted.append(value)
-
-        if formatted:
-            frontmatter_config = mdpopups.format_frontmatter({'allow_code_wrap': True})
-            return mdpopups.md2html(self.view, frontmatter_config + "\n".join(formatted))
-
-        return ""
+        content = (self._hover.get('contents') or '') if isinstance(self._hover, dict) else ''
+        return minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT)
 
     def request_show_hover(self, point: int) -> None:
         sublime.set_timeout(lambda: self.show_hover(point), 50)

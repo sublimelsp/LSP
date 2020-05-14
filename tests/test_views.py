@@ -5,16 +5,18 @@ from LSP.plugin.core.views import did_change
 from LSP.plugin.core.views import did_open
 from LSP.plugin.core.views import did_save
 from LSP.plugin.core.views import MissingFilenameError
+from LSP.plugin.core.views import FORMAT_STRING, FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from LSP.plugin.core.views import point_to_offset
+from LSP.plugin.core.views import text2html
 from LSP.plugin.core.views import text_document_formatting
 from LSP.plugin.core.views import text_document_position_params
 from LSP.plugin.core.views import text_document_range_formatting
 from LSP.plugin.core.views import uri_from_view
 from LSP.plugin.core.views import will_save
 from LSP.plugin.core.views import will_save_wait_until
-from LSP.plugin.core.views import text2html
 from unittest.mock import MagicMock
 from unittesting import DeferrableTestCase
+import re
 import sublime
 
 
@@ -113,6 +115,87 @@ class ViewsTest(DeferrableTestCase):
         # When we move two UTF-16 points further, we should encompass the beer emoji.
         # So that means that the code point offsets should have a difference of 1.
         self.assertEqual(point_to_offset(Point(1, foobarbaz_length + 2), self.view) - offset, 1)
+
+    def test_minihtml_no_allowed_formats(self) -> None:
+        content = "<div>text\n</div>"
+        with self.assertRaises(Exception):
+            minihtml(self.view, content, allowed_formats=0)
+
+    def test_minihtml_conflicting_formats(self) -> None:
+        content = "<div>text\n</div>"
+        with self.assertRaises(Exception):
+            minihtml(self.view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKED_STRING)
+
+    def test_minihtml_format_string(self) -> None:
+        content = "<div>text\n</div>"
+        expect = "&lt;div&gt;text<br>&lt;/div&gt;"
+        self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_STRING), expect)
+
+    def test_minihtml_format_marked_string(self) -> None:
+        content = "<div>text\n</div>"
+        expect = "<div>text</div>"
+        self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING), expect)
+
+    def test_minihtml_format_markup_content(self) -> None:
+        content = {'value': 'This is **bold** text', 'kind': 'markdown'}
+        expect = "<p>This is <strong>bold</strong> text</p>"
+        self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT), expect)
+
+    def test_minihtml_handles_markup_content_plaintext(self) -> None:
+        content = {'value': 'type TVec2i = specialize TGVec2<Integer>', 'kind': 'plaintext'}
+        expect = "type TVec2i = specialize TGVec2&lt;Integer&gt;"
+        allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
+        self.assertEqual(minihtml(self.view, content, allowed_formats=allowed_formats), expect)
+
+    def test_minihtml_handles_marked_string(self) -> None:
+        content = {'value': 'import json', 'language': 'python'}
+        expect = '<div class="highlight"><pre><span>import</span><span> </span><span>json</span><br></pre></div>'
+        allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
+        formatted = self._strip_style_attributes(minihtml(self.view, content, allowed_formats=allowed_formats))
+        self.assertEqual(formatted, expect)
+
+    def test_minihtml_handles_marked_string_mutiple_spaces(self) -> None:
+        content = {'value': 'import  json', 'language': 'python'}
+        expect = '<div class="highlight"><pre><span>import</span><span>&nbsp; </span><span>json</span><br></pre></div>'
+        allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
+        formatted = self._strip_style_attributes(minihtml(self.view, content, allowed_formats=allowed_formats))
+        self.assertEqual(formatted, expect)
+
+    def test_minihtml_handles_marked_string_array(self) -> None:
+        content = [
+            {'value': 'import sys', 'language': 'python'},
+            {'value': 'let x', 'language': 'js'}
+        ]
+        expect = ''.join([
+            '<div class="highlight"><pre><span>import</span><span> </span><span>sys</span><br></pre></div>'
+            '<div class="highlight"><pre><span>let</span><span> </span><span>x</span><br></pre></div>'
+        ])
+        allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
+        formatted = self._strip_style_attributes(minihtml(self.view, content, allowed_formats=allowed_formats))
+        self.assertEqual(formatted, expect)
+
+    def test_minihtml_ignores_non_allowed_string(self) -> None:
+        content = "<div>text\n</div>"
+        expect = ""
+        self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT), expect)
+
+    def test_minihtml_ignores_non_allowed_marked_string(self) -> None:
+        content = {'value': 'import sys', 'language': 'python'}
+        expect = ""
+        self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT), expect)
+
+    def test_minihtml_ignores_non_allowed_marked_string_array(self) -> None:
+        content = ["a", "b"]
+        expect = ""
+        self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT), expect)
+
+    def test_minihtml_ignores_non_allowed_markup_content(self) -> None:
+        content = {'value': 'a<span>b</span>', 'kind': 'plaintext'}
+        expect = ""
+        self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_STRING), expect)
+
+    def _strip_style_attributes(self, content: str) -> str:
+        return re.sub(r'\s+style="[^"]+"', '', content)
 
     def test_text2html_replaces_tabs_with_br(self) -> None:
         self.assertEqual(text2html("Hello,\t world "), "Hello,&nbsp;&nbsp;&nbsp;&nbsp; world ")

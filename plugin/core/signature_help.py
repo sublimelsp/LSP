@@ -1,6 +1,6 @@
 import html
 from .logging import debug
-from .typing import Tuple, Optional, Dict, List, Any, Protocol
+from .typing import Tuple, Optional, List, Protocol
 
 
 class ScopeRenderer(Protocol):
@@ -16,22 +16,6 @@ class ScopeRenderer(Protocol):
 
     def markdown(self, content: str) -> str:
         ...
-
-
-def get_documentation(d: Dict[str, Any]) -> Optional[str]:
-    docs = d.get('documentation', None)
-    if docs is None:
-        return None
-    elif isinstance(docs, str):
-        # In older version of the protocol, documentation was just a string.
-        return docs
-    elif isinstance(docs, dict):
-        # This can be either "plaintext" or "markdown" format. For now, we can dump it into the popup box. It would
-        # be nice to handle the markdown in a special way.
-        return docs.get('value', None)
-    else:
-        debug('unknown documentation type:', str(d))
-        return None
 
 
 class ParameterInformation(object):
@@ -105,7 +89,7 @@ def parse_parameter_information(parameter: dict) -> ParameterInformation:
         label = label_or_range
     else:
         label_range = label_or_range
-    return ParameterInformation(label, label_range, get_documentation(parameter))
+    return ParameterInformation(label, label_range, parameter.get('documentation'))
 
 
 def parse_signature_information(signature: dict) -> SignatureInformation:
@@ -117,7 +101,7 @@ def parse_signature_information(signature: dict) -> SignatureInformation:
         param_infos = list(parse_parameter_information(param) for param in parameters)
         paren_bounds = parse_signature_label(signature_label, param_infos)
 
-    return SignatureInformation(signature_label, get_documentation(signature), paren_bounds, param_infos)
+    return SignatureInformation(signature_label, signature.get('documentation'), paren_bounds, param_infos)
 
 
 class SignatureHelp(object):

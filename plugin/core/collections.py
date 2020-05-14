@@ -6,7 +6,7 @@ from .typing import Optional, Dict, Any
 
 class DottedDict:
 
-    __slots__ = ('_d')
+    __slots__ = ('_d',)
 
     def __init__(self, d: Optional[Dict[str, Any]] = None) -> None:
         """

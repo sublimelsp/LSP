@@ -12,7 +12,8 @@ from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRe
 from .core.registry import session_for_view, LspTextCommand, windows
 from .core.settings import client_configs, settings
 from .core.typing import List, Optional, Any, Dict
-from .core.views import text_document_position_params, minihtml
+from .core.views import text_document_position_params
+from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .diagnostics import filter_by_point, view_diagnostics
 
 
@@ -170,10 +171,8 @@ class LspHoverCommand(LspTextCommand):
         return "".join(formatted)
 
     def hover_content(self) -> str:
-        if isinstance(self._hover, dict):
-            # Can be: MarkedString | MarkedString[] | MarkupContent
-            return minihtml(self.view, self._hover.get('contents') or "", prefer_plain_text=False)
-        return ''
+        content = self._hover if isinstance(self._hover, dict) else ''
+        return minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT)
 
     def request_show_hover(self, point: int) -> None:
         sublime.set_timeout(lambda: self.show_hover(point), 50)

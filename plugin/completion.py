@@ -10,7 +10,8 @@ from .core.protocol import Request, InsertTextFormat, Range
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.settings import settings, client_configs
 from .core.typing import Any, List, Dict, Optional, Union, Generator
-from .core.views import text_document_position_params, range_to_region, minihtml
+from .core.views import text_document_position_params, range_to_region
+from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
 
 
 completion_kinds = {
@@ -45,8 +46,8 @@ completion_kinds = {
 class LspResolveDocsCommand(sublime_plugin.TextCommand):
     def run(self, edit: sublime.Edit, index: int) -> None:
         item = CompletionHandler.completions[index]
-        detail = minihtml(self.view, item.get('detail') or "", prefer_plain_text=True)
-        documentation = minihtml(self.view, item.get("documentation") or "", prefer_plain_text=True)
+        detail = self.format_documentation(item.get('detail') or "")
+        documentation = self.format_documentation(item.get("documentation") or "")
 
         # don't show the detail in the cooperate AC popup if it is already shown in the AC details filed.
         self.is_detail_shown = bool(detail)
@@ -57,6 +58,9 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
             # To make sure that the detail or documentation fields doesn't exist we need to resove the completion item.
             # If those fields appear after the item is resolved we show them in the popup.
             self.do_resolve(item)
+
+    def format_documentation(self, content: str) -> str:
+        return minihtml(self.view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
 
     def get_content(self, documentation: str, detail: str) -> str:
         content = ""
@@ -90,8 +94,8 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
     def handle_resolve_response(self, item: Optional[dict]) -> None:
         if not item:
             return
-        detail = minihtml(self.view, item.get('detail') or "", prefer_plain_text=True)
-        documentation = minihtml(self.view, item.get("documentation") or "", prefer_plain_text=True)
+        detail = self.format_documentation(item.get('detail') or "")
+        documentation = self.format_documentation(item.get("documentation") or "")
         minihtml_content = self.get_content(documentation, detail)
         if self.view.is_popup_visible():
             self.update_popup(minihtml_content)

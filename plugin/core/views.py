@@ -176,9 +176,14 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
     })
 
 
-def minihtml(view: sublime.View, content: Union[str, dict, list], prefer_plain_text: bool) -> str:
+FORMAT_STRING = 0x1
+FORMAT_MARKED_STRING = 0x2
+FORMAT_MARKUP_CONTENT = 0x4
+
+
+def minihtml(view: sublime.View, content: Union[str, dict, list], allowed_formats: int) -> str:
     """
-    Formats provided input into markup accepted by minihtml.
+    Formats provided input content into markup accepted by minihtml.
 
     Content can be in one of those formats:
      - string: treated as plain text
@@ -186,22 +191,29 @@ def minihtml(view: sublime.View, content: Union[str, dict, list], prefer_plain_t
      - MarkedString[]
      - MarkupContent: { kind: MarkupKind, value: string }
 
-    Since we can't distinguish between plain text string and a MarkedString in a string form, we
-    need to be told explicitly which one to use for string input.
+    We can't distinguish between plain text string and a MarkedString in a string form so
+    FORMAT_STRING and FORMAT_MARKED_STRING can't both be specified at the same time.
 
     :param view
     :param content
-    :param prefer_plain_text: Whether to treat *string* input as plain text (True) or markdown (False).
+    :param allowed_formats: Bitwise flag specifying which formats to parse.
 
     :returns: Formatted string
     """
+    if allowed_formats == 0:
+        raise Exception("Must specify at least one format")
+    parse_string = bool(allowed_formats & FORMAT_STRING)
+    parse_marked_string = bool(allowed_formats & FORMAT_MARKED_STRING)
+    parse_markup_content = bool(allowed_formats & FORMAT_MARKUP_CONTENT)
+    if parse_string and parse_marked_string:
+        raise Exception("Not allowed to specify FORMAT_STRING and FORMAT_MARKED_STRING at the same time")
     is_plain_text = True
     result = ''
-    if isinstance(content, str):
+    if (parse_string or parse_marked_string) and isinstance(content, str):
         # plain text string or MarkedString
-        is_plain_text = prefer_plain_text
+        is_plain_text = parse_string
         result = content
-    if isinstance(content, list):
+    if parse_marked_string and isinstance(content, list):
         # MarkedString[]
         formatted = []
         for item in content:
@@ -220,16 +232,16 @@ def minihtml(view: sublime.View, content: Union[str, dict, list], prefer_plain_t
 
         is_plain_text = False
         result = "\n".join(formatted)
-    if isinstance(content, dict):
+    if (parse_marked_string or parse_markup_content) and isinstance(content, dict):
         # MarkupContent or MarkedString (dict)
         language = content.get("language")
         kind = content.get("kind")
         value = content.get("value") or ""
-        if kind:
+        if parse_markup_content and kind:
             # MarkupContent
             is_plain_text = kind != "markdown"
             result = value
-        if language:
+        if parse_marked_string and language:
             # MarkedString (dict)
             is_plain_text = False
             result = "```{}\n{}\n```\n".format(language, value)

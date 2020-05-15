@@ -1,9 +1,10 @@
-import sublime
-from copy import deepcopy
+from .collections import DottedDict
 from .logging import debug
 from .types import ClientConfig, WindowLike, syntax2scope, view2scope
 from .typing import Any, Generator, List, Dict, Iterable
 from .workspace import enable_in_project, disable_in_project
+from copy import deepcopy
+import sublime
 
 
 def is_supported_syntax(syntax: str, configs: Iterable[ClientConfig]) -> bool:
@@ -86,9 +87,12 @@ class WindowConfigManager(object):
     def _apply_project_overrides(self, client_config: ClientConfig, project_clients: Dict[str, Any]) -> ClientConfig:
         overrides = project_clients.get(client_config.name)
         if overrides:
-            debug('window has override for {}'.format(client_config.name), overrides)
-            client_settings = _merge_dicts(client_config.settings, overrides.get("settings", {}))
-            client_env = _merge_dicts(client_config.env, overrides.get("env", {}))
+            debug('applying .sublime-project override for', client_config.name)
+            settings = DottedDict(deepcopy(client_config.settings.get()))
+            settings.update(overrides.get("settings", {}))
+            env = deepcopy(client_config.env)
+            for key, value in overrides.get("env", {}).items():
+                env[key] = value
             return ClientConfig(
                 name=client_config.name,
                 binary_args=overrides.get("command", client_config.binary_args),
@@ -96,22 +100,11 @@ class WindowConfigManager(object):
                 tcp_port=overrides.get("tcp_port", client_config.tcp_port),
                 enabled=overrides.get("enabled", client_config.enabled),
                 init_options=overrides.get("initializationOptions", client_config.init_options),
-                settings=client_settings,
-                env=client_env,
+                settings=settings,
+                env=env,
                 tcp_host=overrides.get("tcp_host", client_config.tcp_host),
                 experimental_capabilities=overrides.get(
                     "experimental_capabilities", client_config.experimental_capabilities),
             )
 
         return client_config
-
-
-def _merge_dicts(dict_a: dict, dict_b: dict) -> dict:
-    """Merge dict_b into dict_a with one level of recurse"""
-    result_dict = deepcopy(dict_a)
-    for key, value in dict_b.items():
-        if isinstance(result_dict.get(key), dict) and isinstance(value, dict):
-            result_dict.setdefault(key, {}).update(value)
-        else:
-            result_dict[key] = value
-    return result_dict

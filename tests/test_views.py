@@ -1,7 +1,9 @@
+from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.typing import Generator
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import did_change
+from LSP.plugin.core.views import did_change_configuration
 from LSP.plugin.core.views import did_open
 from LSP.plugin.core.views import did_save
 from LSP.plugin.core.views import MissingFilenameError
@@ -99,6 +101,28 @@ class ViewsTest(DeferrableTestCase):
             "textDocument": {"uri": filename_to_uri(self.mock_file_name)},
             "options": {"tabSize": 4321, "insertSpaces": False},
             "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 2}}
+        })
+
+    def test_did_change_configuration(self) -> None:
+        settings = DottedDict()
+        settings.set("a.b.x", 1)
+        settings.set("a.b.y", True)
+        settings.set("a.c.a", 1234)
+        settings.set("a.c.b", 4321)
+        notification = did_change_configuration(settings)
+        self.assertEqual(notification.params, {
+            "settings": {
+                "a": {
+                    "b": {
+                        "x": 1,
+                        "y": True
+                    },
+                    "c": {
+                        "a": 1234,
+                        "b": 4321
+                    }
+                }
+            }
         })
 
     def test_point_to_offset(self) -> None:

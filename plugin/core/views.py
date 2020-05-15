@@ -1,10 +1,11 @@
+from .collections import DottedDict
+from .protocol import Point, Range, Notification, Request
+from .typing import Optional, Dict, Any, Iterable, List, Union
+from .url import filename_to_uri
 import linecache
 import mdpopups
 import re
 import sublime
-from .protocol import Point, Range, Notification, Request
-from .typing import Optional, Dict, Any, Iterable, List, Union
-from .url import filename_to_uri
 
 
 def get_line(window: Optional[sublime.Window], file_name: str, row: int) -> str:
@@ -174,6 +175,10 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
         "options": formatting_options(view.settings()),
         "range": region_to_range(view, region).to_lsp()
     })
+
+
+def did_change_configuration(d: DottedDict) -> Notification:
+    return Notification.didChangeConfiguration({"settings": d.get()})
 
 
 FORMAT_STRING = 0x1

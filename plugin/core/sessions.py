@@ -1,4 +1,5 @@
 from .. import __version__
+from .collections import DottedDict
 from .logging import debug
 from .process import start_server
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification
@@ -7,6 +8,7 @@ from .rpc import Client, attach_stdio_client, Response
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
 from .types import ClientConfig, ClientStates, Settings
 from .typing import Callable, Dict, Any, Optional, List, Tuple
+from .views import did_change_configuration
 from .workspace import is_subpath_of
 import os
 
@@ -188,39 +190,6 @@ def diff_folders(old: List[WorkspaceFolder],
     return added, removed
 
 
-def get_dotted_value(current: Any, dotted: str) -> Any:
-    keys = dotted.split('.')
-    for key in keys:
-        if isinstance(current, dict):
-            current = current.get(key)
-        else:
-            return None
-    return current
-
-
-def set_dotted_value(current: dict, dotted: str, value: Any) -> None:
-    keys = dotted.split('.')
-    for i in range(0, len(keys) - 1):
-        key = keys[i]
-        next_current = current.get(key)
-        if not isinstance(next_current, dict):
-            next_current = {}
-            current[key] = next_current
-        current = next_current
-    current[keys[-1]] = value
-
-
-def clear_dotted_value(current: dict, dotted: str) -> None:
-    keys = dotted.split('.')
-    for i in range(0, len(keys) - 1):
-        key = keys[i]
-        next_current = current.get(key)
-        if not isinstance(next_current, dict):
-            return
-        current = next_current
-    current.pop(keys[-1], None)
-
-
 class Session(object):
     def __init__(self,
                  config: ClientConfig,
@@ -233,7 +202,7 @@ class Session(object):
         self.state = ClientStates.STARTING
         self._on_post_initialize = on_post_initialize
         self._on_post_exit = on_post_exit
-        self.capabilities = dict()  # type: Dict[str, Any]
+        self.capabilities = DottedDict()
         self.client = client
         self._workspace_folders = workspace_folders
         if on_pre_initialize:
@@ -245,7 +214,7 @@ class Session(object):
         return value is not False and value is not None
 
     def get_capability(self, capability: str) -> Optional[Any]:
-        return get_dotted_value(self.capabilities, capability)
+        return self.capabilities.get(capability)
 
     def should_notify_did_open(self) -> bool:
         if self.has_capability('textDocumentSync.openClose'):
@@ -338,7 +307,7 @@ class Session(object):
         self.end()
 
     def _handle_initialize_result(self, result: Any) -> None:
-        self.capabilities.update(result.get('capabilities', dict()))
+        self.capabilities.assign(result.get('capabilities', dict()))
 
         # only keep supported amount of folders
         if self._workspace_folders:
@@ -357,7 +326,7 @@ class Session(object):
         self.on_request("client/registerCapability", self._handle_register_capability)
         self.on_request("client/unregisterCapability", self._handle_unregister_capability)
         if self.config.settings:
-            self.client.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
+            self.client.send_notification(did_change_configuration(self.config.settings))
 
         if self._on_post_initialize:
             self._on_post_initialize(self)
@@ -373,14 +342,7 @@ class Session(object):
         items = []  # type: List[Any]
         requested_items = params.get("items") or []
         for requested_item in requested_items:
-            if 'section' in requested_item:
-                section = requested_item['section']
-                if section:
-                    items.append(get_dotted_value(self.config.settings, section))
-                else:
-                    items.append(self.config.settings)
-            else:
-                items.append(self.config.settings)
+            items.append(self.config.settings.get(requested_item.get('section', None)))
         self.client.send_response(Response(request_id, items))
 
     def _handle_register_capability(self, params: Any, request_id: Any) -> None:
@@ -389,8 +351,8 @@ class Session(object):
             method = registration["method"]
             capability_path, registration_path = method_to_capability(method)
             debug("{}: registering capability:".format(self.config.name), capability_path)
-            set_dotted_value(self.capabilities, capability_path, registration.get("registerOptions", {}))
-            set_dotted_value(self.capabilities, registration_path, registration["id"])
+            self.capabilities.set(capability_path, registration.get("registerOptions", {}))
+            self.capabilities.set(registration_path, registration["id"])
         self.client.send_response(Response(request_id, None))
 
     def _handle_unregister_capability(self, params: Any, request_id: Any) -> None:
@@ -398,8 +360,8 @@ class Session(object):
         for unregistration in unregistrations:
             capability_path, registration_path = method_to_capability(unregistration["method"])
             debug("{}: unregistering capability:".format(self.config.name), capability_path)
-            clear_dotted_value(self.capabilities, capability_path)
-            clear_dotted_value(self.capabilities, registration_path)
+            self.capabilities.remove(capability_path)
+            self.capabilities.remove(registration_path)
         self.client.send_response(Response(request_id, None))
 
     def end(self) -> None:

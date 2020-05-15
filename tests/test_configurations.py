@@ -1,4 +1,3 @@
-from LSP.plugin.core.configurations import _merge_dicts
 from LSP.plugin.core.configurations import ConfigManager
 from LSP.plugin.core.configurations import is_supported_syntax
 from LSP.plugin.core.configurations import WindowConfigManager
@@ -29,24 +28,6 @@ class GlobalConfigManagerTests(unittest.TestCase):
         win.project_data = MagicMock(return_value={'settings': {'LSP': {TEST_CONFIG.name: {"enabled": False}}}})
         window_mgr = manager.for_window(win)
         self.assertFalse(window_mgr.all[0].enabled)
-
-
-class MergeDictsTests(unittest.TestCase):
-
-    def test_preserves_against_empty(self):
-
-        # merge against one empty dict
-        self.assertEqual(_merge_dicts({'a': 1}, {}), {'a': 1})
-        self.assertEqual(_merge_dicts({}, {'a': 1}), {'a': 1})
-
-        # first-level collision
-        self.assertEqual(_merge_dicts({'a': 2}, {'a': 1}), {'a': 1})
-
-        # replace number value with dict
-        self.assertEqual(_merge_dicts({'a': 2}, {'a': {'b': 4}}), {'a': {'b': 4}})
-
-        # update existing child dict.
-        self.assertEqual(_merge_dicts({'a': {'b': 2, 'c': 3}}, {'a': {'b': 4}}), {'a': {'b': 4, 'c': 3}})
 
 
 class WindowConfigManagerTests(unittest.TestCase):

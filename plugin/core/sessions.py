@@ -342,7 +342,7 @@ class Session(object):
         items = []  # type: List[Any]
         requested_items = params.get("items") or []
         for requested_item in requested_items:
-            items.append(self.config.settings.get(requested_item.get('section', None)))
+            items.append(self.config.settings.get(requested_item.get('section') or None))
         self.client.send_response(Response(request_id, items))
 
     def _handle_register_capability(self, params: Any, request_id: Any) -> None:

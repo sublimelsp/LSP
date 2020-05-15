@@ -32,10 +32,10 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
                 return True
         return False
 
-    def test_sends_did_open_to_multiple_sessions(self) -> Generator:
-        window = sublime.active_window()
-        self.assertTrue(window)
-        self.config1 = make_stdio_test_config()
+    def setUp(self) -> Generator:
+        self.window = sublime.active_window()
+        self.assertTrue(self.window)
+        self.config1 = deepcopy(make_stdio_test_config())
         self.config1.init_options["serverResponse"] = {
             'capabilities': {
                 'textDocumentSync': {
@@ -46,16 +46,18 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
             }
         }
         self.config2 = deepcopy(self.config1)
-        self.config2.name = "foobar"
+        self.config2.name = "TEST-2"
+        self.wm = windows.lookup(self.window)
         add_config(self.config1)
         add_config(self.config2)
-        self.wm = windows.lookup(window)
         self.wm._configs.all.append(self.config1)
         self.wm._configs.all.append(self.config2)
-        filename = expand(join("$packages", "LSP", "tests", "testfile.txt"), window)
-        open_view = window.find_open_file(filename)
+
+    def test_sends_did_open_to_multiple_sessions(self) -> Generator:
+        filename = expand(join("$packages", "LSP", "tests", "testfile.txt"), self.window)
+        open_view = self.window.find_open_file(filename)
         close_test_view(open_view)
-        self.view = window.open_file(filename)
+        self.view = self.window.open_file(filename)
         yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
         self.assertTrue(self.wm._configs.match_view(self.view))
         # self.init_view_settings()
@@ -80,13 +82,17 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         self.view.run_command("insert", {"characters": "a"})
         yield from self.await_message("textDocument/didChange")
         status_string = self.view.get_status("lsp_clients")
-        self.assertEqual(set(s.strip() for s in status_string.split(',')), set(("TEST", "foobar")))
+        self.assertEqual(set(s.strip() for s in status_string.split(',')), set(("TEST", "TEST-2")))
         close_test_view(self.view)
         yield from self.await_message("textDocument/didClose")
-        remove_config(self.config2)
-        remove_config(self.config1)
 
     def doCleanups(self) -> Generator:
+        self.wm.end_config_sessions(self.config1.name)
+        self.wm.end_config_sessions(self.config2.name)
+        if self.session1:
+            yield lambda: self.session1.client is None
+        if self.session2:
+            yield lambda: self.session2.client is None
         close_test_view(self.view)
         try:
             remove_config(self.config2)
@@ -94,6 +100,14 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
             pass
         try:
             remove_config(self.config1)
+        except ValueError:
+            pass
+        try:
+            self.wm._configs.all.remove(self.config2)
+        except ValueError:
+            pass
+        try:
+            self.wm._configs.all.remove(self.config1)
         except ValueError:
             pass
         yield from super().doCleanups()

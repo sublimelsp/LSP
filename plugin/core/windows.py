@@ -1,12 +1,13 @@
 from .configurations import ConfigManager
 from .configurations import WindowConfigManager
 from .diagnostics import DiagnosticsStorage
-from .logging import debug, exception_log
+from .logging import debug
+from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
 from .protocol import Notification, TextDocumentSyncKindNone, TextDocumentSyncKindFull
+from .sessions import get_plugin
 from .sessions import Manager
 from .sessions import Session
-from .settings import client_configs
 from .transports import create_transport
 from .types import ClientConfig
 from .types import ClientStates
@@ -14,7 +15,7 @@ from .types import Settings
 from .types import view2scope
 from .types import ViewLike
 from .types import WindowLike
-from .typing import Optional, List, Callable, Dict, Any, Protocol, Set, Iterable, Generator, Type
+from .typing import Optional, List, Callable, Dict, Any, Protocol, Set, Iterable, Generator
 from .views import did_change, did_close, did_open, did_save, will_save
 from .workspace import disable_in_project
 from .workspace import enable_in_project
@@ -68,38 +69,6 @@ class DocumentHandler(Protocol):
 
     def has_document_state(self, file_name: str) -> bool:
         ...
-
-
-_session_types = {}  # type: Dict[str, Type[Session]]
-
-
-def register_session_type(session_type: Type[Session]) -> None:
-    if issubclass(session_type, Session):
-        try:
-            name = session_type.name()
-            if name not in _session_types:
-                config = session_type.standard_configuration()
-                _session_types[name] = session_type
-                client_configs.add_external_config(config)
-                client_configs.update_configs()
-                debug("Registered", name)
-        except Exception as ex:
-            exception_log("Failed to register session type", ex)
-
-
-def unregister_session_type(session_type: Type[Session]) -> None:
-    name = session_type.name()
-    try:
-        _session_types.pop(name)
-        client_configs.remove_external_config(name)
-        debug("Unregistered", name)
-    except KeyError:
-        pass
-
-
-def get_session_type(name: str) -> Type[Session]:
-    global _session_types
-    return _session_types.get(name, Session)
 
 
 def get_active_views(window: WindowLike) -> List[ViewLike]:
@@ -497,8 +466,17 @@ class WindowManager(Manager):
         self._window.status_message("Starting " + config.name + "...")
         try:
             workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
-            session_type = get_session_type(config.name)
-            session = session_type(self, self._settings, workspace_folders, config)
+            plugin_class = get_plugin(config.name)
+            if plugin_class is not None:
+                if plugin_class.needs_update_or_installation():
+                    # TODO: Run on separate thread somewhere
+                    plugin_class.install_or_update()
+                plugin_class.adjust_user_configuration(config)
+                cannot_start_reason = plugin_class.can_start(self._window, initiating_view, workspace_folders, config)
+                if cannot_start_reason:
+                    self._window.status_message(cannot_start_reason)
+                    return
+            session = Session(self, self._settings, workspace_folders, config, plugin_class)
             if self.server_panel_factory:
                 session.logger.sink = self._payload_log_sink
             if workspace_folders:
@@ -517,6 +495,7 @@ class WindowManager(Manager):
                 "{}",
                 "Server will be disabled for this window"
             ]).format(config.name, str(e))
+            exception_log("Unable to start {}".format(config.name), e)
             self._configs.disable_temporarily(config.name)
             self._sublime.message_dialog(message)
 

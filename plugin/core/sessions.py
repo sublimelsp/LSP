@@ -1,11 +1,12 @@
 from .edit import parse_workspace_edit
-from .logging import debug
+from .logging import debug, exception_log
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification, Response
 from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
 from .rpc import Client
+from .settings import client_configs
 from .transports import Transport
-from .types import ClientConfig, ClientStates, Settings
-from .typing import Dict, Any, Optional, List, Tuple, Generator
+from .types import ClientConfig, LanguageConfig, ClientStates, Settings
+from .typing import Dict, Any, Optional, List, Tuple, Generator, Type
 from .workspace import is_subpath_of
 from abc import ABCMeta, abstractmethod
 import os
@@ -278,41 +279,168 @@ def clear_dotted_value(current: dict, dotted: str) -> None:
     current.pop(keys[-1], None)
 
 
-class Session(Client):
+class AbstractPlugin(metaclass=ABCMeta):
+    """
+    You can define notification and request handlers by defining methods that start with 'm_'.
+
+    python/analysisStarted -> def m_python_analysisStarted(self, params: JSONValue) -> None: ...
+    python/analysisStopped -> def m_python_analysisStopped(self, params: JSONValue) -> None: ...
+    """
 
     @classmethod
+    @abstractmethod
     def name(cls) -> str:
+        """
+        A human-friendly name
+        """
         raise NotImplementedError()
 
     @classmethod
+    @abstractmethod
+    def languages(cls) -> List[LanguageConfig]:
+        """
+        The languages that this plugin serves
+        """
+        raise NotImplementedError()
+
+    @classmethod
+    @abstractmethod
+    def command(cls) -> List[str]:
+        """
+        The startup command for the language server process
+        """
+        raise NotImplementedError()
+
+    @classmethod
+    def tcp_port(cls) -> Optional[int]:
+        """
+        The TCP port used in case we're doing JSON-RPC over TCP
+        """
+        return None
+
+    @classmethod
+    def experimental_capabilities(cls) -> Optional[Dict[str, Any]]:
+        """
+        Experimental capabilities for the initialize request
+        """
+        return None
+
+    @classmethod
+    def initialization_options(cls) -> Optional[Dict[str, Any]]:
+        """
+        initializationOptions for the initialize request
+        """
+        return None
+
+    @classmethod
+    def default_settings(cls) -> Optional[Dict[str, Any]]:
+        """
+        Settings for the workspace/didChangeConfiguration notification and the workspace/configuration request
+        """
+        return None
+
+    @classmethod
+    def env(cls) -> Dict[str, str]:
+        """
+        Extra environment variables for the process of the language server binary
+        """
+        return {}
+
+    @classmethod
     def needs_update_or_installation(cls) -> bool:
+        """
+        If this plugin manages its own server binary, then this is the place to check whether the binary needs
+        an update, or whether it needs to be installed before starting the language server.
+        """
         return False
 
     @classmethod
     def install_or_update(cls) -> None:
+        """
+        Do the actual update/installation of the server binary. This runs in a separate thread, so don't spawn threads
+        yourself here.
+        """
         pass
 
     @classmethod
-    def standard_configuration(cls) -> ClientConfig:
-        raise NotImplementedError()
-
-    @classmethod
-    def adjust_configuration(cls, configuration: ClientConfig) -> ClientConfig:
-        return configuration
+    def adjust_user_configuration(cls, configuration: ClientConfig) -> None:
+        pass
 
     @classmethod
     def can_start(cls, window: sublime.Window, initiating_view: sublime.View,
                   workspace_folders: List[WorkspaceFolder], configuration: ClientConfig) -> Optional[str]:
+        """
+        Determines ability to start. This is called after needs_update_or_installation and after install_or_update.
+        So you may assume that if you're managing your server binary, then it is already installed when this
+        classmethod is called.
+
+        :param      window:             The window
+        :param      initiating_view:    The initiating view
+        :param      workspace_folders:  The workspace folders
+        :param      configuration:      The configuration
+
+        :returns:   A string describing the reason why we should not start a language server session, or None if we
+                    should go ahead and start a session.
+        """
         return None
 
-    def on_initialized(self) -> None:
-        pass
+    def __init__(self, weaksession: 'weakref.ref[Session]') -> None:
+        """
+        Constructs a new instance.
 
-    def on_shutdown(self) -> None:
-        pass
+        :param      weaksession:  A weak reference to the Session. You can grab a strong reference through
+                                  self.weaksession(), but don't hold on to that reference.
+        """
+        self.weaksession = weaksession
+
+
+_plugins = {}  # type: Dict[str, Type[AbstractPlugin]]
+
+
+def register_plugin(plugin: Type[AbstractPlugin], update_global_configs: bool = True) -> None:
+    global _plugins
+    global client_configs
+    try:
+        config = ClientConfig(
+            name=plugin.name(),
+            binary_args=plugin.command(),
+            languages=plugin.languages(),
+            tcp_port=plugin.tcp_port(),
+            enabled=True,
+            init_options=plugin.initialization_options(),
+            settings=plugin.default_settings(),
+            env=plugin.env()
+        )
+        client_configs.add_external_config(config)
+        _plugins[config.name] = plugin
+        if update_global_configs:
+            client_configs.update_configs()
+    except Exception as ex:
+        exception_log("Failed to register plugin", ex)
+
+
+def unregister_plugin(plugin: Type[AbstractPlugin]) -> None:
+    global _plugins
+    global client_configs
+    try:
+        name = plugin.name()
+        client_configs.remove_external_config(name)
+        _plugins.pop(name, None)
+    except Exception as ex:
+        exception_log("Failed to unregister plugin", ex)
+    finally:
+        client_configs.update_configs()
+
+
+def get_plugin(name: str) -> Optional[Type[AbstractPlugin]]:
+    global _plugins
+    return _plugins.get(name, None)
+
+
+class Session(Client):
 
     def __init__(self, manager: Manager, settings: Settings, workspace_folders: List[WorkspaceFolder],
-                 config: ClientConfig) -> None:
+                 config: ClientConfig, plugin_class: Optional[Type[AbstractPlugin]]) -> None:
         self.config = config
         self.manager = weakref.ref(manager)
         self.window = manager.window()
@@ -320,7 +448,19 @@ class Session(Client):
         self.capabilities = dict()  # type: Dict[str, Any]
         self._workspace_folders = workspace_folders
         self._progress = {}  # type: Dict[Any, Dict[str, str]]
+        self._plugin_class = plugin_class
+        self._plugin = None  # type: Optional[AbstractPlugin]
         super().__init__(config.name, settings)
+
+    def __getattr__(self, name: str) -> Any:
+        """
+        If we don't have a request/notification handler, look up the request/notification handler in the plugin.
+        """
+        if name.startswith('m_'):
+            attr = getattr(self._plugin, name)
+            if attr is not None:
+                return attr
+        raise AttributeError(name)
 
     def has_capability(self, capability: str) -> bool:
         value = self.get_capability(capability)
@@ -429,7 +569,8 @@ class Session(Client):
             debug("session with no workspace folders")
 
         self.state = ClientStates.READY
-        self.on_initialized()
+        if self._plugin_class is not None:
+            self._plugin = self._plugin_class(weakref.ref(self))
         if self.config.settings:
             self.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
         execute_commands = self.get_capability('executeCommandProvider.commands')
@@ -543,10 +684,10 @@ class Session(Client):
         return status_msg
 
     def end(self) -> None:
+        self._plugin = None
         debug("stopping", self.config.name, "gracefully")
         self.capabilities.clear()
         self.state = ClientStates.STOPPING
-        self.on_shutdown()
         self.send_request(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
 
     def _handle_shutdown_result(self, _: Any) -> None:

@@ -181,7 +181,7 @@ FORMAT_MARKED_STRING = 0x2
 FORMAT_MARKUP_CONTENT = 0x4
 
 
-def minihtml(view: sublime.View, content: Union[str, dict, list], allowed_formats: int) -> str:
+def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allowed_formats: int) -> str:
     """
     Formats provided input content into markup accepted by minihtml.
 
@@ -201,12 +201,12 @@ def minihtml(view: sublime.View, content: Union[str, dict, list], allowed_format
     :returns: Formatted string
     """
     if allowed_formats == 0:
-        raise Exception("Must specify at least one format")
+        raise ValueError("Must specify at least one format")
     parse_string = bool(allowed_formats & FORMAT_STRING)
     parse_marked_string = bool(allowed_formats & FORMAT_MARKED_STRING)
     parse_markup_content = bool(allowed_formats & FORMAT_MARKUP_CONTENT)
     if parse_string and parse_marked_string:
-        raise Exception("Not allowed to specify FORMAT_STRING and FORMAT_MARKED_STRING at the same time")
+        raise ValueError("Not allowed to specify FORMAT_STRING and FORMAT_MARKED_STRING at the same time")
     is_plain_text = True
     result = ''
     if (parse_string or parse_marked_string) and isinstance(content, str):

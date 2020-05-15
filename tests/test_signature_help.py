@@ -1,7 +1,9 @@
-from LSP.plugin.core.signature_help import (
-    create_signature_help, SignatureHelp, get_documentation,
-    parse_signature_information, ScopeRenderer, render_signature_label
-)
+from LSP.plugin.core.signature_help import create_signature_help
+from LSP.plugin.core.signature_help import parse_signature_information
+from LSP.plugin.core.signature_help import render_signature_label
+from LSP.plugin.core.signature_help import ScopeRenderer
+from LSP.plugin.core.signature_help import SignatureHelp
+from LSP.plugin.core.typing import Union, Dict
 import unittest
 
 signature = {
@@ -58,8 +60,8 @@ SINGLE_SIGNATURE = """<div class="highlight"><pre>
 <variable.parameter emphasize>value</variable.parameter>: int
 <punctuation>)</punctuation> -&gt; None</entity.name.function>
 </pre></div>
-<p>The default function for foobaring</p>
-<p><b>value</b>: A number to foobar on</p>"""
+<p>{'value': 'The default function for foobaring'}</p>
+<p><b>value</b>: {'value': 'A number to foobar on'}</p>"""
 
 MISSING_LABEL_SIGNATURE = """<div class="highlight"><pre>
 
@@ -75,8 +77,8 @@ OVERLOADS_FIRST = """**1** of **2** overloads (use the ↑ ↓ keys to navigate)
 <variable.parameter emphasize>value</variable.parameter>: int
 <punctuation>)</punctuation> -&gt; None</entity.name.function>
 </pre></div>
-<p>The default function for foobaring</p>
-<p><b>value</b>: A number to foobar on</p>"""
+<p>{'value': 'The default function for foobaring'}</p>
+<p><b>value</b>: {'value': 'A number to foobar on'}</p>"""
 
 
 OVERLOADS_SECOND = """**2** of **2** overloads (use the ↑ ↓ keys to navigate):
@@ -89,8 +91,8 @@ OVERLOADS_SECOND = """**2** of **2** overloads (use the ↑ ↓ keys to navigate
  \n<variable.parameter>multiplier</variable.parameter>: int
 <punctuation>)</punctuation> -&gt; None</entity.name.function>
 </pre></div>
-<p>Foobaring with a multiplier</p>
-<p><b>value</b>: A number to foobar on</p>"""
+<p>{'value': 'Foobaring with a multiplier'}</p>
+<p><b>value</b>: {'value': 'A number to foobar on'}</p>"""
 
 OVERLOADS_SECOND_SECOND_PARAMETER = """**2** of **2** overloads (use the ↑ ↓ keys to navigate):
 
@@ -102,7 +104,7 @@ OVERLOADS_SECOND_SECOND_PARAMETER = """**2** of **2** overloads (use the ↑ ↓
  \n<variable.parameter emphasize>multiplier</variable.parameter>: int
 <punctuation>)</punctuation> -&gt; None</entity.name.function>
 </pre></div>
-<p>Foobaring with a multiplier</p>
+<p>{'value': 'Foobaring with a multiplier'}</p>
 <p><b>multiplier</b>: Change foobar to work on larger increments</p>"""
 
 
@@ -129,23 +131,11 @@ class MockRenderer(ScopeRenderer):
     def _wrap_with_scope_style(self, content: str, scope: str, emphasize: bool = False) -> str:
         return '\n<{}{}>{}</{}>'.format(scope, " emphasize" if emphasize else "", content, scope)
 
-    def markdown(self, content: str) -> str:
+    def markup(self, content: Union[str, Dict[str, str]]) -> str:
         return content
 
 
 renderer = MockRenderer()
-
-
-class GetDocumentationTests(unittest.TestCase):
-
-    def test_absent(self):
-        self.assertIsNone(get_documentation({}))
-
-    def test_is_str(self):
-        self.assertEqual(get_documentation({'documentation': 'str'}), 'str')
-
-    def test_is_dict(self):
-        self.assertEqual(get_documentation({'documentation': {'value': 'value'}}), 'value')
 
 
 class CreateSignatureHelpTests(unittest.TestCase):

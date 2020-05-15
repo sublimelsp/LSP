@@ -1,6 +1,6 @@
 import html
 from .logging import debug
-from .typing import Tuple, Optional, List, Protocol
+from .typing import Tuple, Optional, List, Protocol, Union, Dict
 
 
 class ScopeRenderer(Protocol):
@@ -14,7 +14,7 @@ class ScopeRenderer(Protocol):
     def parameter(self, content: str, emphasize: bool = False) -> str:
         ...
 
-    def markdown(self, content: str) -> str:
+    def markup(self, content: Union[str, Dict[str, str]]) -> str:
         ...
 
 
@@ -130,7 +130,7 @@ class SignatureHelp(object):
         formatted.append("</pre></div>")
 
         if signature.documentation:
-            formatted.append("<p>{}</p>".format(renderer.markdown(signature.documentation)))
+            formatted.append("<p>{}</p>".format(renderer.markup(signature.documentation)))
 
         if signature.parameters and self._active_parameter_index in range(0, len(signature.parameters)):
             parameter = signature.parameters[self._active_parameter_index]
@@ -139,7 +139,7 @@ class SignatureHelp(object):
             if parameter_documentation:
                 formatted.append("<p><b>{}</b>: {}</p>".format(
                     parameter_label,
-                    renderer.markdown(parameter_documentation)))
+                    renderer.markup(parameter_documentation)))
 
         return "\n".join(formatted)
 

@@ -824,7 +824,7 @@ Description of all built-in settings: https://github.com/palantir/python-languag
 
 #### Microsoft's Python Language Server
 
-Alternatively, use Microsoft Python Language Server (using .NET Core runtime).
+Alternatively, use Microsoft Python Language Server (using .NET Core runtime).  
 Here is a basic configuration to be added to your User/LSP.sublime-settings file:
 
 ```js
@@ -861,7 +861,7 @@ Here is a basic configuration to be added to your User/LSP.sublime-settings file
 },
 ```
 
-The configuration of the language server has to be defined as per the [Microsoft documentation](https://github.com/microsoft/python-language-server/blob/master/README.md) and the [Sublime Text instructions](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md).
+The configuration of the language server has to be defined as per the Microsoft [documentation](https://github.com/microsoft/python-language-server/blob/master/README.md) and the Sublime Text [instructions](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md).
 Here is an example of settings:
 
 ```js

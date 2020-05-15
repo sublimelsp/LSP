@@ -9,7 +9,7 @@ from .core.protocol import Request
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.settings import client_configs, settings
 from .core.signature_help import create_signature_help, SignatureHelp
-from .core.typing import List, Dict, Optional
+from .core.typing import List, Dict, Optional, Union
 from .core.views import text_document_position_params
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
 
@@ -30,7 +30,7 @@ class ColorSchemeScopeRenderer(object):
     def parameter(self, content: str, emphasize: bool = False) -> str:
         return self._wrap_with_scope_style(content, "variable.parameter", emphasize)
 
-    def markdown(self, content: str) -> str:
+    def markup(self, content: Union[str, Dict[str, str]]) -> str:
         return minihtml(self._view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
 
     def _wrap_with_scope_style(self, content: str, scope: str, emphasize: bool = False, escape: bool = True) -> str:
@@ -73,7 +73,10 @@ class SignatureHelpListener(LSPViewEventListener):
         self._initialized = True
 
     def on_modified_async(self) -> None:
-        pos = self.view.sel()[0].begin()
+        try:
+            pos = self.view.sel()[0].begin()
+        except IndexError:
+            return
         # TODO: this will fire too often, narrow down using scopes or regex
         if not self._initialized:
             self.initialize()

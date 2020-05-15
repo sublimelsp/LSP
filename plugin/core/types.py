@@ -1,3 +1,4 @@
+from .collections import DottedDict
 from .typing import Optional, List, Dict, Any, Protocol
 import sublime
 
@@ -73,7 +74,7 @@ class ClientConfig(object):
                  tcp_port: Optional[int],
                  enabled: bool = True,
                  init_options: dict = dict(),
-                 settings: dict = dict(),
+                 settings: DottedDict = DottedDict(),
                  env: dict = dict(),
                  tcp_host: Optional[str] = None,
                  tcp_mode: Optional[str] = None,

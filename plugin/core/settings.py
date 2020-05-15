@@ -1,3 +1,4 @@
+from .collections import DottedDict
 from .logging import debug
 from .types import Settings, ClientConfig, LanguageConfig, syntax2scope
 from .typing import Any, List, Optional, Dict, Callable
@@ -209,7 +210,7 @@ def read_client_config(name: str, d: Dict[str, Any]) -> ClientConfig:
         tcp_port=d.get("tcp_port", None),
         enabled=d.get("enabled", False),
         init_options=d.get("initializationOptions", dict()),
-        settings=d.get("settings", dict()),
+        settings=DottedDict(d.get("settings", None)),
         env=d.get("env", dict()),
         tcp_host=d.get("tcp_host", None),
         tcp_mode=d.get("tcp_mode", None),

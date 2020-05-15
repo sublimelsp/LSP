@@ -1,3 +1,4 @@
+from .collections import DottedDict
 from .edit import parse_workspace_edit
 from .logging import debug, exception_log
 from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification, Response
@@ -7,6 +8,7 @@ from .settings import client_configs
 from .transports import Transport
 from .types import ClientConfig, LanguageConfig, ClientStates, Settings
 from .typing import Dict, Any, Optional, List, Tuple, Generator, Type
+from .views import did_change_configuration
 from .workspace import is_subpath_of
 from abc import ABCMeta, abstractmethod
 import os
@@ -246,39 +248,6 @@ def diff_folders(old: List[WorkspaceFolder],
     return added, removed
 
 
-def get_dotted_value(current: Any, dotted: str) -> Any:
-    keys = dotted.split('.')
-    for key in keys:
-        if isinstance(current, dict):
-            current = current.get(key)
-        else:
-            return None
-    return current
-
-
-def set_dotted_value(current: dict, dotted: str, value: Any) -> None:
-    keys = dotted.split('.')
-    for i in range(0, len(keys) - 1):
-        key = keys[i]
-        next_current = current.get(key)
-        if not isinstance(next_current, dict):
-            next_current = {}
-            current[key] = next_current
-        current = next_current
-    current[keys[-1]] = value
-
-
-def clear_dotted_value(current: dict, dotted: str) -> None:
-    keys = dotted.split('.')
-    for i in range(0, len(keys) - 1):
-        key = keys[i]
-        next_current = current.get(key)
-        if not isinstance(next_current, dict):
-            return
-        current = next_current
-    current.pop(keys[-1], None)
-
-
 class AbstractPlugin(metaclass=ABCMeta):
     """
     You can define notification and request handlers by defining methods that start with 'm_'.
@@ -445,7 +414,7 @@ class Session(Client):
         self.manager = weakref.ref(manager)
         self.window = manager.window()
         self.state = ClientStates.STARTING
-        self.capabilities = dict()  # type: Dict[str, Any]
+        self.capabilities = DottedDict()
         self._workspace_folders = workspace_folders
         self._progress = {}  # type: Dict[Any, Dict[str, str]]
         self._plugin_class = plugin_class
@@ -467,7 +436,7 @@ class Session(Client):
         return value is not False and value is not None
 
     def get_capability(self, capability: str) -> Optional[Any]:
-        return get_dotted_value(self.capabilities, capability)
+        return self.capabilities.get(capability)
 
     def should_notify_did_open(self) -> bool:
         if self.has_capability('textDocumentSync.openClose'):
@@ -556,7 +525,7 @@ class Session(Client):
         return self.has_capability("workspace.workspaceFolders.supported")
 
     def _handle_initialize_result(self, result: Any) -> None:
-        self.capabilities.update(result.get('capabilities', dict()))
+        self.capabilities.assign(result.get('capabilities', dict()))
 
         # only keep supported amount of folders
         if self._workspace_folders:
@@ -572,7 +541,7 @@ class Session(Client):
         if self._plugin_class is not None:
             self._plugin = self._plugin_class(weakref.ref(self))
         if self.config.settings:
-            self.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
+            self.send_notification(did_change_configuration(self.config.settings))
         execute_commands = self.get_capability('executeCommandProvider.commands')
         if execute_commands:
             debug("{}: Supported execute commands: {}".format(self.config.name, execute_commands))
@@ -601,14 +570,7 @@ class Session(Client):
         items = []  # type: List[Any]
         requested_items = params.get("items") or []
         for requested_item in requested_items:
-            if 'section' in requested_item:
-                section = requested_item['section']
-                if section:
-                    items.append(get_dotted_value(self.config.settings, section))
-                else:
-                    items.append(self.config.settings)
-            else:
-                items.append(self.config.settings)
+            items.append(self.config.settings.get(requested_item.get('section') or None))
         self.send_response(Response(request_id, items))
 
     def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:
@@ -631,8 +593,8 @@ class Session(Client):
             method = registration["method"]
             capability_path, registration_path = method_to_capability(method)
             debug("{}: registering capability:".format(self.config.name), capability_path)
-            set_dotted_value(self.capabilities, capability_path, registration.get("registerOptions", {}))
-            set_dotted_value(self.capabilities, registration_path, registration["id"])
+            self.capabilities.set(capability_path, registration.get("registerOptions", {}))
+            self.capabilities.set(registration_path, registration["id"])
         self.send_response(Response(request_id, None))
 
     def m_client_unregisterCapability(self, params: Any, request_id: Any) -> None:
@@ -641,8 +603,8 @@ class Session(Client):
         for unregistration in unregistrations:
             capability_path, registration_path = method_to_capability(unregistration["method"])
             debug("{}: unregistering capability:".format(self.config.name), capability_path)
-            clear_dotted_value(self.capabilities, capability_path)
-            clear_dotted_value(self.capabilities, registration_path)
+            self.capabilities.remove(capability_path)
+            self.capabilities.remove(registration_path)
         self.send_response(Response(request_id, None))
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:

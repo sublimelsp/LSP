@@ -231,6 +231,7 @@ def create_transport(config: ClientConfig, cwd: str, window: sublime.Window,
         stdout=stdout,
         stderr=subprocess.PIPE,
         startupinfo=startupinfo,
+        env=env,
         cwd=cwd)
     sock = None  # type: Optional[socket.socket]
     if config.tcp_port:

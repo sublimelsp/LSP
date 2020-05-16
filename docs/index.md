@@ -875,6 +875,7 @@ Here is an example of settings:
       // https://github.com/microsoft/python-language-server/blob/master/TROUBLESHOOTING.md#unresolved-import-warnings
       "autoComplete":
       {
+          // add extra path for Sublime Text plugins
           "extraPaths": [ "/opt/sublime_text" ]
       }
       // Configure the linting options as documented in:

@@ -861,7 +861,9 @@ Here is a basic configuration to be added to your User/LSP.sublime-settings file
 },
 ```
 
-The configuration of the language server has to be defined as per the Microsoft [documentation](https://github.com/microsoft/python-language-server/blob/master/README.md) and the Sublime Text [instructions](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md).
+The language server has to be configured as per the Microsoft [documentation](https://github.com/microsoft/python-language-server/blob/master/README.md) and the Sublime Text [instructions](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md).
+An exhaustive list of the configuration options can be found in the VSCode [documentation](https://code.visualstudio.com/docs/python/settings-reference#_python-language-server-settings).
+
 Here is an example of settings:
 
 ```js
@@ -869,6 +871,14 @@ Here is an example of settings:
   {
     "python":
     {
+      // Solve the 'unresolved import' warning as documented in:
+      // https://github.com/microsoft/python-language-server/blob/master/TROUBLESHOOTING.md#unresolved-import-warnings
+      "autoComplete":
+      {
+          "extraPaths": [ "/opt/sublime_text" ]
+      }
+      // Configure the linting options as documented in:
+      // https://github.com/microsoft/python-language-server/#linting-options-diagnostics
       "analysis":
       {
         "errors": [ "undefined-variable" ],

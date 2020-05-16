@@ -90,9 +90,9 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         self.wm.end_config_sessions(self.config1.name)
         self.wm.end_config_sessions(self.config2.name)
         if self.session1:
-            yield lambda: self.session1.client is None
+            yield lambda: self.session1.state == ClientStates.STOPPING
         if self.session2:
-            yield lambda: self.session2.client is None
+            yield lambda: self.session2.state == ClientStates.STOPPING
         close_test_view(self.view)
         try:
             remove_config(self.config2)
@@ -125,7 +125,7 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         def error_handler(params: 'Any') -> None:
             debug("Got error:", params, "awaiting timeout :(")
 
-        self.session1.client.send_request(Request("$test/getReceived", {"method": method}), handler1, error_handler)
-        self.session2.client.send_request(Request("$test/getReceived", {"method": method}), handler2, error_handler)
+        self.session1.send_request(Request("$test/getReceived", {"method": method}), handler1, error_handler)
+        self.session2.send_request(Request("$test/getReceived", {"method": method}), handler2, error_handler)
         yield {"condition": promise1, "timeout": TIMEOUT_TIME}
         yield {"condition": promise2, "timeout": TIMEOUT_TIME}

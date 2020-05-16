@@ -48,12 +48,12 @@ class ServerRequests(TextDocumentTestCase):
             },
             None)
         self.assertIn("barProvider", self.session.capabilities)
-        self.assertEqual(self.session.capabilities["barProvider"]["id"], "hello")
+        self.assertEqual(self.session.capabilities.get("barProvider.id"), "hello")
         self.assertIn("bazProvider", self.session.capabilities)
-        self.assertEqual(self.session.capabilities["bazProvider"], {"id": "world", "frobnicatable": True})
-        self.assertEqual(self.session.capabilities["workspace"]["workspaceFolders"]["changeNotifications"], "asdf")
-        self.assertEqual(self.session.capabilities["textDocumentSync"]["openClose"], {"id": "1"})
-        self.assertEqual(self.session.capabilities["textDocumentSync"]["willSaveWaitUntil"],
+        self.assertEqual(self.session.capabilities.get("bazProvider"), {"id": "world", "frobnicatable": True})
+        self.assertEqual(self.session.capabilities.get("workspace.workspaceFolders.changeNotifications"), "asdf")
+        self.assertEqual(self.session.capabilities.get("textDocumentSync.openClose"), {"id": "1"})
+        self.assertEqual(self.session.capabilities.get("textDocumentSync.willSaveWaitUntil"),
                          {"id": "2", "documentSelector": {}})
 
     def test_m_client_unregisterCapability(self) -> Generator:

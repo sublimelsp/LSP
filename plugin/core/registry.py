@@ -38,7 +38,7 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
         return self._manager is not None
 
 
-def client_from_session(session: Optional[Session]) -> Optional[Client]:
+def client_from_session(session: Optional[Session]) -> Optional[Session]:
     return session if session else None
 
 

@@ -250,10 +250,27 @@ def diff_folders(old: List[WorkspaceFolder],
 
 class AbstractPlugin(metaclass=ABCMeta):
     """
-    You can define notification and request handlers by defining methods that start with 'm_'.
+    Inherit from this class to handle non-standard requests and notifications.
 
-    python/analysisStarted -> def m_python_analysisStarted(self, params: JSONValue) -> None: ...
-    python/analysisStopped -> def m_python_analysisStopped(self, params: JSONValue) -> None: ...
+    Given a request/notification, replace the non-alphabetic characters with an underscore, and prepend it with "m_".
+    This will be the name of your method.
+
+    For instance, to implement the non-standard eslint/openDoc request, define the Python method
+
+        def m_eslint_openDoc(self, params, request_id):
+            session = self.weaksession()
+            if session:
+                webbrowser.open_tab(params['url'])
+                session.send_response(Response(request_id, None))
+
+    To handle the non-standard eslint/status notification, define the Python method
+
+        def m_eslint_status(self, params):
+            pass
+
+    To understand how this works, see the __getattr__ method of the Session class.
+
+    You must also implement at least the *classmethods* `name`, `languages` and `command`.
     """
 
     @classmethod
@@ -374,7 +391,7 @@ def register_plugin(plugin: Type[AbstractPlugin], update_global_configs: bool = 
             binary_args=plugin.command(),
             languages=plugin.languages(),
             tcp_port=plugin.tcp_port(),
-            enabled=True,
+            enabled=True,  # A plugin config is enabled if and only if the plugin is enabled
             init_options=plugin.initialization_options() or {},
             settings=DottedDict(plugin.default_settings()),
             env=plugin.env()

@@ -1,8 +1,8 @@
 from LSP.plugin.core.protocol import TextDocumentSyncKindFull, TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
 from LSP.plugin.core.protocol import WorkspaceFolder
-from LSP.plugin.core.sessions import clear_dotted_value
-from LSP.plugin.core.sessions import create_session, Session, get_initialize_params
-from LSP.plugin.core.sessions import set_dotted_value
+from LSP.plugin.core.sessions import Session
+from LSP.plugin.core.sessions import get_initialize_params
+from LSP.plugin.core.sessions import Manager
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.types import Settings
 from LSP.plugin.core.typing import Optional
@@ -14,80 +14,7 @@ import unittest
 import unittest.mock
 
 
-class MiscFunctions(unittest.TestCase):
-
-    def test_set_and_clear_dotted_values(self) -> None:
-        d = {"foo": {"bar": "baz"}}
-        set_dotted_value(d, "foo.bar.baz.qux", {"hello": "there"})
-        set_dotted_value(d, "foo.bar.baz.qux.id", "asdf-1234-qwerty")
-        self.assertEqual(d, {
-            "foo": {
-                "bar": {
-                    "baz": {
-                        "qux": {
-                            "hello": "there",
-                            "id": "asdf-1234-qwerty"
-                        }
-                    }
-                }
-            }
-        })
-        d = {"foo": {"bar": 42}}
-        set_dotted_value(d, "foo.bar.baz.qux", {"hello": "there"})
-        set_dotted_value(d, "foo.bar.baz.qux.id", "asdf-1234-qwerty")
-        self.assertEqual(d, {
-            "foo": {
-                "bar": {
-                    "baz": {
-                        "qux": {
-                            "hello": "there",
-                            "id": "asdf-1234-qwerty"
-                        }
-                    }
-                }
-            }
-        })
-        clear_dotted_value(d, "foo.bar.baz.qux")
-        self.assertEqual(d, {
-            "foo": {
-                "bar": {
-                    "baz": {}
-                }
-            }
-        })
-        clear_dotted_value(d, "foo.bar.baz.qux.id")
-        self.assertEqual(d, {
-            "foo": {
-                "bar": {
-                    "baz": {}
-                }
-            }
-        })
-        clear_dotted_value(d, "foo")
-        self.assertEqual(d, {})
-
-
 class SessionTest(unittest.TestCase):
-
-    def assert_if_none(self, session: Optional[Session]) -> Session:
-        self.assertIsNotNone(session)
-        assert session  # mypy
-        return session
-
-    def make_session(self, bootstrap_client, on_pre_initialize=None, on_post_initialize=None,
-                     on_post_exit=None) -> Session:
-        project_path = "/"
-        folders = [WorkspaceFolder.from_path(project_path)]
-        return self.assert_if_none(
-            create_session(
-                config=TEST_CONFIG,
-                workspace_folders=folders,
-                env=dict(),
-                settings=Settings(),
-                bootstrap_client=bootstrap_client,
-                on_pre_initialize=on_pre_initialize,
-                on_post_initialize=on_post_initialize,
-                on_post_exit=on_post_exit))
 
     def test_experimental_capabilities(self) -> None:
         wf = WorkspaceFolder.from_path("/foo/bar/baz")
@@ -132,57 +59,6 @@ class SessionTest(unittest.TestCase):
         self.assertIn("initializationOptions", params)
         self.assertEqual(params["initializationOptions"], {"foo": "bar"})
 
-    # @unittest.skip("need an example config")
-    def test_can_create_session(self):
-        config = ClientConfig(
-            "test",
-            ["cmd.exe"] if sublime.platform() == "windows" else ["ls"],
-            None, [], [], None, [TEST_LANGUAGE])
-        project_path = "/"
-        folders = [WorkspaceFolder.from_path(project_path)]
-        session = self.assert_if_none(
-            create_session(config, folders, dict(), Settings()))
-        session.client.transport.close()
-
-    def test_can_get_started_session(self):
-        post_initialize_callback = unittest.mock.Mock()
-        session = self.make_session(
-            MockClient(),
-            on_post_initialize=post_initialize_callback)
-        self.assertIsNotNone(session.client)
-        self.assertTrue(session.has_capability("testing"))
-        self.assertTrue(session.get_capability("testing"))
-        assert post_initialize_callback.call_count == 1
-
-    def test_pre_initialize_callback_is_invoked(self):
-        pre_initialize_callback = unittest.mock.Mock()
-        post_initialize_callback = unittest.mock.Mock()
-        session = self.make_session(
-            MockClient(),
-            on_pre_initialize=pre_initialize_callback,
-            on_post_initialize=post_initialize_callback)
-        self.assertIsNotNone(session.client)
-        self.assertTrue(session.has_capability("testing"))
-        self.assertTrue(session.get_capability("testing"))
-        assert pre_initialize_callback.call_count == 1
-        assert post_initialize_callback.call_count == 1
-
-    def test_can_shutdown_session(self):
-        post_initialize_callback = unittest.mock.Mock()
-        post_exit_callback = unittest.mock.Mock()
-        session = self.make_session(
-            MockClient(),
-            on_post_initialize=post_initialize_callback,
-            on_post_exit=post_exit_callback)
-        self.assertIsNotNone(session.client)
-        self.assertTrue(session.has_capability("testing"))
-        assert post_initialize_callback.call_count == 1
-        session.end()
-        self.assertIsNone(session.client)
-        self.assertFalse(session.has_capability("testing"))
-        self.assertIsNone(session.get_capability("testing"))
-        assert post_exit_callback.call_count == 1
-
     def test_document_sync_capabilities(self) -> None:
         client = MockClient()
         client.responses = {
@@ -192,6 +68,7 @@ class SessionTest(unittest.TestCase):
                         "openClose": True,
                         "change": TextDocumentSyncKindFull,
                         "save": True}}}}  # A boolean with value true means "send didSave"
+        session = Session()
         session = Session(TEST_CONFIG, [], client)
         self.assertTrue(session.should_notify_did_open())
         self.assertTrue(session.should_notify_did_close())

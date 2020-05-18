@@ -472,7 +472,9 @@ class WindowManager(Manager):
                     # TODO: Run on separate thread somewhere
                     plugin_class.install_or_update()
                 plugin_class.adjust_user_configuration(config)
-                cannot_start_reason = plugin_class.can_start(self._window, initiating_view, workspace_folders, config)
+                # WindowLike vs. sublime.Window
+                cannot_start_reason = plugin_class.can_start(
+                    self._window, initiating_view, workspace_folders, config)  # type: ignore
                 if cannot_start_reason:
                     self._window.status_message(cannot_start_reason)
                     return

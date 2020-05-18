@@ -368,7 +368,6 @@ _plugins = {}  # type: Dict[str, Type[AbstractPlugin]]
 
 def register_plugin(plugin: Type[AbstractPlugin], update_global_configs: bool = True) -> None:
     global _plugins
-    global client_configs
     try:
         config = ClientConfig(
             name=plugin.name(),
@@ -376,8 +375,8 @@ def register_plugin(plugin: Type[AbstractPlugin], update_global_configs: bool = 
             languages=plugin.languages(),
             tcp_port=plugin.tcp_port(),
             enabled=True,
-            init_options=plugin.initialization_options(),
-            settings=plugin.default_settings(),
+            init_options=plugin.initialization_options() or {},
+            settings=DottedDict(plugin.default_settings()),
             env=plugin.env()
         )
         client_configs.add_external_config(config)
@@ -390,7 +389,6 @@ def register_plugin(plugin: Type[AbstractPlugin], update_global_configs: bool = 
 
 def unregister_plugin(plugin: Type[AbstractPlugin]) -> None:
     global _plugins
-    global client_configs
     try:
         name = plugin.name()
         client_configs.remove_external_config(name)

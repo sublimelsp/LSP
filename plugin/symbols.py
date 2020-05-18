@@ -171,8 +171,20 @@ class SymbolQueryInput(sublime_plugin.TextInputHandler):
 
 
 class LspWorkspaceSymbolsCommand(LspTextCommand):
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
+
+    def is_enabled(self) -> bool:
+        return self.has_client_with_capability('workspaceSymbolProvider')
+
+    def input(self, _args: Any) -> sublime_plugin.TextInputHandler:
+        return SymbolQueryInput()
+
+    def run(self, edit: sublime.Edit, symbol_query_input: str = "") -> None:
+        if symbol_query_input:
+            client = self.client_with_capability('workspaceSymbolProvider')
+            if client:
+                self.view.set_status("lsp_workspace_symbols", "Searching for '{}'...".format(symbol_query_input))
+                request = Request.workspaceSymbol({"query": symbol_query_input})
+                client.send_request(request, lambda r: self._handle_response(symbol_query_input, r), self._handle_error)
 
     def _format(self, s: Dict[str, Any]) -> str:
         file_name = os.path.basename(s['location']['uri'])
@@ -191,10 +203,9 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
         self.view.erase_status("lsp_workspace_symbols")
         if response:
             matches = response
-            choices = list(map(lambda s: self._format(s), matches))
             window = self.view.window()
             if window:
-                window.show_quick_panel(choices, lambda i: self._open_file(matches, i))
+                window.show_quick_panel(list(map(self._format, matches)), lambda i: self._open_file(matches, i))
         else:
             sublime.message_dialog("No matches found for query string: '{}'".format(query))
 
@@ -203,17 +214,3 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
         reason = error.get("message", "none provided by server :(")
         msg = "command 'workspace/symbol' failed. Reason: {}".format(reason)
         sublime.error_message(msg)
-
-    def is_enabled(self) -> bool:
-        return self.has_client_with_capability('workspaceSymbolProvider')
-
-    def input(self, _args: Any) -> sublime_plugin.TextInputHandler:
-        return SymbolQueryInput()
-
-    def run(self, edit: sublime.Edit, symbol_query_input: str = "") -> None:
-        if symbol_query_input:
-            request = Request.workspaceSymbol({"query": symbol_query_input})
-            client = self.client_with_capability('workspaceSymbolProvider')
-            if client:
-                self.view.set_status("lsp_workspace_symbols", "Searching for '{}'...".format(symbol_query_input))
-                client.send_request(request, lambda r: self._handle_response(symbol_query_input, r), self._handle_error)

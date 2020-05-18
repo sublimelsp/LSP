@@ -1,13 +1,13 @@
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.protocol import Point
-from LSP.plugin.core.typing import Generator
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import did_change
 from LSP.plugin.core.views import did_change_configuration
 from LSP.plugin.core.views import did_open
 from LSP.plugin.core.views import did_save
-from LSP.plugin.core.views import MissingFilenameError
 from LSP.plugin.core.views import FORMAT_STRING, FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from LSP.plugin.core.views import location_to_encoded_filename
+from LSP.plugin.core.views import MissingFilenameError
 from LSP.plugin.core.views import point_to_offset
 from LSP.plugin.core.views import text2html
 from LSP.plugin.core.views import text_document_formatting
@@ -24,10 +24,9 @@ import sublime
 
 class ViewsTest(DeferrableTestCase):
 
-    def setUp(self) -> Generator:
+    def setUp(self) -> None:
         super().setUp()
-        self.view = sublime.active_window().new_file()
-        yield not self.view.is_loading()
+        self.view = sublime.active_window().new_file()  # new_file() always returns a ready view
         self.view.set_scratch(True)
         self.mock_file_name = "C:/Windows" if sublime.platform() == "windows" else "/etc"
         self.view.file_name = MagicMock(return_value=self.mock_file_name)
@@ -258,3 +257,13 @@ class ViewsTest(DeferrableTestCase):
         content = "'https://github.com/sublimelsp/LSP'"
         expect = "'<a href='https://github.com/sublimelsp/LSP'>https://github.com/sublimelsp/LSP</a>'"
         self.assertEqual(text2html(content), expect)
+
+    def test_location_to_encoded_filename(self) -> None:
+        self.assertEqual(
+            location_to_encoded_filename(
+                {'uri': 'file:///foo/bar', 'range': {'start': {'line': 0, 'character': 5}}}),
+            '/foo/bar:1:6')
+        self.assertEqual(
+            location_to_encoded_filename(
+                {'targetUri': 'file:///foo/bar', 'targetSelectionRange': {'start': {'line': 1234, 'character': 4321}}}),
+            '/foo/bar:1235:4322')

@@ -7,6 +7,65 @@ import mdpopups
 import re
 import sublime
 
+SYMBOL_KINDS = [
+    # Display Name     ST Scope
+    ("File",           "comment"),
+    ("Module",         "comment"),
+    ("Namespace",      "keyword.control"),
+    ("Package",        "comment"),
+    ("Class",          "entity.name.class"),
+    ("Method",         "entity.name.function"),
+    ("Property",       "comment"),
+    ("Field",          "comment"),
+    ("Constructor",    "entity.name.function"),
+    ("Enum",           "comment"),
+    ("Interface",      "entity.name.class"),
+    ("Function",       "entity.name.function"),
+    ("Variable",       "variable"),
+    ("Constant",       "constant"),
+    ("String",         "string"),
+    ("Number",         "constant.numeric"),
+    ("Boolean",        "constant"),
+    ("Array",          "variable"),
+    ("Object",         "variable"),
+    ("Key",            "comment"),
+    ("Null",           "comment"),
+    ("Enum Member",    "comment"),
+    ("Struct",         "comment"),
+    ("Event",          "comment"),
+    ("Operator",       "comment"),
+    ("Type Parameter", "comment"),
+]
+
+COMPLETION_KINDS = [
+    # ST Kind                    Icon Display Name
+    (sublime.KIND_ID_MARKUP,     "t", "Text"),
+    (sublime.KIND_ID_FUNCTION,   "m", "Method"),
+    (sublime.KIND_ID_FUNCTION,   "f", "Function"),
+    (sublime.KIND_ID_FUNCTION,   "c", "Constructor"),
+    (sublime.KIND_ID_VARIABLE,   "f", "Field"),
+    (sublime.KIND_ID_VARIABLE,   "v", "Variable"),
+    (sublime.KIND_ID_TYPE,       "c", "Class"),
+    (sublime.KIND_ID_TYPE,       "i", "Interface"),
+    (sublime.KIND_ID_NAMESPACE,  "m", "Module"),
+    (sublime.KIND_ID_VARIABLE,   "p", "Property"),
+    (sublime.KIND_ID_VARIABLE,   "u", "Unit"),
+    (sublime.KIND_ID_VARIABLE,   "v", "Value"),
+    (sublime.KIND_ID_TYPE,       "e", "Enum"),
+    (sublime.KIND_ID_KEYWORD,    "k", "Keyword"),
+    (sublime.KIND_ID_SNIPPET,    "s", "Snippet"),
+    (sublime.KIND_ID_MARKUP,     "c", "Color"),
+    (sublime.KIND_ID_NAVIGATION, "f", "File"),
+    (sublime.KIND_ID_NAVIGATION, "r", "Reference"),
+    (sublime.KIND_ID_NAMESPACE,  "f", "Folder"),
+    (sublime.KIND_ID_VARIABLE,   "e", "Enum Member"),
+    (sublime.KIND_ID_VARIABLE,   "c", "Constant"),
+    (sublime.KIND_ID_TYPE,       "s", "Struct"),
+    (sublime.KIND_ID_TYPE,       "e", "Event"),
+    (sublime.KIND_ID_KEYWORD,    "o", "Operator"),
+    (sublime.KIND_ID_TYPE,       "t", "Type Parameter"),
+]
+
 
 def get_line(window: Optional[sublime.Window], file_name: str, row: int) -> str:
     '''

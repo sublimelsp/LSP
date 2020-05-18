@@ -745,7 +745,76 @@ Description of all built-in settings: https://github.com/palantir/python-languag
 
 #### Microsoft's Python Language Server
 
-Alternatively, use Microsoft Python Language Server (using .NET Core runtime). [Instructions](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md).
+Alternatively, use Microsoft Python Language Server (using .NET Core runtime).  
+Here is a basic configuration to be added to your User/LSP.sublime-settings file:
+
+```js
+  //...
+"mspyls": {
+  "enabled": true,
+  "command": [ "dotnet", "exec", "PATH/TO/Microsoft.Python.LanguageServer.dll" ],
+  "languageId": "python",
+  "scopes": [ "source.python" ],
+  "syntaxes": [
+    "Packages/Python/Python.sublime-syntax",
+    "Packages/MagicPython/grammars/MagicPython.tmLanguage",
+    "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage"
+  ],
+  "initializationOptions":
+  {
+    "interpreter":
+    {
+      "properties":
+      {
+        "UseDefaultDatabase": true,
+        "Version": "3.7" // python version
+      }
+    }
+  },
+  "settings":
+  {
+    "python":
+    {
+      // At least an empty "python" object is (currently) required to initialise the language server.
+      // Other options can be defined as explained below.
+    }
+  }
+},
+```
+
+The language server has to be configured as per the Microsoft [documentation](https://github.com/microsoft/python-language-server/blob/master/README.md) and the Sublime Text [instructions](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md).
+An exhaustive list of the configuration options can be found in the VSCode [documentation](https://code.visualstudio.com/docs/python/settings-reference#_python-language-server-settings).
+
+Here is an example of settings:
+
+```js
+  "settings":
+  {
+    "python":
+    {
+      // Solve the 'unresolved import' warning as documented in:
+      // https://github.com/microsoft/python-language-server/blob/master/TROUBLESHOOTING.md#unresolved-import-warnings
+      "autoComplete":
+      {
+          // add extra path for Sublime Text plugins
+          "extraPaths": [ "/opt/sublime_text" ]
+      }
+      // Configure the linting options as documented in:
+      // https://github.com/microsoft/python-language-server/#linting-options-diagnostics
+      "analysis":
+      {
+        "errors": [ "undefined-variable" ],
+        "warnings": [ "unknown-parameter-name" ],
+        "information": [ "unresolved-import" ],
+        "disabled": [ "too-many-function-arguments", "parameter-missing" ]
+      },
+      // "linting":
+      // {
+      //     "enabled": "false"
+      // }
+    }
+  }
+```
 
 ### R<a name="r"></a>
 

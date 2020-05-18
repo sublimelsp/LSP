@@ -1,10 +1,13 @@
-import sublime
-import sublime_plugin
 from .core.protocol import Request, Range
 from .core.protocol import SymbolKind
 from .core.registry import LspTextCommand
-from .core.views import range_to_region, text_document_identifier
 from .core.typing import Any, List, Optional, Tuple, Dict
+from .core.views import location_to_encoded_filename
+from .core.views import range_to_region
+from .core.views import text_document_identifier
+import os
+import sublime
+import sublime_plugin
 
 
 symbol_kind_names = {
@@ -156,3 +159,58 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             self.regions.append((range_to_region(Range.from_lsp(item['location']['range']), self.view), None))
             quick_panel_items.append([item['name'], format_symbol_kind(item['kind'])])
         return quick_panel_items
+
+
+class SymbolQueryInput(sublime_plugin.TextInputHandler):
+
+    def validate(self, txt: str) -> bool:
+        return txt != ""
+
+    def placeholder(self) -> str:
+        return "Symbol"
+
+
+class LspWorkspaceSymbolsCommand(LspTextCommand):
+
+    def is_enabled(self) -> bool:
+        return self.has_client_with_capability('workspaceSymbolProvider')
+
+    def input(self, _args: Any) -> sublime_plugin.TextInputHandler:
+        return SymbolQueryInput()
+
+    def run(self, edit: sublime.Edit, symbol_query_input: str = "") -> None:
+        if symbol_query_input:
+            client = self.client_with_capability('workspaceSymbolProvider')
+            if client:
+                self.view.set_status("lsp_workspace_symbols", "Searching for '{}'...".format(symbol_query_input))
+                request = Request.workspaceSymbol({"query": symbol_query_input})
+                client.send_request(request, lambda r: self._handle_response(symbol_query_input, r), self._handle_error)
+
+    def _format(self, s: Dict[str, Any]) -> str:
+        file_name = os.path.basename(s['location']['uri'])
+        symbol_kind = format_symbol_kind(s["kind"])
+        name = "{} ({}) - {} -- {}".format(s['name'], symbol_kind, s.get('containerName', ""), file_name)
+        return name
+
+    def _open_file(self, symbols: List[Dict[str, Any]], index: int) -> None:
+        if index != -1:
+            symbol = symbols[index]
+            window = self.view.window()
+            if window:
+                window.open_file(location_to_encoded_filename(symbol['location']), sublime.ENCODED_POSITION)
+
+    def _handle_response(self, query: str, response: Optional[List[Dict[str, Any]]]) -> None:
+        self.view.erase_status("lsp_workspace_symbols")
+        if response:
+            matches = response
+            window = self.view.window()
+            if window:
+                window.show_quick_panel(list(map(self._format, matches)), lambda i: self._open_file(matches, i))
+        else:
+            sublime.message_dialog("No matches found for query string: '{}'".format(query))
+
+    def _handle_error(self, error: Dict[str, Any]) -> None:
+        self.view.erase_status("lsp_workspace_symbols")
+        reason = error.get("message", "none provided by server :(")
+        msg = "command 'workspace/symbol' failed. Reason: {}".format(reason)
+        sublime.error_message(msg)

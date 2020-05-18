@@ -3,6 +3,7 @@ import linecache
 from .protocol import Point, Range, Notification, Request
 from .typing import Optional, Dict, Any
 from .url import filename_to_uri
+from .url import uri_to_filename
 
 
 def get_line(window: Optional[sublime.Window], file_name: str, row: int) -> str:
@@ -46,6 +47,17 @@ def region_to_range(view: sublime.View, region: sublime.Region) -> Range:
         offset_to_point(view, region.begin()),
         offset_to_point(view, region.end())
     )
+
+
+def location_to_encoded_filename(location: Dict[str, Any]) -> str:
+    if "targetUri" in location:
+        uri = location["targetUri"]
+        position = location["targetSelectionRange"]["start"]
+    else:
+        uri = location["uri"]
+        position = location["range"]["start"]
+    # WARNING: Cannot possibly do UTF-16 conversion :) Oh well.
+    return '{}:{}:{}'.format(uri_to_filename(uri), position['line'] + 1, position['character'] + 1)
 
 
 class MissingFilenameError(Exception):

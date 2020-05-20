@@ -1,7 +1,7 @@
 import sublime
 import sublime_plugin
 from .clients import start_window_config
-from .configurations import ConfigManager, is_supported_syntax
+from .configurations import ConfigManager
 from .handlers import LanguageHandler
 from .logging import debug
 from .rpc import Client
@@ -24,10 +24,7 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
     @classmethod
     def has_supported_syntax(cls, view_settings: dict) -> bool:
         syntax = view_settings.get('syntax')
-        if syntax:
-            return is_supported_syntax(syntax, client_configs.all)
-        else:
-            return False
+        return bool(syntax and client_configs.is_syntax_supported(syntax))
 
     @property
     def manager(self) -> WindowManager:

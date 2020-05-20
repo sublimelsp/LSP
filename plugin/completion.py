@@ -3,12 +3,10 @@ import mdpopups
 import sublime
 import sublime_plugin
 import webbrowser
-
-from .core.configurations import is_supported_syntax
 from .core.edit import parse_text_edit
 from .core.protocol import Request, InsertTextFormat, Range
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
-from .core.settings import settings, client_configs
+from .core.settings import settings
 from .core.typing import Any, List, Dict, Optional, Union, Generator
 from .core.views import text_document_position_params, range_to_region
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
@@ -150,9 +148,7 @@ class CompletionHandler(LSPViewEventListener):
     def is_applicable(cls, view_settings: dict) -> bool:
         if 'completion' in settings.disabled_capabilities:
             return False
-
-        syntax = view_settings.get('syntax')
-        return is_supported_syntax(syntax, client_configs.all) if syntax else False
+        return cls.has_supported_syntax(view_settings)
 
     def initialize(self) -> None:
         self.initialized = True

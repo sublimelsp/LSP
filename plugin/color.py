@@ -1,12 +1,11 @@
 import sublime
-import sublime_plugin
-from .core.configurations import is_supported_syntax
 from .core.documents import is_transient_view
 from .core.protocol import Range
 from .core.protocol import Request
 from .core.registry import session_for_view, sessions_for_view, client_from_session, configurations_for_view
-from .core.settings import settings, client_configs
-from .core.typing import Any, List, Dict, Optional
+from .core.registry import LSPViewEventListener
+from .core.settings import settings
+from .core.typing import List, Dict, Optional
 from .core.url import filename_to_uri
 from .core.views import range_to_region
 
@@ -14,7 +13,7 @@ from .core.views import range_to_region
 color_phantoms_by_view = dict()  # type: Dict[int, sublime.PhantomSet]
 
 
-class LspColorListener(sublime_plugin.ViewEventListener):
+class LspColorListener(LSPViewEventListener):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self._stored_point = -1
@@ -22,11 +21,10 @@ class LspColorListener(sublime_plugin.ViewEventListener):
         self.enabled = False
 
     @classmethod
-    def is_applicable(cls, _settings: Any) -> bool:
-        syntax = _settings.get('syntax')
-        is_supported = syntax and is_supported_syntax(syntax, client_configs.all)
-        disabled_by_user = 'colorProvider' in settings.disabled_capabilities
-        return is_supported and not disabled_by_user
+    def is_applicable(cls, view_settings: dict) -> bool:
+        if 'colorProvider' in settings.disabled_capabilities:
+            return False
+        return cls.has_supported_syntax(view_settings)
 
     @property
     def phantom_set(self) -> sublime.PhantomSet:

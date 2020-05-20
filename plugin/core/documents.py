@@ -1,8 +1,6 @@
 import sublime
 
-from .configurations import is_supported_syntax
 from .registry import LSPViewEventListener
-from .settings import client_configs
 from .typing import Optional, Iterable
 
 
@@ -40,18 +38,9 @@ def is_transient_view(view: sublime.View) -> bool:
 
 
 class DocumentSyncListener(LSPViewEventListener):
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
-
     @classmethod
-    def is_applicable(cls, settings: dict) -> bool:
-        syntax = settings.get('syntax')  # type: 'Optional[str]'
-        # This enables all of document sync for any supportable syntax
-        # Global performance cost, consider a detect_lsp_support setting
-        if not syntax:
-            return False
-        else:
-            return is_supported_syntax(syntax, client_configs.all)
+    def is_applicable(cls, view_settings: dict) -> bool:
+        return cls.has_supported_syntax(view_settings)
 
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:

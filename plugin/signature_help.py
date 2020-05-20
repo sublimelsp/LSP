@@ -3,11 +3,10 @@ import sublime
 import html
 import webbrowser
 
-from .core.configurations import is_supported_syntax
 from .core.popups import popups
 from .core.protocol import Request
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
-from .core.settings import client_configs, settings
+from .core.settings import settings
 from .core.signature_help import create_signature_help, SignatureHelp
 from .core.typing import List, Dict, Optional, Union
 from .core.views import text_document_position_params
@@ -55,11 +54,7 @@ class SignatureHelpListener(LSPViewEventListener):
     def is_applicable(cls, view_settings: dict) -> bool:
         if 'signatureHelp' in settings.disabled_capabilities:
             return False
-        syntax = view_settings.get('syntax')
-        if syntax:
-            return is_supported_syntax(syntax, client_configs.all)
-        else:
-            return False
+        return cls.has_supported_syntax(view_settings)
 
     def initialize(self) -> None:
         session = session_for_view(self.view, 'signatureHelpProvider')

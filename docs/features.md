@@ -40,13 +40,22 @@ Example:
     "caption": "Thread First",
     "command": "lsp_execute",
     "args": { 
-    	"command_name": "thread-first",
-    	"command_args":["file:///tmp/foo.clj", 0, 0] 
+      "command_name": "thread-first",
+      "command_args": ["${file}", 0, 0]
     }
   }
 ]
 ```
-Note: `command_args` is optional depending on the `workspace/executeCommand` that are supported by the LSP server. 
+Note: `command_args` is optional depending on the `workspace/executeCommand` that are supported by the LSP server.
+The following variables will be expanded, but only if they are top-level array items and not within nested arrays or objects:
+
+| Variable | Type | Description |
+| -------- | ---- | ----------- |
+| `"${file}"` | string | File URI of the active view |
+| `"${offset}"` | int | Character offset of the (rearmost) cursor position |
+| `"${selection_begin}"` | int | Character offset of the begin of the (rearmost) selection |
+| `"${selection_end}"` | int | Character offset of the end of the (rearmost) selection |
+| `"${selection}"` | string | Content of the (rearmost) selection |
 
 **Overriding keybindings**
 

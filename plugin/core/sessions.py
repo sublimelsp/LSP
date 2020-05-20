@@ -2,18 +2,22 @@ from .. import __version__
 from .collections import DottedDict
 from .logging import debug
 from .process import start_server
-from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification
 from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
+from .protocol import WorkspaceFolder, Request, Notification
 from .rpc import Client, attach_stdio_client, Response
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
 from .types import ClientConfig, ClientStates, Settings
 from .typing import Callable, Dict, Any, Optional, List, Tuple
+from .views import COMPLETION_KINDS
 from .views import did_change_configuration
+from .views import SYMBOL_KINDS
 from .workspace import is_subpath_of
 import os
 
 
 def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: ClientConfig) -> dict:
+    completion_kinds = list(range(1, len(COMPLETION_KINDS) + 1))
+    symbol_kinds = list(range(1, len(SYMBOL_KINDS) + 1))
     first_folder = workspace_folders[0] if workspace_folders else None
     capabilities = {
         "textDocument": {
@@ -34,7 +38,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
                     "deprecatedSupport": True
                 },
                 "completionItemKind": {
-                    "valueSet": completion_item_kinds
+                    "valueSet": completion_kinds
                 }
             },
             "signatureHelp": {

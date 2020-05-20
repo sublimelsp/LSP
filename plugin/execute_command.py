@@ -3,7 +3,7 @@ from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.rpc import Client
 from .core.typing import List, Optional, Dict, Any
-from .core.url import filename_to_uri
+from .core.views import uri_from_view
 
 
 class LspExecuteCommand(LspTextCommand):
@@ -19,22 +19,33 @@ class LspExecuteCommand(LspTextCommand):
             window = self.view.window()
             if window:
                 window.status_message("Running command {}".format(command_name))
-            self._send_command(client, command_name, self._expand_variables(command_args))
+            if command_args:
+                command_args = self._expand_variables(command_args)
+            self._send_command(client, command_name, command_args)
 
-    def _expand_variables(self, command_args: Optional[List[Any]]) -> Optional[List[Any]]:
-        if not command_args:
-            return None
+    def _expand_variables(self, command_args: List[Any]) -> List[Any]:
+        region = self.view.sel()[-1]
         for i, arg in enumerate(command_args):
-            if arg == "${file}":
-                command_args[i] = filename_to_uri(self.view.file_name())
-            elif arg == "${offset}":
-                command_args[i] = self.view.sel()[-1].b
-            elif arg == "${selection_begin}":
-                command_args[i] = self.view.sel()[-1].begin()
-            elif arg == "${selection_end}":
-                command_args[i] = self.view.sel()[-1].end()
+            if arg == "${file_uri}":
+                command_args[i] = uri_from_view(self.view)
             elif arg == "${selection}":
-                command_args[i] = self.view.substr(self.view.sel()[-1])
+                command_args[i] = self.view.substr(region)
+            elif arg == "${offset}":
+                command_args[i] = region.b
+            elif arg == "${selection_begin}":
+                command_args[i] = region.begin()
+            elif arg == "${selection_end}":
+                command_args[i] = region.end()
+            elif arg == "${position}":
+                position = self.view.rowcol(region.b)
+                command_args[i] = {"line": position[0], "character": position[1]}
+            elif arg == "${range}":
+                start = self.view.rowcol(region.begin())
+                end = self.view.rowcol(region.end())
+                command_args[i] = {
+                    "start": {"line": start[0], "character": start[1]},
+                    "end": {"line": end[0], "character": end[1]}
+                }
         return command_args
 
     def _handle_response(self, command: str, response: Optional[Any]) -> None:
@@ -49,10 +60,7 @@ class LspExecuteCommand(LspTextCommand):
         sublime.message_dialog(msg)
 
     def _send_command(self, client: Client, command_name: str, command_args: Optional[List[Any]]) -> None:
-        request = {
-            "command": command_name,
-            "arguments": command_args
-        }
+        request = {"command": command_name, "arguments": command_args} if command_args else {"command": command_name}
         client.send_request(Request.executeCommand(request),
                             lambda reponse: self._handle_response(command_name, reponse),
                             lambda error: self._handle_error(command_name, error))

@@ -92,6 +92,7 @@ class ClientConfigs(object):
         self._external_configs = dict()  # type: Dict[str, ClientConfig]
         self.all = []  # type: List[ClientConfig]
         self._listener = None  # type: Optional[Callable]
+        self._supported_syntaxes_cache = dict()  # type: Dict[str, bool]
 
     def update(self, settings_obj: sublime.Settings) -> None:
         self._default_settings = read_dict_setting(settings_obj, "default_clients", {})
@@ -103,6 +104,7 @@ class ClientConfigs(object):
 
     def update_configs(self) -> None:
         del self.all[:]
+        self._supported_syntaxes_cache = dict()
 
         for config_name, config in self._external_configs.items():
             user_settings = self._global_settings.get(config_name, dict())
@@ -135,6 +137,14 @@ class ClientConfigs(object):
 
     def set_listener(self, recipient: Callable) -> None:
         self._listener = recipient
+
+    def is_syntax_supported(self, syntax: str) -> bool:
+        if syntax in self._supported_syntaxes_cache:
+            return self._supported_syntaxes_cache[syntax]
+        scope = syntax2scope(syntax)
+        supported = bool(scope and any(config.match_document(scope) for config in self.all))
+        self._supported_syntaxes_cache[syntax] = supported
+        return supported
 
 
 _settings_obj = None  # type: Optional[sublime.Settings]

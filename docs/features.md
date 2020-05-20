@@ -51,13 +51,13 @@ The following variables will be expanded, but only if they are top-level array i
 
 | Variable | Type | Description |
 | -------- | ---- | ----------- |
-| `"${file_uri}"` | string | File URI of the active view |
-| `"${selection}"` | string | Content of the (rearmost) selection |
-| `"${offset}"` | int | Character offset of the (rearmost) cursor position |
-| `"${selection_begin}"` | int | Character offset of the begin of the (rearmost) selection |
-| `"${selection_end}"` | int | Character offset of the end of the (rearmost) selection |
-| `"${position}"` | object | Mapping `{ 'line': int, 'character': int }` of the (rearmost) cursor position, see [Position](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#position) |
-| `"${range}` | object | Mapping with `'start'` and `'end'` positions of the (rearmost) selection, see [Range](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#range) |
+| `"$file_uri"` or `"${file_uri}"` | string | File URI of the active view |
+| `"$selection"` or `"${selection}"` | string | Content of the (rearmost) selection |
+| `"$offset"` or `"${offset}"` | int | Character offset of the (rearmost) cursor position |
+| `"$selection_begin"` or `"${selection_begin}"` | int | Character offset of the begin of the (rearmost) selection |
+| `"$selection_end"` or `"${selection_end}"` | int | Character offset of the end of the (rearmost) selection |
+| `"$position"` or `"${position}"` | object | Mapping `{ 'line': int, 'character': int }` of the (rearmost) cursor position, see [Position](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#position) |
+| `"$range"` or `"${range}` | object | Mapping with `'start'` and `'end'` positions of the (rearmost) selection, see [Range](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#range) |
 
 **Overriding keybindings**
 

@@ -26,20 +26,20 @@ class LspExecuteCommand(LspTextCommand):
     def _expand_variables(self, command_args: List[Any]) -> List[Any]:
         region = self.view.sel()[-1]
         for i, arg in enumerate(command_args):
-            if arg == "${file_uri}":
+            if arg in ["$file_uri", "${file_uri}"]:
                 command_args[i] = uri_from_view(self.view)
-            elif arg == "${selection}":
+            elif arg in ["$selection", "${selection}"]:
                 command_args[i] = self.view.substr(region)
-            elif arg == "${offset}":
+            elif arg in ["$offset", "${offset}"]:
                 command_args[i] = region.b
-            elif arg == "${selection_begin}":
+            elif arg in ["$selection_begin", "${selection_begin}"]:
                 command_args[i] = region.begin()
-            elif arg == "${selection_end}":
+            elif arg in ["$selection_end", "${selection_end}"]:
                 command_args[i] = region.end()
-            elif arg == "${position}":
+            elif arg in ["$position", "${position}"]:
                 position = self.view.rowcol(region.b)
                 command_args[i] = {"line": position[0], "character": position[1]}
-            elif arg == "${range}":
+            elif arg in ["$range", "${range}"]:
                 start = self.view.rowcol(region.begin())
                 end = self.view.rowcol(region.end())
                 command_args[i] = {

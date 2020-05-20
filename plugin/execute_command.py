@@ -21,7 +21,9 @@ class LspExecuteCommand(LspTextCommand):
                 window.status_message("Running command {}".format(command_name))
             self._send_command(client, command_name, self._expand_variables(command_args))
 
-    def _expand_variables(self, command_args: List[Any]) -> List[Any]:
+    def _expand_variables(self, command_args: Optional[List[Any]]) -> Optional[List[Any]]:
+        if not command_args:
+            return None
         for i, arg in enumerate(command_args):
             if arg == "${file}":
                 command_args[i] = filename_to_uri(self.view.file_name())

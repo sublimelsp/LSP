@@ -1,10 +1,8 @@
 import sublime
-from .core.configurations import is_supported_syntax
 from .core.edit import parse_text_edit
 from .core.registry import LspTextCommand, LSPViewEventListener, session_for_view, client_from_session
 from .core.registry import sessions_for_view
 from .core.sessions import Session
-from .core.settings import client_configs
 from .core.typing import Any, List, Optional
 from .core.views import will_save_wait_until, text_document_formatting, text_document_range_formatting
 
@@ -15,15 +13,9 @@ def apply_response_to_view(response: Optional[List[dict]], view: sublime.View) -
 
 
 class FormatOnSaveListener(LSPViewEventListener):
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
-
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:
-        syntax = view_settings.get('syntax')
-        if syntax:
-            return is_supported_syntax(syntax, client_configs.all)
-        return False
+        return cls.has_supported_syntax(view_settings)
 
     def on_pre_save(self) -> None:
         file_path = self.view.file_name()

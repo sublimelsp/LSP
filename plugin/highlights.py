@@ -1,10 +1,8 @@
 import sublime
-import sublime_plugin
-
-from .core.configurations import is_supported_syntax
 from .core.protocol import Request, Range, DocumentHighlightKind
 from .core.registry import session_for_view, client_from_session
-from .core.settings import settings, client_configs
+from .core.registry import LSPViewEventListener
+from .core.settings import settings
 from .core.typing import List, Dict, Optional
 from .core.views import range_to_region, text_document_position_params
 
@@ -24,23 +22,18 @@ def remove_highlights(view: sublime.View) -> None:
         view.erase_regions("lsp_highlight_{}".format(kind))
 
 
-class DocumentHighlightListener(sublime_plugin.ViewEventListener):
-
-    @classmethod
-    def is_applicable(cls, view_settings: dict) -> bool:
-        if 'documentHighlight' in settings.disabled_capabilities:
-            return False
-        syntax = view_settings.get('syntax')
-        if syntax:
-            return is_supported_syntax(syntax, client_configs.all)
-        else:
-            return False
-
+class DocumentHighlightListener(LSPViewEventListener):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self._initialized = False
         self._enabled = False
         self._stored_point = -1
+
+    @classmethod
+    def is_applicable(cls, view_settings: dict) -> bool:
+        if 'documentHighlight' in settings.disabled_capabilities:
+            return False
+        return cls.has_supported_syntax(view_settings)
 
     def on_selection_modified_async(self) -> None:
         if not self._initialized:

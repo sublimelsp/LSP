@@ -3,7 +3,7 @@ from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.rpc import Client
 from .core.typing import List, Optional, Dict, Any
-from .core.views import uri_from_view
+from .core.views import uri_from_view, offset_to_point, region_to_range
 
 
 class LspExecuteCommand(LspTextCommand):
@@ -37,15 +37,9 @@ class LspExecuteCommand(LspTextCommand):
             elif arg in ["$selection_end", "${selection_end}"]:
                 command_args[i] = region.end()
             elif arg in ["$position", "${position}"]:
-                position = self.view.rowcol(region.b)
-                command_args[i] = {"line": position[0], "character": position[1]}
+                command_args[i] = offset_to_point(self.view, region.b).to_lsp()
             elif arg in ["$range", "${range}"]:
-                start = self.view.rowcol(region.begin())
-                end = self.view.rowcol(region.end())
-                command_args[i] = {
-                    "start": {"line": start[0], "character": start[1]},
-                    "end": {"line": end[0], "character": end[1]}
-                }
+                command_args[i] = region_to_range(self.view, region).to_lsp()
         return command_args
 
     def _handle_response(self, command: str, response: Optional[Any]) -> None:

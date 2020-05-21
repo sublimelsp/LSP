@@ -58,11 +58,11 @@ def make_stdio_test_config() -> ClientConfig:
 
 
 def add_config(config):
-    client_configs.all.append(config)
+    client_configs.add_for_testing(config)
 
 
 def remove_config(config):
-    client_configs.all.remove(config)
+    client_configs.remove_for_testing(config)
 
 
 def close_test_view(view: sublime.View):
@@ -110,7 +110,6 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.config.init_options["serverResponse"] = server_capabilities
         add_config(self.config)
         self.wm = windows.lookup(window)
-        self.wm._configs.all.append(self.config)
         filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(test_name)), window)
         open_view = window.find_open_file(filename)
         close_test_view(open_view)
@@ -239,5 +238,4 @@ class TextDocumentTestCase(DeferrableTestCase):
         # restore the user's configs
         close_test_view(self.view)
         remove_config(self.config)
-        self.wm._configs.all.remove(self.config)
         yield from super().doCleanups()

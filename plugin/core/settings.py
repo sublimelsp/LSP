@@ -99,6 +99,18 @@ class ClientConfigs(object):
         self._global_settings = read_dict_setting(settings_obj, "clients", {})
         self.update_configs()
 
+    def add_for_testing(self, config: ClientConfig) -> None:
+        self.all.append(config)
+        self._supported_syntaxes_cache = dict()
+        if self._listener:
+            self._listener()
+
+    def remove_for_testing(self, config: ClientConfig) -> None:
+        self.all.remove(config)
+        self._supported_syntaxes_cache = dict()
+        if self._listener:
+            self._listener()
+
     def add_external_config(self, config: ClientConfig) -> None:
         self._external_configs[config.name] = config
 

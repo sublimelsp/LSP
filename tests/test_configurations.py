@@ -1,6 +1,7 @@
 from LSP.plugin.core.configurations import ConfigManager
 from LSP.plugin.core.configurations import WindowConfigManager
 from LSP.plugin.core.settings import client_configs
+from setup import add_config, remove_config
 from test_mocks import DISABLED_CONFIG
 from test_mocks import TEST_CONFIG
 from test_mocks import TEST_LANGUAGE
@@ -92,22 +93,17 @@ class WindowConfigManagerTests(unittest.TestCase):
 
 class IsSupportedSyntaxTests(unittest.TestCase):
 
-    def tearDown(self) -> None:
-        # Resets state of configs to match settings
-        client_configs.update_configs()
-
     def test_has_no_matching_config(self) -> None:
         self.assertFalse(client_configs.is_syntax_supported('asdf'))
 
     def test_has_matching_config(self) -> None:
-        client_configs.all.append(TEST_CONFIG)
+        add_config(TEST_CONFIG)
         self.assertEqual(TEST_LANGUAGE.feature_selector, TEST_CONFIG.languages[0].feature_selector)
         self.assertTrue(client_configs.is_syntax_supported("Packages/Text/Plain text.tmLanguage"))
-        client_configs.all.remove(TEST_CONFIG)
+        remove_config(TEST_CONFIG)
 
     def test_does_not_match_after_removing_config(self) -> None:
-        client_configs.all.append(TEST_CONFIG)
+        add_config(TEST_CONFIG)
         self.assertTrue(client_configs.is_syntax_supported("Packages/Text/Plain text.tmLanguage"))
-        # Removes manually added config
-        client_configs.update_configs()
+        remove_config(TEST_CONFIG)
         self.assertFalse(client_configs.is_syntax_supported("Packages/Text/Plain text.tmLanguage"))

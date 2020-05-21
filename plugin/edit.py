@@ -42,20 +42,20 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         # of any change that we haven't applied yet.
         if changes:
             view_version = self.view.change_count()
-            last_row, last_col = self.view.rowcol(self.view.size())
+            last_row, last_col = self.view.rowcol_utf16(self.view.size())
             for change in reversed(sort_by_application_order(changes)):
                 start, end, newText, version = change
                 if version is not None and version != view_version:
                     debug('ignoring edit due to non-matching document version')
                     continue
-                region = sublime.Region(self.view.text_point(*start), self.view.text_point(*end))
+                region = sublime.Region(self.view.text_point_utf16(*start), self.view.text_point_utf16(*end))
 
                 if start[0] > last_row and newText[0] != '\n':
                     # Handle when a language server (eg gopls) inserts at a row beyond the document
                     # some editors create the line automatically, sublime needs to have the newline prepended.
                     debug('adding new line for edit at line {}, document ended at line {}'.format(start[0], last_row))
                     self.apply_change(region, '\n' + newText, edit)
-                    last_row, last_col = self.view.rowcol(self.view.size())
+                    last_row, last_col = self.view.rowcol_utf16(self.view.size())
                 else:
                     self.apply_change(region, newText, edit)
 

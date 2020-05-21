@@ -40,13 +40,24 @@ Example:
     "caption": "Thread First",
     "command": "lsp_execute",
     "args": { 
-    	"command_name": "thread-first",
-    	"command_args":["file:///tmp/foo.clj", 0, 0] 
+      "command_name": "thread-first",
+      "command_args": ["${file_uri}", 0, 0]
     }
   }
 ]
 ```
-Note: `command_args` is optional depending on the `workspace/executeCommand` that are supported by the LSP server. 
+Note: `command_args` is optional depending on the `workspace/executeCommand` that are supported by the LSP server.
+The following variables will be expanded, but only if they are top-level array items and not within nested arrays or objects:
+
+| Variable | Type | Description |
+| -------- | ---- | ----------- |
+| `"$file_uri"` or `"${file_uri}"` | string | File URI of the active view |
+| `"$selection"` or `"${selection}"` | string | Content of the (topmost) selection |
+| `"$offset"` or `"${offset}"` | int | Character offset of the (topmost) cursor position |
+| `"$selection_begin"` or `"${selection_begin}"` | int | Character offset of the begin of the (topmost) selection |
+| `"$selection_end"` or `"${selection_end}"` | int | Character offset of the end of the (topmost) selection |
+| `"$position"` or `"${position}"` | object | Mapping `{ 'line': int, 'character': int }` of the (topmost) cursor position, see [Position](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#position) |
+| `"$range"` or `"${range}` | object | Mapping with `'start'` and `'end'` positions of the (topmost) selection, see [Range](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#range) |
 
 **Overriding keybindings**
 

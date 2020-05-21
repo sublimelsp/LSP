@@ -57,6 +57,15 @@ def make_stdio_test_config() -> ClientConfig:
         enabled=True)
 
 
+def make_tcp_test_config() -> ClientConfig:
+    return ClientConfig(
+        name="TEST",
+        binary_args=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port"],
+        tcp_port=0,  # select a free one for me
+        languages=[LanguageConfig(language_id="txt", document_selector="text.plain")],
+        enabled=True)
+
+
 def add_config(config):
     client_configs.all.append(config)
 
@@ -83,28 +92,18 @@ class SessionType:
 
 class TextDocumentTestCase(DeferrableTestCase):
 
-    def __init__(self, *args: 'Any', **kwargs: 'Any') -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.session = None  # type: Optional[Session]
-        self.config = make_stdio_test_config()
+        # kwargs["tcp"] = True
+        self.config = make_tcp_test_config() if kwargs.get("tcp") else make_stdio_test_config()
 
     def setUp(self) -> 'Generator':
         super().setUp()
         test_name = self.get_test_name()
         server_capabilities = self.get_test_server_capabilities()
-        session_type = self.get_test_session_type()
         self.assertTrue(test_name)
         self.assertTrue(server_capabilities)
-        if session_type == SessionType.Stdio:
-            pass
-        elif session_type == SessionType.TcpCreate:
-            # TODO: make the test server do TCP
-            pass
-        elif session_type == SessionType.TcpConnectExisting:
-            # TODO
-            pass
-        else:
-            self.assertFalse(True)
         window = sublime.active_window()
         self.assertTrue(window)
         self.config.init_options["serverResponse"] = server_capabilities
@@ -133,9 +132,6 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def get_test_server_capabilities(self) -> dict:
         return basic_responses["initialize"]
-
-    def get_test_session_type(self) -> int:
-        return SessionType.Stdio
 
     def init_view_settings(self) -> None:
         s = self.view.settings().set

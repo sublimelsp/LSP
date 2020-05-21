@@ -19,7 +19,6 @@ Tests can await this request to make sure that they receive notification before 
 resumes (since response to request will arrive after requested notification).
 
 TODO: Untested on Windows.
-TODO: It should also understand TCP, both as slave and master.
 """
 from argparse import ArgumentParser
 from enum import IntEnum
@@ -462,15 +461,34 @@ def _win32_stdio(loop: asyncio.AbstractEventLoop) -> Tuple[asyncio.StreamReader,
 # END: https://stackoverflow.com/a/52702646/990142
 
 
-async def main() -> bool:
-    reader, writer = await stdio()
-    session = Session(reader, writer)
-    return await session.run_forever()
+async def main(tcp_port: Optional[int] = None) -> bool:
+    if tcp_port is not None:
+
+        class ClientConnectedCallback:
+
+            def __init__(self) -> None:
+                self.received_shutdown = False
+
+            async def __call__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+                session = Session(reader, writer)
+                self.received_shutdown = await session.run_forever()
+
+        callback = ClientConnectedCallback()
+        server = await asyncio.start_server(callback, port=tcp_port)
+        # NOTE: This is deliberately wrong -- we should stop serving once the exit notification is received.
+        # But, it's good to have this botched logic here to make sure that servers shutdown in the integration tests.
+        await server.serve_forever()
+        return callback.received_shutdown
+    else:
+        reader, writer = await stdio()
+        session = Session(reader, writer)
+        return await session.run_forever()
 
 
 if __name__ == '__main__':
     parser = ArgumentParser(prog=__package__, description=__doc__)
     parser.add_argument("-v", "--version", action="store_true", help="print version and exit")
+    parser.add_argument("-p", "--tcp-port", type=int)
     args = parser.parse_args()
     if args.version:
         print(__package__, __version__)
@@ -478,7 +496,7 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     shutdown_received = False
     try:
-        shutdown_received = loop.run_until_complete(main())
+        shutdown_received = loop.run_until_complete(main(args.tcp_port))
     except KeyboardInterrupt:
         pass
     loop.run_until_complete(loop.shutdown_asyncgens())

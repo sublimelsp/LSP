@@ -1,4 +1,5 @@
 import sublime
+import sublime_plugin
 
 from ..color import remove_color_boxes
 from ..diagnostics import DiagnosticsPresenter
@@ -10,6 +11,7 @@ from .registry import windows, unload_sessions
 from .sessions import AbstractPlugin
 from .sessions import register_plugin
 from .settings import settings, load_settings, unload_settings
+from .transports import kill_all_subprocesses
 from .typing import Optional, List, Type
 
 
@@ -65,3 +67,8 @@ def start_active_window() -> None:
     window = sublime.active_window()
     if window:
         windows.lookup(window).start_active_views()
+
+
+class Listener(sublime_plugin.EventListener):
+    def on_exit(self) -> None:
+        kill_all_subprocesses()

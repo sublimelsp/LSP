@@ -2,6 +2,7 @@ from .logging import exception_log, debug
 from .types import ClientConfig
 from .typing import Dict, Any, Optional, IO, Protocol
 from abc import ABCMeta, abstractmethod
+from contextlib import closing
 from queue import Queue
 import json
 import os
@@ -10,14 +11,11 @@ import socket
 import sublime
 import subprocess
 import threading
+import time
 import weakref
 
 
 TCP_CONNECT_TIMEOUT = 5
-
-
-class UnexpectedProcessExitError(Exception):
-    pass
 
 
 class Transport(metaclass=ABCMeta):
@@ -29,25 +27,6 @@ class Transport(metaclass=ABCMeta):
     @abstractmethod
     def close(self) -> None:
         pass
-
-
-def encode(d: Dict[str, Any]) -> bytes:
-    return json.dumps(d, sort_keys=False, check_circular=False, separators=(',', ':')).encode('utf-8')
-
-
-def decode(message: bytes) -> Dict[str, Any]:
-    return json.loads(message.decode('utf-8'))
-
-
-def content_length(line: bytes) -> Optional[int]:
-    if line.startswith(b'Content-Length: '):
-        _, value = line.split(b'Content-Length: ')
-        value = value.strip()
-        try:
-            return int(value)
-        except ValueError as ex:
-            raise ValueError("Invalid Content-Length header: {}".format(value.decode('ascii'))) from ex
-    return None
 
 
 class TransportCallbacks(Protocol):
@@ -112,7 +91,7 @@ class JsonRpcTransport(Transport):
                 if not line:
                     break
                 try:
-                    num_bytes = content_length(line)
+                    num_bytes = _content_length(line)
                 except ValueError:
                     continue
                 if num_bytes is None:
@@ -125,7 +104,7 @@ class JsonRpcTransport(Transport):
                 callback_object = self._callback_object()
                 if callback_object:
                     try:
-                        callback_object.on_payload(decode(body))
+                        callback_object.on_payload(_decode(body))
                     except Exception as ex:
                         exception_log("Error handling payload", ex)
                 else:
@@ -142,13 +121,15 @@ class JsonRpcTransport(Transport):
             try:
                 # Allow the process to stop itself.
                 exit_code = self._process.wait(1)
-            except (AttributeError, ProcessLookupError):
+            except (AttributeError, ProcessLookupError, subprocess.TimeoutExpired):
                 pass
         if self._process:
             try:
                 # The process didn't stop itself. Terminate!
-                self._process.terminate()
-                exit_code = self._process.wait()
+                self._process.kill()
+                # still wait for the process to die, or zombie processes might be the result
+                # Ignore the exit code in this case, it's going to be something non-zero because we sent SIGKILL.
+                self._process.wait()
             except (AttributeError, ProcessLookupError):
                 pass
             except Exception as ex:
@@ -164,7 +145,7 @@ class JsonRpcTransport(Transport):
                 d = self._send_queue.get()
                 if d is None:
                     break
-                body = encode(d)
+                body = _encode(d)
                 self._writer.writelines((
                     "Content-Length: {}\r\n".format(len(body)).encode('ascii'),
                     "Content-Type: application/vscode-jsonrpc; charset=utf-8\r\n\r\n".encode('ascii'),
@@ -197,11 +178,20 @@ class JsonRpcTransport(Transport):
 def create_transport(config: ClientConfig, cwd: str, window: sublime.Window,
                      callback_object: TransportCallbacks) -> JsonRpcTransport:
     variables = window.extract_variables()
-    args = [sublime.expand_variables(os.path.expanduser(arg), variables) for arg in config.binary_args]
+    tcp_port = None  # type: Optional[int]
+    if config.tcp_port is not None:
+        tcp_port = _find_free_port() if config.tcp_port == 0 else config.tcp_port
+    if tcp_port is not None:
+        variables["port"] = str(tcp_port)
+    args = sublime.expand_variables(config.binary_args, variables)
+    args = list(map(os.path.expanduser, args))
+    if tcp_port is not None:
+        # DEPRECATED -- replace {port} with $port or ${port} in your client config
+        args = [a.replace('{port}', str(tcp_port)) for a in args]
     env = os.environ.copy()
     for var, value in config.env.items():
         env[var] = os.path.expandvars(sublime.expand_variables(value, variables))
-    if config.tcp_port:
+    if tcp_port is not None:
         stdout = subprocess.DEVNULL
         stdin = subprocess.DEVNULL
     else:
@@ -224,7 +214,7 @@ def create_transport(config: ClientConfig, cwd: str, window: sublime.Window,
                     break
     else:
         startupinfo = None
-    debug("starting process in", cwd)
+    debug("starting {} in {}".format(args, cwd))
     process = subprocess.Popen(
         args=args,
         stdin=stdin,
@@ -233,12 +223,69 @@ def create_transport(config: ClientConfig, cwd: str, window: sublime.Window,
         startupinfo=startupinfo,
         env=env,
         cwd=cwd)
+    _subprocesses.add(process)
     sock = None  # type: Optional[socket.socket]
-    if config.tcp_port:
-        sock = socket.create_connection((None, config.tcp_port), TCP_CONNECT_TIMEOUT)
+    if tcp_port:
+        sock = _connect_tcp(tcp_port)
+        if sock is None:
+            raise RuntimeError("Failed to connect on port {}".format(config.tcp_port))
         reader = sock.makefile('rwb')  # type: IO[bytes]
         writer = reader
     else:
-        reader = process.stdout
-        writer = process.stdin
+        reader = process.stdout  # type: ignore
+        writer = process.stdin  # type: ignore
     return JsonRpcTransport(config.name, process, sock, reader, writer, process.stderr, callback_object)
+
+
+_subprocesses = weakref.WeakSet()  # type: weakref.WeakSet[subprocess.Popen]
+
+
+def kill_all_subprocesses() -> None:
+    global _subprocesses
+    subprocesses = list(_subprocesses)
+    for p in subprocesses:
+        try:
+            p.kill()
+        except Exception:
+            pass
+    for p in subprocesses:
+        try:
+            p.wait()
+        except Exception:
+            pass
+
+
+def _connect_tcp(port: int) -> Optional[socket.socket]:
+    start_time = time.time()
+    while time.time() - start_time < TCP_CONNECT_TIMEOUT:
+        try:
+            return socket.create_connection(('localhost', port))
+        except ConnectionRefusedError:
+            pass
+    return None
+
+
+def _find_free_port() -> int:
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(('', 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
+
+
+def _encode(d: Dict[str, Any]) -> bytes:
+    return json.dumps(d, sort_keys=False, check_circular=False, separators=(',', ':')).encode('utf-8')
+
+
+def _decode(message: bytes) -> Dict[str, Any]:
+    return json.loads(message.decode('utf-8'))
+
+
+def _content_length(line: bytes) -> Optional[int]:
+    if line.startswith(b'Content-Length: '):
+        _, value = line.split(b'Content-Length: ')
+        value = value.strip()
+        try:
+            return int(value)
+        except ValueError as ex:
+            raise ValueError("Invalid Content-Length header: {}".format(value.decode('ascii'))) from ex
+    return None

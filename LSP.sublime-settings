@@ -122,17 +122,11 @@
   //     // is "source.python" (see above).
   //     "languageId": "python",
   //
-  //     # TCP mode (off unless tcp_mode or tcp_port are set)
-  //
-  //     // Set to "host" if the server connects to the editor. Otherwise, LSP will connect to the server.
-  //     "tcp_mode": "",
-  //
-  //     // Port to connect to. If tcp_mode="host", you likely want to leave this empty so LSP selects a random port.
-  //     // The chosen port can be passed as a server argument using a {port} placeholder.
+  //     // When you want to connect to the language server via TCP (on localhost), specify the port here.
+  //     // If you put a value of 0 here, then LSP will select a free port number on localhost. In that case, you can
+  //     // use the string templates $port or ${port} in the "command".
+  //     // The syntax "{port}" is also allowed, but deprecated in favor of $port and ${port}.
   //     "tcp_port": 1234,
-  //
-  //     // Host to connect to if not localhost
-  //     "tcp_host": "",
   //
   //     # Optional settings (key-value pairs):
   //

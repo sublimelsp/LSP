@@ -2,7 +2,6 @@ from .collections import DottedDict
 from .edit import parse_workspace_edit
 from .logging import debug, exception_log
 from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
-from .protocol import WorkspaceFolder, Request, Notification
 from .protocol import WorkspaceFolder, Request, Notification, Response
 from .rpc import Client
 from .settings import client_configs
@@ -667,13 +666,12 @@ class Session(Client):
 
     def end(self) -> None:
         self._plugin = None
-        debug("stopping", self.config.name, "gracefully")
         self.capabilities.clear()
         self.state = ClientStates.STOPPING
         self.send_request(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
 
     def _handle_shutdown_result(self, _: Any) -> None:
-        self.send_notification(Notification.exit())
+        self.exit()
 
     def on_transport_close(self, exit_code: int, exception: Optional[Exception]) -> None:
         super().on_transport_close(exit_code, exception)

@@ -98,6 +98,9 @@ Some language servers support multiple languages, which can be specified in the 
 | tcp_mode | see instructions below |
 | experimental_capabilities | Turn on experimental capabilities of a language server. This is a dictionary and differs per language server |
 
+You can figure out the scope with Tools > Developer > Show Scope Name.
+You can figure out the syntax by opening the ST console and running `view.settings().get("syntax")`.
+
 The default transport is stdio, but TCP is also supported.
 The port number can be inserted into the server's arguments by adding a `{port}` placeholder in `command`.
 

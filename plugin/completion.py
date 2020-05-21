@@ -3,44 +3,14 @@ import mdpopups
 import sublime
 import sublime_plugin
 import webbrowser
-
-from .core.configurations import is_supported_syntax
 from .core.edit import parse_text_edit
 from .core.protocol import Request, InsertTextFormat, Range
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
-from .core.settings import settings, client_configs
+from .core.settings import settings
 from .core.typing import Any, List, Dict, Optional, Union, Generator
 from .core.views import text_document_position_params, range_to_region
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
-
-
-completion_kinds = {
-    1: (sublime.KIND_ID_MARKUP, "Ξ", "Text"),
-    2: (sublime.KIND_ID_FUNCTION, "λ", "Method"),
-    3: (sublime.KIND_ID_FUNCTION, "λ", "Function"),
-    4: (sublime.KIND_ID_FUNCTION, "c", "Constructor"),
-    5: (sublime.KIND_ID_VARIABLE, "f", "Field"),
-    6: (sublime.KIND_ID_VARIABLE, "v", "Variable"),
-    7: (sublime.KIND_ID_TYPE, "c", "Class"),
-    8: (sublime.KIND_ID_TYPE, "i", "Interface"),
-    9: (sublime.KIND_ID_NAMESPACE, "◪", "Module"),
-    10: (sublime.KIND_ID_VARIABLE, "ρ", "Property"),
-    11: (sublime.KIND_ID_VARIABLE, "u", "Unit"),
-    12: (sublime.KIND_ID_VARIABLE, "ν", "Value"),
-    13: (sublime.KIND_ID_TYPE, "ε", "Enum"),
-    14: (sublime.KIND_ID_KEYWORD, "κ", "Keyword"),
-    15: (sublime.KIND_ID_SNIPPET, "s", "Snippet"),
-    16: (sublime.KIND_ID_AMBIGUOUS, "c", "Color"),
-    17: (sublime.KIND_ID_AMBIGUOUS, "#", "File"),
-    18: (sublime.KIND_ID_AMBIGUOUS, "⇢", "Reference"),
-    19: (sublime.KIND_ID_AMBIGUOUS, "ƒ", "Folder"),
-    20: (sublime.KIND_ID_TYPE, "ε", "EnumMember"),
-    21: (sublime.KIND_ID_VARIABLE, "π", "Constant"),
-    22: (sublime.KIND_ID_TYPE, "s", "Struct"),
-    23: (sublime.KIND_ID_FUNCTION, "e", "Event"),
-    24: (sublime.KIND_ID_KEYWORD, "ο", "Operator"),
-    25: (sublime.KIND_ID_TYPE, "τ", "Type Parameter")
-}
+from .core.views import COMPLETION_KINDS
 
 
 class LspResolveDocsCommand(sublime_plugin.TextCommand):
@@ -178,9 +148,7 @@ class CompletionHandler(LSPViewEventListener):
     def is_applicable(cls, view_settings: dict) -> bool:
         if 'completion' in settings.disabled_capabilities:
             return False
-
-        syntax = view_settings.get('syntax')
-        return is_supported_syntax(syntax, client_configs.all) if syntax else False
+        return cls.has_supported_syntax(view_settings)
 
     def initialize(self) -> None:
         self.initialized = True
@@ -239,8 +207,8 @@ class CompletionHandler(LSPViewEventListener):
     def format_completion(self, item: dict, index: int, can_resolve_completion_items: bool) -> sublime.CompletionItem:
         # This is a hot function. Don't do heavy computations or IO in this function.
         item_kind = item.get("kind")
-        if item_kind:
-            kind = completion_kinds.get(item_kind, sublime.KIND_AMBIGUOUS)
+        if isinstance(item_kind, int) and 1 <= item_kind <= len(COMPLETION_KINDS):
+            kind = COMPLETION_KINDS[item_kind - 1]
         else:
             kind = sublime.KIND_AMBIGUOUS
 

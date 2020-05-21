@@ -1,16 +1,15 @@
 import mdpopups
 import sublime
-import sublime_plugin
 import webbrowser
 import os
 from html import escape
 from .code_actions import actions_manager, run_code_action_or_command
 from .code_actions import CodeActionOrCommand
-from .core.configurations import is_supported_syntax
 from .core.popups import popups
 from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation, Point
 from .core.registry import session_for_view, LspTextCommand, windows
-from .core.settings import client_configs, settings
+from .core.registry import LSPViewEventListener
+from .core.settings import settings
 from .core.typing import List, Optional, Any, Dict
 from .core.views import text_document_position_params
 from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
@@ -20,19 +19,12 @@ from .diagnostics import filter_by_point, view_diagnostics
 SUBLIME_WORD_MASK = 515
 
 
-class HoverHandler(sublime_plugin.ViewEventListener):
-    def __init__(self, view: sublime.View) -> None:
-        self.view = view
-
+class HoverHandler(LSPViewEventListener):
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:
         if 'hover' in settings.disabled_capabilities:
             return False
-        syntax = view_settings.get('syntax')
-        if syntax:
-            return is_supported_syntax(syntax, client_configs.all)
-        else:
-            return False
+        return cls.has_supported_syntax(view_settings)
 
     def on_hover(self, point: int, hover_zone: int) -> None:
         if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():

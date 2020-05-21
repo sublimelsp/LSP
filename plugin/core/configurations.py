@@ -1,17 +1,10 @@
 from .collections import DottedDict
 from .logging import debug
-from .types import ClientConfig, WindowLike, syntax2scope, view2scope
-from .typing import Any, Generator, List, Dict, Iterable
+from .types import ClientConfig, WindowLike, view2scope
+from .typing import Any, Generator, List, Dict
 from .workspace import enable_in_project, disable_in_project
 from copy import deepcopy
 import sublime
-
-
-def is_supported_syntax(syntax: str, configs: Iterable[ClientConfig]) -> bool:
-    scope = syntax2scope(syntax)
-    if scope is not None:
-        return any(config.match_document(scope) for config in configs)
-    return False
 
 
 class ConfigManager(object):

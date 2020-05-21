@@ -1,14 +1,17 @@
 from .collections import DottedDict
 from .edit import parse_workspace_edit
 from .logging import debug, exception_log
-from .protocol import completion_item_kinds, symbol_kinds, WorkspaceFolder, Request, Notification, Response
 from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
+from .protocol import WorkspaceFolder, Request, Notification
+from .protocol import WorkspaceFolder, Request, Notification, Response
 from .rpc import Client
 from .settings import client_configs
 from .transports import Transport
 from .types import ClientConfig, LanguageConfig, ClientStates, Settings
 from .typing import Dict, Any, Optional, List, Tuple, Generator, Type
+from .views import COMPLETION_KINDS
 from .views import did_change_configuration
+from .views import SYMBOL_KINDS
 from .workspace import is_subpath_of
 from abc import ABCMeta, abstractmethod
 import os
@@ -72,6 +75,8 @@ class Manager(metaclass=ABCMeta):
 
 
 def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: ClientConfig) -> dict:
+    completion_kinds = list(range(1, len(COMPLETION_KINDS) + 1))
+    symbol_kinds = list(range(1, len(SYMBOL_KINDS) + 1))
     first_folder = workspace_folders[0] if workspace_folders else None
     capabilities = {
         "textDocument": {
@@ -92,7 +97,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
                     "deprecatedSupport": True
                 },
                 "completionItemKind": {
-                    "valueSet": completion_item_kinds
+                    "valueSet": completion_kinds
                 }
             },
             "signatureHelp": {

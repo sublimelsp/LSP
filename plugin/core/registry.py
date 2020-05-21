@@ -1,12 +1,12 @@
-import sublime
-import sublime_plugin
-from .configurations import ConfigManager, is_supported_syntax
+from .configurations import ConfigManager
 from .rpc import Client
 from .sessions import Session
 from .settings import settings, client_configs
 from .types import ClientConfig, ClientStates, view2scope
-from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
 from .typing import Optional, Callable, Dict, Any, Generator
+from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
+import sublime
+import sublime_plugin
 
 
 client_start_listeners = {}  # type: Dict[str, Callable]
@@ -21,10 +21,7 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
     @classmethod
     def has_supported_syntax(cls, view_settings: dict) -> bool:
         syntax = view_settings.get('syntax')
-        if syntax:
-            return is_supported_syntax(syntax, client_configs.all)
-        else:
-            return False
+        return bool(syntax and client_configs.is_syntax_supported(syntax))
 
     @property
     def manager(self) -> WindowManager:

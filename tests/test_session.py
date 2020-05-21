@@ -1,8 +1,6 @@
 from LSP.plugin.core.protocol import TextDocumentSyncKindFull, TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
 from LSP.plugin.core.protocol import WorkspaceFolder
-from LSP.plugin.core.sessions import clear_dotted_value
 from LSP.plugin.core.sessions import create_session, Session, get_initialize_params
-from LSP.plugin.core.sessions import set_dotted_value
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.types import Settings
 from LSP.plugin.core.typing import Optional
@@ -12,59 +10,6 @@ from test_mocks import TEST_LANGUAGE
 import sublime
 import unittest
 import unittest.mock
-
-
-class MiscFunctions(unittest.TestCase):
-
-    def test_set_and_clear_dotted_values(self) -> None:
-        d = {"foo": {"bar": "baz"}}
-        set_dotted_value(d, "foo.bar.baz.qux", {"hello": "there"})
-        set_dotted_value(d, "foo.bar.baz.qux.id", "asdf-1234-qwerty")
-        self.assertEqual(d, {
-            "foo": {
-                "bar": {
-                    "baz": {
-                        "qux": {
-                            "hello": "there",
-                            "id": "asdf-1234-qwerty"
-                        }
-                    }
-                }
-            }
-        })
-        d = {"foo": {"bar": 42}}
-        set_dotted_value(d, "foo.bar.baz.qux", {"hello": "there"})
-        set_dotted_value(d, "foo.bar.baz.qux.id", "asdf-1234-qwerty")
-        self.assertEqual(d, {
-            "foo": {
-                "bar": {
-                    "baz": {
-                        "qux": {
-                            "hello": "there",
-                            "id": "asdf-1234-qwerty"
-                        }
-                    }
-                }
-            }
-        })
-        clear_dotted_value(d, "foo.bar.baz.qux")
-        self.assertEqual(d, {
-            "foo": {
-                "bar": {
-                    "baz": {}
-                }
-            }
-        })
-        clear_dotted_value(d, "foo.bar.baz.qux.id")
-        self.assertEqual(d, {
-            "foo": {
-                "bar": {
-                    "baz": {}
-                }
-            }
-        })
-        clear_dotted_value(d, "foo")
-        self.assertEqual(d, {})
 
 
 class SessionTest(unittest.TestCase):

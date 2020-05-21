@@ -20,10 +20,10 @@ class LspExecuteCommand(LspTextCommand):
             if window:
                 window.status_message("Running command {}".format(command_name))
             if command_args:
-                command_args = self._expand_variables(command_args)
+                self._expand_variables(command_args)
             self._send_command(client, command_name, command_args)
 
-    def _expand_variables(self, command_args: List[Any]) -> List[Any]:
+    def _expand_variables(self, command_args: List[Any]) -> None:
         region = self.view.sel()[0]
         for i, arg in enumerate(command_args):
             if arg in ["$file_uri", "${file_uri}"]:
@@ -40,7 +40,6 @@ class LspExecuteCommand(LspTextCommand):
                 command_args[i] = offset_to_point(self.view, region.b).to_lsp()
             elif arg in ["$range", "${range}"]:
                 command_args[i] = region_to_range(self.view, region).to_lsp()
-        return command_args
 
     def _handle_response(self, command: str, response: Optional[Any]) -> None:
         msg = "command {} completed".format(command)

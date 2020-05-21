@@ -24,7 +24,7 @@ class LspExecuteCommand(LspTextCommand):
             self._send_command(client, command_name, command_args)
 
     def _expand_variables(self, command_args: List[Any]) -> List[Any]:
-        region = self.view.sel()[-1]
+        region = self.view.sel()[0]
         for i, arg in enumerate(command_args):
             if arg in ["$file_uri", "${file_uri}"]:
                 command_args[i] = uri_from_view(self.view)

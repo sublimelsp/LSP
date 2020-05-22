@@ -78,11 +78,14 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
 
 class LspCompleteCommand(sublime_plugin.TextCommand):
 
-    def handle_additional_edits(self, item: Dict[str, Any]) -> None:
+    def epilogue(self, item: Dict[str, Any]) -> None:
         additional_edits = item.get('additionalTextEdits')
         if additional_edits:
             edits = [parse_text_edit(additional_edit) for additional_edit in additional_edits]
             self.view.run_command("lsp_apply_document_edit", {'changes': edits})
+        command = item.get("command")
+        if command:
+            self.view.run_command("lsp_execute", {"command_name": command})
 
 
 class LspCompleteInsertTextCommand(LspCompleteCommand):
@@ -93,7 +96,7 @@ class LspCompleteInsertTextCommand(LspCompleteCommand):
             self.view.run_command("insert_snippet", {"contents": insert_text})
         else:
             self.view.run_command("insert", {"characters": insert_text})
-        self.handle_additional_edits(item)
+        self.epilogue(item)
 
 
 class LspCompleteTextEditCommand(LspCompleteCommand):
@@ -111,7 +114,7 @@ class LspCompleteTextEditCommand(LspCompleteCommand):
                 # NOTE: Cannot do .replace, because ST will select the replacement.
                 self.view.erase(edit, region)
                 self.view.insert(edit, region.a, new_text)
-        self.handle_additional_edits(item)
+        self.epilogue(item)
 
     def translated_regions(self, edit_region: sublime.Region) -> Generator[sublime.Region, None, None]:
         selection = self.view.sel()
@@ -244,8 +247,8 @@ class CompletionHandler(LSPViewEventListener):
                 kind=kind,
                 details=st_details)
             completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
-        elif item.get("additionalTextEdits"):
-            # It's an insertText, but additionalEdits requires us to use a command completion.
+        elif item.get("additionalTextEdits") or item.get("command"):
+            # It's an insertText, but additionalEdits or a command requires us to use a command completion.
             completion = sublime.CompletionItem.command_completion(
                 trigger=st_trigger,
                 command="lsp_complete_insert_text",
@@ -254,7 +257,7 @@ class CompletionHandler(LSPViewEventListener):
                 kind=kind,
                 details=st_details)
         else:
-            # A snippet completion suffices for insertText with no additionalTextEdits.
+            # A snippet completion suffices for insertText with no additionalTextEdits and no command.
             snippet = item.get("insertText") or item["label"]
             if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.PlainText:
                 snippet = snippet.replace('$', '\\$')

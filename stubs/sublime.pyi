@@ -88,6 +88,8 @@ KIND_NAVIGATION = ...  # type: Tuple[int, str, str]
 KIND_MARKUP = ...  # type: Tuple[int, str, str]
 KIND_VARIABLE = ...  # type: Tuple[int, str, str]
 KIND_SNIPPET = ...  # type: Tuple[int, str, str]
+COMPLETION_FORMAT_TEXT = ...  # type: int
+COMPLETION_FORMAT_SNIPPET = ...  # type: int
 
 
 class Settings:
@@ -258,11 +260,23 @@ def windows() -> 'Sequence[Window]':
 def get_macro() -> Sequence[dict]:
     ...
 
+
 def list_syntaxes() -> Sequence[Dict[str, Any]]:
     ...
 
+
 class CompletionItem:
     flags = ...  # type: int
+
+    def __init__(
+            self,
+            trigger: str,
+            annotation: str = "",
+            completion: str = "",
+            completion_format: int = COMPLETION_FORMAT_TEXT,
+            kind: Tuple[int, str, str] = KIND_AMBIGUOUS,
+            details: str = "") -> None:
+        ...
 
     @classmethod
     def snippet_completion(

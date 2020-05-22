@@ -22,7 +22,8 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
         # don't show the detail in the cooperate AC popup if it is already shown in the AC details filed.
         self.is_detail_shown = bool(detail)
         minihtml_content = self.get_content(documentation, detail)
-        self.show_popup(minihtml_content)
+        # NOTE: For some reason, ST does not like it when we show a popup from within this run method.
+        sublime.set_timeout(lambda: self.show_popup(minihtml_content))
 
         if not detail or not documentation:
             # To make sure that the detail or documentation fields doesn't exist we need to resove the completion item.
@@ -67,10 +68,9 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
         detail = self.format_documentation(item.get('detail') or "")
         documentation = self.format_documentation(item.get("documentation") or "")
         minihtml_content = self.get_content(documentation, detail)
-        if self.view.is_popup_visible():
-            self.update_popup(minihtml_content)
-        else:
-            self.show_popup(minihtml_content)
+        show = self.update_popup if self.view.is_popup_visible() else self.show_popup
+        # NOTE: Update/show popups from the main thread, or else the popup might make the AC widget disappear.
+        sublime.set_timeout(lambda: show(minihtml_content))
 
     def update_popup(self, minihtml_content: str) -> None:
         mdpopups.update_popup(self.view, minihtml_content)
@@ -78,11 +78,14 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
 
 class LspCompleteCommand(sublime_plugin.TextCommand):
 
-    def handle_additional_edits(self, item: Dict[str, Any]) -> None:
+    def epilogue(self, item: Dict[str, Any]) -> None:
         additional_edits = item.get('additionalTextEdits')
         if additional_edits:
             edits = [parse_text_edit(additional_edit) for additional_edit in additional_edits]
             self.view.run_command("lsp_apply_document_edit", {'changes': edits})
+        command = item.get("command")
+        if command:
+            self.view.run_command("lsp_execute", {"command_name": command})
 
 
 class LspCompleteInsertTextCommand(LspCompleteCommand):
@@ -93,7 +96,7 @@ class LspCompleteInsertTextCommand(LspCompleteCommand):
             self.view.run_command("insert_snippet", {"contents": insert_text})
         else:
             self.view.run_command("insert", {"characters": insert_text})
-        self.handle_additional_edits(item)
+        self.epilogue(item)
 
 
 class LspCompleteTextEditCommand(LspCompleteCommand):
@@ -111,7 +114,7 @@ class LspCompleteTextEditCommand(LspCompleteCommand):
                 # NOTE: Cannot do .replace, because ST will select the replacement.
                 self.view.erase(edit, region)
                 self.view.insert(edit, region.a, new_text)
-        self.handle_additional_edits(item)
+        self.epilogue(item)
 
     def translated_regions(self, edit_region: sublime.Region) -> Generator[sublime.Region, None, None]:
         selection = self.view.sel()
@@ -244,8 +247,8 @@ class CompletionHandler(LSPViewEventListener):
                 kind=kind,
                 details=st_details)
             completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
-        elif item.get("additionalTextEdits"):
-            # It's an insertText, but additionalEdits requires us to use a command completion.
+        elif item.get("additionalTextEdits") or item.get("command"):
+            # It's an insertText, but additionalEdits or a command requires us to use a command completion.
             completion = sublime.CompletionItem.command_completion(
                 trigger=st_trigger,
                 command="lsp_complete_insert_text",
@@ -254,14 +257,16 @@ class CompletionHandler(LSPViewEventListener):
                 kind=kind,
                 details=st_details)
         else:
-            # A snippet completion suffices for insertText with no additionalTextEdits.
-            snippet = item.get("insertText") or item["label"]
+            # A plain old completion suffices for insertText with no additionalTextEdits and no command.
             if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.PlainText:
-                snippet = snippet.replace('$', '\\$')
-            completion = sublime.CompletionItem.snippet_completion(
+                st_format = sublime.COMPLETION_FORMAT_TEXT
+            else:
+                st_format = sublime.COMPLETION_FORMAT_SNIPPET
+            completion = sublime.CompletionItem(
                 trigger=st_trigger,
-                snippet=snippet,
                 annotation=st_annotation,
+                completion=item.get("insertText") or item["label"],
+                completion_format=st_format,
                 kind=kind,
                 details=st_details)
 

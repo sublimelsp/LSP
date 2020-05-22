@@ -97,9 +97,11 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
     - ✅ Include text
   - ✅ didClose
 - ✅ completion
-  - ❌ documentation field is ignored
-  - ❌ completionItem/resolve is not perfect
-  - ❌ various manual workarounds for textEdit
+  - ✅ insertText
+  - ✅ textEdit
+  - ❌ prefix filter textEdit
+  - ✅ documentation (both static and from completionItem/resolve)
+  - ✅ Run command after inserting completion
 - ✅ hover
 - ✅ signatureHelp
 - ✅ declaration

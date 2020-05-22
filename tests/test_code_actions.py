@@ -53,3 +53,13 @@ class CodeActionsTestCase(TextDocumentTestCase):
         ])
         run_code_action_or_command(self.view, self.config.name, code_actions)
         self.assertEquals(entire_content(self.view), initial_content)
+
+    # Keep this test last as it breaks pyls!
+    def test_applies_correctly_after_emoji(self) -> Generator:
+        self.insert_characters('🕵️hi')
+        yield from self.await_message("textDocument/didChange")
+        code_action = create_test_code_actions(self.view.change_count(), [
+            ("bye", Range(Point(0, 3), Point(0, 5))),
+        ])
+        run_code_action_or_command(self.view, self.config.name, code_action)
+        self.assertEquals(entire_content(self.view), '🕵️bye')

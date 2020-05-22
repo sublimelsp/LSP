@@ -2,6 +2,7 @@ from .logging import debug
 from .protocol import WorkspaceFolder
 from .types import WindowLike
 from .typing import List, Optional, Any, Callable
+import sublime
 
 
 def is_subpath_of(file_path: str, potential_subpath: str) -> bool:
@@ -36,6 +37,9 @@ class ProjectFolders(object):
             return any(is_subpath_of(file_path, folder) for folder in self.folders)
         else:
             return True
+
+    def __contains__(self, view: sublime.View) -> bool:
+        return self.includes_path(view.file_name() or '')
 
     def _set_folders(self, folders: List[str]) -> None:
         self.folders = folders

@@ -3,14 +3,15 @@ import mdpopups
 import sublime
 import sublime_plugin
 import webbrowser
+from .core.documents import DocumentSyncListener
 from .core.edit import parse_text_edit
 from .core.protocol import Request, InsertTextFormat, Range
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.settings import settings
 from .core.typing import Any, List, Dict, Optional, Union, Generator
-from .core.views import text_document_position_params, range_to_region
-from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .core.views import COMPLETION_KINDS
+from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from .core.views import text_document_position_params, range_to_region
 
 
 class LspResolveDocsCommand(sublime_plugin.TextCommand):
@@ -197,7 +198,7 @@ class CompletionHandler(LSPViewEventListener):
         client = client_from_session(session)
         if not client:
             return None
-        self.manager.documents.purge_changes(self.view)
+        self.purge_changes()
         completion_list = sublime.CompletionList()
         capability = session.get_capability('completionProvider') or {}
         can_resolve_completion_items = bool(capability.get('resolveProvider', False))

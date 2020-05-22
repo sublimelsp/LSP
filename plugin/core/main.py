@@ -25,9 +25,6 @@ def startup() -> None:
     windows.set_settings_factory(settings)
     load_handlers()
     sublime.status_message("LSP initialized")
-    window = sublime.active_window()
-    if window:
-        windows.lookup(window).start_active_views()
 
 
 def shutdown() -> None:

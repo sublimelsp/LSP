@@ -354,7 +354,7 @@ class DiagnosticOutputPanel(DiagnosticsUpdateWalk):
 
 class DiagnosticsPresenter(object):
 
-    def __init__(self, window: sublime.Window, documents_state: DocumentsState) -> None:
+    def __init__(self, window: sublime.Window) -> None:
         self._window = window
         self._dirty = False
         self._received_diagnostics_after_change = False
@@ -365,9 +365,6 @@ class DiagnosticsPresenter(object):
         self._cursor = DiagnosticsCursor(settings.show_diagnostics_severity_level)
         self._phantoms = DiagnosticsPhantoms(self._window)
         self._diagnostics = {}  # type: Dict[str, Dict[str, List[Diagnostic]]]
-        if settings.auto_show_diagnostics_panel == 'saved':
-            setattr(documents_state, 'changed', self.on_document_changed)
-            setattr(documents_state, 'saved', self.on_document_saved)
 
     def on_document_changed(self) -> None:
         self._received_diagnostics_after_change = False

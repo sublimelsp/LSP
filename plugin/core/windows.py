@@ -4,7 +4,7 @@ from .diagnostics import DiagnosticsStorage
 from .edit import parse_workspace_edit
 from .logging import debug
 from .message_request_handler import MessageRequestHandler
-from .protocol import Notification, Response, TextDocumentSyncKindNone, TextDocumentSyncKindFull
+from .protocol import Notification, Response
 from .rpc import Client, SublimeLogger
 from .sessions import Session
 from .types import ClientConfig
@@ -13,14 +13,15 @@ from .types import Settings
 from .types import view2scope
 from .types import ViewLike
 from .types import WindowLike
-from .typing import Optional, List, Callable, Dict, Any, Protocol, Set, Iterable
-from .views import did_change, did_close, did_open, did_save, will_save
+from .typing import Optional, List, Callable, Dict, Any, Protocol, Set, Iterable, Generator
 from .workspace import disable_in_project
 from .workspace import enable_in_project
 from .workspace import get_workspace_folders
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
+from collections import deque
 from weakref import ref
+from weakref import WeakSet
 from weakref import WeakValueDictionary
 import sublime
 import threading
@@ -44,38 +45,6 @@ class LanguageHandlerListener(Protocol):
         ...
 
 
-class DocumentHandler(Protocol):
-    def add_session(self, session: Session) -> None:
-        ...
-
-    def remove_session(self, config_name: str) -> None:
-        ...
-
-    def reset(self) -> None:
-        ...
-
-    def handle_did_open(self, view: ViewLike) -> None:
-        ...
-
-    def handle_did_change(self, view: ViewLike, changes: Iterable[sublime.TextChange]) -> None:
-        ...
-
-    def purge_changes(self, view: ViewLike) -> None:
-        ...
-
-    def handle_will_save(self, view: ViewLike, reason: int) -> None:
-        ...
-
-    def handle_did_save(self, view: ViewLike) -> None:
-        ...
-
-    def handle_did_close(self, view: ViewLike) -> None:
-        ...
-
-    def has_document_state(self, file_name: str) -> bool:
-        ...
-
-
 def get_active_views(window: WindowLike) -> List[ViewLike]:
     views = list()  # type: List[ViewLike]
     num_groups = window.num_groups()
@@ -90,217 +59,22 @@ def get_active_views(window: WindowLike) -> List[ViewLike]:
     return views
 
 
-class DocumentHandlerFactory(object):
-    def __init__(self, sublime: Any, settings: Settings) -> None:
-        self._sublime = sublime
-        self._settings = settings
-
-    def for_window(self, window: WindowLike, workspace: ProjectFolders,
-                   configs: WindowConfigManager) -> DocumentHandler:
-        return WindowDocumentHandler(self._sublime, self._settings, window, workspace, configs)
-
-
-def nop() -> None:
-    pass
-
-
-class PendingBuffer:
-
-    __slots__ = ('view', 'version', 'changes')
-
-    def __init__(self, view: ViewLike, version: int, changes: Iterable[sublime.TextChange]) -> None:
-        self.view = view
-        self.version = version
-        self.changes = list(changes)
-
-    def update(self, version: int, changes: Iterable[sublime.TextChange]) -> None:
-        self.version = version
-        self.changes.extend(changes)
-
-
-class WindowDocumentHandler(object):
-    def __init__(self, sublime: Any, settings: Settings, window: WindowLike, workspace: ProjectFolders,
-                 configs: WindowConfigManager) -> None:
-        self._sublime = sublime
-        self._settings = settings
-        self._configs = configs
-        self._window = window
-        self._document_states = set()  # type: Set[str]
-        self._pending_buffer_changes = dict()  # type: Dict[int, PendingBuffer]
-        self._sessions = dict()  # type: Dict[str, List[Session]]
-        self._workspace = workspace
-        self.changed = nop
-        self.saved = nop
-
-    def add_session(self, session: Session) -> None:
-        self._sessions.setdefault(session.config.name, []).append(session)
-        self._notify_open_documents(session)
-
-    def remove_session(self, config_name: str) -> None:
-        if config_name in self._sessions:
-            del self._sessions[config_name]
-
-    def reset(self) -> None:
-        for view in self._window.views():
-            self.detach_view(view)
-        self._document_states.clear()
-
-    def has_document_state(self, path: str) -> bool:
-        return path in self._document_states
-
-    def _get_applicable_sessions(self, view: ViewLike) -> List[Session]:
-        sessions = []  # type: List[Session]
-        # ViewLike vs sublime.View
-        scope = view2scope(view)  # type: ignore
-
-        for config_name, config_sessions in self._sessions.items():
-            for session in config_sessions:
-                if session.config.match_document(scope) and session.handles_path(view.file_name()):
-                    sessions.append(session)
-
-        return sessions
-
-    def _notify_open_documents(self, session: Session) -> None:
-        # Note: a copy is made of self._document_states because it may be modified in another thread.
-        for file_name in list(self._document_states):
-            if session.handles_path(file_name):
-                view = self._window.find_open_file(file_name)
-                if view:
-                    # ViewLike vs sublime.View
-                    if session.config.match_document(view2scope(view)):  # type: ignore
-                        sessions = self._get_applicable_sessions(view)
-                        self._attach_view(view, sessions)
-                        for session in sessions:
-                            if session.should_notify_did_open():
-                                self._notify_did_open(view, session)
-
-    def _attach_view(self, view: ViewLike, sessions: List[Session]) -> None:
-        view.settings().set("show_definitions", False)
-        if self._settings.show_view_status:
-            view.set_status("lsp_clients", ", ".join(session.config.name for session in sessions))
-
-    def detach_view(self, view: ViewLike) -> None:
-        view.settings().erase("show_definitions")
-        view.set_status("lsp_clients", "")
-
-    def _view_language(self, view: ViewLike, config_name: str) -> str:
-        return view.settings().get('lsp_language')[config_name]
-
-    def _set_view_languages(self, view: ViewLike, configurations: Iterable[ClientConfig]) -> None:
-        # HACK! languageId <--> view base scope should be UNIQUE
-        languages = {}
-        base_scope = view2scope(view)  # type: ignore
-        for config in configurations:
-            for language in config.languages:
-                if language.match_document(base_scope):
-                    # bad :( all values should be exactly the same language.id
-                    languages[config.name] = language.id
-                    break
-        view.settings().set('lsp_language', languages)  # TODO: this should be a single languageId
-        view.settings().set('lsp_active', True)
-
-    def handle_did_open(self, view: ViewLike) -> None:
-        file_name = view.file_name()
-        if file_name and file_name not in self._document_states:
-            configurations = list(self._configs.match_view(view))  # type: ignore
-            if len(configurations) > 0:
-                # always register a supported document
-                self._document_states.add(file_name)
-                self._set_view_languages(view, configurations)
-
-                # the sessions may not be available yet,
-                # the document will get synced when a session is added.
-                sessions = self._get_applicable_sessions(view)
-                self._attach_view(view, sessions)
-                for session in sessions:
-                    if session.should_notify_did_open():
-                        self._notify_did_open(view, session)
-
-    def _notify_did_open(self, view: ViewLike, session: Session) -> None:
-        language_id = self._view_language(view, session.config.name)
-        if session.client:
-            # mypy: expected sublime.View, got ViewLike
-            session.client.send_notification(did_open(view, language_id))  # type: ignore
-
-    def handle_did_close(self, view: ViewLike) -> None:
-        file_name = view.file_name() or ""
-        try:
-            self._document_states.remove(file_name)
-        except KeyError:
-            return
-        # mypy: expected sublime.View, got ViewLike
-        notification = did_close(view)  # type: ignore
-        for session in self._get_applicable_sessions(view):
-            if session.client and session.should_notify_did_close():
-                session.client.send_notification(notification)
-
-    def handle_will_save(self, view: ViewLike, reason: int) -> None:
-        file_name = view.file_name()
-        if file_name in self._document_states:
-            for session in self._get_applicable_sessions(view):
-                if session.client and session.should_notify_will_save():
-                    # mypy: expected sublime.View, got ViewLike
-                    session.client.send_notification(will_save(view, reason))  # type: ignore
-
-    def handle_did_save(self, view: ViewLike) -> None:
-        file_name = view.file_name()
-        if file_name in self._document_states:
-            self.purge_changes(view)
-            for session in self._get_applicable_sessions(view):
-                if session.client:
-                    send_did_save, include_text = session.should_notify_did_save()
-                    if send_did_save:
-                        # mypy: expected sublime.View, got ViewLike
-                        session.client.send_notification(did_save(view, include_text))  # type: ignore
-            self.saved()
-        else:
-            debug('document not tracked', file_name)
-
-    def handle_did_change(self, view: ViewLike, changes: Iterable[sublime.TextChange]) -> None:
-        buffer_id = view.buffer_id()
-        change_count = view.change_count()
-        pending_buffer = self._pending_buffer_changes.get(buffer_id)
-        if pending_buffer is None:
-            self._pending_buffer_changes[buffer_id] = PendingBuffer(view, change_count, changes)
-        else:
-            pending_buffer.update(change_count, changes)
-        self._sublime.set_timeout_async(lambda: self.purge_did_change(buffer_id, change_count), 500)
-
-    def purge_changes(self, view: ViewLike) -> None:
-        self.purge_did_change(view.buffer_id())
-
-    def purge_did_change(self, buffer_id: int, buffer_version: Optional[int] = None) -> None:
-        pending_buffer = self._pending_buffer_changes.get(buffer_id, None)
-        if pending_buffer is not None:
-            if buffer_version is None or buffer_version == pending_buffer.version:
-                self._pending_buffer_changes.pop(buffer_id, None)
-                self.notify_did_change(pending_buffer)
-                self.changed()
-
-    def notify_did_change(self, pending_buffer: PendingBuffer) -> None:
-        view = pending_buffer.view
-        if not view.is_valid():
-            return
-        file_name = view.file_name()
-        if not file_name or view.window() != self._window:
-            return
-        # ensure view is opened.
-        if file_name not in self._document_states:
-            self.handle_did_open(view)
-        for session in self._get_applicable_sessions(view):
-            if not session.client:
-                continue
-            sync_kind = session.text_sync_kind()
-            if sync_kind == TextDocumentSyncKindNone:
-                continue
-            changes = None if sync_kind == TextDocumentSyncKindFull else pending_buffer.changes
-            # ViewLike vs sublime.View
-            notification = did_change(view, changes)  # type: ignore
-            session.client.send_notification(notification)
-
-
 def extract_message(params: Any) -> str:
     return params.get("message", "???") if isinstance(params, dict) else "???"
+
+
+class ViewListenerProtocol(Protocol):
+
+    view = None  # type: sublime.View
+
+    def on_session_initialized(self, session: Session) -> None:
+        ...
+
+    def on_session_shutdown(self, session: Session) -> None:
+        ...
+
+    def __hash__(self) -> int:
+        ...
 
 
 class WindowManager(object):
@@ -310,7 +84,6 @@ class WindowManager(object):
         workspace: ProjectFolders,
         settings: Settings,
         configs: WindowConfigManager,
-        documents: DocumentHandler,
         diagnostics: DiagnosticsStorage,
         session_starter: Callable,
         sublime: Any,
@@ -321,17 +94,19 @@ class WindowManager(object):
         self._settings = settings
         self._configs = configs
         self.diagnostics = diagnostics
-        self.documents = documents
         self.server_panel_factory = server_panel_factory
-        self._sessions = dict()  # type: Dict[str, List[Session]]
+        self._sessions = {}  # type: Dict[str, WeakSet[Session]]
         self._next_initialize_views = list()  # type: List[ViewLike]
         self._start_session = session_starter
         self._sublime = sublime
         self._handlers = handler_dispatcher
         self._restarting = False
         self._is_closing = False
-        self._initialization_lock = threading.Lock()
         self._workspace = workspace
+        self._pending_listeners = deque()  # type: deque[ViewListenerProtocol]
+        self._listeners = WeakSet()  # type: WeakSet[ViewListenerProtocol]
+        self._new_listener = None  # type: Optional[ViewListenerProtocol]
+        self._new_session = None  # type: Optional[Session]
         weakself = ref(self)
 
         # A weak reference is needed, otherwise self._workspace will have a strong reference to self, meaning a
@@ -351,6 +126,59 @@ class WindowManager(object):
         self._workspace.on_changed = on_changed
         self._workspace.on_switched = on_switched
         self._progress = dict()  # type: Dict[Any, Any]
+
+    def register_listener(self, listener: ViewListenerProtocol) -> None:
+        self._pending_listeners.appendleft(listener)
+        if self._new_session:
+            return
+        sublime.set_timeout_async(self._dequeue_listener)
+
+    def unregister_listener(self, listener: ViewListenerProtocol) -> None:
+        self._listeners.discard(listener)
+
+    def listeners(self) -> Generator[ViewListenerProtocol, None, None]:
+        yield from self._listeners
+
+    def _dequeue_listener(self) -> None:
+        listener = None  # type: Optional[ViewListenerProtocol]
+        if self._new_listener is not None and self._new_listener.view.is_valid():
+            listener = self._new_listener
+            self._new_listener = None
+        else:
+            try:
+                listener = self._pending_listeners.pop()
+                if not listener.view.is_valid():
+                    sublime.set_timeout_async(self._dequeue_listener)
+                    return
+                self._listeners.add(listener)
+            except IndexError:
+                # We have handled all pending listeners.
+                self._new_session = None
+                return
+        scope = view2scope(listener.view)
+        file_name = listener.view.file_name() or ''
+        if self._new_session:
+            self._sessions.setdefault(self._new_session.config.name, WeakSet()).add(self._new_session)
+        if listener.view in self._workspace:
+            for sessions in self._sessions.values():
+                for session in sessions:
+                    if session.config.match_document(scope):
+                        if session.handles_path(file_name):
+                            listener.on_session_initialized(session)
+                            break
+        else:
+            for sessions in self._sessions.values():
+                for session in sessions:
+                    if session.config.match_document(scope):
+                        listener.on_session_initialized(session)
+                        break
+        self._new_session = None
+        config = self._needed_config(listener.view)
+        if config:
+            self._new_listener = listener
+            self._start_client(config, file_name)
+        else:
+            self._new_listener = None
 
     def _on_project_changed(self, folders: List[str]) -> None:
         workspace_folders = get_workspace_folders(self._workspace.folders)
@@ -385,79 +213,35 @@ class WindowManager(object):
     def enable_config(self, config_name: str) -> None:
         enable_in_project(self._window, config_name)
         self.update_configs()
-        self._sublime.set_timeout_async(self.start_active_views, 500)
-        self._window.status_message("{} enabled, starting server...".format(config_name))
+        for listener in self._listeners:
+            self._pending_listeners.appendleft(listener)
+        self._listeners.clear()
+        if not self._new_session:
+            sublime.set_timeout_async(self._dequeue_listener)
 
     def disable_config(self, config_name: str) -> None:
         disable_in_project(self._window, config_name)
         self.update_configs()
         self.end_config_sessions(config_name)
 
-    def start_active_views(self) -> None:
-        active_views = get_active_views(self._window)
-        debug('window {} starting {} initial views'.format(self._window.id(), len(active_views)))
-        for view in active_views:
-            if view.file_name():
-                self._workspace.update()
-                self._initialize_on_open(view)
-                self.documents.handle_did_open(view)
-
-    def activate_view(self, view: ViewLike) -> None:
-        file_name = view.file_name() or ""
-        if not self.documents.has_document_state(file_name):
-            self._workspace.update()
-            self._initialize_on_open(view)
-
-    def _open_after_initialize(self, view: ViewLike) -> None:
-        if any(v for v in self._next_initialize_views if v.id() == view.id()):
-            return
-        self._next_initialize_views.append(view)
-
-    def _open_pending_views(self) -> None:
-        opening = list(self._next_initialize_views)
-        self._next_initialize_views = []
-        for view in opening:
-            debug('opening after initialize', view.file_name())
-            self._initialize_on_open(view)
-
-    def _initialize_on_open(self, view: ViewLike) -> None:
-        file_path = view.file_name() or ""
-
-        if not self._workspace.includes_path(file_path):
-            return
-
-        def needed_configs(configs: Iterable[ClientConfig]) -> List[ClientConfig]:
-            new_configs = []
-            for c in configs:
-                if c.name not in self._sessions:
-                    new_configs.append(c)
-                else:
-                    session = next((s for s in self._sessions[c.name] if s.handles_path(file_path)), None)
-                    if session:
-                        if session.state != ClientStates.READY:
-                            debug('scheduling for delayed open, session {} not ready: {}'.format(c.name, file_path))
-                            self._open_after_initialize(view)
-                        else:
-                            debug('found ready session {} for {}'.format(c.name, file_path))
-                    else:
-                        debug('path not in existing {} session: {}'.format(c.name, file_path))
-                        new_configs.append(c)
-
-            return new_configs
-
-        # have all sessions for this document been started?
-        with self._initialization_lock:
-            if any(needed_configs(self._configs.match_view(view, include_disabled=True))):  # type: ignore
-                # TODO: cannot observe project setting changes
-                # have to check project overrides every session request
-                self.update_configs()
-
-                startable_configs = needed_configs(self._configs.match_view(view))  # type: ignore
-
-                for config in startable_configs:
-
-                    debug("window {} requests {} for {}".format(self._window.id(), config.name, file_path))
-                    self._start_client(config, file_path)
+    def _needed_config(self, view: sublime.View) -> Optional[ClientConfig]:
+        configs = self._configs.match_view(view)
+        if view in self._workspace:
+            for config in configs:
+                handled = False
+                sessions = self._sessions.get(config.name, WeakSet())
+                for session in sessions:
+                    if session.handles_path(view.file_name() or ''):
+                        handled = True
+                        break
+                if not handled:
+                    return config
+        else:
+            for config in configs:
+                if config.name in self._sessions:
+                    continue
+                return config
+        return None
 
     def _start_client(self, config: ClientConfig, file_path: str) -> None:
         if not self._can_start_config(config.name, file_path):
@@ -485,13 +269,15 @@ class WindowManager(object):
                 "{}",
                 "Server will be disabled for this window"
             ]).format(config.name, str(e))
-
             self._configs.disable_temporarily(config.name)
-            self._sublime.message_dialog(message)
+            sublime.message_dialog(message)
+            # Continue with handling pending listeners
+            self._new_session = None
+            sublime.set_timeout_async(self._dequeue_listener)
 
         if session:
             debug("window {} added session {}".format(self._window.id(), config.name))
-            self._sessions.setdefault(config.name, []).append(session)
+            self._new_session = session
 
     def _handle_message_request(self, params: dict, source: str, client: Client, request_id: Any) -> None:
         handler = MessageRequestHandler(self._window.active_view(), client, request_id, params, source)  # type: ignore
@@ -502,12 +288,11 @@ class WindowManager(object):
         self.end_sessions()
 
     def end_sessions(self) -> None:
-        self.documents.reset()
         for config_name in list(self._sessions):
             self.end_config_sessions(config_name)
 
     def end_config_sessions(self, config_name: str) -> None:
-        config_sessions = self._sessions.pop(config_name, [])
+        config_sessions = self._sessions.pop(config_name, WeakSet())
         for session in config_sessions:
             debug("unloading session", config_name)
             session.end()
@@ -555,7 +340,6 @@ class WindowManager(object):
             lambda params: self._handle_log_message(session.config.name, params))
 
     def _handle_post_initialize(self, session: Session) -> None:
-
         # handle server requests and notifications
         session.on_request(
             "workspace/applyEdit",
@@ -577,11 +361,8 @@ class WindowManager(object):
 
         session.client.send_notification(Notification.initialized())
 
-        if session.has_capability("textDocumentSync"):
-            self.documents.add_session(session)
         self._window.status_message("{} initialized".format(session.config.name))
-
-        self._open_pending_views()
+        sublime.set_timeout_async(self._dequeue_listener)
 
     def handle_view_closed(self, view: ViewLike) -> None:
         if view.file_name():
@@ -638,22 +419,12 @@ class WindowManager(object):
         self._is_closing = True
         self.end_sessions()
 
-    def _handle_all_sessions_ended(self) -> None:
-        debug('clients for window {} unloaded'.format(self._window.id()))
-        if self._restarting:
-            debug('window {} sessions unloaded - restarting'.format(self._window.id()))
-            self.start_active_views()
-
     def _handle_post_exit(self, config_name: str) -> None:
-        self.documents.remove_session(config_name)
         for view in self._window.views():
             file_name = view.file_name()
             if file_name:
                 self.diagnostics.remove(file_name, config_name)
-
         debug("session", config_name, "ended")
-        if not self._sessions:
-            self._handle_all_sessions_ended()
 
     def _handle_server_crash(self, config: ClientConfig) -> None:
         msg = "Language server {} has crashed, do you want to restart it?".format(config.name)
@@ -681,11 +452,10 @@ class WindowManager(object):
 
 
 class WindowRegistry(object):
-    def __init__(self, configs: ConfigManager, documents: Any,
+    def __init__(self, configs: ConfigManager,
                  session_starter: Callable, sublime: Any, handler_dispatcher: LanguageHandlerListener) -> None:
         self._windows = WeakValueDictionary()  # type: WeakValueDictionary[int, WindowManager]
         self._configs = configs
-        self._documents = documents
         self._session_starter = session_starter
         self._sublime = sublime
         self._handler_dispatcher = handler_dispatcher
@@ -709,15 +479,12 @@ class WindowRegistry(object):
                 raise RuntimeError("no settings")
             workspace = ProjectFolders(window)
             window_configs = self._configs.for_window(window)
-            window_documents = self._documents.for_window(window, workspace, window_configs)
-            diagnostics_ui = self._diagnostics_ui_class(window,
-                                                        window_documents) if self._diagnostics_ui_class else None
+            diagnostics_ui = self._diagnostics_ui_class(window) if self._diagnostics_ui_class else None
             state = WindowManager(
                 window=window,
                 workspace=workspace,
                 settings=self._settings,
                 configs=window_configs,
-                documents=window_documents,
                 diagnostics=DiagnosticsStorage(diagnostics_ui),
                 session_starter=self._session_starter,
                 sublime=self._sublime,

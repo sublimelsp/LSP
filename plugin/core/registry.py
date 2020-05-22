@@ -6,9 +6,9 @@ from .handlers import LanguageHandler
 from .logging import debug
 from .rpc import Client
 from .sessions import Session
-from .settings import settings, client_configs
+from .settings import client_configs
 from .types import ClientConfig, ClientStates, WindowLike, view2scope
-from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
+from .windows import WindowRegistry, WindowManager
 from .typing import Optional, Callable, Dict, Any, Generator
 
 
@@ -36,6 +36,14 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
 
     def has_manager(self) -> bool:
         return self._manager is not None
+
+    def purge_changes(self) -> None:
+        # Supermassive hack that will go away later.
+        listeners = sublime_plugin.view_event_listeners.get(self.view.id(), [])
+        for listener in listeners:
+            if listener.__class__.__name__ == 'DocumentSyncListener':
+                listener.purge_changes()
+                return
 
 
 class LanguageHandlerDispatcher(object):
@@ -118,9 +126,8 @@ def unload_sessions(window: sublime.Window) -> None:
 
 configs = ConfigManager(client_configs.all)
 client_configs.set_listener(configs.update)
-documents = DocumentHandlerFactory(sublime, settings)
 handlers_dispatcher = LanguageHandlerDispatcher()
-windows = WindowRegistry(configs, documents, start_window_config, sublime, handlers_dispatcher)
+windows = WindowRegistry(configs, start_window_config, sublime, handlers_dispatcher)
 
 
 def configurations_for_view(view: sublime.View) -> Generator[ClientConfig, None, None]:

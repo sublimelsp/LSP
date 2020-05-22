@@ -1,7 +1,10 @@
-import sublime
-
 from .registry import LSPViewEventListener
-from .typing import Optional, Iterable
+from .session_view import PendingBuffer
+from .session_view import SessionView
+from .sessions import Session
+from .settings import client_configs
+from .typing import Optional, Dict, Generator, Iterable
+import sublime
 
 
 SUBLIME_WORD_MASK = 515
@@ -38,6 +41,7 @@ def is_transient_view(view: sublime.View) -> bool:
 
 
 class DocumentSyncListener(LSPViewEventListener):
+
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:
         return cls.has_supported_syntax(view_settings)
@@ -46,29 +50,75 @@ class DocumentSyncListener(LSPViewEventListener):
     def applies_to_primary_view_only(cls) -> bool:
         return False
 
-    def on_load_async(self) -> None:
+    def __init__(self, view: sublime.View) -> None:
+        super().__init__(view)
+        self._registered = False
+        self._session_views = {}  # type: Dict[str, SessionView]
+        self._pending_buffer = None  # type: Optional[PendingBuffer]
+
+    def __del__(self) -> None:
+        self.view.settings().erase("lsp_active")
+
+    def on_session_initialized(self, session: Session) -> None:
+        self._session_views[session.config.name] = SessionView(self, session)
+
+    def on_session_shutdown(self, session: Session) -> None:
+        self._session_views.pop(session.config.name, None)
+
+    def session_views(self) -> Generator[SessionView, None, None]:
+        yield from self._session_views.values()
+
+    def on_load(self) -> None:
         # skip transient views:
         if not is_transient_view(self.view):
-            self.manager.activate_view(self.view)
-            self.manager.documents.handle_did_open(self.view)
+            self._register()
 
-    def on_activated_async(self) -> None:
+    def on_activated(self) -> None:
         if self.view.file_name() and not is_transient_view(self.view):
-            self.manager.activate_view(self.view)
-            self.manager.documents.handle_did_open(self.view)
+            self._register()
 
     def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
-        if self.view.file_name():
-            self.manager.documents.handle_did_change(self.view, changes)
+        change_count = self.view.change_count()
+        if self._pending_buffer is None:
+            self._pending_buffer = PendingBuffer(change_count, changes)
+        else:
+            self._pending_buffer.update(change_count, changes)
+        sublime.set_timeout(lambda: self._purge_did_change(change_count), 500)
 
     def on_pre_save(self) -> None:
         if self.view.file_name():
-            self.manager.documents.handle_will_save(self.view, reason=1)  # TextDocumentSaveReason.Manual
+            for sv in self.session_views():
+                sv.will_save(reason=1)  # TextDocumentSaveReason.Manual
 
-    def on_post_save_async(self) -> None:
-        self.manager.documents.handle_did_save(self.view)
+    def on_post_save(self) -> None:
+        self.purge_changes()
+        for sv in self.session_views():
+            sv.did_save()
 
     def on_close(self) -> None:
         if self.view.file_name() and self.view.is_primary() and self.has_manager():
-            self.manager.handle_view_closed(self.view)
-            self.manager.documents.handle_did_close(self.view)
+            self._session_views.clear()
+            if self._registered:
+                self.manager.unregister_listener(self)
+
+    def _purge_did_change(self, change_count: int) -> None:
+        if change_count == self.view.change_count():
+            self.purge_changes()
+
+    def purge_changes(self) -> None:
+        if self._pending_buffer is not None:
+            for sv in self.session_views():
+                sv.did_change(self._pending_buffer.changes)
+            self._pending_buffer = None
+
+    def _register(self) -> None:
+        if not self._registered:
+            self.manager.register_listener(self)
+            self.view.settings().set("lsp_active", True)
+            self._registered = True
+
+    def __hash__(self) -> int:
+        return hash(id(self))
+
+    def __str__(self) -> str:
+        return str(self.view.id())

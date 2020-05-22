@@ -95,7 +95,7 @@ class SignatureHelpListener(LSPViewEventListener):
         self.requested_position = point
         client = client_from_session(session_for_view(self.view, 'signatureHelpProvider', point))
         if client:
-            self.manager.documents.purge_changes(self.view)
+            self.purge_changes()
             document_position = text_document_position_params(self.view, point)
             client.send_request(
                 Request.signatureHelp(document_position),

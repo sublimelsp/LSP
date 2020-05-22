@@ -7,12 +7,14 @@ from .protocol import WorkspaceFolder, Request, Notification
 from .rpc import Client, attach_stdio_client, Response
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
 from .types import ClientConfig, ClientStates, Settings
-from .typing import Callable, Dict, Any, Optional, List, Tuple
+from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator, Protocol
 from .views import COMPLETION_KINDS
 from .views import did_change_configuration
 from .views import SYMBOL_KINDS
 from .workspace import is_subpath_of
+from weakref import WeakSet
 import os
+import sublime
 
 
 def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: ClientConfig) -> dict:
@@ -194,6 +196,19 @@ def diff_folders(old: List[WorkspaceFolder],
     return added, removed
 
 
+class SessionViewProtocol(Protocol):
+
+    session = None  # type: Session
+    view = None  # type: sublime.View
+    listener = None  # type: Any
+
+    def on_diagnostics(self, diagnostics: Any) -> None:
+        ...
+
+    def __hash__(self) -> int:
+        ...
+
+
 class Session(object):
     def __init__(self,
                  config: ClientConfig,
@@ -209,9 +224,19 @@ class Session(object):
         self.capabilities = DottedDict()
         self.client = client
         self._workspace_folders = workspace_folders
+        self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
         if on_pre_initialize:
             on_pre_initialize(self)
         self._initialize()
+
+    def register_session_view(self, sv: SessionViewProtocol) -> None:
+        self._session_views.add(sv)
+
+    def unregister_session_view(self, sv: SessionViewProtocol) -> None:
+        self._session_views.discard(sv)
+
+    def session_views(self) -> Generator[SessionViewProtocol, None, None]:
+        yield from self._session_views
 
     def has_capability(self, capability: str) -> bool:
         value = self.get_capability(capability)
@@ -264,16 +289,15 @@ class Session(object):
         return self.has_capability("didChangeConfigurationProvider")
 
     def handles_path(self, file_path: Optional[str]) -> bool:
+        if self._supports_workspace_folders():
+            return True
         if not file_path:
             return False
-
         if not self._workspace_folders:
             return True
-
         for folder in self._workspace_folders:
             if is_subpath_of(file_path, folder.path):
                 return True
-
         return False
 
     def update_folders(self, folders: List[WorkspaceFolder]) -> None:

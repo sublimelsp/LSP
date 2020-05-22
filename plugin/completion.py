@@ -257,14 +257,16 @@ class CompletionHandler(LSPViewEventListener):
                 kind=kind,
                 details=st_details)
         else:
-            # A snippet completion suffices for insertText with no additionalTextEdits and no command.
-            snippet = item.get("insertText") or item["label"]
+            # A plain old completion suffices for insertText with no additionalTextEdits and no command.
             if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.PlainText:
-                snippet = snippet.replace('$', '\\$')
-            completion = sublime.CompletionItem.snippet_completion(
+                st_format = sublime.COMPLETION_FORMAT_TEXT
+            else:
+                st_format = sublime.COMPLETION_FORMAT_SNIPPET
+            completion = sublime.CompletionItem(
                 trigger=st_trigger,
-                snippet=snippet,
                 annotation=st_annotation,
+                completion=item.get("insertText") or item["label"],
+                completion_format=st_format,
                 kind=kind,
                 details=st_details)
 

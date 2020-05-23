@@ -1,6 +1,7 @@
 from .logging import exception_log, debug
 from .types import ClientConfig
 from .typing import Dict, Any, Optional, IO, Protocol
+from .views import extract_variables
 from abc import ABCMeta, abstractmethod
 from contextlib import closing
 from queue import Queue
@@ -176,21 +177,19 @@ class JsonRpcTransport(Transport):
 
 
 def create_transport(config: ClientConfig, cwd: str, window: sublime.Window,
-                     callback_object: TransportCallbacks) -> JsonRpcTransport:
-    variables = window.extract_variables()
+                     callback_object: TransportCallbacks, variables: Dict[str, str]) -> JsonRpcTransport:
     tcp_port = None  # type: Optional[int]
     if config.tcp_port is not None:
         tcp_port = _find_free_port() if config.tcp_port == 0 else config.tcp_port
     if tcp_port is not None:
         variables["port"] = str(tcp_port)
     args = sublime.expand_variables(config.binary_args, variables)
-    args = list(map(os.path.expanduser, args))
     if tcp_port is not None:
         # DEPRECATED -- replace {port} with $port or ${port} in your client config
         args = [a.replace('{port}', str(tcp_port)) for a in args]
     env = os.environ.copy()
     for var, value in config.env.items():
-        env[var] = os.path.expandvars(sublime.expand_variables(value, variables))
+        env[var] = sublime.expand_variables(value, variables)
     if tcp_port is not None:
         stdout = subprocess.DEVNULL
         stdin = subprocess.DEVNULL

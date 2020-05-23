@@ -5,8 +5,10 @@ from .url import filename_to_uri
 from .url import uri_to_filename
 import linecache
 import mdpopups
+import os
 import re
 import sublime
+import tempfile
 
 SYMBOL_KINDS = [
     # Display Name     ST Scope
@@ -85,6 +87,14 @@ def get_line(window: Optional[sublime.Window], file_name: str, row: int) -> str:
         # get from linecache
         # linecache row is not 0 based, so we increment it by 1 to get the correct line.
         return linecache.getline(file_name, row + 1).strip()
+
+
+def extract_variables(window: sublime.Window) -> Dict[str, str]:
+    variables = window.extract_variables()
+    variables["cache_path"] = sublime.cache_path()
+    variables["temp_dir"] = tempfile.gettempdir()
+    variables["home"] = os.path.expanduser('~')
+    return variables
 
 
 def point_to_offset(point: Point, view: sublime.View) -> int:

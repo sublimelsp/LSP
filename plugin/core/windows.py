@@ -17,6 +17,7 @@ from .types import ViewLike
 from .types import WindowLike
 from .typing import Optional, List, Callable, Dict, Any, Protocol, Set, Iterable, Generator
 from .views import did_change, did_close, did_open, did_save, will_save
+from .views import extract_variables
 from .workspace import disable_in_project
 from .workspace import enable_in_project
 from .workspace import get_workspace_folders
@@ -463,15 +464,13 @@ class WindowManager(Manager):
         if not self._can_start_config(config.name, file_path):
             debug('Already starting on this window:', config.name)
             return
-        self._window.status_message("Starting " + config.name + "...")
         try:
             workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
             plugin_class = get_plugin(config.name)
             if plugin_class is not None:
                 if plugin_class.needs_update_or_installation():
-                    # TODO: Run on separate thread somewhere
+                    self._window.status_message('Installing {} ...'.format(config.name))
                     plugin_class.install_or_update()
-                plugin_class.adjust_user_configuration(config)
                 # WindowLike vs. sublime.Window
                 cannot_start_reason = plugin_class.can_start(
                     self._window, initiating_view, workspace_folders, config)  # type: ignore
@@ -487,8 +486,16 @@ class WindowManager(Manager):
                 cwd = os.path.dirname(file_path)
             else:
                 cwd = tempfile.gettempdir()
+            variables = extract_variables(self._window)  # type: ignore
+            if plugin_class is not None:
+                additional_variables = plugin_class.additional_variables()
+                if isinstance(additional_variables, dict):
+                    variables.update(additional_variables)
             # WindowLike vs sublime.Window
-            session.initialize(create_transport(config, cwd, self._window, session))  # type: ignore
+            self._window.status_message("Starting {} ...".format(config.name))
+            transport = create_transport(config, cwd, self._window, session, variables)  # type: ignore
+            self._window.status_message("Initializing {} ...".format(config.name))
+            session.initialize(variables, transport)
             self._sessions.setdefault(config.name, []).append(session)
             debug("window {} added session {}".format(self._window.id(), config.name))
         except Exception as e:

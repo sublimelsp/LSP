@@ -6,7 +6,7 @@ from .protocol import WorkspaceFolder, Request, Notification, Response
 from .rpc import Client
 from .settings import client_configs
 from .transports import Transport
-from .types import ClientConfig, LanguageConfig, ClientStates, Settings
+from .types import ClientConfig, ClientStates, Settings
 from .typing import Dict, Any, Optional, List, Tuple, Generator, Type
 from .views import COMPLETION_KINDS
 from .views import did_change_configuration
@@ -73,7 +73,8 @@ class Manager(metaclass=ABCMeta):
         pass
 
 
-def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: ClientConfig) -> dict:
+def get_initialize_params(variables: Dict[str, str], workspace_folders: List[WorkspaceFolder],
+                          config: ClientConfig) -> dict:
     completion_kinds = list(range(1, len(COMPLETION_KINDS) + 1))
     symbol_kinds = list(range(1, len(SYMBOL_KINDS) + 1))
     first_folder = workspace_folders[0] if workspace_folders else None
@@ -198,7 +199,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
         "capabilities": capabilities
     }
     if config.init_options is not None:
-        params['initializationOptions'] = config.init_options
+        params['initializationOptions'] = sublime.expand_variables(config.init_options, variables)
     return params
 
 
@@ -255,10 +256,8 @@ def diff_folders(old: List[WorkspaceFolder],
 class AbstractPlugin(metaclass=ABCMeta):
     """
     Inherit from this class to handle non-standard requests and notifications.
-
     Given a request/notification, replace the non-alphabetic characters with an underscore, and prepend it with "m_".
     This will be the name of your method.
-
     For instance, to implement the non-standard eslint/openDoc request, define the Python method
 
         def m_eslint_openDoc(self, params, request_id):
@@ -273,68 +272,61 @@ class AbstractPlugin(metaclass=ABCMeta):
             pass
 
     To understand how this works, see the __getattr__ method of the Session class.
-
-    You must also implement at least the *classmethods* `name`, `languages` and `command`.
     """
 
     @classmethod
     @abstractmethod
     def name(cls) -> str:
         """
-        A human-friendly name
+        A human-friendly name. If your plugin is called "LSP-foobar", then this should return "foobar". If you also
+        have your settings file called "LSP-foobar.sublime-settings", then you don't even need to re-implement the
+        configuration method (see below).
         """
         raise NotImplementedError()
 
     @classmethod
-    @abstractmethod
-    def languages(cls) -> List[LanguageConfig]:
+    def configuration(cls) -> sublime.Settings:
         """
-        The languages that this plugin serves
+        The Settings object that defines the `command`, `languages`, and optionally the `initializationOptions`,
+        `settings`, `env` and `tcp_port`.
+
+        The `command`, `initializationOptions` and `env` are subject to template string substitution. The following
+        template strings are recognized:
+
+        $file
+        $file_base_name
+        $file_extension
+        $file_name
+        $file_path
+        $platform
+        $project
+        $project_base_name
+        $project_extension
+        $project_name
+        $project_path
+
+        These are just the values from window.extract_variables(). Additionally,
+
+        $cache_path   sublime.cache_path()
+        $temp_dir     tempfile.gettempdir()
+        $home         os.path.expanduser('~')
+        $port         A random free TCP-port on localhost in case `tcp_port` is set to 0. This string template can only
+                      be used in the `command`
+
+        The `command` and `env` are expanded upon starting the subprocess of the Session. The `initializationOptions`
+        are expanded upon doing the initialize request. `initializationOptions` does not expand $port.
+
+        When you're managing your own server binary, you would typically place it in sublime.cache_path(). So your
+        `command` should look like this: "command": ["$cache_path/LSP-foobar/server_binary", "--stdio"]
         """
-        raise NotImplementedError()
+        return sublime.load_settings('LSP-{}.sublime-settings'.format(cls.name()))
 
     @classmethod
-    @abstractmethod
-    def command(cls) -> List[str]:
+    def additional_variables(cls) -> Optional[Dict[str, str]]:
         """
-        The startup command for the language server process
-        """
-        raise NotImplementedError()
-
-    @classmethod
-    def tcp_port(cls) -> Optional[int]:
-        """
-        The TCP port used in case we're doing JSON-RPC over TCP
+        In addition to the above variables, add more variables here to be expanded.
         """
         return None
-
-    @classmethod
-    def experimental_capabilities(cls) -> Optional[Dict[str, Any]]:
-        """
-        Experimental capabilities for the initialize request
-        """
-        return None
-
-    @classmethod
-    def initialization_options(cls) -> Optional[Dict[str, Any]]:
-        """
-        initializationOptions for the initialize request
-        """
-        return None
-
-    @classmethod
-    def default_settings(cls) -> Optional[Dict[str, Any]]:
-        """
-        Settings for the workspace/didChangeConfiguration notification and the workspace/configuration request
-        """
-        return None
-
-    @classmethod
-    def env(cls) -> Dict[str, str]:
-        """
-        Extra environment variables for the process of the language server binary
-        """
-        return {}
 
     @classmethod
     def needs_update_or_installation(cls) -> bool:
@@ -350,10 +342,6 @@ class AbstractPlugin(metaclass=ABCMeta):
         Do the actual update/installation of the server binary. This runs in a separate thread, so don't spawn threads
         yourself here.
         """
-        pass
-
-    @classmethod
-    def adjust_user_configuration(cls, configuration: ClientConfig) -> None:
         pass
 
     @classmethod
@@ -387,23 +375,13 @@ class AbstractPlugin(metaclass=ABCMeta):
 _plugins = {}  # type: Dict[str, Type[AbstractPlugin]]
 
 
-def register_plugin(plugin: Type[AbstractPlugin], update_global_configs: bool = True) -> None:
+def register_plugin(plugin: Type[AbstractPlugin]) -> None:
     global _plugins
     try:
-        config = ClientConfig(
-            name=plugin.name(),
-            binary_args=plugin.command(),
-            languages=plugin.languages(),
-            tcp_port=plugin.tcp_port(),
-            enabled=True,  # A plugin config is enabled if and only if the plugin is enabled
-            init_options=plugin.initialization_options() or {},
-            settings=DottedDict(plugin.default_settings()),
-            env=plugin.env()
-        )
-        client_configs.add_external_config(config)
-        _plugins[config.name] = plugin
-        if update_global_configs:
-            client_configs.update_configs()
+        name = plugin.name()
+        client_configs.add_external_config(name, plugin.configuration())
+        _plugins[name] = plugin
+        client_configs.update_configs()
     except Exception as ex:
         exception_log("Failed to register plugin", ex)
 
@@ -527,9 +505,9 @@ class Session(Client):
         if self._supports_workspace_folders():
             self._workspace_folders = folders
 
-    def initialize(self, transport: Transport) -> None:
+    def initialize(self, variables: Dict[str, str], transport: Transport) -> None:
         self.transport = transport
-        params = get_initialize_params(self._workspace_folders, self.config)
+        params = get_initialize_params(variables, self._workspace_folders, self.config)
         self.send_request(Request.initialize(params), self._handle_initialize_result, lambda _: self.end())
 
     def call_manager(self, method: str, *args: Any) -> None:

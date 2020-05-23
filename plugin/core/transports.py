@@ -1,7 +1,6 @@
 from .logging import exception_log, debug
 from .types import ClientConfig
 from .typing import Dict, Any, Optional, IO, Protocol
-from .views import extract_variables
 from abc import ABCMeta, abstractmethod
 from contextlib import closing
 from queue import Queue

@@ -42,7 +42,7 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
         listeners = sublime_plugin.view_event_listeners.get(self.view.id(), [])
         for listener in listeners:
             if listener.__class__.__name__ == 'DocumentSyncListener':
-                listener.purge_changes()
+                listener.purge_changes()  # type: ignore
                 return
 
 

@@ -51,9 +51,8 @@ class SessionView:
                 self.session.client.send_notification(did_open(self.view, language_id))  # type: ignore
 
     def __del__(self) -> None:
-        notification = did_close(self.view)  # type: ignore
-        if self.session.client and self.session.should_notify_did_close():
-            self.session.client.send_notification(notification)
+        if self.session.client and not self.session.client.exiting and self.session.should_notify_did_close():
+            self.session.client.send_notification(did_close(self.view))  # type: ignore
         self.view.erase_status(self.status_key)
         settings = self.view.settings()  # type: sublime.Settings
         # TODO: Language ID must be UNIQUE!
@@ -64,7 +63,8 @@ class SessionView:
                 settings.set("lsp_language", languages)
             else:
                 settings.erase("lsp_language")
-        self.session.unregister_session_view(self)
+        if not self.session.client.exiting:
+            self.session.unregister_session_view(self)
 
     def did_change(self, changes: Iterable[sublime.TextChange]) -> None:
         sync_kind = self.session.text_sync_kind()

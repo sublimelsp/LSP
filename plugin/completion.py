@@ -3,7 +3,6 @@ import mdpopups
 import sublime
 import sublime_plugin
 import webbrowser
-from .core.documents import DocumentSyncListener
 from .core.edit import parse_text_edit
 from .core.protocol import Request, InsertTextFormat, Range, CompletionItemTag
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener

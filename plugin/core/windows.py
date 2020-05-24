@@ -13,7 +13,7 @@ from .types import Settings
 from .types import view2scope
 from .types import ViewLike
 from .types import WindowLike
-from .typing import Optional, List, Callable, Dict, Any, Protocol, Set, Iterable, Generator
+from .typing import Optional, List, Callable, Dict, Any, Deque, Protocol, Generator
 from .workspace import disable_in_project
 from .workspace import enable_in_project
 from .workspace import get_workspace_folders
@@ -24,7 +24,6 @@ from weakref import ref
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import sublime
-import threading
 
 
 class SublimeLike(Protocol):
@@ -103,7 +102,7 @@ class WindowManager(object):
         self._restarting = False
         self._is_closing = False
         self._workspace = workspace
-        self._pending_listeners = deque()  # type: deque[ViewListenerProtocol]
+        self._pending_listeners = deque()  # type: Deque[ViewListenerProtocol]
         self._listeners = WeakSet()  # type: WeakSet[ViewListenerProtocol]
         self._new_listener = None  # type: Optional[ViewListenerProtocol]
         self._new_session = None  # type: Optional[Session]

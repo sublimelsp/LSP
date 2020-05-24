@@ -4,7 +4,7 @@ import re
 import sublime
 import sublime_plugin
 
-from .core.diagnostics import DiagnosticsWalker, DiagnosticsUpdateWalk, DiagnosticsCursor, DocumentsState
+from .core.diagnostics import DiagnosticsWalker, DiagnosticsUpdateWalk, DiagnosticsCursor
 from .core.logging import debug
 from .core.panels import ensure_panel
 from .core.protocol import Diagnostic, DiagnosticSeverity, DiagnosticRelatedInformation, Point, Range

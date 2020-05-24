@@ -2,7 +2,6 @@ from .registry import LSPViewEventListener
 from .session_view import PendingBuffer
 from .session_view import SessionView
 from .sessions import Session
-from .settings import client_configs
 from .typing import Optional, Dict, Generator, Iterable
 import sublime
 
@@ -60,7 +59,8 @@ class DocumentSyncListener(LSPViewEventListener):
         self.view.settings().erase("lsp_active")
 
     def on_session_initialized(self, session: Session) -> None:
-        self._session_views[session.config.name] = SessionView(self, session)
+        if session.config.name not in self._session_views:
+            self._session_views[session.config.name] = SessionView(self, session)
 
     def on_session_shutdown(self, session: Session) -> None:
         self._session_views.pop(session.config.name, None)

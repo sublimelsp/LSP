@@ -25,11 +25,6 @@ class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
             config_name = self._items[index][0]
             client_configs.enable(config_name)
 
-            # start the server on the current window.
-            wm = windows.lookup(self.window)
-            sublime.set_timeout_async(lambda: wm.start_active_views(), 500)
-            self.window.status_message("{} enabled, starting server...".format(config_name))
-
 
 class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:

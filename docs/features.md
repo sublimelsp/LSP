@@ -27,6 +27,38 @@
 * Next/Previous Diagnostic From panel: `F4` / `shift+F4`
 * Workspace Symbol Search: via command Palette `LSP: workspace symbol`
 
+**Execute server commands**
+
+For LSP servers that can handle [workspace/executeCommand](https://microsoft.github.io/language-server-protocol/specification#workspace_executeCommand), you can make these commands available into the sublime palette by adding an entry to your existing `.sublime-commands` file or by creating a new one.
+
+Example:
+
+```json
+[
+  // ...
+  {
+    "caption": "Thread First",
+    "command": "lsp_execute",
+    "args": { 
+      "command_name": "thread-first",
+      "command_args": ["${file_uri}", 0, 0]
+    }
+  }
+]
+```
+Note: `command_args` is optional depending on the `workspace/executeCommand` that are supported by the LSP server.
+The following variables will be expanded, but only if they are top-level array items and not within nested arrays or objects:
+
+| Variable | Type | Description |
+| -------- | ---- | ----------- |
+| `"$file_uri"` or `"${file_uri}"` | string | File URI of the active view |
+| `"$selection"` or `"${selection}"` | string | Content of the (topmost) selection |
+| `"$offset"` or `"${offset}"` | int | Character offset of the (topmost) cursor position |
+| `"$selection_begin"` or `"${selection_begin}"` | int | Character offset of the begin of the (topmost) selection |
+| `"$selection_end"` or `"${selection_end}"` | int | Character offset of the end of the (topmost) selection |
+| `"$position"` or `"${position}"` | object | Mapping `{ 'line': int, 'character': int }` of the (topmost) cursor position, see [Position](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#position) |
+| `"$range"` or `"${range}` | object | Mapping with `'start'` and `'end'` positions of the (topmost) selection, see [Range](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#range) |
+
 **Overriding keybindings**
 
 Sublime's keybindings can be edited from the `Preferences: Key Bindings` command.
@@ -82,7 +114,7 @@ Add these settings to your Sublime settings, Syntax-specific settings and/or in 
 * `highlight_active_signature_parameter`: *highlight the active parameter of the currently active signature*
 * `document_highlight_style`: *document highlight style: "underline", "stippled", "squiggly" or ""*
 * `document_highlight_scopes`: *customize your sublime text scopes for document highlighting*
-* `diagnostics_gutter_marker` `"dot"` *gutter marker for code diagnostics: "dot", "circle", "bookmark", "cross" or ""*
+* `diagnostics_gutter_marker` `"dot"` *gutter marker for code diagnostics: "dot", "circle", "bookmark", "sign" or ""*
 * `show_code_actions_bulb` `false` *show a bulb in the gutter when code actions are available*
 * `show_symbol_action_links` `false` *show links to symbol actions like go to, references and rename in the hover popup*
 * `disabled_capabilities`, `[]` *Turn off client capabilities (features): "hover", "completion", "documentHighlight", "colorProvider", "signatureHelp"

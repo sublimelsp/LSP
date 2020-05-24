@@ -252,13 +252,23 @@ class DiagnosticViewRegions(DiagnosticsUpdateWalk):
         self._relevant_file = False
 
     def end(self) -> None:
-        for severity in range(DiagnosticSeverity.Error, DiagnosticSeverity.Hint + 1):
+        for severity in range(settings.show_diagnostics_severity_level + 1):
             region_name = "lsp_" + format_severity(severity)
             if severity in self._regions:
                 regions = self._regions[severity]
                 scope_name = diagnostic_severity_scopes[severity]
+                if settings.diagnostics_gutter_marker == "sign":
+                    diagnostic_severity_icons = {
+                        DiagnosticSeverity.Error: "Packages/LSP/icons/error.png",
+                        DiagnosticSeverity.Warning: "Packages/LSP/icons/warning.png",
+                        DiagnosticSeverity.Information: "Packages/LSP/icons/info.png",
+                        DiagnosticSeverity.Hint: "Packages/LSP/icons/info.png"
+                    }
+                    icon = diagnostic_severity_icons[severity]
+                else:
+                    icon = settings.diagnostics_gutter_marker
                 self._view.add_regions(
-                    region_name, regions, scope_name, settings.diagnostics_gutter_marker,
+                    region_name, regions, scope_name, icon,
                     UNDERLINE_FLAGS if settings.diagnostics_highlight_style == "underline" else BOX_FLAGS)
             else:
                 self._view.erase_regions(region_name)

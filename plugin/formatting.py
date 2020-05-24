@@ -31,10 +31,9 @@ class FormatOnSaveListener(LSPViewEventListener):
             return
 
         self._view_maybe_dirty = True
-        for session in sessions_for_view(self.view):
-            if session.should_request_will_save_wait_until():
-                self._purge_changes_if_needed()
-                self._will_save_wait_until(session)
+        for session in sessions_for_view(self.view, 'textDocumentSync.willSaveWaitUntil'):
+            self._purge_changes_if_needed()
+            self._will_save_wait_until(session)
 
         if self.view.settings().get("lsp_format_on_save"):
             self._purge_changes_if_needed()

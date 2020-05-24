@@ -18,6 +18,7 @@ import os
 def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: ClientConfig) -> dict:
     completion_kinds = list(range(1, len(COMPLETION_KINDS) + 1))
     symbol_kinds = list(range(1, len(SYMBOL_KINDS) + 1))
+    completion_tag_value_set = [v for k, v in CompletionItemTag.__dict__.items() if not k.startswith('_')]
     first_folder = workspace_folders[0] if workspace_folders else None
     capabilities = {
         "textDocument": {
@@ -37,7 +38,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
                     "snippetSupport": True,
                     "deprecatedSupport": True,
                     "tagSupport": {
-                        "valueSet": [CompletionItemTag.Deprecated]
+                        "valueSet": completion_tag_value_set
                     }
                 },
                 "completionItemKind": {

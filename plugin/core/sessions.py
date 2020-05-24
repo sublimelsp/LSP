@@ -1,7 +1,8 @@
 from .collections import DottedDict
 from .edit import parse_workspace_edit
-from .logging import debug, exception_log
-from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
+from .logging import debug
+from .logging import exception_log
+from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindIncremental, CompletionItemTag
 from .protocol import WorkspaceFolder, Request, Notification, Response
 from .rpc import Client
 from .settings import client_configs
@@ -77,6 +78,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                           config: ClientConfig) -> dict:
     completion_kinds = list(range(1, len(COMPLETION_KINDS) + 1))
     symbol_kinds = list(range(1, len(SYMBOL_KINDS) + 1))
+    completion_tag_value_set = [v for k, v in CompletionItemTag.__dict__.items() if not k.startswith('_')]
     first_folder = workspace_folders[0] if workspace_folders else None
     capabilities = {
         "textDocument": {
@@ -94,7 +96,10 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "dynamicRegistration": True,
                 "completionItem": {
                     "snippetSupport": True,
-                    "deprecatedSupport": True
+                    "deprecatedSupport": True,
+                    "tagSupport": {
+                        "valueSet": completion_tag_value_set
+                    }
                 },
                 "completionItemKind": {
                     "valueSet": completion_kinds

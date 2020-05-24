@@ -5,7 +5,7 @@ import sublime_plugin
 import webbrowser
 from .core.documents import DocumentSyncListener
 from .core.edit import parse_text_edit
-from .core.protocol import Request, InsertTextFormat, Range
+from .core.protocol import Request, InsertTextFormat, Range, CompletionItemTag
 from .core.registry import session_for_view, client_from_session, LSPViewEventListener
 from .core.settings import settings
 from .core.typing import Any, List, Dict, Optional, Union, Generator
@@ -134,6 +134,10 @@ def resolve(completion_list: sublime.CompletionList, items: List[sublime.Complet
     sublime.set_timeout(lambda: completion_list.set_completions(items, flags))
 
 
+def is_deprecated(item: dict) -> bool:
+    return item.get("deprecated", False) or CompletionItemTag.Deprecated in item.get("tags", [])
+
+
 class CompletionHandler(LSPViewEventListener):
     completions = []  # type: List[dict]
 
@@ -216,7 +220,7 @@ class CompletionHandler(LSPViewEventListener):
         else:
             kind = sublime.KIND_AMBIGUOUS
 
-        if item.get("deprecated", False):
+        if is_deprecated(item):
             kind = (kind[0], '⚠', "⚠ {} - Deprecated".format(kind[2]))
 
         lsp_label = item["label"]

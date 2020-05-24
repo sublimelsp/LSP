@@ -16,6 +16,10 @@ class DiagnosticSeverity(object):
     Hint = 4
 
 
+class CompletionItemTag:
+    Deprecated = 1
+
+
 class InsertTextFormat:
     PlainText = 1
     Snippet = 2

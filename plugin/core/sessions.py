@@ -2,7 +2,7 @@ from .. import __version__
 from .collections import DottedDict
 from .logging import debug
 from .process import start_server
-from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
+from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindIncremental, CompletionItemTag
 from .protocol import WorkspaceFolder, Request, Notification
 from .rpc import Client, attach_stdio_client, Response
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
@@ -35,7 +35,10 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
                 "dynamicRegistration": True,
                 "completionItem": {
                     "snippetSupport": True,
-                    "deprecatedSupport": True
+                    "deprecatedSupport": True,
+                    "tagSupport": {
+                        "valueSet": [CompletionItemTag.Deprecated]
+                    }
                 },
                 "completionItemKind": {
                     "valueSet": completion_kinds

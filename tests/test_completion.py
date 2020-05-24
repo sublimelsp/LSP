@@ -1,6 +1,7 @@
 from LSP.plugin.completion import CompletionHandler
 from LSP.plugin.core.registry import is_supported_view
 from LSP.plugin.core.registry import windows
+from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable
 from setup import TextDocumentTestCase, add_config, remove_config, text_config
 from unittesting import DeferrableTestCase
@@ -619,3 +620,25 @@ class QueryCompletionsTests(TextDocumentTestCase):
         # remove '"k"' is invalid. The code in completion.py must be able to handle this.
         yield self.create_commit_completion_closure()
         self.assertEqual(self.read_file(), '{"keys": []}')
+
+    def test_show_deprecated_flag(self) -> 'Generator':
+        item_with_deprecated_flag = {
+            "label": 'hello',
+            "kind": 2,  # Method
+            "deprecated": True
+        }
+        handler = CompletionHandler(self.view)
+        formatted_completion_item = handler.format_completion(item_with_deprecated_flag, 0, False)
+        self.assertEqual('⚠', formatted_completion_item.kind[1])
+        self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
+
+    def test_show_deprecated_tag(self) -> 'Generator':
+        item_with_deprecated_tags = {
+            "label": 'hello',
+            "kind": 2,  # Method
+            "tags": [CompletionItemTag.Deprecated]
+        }
+        handler = CompletionHandler(self.view)
+        formatted_completion_item = handler.format_completion(item_with_deprecated_tags, 0, False)
+        self.assertEqual('⚠', formatted_completion_item.kind[1])
+        self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])

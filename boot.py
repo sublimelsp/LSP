@@ -1,12 +1,11 @@
 import sublime
-from .plugin import __version__
 
-if __version__ <= (0, 11, 0) and int(sublime.version()) > 4000:
+if int(sublime.version()) > 4000:
     sublime.error_message(
-        """Installed version of LSP package is not compatible with Sublime Text 4.\n"""
-        """Please remove and re-install this package to receive ST4-compatible version."""
+        """The installed version of LSP package is not compatible with Sublime Text 4.\n"""
+        """Please remove and reinstall this package to receive version compatible with ST4.\n"""
+        """Remember to restart Sublime Text after.\n"""
     )
-
 
 # Please keep this list sorted (Edit -> Sort Lines)
 from .plugin.code_actions import LspCodeActionBulbListener

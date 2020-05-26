@@ -32,8 +32,7 @@ def plugin_loaded() -> None:
         sublime.error_message(
             """The currently installed version of LSP package is not compatible with Sublime Text 4. """
             """Please remove and reinstall this package to receive a version compatible with ST4. """
-            """Remember to restart Sublime Text after."""
-        )
+            """Remember to restart Sublime Text after.""")
 
 
 def plugin_unloaded() -> None:

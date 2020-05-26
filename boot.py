@@ -10,8 +10,8 @@ from .plugin.configuration import LspDisableLanguageServerInProjectCommand
 from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
 from .plugin.core.documents import DocumentSyncListener
-from .plugin.core.main import shutdown as plugin_unloaded
-from .plugin.core.main import startup
+from .plugin.core.main import plugin_loaded
+from .plugin.core.main import plugin_unloaded
 from .plugin.core.panels import LspClearPanelCommand
 from .plugin.core.panels import LspUpdatePanelCommand
 from .plugin.core.panels import LspUpdateServerPanelCommand
@@ -44,14 +44,3 @@ from .plugin.symbols import LspSelectionAddCommand
 from .plugin.symbols import LspSelectionClearCommand
 from .plugin.symbols import LspWorkspaceSymbolsCommand
 import sublime
-
-
-def plugin_loaded():
-    startup()
-
-    if int(sublime.version()) > 4000:
-        sublime.error_message(
-            """The currently installed version of LSP package is not compatible with Sublime Text 4. """
-            """Please remove and reinstall this package to receive a version compatible with ST4. """
-            """Remember to restart Sublime Text after."""
-        )

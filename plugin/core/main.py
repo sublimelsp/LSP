@@ -4,28 +4,111 @@ import sublime_plugin
 from ..color import remove_color_boxes
 from ..diagnostics import DiagnosticsPresenter
 from ..highlights import remove_highlights
+from .handlers import LanguageHandler
 from .logging import set_debug_logging, set_exception_logging
 from .panels import destroy_output_panels, ensure_panel, PanelName
 from .popups import popups
+from .protocol import WorkspaceFolder
 from .registry import windows, unload_sessions
+from .rpc import method2attr
 from .sessions import AbstractPlugin
 from .sessions import register_plugin
+from .sessions import Session
 from .settings import settings, load_settings, unload_settings
 from .transports import kill_all_subprocesses
-from .typing import Optional, List, Type
+from .types import ClientConfig
+from .typing import Optional, List, Type, Callable, Dict
+import weakref
 
 
 def ensure_server_panel(window: sublime.Window) -> Optional[sublime.View]:
     return ensure_panel(window, PanelName.LanguageServers, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
 
 
-def get_final_subclasses(derived: List[Type], results: List[Type]) -> None:
+def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:
+    """
+    This function should be removed: https://github.com/sublimelsp/LSP/issues/899
+    """
     for d in derived:
         d_subclasses = d.__subclasses__()
         if len(d_subclasses) > 0:
-            get_final_subclasses(d_subclasses, results)
+            _get_final_subclasses(d_subclasses, results)
         else:
             results.append(d)
+
+
+def _forcefully_register_plugins() -> None:
+    """
+    This function should be removed: https://github.com/sublimelsp/LSP/issues/899
+    """
+    plugin_classes = []  # type: List[Type[AbstractPlugin]]
+    _get_final_subclasses(AbstractPlugin.__subclasses__(), plugin_classes)
+    for plugin_class in plugin_classes:
+        register_plugin(plugin_class)
+    language_handler_classes = []  # type: List[Type[LanguageHandler]]
+    _get_final_subclasses(LanguageHandler.__subclasses__(), language_handler_classes)
+    for language_handler_class in language_handler_classes:
+        # Create an ephemeral plugin that stores an instance of the LanguageHandler as a class instance. Custom requests
+        # and notifications will work.
+        class LanguageHandlerTransition(AbstractPlugin):
+
+            handler = language_handler_class()
+            has_regular_name = False
+
+            @classmethod
+            def name(cls) -> str:
+                n = cls.handler.name  # type: ignore
+                if n.lower().startswith('lsp-'):
+                    cls.has_regular_name = True
+                    return n[len('lsp-'):]
+                return n
+
+            @classmethod
+            def configuration(cls) -> sublime.Settings:
+                if cls.has_regular_name:
+                    settings_filename = "LSP-{}.sublime-settings".format(cls.name())
+                else:
+                    # e.g. "metals-sublime.sublime-settings"
+                    settings_filename = "{}.sublime-settings".format(cls.name())
+                settings = sublime.load_settings(settings_filename)
+                cfg = cls.handler.config  # type: ignore
+                settings.set("command", cfg.binary_args)
+                settings.set("settings", cfg.settings.get(None))
+                settings.set("initializationOptions", cfg.init_options)
+                langs = []  # type: List[Dict[str, str]]
+                for language in cfg.languages:
+                    lang = {
+                        "languageId": language.id,
+                        "document_selector": language.document_selector or "source.{}".format(language.id),
+                        "feature_selector": language.feature_selector
+                    }
+                    if not lang["feature_selector"]:
+                        lang["feature_selector"] = lang["document_selector"]
+                    print(lang)
+                    langs.append(lang)
+                settings.set("languages", langs)
+                return settings
+
+            @classmethod
+            def can_start(cls, window: sublime.Window, initiating_view: sublime.View,
+                          workspace_folders: List[WorkspaceFolder], configuration: ClientConfig) -> Optional[str]:
+                if hasattr(cls.handler, 'on_start'):
+                    if not cls.handler.on_start(window):  # type: ignore
+                        return "{} cannot start".format(cls.name())
+                return None
+
+            def __init__(self, weaksession: 'weakref.ref[Session]') -> None:
+                super().__init__(weaksession)
+                if hasattr(self.handler, 'on_initialized'):
+                    self.handler.on_initialized(self)  # type: ignore
+
+            def on_notification(self, method: str, handler: Callable) -> None:
+                setattr(self, method2attr(method), handler)
+
+            def on_request(self, method: str, handler: Callable) -> None:
+                setattr(self, method2attr(method), handler)
+
+        register_plugin(LanguageHandlerTransition)
 
 
 def startup() -> None:
@@ -33,14 +116,7 @@ def startup() -> None:
     popups.load_css()
     set_debug_logging(settings.log_debug)
     set_exception_logging(True)
-    final_subclasses = []  # type: List[Type[AbstractPlugin]]
-    get_final_subclasses(AbstractPlugin.__subclasses__(), final_subclasses)
-    for plugin_class in final_subclasses:
-        # Unfortunately we need to do this ourselves instead of helper packages registering themselves in plugin_loaded
-        # and unregistering themselves in plugin_unloaded. This is because this base LSP package is loaded before
-        # the helper packages. If the helper packages were loaded before this package, we would not have to do this.
-        # Perhaps we can come up with a scheme to load the helper packages before this package?
-        register_plugin(plugin_class)
+    _forcefully_register_plugins()  # Remove this function: https://github.com/sublimelsp/LSP/issues/899
     windows.set_diagnostics_ui(DiagnosticsPresenter)
     windows.set_server_panel_factory(ensure_server_panel)
     windows.set_settings_factory(settings)

@@ -38,13 +38,15 @@ class SessionTest(unittest.TestCase):
     def test_experimental_capabilities(self) -> None:
         wf = WorkspaceFolder.from_path("/foo/bar/baz")
         params = get_initialize_params(
-            [wf], ClientConfig(name="test", binary_args=[""], languages=[], tcp_port=None,
-                               experimental_capabilities=None))
+            {},
+            [wf],
+            ClientConfig(name="test", binary_args=[""], languages=[], tcp_port=None, experimental_capabilities=None))
         self.assertNotIn("experimental", params["capabilities"])
 
         params = get_initialize_params(
-            [wf], ClientConfig(name="test", binary_args=[""], languages=[], tcp_port=None,
-                               experimental_capabilities={}))
+            {},
+            [wf],
+            ClientConfig(name="test", binary_args=[""], languages=[], tcp_port=None, experimental_capabilities={}))
         self.assertIn("experimental", params["capabilities"])
         self.assertEqual(params["capabilities"]["experimental"], {})
 
@@ -60,21 +62,22 @@ class SessionTest(unittest.TestCase):
             tcp_port=None,
             experimental_capabilities=experimental_capabilities
         )
-        params = get_initialize_params([wf], config)
+        params = get_initialize_params({}, [wf], config)
         self.assertIn("experimental", params["capabilities"])
         self.assertEqual(params["capabilities"]["experimental"], experimental_capabilities)
 
     def test_initialize_params(self) -> None:
         wf = WorkspaceFolder.from_path("/foo/bar/baz")
         params = get_initialize_params(
-            [wf], ClientConfig(name="test", binary_args=[""], languages=[], tcp_port=None, init_options=None))
+            {}, [wf], ClientConfig(name="test", binary_args=[""], languages=[], tcp_port=None, init_options=None))
         self.assertNotIn("initializationOptions", params)
         params = get_initialize_params(
-            [wf], ClientConfig(name="test", binary_args=[""], languages=[], tcp_port=None, init_options={}))
+            {}, [wf], ClientConfig(name="test", binary_args=[""], languages=[], tcp_port=None, init_options={}))
         self.assertIn("initializationOptions", params)
         self.assertEqual(params["initializationOptions"], {})
         params = get_initialize_params(
-            [wf], ClientConfig(name="test", binary_args=[""], languages=[], tcp_port=None, init_options={"foo": "bar"}))
+            {}, [wf], ClientConfig(
+                name="test", binary_args=[""], languages=[], tcp_port=None, init_options={"foo": "bar"}))
         self.assertIn("initializationOptions", params)
         self.assertEqual(params["initializationOptions"], {"foo": "bar"})
 

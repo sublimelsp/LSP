@@ -175,7 +175,7 @@ class JsonRpcTransport(Transport):
         self._send_queue.put_nowait(None)
 
 
-def create_transport(config: ClientConfig, cwd: str, window: sublime.Window,
+def create_transport(config: ClientConfig, cwd: Optional[str], window: sublime.Window,
                      callback_object: TransportCallbacks, variables: Dict[str, str]) -> JsonRpcTransport:
     tcp_port = None  # type: Optional[int]
     if config.tcp_port is not None:
@@ -212,7 +212,7 @@ def create_transport(config: ClientConfig, cwd: str, window: sublime.Window,
                     break
     else:
         startupinfo = None
-    debug("starting {} in {}".format(args, cwd))
+    debug("starting {} in {}".format(args, cwd if cwd else os.getcwd()))
     process = subprocess.Popen(
         args=args,
         stdin=stdin,

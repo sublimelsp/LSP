@@ -480,12 +480,7 @@ class WindowManager(Manager):
             session = Session(self, self._settings, workspace_folders, config, plugin_class)
             if self.server_panel_factory:
                 session.logger.sink = self._payload_log_sink
-            if workspace_folders:
-                cwd = workspace_folders[0].path
-            elif file_path:
-                cwd = os.path.dirname(file_path)
-            else:
-                cwd = tempfile.gettempdir()
+            cwd = workspace_folders[0].path if workspace_folders else None
             variables = extract_variables(self._window)  # type: ignore
             if plugin_class is not None:
                 additional_variables = plugin_class.additional_variables()

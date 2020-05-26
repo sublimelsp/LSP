@@ -8,6 +8,7 @@ from .handlers import LanguageHandler
 from .logging import set_debug_logging, set_exception_logging
 from .panels import destroy_output_panels, ensure_panel, PanelName
 from .popups import popups
+from .protocol import Response
 from .protocol import WorkspaceFolder
 from .registry import windows, unload_sessions
 from .rpc import method2attr
@@ -107,6 +108,11 @@ def _forcefully_register_plugins() -> None:
 
             def on_request(self, method: str, handler: Callable) -> None:
                 setattr(self, method2attr(method), handler)
+
+            def send_response(self, response: Response) -> None:
+                session = self.weaksession()
+                if session:
+                    session.send_response(response)
 
         register_plugin(LanguageHandlerTransition)
 

@@ -25,9 +25,7 @@ from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
 from weakref import ref
 from weakref import WeakValueDictionary
-import os
 import sublime
-import tempfile
 import threading
 
 

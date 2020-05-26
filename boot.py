@@ -10,8 +10,8 @@ from .plugin.configuration import LspDisableLanguageServerInProjectCommand
 from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
 from .plugin.core.documents import DocumentSyncListener
-from .plugin.core.main import shutdown as plugin_unloaded
-from .plugin.core.main import startup as plugin_loaded
+from .plugin.core.main import plugin_loaded
+from .plugin.core.main import plugin_unloaded
 from .plugin.core.panels import LspClearPanelCommand
 from .plugin.core.panels import LspUpdatePanelCommand
 from .plugin.core.panels import LspUpdateServerPanelCommand
@@ -43,3 +43,4 @@ from .plugin.symbols import LspDocumentSymbolsCommand
 from .plugin.symbols import LspSelectionAddCommand
 from .plugin.symbols import LspSelectionClearCommand
 from .plugin.symbols import LspWorkspaceSymbolsCommand
+import sublime

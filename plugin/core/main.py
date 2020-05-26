@@ -15,7 +15,7 @@ def ensure_server_panel(window: sublime.Window) -> Optional[sublime.View]:
     return ensure_panel(window, PanelName.LanguageServers, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
 
 
-def startup() -> None:
+def plugin_loaded() -> None:
     load_settings()
     popups.load_css()
     set_debug_logging(settings.log_debug)
@@ -28,9 +28,14 @@ def startup() -> None:
     window = sublime.active_window()
     if window:
         windows.lookup(window).start_active_views()
+    if int(sublime.version()) > 4000:
+        sublime.error_message(
+            """The currently installed version of LSP package is not compatible with Sublime Text 4. """
+            """Please remove and reinstall this package to receive a version compatible with ST4. """
+            """Remember to restart Sublime Text after.""")
 
 
-def shutdown() -> None:
+def plugin_unloaded() -> None:
     # Also needs to handle package being disabled or removed
     # https://github.com/sublimelsp/LSP/issues/375
     unload_settings()

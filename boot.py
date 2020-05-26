@@ -2,9 +2,9 @@ import sublime
 
 if int(sublime.version()) > 4000:
     sublime.error_message(
-        """The installed version of LSP package is not compatible with Sublime Text 4.\n"""
-        """Please remove and reinstall this package to receive version compatible with ST4.\n"""
-        """Remember to restart Sublime Text after.\n"""
+        """The currently installed version of LSP package is not compatible with Sublime Text 4. """
+        """Please remove and reinstall this package to receive a version compatible with ST4. """
+        """Remember to restart Sublime Text after."""
     )
 
 # Please keep this list sorted (Edit -> Sort Lines)

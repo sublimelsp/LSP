@@ -94,7 +94,7 @@ class ClientConfigs(object):
         self._listener = None  # type: Optional[Callable]
         self._supported_syntaxes_cache = dict()  # type: Dict[str, bool]
 
-    def update(self, settings_obj: sublime.Settings, also_update_configs=False) -> None:
+    def update(self, settings_obj: sublime.Settings, also_update_configs: bool = False) -> None:
         self._default_settings = read_dict_setting(settings_obj, "default_clients", {})
         self._global_settings = read_dict_setting(settings_obj, "clients", {})
         if also_update_configs:
@@ -189,8 +189,9 @@ def load_settings() -> None:
     update_settings(settings, loaded_settings_obj)
     client_configs.update(loaded_settings_obj, also_update_configs=False)
     loaded_settings_obj.add_on_change("_on_new_settings", lambda: update_settings(settings, loaded_settings_obj))
-    loaded_settings_obj.add_on_change("_on_new_client_settings",
-        lambda: client_configs.update(loaded_settings_ob, also_update_configs=True))
+    loaded_settings_obj.add_on_change(
+        "_on_new_client_settings",
+        lambda: client_configs.update(loaded_settings_obj, also_update_configs=True))
 
 
 def unload_settings() -> None:

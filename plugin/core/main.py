@@ -15,6 +15,7 @@ from .rpc import method2attr
 from .sessions import AbstractPlugin
 from .sessions import register_plugin
 from .sessions import Session
+from .settings import client_configs
 from .settings import settings, load_settings, unload_settings
 from .transports import kill_all_subprocesses
 from .types import ClientConfig
@@ -85,7 +86,6 @@ def _forcefully_register_plugins() -> None:
                     }
                     if not lang["feature_selector"]:
                         lang["feature_selector"] = lang["document_selector"]
-                    print(lang)
                     langs.append(lang)
                 settings.set("languages", langs)
                 return settings
@@ -123,6 +123,7 @@ def startup() -> None:
     set_debug_logging(settings.log_debug)
     set_exception_logging(True)
     _forcefully_register_plugins()  # Remove this function: https://github.com/sublimelsp/LSP/issues/899
+    client_configs.update_configs()
     windows.set_diagnostics_ui(DiagnosticsPresenter)
     windows.set_server_panel_factory(ensure_server_panel)
     windows.set_settings_factory(settings)

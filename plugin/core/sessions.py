@@ -386,7 +386,6 @@ def register_plugin(plugin: Type[AbstractPlugin]) -> None:
         name = plugin.name()
         client_configs.add_external_config(name, plugin.configuration())
         _plugins[name] = plugin
-        client_configs.update_configs()
     except Exception as ex:
         exception_log("Failed to register plugin", ex)
 

@@ -183,6 +183,7 @@ def create_transport(config: ClientConfig, cwd: Optional[str], window: sublime.W
     if tcp_port is not None:
         variables["port"] = str(tcp_port)
     args = sublime.expand_variables(config.binary_args, variables)
+    args = [os.path.expanduser(arg) for arg in args]
     if tcp_port is not None:
         # DEPRECATED -- replace {port} with $port or ${port} in your client config
         args = [a.replace('{port}', str(tcp_port)) for a in args]

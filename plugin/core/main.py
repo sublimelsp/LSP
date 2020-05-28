@@ -55,38 +55,28 @@ def _forcefully_register_plugins() -> None:
         class LanguageHandlerTransition(AbstractPlugin):
 
             handler = language_handler_class()
-            has_regular_name = False
 
             @classmethod
             def name(cls) -> str:
-                n = cls.handler.name  # type: ignore
-                if n.lower().startswith('lsp-'):
-                    cls.has_regular_name = True
-                    return n[len('lsp-'):]
-                return n
+                return cls.handler.name  # type: ignore
 
             @classmethod
             def configuration(cls) -> sublime.Settings:
-                if cls.has_regular_name:
-                    settings_filename = "LSP-{}.sublime-settings".format(cls.name())
-                else:
-                    # e.g. "metals-sublime.sublime-settings"
-                    settings_filename = "{}.sublime-settings".format(cls.name())
-                settings = sublime.load_settings(settings_filename)
+                file_base_name = cls.name()
+                if file_base_name.startswith("lsp-"):
+                    file_base_name = "LSP-" + file_base_name[len("lsp-"):]
+                settings = sublime.load_settings("{}.sublime-settings".format(file_base_name))
                 cfg = cls.handler.config  # type: ignore
                 settings.set("command", cfg.binary_args)
                 settings.set("settings", cfg.settings.get(None))
                 settings.set("initializationOptions", cfg.init_options)
                 langs = []  # type: List[Dict[str, str]]
                 for language in cfg.languages:
-                    lang = {
+                    langs.append({
                         "languageId": language.id,
-                        "document_selector": language.document_selector or "source.{}".format(language.id),
+                        "document_selector": language.document_selector,
                         "feature_selector": language.feature_selector
-                    }
-                    if not lang["feature_selector"]:
-                        lang["feature_selector"] = lang["document_selector"]
-                    langs.append(lang)
+                    })
                 settings.set("languages", langs)
                 return settings
 

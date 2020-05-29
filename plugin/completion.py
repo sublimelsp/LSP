@@ -58,7 +58,7 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
     def do_resolve(self, item: dict) -> None:
         session = session_for_view(self.view, 'completionProvider.resolveProvider')
         if session:
-            session.client.send_request(
+            session.send_request(
                 Request.resolveCompletionItem(item),
                 lambda res: self.handle_resolve_response(res))
 

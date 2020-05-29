@@ -27,7 +27,9 @@ class DottedDictTests(TestCase):
     def test_remove(self) -> None:
         d = DottedDict()
         d.set("foo", "asdf")
+        self.assertIn("foo", d)
         d.remove("foo")
+        self.assertNotIn("foo", d)
         self.assertIsNone(d.get("foo"))
         d.set("foo.bar", {"baz": "qux"})
         self.verify(d, "foo.bar", {"baz": "qux"})

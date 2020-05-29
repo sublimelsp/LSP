@@ -80,6 +80,10 @@ class DottedDict:
         """
         return bool(self._d)
 
+    def __contains__(self, path: str) -> bool:
+        value = self.get(path)
+        return value is not None and value is not False
+
     def clear(self) -> None:
         """
         Remove all key-value pairs.

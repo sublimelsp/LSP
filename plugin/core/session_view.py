@@ -46,13 +46,14 @@ class SessionView:
         settings.set("lsp_language", languages)
         if self.session.should_notify_did_open():
             language_id = self.view.settings().get("lsp_language", "TODO")
-            if self.session.client:
-                # mypy: expected sublime.View, got ViewLike
-                self.session.client.send_notification(did_open(self.view, language_id))  # type: ignore
+            # mypy: expected sublime.View, got ViewLike
+            self.session.send_notification(did_open(self.view, language_id))  # type: ignore
 
     def __del__(self) -> None:
-        if self.session.client and not self.session.client.exiting and self.session.should_notify_did_close():
-            self.session.client.send_notification(did_close(self.view))  # type: ignore
+        if not self.session.exiting:
+            if self.session.should_notify_did_close():
+                self.session.send_notification(did_close(self.view))  # type: ignore
+            self.session.unregister_session_view(self)
         self.view.erase_status(self.status_key)
         settings = self.view.settings()  # type: sublime.Settings
         # TODO: Language ID must be UNIQUE!
@@ -63,8 +64,6 @@ class SessionView:
                 settings.set("lsp_language", languages)
             else:
                 settings.erase("lsp_language")
-        if not self.session.client.exiting:
-            self.session.unregister_session_view(self)
 
     def did_change(self, changes: Iterable[sublime.TextChange]) -> None:
         sync_kind = self.session.text_sync_kind()
@@ -72,20 +71,19 @@ class SessionView:
             return
         c = None if sync_kind == TextDocumentSyncKindFull else changes
         notification = did_change(self.view, c)  # type: ignore
-        self.session.client.send_notification(notification)
+        self.session.send_notification(notification)
         self._massive_hack_changed()
 
     def will_save(self, reason: int) -> None:
-        if self.session.client and self.session.should_notify_will_save():
+        if self.session.should_notify_will_save():
             # mypy: expected sublime.View, got ViewLike
-            self.session.client.send_notification(will_save(self.view, reason))  # type: ignore
+            self.session.send_notification(will_save(self.view, reason))  # type: ignore
 
     def did_save(self) -> None:
-        if self.session.client:
-            send_did_save, include_text = self.session.should_notify_did_save()
-            if send_did_save:
-                # mypy: expected sublime.View, got ViewLike
-                self.session.client.send_notification(did_save(self.view, include_text))  # type: ignore
+        send_did_save, include_text = self.session.should_notify_did_save()
+        if send_did_save:
+            # mypy: expected sublime.View, got ViewLike
+            self.session.send_notification(did_save(self.view, include_text))  # type: ignore
         self._massive_hack_saved()
 
     def on_diagnostics(self, diagnostics: Any) -> None:

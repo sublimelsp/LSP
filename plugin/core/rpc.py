@@ -1,28 +1,13 @@
 from .logging import debug, exception_log
 from .protocol import Request, Notification, Response, Error, ErrorCode
-from .transports import StdioTransport, Transport
+from .transports import Transport, TransportCallbacks
 from .types import Settings
 from .typing import Any, Dict, Tuple, Callable, Optional, List
 from abc import ABCMeta, abstractmethod
-from threading import Condition
-import json
-import subprocess
+from threading import Condition, Lock
+import sublime
 
-
-TCP_CONNECT_TIMEOUT = 5
 DEFAULT_SYNC_REQUEST_TIMEOUT = 1.0
-
-
-def format_request(payload: Dict[str, Any]) -> str:
-    """Converts the request into json"""
-    return json.dumps(payload, sort_keys=False, check_circular=False, separators=(',', ':'))
-
-
-def try_terminate_process(process: subprocess.Popen) -> None:
-    try:
-        process.terminate()
-    except ProcessLookupError:
-        pass  # process can be terminated already
 
 
 class Logger(metaclass=ABCMeta):
@@ -126,23 +111,29 @@ class SyncRequestStatus:
         self.__response_id = -1
 
 
-class Client(object):
-    def __init__(self, transport: Transport, settings: Settings) -> None:
-        self.transport = transport  # type: Optional[Transport]
-        self.transport.start(self.receive_payload, self.on_transport_closed)
+def print_to_status_bar(error: Dict[str, Any]) -> None:
+    sublime.status_message(error["message"])
+
+
+def method2attr(method: str) -> str:
+    # window/messageRequest -> m_window_messageRequest
+    # $/progress -> m___progress
+    # client/registerCapability -> m_client_registerCapability
+    return 'm_' + ''.join(map(lambda c: c if c.isalpha() else '_', method))
+
+
+class Client(TransportCallbacks):
+    def __init__(self, config_name: str, settings: Settings) -> None:
+        self.transport = None  # type: Optional[Transport]
         self.request_id = 0  # Our request IDs are always integers.
-        self.logger = SublimeLogger(settings, "server", debug)  # type: Logger
-        self._response_handlers = {}  # type: Dict[int, Tuple[Optional[Callable], Optional[Callable[[Any], None]]]]
-        self._request_handlers = {}  # type: Dict[str, Callable]
-        self._notification_handlers = {}  # type: Dict[str, Callable]
+        self.logger = SublimeLogger(settings, config_name, debug)
+        self._response_handlers = {}  # type: Dict[int, Tuple[Callable, Optional[Callable[[Any], None]]]]
         self._sync_request_result = SyncRequestStatus()
-        self._sync_request_cvar = Condition()
+        self._sync_request_lock = Lock()
+        self._sync_request_cvar = Condition(self._sync_request_lock)
         self._deferred_notifications = []  # type: List[Any]
         self._deferred_responses = []  # type: List[Tuple[Optional[Callable], Any]]
         self.exiting = False
-        self._crash_handler = None  # type: Optional[Callable]
-        self._transport_fail_handler = None  # type: Optional[Callable]
-        self._error_display_handler = lambda msg: debug(msg)
 
     def send_request(
             self,
@@ -150,18 +141,12 @@ class Client(object):
             handler: Callable[[Optional[Any]], None],
             error_handler: Optional[Callable[[Any], None]] = None,
     ) -> None:
-        if self.transport is not None:
-            with self._sync_request_cvar:
-                self.request_id += 1
-                request_id = self.request_id
-                self._response_handlers[request_id] = (handler, error_handler)
-            self.logger.outgoing_request(request_id, request.method, request.params, blocking=False)
-            self.send_payload(request.to_payload(request_id))
-        else:
-            debug('unable to send', request.method)
-            if error_handler is not None:
-                error_handler(None)
-            return None
+        with self._sync_request_cvar:
+            self.request_id += 1
+            request_id = self.request_id
+            self._response_handlers[request_id] = (handler, error_handler)
+        self.logger.outgoing_request(request_id, request.method, request.params, blocking=False)
+        self.send_payload(request.to_payload(request_id))
 
     def execute_request(
             self,
@@ -173,10 +158,6 @@ class Client(object):
         """
         Sends a request and waits for response up to timeout (default: 1 second), blocking the current thread.
         """
-        if self.transport is None:
-            debug('unable to send', request.method)
-            return None
-
         result = None  # type: Any
         error = None  # type: Optional[Dict[str, Any]]
         exception = None  # type: Optional[Exception]
@@ -187,6 +168,7 @@ class Client(object):
                 self.logger.outgoing_request(request_id, request.method, request.params, blocking=True)
                 self._sync_request_result.prepare(request_id)  # After this, is_requesting() returns True.
                 self.send_payload(request.to_payload(request_id))
+                self._response_handlers[request_id] = (handler, error_handler)
                 # We go to sleep. We wake up once another thread calls .notify() on this condition variable.
                 if not self._sync_request_cvar.wait_for(self._sync_request_result.is_ready, timeout):
                     error = {"code": ErrorCode.Timeout, "message": "timeout on {}".format(request.method)}
@@ -202,17 +184,16 @@ class Client(object):
             self.flush_deferred_responses()
         if exception is None:
             if error is not None:
-                if error_handler is None:
-                    self._error_display_handler(error["message"])
-                else:
-                    error_handler(error)
+                if not error_handler:
+                    error_handler = print_to_status_bar
+                error_handler(error)
             else:
                 handler(result)
 
     def flush_deferred_notifications(self) -> None:
         for payload in self._deferred_notifications:
             try:
-                handler = self._notification_handlers.get(payload["method"])
+                handler = self._get_handler(payload["method"])
                 if handler:
                     handler(payload["params"])
             except Exception as err:
@@ -229,11 +210,8 @@ class Client(object):
         self._deferred_responses.clear()
 
     def send_notification(self, notification: Notification) -> None:
-        if self.transport is not None:
-            self.logger.outgoing_notification(notification.method, notification.params)
-            self.send_payload(notification.to_payload())
-        else:
-            debug('unable to send', notification.method)
+        self.logger.outgoing_notification(notification.method, notification.params)
+        self.send_payload(notification.to_payload())
 
     def send_response(self, response: Response) -> None:
         self.logger.outgoing_response(response.request_id, response.result)
@@ -246,28 +224,16 @@ class Client(object):
     def exit(self) -> None:
         self.exiting = True
         self.send_notification(Notification.exit())
-
-    def set_crash_handler(self, handler: Callable) -> None:
-        self._crash_handler = handler
-
-    def set_error_display_handler(self, handler: Callable) -> None:
-        self._error_display_handler = handler
-
-    def set_transport_failure_handler(self, handler: Callable) -> None:
-        self._transport_fail_handler = handler
-
-    def handle_transport_failure(self) -> None:
-        debug('transport failed')
-        self.transport = None
-        if self._transport_fail_handler is not None:
-            self._transport_fail_handler()
-        if self._crash_handler is not None:
-            self._crash_handler()
+        try:
+            self.transport.close()  # type: ignore
+        except AttributeError:
+            pass
 
     def send_payload(self, payload: Dict[str, Any]) -> None:
-        if self.transport:
-            message = format_request(payload)
-            self.transport.send(message)
+        try:
+            self.transport.send(payload)  # type: ignore
+        except AttributeError:
+            pass
 
     def deduce_payload(
         self,
@@ -275,19 +241,19 @@ class Client(object):
     ) -> Tuple[Optional[Callable], Any, Optional[int], Optional[str], Optional[str]]:
         if "method" in payload:
             method = payload["method"]
+            handler = self._get_handler(method)
             result = payload.get("params")
             if "id" in payload:
                 req_id = payload["id"]
-                handler = self._request_handlers.get(method)
+                self.logger.incoming_request(req_id, method, result)
                 if handler is None:
                     self.send_error_response(req_id, Error(ErrorCode.MethodNotFound, method))
                 else:
                     tup = (handler, result, req_id, "request", method)
-                    self.logger.incoming_request(req_id, method, result)
                     return tup
             else:
                 if self._sync_request_result.is_idle():
-                    res = (self._notification_handlers.get(method), result, None, "notification", method)
+                    res = (handler, result, None, "notification", method)
                     self.logger.incoming_notification(method, result, res[0] is None)
                     return res
                 else:
@@ -303,16 +269,7 @@ class Client(object):
             debug("Unknown payload type: ", payload)
         return (None, None, None, None, None)
 
-    def receive_payload(self, message: str) -> None:
-        payload = None
-        try:
-            payload = json.loads(message)
-            # limit = min(len(message), 200)
-            # debug("got json: ", message[0:limit], "...")
-        except IOError as err:
-            exception_log("got a non-JSON payload: " + message, err)
-            return
-
+    def on_payload(self, payload: Dict[str, Any]) -> None:
         with self._sync_request_cvar:
             handler, result, req_id, typestr, method = self.deduce_payload(payload)
 
@@ -333,26 +290,31 @@ class Client(object):
             except Exception as err:
                 exception_log("Error handling {}".format(typestr), err)
 
-    def on_transport_closed(self) -> None:
-        self._error_display_handler("Communication to server closed, exiting")
-        # Differentiate between normal exit and server crash?
-        if not self.exiting:
-            self.handle_transport_failure()
+    def on_stderr_message(self, message: str) -> None:
+        pass
+
+    def on_transport_close(self, exit_code: int, exception: Optional[Exception]) -> None:
+        self.transport = None
 
     def response_handler(self, response_id: int, response: Dict[str, Any]) -> Tuple[Optional[Callable], Any]:
         handler, error_handler = self._response_handlers.pop(response_id, (None, None))
+        if not handler:
+            error = {"code": ErrorCode.InvalidParams, "message": "unknown response ID {}".format(response_id)}
+            return self.handle_response(response_id, print_to_status_bar, error, True)
         if "result" in response and "error" not in response:
             return self.handle_response(response_id, handler, response["result"], False)
-        elif "result" not in response and "error" in response:
-            return self.handle_response(response_id, error_handler, response["error"], True)
+        if not error_handler:
+            error_handler = print_to_status_bar
+        if "result" not in response and "error" in response:
+            error = response["error"]
         else:
             error = {"code": ErrorCode.InvalidParams, "message": "invalid response payload"}
-            return self.handle_response(response_id, error_handler, error, True)
+        return self.handle_response(response_id, error_handler, error, True)
 
-    def handle_response(self, response_id: int, handler: Optional[Callable],
+    def handle_response(self, response_id: int, handler: Callable,
                         result: Any, is_error: bool) -> Tuple[Optional[Callable], Any]:
         if self._sync_request_result.is_idle():
-            pass
+            return (handler, result)
         elif self._sync_request_result.is_requesting():
             if self._sync_request_result.request_id() == response_id:
                 if is_error:
@@ -366,26 +328,9 @@ class Client(object):
         else:  # self._sync_request_result.is_ready()
             self._deferred_responses.append((handler, result))
             return (None, None)
-        if handler:
-            return (handler, result)
-        elif is_error:
-            return (self._error_display_handler, result.get("message"))
-        else:
-            debug("dropping response with ID", response_id)
-            return (None, None)
 
-    def on_request(self, request_method: str, handler: Callable) -> None:
-        self._request_handlers[request_method] = handler
-
-    def on_notification(self, notification_method: str, handler: Callable) -> None:
-        self._notification_handlers[notification_method] = handler
-
-
-def attach_stdio_client(process: subprocess.Popen, settings: Settings) -> Client:
-    transport = StdioTransport(process)
-    client = Client(transport, settings)
-    client.set_transport_failure_handler(lambda: try_terminate_process(process))
-    return client
+    def _get_handler(self, method: str) -> Optional[Callable]:
+        return getattr(self, method2attr(method), None)
 
 
 class SublimeLogger(Logger):

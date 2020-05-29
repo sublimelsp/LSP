@@ -57,6 +57,15 @@ def make_stdio_test_config() -> ClientConfig:
         enabled=True)
 
 
+def make_tcp_test_config() -> ClientConfig:
+    return ClientConfig(
+        name="TEST",
+        binary_args=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port"],
+        tcp_port=0,  # select a free one for me
+        languages=[LanguageConfig(language_id="txt", document_selector="text.plain")],
+        enabled=True)
+
+
 def add_config(config):
     client_configs.add_for_testing(config)
 
@@ -83,28 +92,18 @@ class SessionType:
 
 class TextDocumentTestCase(DeferrableTestCase):
 
-    def __init__(self, *args: 'Any', **kwargs: 'Any') -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.session = None  # type: Optional[Session]
-        self.config = make_stdio_test_config()
+        # kwargs["tcp"] = True
+        self.config = make_tcp_test_config() if kwargs.get("tcp") else make_stdio_test_config()
 
     def setUp(self) -> 'Generator':
         super().setUp()
         test_name = self.get_test_name()
         server_capabilities = self.get_test_server_capabilities()
-        session_type = self.get_test_session_type()
         self.assertTrue(test_name)
         self.assertTrue(server_capabilities)
-        if session_type == SessionType.Stdio:
-            pass
-        elif session_type == SessionType.TcpCreate:
-            # TODO: make the test server do TCP
-            pass
-        elif session_type == SessionType.TcpConnectExisting:
-            # TODO
-            pass
-        else:
-            self.assertFalse(True)
         window = sublime.active_window()
         self.assertTrue(window)
         self.config.init_options["serverResponse"] = server_capabilities
@@ -132,9 +131,6 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def get_test_server_capabilities(self) -> dict:
         return basic_responses["initialize"]
-
-    def get_test_session_type(self) -> int:
-        return SessionType.Stdio
 
     def init_view_settings(self) -> None:
         s = self.view.settings().set
@@ -170,30 +166,45 @@ class TextDocumentTestCase(DeferrableTestCase):
         def error_handler(params: 'Any') -> None:
             debug("Got error:", params, "awaiting timeout :(")
 
-        self.session.client.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
+        self.session.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
+        yield from self.await_promise(promise)
+
+    def make_server_do_fake_request(self, method: str, params: Any) -> YieldPromise:
+        promise = YieldPromise()
+
+        def on_result(params: Any) -> None:
+            promise.fulfill(params)
+
+        def on_error(params: Any) -> None:
+            promise.fulfill(params)
+
+        req = Request("$test/fakeRequest", {"method": method, "params": params})
+        self.session.send_request(req, on_result, on_error)
+        return promise
+
+    def await_promise(self, promise: YieldPromise) -> Generator:
         yield {"condition": promise, "timeout": TIMEOUT_TIME}
 
     def set_response(self, method: str, response: 'Any') -> None:
         self.assertIsNotNone(self.session)
         assert self.session  # mypy
-        self.session.client.send_notification(
+        self.session.send_notification(
             Notification("$test/setResponse", {"method": method, "response": response}))
 
-    def await_client_notification(self, method: str, params: 'Any' = None) -> 'Generator':
+    def await_client_notification(self, method: str, params: Any = None) -> 'Generator':
         self.assertIsNotNone(self.session)
         assert self.session  # mypy
         promise = YieldPromise()
 
-        def handler(params: 'Any') -> None:
-            assert params is None
-            promise.fulfill()
+        def handler(params: Any) -> None:
+            promise.fulfill(params)
 
-        def error_handler(params: 'Any') -> None:
+        def error_handler(params: Any) -> None:
             debug("Got error:", params, "awaiting timeout :(")
 
-        self.session.client.send_request(
+        self.session.send_request(
             Request("$test/sendNotification", {"method": method, "params": params}), handler, error_handler)
-        yield {"condition": promise, "timeout": TIMEOUT_TIME}
+        yield from self.await_promise(promise)
 
     def await_boilerplate_begin(self) -> 'Generator':
         yield from self.await_message("initialize")
@@ -203,7 +214,7 @@ class TextDocumentTestCase(DeferrableTestCase):
     def await_boilerplate_end(self) -> 'Generator':
         self.wm.end_config_sessions(self.config.name)  # TODO: Shouldn't this be automatic once the last view closes?
         if self.session:
-            yield lambda: self.session.client is None
+            yield lambda: self.session.state == ClientStates.STOPPING
 
     def await_clear_view_and_save(self) -> 'Generator':
         assert self.view  # type: Optional[sublime.View]

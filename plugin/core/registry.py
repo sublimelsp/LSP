@@ -1,15 +1,13 @@
-import sublime
-import sublime_plugin
-from .clients import start_window_config
 from .configurations import ConfigManager
-from .handlers import LanguageHandler
-from .logging import debug
 from .rpc import Client
 from .sessions import Session
 from .settings import client_configs
-from .types import ClientConfig, ClientStates, WindowLike, view2scope
-from .windows import WindowRegistry, WindowManager
+from .settings import settings, client_configs
+from .types import ClientConfig, ClientStates, view2scope
 from .typing import Optional, Callable, Dict, Any, Generator
+from .windows import WindowRegistry, WindowManager
+import sublime
+import sublime_plugin
 
 
 client_start_listeners = {}  # type: Dict[str, Callable]
@@ -46,36 +44,8 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
                 return
 
 
-class LanguageHandlerDispatcher(object):
-
-    def on_start(self, config_name: str, window: WindowLike) -> bool:
-        if config_name in client_start_listeners:
-            return client_start_listeners[config_name](window)
-        else:
-            return True
-
-    def on_initialized(self, config_name: str, window: WindowLike, client: Client) -> None:
-        if config_name in client_initialization_listeners:
-            client_initialization_listeners[config_name](client)
-
-
-def load_handlers() -> None:
-    for handler in LanguageHandler.instantiate_all():
-        register_language_handler(handler)
-    client_configs.update_configs()
-
-
-def register_language_handler(handler: LanguageHandler) -> None:
-    debug("received config {} from {}".format(handler.name, handler.__class__.__name__))
-    client_configs.add_external_config(handler.config)
-    if handler.on_start:
-        client_start_listeners[handler.name] = handler.on_start
-    if handler.on_initialized:
-        client_initialization_listeners[handler.name] = handler.on_initialized
-
-
-def client_from_session(session: Optional[Session]) -> Optional[Client]:
-    return session.client if session else None
+def client_from_session(session: Optional[Session]) -> Optional[Session]:
+    return session if session else None
 
 
 def sessions_for_view(view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
@@ -126,8 +96,7 @@ def unload_sessions(window: sublime.Window) -> None:
 
 configs = ConfigManager(client_configs.all)
 client_configs.set_listener(configs.update)
-handlers_dispatcher = LanguageHandlerDispatcher()
-windows = WindowRegistry(configs, start_window_config, sublime, handlers_dispatcher)
+windows = WindowRegistry(configs, sublime)
 
 
 def configurations_for_view(view: sublime.View) -> Generator[ClientConfig, None, None]:

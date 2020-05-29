@@ -11,6 +11,7 @@ from .plugin.configuration import LspDisableLanguageServerInProjectCommand
 from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
 from .plugin.core.documents import DocumentSyncListener
+from .plugin.core.main import Listener
 from .plugin.core.main import shutdown as plugin_unloaded
 from .plugin.core.main import startup as plugin_loaded
 from .plugin.core.panels import LspClearPanelCommand

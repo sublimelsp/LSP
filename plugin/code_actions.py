@@ -92,10 +92,9 @@ def request_code_actions_with_diagnostics(
                         "diagnostics": list(diagnostic.to_lsp() for diagnostic in point_diagnostics)
                     }
                 }
-                if session.client:
-                    session.client.send_request(
-                        Request.codeAction(params),
-                        actions_at_location.collect(session.config.name))
+                session.send_request(
+                    Request.codeAction(params),
+                    actions_at_location.collect(session.config.name))
     return actions_at_location
 
 

@@ -1,12 +1,15 @@
 from .configurations import ConfigManager
 from .configurations import WindowConfigManager
 from .diagnostics import DiagnosticsStorage
-from .edit import parse_workspace_edit
 from .logging import debug
+from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
-from .protocol import Notification, Response
+from .protocol import Notification, TextDocumentSyncKindNone, TextDocumentSyncKindFull
 from .rpc import Client, SublimeLogger
+from .sessions import get_plugin
+from .sessions import Manager
 from .sessions import Session
+from .transports import create_transport
 from .types import ClientConfig
 from .types import ClientStates
 from .types import Settings
@@ -14,6 +17,7 @@ from .types import view2scope
 from .types import ViewLike
 from .types import WindowLike
 from .typing import Optional, List, Callable, Dict, Any, Deque, Protocol, Generator
+from .views import extract_variables
 from .workspace import disable_in_project
 from .workspace import enable_in_project
 from .workspace import get_workspace_folders
@@ -32,15 +36,6 @@ class SublimeLike(Protocol):
         ...
 
     def Region(self, a: int, b: int) -> 'Any':
-        ...
-
-
-class LanguageHandlerListener(Protocol):
-
-    def on_start(self, config_name: str, window: WindowLike) -> bool:
-        ...
-
-    def on_initialized(self, config_name: str, window: WindowLike, client: Client) -> None:
         ...
 
 
@@ -76,7 +71,7 @@ class ViewListenerProtocol(Protocol):
         ...
 
 
-class WindowManager(object):
+class WindowManager(Manager):
     def __init__(
         self,
         window: WindowLike,
@@ -84,9 +79,7 @@ class WindowManager(object):
         settings: Settings,
         configs: WindowConfigManager,
         diagnostics: DiagnosticsStorage,
-        session_starter: Callable,
         sublime: Any,
-        handler_dispatcher: LanguageHandlerListener,
         server_panel_factory: Optional[Callable] = None
     ) -> None:
         self._window = window
@@ -96,9 +89,7 @@ class WindowManager(object):
         self.server_panel_factory = server_panel_factory
         self._sessions = {}  # type: Dict[str, WeakSet[Session]]
         self._next_initialize_views = list()  # type: List[ViewLike]
-        self._start_session = session_starter
         self._sublime = sublime
-        self._handlers = handler_dispatcher
         self._restarting = False
         self._is_closing = False
         self._workspace = workspace
@@ -175,9 +166,21 @@ class WindowManager(object):
         config = self._needed_config(listener.view)
         if config:
             self._new_listener = listener
-            self._start_client(config, file_name)
+            self.start(config, listener.view)
         else:
             self._new_listener = None
+
+    def window(self) -> sublime.Window:
+        # WindowLike vs. sublime
+        return self._window  # type: ignore
+
+    def sessions(self, view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
+        file_name = view.file_name() or ''
+        for sessions in self._sessions.values():
+            for session in sessions:
+                if capability is None or capability in session.capabilities:
+                    if session.state == ClientStates.READY and session.handles_path(file_name):
+                        yield session
 
     def _on_project_changed(self, folders: List[str]) -> None:
         workspace_folders = get_workspace_folders(self._workspace.folders)
@@ -242,44 +245,56 @@ class WindowManager(object):
                 return config
         return None
 
-    def _start_client(self, config: ClientConfig, file_path: str) -> None:
+    def start(self, config: ClientConfig, initiating_view: sublime.View) -> None:
+        file_path = initiating_view.file_name() or ''
         if not self._can_start_config(config.name, file_path):
             debug('Already starting on this window:', config.name)
             return
-
-        if not self._handlers.on_start(config.name, self._window):
-            return
-
-        self._window.status_message("Starting " + config.name + "...")
-        session = None  # type: Optional[Session]
-        workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
         try:
-            session = self._start_session(
-                self._window,                  # window
-                workspace_folders,             # workspace_folders
-                config,                        # config
-                self._handle_pre_initialize,   # on_pre_initialize
-                self._handle_post_initialize,  # on_post_initialize
-                self._handle_post_exit,        # on_post_exit
-                lambda msg: self._handle_stderr_log(config.name, msg))  # on_stderr_log
+            workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
+            plugin_class = get_plugin(config.name)
+            if plugin_class is not None:
+                if plugin_class.needs_update_or_installation():
+                    self._window.status_message('Installing {} ...'.format(config.name))
+                    plugin_class.install_or_update()
+                # WindowLike vs. sublime.Window
+                cannot_start_reason = plugin_class.can_start(
+                    self._window, initiating_view, workspace_folders, config)  # type: ignore
+                if cannot_start_reason:
+                    self._window.status_message(cannot_start_reason)
+                    return
+            session = Session(self, self._settings, workspace_folders, config, plugin_class)
+            if self.server_panel_factory:
+                session.logger.sink = self._payload_log_sink
+            cwd = workspace_folders[0].path if workspace_folders else None
+            variables = extract_variables(self._window)  # type: ignore
+            if plugin_class is not None:
+                additional_variables = plugin_class.additional_variables()
+                if isinstance(additional_variables, dict):
+                    variables.update(additional_variables)
+            # WindowLike vs sublime.Window
+            self._window.status_message("Starting {} ...".format(config.name))
+            transport = create_transport(config, cwd, self._window, session, variables)  # type: ignore
+            self._window.status_message("Initializing {} ...".format(config.name))
+            session.initialize(variables, transport)
+            self._sessions.setdefault(config.name, []).append(session)
+            debug("window {} added session {}".format(self._window.id(), config.name))
         except Exception as e:
             message = "\n\n".join([
                 "Could not start {}",
                 "{}",
                 "Server will be disabled for this window"
             ]).format(config.name, str(e))
+            exception_log("Unable to start {}".format(config.name), e)
             self._configs.disable_temporarily(config.name)
             sublime.message_dialog(message)
             # Continue with handling pending listeners
             self._new_session = None
             sublime.set_timeout_async(self._dequeue_listener)
 
-        if session:
-            debug("window {} added session {}".format(self._window.id(), config.name))
-            self._new_session = session
-
-    def _handle_message_request(self, params: dict, source: str, client: Client, request_id: Any) -> None:
-        handler = MessageRequestHandler(self._window.active_view(), client, request_id, params, source)  # type: ignore
+    def handle_message_request(self, session: Session, params: Any, request_id: Any) -> None:
+        handler = MessageRequestHandler(self._window.active_view(), session, request_id, params,  # type: ignore
+                                        session.config.name)
         handler.show()
 
     def restart_sessions(self) -> None:
@@ -293,7 +308,6 @@ class WindowManager(object):
     def end_config_sessions(self, config_name: str) -> None:
         config_sessions = self._sessions.pop(config_name, WeakSet())
         for session in config_sessions:
-            debug("unloading session", config_name)
             session.end()
 
     def get_project_path(self, file_path: str) -> Optional[str]:
@@ -304,62 +318,12 @@ class WindowManager(object):
                     candidate = folder
         return candidate
 
-    def _apply_workspace_edit(self, params: Dict[str, Any], client: Client, request_id: int) -> None:
-        edit = params.get('edit', dict())
-        changes = parse_workspace_edit(edit)
-        self._window.run_command('lsp_apply_workspace_edit', {'changes': changes})
-        # TODO: We should ideally wait for all changes to have been applied.
-        # This however seems overly complicated, because we have to bring along a string representation of the
-        # client through the sublime-command invocations (as well as the request ID, but that is easy), and then
-        # reconstruct/get the actual Client object back. Maybe we can (ab)use our homebrew event system for this?
-        client.send_response(Response(request_id, {"applied": True}))
-
     def _payload_log_sink(self, message: str) -> None:
-        self._sublime.set_timeout_async(lambda: self._handle_server_message(":", message), 0)
+        self._sublime.set_timeout_async(lambda: self.handle_server_message(":", message), 0)
 
-    def _handle_pre_initialize(self, session: Session) -> None:
-        client = session.client
-        client.set_crash_handler(lambda: self._handle_server_crash(session.config))
-        client.set_error_display_handler(self._window.status_message)
-
-        if self.server_panel_factory and isinstance(client.logger, SublimeLogger):
-            client.logger.server_name = session.config.name
-            client.logger.sink = self._payload_log_sink
-
-        client.on_request(
-            "window/showMessageRequest",
-            lambda params, request_id: self._handle_message_request(params, session.config.name, client, request_id))
-
-        client.on_notification(
-            "window/showMessage",
-            lambda params: self._handle_show_message(session.config.name, params))
-
-        client.on_notification(
-            "window/logMessage",
-            lambda params: self._handle_log_message(session.config.name, params))
-
-    def _handle_post_initialize(self, session: Session) -> None:
-        # handle server requests and notifications
-        session.on_request(
-            "workspace/applyEdit",
-            lambda params, request_id: self._apply_workspace_edit(params, session.client, request_id))
-
-        session.on_request(
-            "window/workDoneProgress/create",
-            lambda params, request_id: self._receive_progress_token(params, session.client, request_id))
-
-        session.on_notification(
-            "textDocument/publishDiagnostics",
-            lambda params: self.diagnostics.receive(session.config.name, params))
-
-        session.on_notification(
-            "$/progress",
-            lambda params: self._handle_progress_notification(params))
-
-        self._handlers.on_initialized(session.config.name, self._window, session.client)
-
-        session.client.send_notification(Notification.initialized())
-
+    def on_post_initialize(self, session: Session) -> None:
+        session.send_notification(Notification.initialized())
+        document_sync = session.capabilities.get("textDocumentSync")
         self._window.status_message("{} initialized".format(session.config.name))
         sublime.set_timeout_async(self._dequeue_listener)
 
@@ -377,87 +341,73 @@ class WindowManager(object):
         if not self._is_closing and not self._window.is_valid():
             self._handle_window_closed()
 
-    def _receive_progress_token(self, params: Dict[str, Any], client: Client, request_id: Any) -> None:
-        self._progress[params['token']] = dict()
-        client.send_response(Response(request_id, None))
-
-    def _handle_progress_notification(self, params: Dict[str, Any]) -> None:
-        token = params['token']
-        if token not in self._progress:
-            debug('unknown $/progress token: {}'.format(token))
-            return
-        value = params['value']
-        if value['kind'] == 'begin':
-            self._progress[token]['title'] = value['title']  # mandatory
-            self._progress[token]['message'] = value.get('message')  # optional
-            self._window.status_message(self._progress_string(token, value))
-        elif value['kind'] == 'report':
-            self._window.status_message(self._progress_string(token, value))
-        elif value['kind'] == 'end':
-            if value.get('message'):
-                status_msg = self._progress[token]['title'] + ': ' + value['message']
-                self._window.status_message(status_msg)
-            self._progress.pop(token, None)
-
-    def _progress_string(self, token: Any, value: Dict[str, Any]) -> str:
-        status_msg = self._progress[token]['title']
-        progress_message = value.get('message')  # optional
-        progress_percentage = value.get('percentage')  # optional
-        if progress_message:
-            self._progress[token]['message'] = progress_message
-            status_msg += ': ' + progress_message
-        elif self._progress[token]['message']:  # reuse last known message if not present
-            status_msg += ': ' + self._progress[token]['message']
-        if progress_percentage:
-            fmt = ' ({:.1f}%)' if isinstance(progress_percentage, float) else ' ({}%)'
-            status_msg += fmt.format(progress_percentage)
-        return status_msg
-
     def _handle_window_closed(self) -> None:
         debug('window {} closed, ending sessions'.format(self._window.id()))
         self._is_closing = True
         self.end_sessions()
 
-    def _handle_post_exit(self, config_name: str) -> None:
+    def _handle_all_sessions_ended(self) -> None:
+        debug('clients for window {} unloaded'.format(self._window.id()))
+        if self._restarting:
+            debug('window {} sessions unloaded - restarting'.format(self._window.id()))
+            sublime.set_timeout(self.start_active_views, 0)
+
+    def on_post_exit(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
+        sublime.set_timeout(lambda: self._on_post_exit_main_thread(session, exit_code, exception))
+
+    def _on_post_exit_main_thread(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
         for view in self._window.views():
             file_name = view.file_name()
             if file_name:
-                self.diagnostics.remove(file_name, config_name)
-        debug("session", config_name, "ended")
+                self.diagnostics.remove(file_name, session.config.name)
+        sessions = self._sessions.get(session.config.name)
+        if sessions is not None:
+            sessions = [s for s in sessions if id(s) != id(session)]
+            if sessions:
+                self._sessions[session.config.name] = sessions
+            else:
+                self._sessions.pop(session.config.name)
+        if exit_code != 0:
+            self._window.status_message("{} exited with status code {}".format(session.config.name, exit_code))
+            fmt = "{0} exited with status code {1}.\n\nDo you want to restart {0}?\n\nIf you choose Cancel, {0} will "\
+                  "be disabled for this window until you restart Sublime Text."
+            msg = fmt.format(session.config.name, exit_code)
+            if sublime.ok_cancel_dialog(msg, "Restart {}".format(session.config.name)):
+                v = self._window.active_view()
+                if not v:
+                    return
+                sublime.set_timeout(lambda: self.start(session.config, v))  # type: ignore
+            else:
+                self._configs.disable_temporarily(session.config.name)
+        if exception:
+            self._window.status_message("{} exited with an exception: {}".format(session.config.name, exception))
+        if not self._sessions:
+            self._handle_all_sessions_ended()
 
-    def _handle_server_crash(self, config: ClientConfig) -> None:
-        msg = "Language server {} has crashed, do you want to restart it?".format(config.name)
-        result = self._sublime.ok_cancel_dialog(msg, ok_title="Restart")
-        if result == self._sublime.DIALOG_YES:
-            self.restart_sessions()
-
-    def _handle_server_message(self, name: str, message: str) -> None:
+    def handle_server_message(self, server_name: str, message: str) -> None:
         if not self.server_panel_factory:
             return
         panel = self.server_panel_factory(self._window)
         if not panel:
             return debug("no server panel for window", self._window.id())
-        panel.run_command("lsp_update_server_panel", {"prefix": name, "message": message})
+        panel.run_command("lsp_update_server_panel", {"prefix": server_name, "message": message})
 
-    def _handle_log_message(self, name: str, params: Any) -> None:
-        self._handle_server_message(name, extract_message(params))
+    def handle_log_message(self, session: Session, params: Any) -> None:
+        self.handle_server_message(session.config.name, extract_message(params))
 
-    def _handle_stderr_log(self, name: str, message: str) -> None:
+    def handle_stderr_log(self, session: Session, message: str) -> None:
         if self._settings.log_stderr:
-            self._handle_server_message(name, message)
+            self.handle_server_message(session.config.name, message)
 
-    def _handle_show_message(self, name: str, params: Any) -> None:
-        self._sublime.status_message("{}: {}".format(name, extract_message(params)))
+    def handle_show_message(self, session: Session, params: Any) -> None:
+        self._sublime.status_message("{}: {}".format(session.config.name, extract_message(params)))
 
 
 class WindowRegistry(object):
-    def __init__(self, configs: ConfigManager,
-                 session_starter: Callable, sublime: Any, handler_dispatcher: LanguageHandlerListener) -> None:
+    def __init__(self, configs: ConfigManager, sublime: Any) -> None:
         self._windows = WeakValueDictionary()  # type: WeakValueDictionary[int, WindowManager]
         self._configs = configs
-        self._session_starter = session_starter
         self._sublime = sublime
-        self._handler_dispatcher = handler_dispatcher
         self._diagnostics_ui_class = None  # type: Optional[Callable]
         self._server_panel_factory = None  # type: Optional[Callable]
         self._settings = None  # type: Optional[Settings]
@@ -485,9 +435,7 @@ class WindowRegistry(object):
                 settings=self._settings,
                 configs=window_configs,
                 diagnostics=DiagnosticsStorage(diagnostics_ui),
-                session_starter=self._session_starter,
                 sublime=self._sublime,
-                handler_dispatcher=self._handler_dispatcher,
                 server_panel_factory=self._server_panel_factory)
             self._windows[window.id()] = state
         return state

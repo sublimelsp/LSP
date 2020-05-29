@@ -93,10 +93,9 @@ class LspHoverCommand(LspTextCommand):
         session = session_for_view(self.view, 'hoverProvider', point)
         if session:
             document_position = text_document_position_params(self.view, point)
-            if session.client:
-                session.client.send_request(
-                    Request.hover(document_position),
-                    lambda response: self.handle_response(response, point))
+            session.send_request(
+                Request.hover(document_position),
+                lambda response: self.handle_response(response, point))
 
     def request_code_actions(self, point: int) -> None:
         actions_manager.request(self.view, point, lambda response: self.handle_code_actions(response, point))

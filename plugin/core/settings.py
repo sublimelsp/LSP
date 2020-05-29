@@ -1,7 +1,7 @@
 from .collections import DottedDict
 from .logging import debug
 from .types import Settings, ClientConfig, LanguageConfig, syntax2scope
-from .typing import Any, List, Optional, Dict, Callable
+from .typing import Any, List, Optional, Dict, Callable, Union
 import sublime
 
 
@@ -94,10 +94,11 @@ class ClientConfigs(object):
         self._listener = None  # type: Optional[Callable]
         self._supported_syntaxes_cache = dict()  # type: Dict[str, bool]
 
-    def update(self, settings_obj: sublime.Settings) -> None:
+    def update(self, settings_obj: sublime.Settings, also_update_configs: bool = False) -> None:
         self._default_settings = read_dict_setting(settings_obj, "default_clients", {})
         self._global_settings = read_dict_setting(settings_obj, "clients", {})
-        self.update_configs()
+        if also_update_configs:
+            self.update_configs()
 
     def add_for_testing(self, config: ClientConfig) -> None:
         self.all.append(config)
@@ -111,8 +112,25 @@ class ClientConfigs(object):
         if self._listener:
             self._listener()
 
-    def add_external_config(self, config: ClientConfig) -> None:
+    def add_external_config(self, name: str, s: sublime.Settings) -> None:
+        config = ClientConfig(
+            name=name,
+            binary_args=read_array_setting(s, "command", []),
+            languages=read_language_configs(s),
+            tcp_port=s.get("tcp_port", None),
+            # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
+            enabled=bool(s.get("enabled", True)),
+            init_options=s.get("initializationOptions"),  # type: ignore
+            settings=DottedDict(read_dict_setting(s, "settings", {})),
+            env=read_dict_setting(s, "env", {}),
+            tcp_host=s.get("tcp_host", None),
+            tcp_mode=s.get("tcp_mode", None),
+            experimental_capabilities=s.get("experimental_capabilities", None)  # type: ignore
+        )
         self._external_configs[config.name] = config
+
+    def remove_external_config(self, name: str) -> None:
+        self._external_configs.pop(name, None)
 
     def update_configs(self) -> None:
         del self.all[:]
@@ -169,9 +187,11 @@ def load_settings() -> None:
     loaded_settings_obj = sublime.load_settings("LSP.sublime-settings")
     _settings_obj = loaded_settings_obj
     update_settings(settings, loaded_settings_obj)
-    client_configs.update(loaded_settings_obj)
+    client_configs.update(loaded_settings_obj, also_update_configs=False)
     loaded_settings_obj.add_on_change("_on_new_settings", lambda: update_settings(settings, loaded_settings_obj))
-    loaded_settings_obj.add_on_change("_on_new_client_settings", lambda: client_configs.update(loaded_settings_obj))
+    loaded_settings_obj.add_on_change(
+        "_on_new_client_settings",
+        lambda: client_configs.update(loaded_settings_obj, also_update_configs=True))
 
 
 def unload_settings() -> None:
@@ -180,7 +200,7 @@ def unload_settings() -> None:
         _settings_obj.clear_on_change("_on_new_client_settings")
 
 
-def convert_syntaxes_to_selector(d: Dict[str, Any]) -> Optional[str]:
+def convert_syntaxes_to_selector(d: Union[sublime.Settings, Dict[str, Any]]) -> Optional[str]:
     syntaxes = d.get("syntaxes")
     if isinstance(syntaxes, list) and syntaxes:
         scopes = set()
@@ -196,27 +216,37 @@ def convert_syntaxes_to_selector(d: Dict[str, Any]) -> Optional[str]:
     return None
 
 
-def read_language_config(config: Dict[str, Any]) -> LanguageConfig:
-    lang_id = config["languageId"]  # "languageId" must exist, just raise a KeyError if it doesn't exist.
+def _has(d: Union[sublime.Settings, Dict[str, Any]], key: str) -> bool:
+    if isinstance(d, sublime.Settings):
+        return d.has(key)
+    else:
+        return key in d
+
+
+def read_language_config(config: Union[sublime.Settings, Dict[str, Any]]) -> LanguageConfig:
+    lang_id = config.get("languageId")
+    if lang_id is None:
+        # "languageId" must exist, just raise a KeyError if it doesn't exist.
+        raise KeyError("languageId")
     document_selector = None  # type: Optional[str]
     feature_selector = None  # type: Optional[str]
-    if "syntaxes" in config:
+    if _has(config, "syntaxes"):
         document_selector = convert_syntaxes_to_selector(config)
         feature_selector = document_selector
-    if "document_selector" in config:
+    if _has(config, "document_selector"):
         # Overwrites potential old assignment to document_selector, which is OK.
-        document_selector = config["document_selector"]
-    if "feature_selector" in config:
+        document_selector = config.get("document_selector")
+    if _has(config, "feature_selector"):
         # Overwrites potential old assignment to feature_selector, which is OK.
-        feature_selector = config["feature_selector"]
+        feature_selector = config.get("feature_selector")
     return LanguageConfig(language_id=lang_id, document_selector=document_selector, feature_selector=feature_selector)
 
 
-def read_language_configs(client_config: dict) -> List[LanguageConfig]:
+def read_language_configs(client_config: Union[sublime.Settings, Dict[str, Any]]) -> List[LanguageConfig]:
     languages = client_config.get("languages")
-    if languages:
-        return list(map(read_language_config, client_config.get("languages", [])))
-    if "languageId" in client_config:
+    if isinstance(languages, list):
+        return list(map(read_language_config, languages))
+    if _has(client_config, "languageId"):
         return [read_language_config(client_config)]
     return []
 

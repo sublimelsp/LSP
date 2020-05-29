@@ -169,3 +169,7 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
         "options": formatting_options(view.settings()),
         "range": region_to_range(view, region).to_lsp()
     })
+
+
+def make_link(href: str, text: str) -> str:
+    return "<a href='{}'>{}</a>".format(href, text.replace(' ', '&nbsp;'))

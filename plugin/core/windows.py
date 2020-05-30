@@ -87,8 +87,7 @@ class WindowManager(Manager):
         self._configs = configs
         self.diagnostics = diagnostics
         self.server_panel_factory = server_panel_factory
-        self._sessions = {}  # type: Dict[str, WeakSet[Session]]
-        self._next_initialize_views = list()  # type: List[ViewLike]
+        self._sessions = WeakSet()  # type: WeakSet[Session]
         self._sublime = sublime
         self._restarting = False
         self._is_closing = False
@@ -145,23 +144,9 @@ class WindowManager(Manager):
                 # We have handled all pending listeners.
                 self._new_session = None
                 return
-        scope = view2scope(listener.view)
-        file_name = listener.view.file_name() or ''
         if self._new_session:
-            self._sessions.setdefault(self._new_session.config.name, WeakSet()).add(self._new_session)
-        if listener.view in self._workspace:
-            for sessions in self._sessions.values():
-                for session in sessions:
-                    if session.config.match_document(scope):
-                        if session.handles_path(file_name):
-                            listener.on_session_initialized(session)
-                            break
-        else:
-            for sessions in self._sessions.values():
-                for session in sessions:
-                    if session.config.match_document(scope):
-                        listener.on_session_initialized(session)
-                        break
+            self._sessions.add(self._new_session)
+        self._publish_sessions_to_listener(listener)
         self._new_session = None
         config = self._needed_config(listener.view)
         if config:
@@ -170,23 +155,35 @@ class WindowManager(Manager):
         else:
             self._new_listener = None
 
+    def _publish_sessions_to_listener(self, listener: ViewListenerProtocol) -> None:
+        scope = view2scope(listener.view)
+        file_name = listener.view.file_name() or ''
+        if listener.view in self._workspace:
+            for session in self._sessions:
+                if session.config.match_document(scope):
+                    if session.handles_path(file_name):
+                        listener.on_session_initialized(session)
+        else:
+            for session in self._sessions:
+                if session.config.match_document(scope):
+                    listener.on_session_initialized(session)
+                    break
+
     def window(self) -> sublime.Window:
         # WindowLike vs. sublime
         return self._window  # type: ignore
 
     def sessions(self, view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
         file_name = view.file_name() or ''
-        for sessions in self._sessions.values():
-            for session in sessions:
-                if capability is None or capability in session.capabilities:
-                    if session.state == ClientStates.READY and session.handles_path(file_name):
-                        yield session
+        for session in self._sessions:
+            if capability is None or capability in session.capabilities:
+                if session.state == ClientStates.READY and session.handles_path(file_name):
+                    yield session
 
     def _on_project_changed(self, folders: List[str]) -> None:
         workspace_folders = get_workspace_folders(self._workspace.folders)
-        for config_name in self._sessions:
-            for session in self._sessions[config_name]:
-                session.update_folders(workspace_folders)
+        for session in self._sessions:
+            session.update_folders(workspace_folders)
 
     def _on_project_switched(self, folders: List[str]) -> None:
         debug('project switched - ending all sessions')
@@ -195,18 +192,13 @@ class WindowManager(Manager):
     def get_session(self, config_name: str, file_path: str) -> Optional[Session]:
         return self._find_session(config_name, file_path)
 
-    def _is_session_ready(self, config_name: str, file_path: str) -> bool:
-        maybe_session = self._find_session(config_name, file_path)
-        return maybe_session is not None and maybe_session.state == ClientStates.READY
-
     def _can_start_config(self, config_name: str, file_path: str) -> bool:
         return not bool(self._find_session(config_name, file_path))
 
     def _find_session(self, config_name: str, file_path: str) -> Optional[Session]:
-        if config_name in self._sessions:
-            for session in self._sessions[config_name]:
-                if session.handles_path(file_path):
-                    return session
+        for session in self._sessions:
+            if session.config.name == config_name and session.handles_path(file_path):
+                return session
         return None
 
     def update_configs(self) -> None:
@@ -228,21 +220,23 @@ class WindowManager(Manager):
 
     def _needed_config(self, view: sublime.View) -> Optional[ClientConfig]:
         configs = self._configs.match_view(view)
+        handled = False
         if view in self._workspace:
             for config in configs:
-                handled = False
-                sessions = self._sessions.get(config.name, WeakSet())
-                for session in sessions:
-                    if session.handles_path(view.file_name() or ''):
+                for session in self._sessions:
+                    if session.config.name == config.name and session.handles_path(view.file_name() or ''):
                         handled = True
                         break
                 if not handled:
                     return config
         else:
             for config in configs:
-                if config.name in self._sessions:
-                    continue
-                return config
+                for session in self._sessions:
+                    if session.config.name == config.name:
+                        handled = True
+                        break
+                if not handled:
+                    return config
         return None
 
     def start(self, config: ClientConfig, initiating_view: sublime.View) -> None:
@@ -277,8 +271,8 @@ class WindowManager(Manager):
             transport = create_transport(config, cwd, self._window, session, variables)  # type: ignore
             self._window.status_message("Initializing {} ...".format(config.name))
             session.initialize(variables, transport)
-            self._sessions.setdefault(config.name, []).append(session)
             debug("window {} added session {}".format(self._window.id(), config.name))
+            self._new_session = session
         except Exception as e:
             message = "\n\n".join([
                 "Could not start {}",
@@ -302,13 +296,15 @@ class WindowManager(Manager):
         self.end_sessions()
 
     def end_sessions(self) -> None:
-        for config_name in list(self._sessions):
-            self.end_config_sessions(config_name)
+        sessions = list(self._sessions)
+        for session in sessions:
+            session.end()
 
     def end_config_sessions(self, config_name: str) -> None:
-        config_sessions = self._sessions.pop(config_name, WeakSet())
-        for session in config_sessions:
-            session.end()
+        sessions = list(self._sessions)
+        for session in sessions:
+            if session.config.name == config_name:
+                session.end()
 
     def get_project_path(self, file_path: str) -> Optional[str]:
         candidate = None  # type: Optional[str]
@@ -350,7 +346,6 @@ class WindowManager(Manager):
         debug('clients for window {} unloaded'.format(self._window.id()))
         if self._restarting:
             debug('window {} sessions unloaded - restarting'.format(self._window.id()))
-            sublime.set_timeout(self.start_active_views, 0)
 
     def on_post_exit(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
         sublime.set_timeout(lambda: self._on_post_exit_main_thread(session, exit_code, exception))
@@ -360,13 +355,8 @@ class WindowManager(Manager):
             file_name = view.file_name()
             if file_name:
                 self.diagnostics.remove(file_name, session.config.name)
-        sessions = self._sessions.get(session.config.name)
-        if sessions is not None:
-            sessions = [s for s in sessions if id(s) != id(session)]
-            if sessions:
-                self._sessions[session.config.name] = sessions
-            else:
-                self._sessions.pop(session.config.name)
+        for listener in self._listeners:
+            listener.on_session_shutdown(session)
         if exit_code != 0:
             self._window.status_message("{} exited with status code {}".format(session.config.name, exit_code))
             fmt = "{0} exited with status code {1}.\n\nDo you want to restart {0}?\n\nIf you choose Cancel, {0} will "\

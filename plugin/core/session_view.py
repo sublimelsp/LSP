@@ -37,15 +37,16 @@ class SessionView:
         settings = self.view.settings()
         # TODO: Language ID must be UNIQUE!
         languages = settings.get("lsp_language")
+        language_id = ''
         if not isinstance(languages, dict):
             languages = {}
         for language in session.config.languages:
             if language.match_document(view2scope(self.view)):
                 languages[session.config.name] = language.id
+                language_id = language.id
                 break
         settings.set("lsp_language", languages)
         if self.session.should_notify_did_open():
-            language_id = self.view.settings().get("lsp_language", "TODO")
             # mypy: expected sublime.View, got ViewLike
             self.session.send_notification(did_open(self.view, language_id))  # type: ignore
 
@@ -64,6 +65,11 @@ class SessionView:
                 settings.set("lsp_language", languages)
             else:
                 settings.erase("lsp_language")
+
+    def shutdown(self) -> None:
+        listener = self.listener()
+        if listener:
+            listener.on_session_shutdown(self.session)
 
     def did_change(self, changes: Iterable[sublime.TextChange]) -> None:
         sync_kind = self.session.text_sync_kind()

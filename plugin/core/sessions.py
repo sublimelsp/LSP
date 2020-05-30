@@ -268,6 +268,9 @@ class SessionViewProtocol(Protocol):
     def on_diagnostics(self, diagnostics: Any) -> None:
         ...
 
+    def shutdown(self) -> None:
+        ...
+
     def __hash__(self) -> int:
         ...
 
@@ -430,6 +433,7 @@ class Session(Client):
         self.window = manager.window()
         self.state = ClientStates.STARTING
         self.capabilities = DottedDict()
+        self.exiting = False
         self._workspace_folders = workspace_folders
         self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
         self._progress = {}  # type: Dict[Any, Dict[str, str]]
@@ -670,7 +674,10 @@ class Session(Client):
         return status_msg
 
     def end(self) -> None:
+        self.exiting = True
         self._plugin = None
+        for sv in self.session_views():
+            sv.shutdown()
         self.capabilities.clear()
         self.state = ClientStates.STOPPING
         self.send_request(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
@@ -679,6 +686,8 @@ class Session(Client):
         self.exit()
 
     def on_transport_close(self, exit_code: int, exception: Optional[Exception]) -> None:
+        self.exiting = True
+        self.state = ClientStates.STOPPING
         super().on_transport_close(exit_code, exception)
         debug("stopped", self.config.name, "exit code", exit_code)
         mgr = self.manager()

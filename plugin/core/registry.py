@@ -77,16 +77,8 @@ def session_for_view(view: sublime.View, capability: str, point: Optional[int] =
 def _sessions_for_view_and_window(view: sublime.View, window: Optional[sublime.Window],
                                   capability: Optional[str]) -> Generator[Session, None, None]:
     if window:
-        file_path = view.file_name()
-        if file_path:
-            manager = windows.lookup(window)
-            scope = view2scope(view)
-            for sessions in manager._sessions.values():
-                for session in sessions:
-                    if session.state == ClientStates.READY and session.config.match_document(scope):
-                        if session.handles_path(file_path):
-                            if capability is None or session.has_capability(capability):
-                                yield session
+        manager = windows.lookup(window)
+        yield from manager.sessions(view, capability)
 
 
 def unload_sessions(window: sublime.Window) -> None:

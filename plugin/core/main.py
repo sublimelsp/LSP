@@ -121,11 +121,6 @@ def plugin_loaded() -> None:
     window = sublime.active_window()
     if window:
         windows.lookup(window).start_active_views()
-    if int(sublime.version()) > 4000:
-        sublime.error_message(
-            """The currently installed version of LSP package is not compatible with Sublime Text 4. """
-            """Please remove and reinstall this package to receive a version compatible with ST4. """
-            """Remember to restart Sublime Text after.""")
 
 
 def plugin_unloaded() -> None:

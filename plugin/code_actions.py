@@ -1,14 +1,17 @@
-import sublime
 from .core.edit import parse_workspace_edit
 from .core.protocol import Diagnostic
 from .core.protocol import Request, Point
-from .core.registry import LspTextCommand, LSPViewEventListener
+from .core.registry import LspTextCommand
+from .core.registry import LSPViewEventListener
 from .core.registry import sessions_for_view, client_from_session
+from .core.registry import windows
 from .core.settings import settings
 from .core.typing import Any, List, Dict, Callable, Optional, Union, Tuple, Mapping, TypedDict
 from .core.url import filename_to_uri
 from .core.views import entire_content_range, region_to_range
 from .diagnostics import filter_by_point, view_diagnostics
+import sublime
+import sublime_plugin
 
 CodeActionOrCommand = TypedDict('CodeActionOrCommand', {
     'title': str,
@@ -44,7 +47,8 @@ class CodeActionsCollector(object):
 
     def _notify_if_all_finished(self) -> None:
         if self._all_requested and len(self._requested_configs) == len(self._commands_by_config):
-            self._on_complete_handler(self._commands_by_config)
+            # Call back on the main thread
+            sublime.set_timeout(lambda: self._on_complete_handler(self._commands_by_config))
 
     def get_actions(self) -> CodeActionsByConfigName:
         return self._commands_by_config
@@ -125,7 +129,7 @@ def request_code_actions_on_save(
                 if matching_kinds:
                     params = _create_code_action_request_params(view, file_name, [], matching_kinds)
                     request = Request.codeAction(params)
-                    session.client.execute_request(
+                    session.client.send_request(
                         request, filtering_collector(session.config.name, matching_kinds, actions_collector))
     return actions_collector
 
@@ -179,18 +183,22 @@ def get_matching_kinds(user_actions: Dict[str, bool], session_actions: List[str]
     return matching_kinds
 
 
-class LspCodeActionsOnSaveListener(LSPViewEventListener):
-    @classmethod
-    def is_applicable(cls, view_settings: dict) -> bool:
-        return cls.has_enabled_code_actions_on_save(view_settings)
+class LspSaveCommand(sublime_plugin.TextCommand):
+    def __init__(self, view: sublime.View) -> None:
+        super().__init__(view)
+        self._fix_task = None  # type: Optional[CodeActionTask]
 
-    @classmethod
-    def has_enabled_code_actions_on_save(cls, view_settings: Union[dict, sublime.Settings]) -> bool:
-        actions = cls.get_code_actions_on_save(view_settings)
-        return any(enabled for action, enabled in actions.items())
+    def run(self, edit: sublime.Edit) -> None:
+        if self._fix_task:
+            self._fix_task.cancel()
+        on_save_actions = self._get_code_actions_on_save(self.view.settings())
+        if on_save_actions:
+            self._fix_task = CodeActionTask(self.view, on_save_actions, self._trigger_native_save)
+            self._fix_task.run()
+        else:
+            self._trigger_native_save()
 
-    @classmethod
-    def get_code_actions_on_save(cls, view_settings: Union[dict, sublime.Settings]) -> Dict[str, bool]:
+    def _get_code_actions_on_save(self, view_settings: Union[dict, sublime.Settings]) -> Dict[str, bool]:
         view_code_actions = view_settings.get('lsp_code_actions_on_save') or {}
         code_actions = settings.lsp_code_actions_on_save.copy()
         code_actions.update(view_code_actions)
@@ -200,22 +208,62 @@ class LspCodeActionsOnSaveListener(LSPViewEventListener):
                 allowed_code_actions[key] = value
         return allowed_code_actions
 
-    def on_pre_save(self) -> None:
-        if self.view.file_name():
-            self.trigger_code_actions()
+    def _trigger_native_save(self) -> None:
+        print('NATIVE SAVE')
+        self._fix_task = None
+        self.view.run_command('save', {"async": True})
 
-    def trigger_code_actions(self) -> None:
-        on_save_actions = self.get_code_actions_on_save(self.view.settings())
-        if on_save_actions:
-            self.manager.documents.purge_changes(self.view)
-            request_code_actions_on_save(self.view, self.handle_response, on_save_actions)
 
-    def handle_response(self, responses: CodeActionsByConfigName) -> None:
+class CodeActionTask():
+    def __init__(self, view: sublime.View, on_save_actions: Dict[str, bool], on_done: Callable[[], None]) -> None:
+        self._view = view
+        self._manager = windows.lookup(view.window())
+        self._on_save_actions = on_save_actions
+        self._on_done = on_done
+        self._completed = False
+        self._canceled = False
+        self._fix_iteration = 0
+
+    def run(self) -> None:
+        sublime.set_timeout(self._on_timeout, settings.code_action_on_save_timeout_ms)
+        self._run_code_actions()
+
+    def _run_code_actions(self) -> None:
+        self._fix_iteration += 1
+        if self._fix_iteration > 3:
+            print('TOO MANY ITERATIONS. ABORTING.')
+            self._on_complete()
+            return
+        self._manager.documents.purge_changes(self._view)
+        request_code_actions_on_save(self._view, self._handle_response, self._on_save_actions)
+
+    def _handle_response(self, responses: CodeActionsByConfigName) -> None:
+        if self._canceled:
+            return
+        ran_code_action_or_command = False
         for config_name, code_actions in responses.items():
             if code_actions:
                 print('CODE_ACTIONS (config: {})'.format(config_name), code_actions)
                 for code_action in code_actions:
-                    run_code_action_or_command(self.view, config_name, code_action)
+                    ran_code_action_or_command = True
+                    run_code_action_or_command(self._view, config_name, code_action)
+        if ran_code_action_or_command:
+            self._run_code_actions()
+        else:
+            self._on_complete()
+
+    def _on_timeout(self) -> None:
+        if not self._completed and not self._canceled:
+            print('TIMEOUT, ABORTING')
+            self._canceled = True
+            self._on_complete()
+
+    def _on_complete(self) -> None:
+        self._completed = True
+        self._on_done()
+
+    def cancel(self) -> None:
+        self._canceled = True
 
 
 class LspCodeActionBulbListener(LSPViewEventListener):
@@ -289,7 +337,7 @@ def run_code_action_or_command(view: sublime.View, config_name: str,
         if maybe_edit:
             changes = parse_workspace_edit(maybe_edit)
             window = view.window()
-            if window:
+            if changes and window:
                 window.run_command("lsp_apply_workspace_edit", {'changes': changes})
         maybe_command = command_or_code_action.get('command')
         if isinstance(maybe_command, dict):

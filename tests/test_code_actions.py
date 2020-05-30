@@ -76,7 +76,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
             code_action_kind
         )
         self.set_response('textDocument/codeAction', [code_action])
-        self.view.run_command('save')
+        self.view.run_command('lsp_save')
         yield from self.await_message('textDocument/codeAction')
         self.assertEquals(entire_content(self.view), 'const x = 1;')
 
@@ -89,14 +89,14 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
             code_action_kind
         )
         self.set_response('textDocument/codeAction', [code_action])
-        self.view.run_command('save')
+        self.view.run_command('lsp_save')
         yield from self.await_message('textDocument/codeAction')
         self.assertEquals(entire_content(self.view), 'const x = 1;')
 
     def test_no_fix_on_non_matching_kind(self) -> Generator:
         yield from self._setup_document_with_missing_semicolon()
         initial_content = 'const x = 1'
-        self.view.run_command('save')
+        self.view.run_command('lsp_save')
         self.assertEquals(entire_content(self.view), initial_content)
 
     def test_does_not_apply_unsupported_kind(self) -> Generator:
@@ -108,7 +108,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
             code_action_kind
         )
         self.set_response('textDocument/codeAction', [code_action])
-        self.view.run_command('save')
+        self.view.run_command('lsp_save')
         self.assertEquals(entire_content(self.view), 'const x = 1')
 
     def _setup_document_with_missing_semicolon(self) -> Generator:

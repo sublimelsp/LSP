@@ -62,4 +62,7 @@
 
     // Symbol Hover
     // {"keys": ["UNBOUND"], "command": "lsp_hover", "context": [{"key": "setting.lsp_active"}]},
+
+    // Code actions on save
+    { "keys": ["super+s"], "command": "lsp_save", "context": [{ "key": "setting.lsp_active"}] },
 ]

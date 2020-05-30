@@ -146,3 +146,9 @@ def shutdown() -> None:
 class Listener(sublime_plugin.EventListener):
     def on_exit(self) -> None:
         kill_all_subprocesses()
+
+    def on_load_project(self, w: sublime.Window) -> None:
+        windows.lookup(w).on_load_project()
+
+    def on_pre_close_project(self, w: sublime.Window) -> None:
+        windows.lookup(w).on_pre_close_project()

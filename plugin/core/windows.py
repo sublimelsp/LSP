@@ -20,10 +20,8 @@ from .views import did_change, did_close, did_open, did_save, will_save
 from .views import extract_variables
 from .workspace import disable_in_project
 from .workspace import enable_in_project
-from .workspace import get_workspace_folders
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
-from weakref import ref
 from weakref import WeakValueDictionary
 import sublime
 import threading
@@ -321,25 +319,18 @@ class WindowManager(Manager):
         self._is_closing = False
         self._initialization_lock = threading.Lock()
         self._workspace = workspace
-        weakself = ref(self)
 
-        # A weak reference is needed, otherwise self._workspace will have a strong reference to self, meaning a
-        # cyclic dependency.
-        def on_changed(folders: List[str]) -> None:
-            this = weakself()
-            if this is not None:
-                this._on_project_changed(folders)
+    def on_load_project(self) -> None:
+        # TODO: Also end sessions that were previously enabled in the .sublime-project, but now disabled or removed
+        # from the .sublime-project.
+        self._configs.update()
+        workspace_folders = self._workspace.update()
+        for sessions in self._sessions.values():
+            for session in sessions:
+                session.update_folders(workspace_folders)
 
-        # A weak reference is needed, otherwise self._workspace will have a strong reference to self, meaning a
-        # cyclic dependency.
-        def on_switched(folders: List[str]) -> None:
-            this = weakself()
-            if this is not None:
-                this._on_project_switched(folders)
-
-        self._workspace.on_changed = on_changed
-        self._workspace.on_switched = on_switched
-        self._progress = dict()  # type: Dict[Any, Any]
+    def on_pre_close_project(self) -> None:
+        self.end_sessions()
 
     def window(self) -> sublime.Window:
         # WindowLike vs. sublime
@@ -352,16 +343,6 @@ class WindowManager(Manager):
                 if capability is None or capability in session.capabilities:
                     if session.state == ClientStates.READY and session.handles_path(file_name):
                         yield session
-
-    def _on_project_changed(self, folders: List[str]) -> None:
-        workspace_folders = get_workspace_folders(self._workspace.folders)
-        for config_name in self._sessions:
-            for session in self._sessions[config_name]:
-                session.update_folders(workspace_folders)
-
-    def _on_project_switched(self, folders: List[str]) -> None:
-        debug('project switched - ending all sessions')
-        self.end_sessions()
 
     def get_session(self, config_name: str, file_path: str) -> Optional[Session]:
         return self._find_session(config_name, file_path)
@@ -380,18 +361,15 @@ class WindowManager(Manager):
                     return session
         return None
 
-    def update_configs(self) -> None:
-        self._configs.update()
-
     def enable_config(self, config_name: str) -> None:
         enable_in_project(self._window, config_name)
-        self.update_configs()
+        self._configs.update()
         self._sublime.set_timeout_async(self.start_active_views, 500)
         self._window.status_message("{} enabled, starting server...".format(config_name))
 
     def disable_config(self, config_name: str) -> None:
         disable_in_project(self._window, config_name)
-        self.update_configs()
+        self._configs.update()
         self.end_config_sessions(config_name)
 
     def start_active_views(self) -> None:
@@ -448,14 +426,11 @@ class WindowManager(Manager):
 
         # have all sessions for this document been started?
         with self._initialization_lock:
-            if any(needed_configs(self._configs.match_view(view, include_disabled=True))):  # type: ignore
-                # TODO: cannot observe project setting changes
-                # have to check project overrides every session request
-                self.update_configs()
-                startable_configs = needed_configs(self._configs.match_view(view))  # type: ignore
-                for config in startable_configs:
-                    debug("window {} requests {} for {}".format(self._window.id(), config.name, file_path))
-                    self.start(config, view)  # type: ignore
+            # ViewLike vs sublime.View
+            startable_configs = needed_configs(self._configs.match_view(view))  # type: ignore
+            for config in startable_configs:
+                debug("window {} requests {} for {}".format(self._window.id(), config.name, file_path))
+                self.start(config, view)  # type: ignore
 
     def start(self, config: ClientConfig, initiating_view: sublime.View) -> None:
         file_path = initiating_view.file_name() or ''

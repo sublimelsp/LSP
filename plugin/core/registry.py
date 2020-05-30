@@ -105,11 +105,8 @@ class LspTextCommand(sublime_plugin.TextCommand):
     def is_visible(self, event: Optional[dict] = None) -> bool:
         return is_supported_view(self.view)
 
-    def has_client_with_capability(self, capability: str) -> bool:
-        return session_for_view(self.view, capability) is not None
-
-    def client_with_capability(self, capability: str) -> Optional[Session]:
-        return session_for_view(self.view, capability)
+    def session(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
+        return session_for_view(self.view, capability, point)
 
 
 class LspRestartClientCommand(sublime_plugin.TextCommand):

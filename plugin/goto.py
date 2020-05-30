@@ -40,13 +40,11 @@ class LspGotoCommand(LspTextCommand):
         self.goto_kind = "definition"
 
     def is_enabled(self, event: Optional[dict] = None) -> bool:
-        if self.has_client_with_capability(self.goto_kind + "Provider"):
-            return is_at_word(self.view, event)
-        return False
+        return bool(self.session(self.goto_kind + "Provider")) and is_at_word(self.view, event)
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
-        client = self.client_with_capability(self.goto_kind + "Provider")
-        if client:
+        session = self.session(self.goto_kind + "Provider")
+        if session:
             pos = get_position(self.view, event)
             document_position = text_document_position_params(self.view, pos)
             request_type = getattr(Request, self.goto_kind)
@@ -54,7 +52,7 @@ class LspGotoCommand(LspTextCommand):
                 debug("unrecognized goto kind:", self.goto_kind)
                 return
             request = request_type(document_position)
-            client.send_request(request, self.handle_response)
+            session.send_request(request, self.handle_response)
 
     def handle_response(self, response: Any) -> None:
         window = self.view.window()

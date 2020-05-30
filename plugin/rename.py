@@ -39,9 +39,7 @@ class LspSymbolRenameCommand(LspTextCommand):
 
     def is_enabled(self, event: Optional[dict] = None) -> bool:
         # TODO: check what kind of scope we're in.
-        if self.has_client_with_capability('renameProvider'):
-            return is_at_word(self.view, event)
-        return False
+        return bool(self.session('renameProvider')) and is_at_word(self.view, event)
 
     def input(self, args: dict) -> Optional[sublime_plugin.TextInputHandler]:
         if "new_name" not in args:
@@ -53,10 +51,10 @@ class LspSymbolRenameCommand(LspTextCommand):
         self.request_rename(text_document_position_params(self.view, get_position(self.view, event)), new_name)
 
     def request_rename(self, params: dict, new_name: str) -> None:
-        client = self.client_with_capability('renameProvider')
-        if client:
+        session = self.session('renameProvider')
+        if session:
             params["newName"] = new_name
-            client.send_request(Request.rename(params), self.handle_response)
+            session.send_request(Request.rename(params), self.handle_response)
 
     def handle_response(self, response: Optional[Dict]) -> None:
         window = self.view.window()

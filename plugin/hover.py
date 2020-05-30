@@ -111,11 +111,11 @@ class LspHoverCommand(LspTextCommand):
     def symbol_actions_content(self) -> str:
         actions = []
         for goto_kind in goto_kinds:
-            if self.has_client_with_capability(goto_kind.lsp_name + "Provider"):
+            if self.session(goto_kind.lsp_name + "Provider"):
                 actions.append("<a href='{}'>{}</a>".format(goto_kind.lsp_name, goto_kind.label))
-        if self.has_client_with_capability('referencesProvider'):
+        if self.session('referencesProvider'):
             actions.append("<a href='{}'>{}</a>".format('references', 'References'))
-        if self.has_client_with_capability('renameProvider'):
+        if self.session('renameProvider'):
             actions.append("<a href='{}'>{}</a>".format('rename', 'Rename'))
         return "<p class='actions'>" + " | ".join(actions) + "</p>"
 

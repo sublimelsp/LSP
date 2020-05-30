@@ -25,27 +25,29 @@ class CodeActionsCollector(object):
         self._on_complete_handler = on_complete_handler
         self._commands_by_config = {}  # type: CodeActionsByConfigName
         self._requested_configs = []  # type: List[str]
+        self._all_requested = False
 
-    def create_sync_collector(self, config_name: str) -> Callable[[CodeActionsResponse], None]:
-        return lambda actions: self._collect(config_name, actions)
+    def __enter__(self) -> 'CodeActionsCollector':
+        return self
 
-    def _collect(self, config_name: str, actions: CodeActionsResponse) -> None:
-        self._commands_by_config[config_name] = actions or []
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        self._all_requested = True
+        self._notify_if_all_finished()
 
-    def create_async_collector(self, config_name: str) -> Callable[[CodeActionsResponse], None]:
+    def create_collector(self, config_name: str) -> Callable[[CodeActionsResponse], None]:
         self._requested_configs.append(config_name)
-        return lambda actions: self._collect_async(config_name, actions)
+        return lambda actions: self._collect_response(config_name, actions)
 
-    def _collect_async(self, config_name: str, actions: CodeActionsResponse) -> None:
-        self._collect(config_name, actions)
-        if len(self._requested_configs) == len(self._commands_by_config):
-            self.deliver()
+    def _collect_response(self, config_name: str, actions: CodeActionsResponse) -> None:
+        self._commands_by_config[config_name] = actions or []
+        self._notify_if_all_finished()
+
+    def _notify_if_all_finished(self) -> None:
+        if self._all_requested and len(self._requested_configs) == len(self._commands_by_config):
+            self._on_complete_handler(self._commands_by_config)
 
     def get_actions(self) -> CodeActionsByConfigName:
         return self._commands_by_config
-
-    def deliver(self) -> None:
-        self._on_complete_handler(self._commands_by_config)
 
 
 class CodeActionsManager(object):
@@ -77,16 +79,17 @@ def request_code_actions(
     point: int,
 ) -> CodeActionsCollector:
     actions_collector = CodeActionsCollector(actions_handler)
-    file_name = view.file_name()
-    if file_name:
-        diagnostics_by_config = filter_by_point(view_diagnostics(view), Point(*view.rowcol(point)))
-        sessions = [session for session in sessions_for_view(view, 'codeActionProvider') if session.client]
-        for session in sessions:
-            config_name = session.config.name
-            if config_name in diagnostics_by_config:
-                diagnostics = diagnostics_by_config[config_name]
-                request = Request.codeAction(_create_code_action_request_params(view, file_name, diagnostics))
-                session.client.send_request(request, actions_collector.create_async_collector(config_name))
+    with actions_collector:
+        file_name = view.file_name()
+        if file_name:
+            diagnostics_by_config = filter_by_point(view_diagnostics(view), Point(*view.rowcol(point)))
+            sessions = [session for session in sessions_for_view(view, 'codeActionProvider') if session.client]
+            for session in sessions:
+                config_name = session.config.name
+                if config_name in diagnostics_by_config:
+                    diagnostics = diagnostics_by_config[config_name]
+                    request = Request.codeAction(_create_code_action_request_params(view, file_name, diagnostics))
+                    session.client.send_request(request, actions_collector.create_collector(config_name))
     return actions_collector
 
 
@@ -95,28 +98,35 @@ def request_code_actions_on_save(
     actions_handler: Callable[[CodeActionsByConfigName], None],
     on_save_actions: Dict[str, bool]
 ) -> CodeActionsCollector:
-    def actions_filter(config_name: str, kinds: List[str], actions: CodeActionsResponse) -> None:
+    def filtering_collector(
+        config_name: str,
+        kinds: List[str],
+        actions_collector: CodeActionsCollector
+    ) -> Callable[[CodeActionsResponse], None]:
         """
         Filters actions returned from server so that only matching kinds are collected.
 
         Since older servers don't support the "context.only" property, they will return all
         actions regardless of what is requested.
         """
-        matching_actions = [a for a in (actions or []) if a.get('kind') in kinds]
-        actions_collector.create_sync_collector(session.config.name)(matching_actions)
+        def actions_filter(actions: CodeActionsResponse) -> List[CodeActionOrCommand]:
+            return [a for a in (actions or []) if a.get('kind') in kinds]
+        collector = actions_collector.create_collector(config_name)
+        return lambda actions: collector(actions_filter(actions))
 
     actions_collector = CodeActionsCollector(actions_handler)
-    file_name = view.file_name()
-    if file_name:
-        sessions = [session for session in sessions_for_view(view, 'codeActionProvider') if session.client]
-        for session in sessions:
-            supported_kinds = session.get_capability('codeActionProvider.codeActionKinds')
-            matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])
-            if matching_kinds:
-                params = _create_code_action_request_params(view, file_name, [], matching_kinds)
-                request = Request.codeAction(params)
-                session.client.execute_request(
-                    request, lambda actions: actions_filter(session.config.name, matching_kinds, actions))
+    with actions_collector:
+        file_name = view.file_name()
+        if file_name:
+            sessions = [session for session in sessions_for_view(view, 'codeActionProvider') if session.client]
+            for session in sessions:
+                supported_kinds = session.get_capability('codeActionProvider.codeActionKinds')
+                matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])
+                if matching_kinds:
+                    params = _create_code_action_request_params(view, file_name, [], matching_kinds)
+                    request = Request.codeAction(params)
+                    session.client.execute_request(
+                        request, filtering_collector(session.config.name, matching_kinds, actions_collector))
     return actions_collector
 
 
@@ -198,8 +208,7 @@ class LspCodeActionsOnSaveListener(LSPViewEventListener):
         on_save_actions = self.get_code_actions_on_save(self.view.settings())
         if on_save_actions:
             self.manager.documents.purge_changes(self.view)
-            collector = request_code_actions_on_save(self.view, self.handle_response, on_save_actions)
-            collector.deliver()
+            request_code_actions_on_save(self.view, self.handle_response, on_save_actions)
 
     def handle_response(self, responses: CodeActionsByConfigName) -> None:
         for config_name, code_actions in responses.items():

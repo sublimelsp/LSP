@@ -1,5 +1,4 @@
 from .configurations import ConfigManager
-from .rpc import Client
 from .sessions import Session
 from .settings import settings, client_configs
 from .types import ClientConfig, ClientStates, view2scope
@@ -33,10 +32,6 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
 
     def has_manager(self) -> bool:
         return self._manager is not None
-
-
-def client_from_session(session: Optional[Session]) -> Optional[Session]:
-    return session if session else None
 
 
 def sessions_for_view(view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
@@ -113,8 +108,8 @@ class LspTextCommand(sublime_plugin.TextCommand):
     def has_client_with_capability(self, capability: str) -> bool:
         return session_for_view(self.view, capability) is not None
 
-    def client_with_capability(self, capability: str) -> Optional[Client]:
-        return client_from_session(session_for_view(self.view, capability))
+    def client_with_capability(self, capability: str) -> Optional[Session]:
+        return session_for_view(self.view, capability)
 
 
 class LspRestartClientCommand(sublime_plugin.TextCommand):

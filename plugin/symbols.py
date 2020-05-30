@@ -43,6 +43,7 @@ class LspSelectionAddCommand(sublime_plugin.TextCommand):
 
 class LspDocumentSymbolsCommand(LspTextCommand):
 
+    capability = 'documentSymbolProvider'
     REGIONS_KEY = 'lsp_document_symbols'
 
     def __init__(self, view: sublime.View) -> None:
@@ -52,11 +53,8 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.found_at_least_one_nonempty_detail = False
         self.is_first_selection = False
 
-    def is_enabled(self, event: Optional[dict] = None) -> bool:
-        return bool(self.session('documentSymbolProvider'))
-
     def run(self, edit: sublime.Edit) -> None:
-        session = self.session('documentSymbolProvider')
+        session = self.session(self.capability)
         if session:
             session.send_request(
                 Request.documentSymbols({"textDocument": text_document_identifier(self.view)}), self.handle_response)
@@ -157,15 +155,14 @@ class SymbolQueryInput(sublime_plugin.TextInputHandler):
 
 class LspWorkspaceSymbolsCommand(LspTextCommand):
 
-    def is_enabled(self) -> bool:
-        return bool(self.session('workspaceSymbolProvider'))
+    capability = 'workspaceSymbolProvider'
 
     def input(self, _args: Any) -> sublime_plugin.TextInputHandler:
         return SymbolQueryInput()
 
     def run(self, edit: sublime.Edit, symbol_query_input: str = "") -> None:
         if symbol_query_input:
-            session = self.session('workspaceSymbolProvider')
+            session = self.session(self.capability)
             if session:
                 self.view.set_status("lsp_workspace_symbols", "Searching for '{}'...".format(symbol_query_input))
                 request = Request.workspaceSymbol({"query": symbol_query_input})

@@ -1,8 +1,9 @@
 import sublime
 from Default.history_list import get_jump_history_for_view
-from .core.documents import get_position, is_at_word
+from .core.documents import is_at_word
 from .core.logging import debug
 from .core.protocol import Request
+from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.typing import List, Optional, Any
 from .core.views import location_to_encoded_filename

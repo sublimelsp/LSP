@@ -1,17 +1,11 @@
 import sublime
 
+from .registry import get_position
 from .registry import LSPViewEventListener
 from .typing import Optional, Iterable
 
 
 SUBLIME_WORD_MASK = 515
-
-
-def get_position(view: sublime.View, event: Optional[dict] = None) -> int:
-    if event:
-        return view.window_to_text((event["x"], event["y"]))
-    else:
-        return view.sel()[0].begin()
 
 
 def is_at_word(view: sublime.View, event: Optional[dict]) -> bool:

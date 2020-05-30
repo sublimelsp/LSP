@@ -7,14 +7,14 @@ from .core.views import uri_from_view, offset_to_point, region_to_range
 
 
 class LspExecuteCommand(LspTextCommand):
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
+
+    capability = 'executeCommandProvider'
 
     def run(self,
             edit: sublime.Edit,
             command_name: Optional[str] = None,
             command_args: Optional[List[Any]] = None) -> None:
-        session = self.session('executeCommandProvider')
+        session = self.session(self.capability)
         if session and command_name:
             window = self.view.window()
             if window:

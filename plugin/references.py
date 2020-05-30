@@ -2,10 +2,12 @@ import os
 import sublime
 import linecache
 
-from .core.documents import is_at_word, get_position
+from .core.documents import is_at_word
 from .core.panels import ensure_panel
 from .core.protocol import Request, Point
-from .core.registry import LspTextCommand, windows
+from .core.registry import get_position
+from .core.registry import LspTextCommand
+from .core.registry import windows
 from .core.settings import PLUGIN_NAME, settings
 from .core.typing import List, Dict, Optional, Tuple, TypedDict
 from .core.url import uri_to_filename
@@ -20,6 +22,9 @@ def ensure_references_panel(window: sublime.Window) -> 'Optional[sublime.View]':
 
 
 class LspSymbolReferencesCommand(LspTextCommand):
+
+    capability = 'referencesProvider'
+
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self.reflist = []  # type: List[List[str]]
@@ -28,10 +33,10 @@ class LspSymbolReferencesCommand(LspTextCommand):
         self.base_dir = None  # type: Optional[str]
 
     def is_enabled(self, event: Optional[dict] = None) -> bool:
-        return bool(self.session('referencesProvider')) and is_at_word(self.view, event)
+        return super().is_enabled() and is_at_word(self.view, event)
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
-        session = self.session('referencesProvider')
+        session = self.session(self.capability)
         file_path = self.view.file_name()
         if session and file_path:
             pos = get_position(self.view, event)

@@ -63,6 +63,7 @@ goto_kinds = [
 
 
 class LspHoverCommand(LspTextCommand):
+
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self._base_dir = None   # type: Optional[str]

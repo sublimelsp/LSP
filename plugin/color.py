@@ -95,6 +95,7 @@ class LspColorListener(LSPViewEventListener):
             alpha = color['alpha']
 
             content = """
+            <style>html {{padding: 0}}</style>
             <div style='padding: 0.4em;
                         margin-top: 0.2em;
                         border: 1px solid color(var(--foreground) alpha(0.25));

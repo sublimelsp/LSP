@@ -11,6 +11,7 @@ from .core.registry import session_for_view, LspTextCommand, windows
 from .core.registry import LSPViewEventListener
 from .core.settings import settings
 from .core.typing import List, Optional, Any, Dict
+from .core.views import make_link
 from .core.views import text_document_position_params
 from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .diagnostics import filter_by_point, view_diagnostics
@@ -112,11 +113,11 @@ class LspHoverCommand(LspTextCommand):
         actions = []
         for goto_kind in goto_kinds:
             if self.session(goto_kind.lsp_name + "Provider"):
-                actions.append("<a href='{}'>{}</a>".format(goto_kind.lsp_name, goto_kind.label))
+                actions.append(make_link(goto_kind.lsp_name, goto_kind.label))
         if self.session('referencesProvider'):
-            actions.append("<a href='{}'>{}</a>".format('references', 'References'))
+            actions.append(make_link('references', 'References'))
         if self.session('renameProvider'):
-            actions.append("<a href='{}'>{}</a>".format('rename', 'Rename'))
+            actions.append(make_link('rename', 'Rename'))
         return "<p class='actions'>" + " | ".join(actions) + "</p>"
 
     def format_diagnostic_related_info(self, info: DiagnosticRelatedInformation) -> str:
@@ -124,7 +125,8 @@ class LspHoverCommand(LspTextCommand):
         if self._base_dir and file_path.startswith(self._base_dir):
             file_path = os.path.relpath(file_path, self._base_dir)
         location = "{}:{}:{}".format(file_path, info.location.range.start.row+1, info.location.range.start.col+1)
-        return "<a href='location:{}'>{}</a>: {}".format(location, location, escape(info.message))
+        link = make_link("location:{}".format(location), location)
+        return "{}: {}".format(link, escape(info.message))
 
     def format_diagnostic(self, diagnostic: 'Diagnostic') -> str:
         diagnostic_message = escape(diagnostic.message, False).replace('\n', '<br>')
@@ -154,8 +156,9 @@ class LspHoverCommand(LspTextCommand):
             if config_name in self._actions_by_config:
                 action_count = len(self._actions_by_config[config_name])
                 if action_count > 0:
-                    formatted.append("<div class=\"actions\"><a href='{}:{}'>{} ({})</a></div>".format(
-                        'code-actions', config_name, 'Code Actions', action_count))
+                    href = "{}:{}".format('code-actions', config_name)
+                    text = "{} ({})".format('Code Actions', action_count)
+                    formatted.append("<div class=\"actions\">{}</div>".format(make_link(href, text)))
 
             formatted.append("</div>")
 

@@ -129,8 +129,8 @@ def request_code_actions_on_save(
                 if matching_kinds:
                     params = _create_code_action_request_params(view, file_name, [], matching_kinds)
                     request = Request.codeAction(params)
-                    session.client.send_request(
-                        request, filtering_collector(session.config.name, matching_kinds, actions_collector))
+                    session_collector = filtering_collector(session.config.name, matching_kinds, actions_collector)
+                    session.client.send_request(request, session_collector, lambda error: session_collector([]))
     return actions_collector
 
 

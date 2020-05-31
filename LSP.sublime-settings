@@ -21,6 +21,9 @@
   // Only "source.*" actions are supported.
   "lsp_code_actions_on_save": {},
 
+  // The amount of time the code actions on save are allowed to run for.
+  "code_action_on_save_timeout_ms": 2000,
+
   // Open the diagnostics panel automatically
   // when diagnostics level is equal to or less than:
   // error: 1

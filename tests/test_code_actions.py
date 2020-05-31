@@ -167,6 +167,7 @@ class CodeActionsTestCase(TextDocumentTestCase):
         self.assertEquals(entire_content(self.view), initial_content)
 
     # Keep this test last as it breaks pyls!
+    @unittest.skip("not compatible with ST3")
     def test_applies_correctly_after_emoji(self) -> Generator:
         self.insert_characters('🕵️hi')
         yield from self.await_message("textDocument/didChange")

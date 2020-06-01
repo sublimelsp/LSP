@@ -3,6 +3,7 @@ from LSP.plugin.core.typing import Any, Generator
 from LSP.plugin.core.url import filename_to_uri
 from setup import TextDocumentTestCase
 import sublime
+import os
 
 
 class ServerRequests(TextDocumentTestCase):
@@ -16,8 +17,10 @@ class ServerRequests(TextDocumentTestCase):
         yield from self.verify("foobar/qux", {}, {"code": ErrorCode.MethodNotFound, "message": "foobar/qux"})
 
     def test_m_workspace_workspaceFolders(self) -> Generator:
-        uri = filename_to_uri(sublime.active_window().folders()[0])
-        yield from self.verify("workspace/workspaceFolders", {}, [{"name": "LSP", "uri": uri}])
+        expected_output = [{"name": os.path.basename(f), "uri": filename_to_uri(f)}
+                           for f in sublime.active_window().folders()]
+        self.maxDiff = None
+        yield from self.verify("workspace/workspaceFolders", {}, expected_output)
 
     def test_m_workspace_configuration(self) -> Generator:
         yield from self.verify("workspace/configuration", {}, [])

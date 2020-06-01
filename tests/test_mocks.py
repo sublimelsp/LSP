@@ -35,7 +35,12 @@ basic_responses = {
             'typeDefinitionProvider': True,
             'declarationProvider': True,
             'implementationProvider': True,
-            'documentFormattingProvider': True
+            'documentFormattingProvider': True,
+            'workspace': {
+                'workspaceFolders': {
+                    'supported': True
+                }
+            }
         }
     }
 }

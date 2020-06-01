@@ -72,7 +72,7 @@ class LspHoverCommand(LspTextCommand):
         word_at_sel = self.view.classify(point)
         return bool(word_at_sel & SUBLIME_WORD_MASK)
 
-    def run(self, edit: sublime.Edit, point: Optional[int] = None) -> None:
+    def run(self, edit: sublime.Edit, point: Optional[int] = None, event: Optional[dict] = None) -> None:
         hover_point = point or self.view.sel()[0].begin()
         self._base_dir = windows.lookup(self.view.window()).get_project_path(self.view.file_name() or "")
 

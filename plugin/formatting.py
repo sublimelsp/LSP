@@ -70,7 +70,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
     capability = 'documentRangeFormattingProvider'
 
     def is_enabled(self, event: Optional[dict] = None) -> bool:
-        if super().is_enabled():
+        if super().is_enabled(event):
             if len(self.view.sel()) == 1:
                 region = self.view.sel()[0]
                 if region.begin() != region.end():

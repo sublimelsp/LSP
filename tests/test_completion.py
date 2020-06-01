@@ -1,5 +1,4 @@
 from LSP.plugin.completion import CompletionHandler
-from LSP.plugin.core.registry import is_supported_view
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable
@@ -46,7 +45,6 @@ class InitializationTests(DeferrableTestCase):
     def test_not_enabled(self) -> 'Generator':
         wm = windows.lookup(self.view.window())
         wm._configs.all.append(text_config)
-        self.assertTrue(is_supported_view(self.view))
         handler = CompletionHandler(self.view)
         self.assertFalse(handler.initialized)
         self.assertFalse(handler.enabled)

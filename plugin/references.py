@@ -33,7 +33,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         self.base_dir = None  # type: Optional[str]
 
     def is_enabled(self, event: Optional[dict] = None) -> bool:
-        return super().is_enabled() and is_at_word(self.view, event)
+        return super().is_enabled(event) and is_at_word(self.view, event)
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
         session = self.session(self.capability)
@@ -160,9 +160,6 @@ class LspSymbolReferencesCommand(LspTextCommand):
         if self.base_dir:
             return os.path.join(self.base_dir, file_path)
         return file_path
-
-    def want_event(self) -> bool:
-        return True
 
     def _group_references_by_file(self, references: List[ReferenceDict]
                                   ) -> Dict[str, List[Tuple[Point, str]]]:

@@ -554,17 +554,8 @@ class Session(Client):
 
     def _handle_initialize_result(self, result: Any) -> None:
         self.capabilities.assign(result.get('capabilities', dict()))
-
-        # only keep supported amount of folders
-        if self._workspace_folders:
-            if self._supports_workspace_folders():
-                debug('multi folder session:', self._workspace_folders)
-            else:
-                self._workspace_folders = self._workspace_folders[:1]
-                debug('single folder session:', self._workspace_folders[0])
-        else:
-            debug("session with no workspace folders")
-
+        if self._workspace_folders and not self._supports_workspace_folders():
+            self._workspace_folders = self._workspace_folders[:1]
         self.state = ClientStates.READY
         if self._plugin_class is not None:
             self._plugin = self._plugin_class(weakref.ref(self))

@@ -2,7 +2,7 @@ import sublime
 from .core.documents import is_transient_view
 from .core.protocol import Range
 from .core.protocol import Request
-from .core.registry import session_for_view, sessions_for_view, client_from_session, configurations_for_view
+from .core.registry import session_for_view, sessions_for_view, configurations_for_view
 from .core.registry import LSPViewEventListener
 from .core.settings import settings
 from .core.typing import List, Dict, Optional
@@ -70,8 +70,8 @@ class LspColorListener(LSPViewEventListener):
         if is_transient_view(self.view):
             return
 
-        client = client_from_session(session_for_view(self.view, 'colorProvider'))
-        if client:
+        session = session_for_view(self.view, 'colorProvider')
+        if session:
             file_path = self.view.file_name()
             if file_path:
                 params = {
@@ -79,7 +79,7 @@ class LspColorListener(LSPViewEventListener):
                         "uri": filename_to_uri(file_path)
                     }
                 }
-                client.send_request(
+                session.send_request(
                     Request.documentColor(params),
                     self.handle_response
                 )
@@ -95,6 +95,7 @@ class LspColorListener(LSPViewEventListener):
             alpha = color['alpha']
 
             content = """
+            <style>html {{padding: 0}}</style>
             <div style='padding: 0.4em;
                         margin-top: 0.2em;
                         border: 1px solid color(var(--foreground) alpha(0.25));

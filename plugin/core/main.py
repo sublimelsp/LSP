@@ -107,7 +107,7 @@ def _forcefully_register_plugins() -> None:
         register_plugin(LanguageHandlerTransition)
 
 
-def startup() -> None:
+def plugin_loaded() -> None:
     load_settings()
     popups.load_css()
     set_debug_logging(settings.log_debug)
@@ -120,7 +120,7 @@ def startup() -> None:
     sublime.status_message("LSP initialized")
 
 
-def shutdown() -> None:
+def plugin_unloaded() -> None:
     # Also needs to handle package being disabled or removed
     # https://github.com/sublimelsp/LSP/issues/375
     unload_settings()
@@ -143,3 +143,9 @@ def shutdown() -> None:
 class Listener(sublime_plugin.EventListener):
     def on_exit(self) -> None:
         kill_all_subprocesses()
+
+    def on_load_project(self, w: sublime.Window) -> None:
+        windows.lookup(w).on_load_project()
+
+    def on_pre_close_project(self, w: sublime.Window) -> None:
+        windows.lookup(w).on_pre_close_project()

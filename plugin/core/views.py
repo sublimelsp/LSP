@@ -369,3 +369,7 @@ def _replace_match(match: Any) -> str:
 
 def text2html(content: str) -> str:
     return re.sub(REPLACEMENT_RE, _replace_match, content)
+
+
+def make_link(href: str, text: str) -> str:
+    return "<a href='{}'>{}</a>".format(href, text.replace(' ', '&nbsp;'))

@@ -5,7 +5,7 @@ import sublime_plugin
 import webbrowser
 from .core.edit import parse_text_edit
 from .core.protocol import Request, InsertTextFormat, Range, CompletionItemTag
-from .core.registry import session_for_view, client_from_session, LSPViewEventListener
+from .core.registry import session_for_view, LSPViewEventListener
 from .core.settings import settings
 from .core.typing import Any, List, Dict, Optional, Union, Generator
 from .core.views import COMPLETION_KINDS
@@ -198,14 +198,11 @@ class CompletionHandler(LSPViewEventListener):
         session = session_for_view(self.view, 'completionProvider', locations[0])
         if not session:
             return None
-        client = client_from_session(session)
-        if not client:
-            return None
         self.purge_changes()
         completion_list = sublime.CompletionList()
         capability = session.get_capability('completionProvider') or {}
         can_resolve_completion_items = bool(capability.get('resolveProvider', False))
-        client.send_request(
+        session.send_request(
             Request.complete(text_document_position_params(self.view, locations[0])),
             lambda res: self.handle_response(res, completion_list, can_resolve_completion_items),
             lambda res: self.handle_error(res, completion_list))

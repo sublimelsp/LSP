@@ -20,7 +20,6 @@ from .typing import Optional, List, Callable, Dict, Any, Deque, Protocol, Genera
 from .views import extract_variables
 from .workspace import disable_in_project
 from .workspace import enable_in_project
-from .workspace import get_workspace_folders
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
 from collections import deque
@@ -96,25 +95,18 @@ class WindowManager(Manager):
         self._listeners = WeakSet()  # type: WeakSet[ViewListenerProtocol]
         self._new_listener = None  # type: Optional[ViewListenerProtocol]
         self._new_session = None  # type: Optional[Session]
-        weakself = ref(self)
 
-        # A weak reference is needed, otherwise self._workspace will have a strong reference to self, meaning a
-        # cyclic dependency.
-        def on_changed(folders: List[str]) -> None:
-            this = weakself()
-            if this is not None:
-                this._on_project_changed(folders)
+    def on_load_project(self) -> None:
+        # TODO: Also end sessions that were previously enabled in the .sublime-project, but now disabled or removed
+        # from the .sublime-project.
+        self._configs.update()
+        workspace_folders = self._workspace.update()
+        for sessions in self._sessions.values():
+            for session in sessions:
+                session.update_folders(workspace_folders)
 
-        # A weak reference is needed, otherwise self._workspace will have a strong reference to self, meaning a
-        # cyclic dependency.
-        def on_switched(folders: List[str]) -> None:
-            this = weakself()
-            if this is not None:
-                this._on_project_switched(folders)
-
-        self._workspace.on_changed = on_changed
-        self._workspace.on_switched = on_switched
-        self._progress = dict()  # type: Dict[Any, Any]
+    def on_pre_close_project(self) -> None:
+        self.end_sessions()
 
     def register_listener(self, listener: ViewListenerProtocol) -> None:
         self._pending_listeners.appendleft(listener)
@@ -180,15 +172,6 @@ class WindowManager(Manager):
                 if session.state == ClientStates.READY and session.handles_path(file_name):
                     yield session
 
-    def _on_project_changed(self, folders: List[str]) -> None:
-        workspace_folders = get_workspace_folders(self._workspace.folders)
-        for session in self._sessions:
-            session.update_folders(workspace_folders)
-
-    def _on_project_switched(self, folders: List[str]) -> None:
-        debug('project switched - ending all sessions')
-        self.end_sessions()
-
     def get_session(self, config_name: str, file_path: str) -> Optional[Session]:
         return self._find_session(config_name, file_path)
 
@@ -201,12 +184,9 @@ class WindowManager(Manager):
                 return session
         return None
 
-    def update_configs(self) -> None:
-        self._configs.update()
-
     def enable_config(self, config_name: str) -> None:
         enable_in_project(self._window, config_name)
-        self.update_configs()
+        self._configs.update()
         for listener in self._listeners:
             self._pending_listeners.appendleft(listener)
         self._listeners.clear()
@@ -215,7 +195,7 @@ class WindowManager(Manager):
 
     def disable_config(self, config_name: str) -> None:
         disable_in_project(self._window, config_name)
-        self.update_configs()
+        self._configs.update()
         self.end_config_sessions(config_name)
 
     def _needed_config(self, view: sublime.View) -> Optional[ClientConfig]:

@@ -1,9 +1,11 @@
 import sublime
 from Default.history_list import get_jump_history_for_view
-from .core.documents import get_position, is_at_word
+from .core.documents import is_at_word
 from .core.logging import debug
 from .core.protocol import Request
+from .core.registry import get_position
 from .core.registry import LspTextCommand
+from .core.sessions import method_to_capability
 from .core.typing import List, Optional, Any
 from .core.views import location_to_encoded_filename
 from .core.views import text_document_position_params
@@ -35,26 +37,17 @@ def highlight_entry(window: Optional[sublime.Window], locations: List[str], idx:
 
 class LspGotoCommand(LspTextCommand):
 
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
-        self.goto_kind = "definition"
+    method = ''
 
     def is_enabled(self, event: Optional[dict] = None) -> bool:
-        if self.has_client_with_capability(self.goto_kind + "Provider"):
-            return is_at_word(self.view, event)
-        return False
+        return super().is_enabled(event) and is_at_word(self.view, event)
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
-        client = self.client_with_capability(self.goto_kind + "Provider")
-        if client:
+        session = self.session(self.capability)
+        if session:
             pos = get_position(self.view, event)
-            document_position = text_document_position_params(self.view, pos)
-            request_type = getattr(Request, self.goto_kind)
-            if not request_type:
-                debug("unrecognized goto kind:", self.goto_kind)
-                return
-            request = request_type(document_position)
-            client.send_request(request, self.handle_response)
+            request = Request(self.method, text_document_position_params(self.view, pos))
+            session.send_request(request, self.handle_response)
 
     def handle_response(self, response: Any) -> None:
         window = self.view.window()
@@ -83,33 +76,22 @@ class LspGotoCommand(LspTextCommand):
                                    "reverting to Sublime's built-in Goto Definition")
             window.run_command("goto_definition")
 
-    def want_event(self) -> bool:
-        return True
-
 
 class LspSymbolDefinitionCommand(LspGotoCommand):
-
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
-        self.goto_kind = "definition"
+    method = "textDocument/definition"
+    capability = method_to_capability(method)[0]
 
 
 class LspSymbolTypeDefinitionCommand(LspGotoCommand):
-
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
-        self.goto_kind = "typeDefinition"
+    method = "textDocument/typeDefinition"
+    capability = method_to_capability(method)[0]
 
 
 class LspSymbolDeclarationCommand(LspGotoCommand):
-
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
-        self.goto_kind = "declaration"
+    method = "textDocument/declaration"
+    capability = method_to_capability(method)[0]
 
 
 class LspSymbolImplementationCommand(LspGotoCommand):
-
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
-        self.goto_kind = "implementation"
+    method = "textDocument/implementation"
+    capability = method_to_capability(method)[0]

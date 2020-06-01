@@ -43,6 +43,7 @@ class LspSelectionAddCommand(sublime_plugin.TextCommand):
 
 class LspDocumentSymbolsCommand(LspTextCommand):
 
+    capability = 'documentSymbolProvider'
     REGIONS_KEY = 'lsp_document_symbols'
 
     def __init__(self, view: sublime.View) -> None:
@@ -52,13 +53,10 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.found_at_least_one_nonempty_detail = False
         self.is_first_selection = False
 
-    def is_enabled(self, event: Optional[dict] = None) -> bool:
-        return self.has_client_with_capability('documentSymbolProvider')
-
     def run(self, edit: sublime.Edit) -> None:
-        client = self.client_with_capability('documentSymbolProvider')
-        if client:
-            client.send_request(
+        session = self.session(self.capability)
+        if session:
+            session.send_request(
                 Request.documentSymbols({"textDocument": text_document_identifier(self.view)}), self.handle_response)
 
     def handle_response(self, response: Any) -> None:
@@ -157,19 +155,19 @@ class SymbolQueryInput(sublime_plugin.TextInputHandler):
 
 class LspWorkspaceSymbolsCommand(LspTextCommand):
 
-    def is_enabled(self) -> bool:
-        return self.has_client_with_capability('workspaceSymbolProvider')
+    capability = 'workspaceSymbolProvider'
 
     def input(self, _args: Any) -> sublime_plugin.TextInputHandler:
         return SymbolQueryInput()
 
     def run(self, edit: sublime.Edit, symbol_query_input: str = "") -> None:
         if symbol_query_input:
-            client = self.client_with_capability('workspaceSymbolProvider')
-            if client:
+            session = self.session(self.capability)
+            if session:
                 self.view.set_status("lsp_workspace_symbols", "Searching for '{}'...".format(symbol_query_input))
                 request = Request.workspaceSymbol({"query": symbol_query_input})
-                client.send_request(request, lambda r: self._handle_response(symbol_query_input, r), self._handle_error)
+                session.send_request(request, lambda r: self._handle_response(
+                    symbol_query_input, r), self._handle_error)
 
     def _format(self, s: Dict[str, Any]) -> str:
         file_name = os.path.basename(s['location']['uri'])

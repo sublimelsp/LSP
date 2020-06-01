@@ -1,6 +1,6 @@
 import sublime
 from .core.edit import parse_text_edit
-from .core.registry import LspTextCommand, LSPViewEventListener, session_for_view, client_from_session
+from .core.registry import LspTextCommand, LSPViewEventListener, session_for_view
 from .core.registry import sessions_for_view
 from .core.sessions import Session
 from .core.typing import Any, List, Optional
@@ -42,40 +42,35 @@ class FormatOnSaveListener(LSPViewEventListener):
             self._view_maybe_dirty = True
 
     def _will_save_wait_until(self, session: Session) -> None:
-        client = client_from_session(session)
-        if client:
-            client.execute_request(will_save_wait_until(self.view, reason=1),  # TextDocumentSaveReason.Manual
-                                   lambda response: self._apply_and_purge(response))
+        session.execute_request(will_save_wait_until(self.view, reason=1),  # TextDocumentSaveReason.Manual
+                                lambda response: self._apply_and_purge(response))
 
     def _format_on_save(self) -> None:
-        client = client_from_session(session_for_view(self.view, 'documentFormattingProvider'))
-        if client:
-            client.execute_request(text_document_formatting(self.view),
-                                   lambda response: self._apply_and_purge(response))
+        session = session_for_view(self.view, 'documentFormattingProvider')
+        if session:
+            session.execute_request(text_document_formatting(self.view),
+                                    lambda response: self._apply_and_purge(response))
 
 
 class LspFormatDocumentCommand(LspTextCommand):
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
 
-    def is_enabled(self, event: Optional[dict] = None) -> bool:
-        return self.has_client_with_capability('documentFormattingProvider')
+    capability = 'documentFormattingProvider'
 
     def run(self, edit: sublime.Edit) -> None:
-        client = self.client_with_capability('documentFormattingProvider')
+        session = self.session(self.capability)
         file_path = self.view.file_name()
-        if client and file_path:
-            client.send_request(
+        if session and file_path:
+            session.send_request(
                 text_document_formatting(self.view),
                 lambda response: apply_response_to_view(response, self.view))
 
 
 class LspFormatDocumentRangeCommand(LspTextCommand):
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
+
+    capability = 'documentRangeFormattingProvider'
 
     def is_enabled(self, event: Optional[dict] = None) -> bool:
-        if self.has_client_with_capability('documentRangeFormattingProvider'):
+        if super().is_enabled(event):
             if len(self.view.sel()) == 1:
                 region = self.view.sel()[0]
                 if region.begin() != region.end():
@@ -83,10 +78,10 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
         return False
 
     def run(self, edit: sublime.Edit) -> None:
-        client = self.client_with_capability('documentRangeFormattingProvider')
+        session = self.session(self.capability)
         file_path = self.view.file_name()
-        if client and file_path:
+        if session and file_path:
             region = self.view.sel()[0]
-            client.send_request(
+            session.send_request(
                 text_document_range_formatting(self.view, region),
                 lambda response: apply_response_to_view(response, self.view))

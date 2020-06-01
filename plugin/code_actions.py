@@ -240,14 +240,13 @@ class CodeActionTask():
     def _handle_response(self, responses: CodeActionsByConfigName) -> None:
         if self._canceled:
             return
-        ran_code_action_or_command = False
+        document_version = self._view.change_count()
         for config_name, code_actions in responses.items():
             if code_actions:
                 print('CODE_ACTIONS (config: {})'.format(config_name), code_actions)
                 for code_action in code_actions:
-                    ran_code_action_or_command = True
                     run_code_action_or_command(self._view, config_name, code_action)
-        if ran_code_action_or_command:
+        if document_version != self._view.change_count():
             self._run_code_actions()
         else:
             self._on_complete()

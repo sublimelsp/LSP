@@ -178,8 +178,8 @@ def run_code_action_or_command(view: sublime.View, config_name: str,
 
 
 class LspCodeActionsCommand(LspTextCommand):
-    def is_enabled(self) -> bool:
-        return bool(self.session('codeActionProvider'))
+
+    capability = 'codeActionProvider'
 
     def run(self, edit: sublime.Edit) -> None:
         self.commands = []  # type: List[Tuple[str, str, CodeActionOrCommand]]

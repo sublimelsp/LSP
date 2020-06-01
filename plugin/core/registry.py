@@ -93,26 +93,39 @@ def configurations_for_view(view: sublime.View) -> Generator[ClientConfig, None,
         yield from windows.lookup(window)._configs.match_view(view)
 
 
-def is_supported_view(view: sublime.View) -> bool:
-    # TODO: perhaps make this check for a client instead of a config
-    return any(configurations_for_view(view))
+def get_position(view: sublime.View, event: Optional[dict] = None) -> int:
+    if event:
+        return view.window_to_text((event["x"], event["y"]))
+    else:
+        return view.sel()[0].begin()
 
 
 class LspTextCommand(sublime_plugin.TextCommand):
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
+
+    capability = ''
 
     def is_visible(self, event: Optional[dict] = None) -> bool:
-        return is_supported_view(self.view)
+        if self.capability:
+            # At least one active session with the given capability must exist.
+            return bool(self.session(self.capability, get_position(self.view, event)))
+        else:
+            # Any session will do.
+            return any(self.sessions())
+
+    def is_enabled(self, event: Optional[dict] = None) -> bool:
+        return self.is_visible(event)
+
+    def want_event(self) -> bool:
+        return True
 
     def session(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
         return session_for_view(self.view, capability, point)
 
+    def sessions(self, capability: Optional[str] = None) -> Generator[Session, None, None]:
+        yield from sessions_for_view(self.view, capability)
+
 
 class LspRestartClientCommand(sublime_plugin.TextCommand):
-    def is_enabled(self) -> bool:
-        return is_supported_view(self.view)
-
     def run(self, edit: Any) -> None:
         window = self.view.window()
         if window:

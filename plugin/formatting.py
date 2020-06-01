@@ -53,14 +53,11 @@ class FormatOnSaveListener(LSPViewEventListener):
 
 
 class LspFormatDocumentCommand(LspTextCommand):
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
 
-    def is_enabled(self, event: Optional[dict] = None) -> bool:
-        return bool(self.session('documentFormattingProvider'))
+    capability = 'documentFormattingProvider'
 
     def run(self, edit: sublime.Edit) -> None:
-        session = self.session('documentFormattingProvider')
+        session = self.session(self.capability)
         file_path = self.view.file_name()
         if session and file_path:
             session.send_request(
@@ -69,11 +66,11 @@ class LspFormatDocumentCommand(LspTextCommand):
 
 
 class LspFormatDocumentRangeCommand(LspTextCommand):
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
+
+    capability = 'documentRangeFormattingProvider'
 
     def is_enabled(self, event: Optional[dict] = None) -> bool:
-        if bool(self.session('documentRangeFormattingProvider')):
+        if super().is_enabled(event):
             if len(self.view.sel()) == 1:
                 region = self.view.sel()[0]
                 if region.begin() != region.end():
@@ -81,7 +78,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
         return False
 
     def run(self, edit: sublime.Edit) -> None:
-        session = self.session('documentRangeFormattingProvider')
+        session = self.session(self.capability)
         file_path = self.view.file_name()
         if session and file_path:
             region = self.view.sel()[0]

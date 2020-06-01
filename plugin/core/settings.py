@@ -113,6 +113,8 @@ class ClientConfigs(object):
             self._listener()
 
     def add_external_config(self, name: str, s: sublime.Settings) -> None:
+        settings = DottedDict(read_dict_setting(s, "default_settings", {}))  # defined by the plugin author
+        settings.update(read_dict_setting(s, "settings", {}))  # overrides from the user
         config = ClientConfig(
             name=name,
             binary_args=read_array_setting(s, "command", []),
@@ -121,7 +123,7 @@ class ClientConfigs(object):
             # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
             init_options=s.get("initializationOptions"),  # type: ignore
-            settings=DottedDict(read_dict_setting(s, "settings", {})),
+            settings=settings,
             env=read_dict_setting(s, "env", {}),
             tcp_host=s.get("tcp_host", None),
             tcp_mode=s.get("tcp_mode", None),

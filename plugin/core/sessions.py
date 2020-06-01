@@ -292,10 +292,14 @@ class AbstractPlugin(metaclass=ABCMeta):
     @classmethod
     def configuration(cls) -> sublime.Settings:
         """
-        The Settings object that defines the `command`, `languages`, and optionally the `initializationOptions`,
-        `settings`, `env` and `tcp_port`.
+        The Settings object that defines the "command", "languages", and optionally the "initializationOptions",
+        "default_settings", "env" and "tcp_port".
 
-        The `command`, `initializationOptions` and `env` are subject to template string substitution. The following
+        The "settings" dict is also supported, but not recommended for use. Because when a user defines its own
+        settings, the entire dict is overwritten. Because sublime.Settings objects don't recurse overrides in JSON
+        objects. Define your default settings in the "default_settings" object.
+
+        The "command", "initializationOptions" and "env" are subject to template string substitution. The following
         template strings are recognized:
 
         $file
@@ -315,14 +319,14 @@ class AbstractPlugin(metaclass=ABCMeta):
         $cache_path   sublime.cache_path()
         $temp_dir     tempfile.gettempdir()
         $home         os.path.expanduser('~')
-        $port         A random free TCP-port on localhost in case `tcp_port` is set to 0. This string template can only
-                      be used in the `command`
+        $port         A random free TCP-port on localhost in case "tcp_port" is set to 0. This string template can only
+                      be used in the "command"
 
-        The `command` and `env` are expanded upon starting the subprocess of the Session. The `initializationOptions`
-        are expanded upon doing the initialize request. `initializationOptions` does not expand $port.
+        The "command" and "env" are expanded upon starting the subprocess of the Session. The "initializationOptions"
+        are expanded upon doing the initialize request. "initializationOptions" does not expand $port.
 
         When you're managing your own server binary, you would typically place it in sublime.cache_path(). So your
-        `command` should look like this: "command": ["$cache_path/LSP-foobar/server_binary", "--stdio"]
+        "command" should look like this: "command": ["$cache_path/LSP-foobar/server_binary", "--stdio"]
         """
         return sublime.load_settings('LSP-{}.sublime-settings'.format(cls.name()))
 

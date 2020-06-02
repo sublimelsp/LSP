@@ -56,7 +56,7 @@ class LspFormatDocumentCommand(LspTextCommand):
 
     capability = 'documentFormattingProvider'
 
-    def run(self, edit: sublime.Edit) -> None:
+    def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
         session = self.session(self.capability)
         file_path = self.view.file_name()
         if session and file_path:
@@ -77,7 +77,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
                     return True
         return False
 
-    def run(self, edit: sublime.Edit) -> None:
+    def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
         session = self.session(self.capability)
         file_path = self.view.file_name()
         if session and file_path:

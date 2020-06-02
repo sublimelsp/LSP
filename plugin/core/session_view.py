@@ -8,7 +8,7 @@ from .views import did_close
 from .views import did_open
 from .views import did_save
 from .views import will_save
-from .windows import ViewListenerProtocol
+from .windows import AbstractViewListener
 import sublime
 import weakref
 
@@ -28,7 +28,7 @@ class PendingBuffer:
 
 class SessionView:
 
-    def __init__(self, listener: ViewListenerProtocol, session: Session) -> None:
+    def __init__(self, listener: AbstractViewListener, session: Session) -> None:
         self.view = listener.view
         self.session = session
         self.listener = weakref.ref(listener)

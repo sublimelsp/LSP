@@ -4,6 +4,7 @@ from .session_view import PendingBuffer
 from .session_view import SessionView
 from .sessions import Session
 from .typing import Optional, Dict, Generator, Iterable
+from .windows import AbstractViewListener
 import sublime
 
 
@@ -33,11 +34,7 @@ def is_transient_view(view: sublime.View) -> bool:
         return True
 
 
-class DocumentSyncListener(LSPViewEventListener):
-
-    @classmethod
-    def is_applicable(cls, view_settings: dict) -> bool:
-        return cls.has_supported_syntax(view_settings)
+class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:
@@ -53,6 +50,7 @@ class DocumentSyncListener(LSPViewEventListener):
         self.view.settings().erase("lsp_active")
 
     def on_session_initialized(self, session: Session) -> None:
+        assert not self.view.is_loading()
         if session.config.name not in self._session_views:
             self._session_views[session.config.name] = SessionView(self, session)
 
@@ -62,14 +60,12 @@ class DocumentSyncListener(LSPViewEventListener):
     def session_views(self) -> Generator[SessionView, None, None]:
         yield from self._session_views.values()
 
-    def on_load(self) -> None:
-        # skip transient views:
-        if not is_transient_view(self.view):
-            self._register()
-
     def on_activated(self) -> None:
+        assert not self.view.is_loading()
         if self.view.file_name() and not is_transient_view(self.view):
-            self._register()
+            self.manager.register_listener(self)
+            self.view.settings().set("lsp_active", True)
+            self._registered = True
 
     def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
         change_count = self.view.change_count()
@@ -90,10 +86,9 @@ class DocumentSyncListener(LSPViewEventListener):
             sv.did_save()
 
     def on_close(self) -> None:
-        if self.view.file_name() and self.view.is_primary() and self.has_manager():
+        if self._registered and self.view.is_primary():
             self._session_views.clear()
-            if self._registered:
-                self.manager.unregister_listener(self)
+            self.manager.unregister_listener(self)
 
     def _purge_did_change(self, change_count: int) -> None:
         if change_count == self.view.change_count():
@@ -104,12 +99,6 @@ class DocumentSyncListener(LSPViewEventListener):
             for sv in self.session_views():
                 sv.did_change(self._pending_buffer.changes)
             self._pending_buffer = None
-
-    def _register(self) -> None:
-        if not self._registered:
-            self.manager.register_listener(self)
-            self.view.settings().set("lsp_active", True)
-            self._registered = True
 
     def __hash__(self) -> int:
         return hash(id(self))

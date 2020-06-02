@@ -1,8 +1,7 @@
 from .configurations import ConfigManager
 from .sessions import Session
 from .settings import client_configs
-from .settings import settings, client_configs
-from .types import ClientConfig, ClientStates, view2scope
+from .types import ClientConfig
 from .typing import Optional, Callable, Dict, Any, Generator
 from .windows import WindowRegistry, WindowManager
 import sublime

@@ -4,29 +4,29 @@ from .diagnostics import DiagnosticsStorage
 from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
-from .protocol import Notification, TextDocumentSyncKindNone, TextDocumentSyncKindFull
-from .rpc import Client, SublimeLogger
+from .protocol import Notification
 from .sessions import get_plugin
 from .sessions import Manager
 from .sessions import Session
 from .transports import create_transport
 from .types import ClientConfig
-from .types import ClientStates
 from .types import Settings
 from .types import view2scope
 from .types import ViewLike
 from .types import WindowLike
-from .typing import Optional, List, Callable, Dict, Any, Deque, Protocol, Generator
+from .typing import Optional, List, Callable, Any, Deque, Protocol, Generator
 from .views import extract_variables
 from .workspace import disable_in_project
 from .workspace import enable_in_project
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
+from abc import ABCMeta
+from abc import abstractmethod
 from collections import deque
-from weakref import ref
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import sublime
+import sublime_plugin
 
 
 class SublimeLike(Protocol):
@@ -56,18 +56,21 @@ def extract_message(params: Any) -> str:
     return params.get("message", "???") if isinstance(params, dict) else "???"
 
 
-class ViewListenerProtocol(Protocol):
+class AbstractViewListener(metaclass=ABCMeta):
 
     view = None  # type: sublime.View
 
+    @abstractmethod
     def on_session_initialized(self, session: Session) -> None:
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def on_session_shutdown(self, session: Session) -> None:
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def __hash__(self) -> int:
-        ...
+        raise NotImplementedError()
 
 
 class WindowManager(Manager):
@@ -91,9 +94,9 @@ class WindowManager(Manager):
         self._restarting = False
         self._is_closing = False
         self._workspace = workspace
-        self._pending_listeners = deque()  # type: Deque[ViewListenerProtocol]
-        self._listeners = WeakSet()  # type: WeakSet[ViewListenerProtocol]
-        self._new_listener = None  # type: Optional[ViewListenerProtocol]
+        self._pending_listeners = deque()  # type: Deque[AbstractViewListener]
+        self._listeners = WeakSet()  # type: WeakSet[AbstractViewListener]
+        self._new_listener = None  # type: Optional[AbstractViewListener]
         self._new_session = None  # type: Optional[Session]
 
     def on_load_project(self) -> None:
@@ -101,27 +104,33 @@ class WindowManager(Manager):
         # from the .sublime-project.
         self._configs.update()
         workspace_folders = self._workspace.update()
-        for sessions in self._sessions.values():
-            for session in sessions:
-                session.update_folders(workspace_folders)
+        for session in self._sessions:
+            session.update_folders(workspace_folders)
 
     def on_pre_close_project(self) -> None:
         self.end_sessions()
 
-    def register_listener(self, listener: ViewListenerProtocol) -> None:
+    def register_listener(self, listener: AbstractViewListener) -> None:
         self._pending_listeners.appendleft(listener)
         if self._new_session:
             return
         sublime.set_timeout_async(self._dequeue_listener)
 
-    def unregister_listener(self, listener: ViewListenerProtocol) -> None:
+    def unregister_listener(self, listener: AbstractViewListener) -> None:
         self._listeners.discard(listener)
 
-    def listeners(self) -> Generator[ViewListenerProtocol, None, None]:
+    def listeners(self) -> Generator[AbstractViewListener, None, None]:
         yield from self._listeners
 
+    def start_active_views(self) -> None:
+        for v in self._window.views():
+            for listener in sublime_plugin.view_event_listeners[v.id()]:
+                if isinstance(listener, AbstractViewListener):
+                    self.register_listener(listener)
+                    break
+
     def _dequeue_listener(self) -> None:
-        listener = None  # type: Optional[ViewListenerProtocol]
+        listener = None  # type: Optional[AbstractViewListener]
         if self._new_listener is not None and self._new_listener.view.is_valid():
             listener = self._new_listener
             self._new_listener = None
@@ -147,14 +156,12 @@ class WindowManager(Manager):
         else:
             self._new_listener = None
 
-    def _publish_sessions_to_listener(self, listener: ViewListenerProtocol) -> None:
+    def _publish_sessions_to_listener(self, listener: AbstractViewListener) -> None:
         scope = view2scope(listener.view)
-        file_name = listener.view.file_name() or ''
         if listener.view in self._workspace:
             for session in self._sessions:
-                if session.config.match_document(scope):
-                    if session.handles_path(file_name):
-                        listener.on_session_initialized(session)
+                if session.can_handle(listener.view):
+                    listener.on_session_initialized(session)
         else:
             for session in self._sessions:
                 if session.config.match_document(scope):
@@ -166,11 +173,9 @@ class WindowManager(Manager):
         return self._window  # type: ignore
 
     def sessions(self, view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
-        file_name = view.file_name() or ''
         for session in self._sessions:
-            if capability is None or capability in session.capabilities:
-                if session.state == ClientStates.READY and session.handles_path(file_name):
-                    yield session
+            if session.can_handle(view, capability):
+                yield session
 
     def get_session(self, config_name: str, file_path: str) -> Optional[Session]:
         return self._find_session(config_name, file_path)
@@ -201,18 +206,21 @@ class WindowManager(Manager):
     def _needed_config(self, view: sublime.View) -> Optional[ClientConfig]:
         configs = self._configs.match_view(view)
         handled = False
+        file_name = view.file_name() or ''
         if view in self._workspace:
             for config in configs:
+                handled = False
                 for session in self._sessions:
-                    if session.config.name == config.name and session.handles_path(view.file_name() or ''):
+                    if config.name == session.config.name and session.handles_path(file_name):
                         handled = True
                         break
                 if not handled:
                     return config
         else:
             for config in configs:
+                handled = False
                 for session in self._sessions:
-                    if session.config.name == config.name:
+                    if config.name == session.config.name:
                         handled = True
                         break
                 if not handled:
@@ -299,7 +307,6 @@ class WindowManager(Manager):
 
     def on_post_initialize(self, session: Session) -> None:
         session.send_notification(Notification.initialized())
-        document_sync = session.capabilities.get("textDocumentSync")
         self._window.status_message("{} initialized".format(session.config.name))
         sublime.set_timeout_async(self._dequeue_listener)
 

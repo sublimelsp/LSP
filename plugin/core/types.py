@@ -94,6 +94,9 @@ class ClientConfig(object):
     def match_document(self, scope: str) -> bool:
         return any(language.match_document(scope) for language in self.languages)
 
+    def match_view(self, view: sublime.View) -> bool:
+        return self.match_document(view2scope(view))
+
     def score_feature(self, scope: str) -> int:
         highest_score = 0
         for language in self.languages:

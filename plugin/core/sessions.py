@@ -8,7 +8,7 @@ from .rpc import Client
 from .settings import client_configs
 from .transports import Transport
 from .types import ClientConfig, ClientStates, Settings
-from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol
+from .typing import Dict, Any, Optional, List, Tuple, Generator, Type, Protocol
 from .views import COMPLETION_KINDS
 from .views import did_change_configuration
 from .views import SYMBOL_KINDS
@@ -459,6 +459,13 @@ class Session(Client):
 
     def session_views(self) -> Generator[SessionViewProtocol, None, None]:
         yield from self._session_views
+
+    def can_handle(self, view: sublime.View, capability: Optional[str] = None) -> bool:
+        if self.state == ClientStates.READY and self.config.match_view(view):
+            if self.handles_path(view.file_name() or ''):
+                if capability is None or capability in self.capabilities:
+                    return True
+        return False
 
     def has_capability(self, capability: str) -> bool:
         value = self.get_capability(capability)

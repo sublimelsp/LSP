@@ -1,4 +1,5 @@
 from .core.edit import parse_workspace_edit
+from .core.logging import debug
 from .core.protocol import Diagnostic
 from .core.protocol import Request, Point
 from .core.registry import LspTextCommand
@@ -263,6 +264,7 @@ class CodeActionOnSaveTask:
     def _request_code_actions(self) -> None:
         self._iteration += 1
         if self._iteration > 3:
+            debug('Stopped applying Code Actions On Save due to reaching iteration limit')
             self._on_complete()
             return
         self._manager.documents.purge_changes(self._view)
@@ -283,6 +285,8 @@ class CodeActionOnSaveTask:
 
     def _on_timeout(self) -> None:
         if not self._completed and not self._canceled:
+            debug('Aborted process Code Actions On Save due to taking longer than {}ms'.format(
+                settings.code_action_on_save_timeout_ms))
             self._canceled = True
             self._on_complete()
 

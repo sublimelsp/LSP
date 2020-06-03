@@ -27,6 +27,16 @@ class CodeActionsCollector:
     """
     Collects code action responses from multiple sessions. Calls back the "on_complete_handler" with
     results when all responses are received.
+
+    Usage example:
+
+    with CodeActionsCollector() as collector:
+        request_code_actions(collector.create_collector('test_config'))
+        request_code_actions(collector.create_collector('another_config'))
+
+    The "create_collector()" must only be called within the "with" context. Once the context is
+    exited, the "on_complete_handler" will be called once all the created collectors receive the
+    response (are called).
     """
 
     def __init__(self, on_complete_handler: Callable[[CodeActionsByConfigName], None]):
@@ -109,37 +119,17 @@ def request_code_actions_on_save(
     actions_handler: Callable[[CodeActionsByConfigName], None],
     on_save_actions: Dict[str, bool]
 ) -> CodeActionsCollector:
-    def filtering_collector(
-        config_name: str,
-        kinds: List[str],
-        actions_collector: CodeActionsCollector
-    ) -> Tuple[Callable[[CodeActionsResponse], None], Callable[[Any], None]]:
-        """
-        Filters actions returned from the session so that only matching kinds are collected.
-
-        Since older servers don't support the "context.only" property, these will return all
-        actions that need to be filtered.
-        """
-        def actions_filter(actions: CodeActionsResponse) -> List[CodeActionOrCommand]:
-            return [a for a in (actions or []) if a.get('kind') in kinds]
-        collector = actions_collector.create_collector(config_name)
-        return (
-            lambda actions: collector(actions_filter(actions)),
-            lambda error: collector([])
-        )
-
     actions_collector = CodeActionsCollector(actions_handler)
     with actions_collector:
         file_name = view.file_name()
         if file_name:
-            sessions = sessions_for_view(view, 'codeActionProvider')
-            for session in sessions:
+            for session in sessions_for_view(view, 'codeActionProvider'):
                 supported_kinds = session.get_capability('codeActionProvider.codeActionKinds')
                 matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])
                 if matching_kinds:
                     params = _create_code_action_request_params(view, file_name, [], matching_kinds)
                     request = Request.codeAction(params)
-                    collect, onerror = filtering_collector(session.config.name, matching_kinds, actions_collector)
+                    collect, onerror = _filtering_collector(session.config.name, matching_kinds, actions_collector)
                     session.send_request(request, collect, onerror)
     return actions_collector
 
@@ -193,6 +183,26 @@ def get_matching_kinds(user_actions: Dict[str, bool], session_actions: List[str]
     return matching_kinds
 
 
+def _filtering_collector(
+    config_name: str,
+    kinds: List[str],
+    actions_collector: CodeActionsCollector
+) -> Tuple[Callable[[CodeActionsResponse], None], Callable[[Any], None]]:
+    """
+    Filters actions returned from the session so that only matching kinds are collected.
+
+    Since older servers don't support the "context.only" property, these will return all
+    actions that need to be filtered.
+    """
+    def actions_filter(actions: CodeActionsResponse) -> List[CodeActionOrCommand]:
+        return [a for a in (actions or []) if a.get('kind') in kinds]
+    collector = actions_collector.create_collector(config_name)
+    return (
+        lambda actions: collector(actions_filter(actions)),
+        lambda error: collector([])
+    )
+
+
 class LspSaveCommand(sublime_plugin.TextCommand):
     """
     A command used as a substitute for native save command. Runs code actions before triggering the
@@ -228,7 +238,7 @@ class LspSaveCommand(sublime_plugin.TextCommand):
         self.view.run_command('save', {"async": True})
 
 
-class CodeActionOnSaveTask():
+class CodeActionOnSaveTask:
     """
     The main task that requests code actions from sessions and runs them.
 

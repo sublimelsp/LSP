@@ -29,7 +29,7 @@ class Logger(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def incoming_response(self, request_id: int, params: Any, blocking: bool) -> None:
+    def incoming_response(self, request_id: int, params: Any, is_error: bool, blocking: bool) -> None:
         pass
 
     @abstractmethod
@@ -258,10 +258,10 @@ class Client(TransportCallbacks):
                     self._deferred_notifications.append(payload)
         elif "id" in payload:
             response_id = int(payload["id"])
-            handler, result = self.response_handler(response_id, payload)
+            handler, result, is_error = self.response_handler(response_id, payload)
             response_tuple = (handler, result, None, None, None)
             blocking = self._sync_request_result.is_ready()
-            self.logger.incoming_response(response_id, result, blocking)
+            self.logger.incoming_response(response_id, result, is_error, blocking)
             return response_tuple
         else:
             debug("Unknown payload type: ", payload)
@@ -294,7 +294,7 @@ class Client(TransportCallbacks):
     def on_transport_close(self, exit_code: int, exception: Optional[Exception]) -> None:
         self.transport = None
 
-    def response_handler(self, response_id: int, response: Dict[str, Any]) -> Tuple[Optional[Callable], Any]:
+    def response_handler(self, response_id: int, response: Dict[str, Any]) -> Tuple[Optional[Callable], Any, bool]:
         handler, error_handler = self._response_handlers.pop(response_id, (None, None))
         if not handler:
             error = {"code": ErrorCode.InvalidParams, "message": "unknown response ID {}".format(response_id)}
@@ -310,9 +310,9 @@ class Client(TransportCallbacks):
         return self.handle_response(response_id, error_handler, error, True)
 
     def handle_response(self, response_id: int, handler: Callable,
-                        result: Any, is_error: bool) -> Tuple[Optional[Callable], Any]:
+                        result: Any, is_error: bool) -> Tuple[Optional[Callable], Any, bool]:
         if self._sync_request_result.is_idle():
-            return (handler, result)
+            return (handler, result, is_error)
         elif self._sync_request_result.is_requesting():
             if self._sync_request_result.request_id() == response_id:
                 if is_error:
@@ -322,10 +322,10 @@ class Client(TransportCallbacks):
                 self._sync_request_cvar.notify()
             else:
                 self._deferred_responses.append((handler, result))
-            return (None, result)
+            return (None, result, is_error)
         else:  # self._sync_request_result.is_ready()
             self._deferred_responses.append((handler, result))
-            return (None, None)
+            return (None, None, is_error)
 
     def _get_handler(self, method: str) -> Optional[Callable]:
         return getattr(self, method2attr(method), None)
@@ -385,10 +385,13 @@ class SublimeLogger(Logger):
                 log_payload = False
         self.log(self.format_notification(" ->", method), params, log_payload)
 
-    def incoming_response(self, request_id: int, params: Any, blocking: bool) -> None:
+    def incoming_response(self, request_id: int, params: Any, is_error: bool, blocking: bool) -> None:
         if not self.settings.log_debug:
             return
-        direction = "<==" if blocking else "<<<"
+        if is_error:
+            direction = "<~~"
+        else:
+            direction = "<==" if blocking else "<<<"
         self.log(self.format_response(direction, request_id), params, self.settings.log_payloads)
 
     def incoming_error_response(self, request_id: Any, error: Any) -> None:

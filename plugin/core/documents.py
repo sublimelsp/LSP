@@ -46,9 +46,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         self._session_views = {}  # type: Dict[str, SessionView]
         self._pending_buffer = None  # type: Optional[PendingBuffer]
 
-    def __del__(self) -> None:
-        self.view.settings().erase("lsp_active")
-
     def on_session_initialized(self, session: Session) -> None:
         assert not self.view.is_loading()
         if session.config.name not in self._session_views:
@@ -64,7 +61,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         assert not self.view.is_loading()
         if self.view.file_name() and not is_transient_view(self.view):
             self.manager.register_listener(self)
-            self.view.settings().set("lsp_active", True)
             self._registered = True
 
     def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:

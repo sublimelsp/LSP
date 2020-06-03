@@ -34,6 +34,7 @@ class SessionView:
         self.listener = weakref.ref(listener)
         session.register_session_view(self)
         self.view.set_status(self.status_key, session.config.name)
+        self._add_self_to_setting("lsp_active")
         settings = self.view.settings()
         # TODO: Language ID must be UNIQUE!
         languages = settings.get("lsp_language")
@@ -71,31 +72,40 @@ class SessionView:
                 settings.set("lsp_language", languages)
             else:
                 settings.erase("lsp_language")
+        self._discard_self_from_setting("lsp_active")
 
     def register_capability(self, capability: str) -> None:
-        settings = self.view.settings()
-        caps = settings.get(capability)
-        if isinstance(caps, dict):
-            caps[self.session.config.name] = None
-        else:
-            caps = {self.session.config.name: None}
-        settings.set(capability, caps)
+        self._add_self_to_setting(capability)
         if capability == 'hoverProvider':
             # TODO: Remember the old value? Detect changes to show_definitions?
             self.view.settings().set('show_definitions', False)
 
     def unregister_capability(self, capability: str) -> None:
+        if self._discard_self_from_setting(capability) and capability == 'hoverProvider':
+            # TODO: Remember the old value? Detect changes to show_definitions?
+            self.view.settings().set('show_definitions', True)
+
+    def _add_self_to_setting(self, key: str) -> None:
         settings = self.view.settings()
-        caps = settings.get(capability)
-        if isinstance(caps, dict):
-            caps.pop(self.session.config.name, None)
-        if caps:
-            settings.set(capability, caps)
+        value = settings.get(key)
+        if isinstance(value, dict):
+            value[self.session.config.name] = None
         else:
-            settings.erase(capability)
-            if capability == 'hoverProvider':
-                # TODO: Remember the old value? Detect changes to show_definitions?
-                self.view.settings().set('show_definitions', True)
+            value = {self.session.config.name: None}
+        settings.set(key, value)
+
+    def _discard_self_from_setting(self, key: str) -> bool:
+        """Returns True when the setting was erased, otherwise False."""
+        settings = self.view.settings()
+        value = settings.get(key)
+        if isinstance(value, dict):
+            value.pop(self.session.config.name, None)
+        if value:
+            settings.set(key, value)
+            return False
+        else:
+            settings.erase(key)
+            return True
 
     def shutdown(self) -> None:
         listener = self.listener()

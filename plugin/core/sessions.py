@@ -265,6 +265,12 @@ class SessionViewProtocol(Protocol):
     view = None  # type: sublime.View
     listener = None  # type: Any
 
+    def register_capability(self, capability: str) -> None:
+        ...
+
+    def unregister_capability(self, capability: str) -> None:
+        ...
+
     def on_diagnostics(self, diagnostics: Any) -> None:
         ...
 

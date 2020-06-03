@@ -621,6 +621,10 @@ class Session(Client):
             debug("{}: registering capability:".format(self.config.name), capability_path)
             self.capabilities.set(capability_path, registration.get("registerOptions", {}))
             self.capabilities.set(registration_path, registration["id"])
+            toplevel_key = capability_path.split('.')[0]
+            if toplevel_key.endswith('Provider'):
+                for sv in self.session_views():
+                    sv.register_capability(toplevel_key)
         self.send_response(Response(request_id, None))
 
     def m_client_unregisterCapability(self, params: Any, request_id: Any) -> None:
@@ -631,6 +635,10 @@ class Session(Client):
             debug("{}: unregistering capability:".format(self.config.name), capability_path)
             self.capabilities.remove(capability_path)
             self.capabilities.remove(registration_path)
+            toplevel_key = capability_path.split('.')[0]
+            if toplevel_key.endswith('Provider'):
+                for sv in self.session_views():
+                    sv.unregister_capability(toplevel_key)
         self.send_response(Response(request_id, None))
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:

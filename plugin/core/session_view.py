@@ -49,8 +49,14 @@ class SessionView:
         if self.session.should_notify_did_open():
             # mypy: expected sublime.View, got ViewLike
             self.session.send_notification(did_open(self.view, language_id))  # type: ignore
+        for capability in self.session.capabilities.toplevel_keys():
+            if capability.endswith('Provider'):
+                self.register_capability(capability)
 
     def __del__(self) -> None:
+        for capability in self.session.capabilities.toplevel_keys():
+            if capability.endswith('Provider'):
+                self.unregister_capability(capability)
         if not self.session.exiting:
             if self.session.should_notify_did_close():
                 self.session.send_notification(did_close(self.view))  # type: ignore
@@ -65,6 +71,31 @@ class SessionView:
                 settings.set("lsp_language", languages)
             else:
                 settings.erase("lsp_language")
+
+    def register_capability(self, capability: str) -> None:
+        settings = self.view.settings()
+        caps = settings.get(capability)
+        if isinstance(caps, dict):
+            caps[self.session.config.name] = None
+        else:
+            caps = {self.session.config.name: None}
+        settings.set(capability, caps)
+        if capability == 'hoverProvider':
+            # TODO: Remember the old value? Detect changes to show_definitions?
+            self.view.settings().set('show_definitions', False)
+
+    def unregister_capability(self, capability: str) -> None:
+        settings = self.view.settings()
+        caps = settings.get(capability)
+        if isinstance(caps, dict):
+            caps.pop(self.session.config.name, None)
+        if caps:
+            settings.set(capability, caps)
+        else:
+            settings.erase(capability)
+            if capability == 'hoverProvider':
+                # TODO: Remember the old value? Detect changes to show_definitions?
+                self.view.settings().set('show_definitions', True)
 
     def shutdown(self) -> None:
         listener = self.listener()

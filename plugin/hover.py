@@ -87,7 +87,7 @@ class LspHoverCommand(LspTextCommand):
                                                       Point(*self.view.rowcol(hover_point)))
         if self._diagnostics_by_config:
             self.request_code_actions(hover_point)
-            self.request_show_hover(hover_point)
+            self.show_hover(hover_point)
 
     def request_symbol_hover(self, point: int) -> None:
         # todo: session_for_view looks up windowmanager twice (config and for sessions)
@@ -104,11 +104,11 @@ class LspHoverCommand(LspTextCommand):
 
     def handle_code_actions(self, responses: Dict[str, List[CodeActionOrCommand]], point: int) -> None:
         self._actions_by_config = responses
-        self.request_show_hover(point)
+        sublime.set_timeout(lambda: self.show_hover(point))
 
     def handle_response(self, response: Optional[Any], point: int) -> None:
         self._hover = response
-        self.request_show_hover(point)
+        sublime.set_timeout(lambda: self.show_hover(point))
 
     def symbol_actions_content(self) -> str:
         actions = []
@@ -168,9 +168,6 @@ class LspHoverCommand(LspTextCommand):
     def hover_content(self) -> str:
         content = (self._hover.get('contents') or '') if isinstance(self._hover, dict) else ''
         return minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT)
-
-    def request_show_hover(self, point: int) -> None:
-        sublime.set_timeout(lambda: self.show_hover(point), 50)
 
     def show_hover(self, point: int) -> None:
         contents = self.diagnostics_content() + self.hover_content()

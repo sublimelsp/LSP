@@ -46,7 +46,8 @@ class LspExpandSelectionCommand(LspTextCommand):
 
     def _smallest_containing(self, region: sublime.Region, param: Dict[str, Any]) -> sublime.Region:
         r = range_to_region(Range.from_lsp(param["range"]), self.view)
-        if r.contains(region):
+        # Test for *strict* containment
+        if r.contains(region) and (r.a < region.a or r.b > region.b):
             return r
         parent = param.get("parent")
         if parent:

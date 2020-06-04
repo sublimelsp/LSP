@@ -255,19 +255,12 @@ class CodeActionOnSaveTask:
         self._on_done = on_done
         self._completed = False
         self._canceled = False
-        # TODO: For limiting number of iterations the task can run. Maybe not needed since there is a timeout?
-        self._iteration = 0
 
     def run(self) -> None:
         sublime.set_timeout(self._on_timeout, settings.code_action_on_save_timeout_ms)
         self._request_code_actions()
 
     def _request_code_actions(self) -> None:
-        self._iteration += 1
-        if self._iteration > 3:
-            debug('Stopped applying Code-Actions-On-Save due to reaching iteration limit')
-            self._on_complete()
-            return
         self._manager.documents.purge_changes(self._view)
         request_code_actions_on_save(self._view, self._handle_response, self._on_save_actions)
 

@@ -100,8 +100,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         initial_content = 'const x = 1'
         self.view.run_command('lsp_save')
         self.assertEquals(entire_content(self.view), initial_content)
-        yield 100
-        self.assertEquals(self.view.is_dirty(), False)
+        yield lambda: not self.view.is_dirty()
 
     def test_does_not_apply_unsupported_kind(self) -> Generator:
         yield from self._setup_document_with_missing_semicolon()

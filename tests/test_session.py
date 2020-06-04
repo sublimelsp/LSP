@@ -1,11 +1,12 @@
+from LSP.plugin.core.protocol import Error
 from LSP.plugin.core.protocol import TextDocumentSyncKindFull, TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
 from LSP.plugin.core.protocol import WorkspaceFolder
+from LSP.plugin.core.rpc import Logger
 from LSP.plugin.core.sessions import get_initialize_params
 from LSP.plugin.core.sessions import Manager
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.types import ClientConfig
-from LSP.plugin.core.types import Settings
-from LSP.plugin.core.typing import Optional, Generator
+from LSP.plugin.core.typing import Any, Optional, Generator
 from test_mocks import TEST_CONFIG
 import sublime
 import unittest
@@ -30,6 +31,33 @@ class MockManager(Manager):
         pass
 
     def on_post_initialize(self, session: Session) -> None:
+        pass
+
+
+class MockLogger(Logger):
+
+    def outgoing_response(self, request_id: Any, params: Any) -> None:
+        pass
+
+    def outgoing_error_response(self, request_id: Any, error: Error) -> None:
+        pass
+
+    def outgoing_request(self, request_id: int, method: str, params: Any, blocking: bool) -> None:
+        pass
+
+    def outgoing_notification(self, method: str, params: Any) -> None:
+        pass
+
+    def incoming_response(self, request_id: int, params: Any, is_error: bool, blocking: bool) -> None:
+        pass
+
+    def incoming_error_response(self, request_id: Any, error: Any) -> None:
+        pass
+
+    def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
+        pass
+
+    def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
         pass
 
 
@@ -83,7 +111,7 @@ class SessionTest(unittest.TestCase):
 
     def test_document_sync_capabilities(self) -> None:
         manager = MockManager(sublime.active_window())
-        session = Session(manager=manager, settings=Settings(), workspace_folders=[], config=TEST_CONFIG,
+        session = Session(manager=manager, logger=MockLogger(), workspace_folders=[], config=TEST_CONFIG,
                           plugin_class=None)
         session.capabilities.assign({
             'textDocumentSync': {

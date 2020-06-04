@@ -203,8 +203,7 @@ def will_save_text_document_params(view: sublime.View, reason: int) -> Dict[str,
 
 
 def did_save_text_document_params(view: sublime.View, include_text: bool) -> Dict[str, Any]:
-    # type: Dict[str, Any]
-    result = {"textDocument": text_document_identifier(view)}
+    result = {"textDocument": text_document_identifier(view)}  # type: Dict[str, Any]
     if include_text:
         result["text"] = entire_content(view)
     return result

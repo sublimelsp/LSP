@@ -2,14 +2,9 @@ from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.protocol import Response
-from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.types import LanguageConfig
-from LSP.plugin.core.types import Settings
-from LSP.plugin.core.types import ViewLike
-from LSP.plugin.core.typing import Dict, Set, List, Optional, Any, Tuple, Callable
-import os
-import test_sublime
+from LSP.plugin.core.typing import List, Any, Callable
 
 
 TEST_LANGUAGE = LanguageConfig("test", "text.plain")

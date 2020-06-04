@@ -235,7 +235,7 @@ class LspSaveCommand(sublime_plugin.TextCommand):
 
     def _trigger_native_save(self) -> None:
         self._task = None
-        # Triggered from set timeout to preserve original semantics of on_pre_save handling
+        # Triggered from set_timeout to preserve original semantics of on_pre_save handling
         sublime.set_timeout(lambda: self.view.run_command('save', {"async": True}))
 
 

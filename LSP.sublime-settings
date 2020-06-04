@@ -19,7 +19,9 @@
   // unless overridden by project-specific settings.
   //
   // Only "source.*" actions are supported.
-  "lsp_code_actions_on_save": {},
+  "lsp_code_actions_on_save": {
+    // "source.fixAll": True
+  },
 
   // The amount of time the code actions on save are allowed to run for.
   "code_action_on_save_timeout_ms": 2000,

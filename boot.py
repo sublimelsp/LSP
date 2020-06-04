@@ -40,8 +40,10 @@ from .plugin.panels import LspShowDiagnosticsPanelCommand
 from .plugin.panels import LspToggleServerPanelCommand
 from .plugin.references import LspSymbolReferencesCommand
 from .plugin.rename import LspSymbolRenameCommand
+from .plugin.selection_range import LspExpandSelectionCommand
 from .plugin.signature_help import SignatureHelpListener
 from .plugin.symbols import LspDocumentSymbolsCommand
 from .plugin.symbols import LspSelectionAddCommand
 from .plugin.symbols import LspSelectionClearCommand
+from .plugin.symbols import LspSelectionSetCommand
 from .plugin.symbols import LspWorkspaceSymbolsCommand

@@ -165,6 +165,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             },
             "publishDiagnostics": {
                 "relatedInformation": True
+            },
+            "selectionRange": {
+                "dynamicRegistration": True
             }
         },
         "workspace": {

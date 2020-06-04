@@ -38,6 +38,10 @@
             {
                 "command": "lsp_format_document_range",
                 "caption": "Format Selection"
+            },
+            {
+                "command": "lsp_expand_selection",
+                "caption": "Expand Selection"
             }
         ]
     }

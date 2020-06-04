@@ -41,6 +41,14 @@ class LspSelectionAddCommand(sublime_plugin.TextCommand):
             self.view.sel().add(sublime.Region(*region))
 
 
+class LspSelectionSetCommand(sublime_plugin.TextCommand):
+
+    def run(self, _: sublime.Edit, regions: List[Tuple[int, int]]) -> None:
+        self.view.sel().clear()
+        for region in regions:
+            self.view.sel().add(sublime.Region(*region))
+
+
 class LspDocumentSymbolsCommand(LspTextCommand):
 
     capability = 'documentSymbolProvider'

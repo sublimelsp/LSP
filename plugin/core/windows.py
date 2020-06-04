@@ -4,10 +4,13 @@ from .diagnostics import DiagnosticsStorage
 from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
+from .protocol import Error
 from .protocol import Notification, TextDocumentSyncKindNone, TextDocumentSyncKindFull
+from .rpc import Logger
 from .sessions import get_plugin
 from .sessions import Manager
 from .sessions import Session
+from .settings import settings
 from .transports import create_transport
 from .types import ClientConfig
 from .types import ClientStates
@@ -22,6 +25,7 @@ from .workspace import disable_in_project
 from .workspace import enable_in_project
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
+from weakref import ref
 from weakref import WeakValueDictionary
 import sublime
 import threading
@@ -450,9 +454,7 @@ class WindowManager(Manager):
                 if cannot_start_reason:
                     self._window.status_message(cannot_start_reason)
                     return
-            session = Session(self, self._settings, workspace_folders, config, plugin_class)
-            if self.server_panel_factory:
-                session.logger.sink = self._payload_log_sink
+            session = Session(self, PanelLogger(self, config.name), workspace_folders, config, plugin_class)
             cwd = workspace_folders[0].path if workspace_folders else None
             variables = extract_variables(self._window)  # type: ignore
             if plugin_class is not None:
@@ -502,9 +504,6 @@ class WindowManager(Manager):
                 if candidate is None or len(folder) > len(candidate):
                     candidate = folder
         return candidate
-
-    def _payload_log_sink(self, message: str) -> None:
-        self._sublime.set_timeout_async(lambda: self.handle_server_message(":", message), 0)
 
     def on_post_initialize(self, session: Session) -> None:
         with self._initialization_lock:
@@ -632,3 +631,89 @@ class WindowRegistry(object):
                 server_panel_factory=self._server_panel_factory)
             self._windows[window.id()] = state
         return state
+
+
+class PanelLogger(Logger):
+
+    def __init__(self, manager: WindowManager, server_name: str) -> None:
+        self._manager = ref(manager)
+        self._server_name = server_name
+
+    def log(self, message: str, params: Any, log_payload: bool) -> None:
+
+        def run_on_async_worker_thread() -> None:
+            nonlocal message
+            if log_payload:
+                message = "{}: {}".format(message, params)
+            manager = self._manager()
+            if manager is not None:
+                manager.handle_server_message(":", message)
+
+        sublime.set_timeout_async(run_on_async_worker_thread)
+
+    def outgoing_response(self, request_id: Any, params: Any) -> None:
+        if not settings.log_debug:
+            return
+        self.log(self._format_response(">>>", request_id), params, settings.log_payloads)
+
+    def outgoing_error_response(self, request_id: Any, error: Error) -> None:
+        if not settings.log_debug:
+            return
+        self.log(self._format_response("~~>", request_id), error.to_lsp(), settings.log_payloads)
+
+    def outgoing_request(self, request_id: int, method: str, params: Any, blocking: bool) -> None:
+        if not settings.log_debug:
+            return
+        direction = "==>" if blocking else "-->"
+        self.log(self._format_request(direction, method, request_id), params, settings.log_payloads)
+
+    def outgoing_notification(self, method: str, params: Any) -> None:
+        if not settings.log_debug:
+            return
+        # Do not log the payloads if any of these conditions occur because the payloads might contain the entire
+        # content of the view.
+        log_payload = settings.log_payloads
+        if method.endswith("didOpen"):
+            log_payload = False
+        elif method.endswith("didChange"):
+            content_changes = params.get("contentChanges")
+            if content_changes and "range" not in content_changes[0]:
+                log_payload = False
+        elif method.endswith("didSave"):
+            if isinstance(params, dict) and "text" in params:
+                log_payload = False
+        self.log(self._format_notification(" ->", method), params, log_payload)
+
+    def incoming_response(self, request_id: int, params: Any, is_error: bool, blocking: bool) -> None:
+        if not settings.log_debug:
+            return
+        if is_error:
+            direction = "<~~"
+        else:
+            direction = "<==" if blocking else "<<<"
+        self.log(self._format_response(direction, request_id), params, settings.log_payloads)
+
+    def incoming_error_response(self, request_id: Any, error: Any) -> None:
+        if not settings.log_debug:
+            return
+        self.log(self._format_response('<~~', request_id), error, settings.log_payloads)
+
+    def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
+        if not settings.log_debug:
+            return
+        self.log(self._format_request("<--", method, request_id), params, settings.log_payloads)
+
+    def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
+        if not settings.log_debug or method == "window/logMessage":
+            return
+        direction = "<? " if unhandled else "<- "
+        self.log(self._format_notification(direction, method), params, settings.log_payloads)
+
+    def _format_response(self, direction: str, request_id: Any) -> str:
+        return "{} {} {}".format(direction, self._server_name, request_id)
+
+    def _format_request(self, direction: str, method: str, request_id: Any) -> str:
+        return "{} {} {}({})".format(direction, self._server_name, method, request_id)
+
+    def _format_notification(self, direction: str, method: str) -> str:
+        return "{} {} {}".format(direction, self._server_name, method)

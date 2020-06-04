@@ -255,8 +255,10 @@ class CodeActionOnSaveTask:
         self._on_done = on_done
         self._completed = False
         self._canceled = False
+        self._status_key = 'lsp_caos_timeout'
 
     def run(self) -> None:
+        self._erase_view_status()
         sublime.set_timeout(self._on_timeout, settings.code_action_on_save_timeout_ms)
         self._request_code_actions()
 
@@ -279,10 +281,16 @@ class CodeActionOnSaveTask:
 
     def _on_timeout(self) -> None:
         if not self._completed and not self._canceled:
-            debug('Aborted processing of Code-Actions-On-Save due to taking longer than {}ms'.format(
-                settings.code_action_on_save_timeout_ms))
+            self._set_view_status('LSP: Timeout on processing code actions during saving')
             self._canceled = True
             self._on_complete()
+
+    def _set_view_status(self, text: str) -> None:
+        self._view.set_status(self._status_key, text)
+        sublime.set_timeout(self._erase_view_status, 3000)
+
+    def _erase_view_status(self) -> None:
+        self._view.erase_status(self._status_key)
 
     def _on_complete(self) -> None:
         self._completed = True

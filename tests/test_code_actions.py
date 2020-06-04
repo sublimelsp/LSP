@@ -81,6 +81,38 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         self.assertEquals(entire_content(self.view), 'const x = 1;')
         self.assertEquals(self.view.is_dirty(), False)
 
+    def test_applies_in_two_iterations(self) -> Generator:
+        yield from self._setup_document_with_missing_semicolon()
+        code_action_kind = 'source.fixAll'
+        initial_change_count = self.view.change_count()
+        yield from self.set_responses([
+            (
+                'textDocument/codeAction',
+                [
+                    create_test_code_action(
+                        initial_change_count,
+                        [(';', Range(Point(0, 11), Point(0, 11)))],
+                        code_action_kind
+                    )
+                ]
+            ),
+            (
+                'textDocument/codeAction',
+                [
+                    create_test_code_action(
+                        initial_change_count + 1,
+                        [('\nAnd again!', Range(Point(0, 12), Point(0, 12)))],
+                        code_action_kind
+                    )
+                ]
+            ),
+        ])
+        self.view.run_command('lsp_save')
+        yield from self.await_message('textDocument/codeAction')
+        yield from self.await_message('textDocument/codeAction')
+        self.assertEquals(entire_content(self.view), 'const x = 1;\nAnd again!')
+        self.assertEquals(self.view.is_dirty(), False)
+
     def test_applies_immediately_after_text_change(self) -> Generator:
         self.insert_characters('const x = 1')
         code_action_kind = 'source.fixAll'

@@ -28,7 +28,7 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         # Revisit this once we're on ST4.
         for listener in view_event_listeners[self.view.id()]:
             if isinstance(listener, DocumentSyncListener):
-                sublime.set_timeout_async(listener.on_activated_async)
+                sublime.set_timeout(listener.on_activated)
                 return True
         return False
 
@@ -81,8 +81,8 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         yield from self.await_message("textDocument/didOpen")
         self.view.run_command("insert", {"characters": "a"})
         yield from self.await_message("textDocument/didChange")
-        status_string = self.view.get_status("lsp_clients")
-        self.assertEqual(set(s.strip() for s in status_string.split(',')), set(("TEST", "TEST-2")))
+        self.assertEqual(self.view.get_status("lsp_TEST"), "TEST")
+        self.assertEqual(self.view.get_status("lsp_TEST-2"), "TEST-2")
         close_test_view(self.view)
         yield from self.await_message("textDocument/didClose")
 
@@ -93,7 +93,6 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
             yield lambda: self.session1.state == ClientStates.STOPPING
         if self.session2:
             yield lambda: self.session2.state == ClientStates.STOPPING
-        close_test_view(self.view)
         try:
             remove_config(self.config2)
         except ValueError:

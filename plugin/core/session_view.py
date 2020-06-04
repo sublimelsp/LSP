@@ -34,7 +34,6 @@ class SessionView:
         self.listener = weakref.ref(listener)
         session.register_session_view(self)
         self.view.set_status(self.status_key, session.config.name)
-        self._add_self_to_setting("lsp_active")
         settings = self.view.settings()
         # TODO: Language ID must be UNIQUE!
         languages = settings.get("lsp_language")
@@ -72,7 +71,6 @@ class SessionView:
                 settings.set("lsp_language", languages)
             else:
                 settings.erase("lsp_language")
-        self._discard_self_from_setting("lsp_active")
 
     def register_capability(self, capability: str) -> None:
         self._add_self_to_setting(capability)

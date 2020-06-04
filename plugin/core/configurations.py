@@ -44,13 +44,18 @@ class WindowConfigManager(object):
         """
         Yields configurations matching with the language's document_selector
         """
-        configs = self.match_document(view2scope(view))
-        if include_disabled:
-            yield from configs
-        else:
-            for config in configs:
-                if config.enabled:
-                    yield config
+        try:
+            configs = self.match_document(view2scope(view))
+            if include_disabled:
+                yield from configs
+            else:
+                for config in configs:
+                    if config.enabled:
+                        yield config
+        except IndexError:
+            # We're in the worker thread, and the view is already closed. This means view.scope_name(0) returns an
+            # empty string.
+            pass
 
     def is_supported(self, view: Any) -> bool:
         return any(self.match_view(view))

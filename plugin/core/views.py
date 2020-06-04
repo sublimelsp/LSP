@@ -186,7 +186,8 @@ def render_text_change(change: sublime.TextChange) -> Dict[str, Any]:
 def did_change_text_document_params(view: sublime.View,
                                     changes: Optional[Iterable[sublime.TextChange]] = None) -> Dict[str, Any]:
     content_changes = []  # type: List[Dict[str, Any]]
-    result = {"textDocument": versioned_text_document_identifier(view), "contentChanges": content_changes}
+    result = {"textDocument": versioned_text_document_identifier(
+        view), "contentChanges": content_changes}
     if changes is None:
         # TextDocumentSyncKindFull
         content_changes.append({"text": entire_content(view)})
@@ -202,7 +203,8 @@ def will_save_text_document_params(view: sublime.View, reason: int) -> Dict[str,
 
 
 def did_save_text_document_params(view: sublime.View, include_text: bool) -> Dict[str, Any]:
-    result = {"textDocument": text_document_identifier(view)}  # type: Dict[str, Any]
+    # type: Dict[str, Any]
+    result = {"textDocument": text_document_identifier(view)}
     if include_text:
         result["text"] = entire_content(view)
     return result
@@ -292,7 +294,8 @@ def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allo
     parse_marked_string = bool(allowed_formats & FORMAT_MARKED_STRING)
     parse_markup_content = bool(allowed_formats & FORMAT_MARKUP_CONTENT)
     if parse_string and parse_marked_string:
-        raise ValueError("Not allowed to specify FORMAT_STRING and FORMAT_MARKED_STRING at the same time")
+        raise ValueError(
+            "Not allowed to specify FORMAT_STRING and FORMAT_MARKED_STRING at the same time")
     is_plain_text = True
     result = ''
     if (parse_string or parse_marked_string) and isinstance(content, str):
@@ -334,7 +337,8 @@ def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allo
     if is_plain_text:
         return text2html(result)
     else:
-        frontmatter_config = mdpopups.format_frontmatter({'allow_code_wrap': True})
+        frontmatter_config = mdpopups.format_frontmatter(
+            {'allow_code_wrap': True})
         return mdpopups.md2html(view, frontmatter_config + result)
 
 

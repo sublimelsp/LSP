@@ -3,7 +3,7 @@ from .registry import LSPViewEventListener
 from .session_view import PendingBuffer
 from .session_view import SessionView
 from .sessions import Session
-from .typing import Optional, Dict, Generator, Iterable
+from .typing import Any, Optional, Dict, Generator, Iterable
 from .windows import AbstractViewListener
 import sublime
 
@@ -85,6 +85,15 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         if self._registered and self.view.is_primary():
             self._session_views.clear()
             self.manager.unregister_listener(self)
+
+    def on_query_context(self, key: str, operator: str, operand: Any, match_all: bool) -> bool:
+        capability_prefix = "lsp.capabilities."
+        if key.startswith(capability_prefix):
+            return isinstance(self.view.settings().get(key[len(capability_prefix):]), dict)
+        elif key in ("lsp.sessions", "setting.lsp_active"):
+            return bool(self._session_views)
+        else:
+            return False
 
     def _purge_did_change(self, change_count: int) -> None:
         if change_count == self.view.change_count():

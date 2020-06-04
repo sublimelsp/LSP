@@ -134,9 +134,9 @@ def plugin_unloaded() -> None:
                 remove_color_boxes(view)
                 for key in ['error', 'warning', 'info', 'hint', 'diagnostics']:
                     view.erase_regions('lsp_{}'.format(key))
-                for key in ['diagnostics', 'clients']:
+                for key in ['diagnostics']:
                     view.erase_status('lsp_{}'.format(key))
-                for key in ['language', 'active', 'diagnostic_phantom']:
+                for key in ['diagnostic_phantom']:
                     view.settings().erase('lsp_{}'.format(key))
 
 

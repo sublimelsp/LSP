@@ -26,7 +26,6 @@ from collections import deque
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import sublime
-import sublime_plugin
 
 
 class SublimeLike(Protocol):
@@ -122,13 +121,6 @@ class WindowManager(Manager):
     def listeners(self) -> Generator[AbstractViewListener, None, None]:
         yield from self._listeners
 
-    def start_active_views(self) -> None:
-        for v in self._window.views():
-            for listener in sublime_plugin.view_event_listeners[v.id()]:
-                if isinstance(listener, AbstractViewListener):
-                    self.register_listener(listener)
-                    break
-
     def _dequeue_listener(self) -> None:
         listener = None  # type: Optional[AbstractViewListener]
         if self._new_listener is not None and self._new_listener.view.is_valid():
@@ -157,7 +149,10 @@ class WindowManager(Manager):
             self._new_listener = None
 
     def _publish_sessions_to_listener(self, listener: AbstractViewListener) -> None:
-        scope = view2scope(listener.view)
+        try:
+            scope = view2scope(listener.view)
+        except IndexError:
+            return
         if listener.view in self._workspace:
             for session in self._sessions:
                 if session.can_handle(listener.view):
@@ -358,6 +353,7 @@ class WindowManager(Manager):
                 self._configs.disable_temporarily(session.config.name)
         if exception:
             self._window.status_message("{} exited with an exception: {}".format(session.config.name, exception))
+        self._sessions.discard(session)  # TODO: This should be automatic!
         if not self._sessions:
             self._handle_all_sessions_ended()
 

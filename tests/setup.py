@@ -143,14 +143,13 @@ class TextDocumentTestCase(DeferrableTestCase):
         s("lsp_format_on_save", False)
 
     def ensure_document_listener_created(self) -> bool:
-        assert self.view
         # Bug in ST3? Either that, or CI runs with ST window not in focus and that makes ST3 not trigger some
         # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
         # opening file (manager missing in DocumentSyncListener)
         # Revisit this once we're on ST4.
         for listener in view_event_listeners[self.view.id()]:
             if isinstance(listener, DocumentSyncListener):
-                sublime.set_timeout_async(listener.on_activated_async)
+                sublime.set_timeout(listener.on_activated)
                 return True
         return False
 
@@ -215,6 +214,8 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.wm.end_config_sessions(self.config.name)  # TODO: Shouldn't this be automatic once the last view closes?
         if self.session:
             yield lambda: self.session.state == ClientStates.STOPPING
+            assert self.view
+            yield lambda: self.wm.get_session(self.config.name, self.view.file_name()) is None
 
     def await_clear_view_and_save(self) -> 'Generator':
         assert self.view  # type: Optional[sublime.View]
@@ -243,10 +244,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def tearDown(self) -> 'Generator':
         yield from self.await_boilerplate_end()
-        super().tearDown()
-
-    def doCleanups(self) -> 'Generator':
-        # restore the user's configs
         close_test_view(self.view)
+        # restore the user's configs
         remove_config(self.config)
-        yield from super().doCleanups()
+        super().tearDown()

@@ -1,5 +1,4 @@
 from .core.edit import parse_workspace_edit
-from .core.logging import debug
 from .core.protocol import Diagnostic
 from .core.protocol import Request, Point
 from .core.registry import LspTextCommand

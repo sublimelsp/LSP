@@ -5,7 +5,7 @@ from LSP.plugin.core.registry import windows
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.types import ClientConfig, LanguageConfig, ClientStates
-from LSP.plugin.core.typing import Any, Optional, Generator
+from LSP.plugin.core.typing import Any, Generator, List, Optional, Tuple
 from os import environ
 from os.path import join
 from sublime_plugin import view_event_listeners
@@ -186,6 +186,21 @@ class TextDocumentTestCase(DeferrableTestCase):
         assert self.session  # mypy
         self.session.send_notification(
             Notification("$test/setResponse", {"method": method, "response": response}))
+
+    def set_responses(self, responses: List[Tuple[str, Any]]) -> Generator:
+        self.assertIsNotNone(self.session)
+        assert self.session  # mypy
+        promise = YieldPromise()
+
+        def handler(params: Any) -> None:
+            promise.fulfill(params)
+
+        def error_handler(params: Any) -> None:
+            debug("Got error:", params, "awaiting timeout :(")
+
+        payload = [{"method": method, "response": responses} for method, responses in responses]
+        self.session.send_request(Request("$test/setResponses", payload), handler, error_handler)
+        yield from self.await_promise(promise)
 
     def await_client_notification(self, method: str, params: Any = None) -> 'Generator':
         self.assertIsNotNone(self.session)

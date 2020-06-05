@@ -8,19 +8,23 @@
   // Valid values are "never", "always" and "saved"
   "auto_show_diagnostics_panel": "saved",
 
+  // Run the server's formatProvider (if supported) on a document before saving.
+  // This option is also supported in syntax-specific settings and/or in project files.
+  "lsp_format_on_save": false,
+
   // A dictionary of code action identifiers that should be triggered on save.
   //
   // Code action identifiers are not officially standardized so refer to specific
   // server's documentation on what is supported but `source.fixAll` is commonly
-  // used to apply fix-on-save code action.
+  // used to apply fix-on-save code actions.
   //
-  // It's also supported to set this in project-specific settings in which case
-  // it will only apply in that specific project. Setting it here will apply globally,
-  // unless overridden by project-specific settings.
+  // This option is also supported in syntax-specific settings and/or in project files.
+  // Settings from all places will be merged and more specific (syntax and project) settings will
+  // override less specific (from LSP or Sublime settings).
   //
   // Only "source.*" actions are supported.
   "lsp_code_actions_on_save": {
-    // "source.fixAll": True
+    // "source.fixAll": true
   },
 
   // The amount of time the code actions on save are allowed to run for.

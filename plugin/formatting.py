@@ -3,6 +3,7 @@ from .core.edit import parse_text_edit
 from .core.registry import LspTextCommand, LSPViewEventListener, session_for_view
 from .core.registry import sessions_for_view
 from .core.sessions import Session
+from .core.settings import settings
 from .core.typing import Any, List, Optional
 from .core.views import will_save_wait_until, text_document_formatting, text_document_range_formatting
 
@@ -27,7 +28,8 @@ class FormatOnSaveListener(LSPViewEventListener):
             self._purge_changes_if_needed()
             self._will_save_wait_until(session)
 
-        if self.view.settings().get("lsp_format_on_save"):
+        format_on_save = self.view.settings().get("lsp_format_on_save", None)
+        if (format_on_save is not None and format_on_save) or settings.lsp_format_on_save:
             self._purge_changes_if_needed()
             self._format_on_save()
 

@@ -28,8 +28,9 @@ class FormatOnSaveListener(LSPViewEventListener):
             self._purge_changes_if_needed()
             self._will_save_wait_until(session)
 
-        format_on_save = self.view.settings().get("lsp_format_on_save", None)
-        if (format_on_save is not None and format_on_save) or settings.lsp_format_on_save:
+        view_format_on_save = self.view.settings().get("lsp_format_on_save", None)
+        enabled = view_format_on_save if isinstance(view_format_on_save, bool) else settings.lsp_format_on_save
+        if enabled:
             self._purge_changes_if_needed()
             self._format_on_save()
 

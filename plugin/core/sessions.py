@@ -153,7 +153,14 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "dynamicRegistration": True,
                 "codeActionLiteralSupport": {
                     "codeActionKind": {
-                        "valueSet": ["quickfix", "refactor"]
+                        "valueSet": [
+                            "quickfix",
+                            "refactor",
+                            "refactor.extract",
+                            "refactor.inline",
+                            "refactor.rewrite",
+                            "source.organizeImports"
+                        ]
                     }
                 }
             },

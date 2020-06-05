@@ -1,5 +1,6 @@
 import sublime
 
+from .logging import debug
 from .registry import get_position
 from .registry import LSPViewEventListener
 from .typing import Optional, Iterable
@@ -53,7 +54,17 @@ class DocumentSyncListener(LSPViewEventListener):
 
     def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
         if self.view.file_name():
-            self.manager.documents.handle_did_change(self.view, changes)
+            last_change = list(changes)[-1]
+            if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and self.view.size() != 0:
+                # Issue https://github.com/sublimehq/sublime_text/issues/3323
+                # A special situation when changes externally. We receive two changes,
+                # one that removes all content and one that has 0,0,'' parameters. We resend whole
+                # file in that case to fix broken state.
+                debug('Working around the on_text_changed bug {}'.format(self.view.file_name()))
+                self.manager.documents.purge_changes(self.view)
+                self.manager.documents.notify_sessions(self.view, None)
+            else:
+                self.manager.documents.handle_did_change(self.view, changes)
 
     def on_pre_save(self) -> None:
         if self.view.file_name():

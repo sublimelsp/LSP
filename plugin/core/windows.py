@@ -56,6 +56,9 @@ class DocumentHandler(Protocol):
     def handle_did_change(self, view: ViewLike, changes: Iterable[sublime.TextChange]) -> None:
         ...
 
+    def notify_sessions(self, view: ViewLike, buffer_changes: Optional[List[sublime.TextChange]]) -> None:
+        ...
+
     def purge_changes(self, view: ViewLike) -> None:
         ...
 
@@ -282,13 +285,16 @@ class WindowDocumentHandler(object):
         # ensure view is opened.
         if file_name not in self._document_states:
             self.handle_did_open(view)
+        self.notify_sessions(view, pending_buffer.changes)
+
+    def notify_sessions(self, view: ViewLike, buffer_changes: Optional[List[sublime.TextChange]]) -> None:
         for session in self._get_applicable_sessions(view):
             if session.state != ClientStates.READY:
                 continue
             sync_kind = session.text_sync_kind()
             if sync_kind == TextDocumentSyncKindNone:
                 continue
-            changes = None if sync_kind == TextDocumentSyncKindFull else pending_buffer.changes
+            changes = None if sync_kind == TextDocumentSyncKindFull else buffer_changes
             # ViewLike vs sublime.View
             notification = did_change(view, changes)  # type: ignore
             session.send_notification(notification)

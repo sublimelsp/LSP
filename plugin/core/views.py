@@ -155,6 +155,10 @@ def entire_content(view: sublime.View) -> str:
     return view.substr(sublime.Region(0, view.size()))
 
 
+def entire_content_range(view: sublime.View) -> Range:
+    return region_to_range(view, sublime.Region(0, view.size()))
+
+
 def text_document_item(view: sublime.View, language_id: str) -> Dict[str, Any]:
     return {
         "uri": uri_from_view(view),

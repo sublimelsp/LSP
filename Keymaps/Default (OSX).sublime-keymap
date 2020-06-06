@@ -65,4 +65,7 @@
 
     // Expand Selection (a replacement for ST's "Expand Selection")
     // {"keys": ["super+shift+a"], "command": "lsp_expand_selection", "context": [{"key": "setting.lsp_active"}]},
+
+    // Override native save to handle Code-Actions-On-Save
+    { "keys": ["super+s"], "command": "lsp_save", "context": [{ "key": "setting.lsp_active"}] },
 ]

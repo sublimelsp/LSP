@@ -154,7 +154,14 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "dynamicRegistration": True,
                 "codeActionLiteralSupport": {
                     "codeActionKind": {
-                        "valueSet": []
+                        "valueSet": [
+                            "quickfix",
+                            "refactor",
+                            "refactor.extract",
+                            "refactor.inline",
+                            "refactor.rewrite",
+                            "source.organizeImports"
+                        ]
                     }
                 }
             },
@@ -541,6 +548,9 @@ class Session(Client):
         execute_commands = self.get_capability('executeCommandProvider.commands')
         if execute_commands:
             debug("{}: Supported execute commands: {}".format(self.config.name, execute_commands))
+        code_action_kinds = self.get_capability('codeActionProvider.codeActionKinds')
+        if code_action_kinds:
+            debug('{}: supported code action kinds: {}'.format(self.config.name, code_action_kinds))
         mgr = self.manager()
         if mgr:
             mgr.on_post_initialize(self)

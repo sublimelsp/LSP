@@ -18,6 +18,9 @@ class LspExpandSelectionCommand(LspTextCommand):
         self._regions = []  # type: List[sublime.Region]
         self._change_count = 0
 
+    def is_enabled(self, event: Optional[dict] = None) -> bool:
+        return True
+
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
         session = self.session(self.capability, get_position(self.view, event))
         if session:

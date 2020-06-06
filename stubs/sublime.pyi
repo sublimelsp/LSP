@@ -621,6 +621,9 @@ class View:
     def __bool__(self) -> bool:
         ...
 
+    def element(self) -> Optional[str]:
+        ...
+
     def id(self) -> int:
         ...
 

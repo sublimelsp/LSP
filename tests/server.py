@@ -173,7 +173,7 @@ class Session:
         self._received_shutdown = False
 
         # properties used for testing purposes
-        self._responses: Dict[str, PayloadLike] = {}
+        self._responses: List[Tuple[str, PayloadLike]] = []
         self._received: Dict[str, PayloadLike] = {}
         self._received_cv = asyncio.Condition()
 
@@ -256,12 +256,13 @@ class Session:
                 unhandled = False
         handler = handlers.get(method)
         if handler is None:
-            if method in self._responses:
+            mocked_response = self._get_mocked_response(method)
+            if not isinstance(mocked_response, bool):
                 assert request_id is not None
-                self._reply(request_id, self._responses.pop(method))
+                self._reply(request_id, mocked_response)
             elif request_id is not None:
                 self._error(request_id, Error(
-                    ErrorCode.MethodNotFound, "method not found"))
+                    ErrorCode.MethodNotFound, "method '{}' not found".format(method)))
             else:
                 if unhandled:
                     self._log(f"unhandled {typestr} {method}")
@@ -282,6 +283,14 @@ class Session:
             except Exception as ex:
                 if not self._received_shutdown:
                     self._notify("window/logMessage", {"type": MessageType.error, "message": str(ex)})
+
+    def _get_mocked_response(self, method: str) -> Union[PayloadLike, bool]:
+        for response in self._responses:
+            resp_method, resp_payload = response
+            if resp_method == method:
+                self._responses.remove(response)
+                return resp_payload
+        return False
 
     async def _handle_body(self, body: bytes) -> None:
         try:
@@ -323,11 +332,23 @@ class Session:
         self._on_request("$test/getReceived", self._get_received)
         self._on_request("$test/fakeRequest", self._fake_request)
         self._on_request("$test/sendNotification", self._send_notification)
+        self._on_request("$test/setResponses", self._set_responses)
         self._on_notification("$test/setResponse", self._on_set_response)
 
     async def _on_set_response(self, params: PayloadLike) -> None:
         if isinstance(params, dict):
-            self._responses[params["method"]] = params["response"]
+            self._responses.append((params["method"], params["response"]))
+
+    async def _set_responses(self, params: PayloadLike) -> PayloadLike:
+        if not isinstance(params, list):
+            raise Error(ErrorCode.InvalidParams, 'expected responses to be a list')
+
+        for param in params:
+            if not isinstance(param, dict) or 'method' not in param or 'response' not in param:
+                raise Error(ErrorCode.InvalidParams, 'expected a response object to have a method and params keys')
+
+        self._responses.extend([(param['method'], param['response']) for param in params])
+        return None
 
     async def _send_notification(self, params: PayloadLike) -> PayloadLike:
         method, payload = self._validate_request_params(params)

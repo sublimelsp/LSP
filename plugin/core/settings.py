@@ -82,6 +82,9 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings) -> None:
     settings.log_server = read_bool_setting(settings_obj, "log_server", True)
     settings.log_stderr = read_bool_setting(settings_obj, "log_stderr", False)
     settings.log_payloads = read_bool_setting(settings_obj, "log_payloads", False)
+    settings.lsp_format_on_save = read_bool_setting(settings_obj, "lsp_format_on_save", False)
+    settings.lsp_code_actions_on_save = read_dict_setting(settings_obj, "lsp_code_actions_on_save", {})
+    settings.code_action_on_save_timeout_ms = read_int_setting(settings_obj, "code_action_on_save_timeout_ms", 2000)
 
 
 class ClientConfigs(object):

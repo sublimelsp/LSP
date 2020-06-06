@@ -115,13 +115,15 @@ https://stackoverflow.com/questions/16235706/sublime-3-set-key-map-for-function-
 
 ### Sublime settings
 
-Add these settings to your Sublime settings, Syntax-specific settings and/or in Project files.
+Add these settings to LSP settings, your Sublime settings, Syntax-specific settings and/or in Project files.
 
 * `lsp_format_on_save` `false` *run the server's formatProvider (if supported) on a document before saving.*
+* `lsp_code_actions_on_save` `{}` *request code actions with specified identifiers to trigger before saving.*
 
 ### Package settings (LSP)
 
 * `only_show_lsp_completions` `false` *disable sublime word completion and snippets from autocomplete lists*
+* `code_action_on_save_timeout_ms` `2000` *the amount of time the code actions on save are allowed to run for*
 * `show_references_in_quick_panel` `false` *show symbol references in Sublime's quick panel instead of the bottom panel*
 * `show_view_status` `true` *show permanent language server status in the status bar*
 * `auto_show_diagnostics_panel` `always` (`never`, `saved`) *open the diagnostics panel automatically if there are diagnostics*

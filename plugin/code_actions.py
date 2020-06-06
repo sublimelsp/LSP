@@ -262,7 +262,12 @@ class CodeActionOnSaveTask:
         self._request_code_actions()
 
     def _request_code_actions(self) -> None:
-        self._manager.documents.purge_changes(self._view)
+        # Supermassive hack that will go away later.
+        listeners = sublime_plugin.view_event_listeners.get(self._view.id(), [])
+        for listener in listeners:
+            if listener.__class__.__name__ == 'DocumentSyncListener':
+                listener.purge_changes()  # type: ignore
+                return
         request_code_actions_on_save(self._view, self._handle_response, self._on_save_actions)
 
     def _handle_response(self, responses: CodeActionsByConfigName) -> None:

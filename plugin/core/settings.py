@@ -112,8 +112,9 @@ class ClientConfigs(object):
         if self._listener:
             self._listener()
 
-    def add_external_config(self, name: str, s: sublime.Settings) -> None:
-        settings = DottedDict(read_dict_setting(s, "default_settings", {}))  # defined by the plugin author
+    def add_external_config(self, name: str, s: sublime.Settings, file: str) -> None:
+        base = sublime.decode_value(sublime.load_resource(file))
+        settings = DottedDict(base.get("settings", {}))  # defined by the plugin author
         settings.update(read_dict_setting(s, "settings", {}))  # overrides from the user
         config = ClientConfig(
             name=name,

@@ -19,7 +19,7 @@ from .settings import client_configs
 from .settings import settings, load_settings, unload_settings
 from .transports import kill_all_subprocesses
 from .types import ClientConfig
-from .typing import Optional, List, Type, Callable, Dict
+from .typing import Optional, List, Type, Callable, Dict, Tuple
 import weakref
 
 
@@ -61,7 +61,7 @@ def _forcefully_register_plugins() -> None:
                 return cls.handler.name  # type: ignore
 
             @classmethod
-            def configuration(cls) -> sublime.Settings:
+            def configuration(cls) -> Tuple[sublime.Settings, str]:
                 file_base_name = cls.name()
                 if file_base_name.startswith("lsp-"):
                     file_base_name = "LSP-" + file_base_name[len("lsp-"):]
@@ -78,7 +78,7 @@ def _forcefully_register_plugins() -> None:
                         "feature_selector": language.feature_selector
                     })
                 settings.set("languages", langs)
-                return settings
+                return settings, "Packages/{0}/{0}.sublime-settings".format(file_base_name)
 
             @classmethod
             def can_start(cls, window: sublime.Window, initiating_view: sublime.View,

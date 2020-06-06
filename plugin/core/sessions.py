@@ -291,14 +291,14 @@ class AbstractPlugin(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @classmethod
-    def configuration(cls) -> sublime.Settings:
+    def configuration(cls) -> Tuple[sublime.Settings, str]:
         """
-        The Settings object that defines the "command", "languages", and optionally the "initializationOptions",
-        "default_settings", "env" and "tcp_port".
+        Return the Settings object that defines the "command", "languages", and optionally the "initializationOptions",
+        "default_settings", "env" and "tcp_port" as the first element in the tuple, and the path to the base settings
+        filename as the second element in the tuple.
 
-        The "settings" dict is also supported, but not recommended for use. Because when a user defines its own
-        settings, the entire dict is overwritten. Because sublime.Settings objects don't recurse overrides in JSON
-        objects. Define your default settings in the "default_settings" object.
+        The second element in the tuple is used to handle "settings" overrides from users properly. For example, if your
+        plugin is called LSP-foobar, you would return "Packages/LSP-foobar/LSP-foobar.sublime-settings".
 
         The "command", "initializationOptions" and "env" are subject to template string substitution. The following
         template strings are recognized:
@@ -329,7 +329,10 @@ class AbstractPlugin(metaclass=ABCMeta):
         When you're managing your own server binary, you would typically place it in sublime.cache_path(). So your
         "command" should look like this: "command": ["$cache_path/LSP-foobar/server_binary", "--stdio"]
         """
-        return sublime.load_settings('LSP-{}.sublime-settings'.format(cls.name()))
+        name = cls.name()
+        basename = "LSP-{}.sublime-settings".format(name)
+        filepath = "Packages/LSP-{}/{}".format(name, basename)
+        return sublime.load_settings(basename), filepath
 
     @classmethod
     def additional_variables(cls) -> Optional[Dict[str, str]]:
@@ -389,7 +392,7 @@ def register_plugin(plugin: Type[AbstractPlugin]) -> None:
     global _plugins
     try:
         name = plugin.name()
-        client_configs.add_external_config(name, plugin.configuration())
+        client_configs.add_external_config(name, *plugin.configuration())
         _plugins[name] = plugin
     except Exception as ex:
         exception_log("Failed to register plugin", ex)

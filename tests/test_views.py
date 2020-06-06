@@ -9,6 +9,7 @@ from LSP.plugin.core.views import FORMAT_STRING, FORMAT_MARKED_STRING, FORMAT_MA
 from LSP.plugin.core.views import location_to_encoded_filename
 from LSP.plugin.core.views import MissingFilenameError
 from LSP.plugin.core.views import point_to_offset
+from LSP.plugin.core.views import selection_range_params
 from LSP.plugin.core.views import text2html
 from LSP.plugin.core.views import text_document_formatting
 from LSP.plugin.core.views import text_document_position_params
@@ -138,6 +139,20 @@ class ViewsTest(DeferrableTestCase):
         # When we move two UTF-16 points further, we should encompass the beer emoji.
         # So that means that the code point offsets should have a difference of 1.
         self.assertEqual(point_to_offset(Point(1, foobarbaz_length + 2), self.view) - offset, 1)
+
+    def test_selection_range_params(self) -> None:
+        self.view.sel().clear()
+        self.view.sel().add_all([sublime.Region(0, 5), sublime.Region(6, 11)])
+        self.assertEqual(len(self.view.sel()), 2)
+        self.assertEqual(self.view.substr(self.view.sel()[0]), "hello")
+        self.assertEqual(self.view.substr(self.view.sel()[1]), "world")
+        self.assertEqual(selection_range_params(self.view), {
+            "textDocument": {"uri": filename_to_uri(self.mock_file_name)},
+            "positions": [
+                {"line": 0, "character": 5},
+                {"line": 0, "character": 11}
+            ]
+        })
 
     def test_minihtml_no_allowed_formats(self) -> None:
         content = "<div>text\n</div>"

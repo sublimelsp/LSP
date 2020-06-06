@@ -107,6 +107,10 @@ def offset_to_point(view: sublime.View, offset: int) -> Point:
     return Point(*view.rowcol_utf16(offset))
 
 
+def position(view: sublime.View, offset: int) -> Dict[str, Any]:
+    return offset_to_point(view, offset).to_lsp()
+
+
 def range_to_region(range: Range, view: sublime.View) -> sublime.Region:
     return sublime.Region(point_to_offset(range.start, view), point_to_offset(range.end, view))
 
@@ -264,6 +268,13 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
 
 def did_change_configuration(d: DottedDict) -> Notification:
     return Notification.didChangeConfiguration({"settings": d.get()})
+
+
+def selection_range_params(view: sublime.View) -> Dict[str, Any]:
+    return {
+        "textDocument": text_document_identifier(view),
+        "positions": [position(view, r.b) for r in view.sel()]
+    }
 
 
 FORMAT_STRING = 0x1

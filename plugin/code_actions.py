@@ -267,7 +267,7 @@ class CodeActionOnSaveTask:
         for listener in listeners:
             if listener.__class__.__name__ == 'DocumentSyncListener':
                 listener.purge_changes()  # type: ignore
-                return
+                break
         request_code_actions_on_save(self._view, self._handle_response, self._on_save_actions)
 
     def _handle_response(self, responses: CodeActionsByConfigName) -> None:

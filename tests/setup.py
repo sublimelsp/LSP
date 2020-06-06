@@ -214,8 +214,8 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.wm.end_config_sessions(self.config.name)  # TODO: Shouldn't this be automatic once the last view closes?
         if self.session:
             yield lambda: self.session.state == ClientStates.STOPPING
-            assert self.view
-            yield lambda: self.wm.get_session(self.config.name, self.view.file_name()) is None
+            if self.view:
+                yield lambda: self.wm.get_session(self.config.name, self.view.file_name()) is None
 
     def await_clear_view_and_save(self) -> 'Generator':
         assert self.view  # type: Optional[sublime.View]

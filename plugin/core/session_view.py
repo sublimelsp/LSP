@@ -1,8 +1,9 @@
+from .logging import debug
 from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindFull
 from .sessions import Session
 from .settings import settings
 from .types import view2scope
-from .typing import Any, Iterable
+from .typing import Any, Callable, Iterable, Optional
 from .views import did_change
 from .views import did_close
 from .views import did_open
@@ -11,6 +12,15 @@ from .views import will_save
 from .windows import AbstractViewListener
 import sublime
 import weakref
+
+
+def debounced(f: Callable[[], None], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True) -> None:
+
+    def run() -> None:
+        if condition():
+            f()
+
+    sublime.set_timeout(run, timeout_ms)
 
 
 class PendingBuffer:
@@ -32,6 +42,7 @@ class SessionView:
         self.view = listener.view
         self.session = session
         self.listener = weakref.ref(listener)
+        self._pending_buffer = None  # type: Optional[PendingBuffer]
         session.register_session_view(self)
         self.view.set_status(self.status_key, session.config.name)
         settings = self.view.settings()
@@ -110,23 +121,49 @@ class SessionView:
         if listener:
             listener.on_session_shutdown(self.session)
 
-    def did_change(self, changes: Iterable[sublime.TextChange]) -> None:
-        sync_kind = self.session.text_sync_kind()
-        if sync_kind == TextDocumentSyncKindNone:
-            return
-        c = None if sync_kind == TextDocumentSyncKindFull else changes
-        notification = did_change(self.view, c)  # type: ignore
-        self.session.send_notification(notification)
-        self._massive_hack_changed()
+    def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
+        last_change = list(changes)[-1]
+        if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and self.view.size() != 0:
+            # Issue https://github.com/sublimehq/sublime_text/issues/3323
+            # A special situation when changes externally. We receive two changes,
+            # one that removes all content and one that has 0,0,'' parameters. We resend whole
+            # file in that case to fix broken state.
+            debug('Working around the on_text_changed bug {}'.format(self.view.file_name()))
+            self.purge_changes()
+            notification = did_change(self.view, None)  # type: ignore
+            self.session.send_notification(notification)
+            self._massive_hack_changed()
+        else:
+            change_count = self.view.change_count()
+            if self._pending_buffer is None:
+                self._pending_buffer = PendingBuffer(change_count, changes)
+            else:
+                self._pending_buffer.update(change_count, changes)
+            debounced(self.purge_changes, 500,
+                      lambda: self.view.is_valid() and change_count == self.view.change_count())
 
-    def will_save(self, reason: int) -> None:
+    def purge_changes(self) -> None:
+        if self._pending_buffer is not None:
+            sync_kind = self.session.text_sync_kind()
+            if sync_kind == TextDocumentSyncKindNone:
+                return
+            c = None if sync_kind == TextDocumentSyncKindFull else self._pending_buffer.changes
+            notification = did_change(self.view, c)  # type: ignore
+            self.session.send_notification(notification)
+            self._pending_buffer = None
+            self._massive_hack_changed()
+
+    def on_pre_save(self) -> None:
         if self.session.should_notify_will_save():
+            self.purge_changes()
             # mypy: expected sublime.View, got ViewLike
-            self.session.send_notification(will_save(self.view, reason))  # type: ignore
+            # TextDocumentSaveReason.Manual
+            self.session.send_notification(will_save(self.view, 1))  # type: ignore
 
-    def did_save(self) -> None:
+    def on_post_save(self) -> None:
         send_did_save, include_text = self.session.should_notify_did_save()
         if send_did_save:
+            self.purge_changes()
             # mypy: expected sublime.View, got ViewLike
             self.session.send_notification(did_save(self.view, include_text))  # type: ignore
         self._massive_hack_saved()

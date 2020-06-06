@@ -1,6 +1,5 @@
 from .registry import get_position
 from .registry import LSPViewEventListener
-from .session_view import PendingBuffer
 from .session_view import SessionView
 from .sessions import Session
 from .typing import Any, Optional, Dict, Generator, Iterable
@@ -44,7 +43,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         super().__init__(view)
         self._registered = False
         self._session_views = {}  # type: Dict[str, SessionView]
-        self._pending_buffer = None  # type: Optional[PendingBuffer]
 
     def on_session_initialized(self, session: Session) -> None:
         assert not self.view.is_loading()
@@ -59,27 +57,29 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     def on_activated(self) -> None:
         assert not self.view.is_loading()
-        if self.view.file_name() and not is_transient_view(self.view):
+        if self.view.file_name() and self.view.element() is None:
             self.manager.register_listener(self)
             self._registered = True
 
+    def purge_changes(self) -> None:
+        if self._registered:
+            for sv in self.session_views():
+                sv.purge_changes()
+
     def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
-        change_count = self.view.change_count()
-        if self._pending_buffer is None:
-            self._pending_buffer = PendingBuffer(change_count, changes)
-        else:
-            self._pending_buffer.update(change_count, changes)
-        sublime.set_timeout(lambda: self._purge_did_change(change_count), 500)
+        if self._registered:
+            for sv in self.session_views():
+                sv.on_text_changed(changes)
 
     def on_pre_save(self) -> None:
-        if self.view.file_name():
+        if self._registered:
             for sv in self.session_views():
-                sv.will_save(reason=1)  # TextDocumentSaveReason.Manual
+                sv.on_pre_save()
 
     def on_post_save(self) -> None:
-        self.purge_changes()
-        for sv in self.session_views():
-            sv.did_save()
+        if self._registered:
+            for sv in self.session_views():
+                sv.on_post_save()
 
     def on_close(self) -> None:
         if self._registered and self.view.is_primary():
@@ -94,16 +94,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             return bool(self._session_views)
         else:
             return False
-
-    def _purge_did_change(self, change_count: int) -> None:
-        if change_count == self.view.change_count():
-            self.purge_changes()
-
-    def purge_changes(self) -> None:
-        if self._pending_buffer is not None:
-            for sv in self.session_views():
-                sv.did_change(self._pending_buffer.changes)
-            self._pending_buffer = None
 
     def __hash__(self) -> int:
         return hash(id(self))

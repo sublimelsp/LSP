@@ -13,7 +13,8 @@ class LspExecuteCommand(LspTextCommand):
     def run(self,
             edit: sublime.Edit,
             command_name: Optional[str] = None,
-            command_args: Optional[List[Any]] = None) -> None:
+            command_args: Optional[List[Any]] = None,
+            event: Optional[dict] = None) -> None:
         session = self.session(self.capability)
         if session and command_name:
             window = self.view.window()

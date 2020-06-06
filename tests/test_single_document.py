@@ -264,7 +264,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
                 "parent": {
                     "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 5}}
                 },
-                "range": {"start": {"line": 0, "character": 1}, "end": {"line": 0, "character": 4}}
+                "range": {"start": {"line": 0, "character": 1}, "end": {"line": 0, "character": 3}}
             },
             "range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 3}}
         }]
@@ -276,7 +276,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
             yield lambda: self.view.sel()[0] == sublime.Region(a, b)
 
         yield from expand_and_check(2, 3)
-        yield from expand_and_check(1, 4)
+        yield from expand_and_check(1, 3)
         yield from expand_and_check(0, 5)
 
 

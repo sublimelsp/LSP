@@ -5,9 +5,10 @@ from .logging import exception_log
 from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindIncremental, CompletionItemTag
 from .protocol import WorkspaceFolder, Request, Notification, Response
 from .rpc import Client
+from .rpc import Logger
 from .settings import client_configs
 from .transports import Transport
-from .types import ClientConfig, ClientStates, Settings
+from .types import ClientConfig, ClientStates
 from .typing import Dict, Any, Optional, List, Tuple, Generator, Type
 from .views import COMPLETION_KINDS
 from .views import did_change_configuration
@@ -412,7 +413,7 @@ def get_plugin(name: str) -> Optional[Type[AbstractPlugin]]:
 
 class Session(Client):
 
-    def __init__(self, manager: Manager, settings: Settings, workspace_folders: List[WorkspaceFolder],
+    def __init__(self, manager: Manager, logger: Logger, workspace_folders: List[WorkspaceFolder],
                  config: ClientConfig, plugin_class: Optional[Type[AbstractPlugin]]) -> None:
         self.config = config
         self.manager = weakref.ref(manager)
@@ -423,7 +424,7 @@ class Session(Client):
         self._progress = {}  # type: Dict[Any, Dict[str, str]]
         self._plugin_class = plugin_class
         self._plugin = None  # type: Optional[AbstractPlugin]
-        super().__init__(config.name, settings)
+        super().__init__(logger)
 
     def __getattr__(self, name: str) -> Any:
         """

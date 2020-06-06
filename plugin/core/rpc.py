@@ -1,7 +1,6 @@
 from .logging import debug, exception_log
 from .protocol import Request, Notification, Response, Error, ErrorCode
 from .transports import Transport, TransportCallbacks
-from .types import Settings
 from .typing import Any, Dict, Tuple, Callable, Optional, List
 from abc import ABCMeta, abstractmethod
 from threading import Condition, Lock
@@ -123,10 +122,10 @@ def method2attr(method: str) -> str:
 
 
 class Client(TransportCallbacks):
-    def __init__(self, config_name: str, settings: Settings) -> None:
+    def __init__(self, logger: Logger) -> None:
         self.transport = None  # type: Optional[Transport]
         self.request_id = 0  # Our request IDs are always integers.
-        self.logger = SublimeLogger(settings, config_name, debug)
+        self.logger = logger
         self._response_handlers = {}  # type: Dict[int, Tuple[Callable, Optional[Callable[[Any], None]]]]
         self._sync_request_result = SyncRequestStatus()
         self._sync_request_lock = Lock()
@@ -331,83 +330,3 @@ class Client(TransportCallbacks):
 
     def _get_handler(self, method: str) -> Optional[Callable]:
         return getattr(self, method2attr(method), None)
-
-
-class SublimeLogger(Logger):
-
-    def __init__(self, settings: Settings, server_name: str, sink: Callable[[str], None]) -> None:
-        self.settings = settings
-        self.server_name = server_name
-        self.sink = sink
-
-    def log(self, message: str, params: Any, log_payload: bool) -> None:
-        if log_payload:
-            message = "{}: {}".format(message, params)
-        self.sink(message)
-
-    def format_response(self, direction: str, request_id: Any) -> str:
-        return "{} {} {}".format(direction, self.server_name, request_id)
-
-    def format_request(self, direction: str, method: str, request_id: Any) -> str:
-        return "{} {} {}({})".format(direction, self.server_name, method, request_id)
-
-    def format_notification(self, direction: str, method: str) -> str:
-        return "{} {} {}".format(direction, self.server_name, method)
-
-    def outgoing_response(self, request_id: Any, params: Any) -> None:
-        if not self.settings.log_debug:
-            return
-        self.log(self.format_response(">>>", request_id), params, self.settings.log_payloads)
-
-    def outgoing_error_response(self, request_id: Any, error: Error) -> None:
-        if not self.settings.log_debug:
-            return
-        self.log(self.format_response("~~>", request_id), error.to_lsp(), self.settings.log_payloads)
-
-    def outgoing_request(self, request_id: int, method: str, params: Any, blocking: bool) -> None:
-        if not self.settings.log_debug:
-            return
-        direction = "==>" if blocking else "-->"
-        self.log(self.format_request(direction, method, request_id), params, self.settings.log_payloads)
-
-    def outgoing_notification(self, method: str, params: Any) -> None:
-        if not self.settings.log_debug:
-            return
-        # Do not log the payloads if any of these conditions occur because the payloads might contain the entire
-        # content of the view.
-        log_payload = self.settings.log_payloads
-        if method.endswith("didOpen"):
-            log_payload = False
-        elif method.endswith("didChange"):
-            content_changes = params.get("contentChanges")
-            if content_changes and "range" not in content_changes[0]:
-                log_payload = False
-        elif method.endswith("didSave"):
-            if isinstance(params, dict) and "text" in params:
-                log_payload = False
-        self.log(self.format_notification(" ->", method), params, log_payload)
-
-    def incoming_response(self, request_id: int, params: Any, is_error: bool, blocking: bool) -> None:
-        if not self.settings.log_debug:
-            return
-        if is_error:
-            direction = "<~~"
-        else:
-            direction = "<==" if blocking else "<<<"
-        self.log(self.format_response(direction, request_id), params, self.settings.log_payloads)
-
-    def incoming_error_response(self, request_id: Any, error: Any) -> None:
-        if not self.settings.log_debug:
-            return
-        self.log(self.format_response('<~~', request_id), error, self.settings.log_payloads)
-
-    def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
-        if not self.settings.log_debug:
-            return
-        self.log(self.format_request("<--", method, request_id), params, self.settings.log_payloads)
-
-    def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
-        if not self.settings.log_debug or method == "window/logMessage":
-            return
-        direction = "<? " if unhandled else "<- "
-        self.log(self.format_notification(direction, method), params, self.settings.log_payloads)

@@ -214,6 +214,8 @@ class WindowDocumentHandler(object):
 
     def _notify_did_open(self, view: ViewLike, session: Session) -> None:
         language_id = self._view_language(view, session.config.name)
+        # There might be pending, no longer valid changes when restoring session.
+        self._pending_buffer_changes.pop(view.buffer_id(), None)
         # mypy: expected sublime.View, got ViewLike
         session.send_notification(did_open(view, language_id))  # type: ignore
 

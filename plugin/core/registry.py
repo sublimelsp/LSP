@@ -1,9 +1,10 @@
 from .configurations import ConfigManager
 from .sessions import Session
 from .settings import settings, client_configs
-from .types import ClientConfig, ClientStates, view2scope
-from .typing import Optional, Callable, Dict, Any, Generator
-from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
+from .typing import Optional, Callable, Dict, Any, Generator, Iterable
+from .windows import DocumentHandlerFactory
+from .windows import WindowManager
+from .windows import WindowRegistry
 import sublime
 import sublime_plugin
 
@@ -33,12 +34,21 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
     def has_manager(self) -> bool:
         return self._manager is not None
 
+    def sessions(self, capability: Optional[str]) -> Generator[Session, None, None]:
+        yield from self.manager.sessions(self.view, capability)
+
+    def session(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
+        return _best_session(self.view, self.sessions(capability), point)
+
 
 def sessions_for_view(view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
     """
     Returns all sessions for this view, optionally matching the capability path.
     """
-    yield from _sessions_for_view_and_window(view, view.window(), capability)
+    window = view.window()
+    if window:
+        manager = windows.lookup(window)
+        yield from manager.sessions(view, capability)
 
 
 def session_for_view(view: sublime.View, capability: str, point: Optional[int] = None) -> Optional[Session]:
@@ -48,6 +58,10 @@ def session_for_view(view: sublime.View, capability: str, point: Optional[int] =
 
     If point is None, then the point is understood to be the position of the first cursor.
     """
+    return _best_session(view, sessions_for_view(view, capability), point)
+
+
+def _best_session(view: sublime.View, sessions: Iterable[Session], point: Optional[int] = None) -> Optional[Session]:
     if point is None:
         try:
             point = view.sel()[0].b
@@ -55,24 +69,9 @@ def session_for_view(view: sublime.View, capability: str, point: Optional[int] =
             return None
     scope = view.scope_name(point)
     try:
-        return max(sessions_for_view(view, capability), key=lambda session: session.config.score_feature(scope))
+        return max(sessions, key=lambda session: session.config.score_feature(scope))
     except ValueError:
         return None
-
-
-def _sessions_for_view_and_window(view: sublime.View, window: Optional[sublime.Window],
-                                  capability: Optional[str]) -> Generator[Session, None, None]:
-    if window:
-        file_path = view.file_name()
-        if file_path:
-            manager = windows.lookup(window)
-            scope = view2scope(view)
-            for sessions in manager._sessions.values():
-                for session in sessions:
-                    if session.state == ClientStates.READY and session.config.match_document(scope):
-                        if session.handles_path(file_path):
-                            if capability is None or session.has_capability(capability):
-                                yield session
 
 
 def unload_sessions(window: sublime.Window) -> None:
@@ -84,13 +83,6 @@ configs = ConfigManager(client_configs.all)
 client_configs.set_listener(configs.update)
 documents = DocumentHandlerFactory(sublime, settings)
 windows = WindowRegistry(configs, documents, sublime)
-
-
-def configurations_for_view(view: sublime.View) -> Generator[ClientConfig, None, None]:
-    window = view.window()
-    if window:
-        # todo: don't expose _configs
-        yield from windows.lookup(window)._configs.match_view(view)
 
 
 def get_position(view: sublime.View, event: Optional[dict] = None) -> int:

@@ -1,11 +1,11 @@
 import sublime
 from .core.protocol import Request
 from .core.registry import LSPViewEventListener
-from .core.registry import session_for_view, sessions_for_view, configurations_for_view
 from .core.settings import settings
 from .core.typing import List, Optional
 from .core.views import document_color_params
 from .core.views import lsp_color_to_phantom
+from .core.windows import debounced
 
 
 class LspColorListener(LSPViewEventListener):
@@ -31,13 +31,10 @@ class LspColorListener(LSPViewEventListener):
             self.initialize()
 
     def initialize(self, is_retry: bool = False) -> None:
-        if not any(configurations_for_view(self.view)):
-            self.initialized = True  # no server enabled, re-open file to activate feature.
-        sessions = list(sessions_for_view(self.view, 'colorProvider'))
-        if sessions:
+        if self.session('colorProvider'):
             self.initialized = True
             self.enabled = True
-            self.fire_request(self._stored_point)
+            self.fire_request()
         elif not is_retry:
             # session may be starting, try again once in a second.
             sublime.set_timeout_async(lambda: self.initialize(is_retry=True), 1000)
@@ -52,13 +49,12 @@ class LspColorListener(LSPViewEventListener):
             current_point = sel[0].begin()
             if self._stored_point != current_point:
                 self._stored_point = current_point
-                sublime.set_timeout_async(lambda: self.fire_request(current_point), 800)
+                debounced(self.fire_request, 800, lambda: self._stored_point == current_point, async_thread=True)
 
-    def fire_request(self, current_point: int) -> None:
-        if current_point == self._stored_point:
-            session = session_for_view(self.view, 'colorProvider')
-            if session:
-                session.send_request(Request.documentColor(document_color_params(self.view)), self.handle_response)
+    def fire_request(self) -> None:
+        session = self.session('colorProvider')
+        if session:
+            session.send_request(Request.documentColor(document_color_params(self.view)), self.handle_response)
 
     def handle_response(self, response: Optional[List[dict]]) -> None:
         color_infos = response if response else []

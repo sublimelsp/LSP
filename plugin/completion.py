@@ -3,17 +3,19 @@ import mdpopups
 import sublime
 import sublime_plugin
 import webbrowser
+from .core.logging import debug
 from .core.edit import parse_text_edit
 from .core.protocol import Request, InsertTextFormat, Range, CompletionItemTag
-from .core.registry import session_for_view, LSPViewEventListener
+from .core.registry import LspTextCommand
+from .core.registry import LSPViewEventListener
 from .core.settings import settings
 from .core.typing import Any, List, Dict, Optional, Union, Generator
-from .core.views import text_document_position_params, range_to_region
-from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .core.views import COMPLETION_KINDS
+from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from .core.views import text_document_position_params, range_to_region
 
 
-class LspResolveDocsCommand(sublime_plugin.TextCommand):
+class LspResolveDocsCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, index: int) -> None:
         item = CompletionHandler.completions[index]
         detail = self.format_documentation(item.get('detail') or "")
@@ -56,7 +58,7 @@ class LspResolveDocsCommand(sublime_plugin.TextCommand):
         webbrowser.open(url)
 
     def do_resolve(self, item: dict) -> None:
-        session = session_for_view(self.view, 'completionProvider.resolveProvider')
+        session = self.session('completionProvider.resolveProvider')
         if session:
             session.send_request(
                 Request.resolveCompletionItem(item),
@@ -85,6 +87,7 @@ class LspCompleteCommand(sublime_plugin.TextCommand):
             self.view.run_command("lsp_apply_document_edit", {'changes': edits})
         command = item.get("command")
         if command:
+            debug('Running server command "{}" for view {}'.format(command, self.view.id()))
             self.view.run_command("lsp_execute", {"command_name": command})
 
 
@@ -159,7 +162,7 @@ class CompletionHandler(LSPViewEventListener):
 
     def initialize(self) -> None:
         self.initialized = True
-        session = session_for_view(self.view, 'completionProvider')
+        session = self.session('completionProvider')
         if session:
             capability = session.get_capability('completionProvider') or dict()  # type: dict
             # A language server may have an empty dict as CompletionOptions. In that case,
@@ -195,7 +198,7 @@ class CompletionHandler(LSPViewEventListener):
             self.initialize()
         if not self.enabled:
             return None
-        session = session_for_view(self.view, 'completionProvider', locations[0])
+        session = self.session('completionProvider', locations[0])
         if not session:
             return None
         self.manager.documents.purge_changes(self.view)

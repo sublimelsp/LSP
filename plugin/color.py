@@ -2,7 +2,6 @@ import sublime
 from .core.documents import is_transient_view
 from .core.protocol import Range
 from .core.protocol import Request
-from .core.registry import session_for_view, sessions_for_view, configurations_for_view
 from .core.registry import LSPViewEventListener
 from .core.settings import settings
 from .core.typing import List, Dict, Optional
@@ -35,10 +34,7 @@ class LspColorListener(LSPViewEventListener):
             self.initialize()
 
     def initialize(self, is_retry: bool = False) -> None:
-        if not any(configurations_for_view(self.view)):
-            self.initialized = True  # no server enabled, re-open file to activate feature.
-        sessions = list(sessions_for_view(self.view, 'colorProvider'))
-        if sessions:
+        if self.session('colorProvider'):
             self.initialized = True
             self.enabled = True
             self.send_color_request()
@@ -70,7 +66,7 @@ class LspColorListener(LSPViewEventListener):
         if is_transient_view(self.view):
             return
 
-        session = session_for_view(self.view, 'colorProvider')
+        session = self.session('colorProvider')
         if session:
             file_path = self.view.file_name()
             if file_path:

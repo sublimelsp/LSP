@@ -1,7 +1,7 @@
 import sublime
 from .core.edit import parse_text_edit
-from .core.registry import LspTextCommand, LSPViewEventListener, session_for_view
-from .core.registry import sessions_for_view
+from .core.registry import LspTextCommand
+from .core.registry import LSPViewEventListener
 from .core.sessions import Session
 from .core.settings import settings
 from .core.typing import Any, List, Optional
@@ -24,7 +24,7 @@ class FormatOnSaveListener(LSPViewEventListener):
             return
 
         self._view_maybe_dirty = True
-        for session in sessions_for_view(self.view, 'textDocumentSync.willSaveWaitUntil'):
+        for session in self.sessions('textDocumentSync.willSaveWaitUntil'):
             self._purge_changes_if_needed()
             self._will_save_wait_until(session)
 
@@ -49,7 +49,7 @@ class FormatOnSaveListener(LSPViewEventListener):
                                 lambda response: self._apply_and_purge(response))
 
     def _format_on_save(self) -> None:
-        session = session_for_view(self.view, 'documentFormattingProvider')
+        session = self.session('documentFormattingProvider')
         if session:
             session.execute_request(text_document_formatting(self.view),
                                     lambda response: self._apply_and_purge(response))

@@ -174,6 +174,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             },
             "publishDiagnostics": {
                 "relatedInformation": True
+            },
+            "selectionRange": {
+                "dynamicRegistration": True
             }
         },
         "workspace": {
@@ -475,10 +478,10 @@ class Session(Client):
         yield from self._session_views
 
     def can_handle(self, view: sublime.View, capability: Optional[str] = None) -> bool:
-        if self.state == ClientStates.READY and self.config.match_view(view):
-            if self.handles_path(view.file_name() or ''):
-                if capability is None or capability in self.capabilities:
-                    return True
+        file_name = view.file_name() or ''
+        if self.config.match_view(view) and self.state == ClientStates.READY and self.handles_path(file_name):
+            if capability is None or capability in self.capabilities:
+                return True
         return False
 
     def has_capability(self, capability: str) -> bool:

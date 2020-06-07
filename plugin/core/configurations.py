@@ -1,7 +1,7 @@
 from .collections import DottedDict
 from .logging import debug
 from .types import ClientConfig, WindowLike, view2scope
-from .typing import Any, Generator, List, Dict
+from .typing import Any, Generator, List, Dict, Set
 from .workspace import enable_in_project, disable_in_project
 from copy import deepcopy
 import sublime
@@ -29,7 +29,7 @@ class WindowConfigManager(object):
     def __init__(self, window: WindowLike, global_configs: List[ClientConfig]) -> None:
         self._window = window
         self._global_configs = global_configs
-        self._temp_disabled_configs = []  # type: List[str]
+        self._temp_disabled_configs = set()  # type: Set[str]
         self.all = self._create_window_configs()
 
     def match_document(self, scope: str) -> Generator[ClientConfig, None, None]:
@@ -75,7 +75,7 @@ class WindowConfigManager(object):
         self.update()
 
     def disable_temporarily(self, config_name: str) -> None:
-        self._temp_disabled_configs.append(config_name)
+        self._temp_disabled_configs.add(config_name)
         self.update()
 
     def _create_window_configs(self) -> List[ClientConfig]:

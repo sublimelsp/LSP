@@ -30,6 +30,7 @@ basic_responses = {
             'declarationProvider': True,
             'implementationProvider': True,
             'documentFormattingProvider': True,
+            'selectionRangeProvider': True,
             'workspace': {
                 'workspaceFolders': {
                     'supported': True

@@ -7,13 +7,14 @@ from .code_actions import actions_manager, run_code_action_or_command
 from .code_actions import CodeActionOrCommand
 from .core.popups import popups
 from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation, Point
-from .core.registry import session_for_view, LspTextCommand, windows
+from .core.registry import LspTextCommand
 from .core.registry import LSPViewEventListener
+from .core.registry import windows
 from .core.settings import settings
 from .core.typing import List, Optional, Any, Dict
+from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .core.views import make_link
 from .core.views import text_document_position_params
-from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .diagnostics import filter_by_point, view_diagnostics
 
 
@@ -90,9 +91,7 @@ class LspHoverCommand(LspTextCommand):
             self.show_hover(hover_point)
 
     def request_symbol_hover(self, point: int) -> None:
-        # todo: session_for_view looks up windowmanager twice (config and for sessions)
-        # can we memoize some part (eg. where no point is provided?)
-        session = session_for_view(self.view, 'hoverProvider', point)
+        session = self.session('hoverProvider', point)
         if session:
             document_position = text_document_position_params(self.view, point)
             session.send_request(

@@ -4,6 +4,7 @@ from .core.registry import LSPViewEventListener
 from .core.settings import settings
 from .core.typing import List, Dict, Optional
 from .core.views import range_to_region, text_document_position_params
+from .core.windows import debounced
 
 SUBLIME_WORD_MASK = 515
 NO_HIGHLIGHT_SCOPES = 'comment, string'
@@ -37,29 +38,20 @@ class DocumentHighlightListener(LSPViewEventListener):
     def on_selection_modified_async(self) -> None:
         if not self._initialized:
             self._initialize()
-        if self._enabled:
-            if settings.document_highlight_style:
-                self._queue()
+        if self._enabled and settings.document_highlight_style:
+            try:
+                current_point = self.view.sel()[0].begin()
+            except IndexError:
+                return
+            self._stored_point = current_point
+            self._clear_regions()
+            debounced(self._on_document_highlight, 500, lambda: self._stored_point == current_point, async_thread=True)
 
     def _initialize(self) -> None:
         self._initialized = True
         session = self.session("documentHighlightProvider")
         if session:
             self._enabled = True
-
-    def _queue(self) -> None:
-        try:
-            current_point = self.view.sel()[0].begin()
-        except IndexError:
-            return
-        if self._stored_point != current_point:
-            self._clear_regions()
-            self._stored_point = current_point
-            sublime.set_timeout_async(lambda: self._purge(current_point), 500)
-
-    def _purge(self, current_point: int) -> None:
-        if current_point == self._stored_point:
-            self._on_document_highlight()
 
     def _clear_regions(self) -> None:
         for kind in settings.document_highlight_scopes.keys():

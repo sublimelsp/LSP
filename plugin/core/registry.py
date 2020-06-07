@@ -2,7 +2,9 @@ from .configurations import ConfigManager
 from .sessions import Session
 from .settings import settings, client_configs
 from .typing import Optional, Callable, Dict, Any, Generator, Iterable
-from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
+from .windows import DocumentHandlerFactory
+from .windows import WindowManager
+from .windows import WindowRegistry
 import sublime
 import sublime_plugin
 

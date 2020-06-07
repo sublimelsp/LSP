@@ -1,7 +1,6 @@
 import sublime
 from .core.protocol import Request, Range, DocumentHighlightKind
 from .core.registry import LSPViewEventListener
-from .core.registry import session_for_view
 from .core.settings import settings
 from .core.typing import List, Dict, Optional
 from .core.views import range_to_region, text_document_position_params
@@ -50,7 +49,7 @@ class DocumentHighlightListener(LSPViewEventListener):
 
     def _initialize(self) -> None:
         self._initialized = True
-        session = session_for_view(self.view, "documentHighlightProvider")
+        session = self.session("documentHighlightProvider")
         if session:
             self._enabled = True
 
@@ -67,7 +66,7 @@ class DocumentHighlightListener(LSPViewEventListener):
         if word_at_sel & SUBLIME_WORD_MASK:
             if self.view.match_selector(point, NO_HIGHLIGHT_SCOPES):
                 return
-            session = session_for_view(self.view, "documentHighlightProvider", point)
+            session = self.session("documentHighlightProvider", point)
             if session:
                 params = text_document_position_params(self.view, point)
                 request = Request.documentHighlight(params)

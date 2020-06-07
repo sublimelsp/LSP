@@ -5,7 +5,7 @@ import webbrowser
 
 from .core.popups import popups
 from .core.protocol import Request
-from .core.registry import session_for_view, LSPViewEventListener
+from .core.registry import LSPViewEventListener
 from .core.settings import settings
 from .core.signature_help import create_signature_help, SignatureHelp
 from .core.typing import List, Dict, Optional, Union
@@ -57,7 +57,7 @@ class SignatureHelpListener(LSPViewEventListener):
         return cls.has_supported_syntax(view_settings)
 
     def initialize(self) -> None:
-        session = session_for_view(self.view, 'signatureHelpProvider')
+        session = self.session('signatureHelpProvider')
         if session:
             signatureHelpProvider = session.get_capability(
                 'signatureHelpProvider')
@@ -93,7 +93,7 @@ class SignatureHelpListener(LSPViewEventListener):
 
     def request_signature_help(self, point: int) -> None:
         self.requested_position = point
-        session = session_for_view(self.view, 'signatureHelpProvider', point)
+        session = self.session('signatureHelpProvider', point)
         if session:
             self.manager.documents.purge_changes(self.view)
             document_position = text_document_position_params(self.view, point)

@@ -388,3 +388,30 @@ def text2html(content: str) -> str:
 
 def make_link(href: str, text: str) -> str:
     return "<a href='{}'>{}</a>".format(href, text.replace(' ', '&nbsp;'))
+
+
+COLOR_BOX_HTML = """
+<style>html {{padding: 0}}</style>
+<div style='padding: 0.4em;
+            margin-top: 0.2em;
+            border: 1px solid color(var(--foreground) alpha(0.25));
+            background-color: rgba({}, {}, {}, {})'>
+</div>"""
+
+
+def lsp_color_to_html(color_info: Dict[str, Any]) -> str:
+    color = color_info['color']
+    red = color['red'] * 255
+    green = color['green'] * 255
+    blue = color['blue'] * 255
+    alpha = color['alpha']
+    return COLOR_BOX_HTML.format(red, green, blue, alpha)
+
+
+def lsp_color_to_phantom(view: sublime.View, color_info: Dict[str, Any]) -> sublime.Phantom:
+    region = range_to_region(Range.from_lsp(color_info['range']), view)
+    return sublime.Phantom(region, lsp_color_to_html(color_info), sublime.LAYOUT_INLINE)
+
+
+def document_color_params(view: sublime.View) -> Dict[str, Any]:
+    return {"textDocument": text_document_identifier(view)}

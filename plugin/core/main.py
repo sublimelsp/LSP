@@ -1,7 +1,6 @@
 import sublime
 import sublime_plugin
 
-from ..color import remove_color_boxes
 from ..diagnostics import DiagnosticsPresenter
 from ..highlights import remove_highlights
 from .handlers import LanguageHandler
@@ -134,7 +133,6 @@ def plugin_unloaded() -> None:
         for view in window.views():
             if view.file_name():
                 remove_highlights(view)
-                remove_color_boxes(view)
                 for key in ['error', 'warning', 'info', 'hint', 'diagnostics']:
                     view.erase_regions('lsp_{}'.format(key))
                 for key in ['diagnostics', 'clients']:

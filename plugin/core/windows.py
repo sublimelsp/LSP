@@ -349,12 +349,10 @@ class WindowManager(Manager):
         return self._window  # type: ignore
 
     def sessions(self, view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
-        file_name = view.file_name() or ''
         for sessions in self._sessions.values():
             for session in sessions:
-                if capability is None or capability in session.capabilities:
-                    if session.state == ClientStates.READY and session.handles_path(file_name):
-                        yield session
+                if session.can_handle(view, capability):
+                    yield session
 
     def get_session(self, config_name: str, file_path: str) -> Optional[Session]:
         return self._find_session(config_name, file_path)

@@ -9,6 +9,7 @@ from .rpc import Logger
 from .settings import client_configs
 from .transports import Transport
 from .types import ClientConfig, ClientStates
+from .types import view2scope
 from .typing import Dict, Any, Optional, List, Tuple, Generator, Type
 from .views import COMPLETION_KINDS
 from .views import did_change_configuration
@@ -442,6 +443,14 @@ class Session(Client):
             if attr is not None:
                 return attr
         raise AttributeError(name)
+
+    def can_handle(self, view: sublime.View, capability: Optional[str] = None) -> bool:
+        file_name = view.file_name() or ''
+        scope = view2scope(view)
+        if self.config.match_document(scope) and self.state == ClientStates.READY and self.handles_path(file_name):
+            if capability is None or capability in self.capabilities:
+                return True
+        return False
 
     def has_capability(self, capability: str) -> bool:
         value = self.get_capability(capability)

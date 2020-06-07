@@ -2,12 +2,13 @@ import sublime
 from .core.documents import is_transient_view
 from .core.protocol import Range
 from .core.protocol import Request
-from .core.registry import session_for_view, sessions_for_view, configurations_for_view
 from .core.registry import LSPViewEventListener
+from .core.registry import session_for_view, sessions_for_view, configurations_for_view
 from .core.settings import settings
 from .core.typing import List, Dict, Optional
 from .core.url import filename_to_uri
 from .core.views import range_to_region
+from .core.windows import debounced
 
 
 color_phantoms_by_view = dict()  # type: Dict[int, sublime.PhantomSet]
@@ -50,21 +51,13 @@ class LspColorListener(LSPViewEventListener):
 
     def on_modified_async(self) -> None:
         if self.enabled:
-            self.schedule_request()
-
-    def schedule_request(self) -> None:
-        sel = self.view.sel()
-        if len(sel) < 1:
-            return
-
-        current_point = sel[0].begin()
-        if self._stored_point != current_point:
-            self._stored_point = current_point
-            sublime.set_timeout_async(lambda: self.fire_request(current_point), 800)
-
-    def fire_request(self, current_point: int) -> None:
-        if current_point == self._stored_point:
-            self.send_color_request()
+            sel = self.view.sel()
+            if len(sel) < 1:
+                return
+            current_point = sel[0].begin()
+            if self._stored_point != current_point:
+                self._stored_point = current_point
+                debounced(self.send_color_request, 800, lambda: self._stored_point == current_point, async_thread=True)
 
     def send_color_request(self) -> None:
         if is_transient_view(self.view):

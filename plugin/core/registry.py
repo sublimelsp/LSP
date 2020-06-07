@@ -3,7 +3,9 @@ from .sessions import Session
 from .settings import settings, client_configs
 from .types import ClientConfig, ClientStates, view2scope
 from .typing import Optional, Callable, Dict, Any, Generator
-from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
+from .windows import DocumentHandlerFactory
+from .windows import WindowManager
+from .windows import WindowRegistry
 import sublime
 import sublime_plugin
 

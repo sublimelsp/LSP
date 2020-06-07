@@ -9,6 +9,7 @@ from .core.settings import settings
 from .core.typing import Any, List, Dict, Callable, Optional, Union, Tuple, Mapping, TypedDict
 from .core.url import filename_to_uri
 from .core.views import entire_content_range, region_to_range
+from .core.windows import debounced
 from .diagnostics import filter_by_point, view_diagnostics
 import sublime
 import sublime_plugin
@@ -311,21 +312,19 @@ class LspCodeActionBulbListener(LSPViewEventListener):
 
     def on_selection_modified_async(self) -> None:
         self.hide_bulb()
-        self.schedule_request()
-
-    def schedule_request(self) -> None:
         try:
             current_region = self.view.sel()[0]
         except IndexError:
             return
         if self._stored_region != current_region:
             self._stored_region = current_region
-            sublime.set_timeout_async(lambda: self.fire_request(current_region), 800)
+            debounced(
+                lambda: self.fire_request(current_region), 800,
+                lambda: self._stored_region == current_region, async_thread=True)
 
     def fire_request(self, current_region: sublime.Region) -> None:
-        if current_region == self._stored_region:
-            self._actions = []
-            actions_manager.request(self.view, self.handle_responses, current_region.begin())
+        self._actions = []
+        actions_manager.request(self.view, self.handle_responses, current_region.begin())
 
     def handle_responses(self, responses: CodeActionsByConfigName) -> None:
         for _, items in responses.items():

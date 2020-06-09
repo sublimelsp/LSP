@@ -34,8 +34,8 @@ class CodeActionsCollector:
     Usage example:
 
     with CodeActionsCollector() as collector:
-        CodeActionsManager.request_with_diagnostics(collector.create_collector('test_config'))
-        CodeActionsManager.request_with_diagnostics(collector.create_collector('another_config'))
+        actions_manager.request_with_diagnostics(collector.create_collector('test_config'))
+        actions_manager.request_with_diagnostics(collector.create_collector('another_config'))
 
     The "create_collector()" must only be called within the "with" context. Once the context is
     exited, the "on_complete_handler" will be called once all the created collectors receive the

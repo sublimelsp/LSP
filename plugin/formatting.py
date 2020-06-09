@@ -59,13 +59,23 @@ class LspFormatDocumentCommand(LspTextCommand):
 
     capability = 'documentFormattingProvider'
 
+    def is_enabled(self, event: Optional[dict] = None) -> bool:
+        return super().is_enabled() or bool(self.session(LspFormatDocumentRangeCommand.capability))
+
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
         session = self.session(self.capability)
-        file_path = self.view.file_name()
-        if session and file_path:
-            session.send_request(
-                text_document_formatting(self.view),
-                lambda response: apply_response_to_view(response, self.view))
+        if session:
+            # Either use the documentFormattingProvider ...
+            session.send_request(text_document_formatting(self.view), self.on_result)
+        else:
+            session = self.session(LspFormatDocumentRangeCommand.capability)
+            if session:
+                # ... or use the documentRangeFormattingProvider and format the entire range.
+                req = text_document_range_formatting(self.view, sublime.Region(0, self.view.size()))
+                session.send_request(req, self.on_result)
+
+    def on_result(self, params: Any) -> None:
+        apply_response_to_view(params, self.view)
 
 
 class LspFormatDocumentRangeCommand(LspTextCommand):
@@ -82,9 +92,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
         session = self.session(self.capability)
-        file_path = self.view.file_name()
-        if session and file_path:
-            region = self.view.sel()[0]
+        if session:
             session.send_request(
-                text_document_range_formatting(self.view, region),
+                text_document_range_formatting(self.view, self.view.sel()[0]),
                 lambda response: apply_response_to_view(response, self.view))

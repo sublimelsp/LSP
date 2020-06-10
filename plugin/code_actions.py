@@ -360,22 +360,22 @@ class LspCodeActionsListener(LSPViewEventListener):
 
     def handle_responses(self, responses: CodeActionsByConfigName) -> None:
         self._actions_by_config = responses
-        if any((action for action in self._actions_by_config.values())):
+        if any(self._actions_by_config.values()):
             self.show_annotations()
             if settings.show_code_actions_bulb:
                 self.show_bulb()
 
     def show_bulb(self) -> None:
-        region = self.view.sel()[0]
         flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
-        self.view.add_regions('lsp_bulb', [region], 'markup.changed', 'Packages/LSP/icons/lightbulb.png', flags)
+        self.view.add_regions('lsp_bulb', [self._stored_region], 'markup.changed',
+                              'Packages/LSP/icons/lightbulb.png', flags)
 
     def hide_bulb(self) -> None:
         self.view.erase_regions('lsp_bulb')
 
     def show_annotations(self) -> None:
         flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
-        actions_count = sum([len(actions) for actions in self._actions_by_config.values()])
+        actions_count = sum(map(len, self._actions_by_config.values()))
         code_actions_link = make_link('subl:lsp_code_actions', '{} code action(s)'.format(actions_count))
         self.view.add_regions('lsp_action_annottations', [self._stored_region], flags=flags,
                               annotations=["<div class=\"actions\">{}</div>".format(code_actions_link)],
@@ -427,7 +427,10 @@ class LspCodeActionsCommand(LspTextCommand):
         self.commands = []  # type: List[Tuple[str, str, CodeActionOrCommand]]
         self.commands_by_config = {}  # type: CodeActionsByConfigName
         view = self.view
-        region = view.sel()[0]
+        try:
+            region = view.sel()[0]
+        except IndexError:
+            return
         selection_range = Range(Point(*view.rowcol(region.begin())), Point(*view.rowcol(region.end())))
         diagnostics_by_config = filter_by_range(view_diagnostics(view), selection_range)
         actions_manager.request_with_optional_diagnostics(view, diagnostics_by_config, self.handle_responses)

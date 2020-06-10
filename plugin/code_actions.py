@@ -368,7 +368,7 @@ class LspCodeActionsListener(LSPViewEventListener):
         code_actions_link = make_link('subl:lsp_code_actions', '{} code action(s)'.format(actions_count))
         self.view.add_regions('lsp_action_annotations', [self._stored_region], flags=flags,
                               annotations=["<div class=\"actions\">{}</div>".format(code_actions_link)],
-                              annotation_color='yellow')
+                              annotation_color='#2196F3')
 
     def clear_annotations(self) -> None:
         self.view.erase_regions('lsp_action_annotations')

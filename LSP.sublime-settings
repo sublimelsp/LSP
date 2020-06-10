@@ -76,9 +76,6 @@
   // Valid values are "dot", "circle", "bookmark", "sign" or ""
   "diagnostics_gutter_marker": "dot",
 
-  // Show a bulb in the gutter when code actions are available
-  "show_code_actions_bulb": false,
-
   // Show symbol action links in hover popup if available
   "show_symbol_action_links": false,
 

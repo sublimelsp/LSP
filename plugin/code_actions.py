@@ -338,7 +338,6 @@ class LspCodeActionsListener(LSPViewEventListener):
         self._actions_by_config = {}  # type: CodeActionsByConfigName
 
     def on_selection_modified_async(self) -> None:
-        self.hide_bulb()
         self.clear_annotations()
         try:
             current_region = self.view.sel()[0]
@@ -362,16 +361,6 @@ class LspCodeActionsListener(LSPViewEventListener):
         self._actions_by_config = responses
         if any(self._actions_by_config.values()):
             self.show_annotations()
-            if settings.show_code_actions_bulb:
-                self.show_bulb()
-
-    def show_bulb(self) -> None:
-        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
-        self.view.add_regions('lsp_bulb', [self._stored_region], 'markup.changed',
-                              'Packages/LSP/icons/lightbulb.png', flags)
-
-    def hide_bulb(self) -> None:
-        self.view.erase_regions('lsp_bulb')
 
     def show_annotations(self) -> None:
         flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE

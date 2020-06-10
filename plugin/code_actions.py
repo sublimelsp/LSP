@@ -335,7 +335,6 @@ class LspCodeActionsListener(LSPViewEventListener):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self._stored_region = sublime.Region(-1, -1)
-        self._actions_by_config = {}  # type: CodeActionsByConfigName
 
     def on_selection_modified_async(self) -> None:
         self.clear_annotations()
@@ -350,7 +349,6 @@ class LspCodeActionsListener(LSPViewEventListener):
                 lambda: self._stored_region == current_region, async_thread=True)
 
     def fire_request(self, current_region: sublime.Region) -> None:
-        self._actions_by_config = {}
         view = self.view
         stored_range = Range(Point(*view.rowcol(self._stored_region.begin())),
                              Point(*view.rowcol(self._stored_region.end())))
@@ -358,15 +356,14 @@ class LspCodeActionsListener(LSPViewEventListener):
         actions_manager.request_with_optional_diagnostics(view, diagnostics_by_config, self.handle_responses)
 
     def handle_responses(self, responses: CodeActionsByConfigName) -> None:
-        self._actions_by_config = responses
-        if any(self._actions_by_config.values()):
-            self.show_annotations()
+        action_count = sum(map(len, responses.values()))
+        if action_count > 0:
+            self.show_annotations(action_count)
 
-    def show_annotations(self) -> None:
-        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
-        actions_count = sum(map(len, self._actions_by_config.values()))
-        code_actions_link = make_link('subl:lsp_code_actions', '{} code action(s)'.format(actions_count))
-        self.view.add_regions('lsp_action_annotations', [self._stored_region], flags=flags,
+    def show_annotations(self, action_count: int) -> None:
+        code_actions_link = make_link('subl:lsp_code_actions', '{} code action(s)'.format(action_count))
+        self.view.add_regions('lsp_action_annotations', [self._stored_region],
+                              flags=sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE,
                               annotations=["<div class=\"actions\">{}</div>".format(code_actions_link)],
                               annotation_color='#2196F3')
 

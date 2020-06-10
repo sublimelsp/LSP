@@ -1,14 +1,19 @@
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.protocol import Point
+from LSP.plugin.core.protocol import Range
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import did_change
 from LSP.plugin.core.views import did_change_configuration
 from LSP.plugin.core.views import did_open
 from LSP.plugin.core.views import did_save
+from LSP.plugin.core.views import document_color_params
 from LSP.plugin.core.views import FORMAT_STRING, FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from LSP.plugin.core.views import location_to_encoded_filename
+from LSP.plugin.core.views import lsp_color_to_html
+from LSP.plugin.core.views import lsp_color_to_phantom
 from LSP.plugin.core.views import MissingFilenameError
 from LSP.plugin.core.views import point_to_offset
+from LSP.plugin.core.views import range_to_region
 from LSP.plugin.core.views import selection_range_params
 from LSP.plugin.core.views import text2html
 from LSP.plugin.core.views import text_document_formatting
@@ -282,3 +287,33 @@ class ViewsTest(DeferrableTestCase):
             location_to_encoded_filename(
                 {'targetUri': 'file:///foo/bar', 'targetSelectionRange': {'start': {'line': 1234, 'character': 4321}}}),
             '/foo/bar:1235:4322')
+
+    def test_lsp_color_to_phantom(self) -> None:
+        response = [
+            {
+                "color": {
+                    "green": 0.9725490196078431,
+                    "blue": 1,
+                    "red": 0.9411764705882353,
+                    "alpha": 1
+                },
+                "range": {
+                    "start": {
+                        "character": 0,
+                        "line": 0
+                    },
+                    "end": {
+                        "character": 5,
+                        "line": 0
+                    }
+                }
+            }
+        ]
+        phantom = lsp_color_to_phantom(self.view, response[0])
+        self.assertEqual(phantom.content, lsp_color_to_html(response[0]))
+        self.assertEqual(phantom.region, range_to_region(Range.from_lsp(response[0]["range"]), self.view))
+
+    def test_document_color_params(self) -> None:
+        self.assertEqual(
+            document_color_params(self.view),
+            {"textDocument": {"uri": filename_to_uri(self.view.file_name())}})

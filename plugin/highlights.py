@@ -43,9 +43,11 @@ class DocumentHighlightListener(LSPViewEventListener):
                 current_point = self.view.sel()[0].begin()
             except IndexError:
                 return
-            self._stored_point = current_point
             self._clear_regions()
-            debounced(self._on_document_highlight, 500, lambda: self._stored_point == current_point, async_thread=True)
+            if self._stored_point != current_point:
+                self._stored_point = current_point
+                debounced(self._on_document_highlight, 500, lambda: self._stored_point == current_point,
+                          async_thread=True)
 
     def _initialize(self) -> None:
         self._initialized = True

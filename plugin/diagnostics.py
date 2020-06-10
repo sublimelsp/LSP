@@ -346,7 +346,7 @@ class DiagnosticOutputPanel(DiagnosticsUpdateWalk):
     def format_diagnostic(self, diagnostic: Diagnostic) -> str:
         location = "{:>8}:{:<4}".format(
             diagnostic.range.start.row + 1, diagnostic.range.start.col + 1)
-        lines = diagnostic.message.splitlines()
+        lines = diagnostic.message.splitlines() or [""]
         formatted = " {}\t{:<12}\t{:<10}\t{}".format(
             location, diagnostic.source, format_severity(diagnostic.severity), lines[0])
         for line in lines[1:]:

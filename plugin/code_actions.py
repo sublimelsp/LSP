@@ -7,8 +7,7 @@ from .core.registry import sessions_for_view
 from .core.registry import windows
 from .core.settings import settings
 from .core.typing import Any, List, Dict, Callable, Optional, Union, Tuple, Mapping, TypedDict
-from .core.url import filename_to_uri
-from .core.views import entire_content_range, region_to_range
+from .core.views import code_action_params
 from .core.views import make_link
 from .core.windows import debounced
 from .diagnostics import filter_by_point, view_diagnostics
@@ -147,7 +146,7 @@ class CodeActionsManager:
                         supported_kinds = session.get_capability('codeActionProvider.codeActionKinds')
                         matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])
                         if matching_kinds:
-                            params = self._create_request_params(view, file_name, [], matching_kinds)
+                            params = code_action_params(view, file_name, [], matching_kinds)
                             request = Request.codeAction(params)
                             collect, onerror = self._filtering_collector(
                                 session.config.name, matching_kinds, actions_collector)
@@ -157,34 +156,10 @@ class CodeActionsManager:
                         diagnostics = diagnostics_by_config.get(config_name, [])
                         if only_with_diagnostics and not diagnostics:
                             continue
-                        params = self._create_request_params(view, file_name, diagnostics)
+                        params = code_action_params(view, file_name, diagnostics)
                         request = Request.codeAction(params)
                         session.send_request(request, actions_collector.create_collector(config_name))
         return actions_collector
-
-    def _create_request_params(
-        self,
-        view: sublime.View,
-        file_name: str,
-        diagnostics: List[Diagnostic],
-        on_save_actions: Optional[List[str]] = None
-    ) -> Dict:
-        if on_save_actions:
-            relevant_range = entire_content_range(view)
-        else:
-            relevant_range = diagnostics[0].range if diagnostics else region_to_range(view, view.sel()[0])
-        params = {
-            "textDocument": {
-                "uri": filename_to_uri(file_name)
-            },
-            "range": relevant_range.to_lsp(),
-            "context": {
-                "diagnostics": list(diagnostic.to_lsp() for diagnostic in diagnostics)
-            }
-        }
-        if on_save_actions:
-            params['context']['only'] = on_save_actions
-        return params
 
     def _filtering_collector(
         self,

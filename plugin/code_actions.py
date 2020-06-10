@@ -377,12 +377,12 @@ class LspCodeActionsListener(LSPViewEventListener):
         flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
         actions_count = sum(map(len, self._actions_by_config.values()))
         code_actions_link = make_link('subl:lsp_code_actions', '{} code action(s)'.format(actions_count))
-        self.view.add_regions('lsp_action_annottations', [self._stored_region], flags=flags,
+        self.view.add_regions('lsp_action_annotations', [self._stored_region], flags=flags,
                               annotations=["<div class=\"actions\">{}</div>".format(code_actions_link)],
                               annotation_color='yellow')
 
     def clear_annotations(self) -> None:
-        self.view.erase_regions('lsp_action_annottations')
+        self.view.erase_regions('lsp_action_annotations')
 
 
 def is_command(command_or_code_action: CodeActionOrCommand) -> bool:

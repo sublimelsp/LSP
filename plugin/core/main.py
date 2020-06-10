@@ -117,7 +117,6 @@ def plugin_loaded() -> None:
     windows.set_diagnostics_ui(DiagnosticsPresenter)
     windows.set_server_panel_factory(ensure_server_panel)
     windows.set_settings_factory(settings)
-    sublime.status_message("LSP initialized")
 
 
 def plugin_unloaded() -> None:
@@ -141,6 +140,13 @@ def plugin_unloaded() -> None:
 
 
 class Listener(sublime_plugin.EventListener):
+    def on_init(self, _: List[sublime.View]) -> None:
+        for w in sublime.windows():
+            try:
+                windows.lookup(w)
+            except KeyError:
+                windows.add(w)
+
     def on_exit(self) -> None:
         kill_all_subprocesses()
 
@@ -149,3 +155,9 @@ class Listener(sublime_plugin.EventListener):
 
     def on_pre_close_project(self, w: sublime.Window) -> None:
         windows.lookup(w).on_pre_close_project()
+
+    def on_new_window(self, w: sublime.Window) -> None:
+        windows.add(w)
+
+    def on_pre_close_window(self, w: sublime.Window) -> None:
+        windows.discard(w)

@@ -147,8 +147,12 @@ def uri_from_view(view: sublime.View) -> str:
     raise MissingFilenameError(view.id())
 
 
-def text_document_identifier(view: sublime.View) -> Dict[str, Any]:
-    return {"uri": uri_from_view(view)}
+def text_document_identifier(view_or_file_name: Union[str, sublime.View]) -> Dict[str, Any]:
+    if isinstance(view_or_file_name, str):
+        uri = filename_to_uri(view_or_file_name)
+    else:
+        uri = uri_from_view(view_or_file_name)
+    return {"uri": uri}
 
 
 def entire_content(view: sublime.View) -> str:
@@ -159,9 +163,9 @@ def entire_content_range(view: sublime.View) -> Range:
     return region_to_range(view, sublime.Region(0, view.size()))
 
 
-def text_document_item(view: sublime.View, language_id: str) -> Dict[str, Any]:
+def text_document_item(view: sublime.View, language_id: str, file_name: Optional[str] = None) -> Dict[str, Any]:
     return {
-        "uri": uri_from_view(view),
+        "uri": filename_to_uri(file_name) if file_name is not None else uri_from_view(view),
         "languageId": language_id,
         "version": view.change_count(),
         "text": entire_content(view)
@@ -176,8 +180,10 @@ def text_document_position_params(view: sublime.View, location: int) -> Dict[str
     return {"textDocument": text_document_identifier(view), "position": offset_to_point(view, location).to_lsp()}
 
 
-def did_open_text_document_params(view: sublime.View, language_id: str) -> Dict[str, Any]:
-    return {"textDocument": text_document_item(view, language_id)}
+def did_open_text_document_params(
+    view: sublime.View, language_id: str, file_name: Optional[str] = None
+) -> Dict[str, Any]:
+    return {"textDocument": text_document_item(view, language_id, file_name)}
 
 
 def render_text_change(change: sublime.TextChange) -> Dict[str, Any]:
@@ -210,19 +216,22 @@ def will_save_text_document_params(view: sublime.View, reason: int) -> Dict[str,
     return {"textDocument": text_document_identifier(view), "reason": reason}
 
 
-def did_save_text_document_params(view: sublime.View, include_text: bool) -> Dict[str, Any]:
-    result = {"textDocument": text_document_identifier(view)}  # type: Dict[str, Any]
+def did_save_text_document_params(
+    view: sublime.View, include_text: bool, file_name: Optional[str] = None
+) -> Dict[str, Any]:
+    identifier = text_document_identifier(file_name if file_name is not None else view)
+    result = {"textDocument": identifier}  # type: Dict[str, Any]
     if include_text:
         result["text"] = entire_content(view)
     return result
 
 
-def did_close_text_document_params(view: sublime.View) -> Dict[str, Any]:
-    return {"textDocument": text_document_identifier(view)}
+def did_close_text_document_params(file_name: str) -> Dict[str, Any]:
+    return {"textDocument": text_document_identifier(file_name)}
 
 
-def did_open(view: sublime.View, language_id: str) -> Notification:
-    return Notification.didOpen(did_open_text_document_params(view, language_id))
+def did_open(view: sublime.View, language_id: str, file_name: Optional[str] = None) -> Notification:
+    return Notification.didOpen(did_open_text_document_params(view, language_id, file_name))
 
 
 def did_change(view: sublime.View, changes: Optional[Iterable[sublime.TextChange]] = None) -> Notification:
@@ -237,12 +246,12 @@ def will_save_wait_until(view: sublime.View, reason: int) -> Request:
     return Request.willSaveWaitUntil(will_save_text_document_params(view, reason))
 
 
-def did_save(view: sublime.View, include_text: bool) -> Notification:
-    return Notification.didSave(did_save_text_document_params(view, include_text))
+def did_save(view: sublime.View, include_text: bool, file_name: Optional[str] = None) -> Notification:
+    return Notification.didSave(did_save_text_document_params(view, include_text, file_name))
 
 
-def did_close(view: sublime.View) -> Notification:
-    return Notification.didClose(did_close_text_document_params(view))
+def did_close(file_name: str) -> Notification:
+    return Notification.didClose(did_close_text_document_params(file_name))
 
 
 def formatting_options(settings: sublime.Settings) -> Dict[str, Any]:

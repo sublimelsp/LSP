@@ -288,9 +288,6 @@ class SessionViewProtocol(Protocol):
     def shutdown(self) -> None:
         ...
 
-    def __hash__(self) -> int:
-        ...
-
 
 class AbstractPlugin(metaclass=ABCMeta):
     """
@@ -471,8 +468,9 @@ class Session(Client):
     def register_session_view(self, sv: SessionViewProtocol) -> None:
         self._session_views.add(sv)
 
-    def unregister_session_view(self, sv: SessionViewProtocol) -> None:
+    def unregister_session_view(self, sv: SessionViewProtocol) -> bool:
         self._session_views.discard(sv)
+        return not self._session_views
 
     def session_views(self) -> Generator[SessionViewProtocol, None, None]:
         yield from self._session_views
@@ -700,6 +698,8 @@ class Session(Client):
         return status_msg
 
     def end(self) -> None:
+        if self.exiting:
+            return
         self.exiting = True
         self._plugin = None
         for sv in self.session_views():
@@ -715,7 +715,7 @@ class Session(Client):
         self.exiting = True
         self.state = ClientStates.STOPPING
         super().on_transport_close(exit_code, exception)
-        debug("stopped", self.config.name, "exit code", exit_code)
+        self._response_handlers.clear()
         mgr = self.manager()
         if mgr:
             mgr.on_post_exit(self, exit_code, exception)

@@ -23,12 +23,12 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
         return bool(syntax and client_configs.is_syntax_supported(syntax))
 
     @property
-    def manager(self) -> WindowManager:
+    def manager(self) -> WindowManager:  # TODO: Return type is an Optional[WindowManager] !
         if not self._manager:
-            self._manager = windows.lookup(self.view.window())
-
-        assert self._manager
-        return self._manager
+            window = self.view.window()
+            if window:
+                self._manager = windows.lookup(window)
+        return self._manager  # type: ignore
 
     def has_manager(self) -> bool:
         return self._manager is not None

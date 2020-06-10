@@ -17,7 +17,7 @@ from .types import Settings
 from .types import view2scope
 from .types import ViewLike
 from .types import WindowLike
-from .typing import Optional, Callable, Any, Deque, Protocol, Generator
+from .typing import Optional, Callable, Any, Dict, Deque, Protocol, Generator
 from .views import extract_variables
 from .workspace import disable_in_project
 from .workspace import enable_in_project
@@ -28,7 +28,6 @@ from abc import abstractmethod
 from collections import deque
 from weakref import ref
 from weakref import WeakSet
-from weakref import WeakValueDictionary
 import sublime
 
 
@@ -71,10 +70,6 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def on_session_shutdown(self, session: Session) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def __hash__(self) -> int:
         raise NotImplementedError()
 
 
@@ -120,18 +115,17 @@ class WindowManager(Manager):
         self.end_sessions()
 
     def register_listener(self, listener: AbstractViewListener) -> None:
-        self._pending_listeners.appendleft(listener)
-        if self._new_session:
-            return
-        sublime.set_timeout_async(self._dequeue_listener)
+        sublime.set_timeout(lambda: self.register_listener_async(listener))
 
-    def unregister_listener(self, listener: AbstractViewListener) -> None:
-        self._listeners.discard(listener)
+    def register_listener_async(self, listener: AbstractViewListener) -> None:
+        self._pending_listeners.appendleft(listener)
+        if self._new_listener is None:
+            self._dequeue_listener_async()
 
     def listeners(self) -> Generator[AbstractViewListener, None, None]:
         yield from self._listeners
 
-    def _dequeue_listener(self) -> None:
+    def _dequeue_listener_async(self) -> None:
         listener = None  # type: Optional[AbstractViewListener]
         if self._new_listener is not None and self._new_listener.view.is_valid():
             listener = self._new_listener
@@ -140,8 +134,7 @@ class WindowManager(Manager):
             try:
                 listener = self._pending_listeners.pop()
                 if not listener.view.is_valid():
-                    sublime.set_timeout_async(self._dequeue_listener)
-                    return
+                    return self._dequeue_listener_async()
                 self._listeners.add(listener)
             except IndexError:
                 # We have handled all pending listeners.
@@ -201,7 +194,7 @@ class WindowManager(Manager):
             self._pending_listeners.appendleft(listener)
         self._listeners.clear()
         if not self._new_session:
-            sublime.set_timeout_async(self._dequeue_listener)
+            sublime.set_timeout_async(self._dequeue_listener_async)
 
     def disable_config(self, config_name: str) -> None:
         disable_in_project(self._window, config_name)
@@ -242,14 +235,16 @@ class WindowManager(Manager):
             plugin_class = get_plugin(config.name)
             if plugin_class is not None:
                 if plugin_class.needs_update_or_installation():
-                    self._window.status_message('Installing {} ...'.format(config.name))
+                    config.set_view_status(initiating_view, "installing...")
                     plugin_class.install_or_update()
                 # WindowLike vs. sublime.Window
                 cannot_start_reason = plugin_class.can_start(
                     self._window, initiating_view, workspace_folders, config)  # type: ignore
                 if cannot_start_reason:
+                    config.erase_view_status(initiating_view)
                     self._window.status_message(cannot_start_reason)
                     return
+            config.set_view_status(initiating_view, "starting...")
             session = Session(self, PanelLogger(self, config.name), workspace_folders, config, plugin_class)
             cwd = workspace_folders[0].path if workspace_folders else None
             variables = extract_variables(self._window)  # type: ignore
@@ -258,11 +253,9 @@ class WindowManager(Manager):
                 if isinstance(additional_variables, dict):
                     variables.update(additional_variables)
             # WindowLike vs sublime.Window
-            self._window.status_message("Starting {} ...".format(config.name))
             transport = create_transport(config, cwd, self._window, session, variables)  # type: ignore
-            self._window.status_message("Initializing {} ...".format(config.name))
+            config.set_view_status(initiating_view, "initialize")
             session.initialize(variables, transport)
-            debug("window {} added session {}".format(self._window.id(), config.name))
             self._new_session = session
         except Exception as e:
             message = "\n\n".join([
@@ -272,10 +265,11 @@ class WindowManager(Manager):
             ]).format(config.name, str(e))
             exception_log("Unable to start {}".format(config.name), e)
             self._configs.disable_temporarily(config.name)
+            config.erase_view_status(initiating_view)
             sublime.message_dialog(message)
             # Continue with handling pending listeners
             self._new_session = None
-            sublime.set_timeout_async(self._dequeue_listener)
+            sublime.set_timeout_async(self._dequeue_listener_async)
 
     def handle_message_request(self, session: Session, params: Any, request_id: Any) -> None:
         handler = MessageRequestHandler(self._window.active_view(), session, request_id, params,  # type: ignore
@@ -307,8 +301,7 @@ class WindowManager(Manager):
 
     def on_post_initialize(self, session: Session) -> None:
         session.send_notification(Notification.initialized())
-        self._window.status_message("{} initialized".format(session.config.name))
-        sublime.set_timeout_async(self._dequeue_listener)
+        sublime.set_timeout_async(self._dequeue_listener_async)
 
     def handle_view_closed(self, view: ViewLike) -> None:
         if view.file_name():
@@ -358,9 +351,7 @@ class WindowManager(Manager):
                 self._configs.disable_temporarily(session.config.name)
         if exception:
             self._window.status_message("{} exited with an exception: {}".format(session.config.name, exception))
-        self._sessions.discard(session)  # TODO: This should be automatic!
-        if not self._sessions:
-            self._handle_all_sessions_ended()
+        debug("stopped", session.config.name)
 
     def handle_server_message(self, server_name: str, message: str) -> None:
         if not self.server_panel_factory:
@@ -383,7 +374,7 @@ class WindowManager(Manager):
 
 class WindowRegistry(object):
     def __init__(self, configs: ConfigManager, sublime: Any) -> None:
-        self._windows = WeakValueDictionary()  # type: WeakValueDictionary[int, WindowManager]
+        self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs
         self._sublime = sublime
         self._diagnostics_ui_class = None  # type: Optional[Callable]
@@ -399,24 +390,28 @@ class WindowRegistry(object):
     def set_settings_factory(self, settings: Settings) -> None:
         self._settings = settings
 
-    def lookup(self, window: Any) -> WindowManager:
-        state = self._windows.get(window.id())
-        if state is None:
-            if not self._settings:
-                raise RuntimeError("no settings")
-            workspace = ProjectFolders(window)
-            window_configs = self._configs.for_window(window)
-            diagnostics_ui = self._diagnostics_ui_class(window) if self._diagnostics_ui_class else None
-            state = WindowManager(
-                window=window,
-                workspace=workspace,
-                settings=self._settings,
-                configs=window_configs,
-                diagnostics=DiagnosticsStorage(diagnostics_ui),
-                sublime=self._sublime,
-                server_panel_factory=self._server_panel_factory)
-            self._windows[window.id()] = state
+    def lookup(self, window: sublime.Window) -> WindowManager:
+        return self._windows[window.id()]
+
+    def add(self, window: sublime.Window) -> WindowManager:
+        if not self._settings:
+            raise RuntimeError("no settings")
+        workspace = ProjectFolders(window)  # type: ignore
+        window_configs = self._configs.for_window(window)  # type: ignore
+        diagnostics_ui = self._diagnostics_ui_class(window) if self._diagnostics_ui_class else None
+        state = WindowManager(
+            window=window,  # type: ignore
+            workspace=workspace,
+            settings=self._settings,
+            configs=window_configs,
+            diagnostics=DiagnosticsStorage(diagnostics_ui),
+            sublime=self._sublime,
+            server_panel_factory=self._server_panel_factory)
+        self._windows[window.id()] = state
         return state
+
+    def discard(self, window: sublime.Window) -> None:
+        self._windows.pop(window.id(), None)
 
 
 class PanelLogger(Logger):

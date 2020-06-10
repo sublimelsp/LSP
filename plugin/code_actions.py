@@ -250,7 +250,10 @@ class CodeActionOnSaveTask:
 
     def __init__(self, view: sublime.View, on_save_actions: Dict[str, bool], on_done: Callable[[], None]) -> None:
         self._view = view
-        self._manager = windows.lookup(view.window())
+        window = view.window()
+        if not window:
+            raise AttributeError("missing window")
+        self._manager = windows.lookup(window)
         self._on_save_actions = on_save_actions
         self._on_done = on_done
         self._completed = False

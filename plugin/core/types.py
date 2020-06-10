@@ -93,6 +93,14 @@ class ClientConfig(object):
         self.settings = settings
         self.env = env
         self.experimental_capabilities = experimental_capabilities
+        self.status_key = "lsp_{}".format(self.name)
+
+    def set_view_status(self, view: sublime.View, message: str) -> None:
+        status = "{}: {}".format(self.name, message) if message else self.name
+        view.set_status(self.status_key, status)
+
+    def erase_view_status(self, view: sublime.View) -> None:
+        view.erase_status(self.status_key)
 
     def match_document(self, scope: str) -> bool:
         return any(language.match_document(scope) for language in self.languages)
@@ -117,7 +125,10 @@ def syntax2scope(syntax: str) -> Optional[str]:
 
 
 def view2scope(view: sublime.View) -> str:
-    return view.scope_name(0).split()[0]
+    try:
+        return view.scope_name(0).split()[0]
+    except IndexError:
+        return ''
 
 
 class ViewLike(Protocol):

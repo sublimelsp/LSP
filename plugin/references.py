@@ -41,6 +41,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
         if session and file_path:
             pos = get_position(self.view, event)
             window = self.view.window()
+            if not window:
+                return
             self.word_region = self.view.word(pos)
             self.word = self.view.substr(self.word_region)
 

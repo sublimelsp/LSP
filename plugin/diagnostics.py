@@ -42,8 +42,10 @@ def view_diagnostics(view: sublime.View) -> Dict[str, List[Diagnostic]]:
     if view.window():
         file_name = view.file_name()
         if file_name:
-            window_diagnostics = windows.lookup(view.window()).diagnostics.get()
-            return window_diagnostics.get(file_name, {})
+            window = view.window()
+            if window:
+                window_diagnostics = windows.lookup(window).diagnostics.get()
+                return window_diagnostics.get(file_name, {})
     return {}
 
 

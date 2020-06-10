@@ -338,7 +338,8 @@ class LspCodeActionsListener(LSPViewEventListener):
     def show_annotations(self, action_count: int) -> None:
         suffix = 's' if action_count > 1 else ''
         code_actions_link = make_link('subl:lsp_code_actions', '{} code action{}'.format(action_count, suffix))
-        self.view.add_regions('lsp_action_annotations', [self._stored_region],
+        self.view.add_regions('lsp_action_annotations',
+                              [sublime.Region(self._stored_region.b, self._stored_region.a)],
                               flags=sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE,
                               annotations=["<div class=\"actions\">{}</div>".format(code_actions_link)],
                               annotation_color='#2196F3')

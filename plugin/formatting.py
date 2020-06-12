@@ -5,7 +5,10 @@ from .core.registry import LSPViewEventListener
 from .core.sessions import Session
 from .core.settings import settings
 from .core.typing import Any, List, Optional
-from .core.views import will_save_wait_until, text_document_formatting, text_document_range_formatting
+from .core.views import entire_region
+from .core.views import text_document_formatting
+from .core.views import text_document_range_formatting
+from .core.views import will_save_wait_until
 
 
 def apply_response_to_view(response: Optional[List[dict]], view: sublime.View) -> None:
@@ -71,7 +74,7 @@ class LspFormatDocumentCommand(LspTextCommand):
             session = self.session(LspFormatDocumentRangeCommand.capability)
             if session:
                 # ... or use the documentRangeFormattingProvider and format the entire range.
-                req = text_document_range_formatting(self.view, sublime.Region(0, self.view.size()))
+                req = text_document_range_formatting(self.view, entire_region(self.view))
                 session.send_request(req, self.on_result)
 
     def on_result(self, params: Any) -> None:

@@ -1,82 +1,30 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/python
 
+from LSP.plugin.core.typing import Generator, List, Optional, Tuple
 import json
 import os
+import re
 import subprocess
 
+RELEASE_BRANCH = 'st4000-exploration'
 PACKAGE_PATH = os.path.dirname(__file__)
 MESSAGE_DIR = 'messages'
 MESSAGE_PATH = os.path.join(PACKAGE_PATH, MESSAGE_DIR)
 
-GLOBAL_MESSAGE = """
 
-
-💛 Git Gutter? Want to support development?
-
-I've teamed up with Wes Bos to offer the following discounts:
-
-+------------------------------------------------+
-|                                                |
-|   Use the coupon code GITGUTTER for $10 off    |
-|                                                |
-+------------------------------------------------+
-
-🏅 ⭐ ES6 ⭐
-
-👉 ES6.io/friend/GITGUTTER
-
-🏅 ⭐ Sublime Text Book ⭐
-
-👉 SublimeTextBook.com/friend/GITGUTTER
-
-🏅 ⭐ React For Beginners ⭐
-
-👉 ReactForBeginners.com/friend/GITGUTTER
-
-
-Join 15,000 other developers already learning with Wes Bos.
-
-These are fantastic resources - 100% money back guarantee! 🌟
-"""
-
-
-def get_message(fname):
+def get_message(fname: str) -> str:
     with open(fname, 'r', encoding='utf-8') as file:
         message = file.read()
     return message
 
 
-def put_message(fname, text):
+def put_message(fname: str, text: str) -> None:
     with open(fname, 'w', encoding='utf-8') as file:
         file.write(text)
 
 
-def add_global_message(fname):
-    """Append the GLOBAL_MESSAGE to a file if not yet contained."""
-    text = get_message(fname)
-    if GLOBAL_MESSAGE not in text:
-        put_message(fname, text.strip() + GLOBAL_MESSAGE)
-
-
-def remove_global_message(fname):
-    """Remove the GLOBAL_MESSAGE from a file."""
-    text = get_message(fname)
-    new_text = text.replace(GLOBAL_MESSAGE, '').strip() + '\n'
-    if new_text != text:
-        put_message(fname, new_text)
-
-
-def update_global_message(version_history):
-    # remove global message from previous release
-    remove_global_message(
-        os.path.join(MESSAGE_PATH, version_history[-2] + '.txt'))
-    # add global message to current release
-    add_global_message(
-        os.path.join(MESSAGE_PATH, version_history[-1] + '.txt'))
-
-
-def built_messages_json(version_history):
+def build_messages_json(version_history: List[str]) -> None:
     """Write the version history to the messages.json file."""
     output = os.path.join(PACKAGE_PATH, 'messages.json')
     with open(output, 'w+', encoding='utf-8') as file:
@@ -86,32 +34,32 @@ def built_messages_json(version_history):
         file.write('\n')
 
 
-def version_history():
+def version_history() -> List[str]:
     """Return a list of all releases."""
-    def generator():
+    def generator() -> Generator[str, None, None]:
         for filename in os.listdir(MESSAGE_PATH):
             basename, ext = os.path.splitext(filename)
             if ext.lower() == '.txt':
                 yield basename
 
-    def sortkey(key):
+    def sortkey(key: str) -> Tuple[int, int, int]:
         """Convert filename to version tuple (major, minor, patch)."""
-        try:
-            major, minor, patch = key.split('.', 2)
-            if '-' in patch:
-                patch, _ = patch.split('-')
+        match = re.match(
+            r'(?:(?P<prefix>[^.-]+)\-)?(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-.+)?', key)
+        if match:
+            prefix, major, minor, patch = match.groups()
             return int(major), int(minor), int(patch)
-        except:
+        else:
             return 0, 0, 0
 
     return sorted(tuple(generator()), key=sortkey)
 
 
-def git(*args):
+def git(*args: str) -> Optional[str]:
     """Run git command within current package path."""
     if os.name == 'nt':
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo = subprocess.STARTUPINFO()  # type: ignore
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
     else:
         startupinfo = None
     proc = subprocess.Popen(
@@ -121,7 +69,7 @@ def git(*args):
     return stdout.decode('utf-8').strip() if stdout else None
 
 
-def commit_release(version):
+def commit_release(version: str) -> None:
     """Create a 'Cut <version>' commit and tag."""
     commit_message = 'Cut %s' % version
     git('add', '.')
@@ -129,13 +77,12 @@ def commit_release(version):
     git('tag', '-a', '-m', commit_message, version)
 
 
-def build_release():
-    """Built the new release locally."""
+def build_release() -> None:
+    """Build the new release locally."""
     history = version_history()
     version = history[-1]
     put_message(os.path.join(PACKAGE_PATH, 'VERSION'), version)
-    update_global_message(history)
-    built_messages_json(history)
+    build_messages_json(history)
     commit_release(version)
     print("Release %s created!" % version)
 
@@ -144,28 +91,26 @@ def publish_release(token: str) -> None:
     """Publish the new release."""
     version = get_message(os.path.join(PACKAGE_PATH, 'VERSION'))
 
-    repo_url = 'https://github.com/jisaacks/GitGutter.git'
-    # push master branch to server
-    git('push', repo_url, 'master')
+    repo_url = 'https://github.com/sublimelsp/LSP'
+    # push release branch to server
+    git('push', repo_url, RELEASE_BRANCH)
     # push tags to server
     git('push', repo_url, 'tag', version)
 
     # publish the release
-    post_url = '/repos/jisaacks/GitGutter/releases?access_token=' + token
+    post_url = '/repos/sublimelsp/LSP/releases?access_token={}'.format(token)
     headers = {
         'User-Agent': 'Sublime Text',
         'Content-type': 'application/json',
     }
     # get message from /messages/<version>.txt
     text = get_message(os.path.join(MESSAGE_PATH, version + '.txt'))
-    # strip global message
-    text = text.replace(GLOBAL_MESSAGE, '').strip()
     # strip message header (version)
     text = text[text.find('\n') + 1:]
     # built the JSON request body
     data = json.dumps({
         "tag_name": version,
-        "target_commitish": "master",
+        "target_commitish": RELEASE_BRANCH,
         "name": version,
         "body": text,
         "draft": False,
@@ -192,7 +137,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Built and Publish GitGutter Releases')
+        description='Built and Publish LSP Releases')
     parser.add_argument(
         dest='command',
         help='The command to perform is one of [BUILD|PUBLISH].')
@@ -216,28 +161,28 @@ try:
     import sublime
     import sublime_plugin
 
-    SETTINGS = "GitGutter.sublime-settings"
+    SETTINGS = "LSP.sublime-settings"
 
-    class GitGutterBuildReleaseCommand(sublime_plugin.ApplicationCommand):
+    class LspBuildReleaseCommand(sublime_plugin.ApplicationCommand):
 
-        def is_visible(self):
+        def is_visible(self) -> bool:
             settings = sublime.load_settings(SETTINGS)
             return settings.has('github_token')
 
-        def run(self):
+        def run(self) -> None:
             """Built a new release."""
             build_release()
 
-    class GitGutterPublishReleaseCommand(sublime_plugin.ApplicationCommand):
+    class LspPublishReleaseCommand(sublime_plugin.ApplicationCommand):
 
-        def is_visible(self):
+        def is_visible(self) -> bool:
             settings = sublime.load_settings(SETTINGS)
             return settings.has('github_token')
 
-        def run(self):
+        def run(self) -> None:
             """Publish the new release."""
             settings = sublime.load_settings(SETTINGS)
-            publish_release(settings.get('github_token', ''))
+            publish_release(settings.get('github_token') or '')
 
 except ImportError:
     pass

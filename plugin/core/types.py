@@ -26,7 +26,7 @@ class Settings(object):
         self.show_references_in_quick_panel = False
         self.disabled_capabilities = []  # type: List[str]
         self.log_debug = False
-        self.log_server = False
+        self.log_server = []
         self.log_stderr = False
         self.lsp_format_on_save = False
         self.lsp_code_actions_on_save = {}  # type: Dict[str, bool]

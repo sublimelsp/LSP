@@ -151,16 +151,16 @@ def text_document_identifier(view: sublime.View) -> Dict[str, Any]:
     return {"uri": uri_from_view(view)}
 
 
-def entire_region(view: sublime.View) -> sublime.Region:
+def entire_content_region(view: sublime.View) -> sublime.Region:
     return sublime.Region(0, view.size())
 
 
 def entire_content(view: sublime.View) -> str:
-    return view.substr(entire_region(view))
+    return view.substr(entire_content_region(view))
 
 
 def entire_content_range(view: sublime.View) -> Range:
-    return region_to_range(view, entire_region(view))
+    return region_to_range(view, entire_content_region(view))
 
 
 def text_document_item(view: sublime.View, language_id: str) -> Dict[str, Any]:

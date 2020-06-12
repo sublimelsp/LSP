@@ -3,6 +3,8 @@ from LSP.plugin.core.protocol import Point, Range
 from LSP.plugin.core.typing import Any, Dict, Generator, List, Tuple
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
+from LSP.plugin.code_actions import actions_manager
+from LSP.plugin.code_actions import CodeActionsByConfigName
 from LSP.plugin.code_actions import get_matching_kinds
 from LSP.plugin.code_actions import LspCodeActionsListener
 from LSP.plugin.code_actions import run_code_action_or_command
@@ -219,12 +221,12 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         self.view.sel().add(sublime.Region(0, 3))
         self._trigger_on_selection_modified_async()
         yield 100
-        request = yield from self.await_message('textDocument/codeAction')
-        self.assertEquals(request['range']['start']['line'], 0)
-        self.assertEquals(request['range']['start']['character'], 0)
-        self.assertEquals(request['range']['end']['line'], 1)
-        self.assertEquals(request['range']['end']['character'], 1)
-        self.assertEquals(len(request['context']['diagnostics']), 2)
+        params = yield from self.await_message('textDocument/codeAction')
+        self.assertEquals(params['range']['start']['line'], 0)
+        self.assertEquals(params['range']['start']['character'], 0)
+        self.assertEquals(params['range']['end']['line'], 1)
+        self.assertEquals(params['range']['end']['character'], 1)
+        self.assertEquals(len(params['context']['diagnostics']), 2)
         annotations_range = self.view.get_regions('lsp_action_annotations')
         self.assertEquals(len(annotations_range), 1)
         self.assertEquals(annotations_range[0].a, 3)
@@ -244,12 +246,12 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         self.view.sel().add(sublime.Region(0, 3))
         self._trigger_on_selection_modified_async()
         yield 100
-        request = yield from self.await_message('textDocument/codeAction')
-        self.assertEquals(request['range']['start']['line'], 0)
-        self.assertEquals(request['range']['start']['character'], 0)
-        self.assertEquals(request['range']['end']['line'], 1)
-        self.assertEquals(request['range']['end']['character'], 1)
-        self.assertEquals(len(request['context']['diagnostics']), 0)
+        params = yield from self.await_message('textDocument/codeAction')
+        self.assertEquals(params['range']['start']['line'], 0)
+        self.assertEquals(params['range']['start']['character'], 0)
+        self.assertEquals(params['range']['end']['line'], 1)
+        self.assertEquals(params['range']['end']['character'], 1)
+        self.assertEquals(len(params['context']['diagnostics']), 0)
         annotations_range = self.view.get_regions('lsp_action_annotations')
         self.assertEquals(len(annotations_range), 1)
         self.assertEquals(annotations_range[0].a, 3)
@@ -265,6 +267,31 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
 
 
 class CodeActionsTestCase(TextDocumentTestCase):
+    def get_test_server_capabilities(self) -> dict:
+        capabilities = deepcopy(super().get_test_server_capabilities())
+        capabilities['capabilities']['codeActionProvider'] = {}
+        return capabilities
+
+    def test_requests_for_point(self) -> Generator:
+        def handle_response(actions_by_config: CodeActionsByConfigName) -> None:
+            pass
+        self.insert_characters('a\nb')
+        yield from self.await_message("textDocument/didChange")
+        yield from self.await_client_notification(
+            "textDocument/publishDiagnostics",
+            create_test_diagnostics([
+                ('issue a', Range(Point(0, 0), Point(0, 1))),
+                ('issue b', Range(Point(1, 0), Point(1, 1)))
+            ])
+        )
+        actions_manager.request_for_point(self.view, handle_response, 0)
+        params = yield from self.await_message('textDocument/codeAction')
+        self.assertEquals(params['range']['start']['line'], 0)
+        self.assertEquals(params['range']['start']['character'], 0)
+        self.assertEquals(params['range']['end']['line'], 0)
+        self.assertEquals(params['range']['end']['character'], 1)
+        self.assertEquals(len(params['context']['diagnostics']), 1)
+
     def test_applies_code_actions(self) -> Generator:
         self.insert_characters('a\nb')
         yield from self.await_message("textDocument/didChange")

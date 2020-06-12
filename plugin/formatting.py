@@ -5,7 +5,10 @@ from .core.registry import LSPViewEventListener
 from .core.sessions import Session
 from .core.settings import settings
 from .core.typing import Any, List, Optional
-from .core.views import will_save_wait_until, text_document_formatting, text_document_range_formatting
+from .core.views import entire_content_region
+from .core.views import text_document_formatting
+from .core.views import text_document_range_formatting
+from .core.views import will_save_wait_until
 
 
 def apply_response_to_view(response: Optional[List[dict]], view: sublime.View) -> None:
@@ -59,13 +62,23 @@ class LspFormatDocumentCommand(LspTextCommand):
 
     capability = 'documentFormattingProvider'
 
+    def is_enabled(self, event: Optional[dict] = None) -> bool:
+        return super().is_enabled() or bool(self.session(LspFormatDocumentRangeCommand.capability))
+
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
         session = self.session(self.capability)
-        file_path = self.view.file_name()
-        if session and file_path:
-            session.send_request(
-                text_document_formatting(self.view),
-                lambda response: apply_response_to_view(response, self.view))
+        if session:
+            # Either use the documentFormattingProvider ...
+            session.send_request(text_document_formatting(self.view), self.on_result)
+        else:
+            session = self.session(LspFormatDocumentRangeCommand.capability)
+            if session:
+                # ... or use the documentRangeFormattingProvider and format the entire range.
+                req = text_document_range_formatting(self.view, entire_content_region(self.view))
+                session.send_request(req, self.on_result)
+
+    def on_result(self, params: Any) -> None:
+        apply_response_to_view(params, self.view)
 
 
 class LspFormatDocumentRangeCommand(LspTextCommand):
@@ -82,9 +95,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
         session = self.session(self.capability)
-        file_path = self.view.file_name()
-        if session and file_path:
-            region = self.view.sel()[0]
+        if session:
             session.send_request(
-                text_document_range_formatting(self.view, region),
+                text_document_range_formatting(self.view, self.view.sel()[0]),
                 lambda response: apply_response_to_view(response, self.view))

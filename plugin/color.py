@@ -46,7 +46,7 @@ class LspColorListener(LSPViewEventListener):
             sel = self.view.sel()
             if len(sel) < 1:
                 return
-            current_point = sel[0].begin()
+            current_point = sel[0].b
             if self._stored_point != current_point:
                 self._stored_point = current_point
                 debounced(self.fire_request, 800, lambda: self._stored_point == current_point, async_thread=True)

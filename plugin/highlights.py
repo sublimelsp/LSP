@@ -40,7 +40,7 @@ class DocumentHighlightListener(LSPViewEventListener):
             self._initialize()
         if self._enabled and settings.document_highlight_style:
             try:
-                current_point = self.view.sel()[0].begin()
+                current_point = self.view.sel()[0].b
             except IndexError:
                 return
             self._clear_regions()

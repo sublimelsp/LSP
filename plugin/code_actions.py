@@ -1,14 +1,17 @@
 from .core.edit import parse_workspace_edit
 from .core.protocol import Diagnostic
-from .core.protocol import Range, Request, Point
+from .core.protocol import Range, Request
 from .core.registry import LspTextCommand
 from .core.registry import LSPViewEventListener
 from .core.registry import sessions_for_view
 from .core.registry import windows
 from .core.settings import settings
 from .core.typing import Any, List, Dict, Callable, Optional, Union, Tuple, Mapping, TypedDict
-from .core.views import code_action_params
+from .core.views import entire_content_range
 from .core.views import make_link
+from .core.views import offset_to_point
+from .core.views import region_to_range
+from .core.views import text_document_code_action_params
 from .core.windows import debounced
 from .diagnostics import filter_by_point, view_diagnostics
 from .diagnostics import filter_by_range
@@ -83,20 +86,22 @@ class CodeActionsManager:
         self,
         view: sublime.View,
         actions_handler: Callable[[CodeActionsByConfigName], None],
-        point: int
+        request_point: int
     ) -> None:
         current_location_key = "{}#{}:{}".format(view.file_name(), view.change_count(), point)
         if current_location_key in self._point_cache:
             actions_handler(self._point_cache[current_location_key].get_actions())
         else:
             self._point_cache.clear()
-            diagnostics_by_config = filter_by_point(view_diagnostics(view), Point(*view.rowcol(point)))
-            results = self.request_with_diagnostics(view, diagnostics_by_config, actions_handler)
+            point = offset_to_point(view, request_point)
+            diagnostics_by_config = filter_by_point(view_diagnostics(view), point)
+            results = self.request_with_diagnostics(view, Range(point, point), diagnostics_by_config, actions_handler)
             self._point_cache[current_location_key] = results
 
     def request_with_diagnostics(
         self,
         view: sublime.View,
+        request_range: Range,
         diagnostics_by_config: Dict[str, List[Diagnostic]],
         actions_handler: Callable[[CodeActionsByConfigName], None]
     ) -> CodeActionsCollector:
@@ -104,19 +109,20 @@ class CodeActionsManager:
         Requests code actions *only* for provided diagnostics. If session has no diagnostics then
         it will be skipped.
         """
-        return self._request(view, diagnostics_by_config, True, actions_handler)
+        return self._request(view, request_range, diagnostics_by_config, True, actions_handler)
 
-    def request_with_optional_diagnostics(
+    def request_for_range(
         self,
         view: sublime.View,
+        request_range: Range,
         diagnostics_by_config: Dict[str, List[Diagnostic]],
         actions_handler: Callable[[CodeActionsByConfigName], None]
     ) -> CodeActionsCollector:
         """
-        Requests code actions with provided diagnostics included in the request. If there are
+        Requests code actions with provided diagnostics and specified range. If there are
         no diagnostics for given session, the request will be made with empty diagnostics list.
         """
-        return self._request(view, diagnostics_by_config, False, actions_handler)
+        return self._request(view, request_range, diagnostics_by_config, False, actions_handler)
 
     def request_on_save(
         self,
@@ -127,11 +133,13 @@ class CodeActionsManager:
         """
         Requests code actions on save.
         """
-        return self._request(view, dict(), False, actions_handler, on_save_actions)
+        request_range = entire_content_range(view)
+        return self._request(view, request_range, dict(), False, actions_handler, on_save_actions)
 
     def _request(
         self,
         view: sublime.View,
+        request_range: Range,
         diagnostics_by_config: Dict[str, List[Diagnostic]],
         only_with_diagnostics: bool,
         actions_handler: Callable[[CodeActionsByConfigName], None],
@@ -146,7 +154,8 @@ class CodeActionsManager:
                         supported_kinds = session.get_capability('codeActionProvider.codeActionKinds')
                         matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])
                         if matching_kinds:
-                            params = code_action_params(view, file_name, [], matching_kinds)
+                            params = text_document_code_action_params(
+                                view, file_name, request_range, [], matching_kinds)
                             request = Request.codeAction(params)
                             collect, onerror = self._filtering_collector(
                                 session.config.name, matching_kinds, actions_collector)
@@ -156,7 +165,8 @@ class CodeActionsManager:
                         diagnostics = diagnostics_by_config.get(config_name, [])
                         if only_with_diagnostics and not diagnostics:
                             continue
-                        params = code_action_params(view, file_name, diagnostics)
+                        view_range = diagnostics[0].range if only_with_diagnostics else request_range
+                        params = text_document_code_action_params(view, file_name, view_range, diagnostics)
                         request = Request.codeAction(params)
                         session.send_request(request, actions_collector.create_collector(config_name))
         return actions_collector
@@ -307,6 +317,8 @@ class CodeActionOnSaveTask:
 
 
 class LspCodeActionsListener(LSPViewEventListener):
+    debounce_time = 800
+
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self._stored_region = sublime.Region(-1, -1)
@@ -320,15 +332,13 @@ class LspCodeActionsListener(LSPViewEventListener):
         if self._stored_region != current_region:
             self._stored_region = current_region
             debounced(
-                lambda: self.fire_request(current_region), 800,
+                lambda: self.fire_request(current_region), self.debounce_time,
                 lambda: self._stored_region == current_region, async_thread=True)
 
     def fire_request(self, current_region: sublime.Region) -> None:
-        view = self.view
-        stored_range = Range(Point(*view.rowcol(self._stored_region.begin())),
-                             Point(*view.rowcol(self._stored_region.end())))
-        diagnostics_by_config = filter_by_range(view_diagnostics(view), stored_range)
-        actions_manager.request_with_optional_diagnostics(view, diagnostics_by_config, self.handle_responses)
+        stored_range = region_to_range(self.view, self._stored_region)
+        diagnostics_by_config = filter_by_range(view_diagnostics(self.view), stored_range)
+        actions_manager.request_for_range(self.view, stored_range, diagnostics_by_config, self.handle_responses)
 
     def handle_responses(self, responses: CodeActionsByConfigName) -> None:
         action_count = sum(map(len, responses.values()))
@@ -394,9 +404,9 @@ class LspCodeActionsCommand(LspTextCommand):
             region = view.sel()[0]
         except IndexError:
             return
-        selection_range = Range(Point(*view.rowcol(region.begin())), Point(*view.rowcol(region.end())))
+        selection_range = region_to_range(view, region)
         diagnostics_by_config = filter_by_range(view_diagnostics(view), selection_range)
-        actions_manager.request_with_optional_diagnostics(view, diagnostics_by_config, self.handle_responses)
+        actions_manager.request_for_range(view, selection_range, diagnostics_by_config, self.handle_responses)
 
     def combine_commands(self) -> 'List[Tuple[str, str, CodeActionOrCommand]]':
         results = []

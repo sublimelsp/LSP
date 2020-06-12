@@ -1,12 +1,15 @@
 from copy import deepcopy
 from LSP.plugin.core.protocol import Point, Range
-from LSP.plugin.core.typing import Dict, Generator, List, Tuple
+from LSP.plugin.core.typing import Any, Dict, Generator, List, Tuple
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
 from LSP.plugin.code_actions import get_matching_kinds
+from LSP.plugin.code_actions import LspCodeActionsListener
 from LSP.plugin.code_actions import run_code_action_or_command
 from setup import TextDocumentTestCase
+from sublime_plugin import view_event_listeners
 from test_single_document import TEST_FILE_PATH
+import sublime
 import unittest
 
 TEST_FILE_URI = filename_to_uri(TEST_FILE_PATH)
@@ -177,6 +180,88 @@ class CodeActionMatchingTestCase(unittest.TestCase):
         actual = get_matching_kinds({'a.b': True, 'a.b.c': False}, ['a.b.c'])
         expected = []  # type: List[str]
         self.assertEquals(actual, expected)
+
+
+class CodeActionsListenerTestCase(TextDocumentTestCase):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.original_debounce_time = LspCodeActionsListener.debounce_time
+
+    def setUp(self) -> Generator:
+        yield from super().setUp()
+        LspCodeActionsListener.debounce_time = 0
+
+    def tearDown(self) -> Generator:
+        LspCodeActionsListener.debounce_time = self.original_debounce_time
+        yield from super().tearDown()
+
+    def get_test_server_capabilities(self) -> dict:
+        capabilities = deepcopy(super().get_test_server_capabilities())
+        capabilities['capabilities']['codeActionProvider'] = {}
+        return capabilities
+
+    def test_requests_with_diagnostics(self) -> Generator:
+        initial_content = 'a\nb\nc'
+        self.insert_characters(initial_content)
+        yield from self.await_message('textDocument/didChange')
+        range_a = Range(Point(0, 0), Point(0, 1))
+        range_b = Range(Point(1, 0), Point(1, 1))
+        range_c = Range(Point(2, 0), Point(2, 1))
+        yield from self.await_client_notification(
+            "textDocument/publishDiagnostics",
+            create_test_diagnostics([('issue a', range_a), ('issue b', range_b), ('issue c', range_c)])
+        )
+        code_action_a = create_test_code_action(self.view.change_count(), [("A", range_a)])
+        code_action_b = create_test_code_action(self.view.change_count(), [("B", range_b)])
+        self.set_response('textDocument/codeAction', [code_action_a, code_action_b])
+        # Select a and b.
+        self.view.sel().clear()
+        self.view.sel().add(sublime.Region(0, 3))
+        self._trigger_on_selection_modified_async()
+        yield 100
+        request = yield from self.await_message('textDocument/codeAction')
+        self.assertEquals(request['range']['start']['line'], 0)
+        self.assertEquals(request['range']['start']['character'], 0)
+        self.assertEquals(request['range']['end']['line'], 1)
+        self.assertEquals(request['range']['end']['character'], 1)
+        self.assertEquals(len(request['context']['diagnostics']), 2)
+        annotations_range = self.view.get_regions('lsp_action_annotations')
+        self.assertEquals(len(annotations_range), 1)
+        self.assertEquals(annotations_range[0].a, 3)
+        self.assertEquals(annotations_range[0].b, 0)
+
+    def test_requests_with_no_diagnostics(self) -> Generator:
+        initial_content = 'a\nb\nc'
+        self.insert_characters(initial_content)
+        yield from self.await_message("textDocument/didChange")
+        range_a = Range(Point(0, 0), Point(0, 1))
+        range_b = Range(Point(1, 0), Point(1, 1))
+        code_action1 = create_test_code_action(0, [("A", range_a)])
+        code_action2 = create_test_code_action(0, [("B", range_b)])
+        self.set_response('textDocument/codeAction', [code_action1, code_action2])
+        # Select a and b.
+        self.view.sel().clear()
+        self.view.sel().add(sublime.Region(0, 3))
+        self._trigger_on_selection_modified_async()
+        yield 100
+        request = yield from self.await_message('textDocument/codeAction')
+        self.assertEquals(request['range']['start']['line'], 0)
+        self.assertEquals(request['range']['start']['character'], 0)
+        self.assertEquals(request['range']['end']['line'], 1)
+        self.assertEquals(request['range']['end']['character'], 1)
+        self.assertEquals(len(request['context']['diagnostics']), 0)
+        annotations_range = self.view.get_regions('lsp_action_annotations')
+        self.assertEquals(len(annotations_range), 1)
+        self.assertEquals(annotations_range[0].a, 3)
+        self.assertEquals(annotations_range[0].b, 0)
+
+    def _trigger_on_selection_modified_async(self):
+        # "on_selection_modified_async" doesn't trigger when modifying selection programatically.
+        # Don't know of better way to trigger listener then.
+        for listener in view_event_listeners[self.view.id()]:
+            if isinstance(listener, LspCodeActionsListener):
+                listener.on_selection_modified_async()
+                return
 
 
 class CodeActionsTestCase(TextDocumentTestCase):

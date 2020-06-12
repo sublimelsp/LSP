@@ -290,21 +290,18 @@ def selection_range_params(view: sublime.View) -> Dict[str, Any]:
     }
 
 
-def code_action_params(
+def text_document_code_action_params(
     view: sublime.View,
     file_name: str,
+    range: Range,
     diagnostics: List[Diagnostic],
     on_save_actions: Optional[List[str]] = None
 ) -> Dict:
-    if on_save_actions:
-        relevant_range = entire_content_range(view)
-    else:
-        relevant_range = diagnostics[0].range if diagnostics else region_to_range(view, view.sel()[0])
     params = {
         "textDocument": {
             "uri": filename_to_uri(file_name)
         },
-        "range": relevant_range.to_lsp(),
+        "range": range.to_lsp(),
         "context": {
             "diagnostics": list(diagnostic.to_lsp() for diagnostic in diagnostics)
         }

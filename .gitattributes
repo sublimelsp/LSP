@@ -2,9 +2,15 @@
 .style.yapf export-ignore
 codecov.yml export-ignore
 docs/ export-ignore
-mkdocs.yml export-ignore
 mypy.ini export-ignore
 stubs/ export-ignore
 tests/ export-ignore
 tox.ini export-ignore
 unittesting.json export-ignore
+
+# Release script
+makefile export-ignore
+mkdocs.yml export-ignore
+release.py export-ignore
+release.sublime-commands export-ignore
+VERSION export-ignore

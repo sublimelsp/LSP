@@ -386,6 +386,16 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         return None
 
+    @classmethod
+    def on_workspace_configuration(cls, params: Dict, configuration: Any) -> None:
+        """
+        Override to augment returned configuration for workspace/configuration request.
+
+        :param      params:         A ConfigurationItem for which configuration is requested.
+        :param      configuration:  The resolved configuration for given params.
+        """
+        pass
+
     def __init__(self, weaksession: 'weakref.ref[Session]') -> None:
         """
         Constructs a new instance.
@@ -592,7 +602,10 @@ class Session(Client):
         items = []  # type: List[Any]
         requested_items = params.get("items") or []
         for requested_item in requested_items:
-            items.append(self.config.settings.get(requested_item.get('section') or None))
+            configuration = self.config.settings.get(requested_item.get('section') or None)
+            if self._plugin:
+                self._plugin.on_workspace_configuration(requested_item, configuration)
+            items.append(configuration)
         self.send_response(Response(request_id, items))
 
     def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:

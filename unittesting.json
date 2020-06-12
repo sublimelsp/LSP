@@ -5,7 +5,6 @@
     "failfast": false,
     "reload_package_on_testing": true,
     "start_coverage_after_reload": false,
-    "pattern": "test_code_actions.py",
     "show_reload_progress": false,
     "output": null,
     "generate_html_report": true

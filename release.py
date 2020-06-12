@@ -140,7 +140,7 @@ def build_release():
     print("Release %s created!" % version)
 
 
-def publish_release(token):
+def publish_release(token: str) -> None:
     """Publish the new release."""
     version = get_message(os.path.join(PACKAGE_PATH, 'VERSION'))
 

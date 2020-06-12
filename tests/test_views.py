@@ -94,17 +94,31 @@ class ViewsTest(DeferrableTestCase):
         })
 
     def test_text_document_formatting(self) -> None:
-        self.view.settings = MagicMock(return_value={"translate_tabs_to_spaces": False, "tab_size": 1234})
+        self.view.settings = MagicMock(return_value={
+            "translate_tabs_to_spaces": False,
+            "tab_size": 1234, "ensure_newline_at_eof_on_save": True})
         self.assertEqual(text_document_formatting(self.view).params, {
             "textDocument": {"uri": filename_to_uri(self.mock_file_name)},
-            "options": {"tabSize": 1234, "insertSpaces": False}
+            "options": {
+                "tabSize": 1234,
+                "insertSpaces": False,
+                "trimTrailingWhitespace": False,
+                "insertFinalNewline": True,
+                "trimFinalNewlines": True
+            }
         })
 
     def test_text_document_range_formatting(self) -> None:
         self.view.settings = MagicMock(return_value={"tab_size": 4321})
         self.assertEqual(text_document_range_formatting(self.view, sublime.Region(0, 2)).params, {
             "textDocument": {"uri": filename_to_uri(self.mock_file_name)},
-            "options": {"tabSize": 4321, "insertSpaces": False},
+            "options": {
+                "tabSize": 4321,
+                "insertSpaces": False,
+                "trimTrailingWhitespace": False,
+                "insertFinalNewline": False,
+                "trimFinalNewlines": False
+            },
             "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 2}}
         })
 

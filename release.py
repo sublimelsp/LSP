@@ -11,21 +11,24 @@ try:
 except ImportError:
     from LSP.plugin.core.typing import Generator, List, Optional, Tuple
 
-# Project configuration
-# The name of the branch to push to the remote on releasing.
-RELEASE_BRANCH = 'st4000-exploration'
-# The name of the GitHub repository in <owner>/<repo> format
-GITHUB_REPO = 'sublimelsp/LSP'
-# The name of the settings file to get the release token from ("github_token" setting)
-SETTINGS = '{}.sublime-settings'.format(__package__)
-# The prefix to use for the <prefix>_build_release and <prefix>_publish_release commands
-# that can be used in the command palette and other contexts. Can contain underscores.
-COMMAND_PREFIX = 'lsp'
-
 # Internal
 PACKAGE_PATH = os.path.dirname(__file__)
 MESSAGE_DIR = 'messages'
 MESSAGE_PATH = os.path.join(PACKAGE_PATH, MESSAGE_DIR)
+
+with open(os.path.join(PACKAGE_PATH, '.release.json'), 'r') as f:
+    CONFIGURATION = json.load(f)
+
+# Project configuration
+# The name of the branch to push to the remote on releasing.
+RELEASE_BRANCH = CONFIGURATION['push_branch']
+# The name of the GitHub repository in <owner>/<repo> format
+GITHUB_REPO = CONFIGURATION['publish_repo']
+# The prefix to use for the <prefix>_build_release and <prefix>_publish_release commands
+# that can be used in the command palette and other contexts. Can contain underscores.
+COMMAND_PREFIX = CONFIGURATION['sublime_command_prefix']
+# The name of the settings file to get the release token from ("github_token" setting)
+SETTINGS = '{}.sublime-settings'.format(__package__)
 
 
 def get_message(fname: str) -> str:

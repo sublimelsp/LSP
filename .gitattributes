@@ -9,6 +9,7 @@ tox.ini export-ignore
 unittesting.json export-ignore
 
 # Release script
+.release.json export-ignore
 makefile export-ignore
 mkdocs.yml export-ignore
 release.py export-ignore

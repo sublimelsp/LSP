@@ -8,7 +8,7 @@ import re
 import subprocess
 
 # Internal
-PACKAGE_PATH = os.path.dirname(__file__)
+PACKAGE_PATH = os.path.realpath(os.path.join(os.path.join(os.path.dirname(__file__), '..')))
 MESSAGE_DIR = 'messages'
 MESSAGE_PATH = os.path.join(PACKAGE_PATH, MESSAGE_DIR)
 

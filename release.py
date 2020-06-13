@@ -22,6 +22,7 @@ RELEASE_BRANCH = CONFIGURATION['push_branch']
 GITHUB_REPO = CONFIGURATION['publish_repo']
 # The name of the settings file to get the release token from ("github_token" setting)
 SETTINGS = '{}.sublime-settings'.format(__package__)
+VERSION_FILE_PATH = CONFIGURATION['version_file_path']
 
 
 def get_message(fname: str) -> str:
@@ -53,17 +54,18 @@ def version_history() -> List[str]:
             if ext.lower() == '.txt':
                 yield basename
 
-    def sortkey(key: str) -> Tuple[int, int, int]:
-        """Convert filename to version tuple (major, minor, patch)."""
-        match = re.match(
-            r'(?:(?P<prefix>[^.-]+)\-)?(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-.+)?', key)
-        if match:
-            prefix, major, minor, patch = match.groups()
-            return int(major), int(minor), int(patch)
-        else:
-            return 0, 0, 0
+    return sorted(tuple(generator()), key=parse_version)
 
-    return sorted(tuple(generator()), key=sortkey)
+
+def parse_version(version: str) -> Tuple[int, int, int]:
+    """Convert filename to version tuple (major, minor, patch)."""
+    match = re.match(
+        r'(?:(?P<prefix>[^.-]+)\-)?(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-.+)?', version)
+    if match:
+        prefix, major, minor, patch = match.groups()
+        return int(major), int(minor), int(patch)
+    else:
+        return 0, 0, 0
 
 
 def git(*args: str) -> Optional[str]:
@@ -92,7 +94,8 @@ def build_release() -> None:
     """Build the new release locally."""
     history = version_history()
     version = history[-1]
-    put_message(os.path.join(PACKAGE_PATH, 'VERSION'), version)
+    version_tuple = parse_version(version)
+    put_message(VERSION_FILE_PATH, '__version__ = {}\n'.format(version_tuple))
     build_messages_json(history)
     commit_release(version)
     print("Release %s created!" % version)
@@ -100,7 +103,7 @@ def build_release() -> None:
 
 def publish_release(token: str) -> None:
     """Publish the new release."""
-    version = get_message(os.path.join(PACKAGE_PATH, 'VERSION'))
+    version = get_message(VERSION_FILE_PATH)
 
     repo_url = 'https://github.com/{}'.format(GITHUB_REPO)
     # push release branch to server

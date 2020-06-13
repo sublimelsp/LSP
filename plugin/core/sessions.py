@@ -11,6 +11,7 @@ from .transports import Transport
 from .types import ClientConfig, ClientStates
 from .types import view2scope
 from .typing import Dict, Any, Optional, List, Tuple, Generator, Type
+from .version import __version__
 from .views import COMPLETION_KINDS
 from .views import did_change_configuration
 from .views import SYMBOL_KINDS
@@ -19,9 +20,6 @@ from abc import ABCMeta, abstractmethod
 import os
 import sublime
 import weakref
-
-
-__version__ = (0, 11, 0)
 
 
 class Manager(metaclass=ABCMeta):

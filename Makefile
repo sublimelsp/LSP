@@ -1,9 +1,9 @@
 build_release:
-	./release build
+	python3 ./release.py build
 
 release:
 	build_release
-	./release publish --token `cat $HOME/.github_access_token`
+	python3 ./release.py publish --token `cat $HOME/.github_access_token`
 
 build_docs:
 	mkdocs

@@ -1,4 +1,5 @@
 from .collections import DottedDict
+from .protocol import Diagnostic
 from .protocol import Point, Range, Notification, Request
 from .typing import Optional, Dict, Any, Iterable, List, Union
 from .url import filename_to_uri
@@ -297,6 +298,27 @@ def selection_range_params(view: sublime.View) -> Dict[str, Any]:
         "textDocument": text_document_identifier(view),
         "positions": [position(view, r.b) for r in view.sel()]
     }
+
+
+def text_document_code_action_params(
+    view: sublime.View,
+    file_name: str,
+    range: Range,
+    diagnostics: List[Diagnostic],
+    on_save_actions: Optional[List[str]] = None
+) -> Dict:
+    params = {
+        "textDocument": {
+            "uri": filename_to_uri(file_name)
+        },
+        "range": range.to_lsp(),
+        "context": {
+            "diagnostics": list(diagnostic.to_lsp() for diagnostic in diagnostics)
+        }
+    }
+    if on_save_actions:
+        params['context']['only'] = on_save_actions
+    return params
 
 
 FORMAT_STRING = 0x1

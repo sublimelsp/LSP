@@ -833,7 +833,9 @@ class View:
     def unfold(self, x: Union[Region, List[Region]]) -> List[Region]:
         ...
 
-    def add_regions(self, key: str, regions: List[Region], scope: str = ..., icon: str = ..., flags: int = ...) -> None:
+    def add_regions(self, key: str, regions: List[Region], scope: str = ..., icon: str = ..., flags: int = ...,
+                    annotations: List[str] = ..., annotation_color: str = ...,
+                    on_navigate: Callable[[str], None] = ...) -> None:
         ...
 
     def get_regions(self, key: str) -> List[Region]:

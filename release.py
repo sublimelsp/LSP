@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from typing import Generator, List, Optional, Tuple
 import json
 import os
 import re
 import subprocess
-
-try:
-    from typing import Generator, List, Optional, Tuple
-except ImportError:
-    from LSP.plugin.core.typing import Generator, List, Optional, Tuple
 
 # Internal
 PACKAGE_PATH = os.path.dirname(__file__)
@@ -24,9 +20,6 @@ with open(os.path.join(PACKAGE_PATH, '.release.json'), 'r') as f:
 RELEASE_BRANCH = CONFIGURATION['push_branch']
 # The name of the GitHub repository in <owner>/<repo> format
 GITHUB_REPO = CONFIGURATION['publish_repo']
-# The prefix to use for the <prefix>_build_release and <prefix>_publish_release commands
-# that can be used in the command palette and other contexts. Can contain underscores.
-COMMAND_PREFIX = CONFIGURATION['sublime_command_prefix']
 # The name of the settings file to get the release token from ("github_token" setting)
 SETTINGS = '{}.sublime-settings'.format(__package__)
 
@@ -168,43 +161,3 @@ if __name__ == '__main__':
         build_release()
     elif args.command.lower() == 'publish':
         publish_release(args.token)
-
-
-"""
-======================================
-Sublime Text Command Interface
-======================================
-"""
-try:
-    import sublime
-    import sublime_plugin
-
-    camel_case_prefix = ''.join([word.title() for word in COMMAND_PREFIX.lower().split('_')])
-
-    class InternalBuildReleaseCommand(sublime_plugin.ApplicationCommand):
-
-        def is_visible(self) -> bool:
-            settings = sublime.load_settings(SETTINGS)
-            return settings.has('github_token')
-
-        def run(self) -> None:
-            """Built a new release."""
-            build_release()
-
-    InternalBuildReleaseCommand.__name__ = '{}BuildReleaseCommand'.format(camel_case_prefix)
-
-    class InternalPublishReleaseCommand(sublime_plugin.ApplicationCommand):
-
-        def is_visible(self) -> bool:
-            settings = sublime.load_settings(SETTINGS)
-            return settings.has('github_token')
-
-        def run(self) -> None:
-            """Publish the new release."""
-            settings = sublime.load_settings(SETTINGS)
-            publish_release(settings.get('github_token') or '')
-
-    InternalPublishReleaseCommand.__name__ = '{}PublishReleaseCommand'.format(camel_case_prefix)
-
-except ImportError:
-    pass

@@ -1,5 +1,4 @@
 {
     "push_branch": "st4000-exploration",
-    "publish_repo": "sublimelsp/LSP",
-    "sublime_command_prefix": "lsp"
+    "publish_repo": "sublimelsp/LSP"
 }

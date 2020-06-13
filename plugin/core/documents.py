@@ -46,6 +46,16 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         self._session_views = {}  # type: Dict[str, SessionView]
         self._session_views_lock = threading.Lock()
 
+    def __del__(self) -> None:
+        session_views = self._session_views
+        session_views_lock = self._session_views_lock
+
+        def clear_async() -> None:
+            with session_views_lock:
+                session_views.clear()
+
+        sublime.set_timeout_async(clear_async)
+
     def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()
         with self._session_views_lock:
@@ -63,11 +73,10 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         yield from self._session_views.values()
 
     def _register_async(self) -> None:
-        if not self._file_name:
-            file_name = self.view.file_name()
-            if file_name:
-                self._file_name = file_name
-                self.manager.register_listener_async(self)
+        file_name = self.view.file_name()
+        if file_name:
+            self._file_name = file_name
+            self.manager.register_listener_async(self)
 
     def _is_regular_view(self) -> bool:
         v = self.view
@@ -110,9 +119,12 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
                 sv.on_post_save()
 
     def on_close(self) -> None:
-        # ViewListeners are removed automatically -- they live in a weak set of the WindowManager.
-        with self._session_views_lock:
-            self._session_views.clear()
+
+        def clear_async() -> None:
+            with self._session_views_lock:
+                self._session_views.clear()
+
+        sublime.set_timeout_async(clear_async)
 
     def on_query_context(self, key: str, operator: str, operand: Any, match_all: bool) -> bool:
         capability_prefix = "lsp.capabilities."

@@ -39,7 +39,7 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         if index > -1:
             config_name = self._items[index][0]
             wm = windows.lookup(self.window)
-            wm.enable_config(config_name)
+            sublime.set_timeout_async(lambda: wm.enable_config_async(config_name))
 
 
 class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
@@ -55,8 +55,7 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
             config_name = self._items[index][0]
             client_configs.disable(config_name)
             wm = windows.lookup(self.window)
-            sublime.set_timeout_async(lambda: wm.end_config_sessions(config_name), 500)
-            self.window.status_message("{} disabled, shutting down server...".format(config_name))
+            sublime.set_timeout_async(lambda: wm.end_config_sessions_async(config_name))
 
 
 class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
@@ -72,4 +71,4 @@ class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         if index > -1:
             config_name = self._items[index][0]
             wm = windows.lookup(self.window)
-            wm.disable_config(config_name)
+            sublime.set_timeout_async(wm.disable_config_async(config_name))

@@ -81,11 +81,6 @@ def _best_session(view: sublime.View, sessions: Iterable[Session], point: Option
         return None
 
 
-def unload_sessions(window: sublime.Window) -> None:
-    wm = windows.lookup(window)
-    wm.end_sessions()
-
-
 configs = ConfigManager(client_configs.all)
 client_configs.set_listener(configs.update)
 windows = WindowRegistry(configs, sublime)
@@ -124,5 +119,4 @@ class LspRestartClientCommand(sublime_plugin.TextCommand):
     def run(self, edit: Any) -> None:
         window = self.view.window()
         if window:
-            manager = windows.lookup(window)
-            sublime.set_timeout_async(manager.restart_sessions_async)
+            windows.lookup(window).restart_sessions_async()

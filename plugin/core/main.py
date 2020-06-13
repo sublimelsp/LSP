@@ -10,7 +10,7 @@ from .panels import destroy_output_panels, ensure_panel, PanelName
 from .popups import popups
 from .protocol import Response
 from .protocol import WorkspaceFolder
-from .registry import windows, unload_sessions
+from .registry import windows
 from .rpc import method2attr
 from .sessions import AbstractPlugin
 from .sessions import register_plugin
@@ -125,7 +125,6 @@ def plugin_unloaded() -> None:
     unload_settings()
     # TODO: Move to __del__ methods
     for window in sublime.windows():
-        unload_sessions(window)  # unloads view state from document sync and diagnostics
         destroy_output_panels(window)  # references and diagnostics panels
         for view in window.views():
             if view.file_name():
@@ -145,22 +144,23 @@ class Listener(sublime_plugin.EventListener):
                 windows.lookup(w)
             except KeyError:
                 windows.add(w)
-        for view in views:
-            if view.is_loading():
-                debug("WARNING: view", view.id(), "is still loading")
-            for listener in sublime_plugin.view_event_listeners[view.id()]:
-                if isinstance(listener, DocumentSyncListener):
-                    sublime.set_timeout_async(listener.on_load_async)
-                    break
+
+        def load_async() -> None:
+            for view in views:
+                if view.is_loading():
+                    debug("WARNING: view", view.id(), "is still loading")
+                for listener in sublime_plugin.view_event_listeners[view.id()]:
+                    if isinstance(listener, DocumentSyncListener):
+                        listener.on_load_async()
+                        break
+
+        sublime.set_timeout_async(load_async)
 
     def on_exit(self) -> None:
         kill_all_subprocesses()
 
-    def on_load_project(self, w: sublime.Window) -> None:
-        windows.lookup(w).on_load_project()
-
-    def on_pre_close_project(self, w: sublime.Window) -> None:
-        windows.lookup(w).on_pre_close_project()
+    def on_load_project_async(self, w: sublime.Window) -> None:
+        windows.lookup(w).on_load_project_async()
 
     def on_new_window(self, w: sublime.Window) -> None:
         windows.add(w)

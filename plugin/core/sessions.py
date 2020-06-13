@@ -48,7 +48,7 @@ class Manager(metaclass=ABCMeta):
     # Mutators
 
     @abstractmethod
-    def start(self, configuration: ClientConfig, initiating_view: sublime.View) -> None:
+    def start_async(self, configuration: ClientConfig, initiating_view: sublime.View) -> None:
         """
         Start a new Session with the given configuration. The initiating view is the view that caused this method to
         be called.
@@ -61,7 +61,7 @@ class Manager(metaclass=ABCMeta):
     # Event callbacks
 
     @abstractmethod
-    def on_post_exit(self, session: 'Session', exit_code: int, exception: Optional[Exception]) -> None:
+    def on_post_exit_async(self, session: 'Session', exit_code: int, exception: Optional[Exception]) -> None:
         """
         The given Session has stopped with the given exit code.
         """
@@ -449,6 +449,7 @@ class Session(Client):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: List[WorkspaceFolder],
                  config: ClientConfig, plugin_class: Optional[Type[AbstractPlugin]]) -> None:
+        super().__init__(logger)
         self.config = config
         self.manager = weakref.ref(manager)
         self.window = manager.window()
@@ -460,7 +461,9 @@ class Session(Client):
         self._progress = {}  # type: Dict[Any, Dict[str, str]]
         self._plugin_class = plugin_class
         self._plugin = None  # type: Optional[AbstractPlugin]
-        super().__init__(logger)
+
+    def __del__(self) -> None:
+        debug(self.config.binary_args, "ended")
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -568,7 +571,7 @@ class Session(Client):
     def initialize(self, variables: Dict[str, str], transport: Transport) -> None:
         self.transport = transport
         params = get_initialize_params(variables, self._workspace_folders, self.config)
-        self.send_request(Request.initialize(params), self._handle_initialize_result, lambda _: self.end())
+        self.send_request(Request.initialize(params), self._handle_initialize_result, lambda _: self.end_async())
 
     def call_manager(self, method: str, *args: Any) -> None:
         mgr = self.manager()
@@ -704,8 +707,8 @@ class Session(Client):
             status_msg += fmt.format(progress_percentage)
         return status_msg
 
-    def end(self) -> None:
-        # TODO: Ensure this function is called only from the async worker thread
+    def end_async(self) -> None:
+        # TODO: Ensure this function is called only from the async thread
         if self.exiting:
             return
         self.exiting = True
@@ -726,4 +729,4 @@ class Session(Client):
         self._response_handlers.clear()
         mgr = self.manager()
         if mgr:
-            mgr.on_post_exit(self, exit_code, exception)
+            sublime.set_timeout_async(lambda: mgr.on_post_exit_async(self, exit_code, exception))

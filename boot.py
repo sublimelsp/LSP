@@ -1,5 +1,5 @@
 # Please keep this list sorted (Edit -> Sort Lines)
-from .plugin.code_actions import LspCodeActionBulbListener
+from .plugin.code_actions import LspCodeActionsListener
 from .plugin.code_actions import LspCodeActionsCommand
 from .plugin.code_actions import LspSaveCommand
 from .plugin.color import LspColorListener

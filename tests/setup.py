@@ -164,6 +164,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
         self.session.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
         yield from self.await_promise(promise)
+        return promise.result()
 
     def make_server_do_fake_request(self, method: str, params: Any) -> YieldPromise:
         promise = YieldPromise()

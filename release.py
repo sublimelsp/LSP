@@ -7,7 +7,15 @@ import os
 import re
 import subprocess
 
+# Project configuration
+# The name of the branch to push to the remote on releasing.
 RELEASE_BRANCH = 'st4000-exploration'
+# The name of the GitHub repository in <owner>/<repo> format
+GITHUB_REPO = 'sublimelsp/LSP'
+# The name of the settings file to get the release token from ("github_token" setting)
+SETTINGS = '{}.sublime-settings'.format(__package__)
+
+# Internal
 PACKAGE_PATH = os.path.dirname(__file__)
 MESSAGE_DIR = 'messages'
 MESSAGE_PATH = os.path.join(PACKAGE_PATH, MESSAGE_DIR)
@@ -91,14 +99,14 @@ def publish_release(token: str) -> None:
     """Publish the new release."""
     version = get_message(os.path.join(PACKAGE_PATH, 'VERSION'))
 
-    repo_url = 'https://github.com/sublimelsp/LSP'
+    repo_url = 'https://github.com/{}'.format(GITHUB_REPO)
     # push release branch to server
     git('push', repo_url, RELEASE_BRANCH)
     # push tags to server
     git('push', repo_url, 'tag', version)
 
     # publish the release
-    post_url = '/repos/sublimelsp/LSP/releases?access_token={}'.format(token)
+    post_url = '/repos/{}/releases?access_token={}'.format(GITHUB_REPO, token)
     headers = {
         'User-Agent': 'Sublime Text',
         'Content-type': 'application/json',
@@ -137,7 +145,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Built and Publish LSP Releases')
+        description='Built and Publish {} Releases'.format(__package__))
     parser.add_argument(
         dest='command',
         help='The command to perform is one of [BUILD|PUBLISH].')
@@ -160,8 +168,6 @@ Sublime Text Command Interface
 try:
     import sublime
     import sublime_plugin
-
-    SETTINGS = "LSP.sublime-settings"
 
     class LspBuildReleaseCommand(sublime_plugin.ApplicationCommand):
 

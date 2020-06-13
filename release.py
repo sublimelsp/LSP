@@ -201,7 +201,7 @@ try:
             settings = sublime.load_settings(SETTINGS)
             publish_release(settings.get('github_token') or '')
 
-    InternalBuildReleaseCommand.__name__ = '{}PublishReleaseCommand'.format(camel_case_prefix)
+    InternalPublishReleaseCommand.__name__ = '{}PublishReleaseCommand'.format(camel_case_prefix)
 
 except ImportError:
     pass

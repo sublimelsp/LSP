@@ -14,6 +14,11 @@ RELEASE_BRANCH = 'st4000-exploration'
 GITHUB_REPO = 'sublimelsp/LSP'
 # The name of the settings file to get the release token from ("github_token" setting)
 SETTINGS = '{}.sublime-settings'.format(__package__)
+# The prefix to use for the <Prefix>BuildReleaseCommand and <Prefix>PublishReleaseCommand commands
+# that can be used in the command palette and other contexts.
+# The prefix should be written in CamelCase.
+# The resulting commands will be named "<prefix>_build_release" and "<prefix>_publish_release".
+COMMAND_PREFIX = 'Lsp'
 
 # Internal
 PACKAGE_PATH = os.path.dirname(__file__)
@@ -169,7 +174,7 @@ try:
     import sublime
     import sublime_plugin
 
-    class LspBuildReleaseCommand(sublime_plugin.ApplicationCommand):
+    class InternalBuildReleaseCommand(sublime_plugin.ApplicationCommand):
 
         def is_visible(self) -> bool:
             settings = sublime.load_settings(SETTINGS)
@@ -179,7 +184,9 @@ try:
             """Built a new release."""
             build_release()
 
-    class LspPublishReleaseCommand(sublime_plugin.ApplicationCommand):
+    InternalBuildReleaseCommand.__name__ = '{}BuildReleaseCommand'.format(COMMAND_PREFIX)
+
+    class InternalPublishReleaseCommand(sublime_plugin.ApplicationCommand):
 
         def is_visible(self) -> bool:
             settings = sublime.load_settings(SETTINGS)
@@ -189,6 +196,8 @@ try:
             """Publish the new release."""
             settings = sublime.load_settings(SETTINGS)
             publish_release(settings.get('github_token') or '')
+
+    InternalBuildReleaseCommand.__name__ = '{}BuildReleaseCommand'.format(COMMAND_PREFIX)
 
 except ImportError:
     pass

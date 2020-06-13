@@ -5,6 +5,7 @@ from .sessions import Session
 from .typing import Any, Optional, Dict, Generator, Iterable
 from .windows import AbstractViewListener
 import sublime
+import threading
 
 
 SUBLIME_WORD_MASK = 515
@@ -43,14 +44,20 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         super().__init__(view)
         self._file_name = ''
         self._session_views = {}  # type: Dict[str, SessionView]
+        self._session_views_lock = threading.Lock()
 
-    def on_session_initialized(self, session: Session) -> None:
+    def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()
-        if session.config.name not in self._session_views:
-            self._session_views[session.config.name] = SessionView(self, session)
+        with self._session_views_lock:
+            if session.config.name not in self._session_views:
+                self._session_views[session.config.name] = SessionView(self, session)
+                self.view.settings().set("lsp_active", True)
 
-    def on_session_shutdown(self, session: Session) -> None:
-        self._session_views.pop(session.config.name, None)
+    def on_session_shutdown_async(self, session: Session) -> None:
+        with self._session_views_lock:
+            self._session_views.pop(session.config.name, None)
+            if not self._session_views:
+                self.view.settings().erase("lsp_active")
 
     def session_views(self) -> Generator[SessionView, None, None]:
         yield from self._session_views.values()
@@ -77,17 +84,20 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             self._register_async()
 
     def purge_changes(self) -> None:
-        for sv in self.session_views():
-            sv.purge_changes()
+        with self._session_views_lock:
+            for sv in self.session_views():
+                sv.purge_changes()
 
     def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
         if self.view.is_primary():
-            for sv in self.session_views():
-                sv.on_text_changed(changes)
+            with self._session_views_lock:
+                for sv in self.session_views():
+                    sv.on_text_changed(changes)
 
     def on_pre_save(self) -> None:
-        for sv in self.session_views():
-            sv.on_pre_save()
+        with self._session_views_lock:
+            for sv in self.session_views():
+                sv.on_pre_save()
 
     def on_post_save(self) -> None:
         if self.view.file_name() != self._file_name:
@@ -95,12 +105,14 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             self._file_name = ''
             sublime.set_timeout_async(self._register_async)
             return
-        for sv in self.session_views():
-            sv.on_post_save()
+        with self._session_views_lock:
+            for sv in self.session_views():
+                sv.on_post_save()
 
     def on_close(self) -> None:
         # ViewListeners are removed automatically -- they live in a weak set of the WindowManager.
-        self._session_views.clear()
+        with self._session_views_lock:
+            self._session_views.clear()
 
     def on_query_context(self, key: str, operator: str, operand: Any, match_all: bool) -> bool:
         capability_prefix = "lsp.capabilities."

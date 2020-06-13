@@ -124,4 +124,5 @@ class LspRestartClientCommand(sublime_plugin.TextCommand):
     def run(self, edit: Any) -> None:
         window = self.view.window()
         if window:
-            windows.lookup(window).restart_sessions()
+            manager = windows.lookup(window)
+            sublime.set_timeout_async(manager.restart_sessions_async)

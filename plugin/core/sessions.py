@@ -285,7 +285,7 @@ class SessionViewProtocol(Protocol):
     def on_diagnostics(self, diagnostics: Any) -> None:
         ...
 
-    def shutdown(self) -> None:
+    def shutdown_async(self) -> None:
         ...
 
 
@@ -705,12 +705,13 @@ class Session(Client):
         return status_msg
 
     def end(self) -> None:
+        # TODO: Ensure this function is called only from the async worker thread
         if self.exiting:
             return
         self.exiting = True
         self._plugin = None
         for sv in self.session_views():
-            sv.shutdown()
+            sv.shutdown_async()
         self.capabilities.clear()
         self.state = ClientStates.STOPPING
         self.send_request(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)

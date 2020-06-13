@@ -3,8 +3,9 @@ import sublime_plugin
 
 from ..diagnostics import DiagnosticsPresenter
 from ..highlights import remove_highlights
+from .documents import DocumentSyncListener
 from .handlers import LanguageHandler
-from .logging import set_debug_logging, set_exception_logging
+from .logging import set_debug_logging, set_exception_logging, debug
 from .panels import destroy_output_panels, ensure_panel, PanelName
 from .popups import popups
 from .protocol import Response
@@ -138,12 +139,19 @@ def plugin_unloaded() -> None:
 
 
 class Listener(sublime_plugin.EventListener):
-    def on_init(self, _: List[sublime.View]) -> None:
+    def on_init(self, views: List[sublime.View]) -> None:
         for w in sublime.windows():
             try:
                 windows.lookup(w)
             except KeyError:
                 windows.add(w)
+        for view in views:
+            if view.is_loading():
+                debug("WARNING: view", view.id(), "is still loading")
+            for listener in sublime_plugin.view_event_listeners[view.id()]:
+                if isinstance(listener, DocumentSyncListener):
+                    sublime.set_timeout_async(listener.on_load_async)
+                    break
 
     def on_exit(self) -> None:
         kill_all_subprocesses()

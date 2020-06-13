@@ -65,11 +65,11 @@ class AbstractViewListener(metaclass=ABCMeta):
     view = None  # type: sublime.View
 
     @abstractmethod
-    def on_session_initialized(self, session: Session) -> None:
+    def on_session_initialized_async(self, session: Session) -> None:
         raise NotImplementedError()
 
     @abstractmethod
-    def on_session_shutdown(self, session: Session) -> None:
+    def on_session_shutdown_async(self, session: Session) -> None:
         raise NotImplementedError()
 
 
@@ -93,7 +93,7 @@ class WindowManager(Manager):
         self._configs = configs
         self.diagnostics = diagnostics
         self.server_panel_factory = server_panel_factory
-        self._sessions = WeakSet()  # type: WeakSet[Session]
+        self._sessions = set()  # type: Set[Session]
         self._sublime = sublime
         self._restarting = False
         self._is_closing = False
@@ -112,7 +112,7 @@ class WindowManager(Manager):
             session.update_folders(workspace_folders)
 
     def on_pre_close_project(self) -> None:
-        self.end_sessions()
+        sublime.set_timeout_async(self.end_sessions_async)
 
     def register_listener(self, listener: AbstractViewListener) -> None:
         sublime.set_timeout(lambda: self.register_listener_async(listener))
@@ -129,27 +129,34 @@ class WindowManager(Manager):
         listener = None  # type: Optional[AbstractViewListener]
         if self._new_listener is not None and self._new_listener.view.is_valid():
             listener = self._new_listener
+            # debug("re-checking listener", listener)
             self._new_listener = None
         else:
             try:
                 listener = self._pending_listeners.pop()
                 if not listener.view.is_valid():
+                    # debug("listener", listener, "is no longer valid")
                     return self._dequeue_listener_async()
+                # debug("adding new pending listener", listener)
                 self._listeners.add(listener)
             except IndexError:
                 # We have handled all pending listeners.
                 self._new_session = None
                 return
         if self._new_session:
+            # debug("adding new session", self._new_session.config.name)
             self._sessions.add(self._new_session)
+            self._new_session = None
         self._publish_sessions_to_listener(listener)
-        self._new_session = None
         config = self._needed_config(listener.view)
         if config:
+            # debug("found new config for listener", listener)
             self._new_listener = listener
             self.start(config, listener.view)
         else:
+            # debug("no new config found for listener", listener)
             self._new_listener = None
+            return self._dequeue_listener_async()
 
     def _publish_sessions_to_listener(self, listener: AbstractViewListener) -> None:
         try:
@@ -159,11 +166,13 @@ class WindowManager(Manager):
         if listener.view in self._workspace:
             for session in self._sessions:
                 if session.can_handle(listener.view):
-                    listener.on_session_initialized(session)
+                    # debug("registering session", session.config.name, "to listener", listener)
+                    listener.on_session_initialized_async(session)
         else:
             for session in self._sessions:
                 if session.config.match_document(scope):
-                    listener.on_session_initialized(session)
+                    # debug("registering session", session.config.name, "to listener", listener)
+                    listener.on_session_initialized_async(session)
                     break
 
     def window(self) -> sublime.Window:
@@ -191,7 +200,7 @@ class WindowManager(Manager):
         enable_in_project(self._window, config_name)
         self._configs.update()
         for listener in self._listeners:
-            self._pending_listeners.appendleft(listener)
+            self.register_listener(listener)
         self._listeners.clear()
         if not self._new_session:
             sublime.set_timeout_async(self._dequeue_listener_async)
@@ -228,7 +237,7 @@ class WindowManager(Manager):
     def start(self, config: ClientConfig, initiating_view: sublime.View) -> None:
         file_path = initiating_view.file_name() or ''
         if not self._can_start_config(config.name, file_path):
-            debug('Already starting on this window:', config.name)
+            # debug('Already starting on this window:', config.name)
             return
         try:
             workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
@@ -276,11 +285,11 @@ class WindowManager(Manager):
                                         session.config.name)
         handler.show()
 
-    def restart_sessions(self) -> None:
+    def restart_sessions_async(self) -> None:
         self._restarting = True
-        self.end_sessions()
+        self.end_sessions_async()
 
-    def end_sessions(self) -> None:
+    def end_sessions_async(self) -> None:
         sessions = list(self._sessions)
         for session in sessions:
             session.end()
@@ -303,40 +312,17 @@ class WindowManager(Manager):
         session.send_notification(Notification.initialized())
         sublime.set_timeout_async(self._dequeue_listener_async)
 
-    def handle_view_closed(self, view: ViewLike) -> None:
-        if view.file_name():
-            if not self._is_closing:
-                if not self._window.is_valid():
-                    # try to detect close synchronously (for quitting)
-                    self._handle_window_closed()
-                else:
-                    # in case the window is invalidated after the last view is closed
-                    self._sublime.set_timeout_async(lambda: self._check_window_closed(), 100)
-
-    def _check_window_closed(self) -> None:
-        if not self._is_closing and not self._window.is_valid():
-            self._handle_window_closed()
-
-    def _handle_window_closed(self) -> None:
-        debug('window {} closed, ending sessions'.format(self._window.id()))
-        self._is_closing = True
-        self.end_sessions()
-
-    def _handle_all_sessions_ended(self) -> None:
-        debug('clients for window {} unloaded'.format(self._window.id()))
-        if self._restarting:
-            debug('window {} sessions unloaded - restarting'.format(self._window.id()))
-
     def on_post_exit(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
-        sublime.set_timeout(lambda: self._on_post_exit_main_thread(session, exit_code, exception))
+        sublime.set_timeout(lambda: self._on_post_exit_async(session, exit_code, exception))
 
-    def _on_post_exit_main_thread(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
+    def _on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
+        self._sessions.discard(session)
         for view in self._window.views():
             file_name = view.file_name()
             if file_name:
                 self.diagnostics.remove(file_name, session.config.name)
         for listener in self._listeners:
-            listener.on_session_shutdown(session)
+            listener.on_session_shutdown_async(session)
         if exit_code != 0:
             self._window.status_message("{} exited with status code {}".format(session.config.name, exit_code))
             fmt = "{0} exited with status code {1}.\n\nDo you want to restart {0}?\n\nIf you choose Cancel, {0} will "\
@@ -346,12 +332,16 @@ class WindowManager(Manager):
                 v = self._window.active_view()
                 if not v:
                     return
-                sublime.set_timeout(lambda: self.start(session.config, v))  # type: ignore
+                sublime.set_timeout_async(lambda: self.start(session.config, v))  # type: ignore
             else:
                 self._configs.disable_temporarily(session.config.name)
         if exception:
             self._window.status_message("{} exited with an exception: {}".format(session.config.name, exception))
         debug("stopped", session.config.name)
+        if self._restarting and not self._sessions:
+            self._restarting = False
+            for listener in list(self._listeners):
+                self.register_listener_async(listener)
 
     def handle_server_message(self, server_name: str, message: str) -> None:
         if not self.server_panel_factory:

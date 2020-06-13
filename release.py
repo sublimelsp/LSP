@@ -155,6 +155,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--token',
         nargs='?',
+        default=os.environ['GITHUB_TOKEN'],
         help='The GitHub access token used for authentication.')
     args = parser.parse_args()
     if args.command.lower() == 'build':

@@ -51,16 +51,6 @@ def sessions_for_view(view: sublime.View, capability: Optional[str] = None) -> G
         yield from manager.sessions(view, capability)
 
 
-def session_for_view(view: sublime.View, capability: str, point: Optional[int] = None) -> Optional[Session]:
-    """
-    returns the "best matching" session for that particular point. This is determined by the feature_selector property
-    of the relevant LanguageConfig.
-
-    If point is None, then the point is understood to be the position of the first cursor.
-    """
-    return _best_session(view, sessions_for_view(view, capability), point)
-
-
 def _best_session(view: sublime.View, sessions: Iterable[Session], point: Optional[int] = None) -> Optional[Session]:
     if point is None:
         try:
@@ -108,7 +98,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
         return True
 
     def session(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
-        return session_for_view(self.view, capability, point)
+        return _best_session(self.view, self.sessions(capability), point)
 
     def sessions(self, capability: Optional[str] = None) -> Generator[Session, None, None]:
         yield from sessions_for_view(self.view, capability)

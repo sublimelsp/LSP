@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/python
 
-from LSP.plugin.core.typing import Generator, List, Optional, Tuple
 import json
 import os
 import re
 import subprocess
+
+try:
+    from typing import Generator, List, Optional, Tuple
+except ImportError:
+    from LSP.plugin.core.typing import Generator, List, Optional, Tuple
 
 # Project configuration
 # The name of the branch to push to the remote on releasing.

@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 
 from typing import Generator, List, Optional, Tuple
+import argparse
 import json
 import os
 import re
 import subprocess
+import sys
 
 # Internal
 PACKAGE_PATH = os.path.realpath(os.path.join(os.path.join(os.path.dirname(__file__), '..')))
@@ -90,7 +92,7 @@ def commit_release(version: str) -> None:
     git('tag', '-a', '-m', commit_message, version)
 
 
-def build_release() -> None:
+def build_release(args: argparse.Namespace) -> None:
     """Build the new release locally."""
     history = version_history()
     version = history[-1]
@@ -101,8 +103,12 @@ def build_release() -> None:
     print("Release %s created!" % version)
 
 
-def publish_release(token: str) -> None:
+def publish_release(args: argparse.Namespace) -> None:
     """Publish the new release."""
+    if not args.token:
+        print('The GitHub token must be provided either through argument of GITHUB_TOKEN environment variable.')
+        sys.exit(1)
+
     version = get_message(VERSION_FILE_PATH)
 
     repo_url = 'https://github.com/{}'.format(GITHUB_REPO)
@@ -112,7 +118,7 @@ def publish_release(token: str) -> None:
     git('push', repo_url, 'tag', version)
 
     # publish the release
-    post_url = '/repos/{}/releases?access_token={}'.format(GITHUB_REPO, token)
+    post_url = '/repos/{}/releases?access_token={}'.format(GITHUB_REPO, args.token)
     headers = {
         'User-Agent': 'Sublime Text',
         'Content-type': 'application/json',
@@ -148,20 +154,20 @@ Command Line Interface
 ======================================
 """
 if __name__ == '__main__':
-    import argparse
-
     parser = argparse.ArgumentParser(
-        description='Built and Publish {} Releases'.format(__package__))
-    parser.add_argument(
-        dest='command',
-        help='The command to perform is one of [BUILD|PUBLISH].')
-    parser.add_argument(
+        description='Buils and Publishes {} Releases'.format(__package__))
+    subparsers = parser.add_subparsers(help='Available commands')
+    build_parser = subparsers.add_parser('build', help='Build a release')
+    build_parser.set_defaults(func=build_release)
+    publish_parser = subparsers.add_parser('publish', help='Publish a release')
+    publish_parser.add_argument(
         '--token',
         nargs='?',
         default=os.environ.get('GITHUB_TOKEN', None),
         help='The GitHub access token used for authentication.')
+    publish_parser.set_defaults(func=publish_release)
     args = parser.parse_args()
-    if args.command.lower() == 'build':
-        build_release()
-    elif args.command.lower() == 'publish':
-        publish_release(args.token)
+    if 'func' not in args:
+        parser.print_help()
+    else:
+        args.func(args)

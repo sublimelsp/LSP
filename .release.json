@@ -1,5 +1,5 @@
 {
     "push_branch": "st4000-exploration",
     "publish_repo": "sublimelsp/LSP",
-    "version_file_path": "plugin/core/version.py"
+    "python_version_path": "plugin/core/version.py"
 }

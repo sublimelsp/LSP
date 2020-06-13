@@ -24,7 +24,7 @@ RELEASE_BRANCH = CONFIGURATION['push_branch']
 GITHUB_REPO = CONFIGURATION['publish_repo']
 # The name of the settings file to get the release token from ("github_token" setting)
 SETTINGS = '{}.sublime-settings'.format(__package__)
-VERSION_FILE_PATH = CONFIGURATION['version_file_path']
+PYTHON_VERSION_PATH = CONFIGURATION.get('python_version_path', None)
 
 
 def get_message(fname: str) -> str:
@@ -96,8 +96,10 @@ def build_release(args: argparse.Namespace) -> None:
     """Build the new release locally."""
     history = version_history()
     version = history[-1]
-    version_tuple = parse_version(version)
-    put_message(VERSION_FILE_PATH, '__version__ = {}\n'.format(version_tuple))
+    put_message(os.path.join(PACKAGE_PATH, 'VERSION'), version)
+    if PYTHON_VERSION_PATH:
+        version_tuple = parse_version(version)
+        put_message(PYTHON_VERSION_PATH, '__version__ = {}\n'.format(version_tuple))
     build_messages_json(history)
     commit_release(version)
     print("Release %s created!" % version)
@@ -109,7 +111,7 @@ def publish_release(args: argparse.Namespace) -> None:
         print('The GitHub token must be provided either through argument of GITHUB_TOKEN environment variable.')
         sys.exit(1)
 
-    version = get_message(VERSION_FILE_PATH)
+    version = get_message(os.path.join(PACKAGE_PATH, 'VERSION'))
 
     repo_url = 'https://github.com/{}'.format(GITHUB_REPO)
     # push release branch to server

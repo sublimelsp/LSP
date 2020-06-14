@@ -44,9 +44,8 @@ class WindowConfigManager(object):
         """
         Yields configurations matching with the language's document_selector
         """
-        scope = view2scope(view)
         try:
-            configs = self.match_document(scope)
+            configs = self.match_document(view2scope(view))
             if include_disabled:
                 yield from configs
             else:

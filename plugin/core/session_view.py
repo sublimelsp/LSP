@@ -68,7 +68,8 @@ class SessionView:
                 self.session.send_notification(did_close(self._file_name))  # type: ignore
             if self.session.unregister_session_view(self):
                 session = self.session
-                debounced(session.end_async, 3000, lambda: not any(session.session_views()), async_thread=True)
+                count = session.views_opened
+                debounced(session.end_async, 3000, lambda: session.views_opened == count, async_thread=True)
         self.session.config.erase_view_status(self.view)
         settings = self.view.settings()  # type: sublime.Settings
         # TODO: Language ID must be UNIQUE!

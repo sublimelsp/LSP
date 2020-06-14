@@ -456,6 +456,7 @@ class Session(Client):
         self.state = ClientStates.STARTING
         self.capabilities = DottedDict()
         self.exiting = False
+        self.views_opened = 0
         self._workspace_folders = workspace_folders
         self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
         self._progress = {}  # type: Dict[Any, Dict[str, str]]
@@ -477,6 +478,7 @@ class Session(Client):
 
     def register_session_view(self, sv: SessionViewProtocol) -> None:
         self._session_views.add(sv)
+        self.views_opened += 1
 
     def unregister_session_view(self, sv: SessionViewProtocol) -> bool:
         self._session_views.discard(sv)

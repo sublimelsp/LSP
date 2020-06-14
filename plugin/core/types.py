@@ -1,6 +1,17 @@
 from .collections import DottedDict
-from .typing import Optional, List, Dict, Any, Protocol
+from .logging import debug
+from .typing import Optional, List, Dict, Any, Protocol, Generator
+import contextlib
 import sublime
+import time
+import functools
+
+
+@contextlib.contextmanager
+def runtime(token: str) -> Generator[None, None, None]:
+    t = time.time()
+    yield
+    debug(token, "running time:", int((time.time() - t) * 1000000), "μs")
 
 
 class Settings(object):
@@ -54,6 +65,7 @@ class LanguageConfig(object):
         self.document_selector = document_selector if document_selector else "source.{}".format(self.id)
         self.feature_selector = feature_selector if feature_selector else self.document_selector
 
+    @functools.lru_cache(None)
     def score_document(self, scope: str) -> int:
         return sublime.score_selector(scope, self.document_selector)
 

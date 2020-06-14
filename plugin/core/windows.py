@@ -15,7 +15,6 @@ from .transports import create_transport
 from .types import ClientConfig
 from .types import Settings
 from .types import view2scope
-from .types import ViewLike
 from .types import WindowLike
 from .typing import Optional, Callable, Any, Dict, Deque, Protocol, Generator
 from .views import extract_variables

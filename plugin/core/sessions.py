@@ -727,6 +727,10 @@ class Session(Client):
         self.state = ClientStates.STOPPING
         super().on_transport_close(exit_code, exception)
         self._response_handlers.clear()
-        mgr = self.manager()
-        if mgr:
-            sublime.set_timeout_async(lambda: mgr.on_post_exit_async(self, exit_code, exception))
+
+        def run_async() -> None:
+            mgr = self.manager()
+            if mgr:
+                mgr.on_post_exit_async(self, exit_code, exception)
+
+        sublime.set_timeout_async(run_async)

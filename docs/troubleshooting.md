@@ -2,7 +2,7 @@
 
 Enable LSP logging: In LSP Settings enable the `log_debug` setting.
 Enable server logging: set `log_server` and `log_stderr` to `true`
-Restart Sublime and open the console (``ctrl+` ``) to see the additional logging.
+Run "LSP: Toggle Log Panel" from the command palette. No restart is needed.
 If you believe the issue is with this package, please include the output from the Sublime console in your issue report!
 
 ## Common problems

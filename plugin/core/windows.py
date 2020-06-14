@@ -666,7 +666,7 @@ class PanelLogger(Logger):
         self._manager = ref(manager)
         self._server_name = server_name
 
-    def log(self, message: str, params: Any, log_payload: Optional[bool] = True) -> None:
+    def log(self, message: str, params: Any, log_payload: bool = True) -> None:
 
         def run_on_async_worker_thread() -> None:
             nonlocal message

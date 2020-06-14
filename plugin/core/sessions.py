@@ -358,12 +358,8 @@ class Session(object):
         self.on_request("workspace/configuration", self._handle_request_workspace_configuration)
         self.on_request("client/registerCapability", self._handle_register_capability)
         self.on_request("client/unregisterCapability", self._handle_unregister_capability)
-        if self.config.settings:
-            self.client.send_notification(Notification.didChangeConfiguration({'settings': self.config.settings}))
-
         if self._on_post_initialize:
             self._on_post_initialize(self)
-
         execute_commands = self.get_capability('executeCommandProvider.commands')
         if execute_commands:
             debug("{}: Supported execute commands: {}".format(self.config.name, execute_commands))

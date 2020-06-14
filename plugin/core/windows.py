@@ -560,7 +560,8 @@ class WindowManager(object):
         self._handlers.on_initialized(session.config.name, self._window, session.client)
 
         session.client.send_notification(Notification.initialized())
-
+        if session.config.settings:
+            session.client.send_notification(Notification.didChangeConfiguration({'settings': session.config.settings}))
         if session.has_capability("textDocumentSync"):
             self.documents.add_session(session)
         self._window.status_message("{} initialized".format(session.config.name))

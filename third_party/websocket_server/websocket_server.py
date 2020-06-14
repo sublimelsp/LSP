@@ -92,7 +92,7 @@ class API():
 
 class WebsocketServer(ThreadingMixIn, TCPServer, API):
     """
-	A websocket server waiting for clients to connect.
+    A websocket server waiting for clients to connect.
 
     Args:
         port(int): Port to bind to
@@ -197,7 +197,7 @@ class WebSocketHandler(StreamRequestHandler):
                 self.keep_alive = 0
                 return
             b1, b2 = 0, 0
-        except ValueError as e:
+        except ValueError:
             b1, b2 = 0, 0
 
         fin    = b1 & FIN
@@ -260,7 +260,7 @@ class WebSocketHandler(StreamRequestHandler):
             if not message:
                 logger.warning("Can\'t send message, message is not valid UTF-8")
                 return False
-        elif sys.version_info < (3,0) and (isinstance(message, str) or isinstance(message, unicode)):
+        elif sys.version_info < (3, 0) and (isinstance(message, str) or isinstance(message, unicode)):
             pass
         elif isinstance(message, str):
             pass

@@ -1,4 +1,4 @@
-from ...third_party import WebsocketServer
+from ...third_party import WebsocketServer  # type: ignore
 from .configurations import ConfigManager
 from .configurations import WindowConfigManager
 from .diagnostics import DiagnosticsStorage

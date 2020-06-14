@@ -51,7 +51,6 @@ class MockSettings(Settings):
 
     def __init__(self):
         Settings.__init__(self)
-        self.log_payloads = False
         self.show_view_status = True
 
 

@@ -102,13 +102,6 @@
   // command "LSP: Toggle Panel: Language Servers".
   "log_stderr": false,
 
-  // Show full JSON-RPC requests/responses/notifications in the Language Servers
-  // output panel. Note that if the payload is very large, SublimeText will not
-  // highlight the log line.
-  // This output panel can be toggled from the command palette with the
-  // command "LSP: Toggle Panel: Language Servers".
-  "log_payloads": false,
-
   // User clients configuration can be used to
   // - override single settings of "default_clients"
   // - create add new user specified clients

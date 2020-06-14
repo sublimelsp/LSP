@@ -139,7 +139,6 @@ Add these settings to LSP settings, your Sublime settings, Syntax-specific setti
 * `log_debug` `false` *show debug logging in the sublime console*
 * `log_server` `false` *log language server communication in a dedicated panel*
 * `log_stderr` `false` *show language server stderr output in the console*
-* `log_payloads` `false` *show full JSON-RPC responses in the console*
 
 
 

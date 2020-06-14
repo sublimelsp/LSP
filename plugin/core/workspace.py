@@ -3,11 +3,14 @@ from .protocol import WorkspaceFolder
 from .types import WindowLike
 from .typing import List, Any
 import sublime
+import os
 
 
 def is_subpath_of(file_path: str, potential_subpath: str) -> bool:
-    """ Case insensitive, file paths are not normalized when converted from uri"""
-    return file_path.lower().startswith(potential_subpath.lower())
+    try:
+        return os.path.relpath(os.path.realpath(file_path), os.path.realpath(potential_subpath)) != '..'
+    except ValueError:
+        return False
 
 
 class ProjectFolders(object):

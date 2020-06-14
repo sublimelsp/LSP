@@ -175,9 +175,21 @@ class WindowManager(Manager):
         return self._window  # type: ignore
 
     def sessions(self, view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
-        for session in list(self._sessions):
-            if session.can_handle(view, capability):
-                yield session
+        try:
+            scope = view2scope(view)
+        except IndexError:
+            return
+        sessions = list(self._sessions)
+        if view in self._workspace:
+            for session in sessions:
+                if session.can_handle(view, capability):
+                    yield session
+        else:
+            names = set()  # type: Set[str]
+            for session in sessions:
+                if session.config.name not in names and session.config.match_document(scope):
+                    names.add(session.config.name)
+                    yield session
 
     def get_session(self, config_name: str, file_path: str) -> Optional[Session]:
         return self._find_session(config_name, file_path)

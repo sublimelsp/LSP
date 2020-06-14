@@ -137,9 +137,8 @@ Add these settings to LSP settings, your Sublime settings, Syntax-specific setti
 * `show_symbol_action_links` `false` *show links to symbol actions like go to, references and rename in the hover popup*
 * `disabled_capabilities`, `[]` *Turn off client capabilities (features): "hover", "completion", "documentHighlight", "colorProvider", "signatureHelp"
 * `log_debug` `false` *show debug logging in the sublime console*
-* `log_server` `true` *show server/logMessage notifications from language servers in the console*
+* `log_server` `false` *log language server communication in a dedicated panel*
 * `log_stderr` `false` *show language server stderr output in the console*
-* `log_payloads` `false` *show full JSON-RPC responses in the console*
 
 
 

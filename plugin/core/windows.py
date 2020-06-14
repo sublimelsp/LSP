@@ -411,7 +411,7 @@ class PanelLogger(Logger):
         self._manager = ref(manager)
         self._server_name = server_name
 
-    def log(self, message: str, params: Any, log_payload: bool) -> None:
+    def log(self, message: str, params: Any, log_payload: bool = True) -> None:
 
         def run_on_async_worker_thread() -> None:
             nonlocal message
@@ -424,27 +424,27 @@ class PanelLogger(Logger):
         sublime.set_timeout_async(run_on_async_worker_thread)
 
     def outgoing_response(self, request_id: Any, params: Any) -> None:
-        if not settings.log_debug:
+        if not settings.log_server:
             return
-        self.log(self._format_response(">>>", request_id), params, settings.log_payloads)
+        self.log(self._format_response(">>>", request_id), params)
 
     def outgoing_error_response(self, request_id: Any, error: Error) -> None:
-        if not settings.log_debug:
+        if not settings.log_server:
             return
-        self.log(self._format_response("~~>", request_id), error.to_lsp(), settings.log_payloads)
+        self.log(self._format_response("~~>", request_id), error.to_lsp())
 
     def outgoing_request(self, request_id: int, method: str, params: Any, blocking: bool) -> None:
-        if not settings.log_debug:
+        if not settings.log_server:
             return
         direction = "==>" if blocking else "-->"
-        self.log(self._format_request(direction, method, request_id), params, settings.log_payloads)
+        self.log(self._format_request(direction, method, request_id), params)
 
     def outgoing_notification(self, method: str, params: Any) -> None:
-        if not settings.log_debug:
+        if not settings.log_server:
             return
         # Do not log the payloads if any of these conditions occur because the payloads might contain the entire
         # content of the view.
-        log_payload = settings.log_payloads
+        log_payload = True
         if method.endswith("didOpen"):
             log_payload = False
         elif method.endswith("didChange"):
@@ -457,29 +457,24 @@ class PanelLogger(Logger):
         self.log(self._format_notification(" ->", method), params, log_payload)
 
     def incoming_response(self, request_id: int, params: Any, is_error: bool, blocking: bool) -> None:
-        if not settings.log_debug:
+        if not settings.log_server:
             return
         if is_error:
             direction = "<~~"
         else:
             direction = "<==" if blocking else "<<<"
-        self.log(self._format_response(direction, request_id), params, settings.log_payloads)
-
-    def incoming_error_response(self, request_id: Any, error: Any) -> None:
-        if not settings.log_debug:
-            return
-        self.log(self._format_response('<~~', request_id), error, settings.log_payloads)
+        self.log(self._format_response(direction, request_id), params)
 
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
-        if not settings.log_debug:
+        if not settings.log_server:
             return
-        self.log(self._format_request("<--", method, request_id), params, settings.log_payloads)
+        self.log(self._format_request("<--", method, request_id), params)
 
     def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
-        if not settings.log_debug or method == "window/logMessage":
+        if not settings.log_server or method == "window/logMessage":
             return
         direction = "<? " if unhandled else "<- "
-        self.log(self._format_notification(direction, method), params, settings.log_payloads)
+        self.log(self._format_notification(direction, method), params)
 
     def _format_response(self, direction: str, request_id: Any) -> str:
         return "{} {} {}".format(direction, self._server_name, request_id)

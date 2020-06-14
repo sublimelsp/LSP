@@ -32,10 +32,6 @@ class Logger(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def incoming_error_response(self, request_id: Any, error: Any) -> None:
-        pass
-
-    @abstractmethod
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
         pass
 

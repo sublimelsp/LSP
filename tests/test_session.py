@@ -51,9 +51,6 @@ class MockLogger(Logger):
     def incoming_response(self, request_id: int, params: Any, is_error: bool, blocking: bool) -> None:
         pass
 
-    def incoming_error_response(self, request_id: Any, error: Any) -> None:
-        pass
-
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
         pass
 

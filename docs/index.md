@@ -44,7 +44,6 @@ Here is an example of the `LSP.sublime-settings` file with configurations for th
 {
   // General settings
   "log_stderr": true,
-  "log_payloads": true,
 
   // Language server configurations
   "clients": {
@@ -64,7 +63,6 @@ Some language servers support multiple languages, which can be specified in the 
 {
   // General settings
   "log_stderr": true,
-  "log_payloads": true,
 
   // Language server configurations
   "clients": {

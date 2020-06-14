@@ -25,10 +25,9 @@ class Settings(object):
         self.show_symbol_action_links = False
         self.show_references_in_quick_panel = False
         self.disabled_capabilities = []  # type: List[str]
-        self.log_debug = True
-        self.log_server = True
+        self.log_debug = False
+        self.log_server = False
         self.log_stderr = False
-        self.log_payloads = False
         self.lsp_format_on_save = False
         self.lsp_code_actions_on_save = {}  # type: Dict[str, bool]
         self.code_action_on_save_timeout_ms = 2000

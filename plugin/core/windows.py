@@ -720,11 +720,6 @@ class PanelLogger(Logger):
             direction = "<==" if blocking else "<<<"
         self.log(self._format_response(direction, request_id), params, settings.log_payloads)
 
-    def incoming_error_response(self, request_id: Any, error: Any) -> None:
-        if not settings.log_server:
-            return
-        self.log(self._format_response('<~~', request_id), error, settings.log_payloads)
-
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
         if not settings.log_server:
             return

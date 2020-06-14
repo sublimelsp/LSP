@@ -44,7 +44,7 @@ class TransportCallbacks(Protocol):
 class JsonRpcTransport(Transport):
 
     def __init__(self, name: str, process: subprocess.Popen, socket: Optional[socket.socket], reader: IO[bytes],
-                 writer: IO[bytes], stderr: IO[bytes], callback_object: TransportCallbacks) -> None:
+                 writer: IO[bytes], stderr: Optional[IO[bytes]], callback_object: TransportCallbacks) -> None:
         self._process = process
         self._socket = socket
         self._reader = reader

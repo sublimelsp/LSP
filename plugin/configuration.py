@@ -71,4 +71,4 @@ class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
         if index > -1:
             config_name = self._items[index][0]
             wm = windows.lookup(self.window)
-            sublime.set_timeout_async(wm.disable_config_async(config_name))
+            sublime.set_timeout_async(lambda: wm.disable_config_async(config_name))

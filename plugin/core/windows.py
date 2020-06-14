@@ -679,23 +679,23 @@ class PanelLogger(Logger):
         sublime.set_timeout_async(run_on_async_worker_thread)
 
     def outgoing_response(self, request_id: Any, params: Any) -> None:
-        if not settings.log_debug:
+        if not settings.log_server:
             return
         self.log(self._format_response(">>>", request_id), params, settings.log_payloads)
 
     def outgoing_error_response(self, request_id: Any, error: Error) -> None:
-        if not settings.log_debug:
+        if not settings.log_server:
             return
         self.log(self._format_response("~~>", request_id), error.to_lsp(), settings.log_payloads)
 
     def outgoing_request(self, request_id: int, method: str, params: Any, blocking: bool) -> None:
-        if not settings.log_debug:
+        if not settings.log_server:
             return
         direction = "==>" if blocking else "-->"
         self.log(self._format_request(direction, method, request_id), params, settings.log_payloads)
 
     def outgoing_notification(self, method: str, params: Any) -> None:
-        if not settings.log_debug:
+        if not settings.log_server:
             return
         # Do not log the payloads if any of these conditions occur because the payloads might contain the entire
         # content of the view.
@@ -712,7 +712,7 @@ class PanelLogger(Logger):
         self.log(self._format_notification(" ->", method), params, log_payload)
 
     def incoming_response(self, request_id: int, params: Any, is_error: bool, blocking: bool) -> None:
-        if not settings.log_debug:
+        if not settings.log_server:
             return
         if is_error:
             direction = "<~~"
@@ -721,17 +721,17 @@ class PanelLogger(Logger):
         self.log(self._format_response(direction, request_id), params, settings.log_payloads)
 
     def incoming_error_response(self, request_id: Any, error: Any) -> None:
-        if not settings.log_debug:
+        if not settings.log_server:
             return
         self.log(self._format_response('<~~', request_id), error, settings.log_payloads)
 
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
-        if not settings.log_debug:
+        if not settings.log_server:
             return
         self.log(self._format_request("<--", method, request_id), params, settings.log_payloads)
 
     def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
-        if not settings.log_debug or method == "window/logMessage":
+        if not settings.log_server or method == "window/logMessage":
             return
         direction = "<? " if unhandled else "<- "
         self.log(self._format_notification(direction, method), params, settings.log_payloads)

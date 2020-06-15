@@ -1,0 +1,5 @@
+{
+    "push_branch": "master",
+    "publish_repo": "sublimelsp/LSP",
+    "python_version_path": "plugin/__init__.py"
+}

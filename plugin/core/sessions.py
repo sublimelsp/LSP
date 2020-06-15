@@ -659,7 +659,7 @@ class Session(Client):
     def m_client_registerCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/registerCapability request"""
 
-        def run():
+        def run() -> None:
             registrations = params["registrations"]
             for registration in registrations:
                 method = registration["method"]

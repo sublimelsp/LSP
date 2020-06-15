@@ -8,7 +8,9 @@ import os
 
 def is_subpath_of(file_path: str, potential_subpath: str) -> bool:
     try:
-        return os.path.relpath(os.path.realpath(file_path), os.path.realpath(potential_subpath)) != '..'
+        file_path = os.path.realpath(file_path)
+        potential_subpath = os.path.realpath(potential_subpath)
+        return not os.path.relpath(file_path, potential_subpath).startswith("..")
     except ValueError:
         return False
 

@@ -557,6 +557,7 @@ class Session(Client):
         self.state = ClientStates.READY
         if self._plugin_class is not None:
             self._plugin = self._plugin_class(weakref.ref(self))
+        self.send_notification(Notification.initialized())
         if self.config.settings:
             self.send_notification(did_change_configuration(self.config.settings))
         execute_commands = self.get_capability('executeCommandProvider.commands')

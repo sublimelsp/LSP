@@ -5,7 +5,7 @@ from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
 from .protocol import Error
-from .protocol import Notification, TextDocumentSyncKindNone, TextDocumentSyncKindFull
+from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindFull
 from .rpc import Logger
 from .sessions import get_plugin
 from .sessions import Manager
@@ -534,7 +534,6 @@ class WindowManager(Manager):
 
     def on_post_initialize(self, session: Session) -> None:
         with self._initialization_lock:
-            session.send_notification(Notification.initialized())
             document_sync = session.capabilities.get("textDocumentSync")
             if document_sync:
                 self.documents.add_session(session)

@@ -5,7 +5,6 @@ from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
 from .protocol import Error
-from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindFull
 from .rpc import Logger
 from .sessions import get_plugin
 from .sessions import Manager

@@ -9,7 +9,6 @@ from .rpc import Logger
 from .settings import client_configs
 from .transports import Transport
 from .types import ClientConfig, ClientStates
-from .types import view2scope
 from .typing import Dict, Any, Optional, List, Tuple, Generator, Type, Protocol
 from .version import __version__
 from .views import COMPLETION_KINDS

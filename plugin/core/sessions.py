@@ -9,7 +9,9 @@ from .rpc import Logger
 from .settings import client_configs
 from .transports import Transport
 from .types import ClientConfig, ClientStates
+from .types import view2scope
 from .typing import Dict, Any, Optional, List, Tuple, Generator, Type, Protocol
+from .version import __version__
 from .views import COMPLETION_KINDS
 from .views import did_change_configuration
 from .views import SYMBOL_KINDS
@@ -19,9 +21,6 @@ from weakref import WeakSet
 import os
 import sublime
 import weakref
-
-
-__version__ = (0, 11, 0)
 
 
 class Manager(metaclass=ABCMeta):
@@ -593,6 +592,7 @@ class Session(Client):
         self.state = ClientStates.READY
         if self._plugin_class is not None:
             self._plugin = self._plugin_class(weakref.ref(self))
+        self.send_notification(Notification.initialized())
         if self.config.settings:
             self.send_notification(did_change_configuration(self.config.settings))
         execute_commands = self.get_capability('executeCommandProvider.commands')

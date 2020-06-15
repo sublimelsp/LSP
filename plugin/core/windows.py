@@ -5,7 +5,7 @@ from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
 from .protocol import Error
-from .protocol import Notification
+from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindFull
 from .rpc import Logger
 from .sessions import get_plugin
 from .sessions import Manager
@@ -318,7 +318,6 @@ class WindowManager(Manager):
         return candidate
 
     def on_post_initialize(self, session: Session) -> None:
-        session.send_notification(Notification.initialized())
         sublime.set_timeout_async(self._dequeue_listener_async)
 
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:

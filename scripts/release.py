@@ -113,7 +113,7 @@ def publish_release(args: argparse.Namespace) -> None:
 
     version = get_message(os.path.join(PACKAGE_PATH, 'VERSION'))
 
-    repo_url = 'https://github.com/{}'.format(GITHUB_REPO)
+    repo_url = 'git@github.com:{}'.format(GITHUB_REPO)
     # push release branch to server
     git('push', repo_url, RELEASE_BRANCH)
     # push tags to server

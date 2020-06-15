@@ -553,12 +553,15 @@ class Session(Client):
 
     def _maybe_send_did_change_configuration(self) -> None:
         if self.config.settings:
-            variables = extract_variables(self.window)
-            if self._plugin_class is not None:
-                extra_vars = self._plugin_class.additional_variables()
-                if extra_vars:
-                    variables.update(extra_vars)
-            self.send_notification(did_change_configuration(self.config.settings, variables))
+            self.send_notification(did_change_configuration(self.config.settings, self._template_variables()))
+
+    def _template_variables(self) -> Dict[str, str]:
+        variables = extract_variables(self.window)
+        if self._plugin_class is not None:
+            extra_vars = self._plugin_class.additional_variables()
+            if extra_vars:
+                variables.update(extra_vars)
+        return variables
 
     def _handle_initialize_result(self, result: Any) -> None:
         self.capabilities.assign(result.get('capabilities', dict()))
@@ -601,7 +604,7 @@ class Session(Client):
         requested_items = params.get("items") or []
         for requested_item in requested_items:
             items.append(self.config.settings.get(requested_item.get('section') or None))
-        self.send_response(Response(request_id, items))
+        self.send_response(Response(request_id, sublime.expand_variables(items, self._template_variables())))
 
     def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:
         """handles the workspace/applyEdit request"""

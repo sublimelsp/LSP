@@ -314,11 +314,10 @@ class Range(object):
 
         :returns: The extended region (itself)
         """
-        if self.intersects(rge):
-            if rge.contains(self.start):
-                self.start = rge.start
-            if rge.contains(self.end):
-                self.end = rge.end
+        if rge.contains(self.start):
+            self.start = rge.start
+        if rge.contains(self.end):
+            self.end = rge.end
         return self
 
 

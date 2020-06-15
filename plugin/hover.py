@@ -6,7 +6,7 @@ from html import escape
 from .code_actions import actions_manager, run_code_action_or_command
 from .code_actions import CodeActionOrCommand
 from .core.popups import popups
-from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation, Point
+from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation
 from .core.registry import LspTextCommand
 from .core.registry import LSPViewEventListener
 from .core.registry import windows

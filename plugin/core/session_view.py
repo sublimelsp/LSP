@@ -38,7 +38,7 @@ class SessionView:
         if not self._file_name:
             raise ValueError("missing filename")
         self._pending_buffer = None  # type: Optional[PendingBuffer]
-        session.register_session_view(self)
+        session.register_session_view_async(self)
         session.config.set_view_status(self.view, "")
         settings = self.view.settings()
         # TODO: Language ID must be UNIQUE!
@@ -66,7 +66,7 @@ class SessionView:
         if not self.session.exiting:
             if self.view.is_primary() and self.session.should_notify_did_close():
                 self.session.send_notification(did_close(self._file_name))  # type: ignore
-            if self.session.unregister_session_view(self):
+            if self.session.unregister_session_view_async(self):
                 session = self.session
                 count = session.views_opened
                 debounced(session.end_async, 3000, lambda: session.views_opened == count, async_thread=True)

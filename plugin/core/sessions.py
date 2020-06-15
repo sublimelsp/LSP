@@ -475,15 +475,18 @@ class Session(Client):
                 return attr
         raise AttributeError(name)
 
-    def register_session_view(self, sv: SessionViewProtocol) -> None:
+    def register_session_view_async(self, sv: SessionViewProtocol) -> None:
         self._session_views.add(sv)
         self.views_opened += 1
 
-    def unregister_session_view(self, sv: SessionViewProtocol) -> bool:
+    def unregister_session_view_async(self, sv: SessionViewProtocol) -> bool:
         self._session_views.discard(sv)
         return not self._session_views
 
-    def session_views(self) -> Generator[SessionViewProtocol, None, None]:
+    def session_views_async(self) -> Generator[SessionViewProtocol, None, None]:
+        """
+        It is only safe to iterate over this in the async thread
+        """
         yield from self._session_views
 
     def can_handle(self, view: sublime.View, capability: Optional[str] = None) -> bool:
@@ -655,32 +658,40 @@ class Session(Client):
 
     def m_client_registerCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/registerCapability request"""
-        registrations = params["registrations"]
-        for registration in registrations:
-            method = registration["method"]
-            capability_path, registration_path = method_to_capability(method)
-            debug("{}: registering capability:".format(self.config.name), capability_path)
-            self.capabilities.set(capability_path, registration.get("registerOptions", {}))
-            self.capabilities.set(registration_path, registration["id"])
-            toplevel_key = capability_path.split('.')[0]
-            if toplevel_key.endswith('Provider'):
-                for sv in self.session_views():
-                    sv.register_capability(toplevel_key)
-        self.send_response(Response(request_id, None))
+
+        def run():
+            registrations = params["registrations"]
+            for registration in registrations:
+                method = registration["method"]
+                capability_path, registration_path = method_to_capability(method)
+                debug("{}: registering capability:".format(self.config.name), capability_path)
+                self.capabilities.set(capability_path, registration.get("registerOptions", {}))
+                self.capabilities.set(registration_path, registration["id"])
+                toplevel_key = capability_path.split('.')[0]
+                if toplevel_key.endswith('Provider'):
+                    for sv in self.session_views_async():
+                        sv.register_capability(toplevel_key)
+            self.send_response(Response(request_id, None))
+
+        sublime.set_timeout_async(run)
 
     def m_client_unregisterCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/unregisterCapability request"""
-        unregistrations = params["unregisterations"]  # typo in the official specification
-        for unregistration in unregistrations:
-            capability_path, registration_path = method_to_capability(unregistration["method"])
-            debug("{}: unregistering capability:".format(self.config.name), capability_path)
-            self.capabilities.remove(capability_path)
-            self.capabilities.remove(registration_path)
-            toplevel_key = capability_path.split('.')[0]
-            if toplevel_key.endswith('Provider'):
-                for sv in self.session_views():
-                    sv.unregister_capability(toplevel_key)
-        self.send_response(Response(request_id, None))
+
+        def run() -> None:
+            unregistrations = params["unregisterations"]  # typo in the official specification
+            for unregistration in unregistrations:
+                capability_path, registration_path = method_to_capability(unregistration["method"])
+                debug("{}: unregistering capability:".format(self.config.name), capability_path)
+                self.capabilities.remove(capability_path)
+                self.capabilities.remove(registration_path)
+                toplevel_key = capability_path.split('.')[0]
+                if toplevel_key.endswith('Provider'):
+                    for sv in self.session_views_async():
+                        sv.unregister_capability(toplevel_key)
+            self.send_response(Response(request_id, None))
+
+        sublime.set_timeout_async(run)
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
         """handles the window/workDoneProgress/create request"""
@@ -726,7 +737,7 @@ class Session(Client):
             return
         self.exiting = True
         self._plugin = None
-        for sv in self.session_views():
+        for sv in self.session_views_async():
             sv.shutdown_async()
         self.capabilities.clear()
         self.state = ClientStates.STOPPING

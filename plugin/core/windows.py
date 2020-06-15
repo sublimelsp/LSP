@@ -187,8 +187,9 @@ class WindowManager(Manager):
             names = set()  # type: Set[str]
             for session in sessions:
                 if session.config.name not in names and session.config.match_document(scope):
-                    names.add(session.config.name)
-                    yield session
+                    if capability is None or session.has_capability(capability):
+                        names.add(session.config.name)
+                        yield session
 
     def get_session(self, config_name: str, file_path: str) -> Optional[Session]:
         return self._find_session(config_name, file_path)

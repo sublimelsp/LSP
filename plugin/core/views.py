@@ -279,8 +279,10 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
     })
 
 
-def did_change_configuration(d: DottedDict) -> Notification:
-    return Notification.didChangeConfiguration({"settings": d.get()})
+def did_change_configuration(d: DottedDict, variables: Dict[str, str]) -> Notification:
+    settings = d.get()
+    settings = sublime.expand_variables(settings, variables)
+    return Notification.didChangeConfiguration({"settings": settings})
 
 
 def selection_range_params(view: sublime.View) -> Dict[str, Any]:

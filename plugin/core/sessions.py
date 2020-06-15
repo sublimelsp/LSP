@@ -14,6 +14,7 @@ from .typing import Dict, Any, Optional, List, Tuple, Generator, Type
 from .version import __version__
 from .views import COMPLETION_KINDS
 from .views import did_change_configuration
+from .views import extract_variables
 from .views import SYMBOL_KINDS
 from .workspace import is_subpath_of
 from abc import ABCMeta, abstractmethod
@@ -550,6 +551,18 @@ class Session(Client):
     def _supports_workspace_folders(self) -> bool:
         return self.has_capability("workspace.workspaceFolders.supported")
 
+    def _maybe_send_did_change_configuration(self) -> None:
+        if self.config.settings:
+            self.send_notification(did_change_configuration(self.config.settings, self._template_variables()))
+
+    def _template_variables(self) -> Dict[str, str]:
+        variables = extract_variables(self.window)
+        if self._plugin_class is not None:
+            extra_vars = self._plugin_class.additional_variables()
+            if extra_vars:
+                variables.update(extra_vars)
+        return variables
+
     def _handle_initialize_result(self, result: Any) -> None:
         self.capabilities.assign(result.get('capabilities', dict()))
         if self._workspace_folders and not self._supports_workspace_folders():
@@ -558,8 +571,7 @@ class Session(Client):
         if self._plugin_class is not None:
             self._plugin = self._plugin_class(weakref.ref(self))
         self.send_notification(Notification.initialized())
-        if self.config.settings:
-            self.send_notification(did_change_configuration(self.config.settings))
+        self._maybe_send_did_change_configuration()
         execute_commands = self.get_capability('executeCommandProvider.commands')
         if execute_commands:
             debug("{}: Supported execute commands: {}".format(self.config.name, execute_commands))
@@ -592,7 +604,7 @@ class Session(Client):
         requested_items = params.get("items") or []
         for requested_item in requested_items:
             items.append(self.config.settings.get(requested_item.get('section') or None))
-        self.send_response(Response(request_id, items))
+        self.send_response(Response(request_id, sublime.expand_variables(items, self._template_variables())))
 
     def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:
         """handles the workspace/applyEdit request"""

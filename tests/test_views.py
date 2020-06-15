@@ -127,8 +127,8 @@ class ViewsTest(DeferrableTestCase):
         settings.set("a.b.x", 1)
         settings.set("a.b.y", True)
         settings.set("a.c.a", 1234)
-        settings.set("a.c.b", 4321)
-        notification = did_change_configuration(settings)
+        settings.set("a.c.b", "${foo} bar ${baz}")
+        notification = did_change_configuration(settings, {"foo": "X", "baz": "Y"})
         self.assertEqual(notification.params, {
             "settings": {
                 "a": {
@@ -138,7 +138,7 @@ class ViewsTest(DeferrableTestCase):
                     },
                     "c": {
                         "a": 1234,
-                        "b": 4321
+                        "b": "X bar Y"
                     }
                 }
             }

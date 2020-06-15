@@ -512,7 +512,7 @@ class WindowManager(Manager):
     def _create_loggers(self, config_name: str) -> List[Logger]:
         logger_map = {
             "panel": PanelLogger,
-            "websocket": RemoteLogger,
+            "remote": RemoteLogger,
         }
         loggers = []
         for logger_type in settings.log_server:

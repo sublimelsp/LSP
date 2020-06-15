@@ -6,11 +6,12 @@ from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindIncremental,
 from .protocol import WorkspaceFolder, Request, Notification, Response
 from .rpc import Client
 from .rpc import Logger
+from .rpc import method2attr
 from .settings import client_configs
 from .transports import Transport
 from .types import ClientConfig, ClientStates
 from .types import view2scope
-from .typing import Dict, Any, Optional, List, Tuple, Generator, Type
+from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator, Type
 from .version import __version__
 from .views import COMPLETION_KINDS
 from .views import did_change_configuration
@@ -392,6 +393,33 @@ class AbstractPlugin(metaclass=ABCMeta):
                                   self.weaksession(), but don't hold on to that reference.
         """
         self.weaksession = weaksession
+
+    def register_notification_handler(self, method: str, handler: Callable[[Any], None]) -> None:
+        """
+        Registers a handler for specified notification type.
+
+        :param      method:   The method name
+        :param      handler:  The function to handle notification.
+        """
+        setattr(self, method2attr(method), handler)
+
+    def register_request_handler(self, method: str, handler: Callable[[Any, Callable[[Any], None]], None]) -> None:
+        """
+        Registers a handler for specified request type.
+
+        :param      method:   The request name
+        :param      handler:  The handler function receiving the payload and a function that triggers
+                              response with provided payload.
+        """
+        def responder(request_id: Any, result: Any) -> None:
+            session = self.weaksession()
+            if session:
+                session.send_response(Response(request_id, result))
+
+        def on_request(params: Any, request_id: Any) -> None:
+            handler(params, lambda result: responder(request_id, result))
+
+        setattr(self, method2attr(method), on_request)
 
 
 _plugins = {}  # type: Dict[str, Type[AbstractPlugin]]

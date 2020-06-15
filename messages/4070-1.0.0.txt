@@ -1,0 +1,12 @@
+=> 4070-1.0.0
+
+- Fix: send initialized notification first (Raoul Wols)
+- Make log_server setting work again and remove log_payloads (#1120) (Rafał Chłodnicki)
+- Support selection ranges when requesting code actions (#1109) (Rafał Chłodnicki)
+- Update formatting options for 3.15 (Raoul Wols)
+- Use the range formatter if there's no full range formatter (#1111) (Raoul Wols)
+- Fix IndexError when diagnostic message string is empty (syntheorem)
+- Load "settings" from base file for plugin authors (#1082) (Raoul Wols)
+- Fix white space within links not being clickable (#1075) (Rafał Chłodnicki)
+- Fix material color scheme applying padding to the HTML element and causing
+  the box to not be centered (#1070) (Предраг Николић)

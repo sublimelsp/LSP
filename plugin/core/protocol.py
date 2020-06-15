@@ -305,6 +305,22 @@ class Range(object):
         return self.contains(rge.start) or self.contains(rge.end) or \
             rge.contains(self.start) or rge.contains(self.end)
 
+    def extend(self, rge: 'Range') -> 'Range':
+        """
+        Extends current range to fully include another range. If another range is already fully
+        enclosed withing current range then nothing changes.
+
+        :param    rge: The region to extend current with
+
+        :returns: The extended region (itself)
+        """
+        if self.intersects(rge):
+            if rge.contains(self.start):
+                self.start = rge.start
+            if rge.contains(self.end):
+                self.end = rge.end
+        return self
+
 
 class Location(object):
     def __init__(self, file_path: str, range: Range) -> None:

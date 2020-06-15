@@ -257,6 +257,30 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         self.assertEquals(annotations_range[0].a, 3)
         self.assertEquals(annotations_range[0].b, 0)
 
+    def test_extends_range_to_include_diagnostics(self) -> Generator:
+        def handle_response(actions_by_config: CodeActionsByConfigName) -> None:
+            pass
+        self.insert_characters('x diagnostic')
+        yield from self.await_message("textDocument/didChange")
+        yield from self.await_client_notification(
+            "textDocument/publishDiagnostics",
+            create_test_diagnostics([
+                ('diagnostic word', Range(Point(0, 2), Point(0, 12))),
+                ('all content', Range(Point(0, 0), Point(0, 12))),
+            ])
+        )
+        self.view.sel().clear()
+        self.view.sel().add(sublime.Region(0, 5))
+        self._trigger_on_selection_modified_async()
+        yield 100
+        params = yield from self.await_message('textDocument/codeAction')
+        # Range should be extended to include range of all intersecting diagnostics
+        self.assertEquals(params['range']['start']['line'], 0)
+        self.assertEquals(params['range']['start']['character'], 0)
+        self.assertEquals(params['range']['end']['line'], 0)
+        self.assertEquals(params['range']['end']['character'], 12)
+        self.assertEquals(len(params['context']['diagnostics']), 2)
+
     def _trigger_on_selection_modified_async(self):
         # "on_selection_modified_async" doesn't trigger when modifying selection programatically.
         # Don't know of better way to trigger listener then.

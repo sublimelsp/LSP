@@ -6,13 +6,14 @@ from html import escape
 from .code_actions import actions_manager, run_code_action_or_command
 from .code_actions import CodeActionOrCommand
 from .core.popups import popups
-from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation, Point
+from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation
 from .core.registry import LspTextCommand
 from .core.registry import LSPViewEventListener
 from .core.registry import windows
 from .core.settings import settings
 from .core.typing import List, Optional, Any, Dict
 from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from .core.views import offset_to_point
 from .core.views import make_link
 from .core.views import text_document_position_params
 from .diagnostics import filter_by_point, view_diagnostics
@@ -84,8 +85,8 @@ class LspHoverCommand(LspTextCommand):
         if self.is_likely_at_symbol(hover_point):
             self.request_symbol_hover(hover_point)
 
-        self._diagnostics_by_config = filter_by_point(view_diagnostics(self.view),
-                                                      Point(*self.view.rowcol(hover_point)))
+        request_point = offset_to_point(self.view, hover_point)
+        self._diagnostics_by_config, _ = filter_by_point(view_diagnostics(self.view), request_point)
         if self._diagnostics_by_config:
             self.request_code_actions(hover_point)
             self.request_show_hover(hover_point)
@@ -99,6 +100,7 @@ class LspHoverCommand(LspTextCommand):
                 lambda response: self.handle_response(response, point))
 
     def request_code_actions(self, point: int) -> None:
+        # TODO: Remove "request_for_point" and cache code action requests for all actions_manager endpoints
         actions_manager.request_for_point(self.view, lambda response: self.handle_code_actions(response, point), point)
 
     def handle_code_actions(self, responses: Dict[str, List[CodeActionOrCommand]], point: int) -> None:

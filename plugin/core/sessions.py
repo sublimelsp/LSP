@@ -428,7 +428,7 @@ def get_plugin(name: str) -> Optional[Type[AbstractPlugin]]:
 
 class Session(Client):
 
-    def __init__(self, manager: Manager, loggers: List[Logger], workspace_folders: List[WorkspaceFolder],
+    def __init__(self, manager: Manager, logger: Logger, workspace_folders: List[WorkspaceFolder],
                  config: ClientConfig, plugin_class: Optional[Type[AbstractPlugin]]) -> None:
         self.config = config
         self.manager = weakref.ref(manager)
@@ -439,7 +439,7 @@ class Session(Client):
         self._progress = {}  # type: Dict[Any, Dict[str, str]]
         self._plugin_class = plugin_class
         self._plugin = None  # type: Optional[AbstractPlugin]
-        super().__init__(loggers)
+        super().__init__(logger)
 
     def __getattr__(self, name: str) -> Any:
         """

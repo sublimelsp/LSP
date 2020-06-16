@@ -485,7 +485,7 @@ class WindowManager(Manager):
                 if cannot_start_reason:
                     self._window.status_message(cannot_start_reason)
                     return
-            session = Session(self, self._create_loggers(config.name), workspace_folders, config, plugin_class)
+            session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
             cwd = workspace_folders[0].path if workspace_folders else None
             variables = extract_variables(self._window)  # type: ignore
             if plugin_class is not None:
@@ -509,7 +509,7 @@ class WindowManager(Manager):
             self._configs.disable_temporarily(config.name)
             self._sublime.message_dialog(message)
 
-    def _create_loggers(self, config_name: str) -> List[Logger]:
+    def _create_logger(self, config_name: str) -> Logger:
         logger_map = {
             "panel": PanelLogger,
             "remote": RemoteLogger,
@@ -519,8 +519,16 @@ class WindowManager(Manager):
             if logger_type not in logger_map:
                 debug("Invalid logger type ({}) specified for log_server settings".format(logger_type))
                 continue
-            loggers.append(logger_map[logger_type](self, config_name))
-        return loggers
+            loggers.append(logger_map[logger_type])
+        if len(loggers) == 0:
+            return RouterLogger()  # logs nothing
+        elif len(loggers) == 1:
+            return loggers[0](self, config_name)
+        else:
+            router_logger = RouterLogger()
+            for logger in loggers:
+                router_logger.append(logger(self, config_name))
+            return router_logger
 
     def handle_message_request(self, session: Session, params: Any, request_id: Any) -> None:
         handler = MessageRequestHandler(self._window.active_view(), session, request_id, params,  # type: ignore
@@ -896,3 +904,36 @@ class RemoteLogger(Logger):
             RemoteLogger._ws_server.send_message_to_all(json_data)
         else:
             debug('Failed to broadcast a remote log message')
+
+
+class RouterLogger(Logger):
+    def __init__(self) -> None:
+        self._loggers = []  # type: List[Logger]
+
+    def append(self, logger: Logger) -> None:
+        self._loggers.append(logger)
+
+    def outgoing_response(self, *args: Any, **kwargs: Any) -> None:
+        self._foreach("outgoing_response", *args, **kwargs)
+
+    def outgoing_error_response(self, *args: Any, **kwargs: Any) -> None:
+        self._foreach("outgoing_error_response", *args, **kwargs)
+
+    def outgoing_request(self, *args: Any, **kwargs: Any) -> None:
+        self._foreach("outgoing_request", *args, **kwargs)
+
+    def outgoing_notification(self, *args: Any, **kwargs: Any) -> None:
+        self._foreach("outgoing_notification", *args, **kwargs)
+
+    def incoming_response(self, *args: Any, **kwargs: Any) -> None:
+        self._foreach("incoming_response", *args, **kwargs)
+
+    def incoming_request(self, *args: Any, **kwargs: Any) -> None:
+        self._foreach("incoming_request", *args, **kwargs)
+
+    def incoming_notification(self, *args: Any, **kwargs: Any) -> None:
+        self._foreach("incoming_notification", *args, **kwargs)
+
+    def _foreach(self, method: str, *args: Any, **kwargs: Any) -> None:
+        for logger in self._loggers:
+            getattr(logger, method)(*args, **kwargs)

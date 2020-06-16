@@ -243,7 +243,8 @@ class DiagnosticViewRegions(DiagnosticsUpdateWalk):
 
     def begin_file(self, file_name: str) -> None:
         # TODO: would be nice if walk could skip this updater
-        if os.path.samefile(file_name, self._view.file_name()):
+        file = self._view.file_name()
+        if file and os.path.samefile(file_name, file):
             self._relevant_file = True
 
     def diagnostic(self, diagnostic: Diagnostic) -> None:

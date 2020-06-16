@@ -9,12 +9,11 @@ from .core.settings import settings
 from .core.typing import Any, List, Dict, Callable, Optional, Union, Tuple, Mapping, TypedDict
 from .core.views import entire_content_range
 from .core.views import make_link
-from .core.views import offset_to_point
 from .core.views import region_to_range
 from .core.views import text_document_code_action_params
 from .core.windows import debounced
-from .diagnostics import filter_by_point, view_diagnostics
 from .diagnostics import filter_by_range
+from .diagnostics import view_diagnostics
 import sublime
 import sublime_plugin
 

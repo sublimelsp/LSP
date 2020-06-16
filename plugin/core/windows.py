@@ -121,7 +121,7 @@ class WindowManager(Manager):
 
     def _dequeue_listener_async(self) -> None:
         listener = None  # type: Optional[AbstractViewListener]
-        if self._new_listener is not None and self._new_listener.view.is_valid():
+        if self._new_listener is not None:
             listener = self._new_listener
             # debug("re-checking listener", listener)
             self._new_listener = None
@@ -138,10 +138,13 @@ class WindowManager(Manager):
                 self._new_session = None
                 return
         if self._new_session:
-            # debug("adding new session", self._new_session.config.name)
             self._sessions.add(self._new_session)
         self._publish_sessions_to_listener_async(listener)
-        self._new_session = None
+        if self._new_session:
+            if not any(self._new_session.session_views_async()):
+                self._sessions.discard(self._new_session)
+                self._new_session.end_async()
+            self._new_session = None
         config = self._needed_config(listener.view)
         if config:
             # debug("found new config for listener", listener)
@@ -153,10 +156,7 @@ class WindowManager(Manager):
             return self._dequeue_listener_async()
 
     def _publish_sessions_to_listener_async(self, listener: AbstractViewListener) -> None:
-        try:
-            scope = view2scope(listener.view)
-        except IndexError:
-            return
+        scope = view2scope(listener.view)
         if listener.view in self._workspace:
             for session in self._sessions:
                 if session.can_handle(listener.view):
@@ -381,11 +381,10 @@ class WindowRegistry(object):
         self._settings = settings
 
     def lookup(self, window: sublime.Window) -> WindowManager:
-        return self._windows[window.id()]
-
-    def add(self, window: sublime.Window) -> WindowManager:
         if not self._settings:
             raise RuntimeError("no settings")
+        if window.id() in self._windows:
+            return self._windows[window.id()]
         workspace = ProjectFolders(window)  # type: ignore
         window_configs = self._configs.for_window(window)  # type: ignore
         diagnostics_ui = self._diagnostics_ui_class(window) if self._diagnostics_ui_class else None

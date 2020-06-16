@@ -137,12 +137,19 @@ def plugin_unloaded() -> None:
 
 
 class Listener(sublime_plugin.EventListener):
-    def on_init(self, _: List[sublime.View]) -> None:
+    def _register_windows(self) -> None:
         for w in sublime.windows():
-            try:
-                windows.lookup(w)
-            except KeyError:
-                windows.add(w)
+            windows.lookup(w)
+
+    def __del__(self) -> None:
+        for w in sublime.windows():
+            windows.discard(w)
+
+    def on_init(self, views: List[sublime.View]) -> None:
+        for view in views:
+            window = view.window()
+            if window:
+                windows.lookup(window)
 
     def on_exit(self) -> None:
         kill_all_subprocesses()
@@ -151,7 +158,7 @@ class Listener(sublime_plugin.EventListener):
         windows.lookup(w).on_load_project_async()
 
     def on_new_window(self, w: sublime.Window) -> None:
-        windows.add(w)
+        windows.lookup(w)
 
     def on_pre_close_window(self, w: sublime.Window) -> None:
         windows.discard(w)

@@ -28,7 +28,7 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         # Revisit this once we're on ST4.
         for listener in view_event_listeners[self.view.id()]:
             if isinstance(listener, DocumentSyncListener):
-                sublime.set_timeout(listener.on_activated)
+                sublime.set_timeout_async(listener.on_activated_async)
                 return True
         return False
 
@@ -47,6 +47,7 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         }
         self.config2 = deepcopy(self.config1)
         self.config2.name = "TEST-2"
+        self.config2.status_key = "lsp_TEST-2"
         self.wm = windows.lookup(self.window)
         add_config(self.config1)
         add_config(self.config2)
@@ -87,11 +88,15 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         yield from self.await_message("textDocument/didClose")
 
     def doCleanups(self) -> Generator:
-        self.wm.end_config_sessions(self.config1.name)
-        self.wm.end_config_sessions(self.config2.name)
+        try:
+            close_test_view(self.view)
+        except Exception:
+            pass
         if self.session1:
+            sublime.set_timeout_async(self.session1.end_async)
             yield lambda: self.session1.state == ClientStates.STOPPING
         if self.session2:
+            sublime.set_timeout_async(self.session2.end_async)
             yield lambda: self.session2.state == ClientStates.STOPPING
         try:
             remove_config(self.config2)

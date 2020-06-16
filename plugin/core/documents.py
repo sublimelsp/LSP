@@ -2,7 +2,7 @@ from .registry import get_position
 from .registry import LSPViewEventListener
 from .session_view import SessionView
 from .sessions import Session
-from .typing import Any, Optional, Dict, Generator, Iterable
+from .typing import Any, Callable, Optional, Dict, Generator, Iterable
 from .windows import AbstractViewListener
 import sublime
 import threading
@@ -34,6 +34,15 @@ def is_transient_view(view: sublime.View) -> bool:
         return True
 
 
+def _clear_async(lock: threading.Lock, session_views: Dict[str, SessionView]) -> Callable[[], None]:
+
+    def run() -> None:
+        with lock:
+            session_views.clear()
+
+    return run
+
+
 class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     @classmethod
@@ -47,14 +56,10 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         self._session_views_lock = threading.Lock()
 
     def __del__(self) -> None:
-        session_views = self._session_views
-        session_views_lock = self._session_views_lock
+        self._clear_async()
 
-        def clear_async() -> None:
-            with session_views_lock:
-                session_views.clear()
-
-        sublime.set_timeout_async(clear_async)
+    def _clear_async(self) -> None:
+        sublime.set_timeout_async(_clear_async(self._session_views_lock, self._session_views))
 
     def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()
@@ -110,8 +115,8 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     def on_post_save(self) -> None:
         if self.view.file_name() != self._file_name:
-            self._session_views.clear()
             self._file_name = ''
+            self._clear_async()
             sublime.set_timeout_async(self._register_async)
             return
         with self._session_views_lock:
@@ -119,12 +124,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
                 sv.on_post_save()
 
     def on_close(self) -> None:
-
-        def clear_async() -> None:
-            with self._session_views_lock:
-                self._session_views.clear()
-
-        sublime.set_timeout_async(clear_async)
+        self._clear_async()
 
     def on_query_context(self, key: str, operator: str, operand: Any, match_all: bool) -> bool:
         capability_prefix = "lsp.capabilities."

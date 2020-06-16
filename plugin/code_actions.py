@@ -79,7 +79,7 @@ class CodeActionsManager:
     """Manager for per-location caching of code action responses."""
 
     def __init__(self) -> None:
-        self._response_cache = {}  # type: Dict[str, CodeActionsCollector]
+        self._response_cache = None  # type: Optional[Tuple[str, CodeActionsCollector]]
 
     def request_with_diagnostics(
         self,
@@ -132,12 +132,13 @@ class CodeActionsManager:
         if use_cache:
             location_cache_key = "{}#{}:{}:{}".format(
                 view.buffer_id(), view.change_count(), request_range, only_with_diagnostics)
-            if location_cache_key in self._response_cache:
-                collector = self._response_cache[location_cache_key]
-                sublime.set_timeout(lambda: actions_handler(collector.get_actions()))
-                return collector
-            else:
-                self._response_cache.clear()
+            if self._response_cache:
+                cache_key, cache_collector = self._response_cache
+                if location_cache_key == cache_key:
+                    sublime.set_timeout(lambda: actions_handler(cache_collector.get_actions()))
+                    return cache_collector
+                else:
+                    self._response_cache = None
 
         actions_collector = CodeActionsCollector(actions_handler)
         with actions_collector:
@@ -163,7 +164,7 @@ class CodeActionsManager:
                         request = Request.codeAction(params)
                         session.send_request(request, actions_collector.create_collector(config_name))
         if use_cache:
-            self._response_cache[location_cache_key] = actions_collector
+            self._response_cache = (location_cache_key, actions_collector)
         return actions_collector
 
     def _filtering_collector(

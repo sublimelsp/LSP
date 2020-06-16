@@ -751,8 +751,6 @@ class PanelLogger(Logger):
         self.log(self._format_request("<--", method, request_id), params)
 
     def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
-        if not settings.log_server or method == "window/logMessage":
-            return
         direction = "<? " if unhandled else "<- "
         self.log(self._format_notification(direction, method), params)
 

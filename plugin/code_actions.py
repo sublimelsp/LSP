@@ -80,23 +80,7 @@ class CodeActionsManager:
     """Manager for per-location caching of code action responses."""
 
     def __init__(self) -> None:
-        self._point_cache = {}  # type: Dict[str, CodeActionsCollector]
-
-    def request_for_point(
-        self,
-        view: sublime.View,
-        actions_handler: Callable[[CodeActionsByConfigName], None],
-        request_point: int
-    ) -> None:
-        current_location_key = "{}#{}:{}".format(view.buffer_id(), view.change_count(), request_point)
-        if current_location_key in self._point_cache:
-            actions_handler(self._point_cache[current_location_key].get_actions())
-        else:
-            self._point_cache.clear()
-            point = offset_to_point(view, request_point)
-            diagnostics_by_config, extended_range = filter_by_point(view_diagnostics(view), point)
-            results = self.request_with_diagnostics(view, extended_range, diagnostics_by_config, actions_handler)
-            self._point_cache[current_location_key] = results
+        self._response_cache = {}  # type: Dict[str, CodeActionsCollector]
 
     def request_with_diagnostics(
         self,
@@ -145,6 +129,17 @@ class CodeActionsManager:
         actions_handler: Callable[[CodeActionsByConfigName], None],
         on_save_actions: Optional[Dict[str, bool]] = None
     ) -> CodeActionsCollector:
+        use_cache = on_save_actions is None
+        if use_cache:
+            location_cache_key = "{}#{}:{}:{}".format(
+                view.buffer_id(), view.change_count(), request_range, only_with_diagnostics)
+            if location_cache_key in self._response_cache:
+                collector = self._response_cache[location_cache_key]
+                sublime.set_timeout(lambda: actions_handler(collector.get_actions()))
+                return collector
+            else:
+                self._response_cache.clear()
+
         actions_collector = CodeActionsCollector(actions_handler)
         with actions_collector:
             file_name = view.file_name()
@@ -168,6 +163,8 @@ class CodeActionsManager:
                         params = text_document_code_action_params(view, file_name, request_range, diagnostics)
                         request = Request.codeAction(params)
                         session.send_request(request, actions_collector.create_collector(config_name))
+        if use_cache:
+            self._response_cache[location_cache_key] = actions_collector
         return actions_collector
 
     def _filtering_collector(

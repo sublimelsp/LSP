@@ -308,7 +308,7 @@ class Range(object):
     def extend(self, rge: 'Range') -> 'Range':
         """
         Extends current range to fully include another range. If another range is already fully
-        enclosed withing current range then nothing changes.
+        enclosed within the current range then nothing changes.
 
         :param    rge: The region to extend current with
 

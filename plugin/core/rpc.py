@@ -12,6 +12,10 @@ DEFAULT_SYNC_REQUEST_TIMEOUT = 1.0
 class Logger(metaclass=ABCMeta):
 
     @abstractmethod
+    def stderr_message(self, message: str) -> None:
+        pass
+
+    @abstractmethod
     def outgoing_response(self, request_id: Any, params: Any) -> None:
         pass
 

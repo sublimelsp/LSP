@@ -691,6 +691,13 @@ class PanelLogger(Logger):
         self._manager = ref(manager)
         self._server_name = server_name
 
+    def stderr_message(self, message: str) -> None:
+        """
+        Not handled here as stderr messages are handled by WindowManager regardless
+        if this logger is enabled.
+        """
+        pass
+
     def log(self, message: str, params: Any, log_payload: bool = True) -> None:
 
         def run_on_async_worker_thread() -> None:
@@ -815,6 +822,16 @@ class RemoteLogger(Logger):
         """Called when a client sends a message."""
         debug("Client(%d) said: %s" % (client['id'], message))
 
+    def stderr_message(self, message: str) -> None:
+        self._broadcast_json({
+            'server': self._server_name,
+            'time': round(time() * 1000),
+            'method': 'stderr',
+            'params': message,
+            'isError': True,
+            'direction': self.DIRECTION_INCOMING,
+        })
+
     def outgoing_request(self, request_id: int, method: str, params: Any, blocking: bool) -> None:
         self._broadcast_json({
             'server': self._server_name,
@@ -910,6 +927,9 @@ class RouterLogger(Logger):
 
     def append(self, logger: Logger) -> None:
         self._loggers.append(logger)
+
+    def stderr_message(self, *args: Any, **kwargs: Any) -> None:
+        self._foreach("stderr_message", *args, **kwargs)
 
     def outgoing_response(self, *args: Any, **kwargs: Any) -> None:
         self._foreach("outgoing_response", *args, **kwargs)

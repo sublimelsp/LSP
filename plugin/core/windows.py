@@ -766,7 +766,6 @@ class RemoteLogger(Logger):
     _ws_server_thread = None  # type: Optional[threading.Thread]
 
     def __init__(self, manager: WindowManager, server_name: str) -> None:
-        self._manager = ref(manager)
         self._server_name = server_name
         if not RemoteLogger._ws_server:
             try:

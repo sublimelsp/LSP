@@ -774,21 +774,20 @@ class RemoteLogger(Logger):
                 RemoteLogger._ws_server.set_fn_new_client(self._on_new_client)
                 RemoteLogger._ws_server.set_fn_client_left(self._on_client_left)
                 RemoteLogger._ws_server.set_fn_message_received(self._on_message_received)
+                self._start_server()
             except OSError as ex:
                 if ex.errno == 48:  # Address already in use
                     debug('WebsocketServer not started - address already in use')
                     RemoteLogger._ws_server = None
                 else:
                     raise ex
-        self._start_server()
 
     def _start_server(self) -> None:
-        if RemoteLogger._ws_server:
-            def start_async() -> None:
-                if RemoteLogger._ws_server:
-                    RemoteLogger._ws_server.run_forever()
-            RemoteLogger._ws_server_thread = threading.Thread(target=start_async)
-            RemoteLogger._ws_server_thread.start()
+        def start_async() -> None:
+            if RemoteLogger._ws_server:
+                RemoteLogger._ws_server.run_forever()
+        RemoteLogger._ws_server_thread = threading.Thread(target=start_async)
+        RemoteLogger._ws_server_thread.start()
 
     def _stop_server(self) -> None:
         if RemoteLogger._ws_server:

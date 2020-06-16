@@ -88,7 +88,7 @@ class CodeActionsManager:
         actions_handler: Callable[[CodeActionsByConfigName], None],
         request_point: int
     ) -> None:
-        current_location_key = "{}#{}:{}".format(view.file_name(), view.change_count(), request_point)
+        current_location_key = "{}#{}:{}".format(view.buffer_id(), view.change_count(), request_point)
         if current_location_key in self._point_cache:
             actions_handler(self._point_cache[current_location_key].get_actions())
         else:

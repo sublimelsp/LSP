@@ -9,9 +9,7 @@ from LSP.plugin.code_actions import get_matching_kinds
 from LSP.plugin.code_actions import LspCodeActionsListener
 from LSP.plugin.code_actions import run_code_action_or_command
 from setup import TextDocumentTestCase
-from sublime_plugin import view_event_listeners
 from test_single_document import TEST_FILE_PATH
-import sublime
 import unittest
 
 TEST_FILE_URI = filename_to_uri(TEST_FILE_PATH)
@@ -216,10 +214,7 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         code_action_a = create_test_code_action(self.view.change_count(), [("A", range_a)])
         code_action_b = create_test_code_action(self.view.change_count(), [("B", range_b)])
         self.set_response('textDocument/codeAction', [code_action_a, code_action_b])
-        # Select a and b.
-        self.view.sel().clear()
-        self.view.sel().add(sublime.Region(0, 3))
-        self._trigger_on_selection_modified_async()
+        self.view.run_command('lsp_selection_set', {"regions": [(0, 3)]})  # Select a and b.
         yield 100
         params = yield from self.await_message('textDocument/codeAction')
         self.assertEquals(params['range']['start']['line'], 0)
@@ -241,10 +236,7 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         code_action1 = create_test_code_action(0, [("A", range_a)])
         code_action2 = create_test_code_action(0, [("B", range_b)])
         self.set_response('textDocument/codeAction', [code_action1, code_action2])
-        # Select a and b.
-        self.view.sel().clear()
-        self.view.sel().add(sublime.Region(0, 3))
-        self._trigger_on_selection_modified_async()
+        self.view.run_command('lsp_selection_set', {"regions": [(0, 3)]})  # Select a and b.
         yield 100
         params = yield from self.await_message('textDocument/codeAction')
         self.assertEquals(params['range']['start']['line'], 0)
@@ -269,9 +261,7 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
                 ('all content', Range(Point(0, 0), Point(0, 12))),
             ])
         )
-        self.view.sel().clear()
-        self.view.sel().add(sublime.Region(0, 5))
-        self._trigger_on_selection_modified_async()
+        self.view.run_command('lsp_selection_set', {"regions": [(0, 5)]})
         yield 100
         params = yield from self.await_message('textDocument/codeAction')
         # Range should be extended to include range of all intersecting diagnostics
@@ -280,14 +270,6 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         self.assertEquals(params['range']['end']['line'], 0)
         self.assertEquals(params['range']['end']['character'], 12)
         self.assertEquals(len(params['context']['diagnostics']), 2)
-
-    def _trigger_on_selection_modified_async(self):
-        # "on_selection_modified_async" doesn't trigger when modifying selection programatically.
-        # Don't know of better way to trigger listener then.
-        for listener in view_event_listeners[self.view.id()]:
-            if isinstance(listener, LspCodeActionsListener):
-                listener.on_selection_modified_async()
-                return
 
 
 class CodeActionsTestCase(TextDocumentTestCase):

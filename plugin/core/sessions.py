@@ -548,7 +548,10 @@ class Session(Client):
 
     def handles_path(self, file_path: Optional[str]) -> bool:
         if self._supports_workspace_folders():
+            # A workspace-aware language server handles any path, both inside and outside the workspaces.
             return True
+        # If we end up here then the language server is workspace-unaware. This means there can be more than one
+        # language server with the same config name. So we have to actually do the subpath checks.
         if not file_path:
             return False
         if not self._workspace_folders:

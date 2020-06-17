@@ -112,6 +112,9 @@ class WindowManager(Manager):
         sublime.set_timeout_async(lambda: self.register_listener_async(listener))
 
     def register_listener_async(self, listener: AbstractViewListener) -> None:
+        if listener.view not in self._workspace:
+            # TODO: Handle views outside the workspace https://github.com/sublimelsp/LSP/issues/997
+            return
         self._pending_listeners.appendleft(listener)
         if self._new_listener is None:
             self._dequeue_listener_async()
@@ -157,17 +160,12 @@ class WindowManager(Manager):
 
     def _publish_sessions_to_listener_async(self, listener: AbstractViewListener) -> None:
         scope = view2scope(listener.view)
+        # TODO: Handle views outside the workspace https://github.com/sublimelsp/LSP/issues/997
         if listener.view in self._workspace:
             for session in self._sessions:
                 if session.can_handle(listener.view):
                     # debug("registering session", session.config.name, "to listener", listener)
                     listener.on_session_initialized_async(session)
-        else:
-            for session in self._sessions:
-                if session.config.match_document(scope):
-                    # debug("registering session", session.config.name, "to listener", listener)
-                    listener.on_session_initialized_async(session)
-                    break
 
     def window(self) -> sublime.Window:
         # WindowLike vs. sublime
@@ -179,17 +177,11 @@ class WindowManager(Manager):
         except IndexError:
             return
         sessions = list(self._sessions)
+        # TODO: Handle views outside the workspace https://github.com/sublimelsp/LSP/issues/997
         if view in self._workspace:
             for session in sessions:
                 if session.can_handle(view, capability):
                     yield session
-        else:
-            names = set()  # type: Set[str]
-            for session in sessions:
-                if session.config.name not in names and session.config.match_document(scope):
-                    if capability is None or session.has_capability(capability):
-                        names.add(session.config.name)
-                        yield session
 
     def get_session(self, config_name: str, file_path: str) -> Optional[Session]:
         return self._find_session(config_name, file_path)

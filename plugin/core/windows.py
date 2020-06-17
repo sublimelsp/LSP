@@ -13,9 +13,8 @@ from .settings import settings
 from .transports import create_transport
 from .types import ClientConfig
 from .types import Settings
-from .types import view2scope
 from .types import WindowLike
-from .typing import Optional, Callable, Any, Dict, Deque, Protocol, Generator, Set
+from .typing import Optional, Callable, Any, Dict, Deque, Protocol, Generator
 from .views import extract_variables
 from .workspace import disable_in_project
 from .workspace import enable_in_project
@@ -159,7 +158,6 @@ class WindowManager(Manager):
             return self._dequeue_listener_async()
 
     def _publish_sessions_to_listener_async(self, listener: AbstractViewListener) -> None:
-        scope = view2scope(listener.view)
         # TODO: Handle views outside the workspace https://github.com/sublimelsp/LSP/issues/997
         if listener.view in self._workspace:
             for session in self._sessions:
@@ -172,13 +170,9 @@ class WindowManager(Manager):
         return self._window  # type: ignore
 
     def sessions(self, view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
-        try:
-            scope = view2scope(view)
-        except IndexError:
-            return
-        sessions = list(self._sessions)
         # TODO: Handle views outside the workspace https://github.com/sublimelsp/LSP/issues/997
         if view in self._workspace:
+            sessions = list(self._sessions)
             for session in sessions:
                 if session.can_handle(view, capability):
                     yield session

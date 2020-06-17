@@ -168,9 +168,9 @@ def entire_content_range(view: sublime.View) -> Range:
     return region_to_range(view, entire_content_region(view))
 
 
-def text_document_item(view: sublime.View, language_id: str, file_name: Optional[str] = None) -> Dict[str, Any]:
+def text_document_item(view: sublime.View, language_id: str) -> Dict[str, Any]:
     return {
-        "uri": filename_to_uri(file_name) if file_name is not None else uri_from_view(view),
+        "uri": uri_from_view(view),
         "languageId": language_id,
         "version": view.change_count(),
         "text": entire_content(view)
@@ -185,10 +185,8 @@ def text_document_position_params(view: sublime.View, location: int) -> Dict[str
     return {"textDocument": text_document_identifier(view), "position": offset_to_point(view, location).to_lsp()}
 
 
-def did_open_text_document_params(
-    view: sublime.View, language_id: str, file_name: Optional[str] = None
-) -> Dict[str, Any]:
-    return {"textDocument": text_document_item(view, language_id, file_name)}
+def did_open_text_document_params(view: sublime.View, language_id: str) -> Dict[str, Any]:
+    return {"textDocument": text_document_item(view, language_id)}
 
 
 def render_text_change(change: sublime.TextChange) -> Dict[str, Any]:
@@ -234,8 +232,8 @@ def did_close_text_document_params(file_name: str) -> Dict[str, Any]:
     return {"textDocument": text_document_identifier(file_name)}
 
 
-def did_open(view: sublime.View, language_id: str, file_name: Optional[str] = None) -> Notification:
-    return Notification.didOpen(did_open_text_document_params(view, language_id, file_name))
+def did_open(view: sublime.View, language_id: str) -> Notification:
+    return Notification.didOpen(did_open_text_document_params(view, language_id))
 
 
 def did_change(view: sublime.View, changes: Optional[Iterable[sublime.TextChange]] = None) -> Notification:

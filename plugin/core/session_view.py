@@ -53,8 +53,7 @@ class SessionView:
                 break
         settings.set("lsp_language", languages)
         if self.view.is_primary() and self.session.should_notify_did_open():
-            # mypy: expected sublime.View, got ViewLike
-            self.session.send_notification(did_open(self.view, self._language_id, self._file_name))  # type: ignore
+            self.session.send_notification(did_open(self.view, self._language_id))
         for capability in self.session.capabilities.toplevel_keys():
             if capability.endswith('Provider'):
                 self.register_capability(capability)

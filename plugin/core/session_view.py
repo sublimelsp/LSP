@@ -37,6 +37,9 @@ class SessionView:
         self._file_name = self.view.file_name() or ""
         if not self._file_name:
             raise ValueError("missing filename")
+        self._buffer_id = self.view.buffer_id()
+        if self._buffer_id == 0:
+            raise ValueError("missing buffer ID")
         self._pending_buffer = None  # type: Optional[PendingBuffer]
         session.register_session_view_async(self)
         session.config.set_view_status(self.view, "")
@@ -62,9 +65,12 @@ class SessionView:
         for capability in self.session.capabilities.toplevel_keys():
             if capability.endswith('Provider'):
                 self.unregister_capability(capability)
+        # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
+        # in unregistering ourselves from the session.
         if not self.session.exiting:
-            if self.view.is_primary() and self.session.should_notify_did_close():
-                self.session.send_notification(did_close(self._file_name))  # type: ignore
+            # Only send textDocument/didClose when we are the only view left (i.e. there are no other clones).
+            if self.session.should_notify_did_close() and not self._has_clones():
+                self.session.send_notification(did_close(self._file_name))
             if self.session.unregister_session_view_async(self):
                 session = self.session
                 count = session.views_opened
@@ -167,6 +173,19 @@ class SessionView:
 
     def on_diagnostics(self, diagnostics: Any) -> None:
         pass  # TODO
+
+    def _has_clones(self) -> bool:
+        # TODO: Maybe listen for the "clone_file" command and do some bookkeeping? This is currently an O(N) algorithm.
+        try:
+            views = self.session.window.views()
+            view_id = self.view.id()
+            for view in views:
+                if view.id() != view_id:
+                    if view.buffer_id() == self._buffer_id:
+                        return True
+        except AttributeError:
+            pass
+        return False
 
     def _massive_hack_changed(self) -> None:
         if settings.auto_show_diagnostics_panel == 'saved':

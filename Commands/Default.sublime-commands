@@ -12,7 +12,7 @@
         "args": {
             "base_file": "${packages}/LSP/Keymaps/Default (${platform}).sublime-keymap",
             "user_file": "${packages}/User/Default ($platform).sublime-keymap",
-            "default": "// Settings in here override those in \"LSP/Keymaps/Default (${platform}).sublime-keymap\",\n\n{\n\t$0\n}\n"}
+            "default": "[\n\t$0\n]\n"}
     },
     {
         "caption": "LSP: Setup Language Server",

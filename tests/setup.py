@@ -139,6 +139,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         s("lsp_format_on_save", False)
 
     def ensure_document_listener_created(self) -> bool:
+        assert self.view
         # Bug in ST3? Either that, or CI runs with ST window not in focus and that makes ST3 not trigger some
         # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
         # opening file (manager missing in DocumentSyncListener)
@@ -256,7 +257,10 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def tearDown(self) -> 'Generator':
         yield from self.await_boilerplate_end()
-        close_test_view(self.view)
-        # restore the user's configs
-        remove_config(self.config)
         super().tearDown()
+
+    def doCleanups(self) -> 'Generator':
+        # restore the user's configs
+        close_test_view(self.view)
+        remove_config(self.config)
+        yield from super().doCleanups()

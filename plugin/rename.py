@@ -1,12 +1,12 @@
 import sublime
 import sublime_plugin
-from .core.documents import is_at_word
 from .core.edit import parse_workspace_edit
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.typing import Dict, Optional
 from .core.views import text_document_position_params
+from .documents import is_at_word
 
 
 class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):

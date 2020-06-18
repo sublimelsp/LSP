@@ -1,9 +1,9 @@
-from .registry import get_position
-from .registry import LSPViewEventListener
+from .core.registry import get_position
+from .core.registry import LSPViewEventListener
+from .core.sessions import Session
+from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable
+from .core.windows import AbstractViewListener
 from .session_view import SessionView
-from .sessions import Session
-from .typing import Any, Callable, Optional, Dict, Generator, Iterable
-from .windows import AbstractViewListener
 import sublime
 import threading
 

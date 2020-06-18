@@ -45,7 +45,9 @@ def view_diagnostics(view: sublime.View) -> Dict[str, List[Diagnostic]]:
             window = view.window()
             if window:
                 window_diagnostics = windows.lookup(window).diagnostics.get()
-                return window_diagnostics.get(file_name, {})
+                for file in window_diagnostics:
+                    if os.path.samefile(file, file_name):
+                        return window_diagnostics[file]
     return {}
 
 
@@ -255,7 +257,8 @@ class DiagnosticViewRegions(DiagnosticsUpdateWalk):
 
     def begin_file(self, file_name: str) -> None:
         # TODO: would be nice if walk could skip this updater
-        if file_name == self._view.file_name():
+        file = self._view.file_name()
+        if file and os.path.samefile(file_name, file):
             self._relevant_file = True
 
     def diagnostic(self, diagnostic: Diagnostic) -> None:

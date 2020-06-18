@@ -31,7 +31,7 @@ class ProjectFolders(object):
         else:
             return True
 
-    def __contains__(self, view: sublime.View) -> bool:
+    def contains(self, view: sublime.View) -> bool:
         return self.includes_path(view.file_name() or '')
 
 

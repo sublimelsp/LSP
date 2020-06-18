@@ -111,7 +111,7 @@ class WindowManager(Manager):
         sublime.set_timeout_async(lambda: self.register_listener_async(listener))
 
     def register_listener_async(self, listener: AbstractViewListener) -> None:
-        if listener.view not in self._workspace:
+        if not self._workspace.contains(listener.view):
             # TODO: Handle views outside the workspace https://github.com/sublimelsp/LSP/issues/997
             return
         self._pending_listeners.appendleft(listener)
@@ -159,7 +159,7 @@ class WindowManager(Manager):
 
     def _publish_sessions_to_listener_async(self, listener: AbstractViewListener) -> None:
         # TODO: Handle views outside the workspace https://github.com/sublimelsp/LSP/issues/997
-        if listener.view in self._workspace:
+        if self._workspace.contains(listener.view):
             for session in self._sessions:
                 if session.can_handle(listener.view):
                     # debug("registering session", session.config.name, "to listener", listener)
@@ -171,7 +171,7 @@ class WindowManager(Manager):
 
     def sessions(self, view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
         # TODO: Handle views outside the workspace https://github.com/sublimelsp/LSP/issues/997
-        if view in self._workspace:
+        if self._workspace.contains(view):
             sessions = list(self._sessions)
             for session in sessions:
                 if session.can_handle(view, capability):
@@ -207,20 +207,11 @@ class WindowManager(Manager):
         configs = self._configs.match_view(view)
         handled = False
         file_name = view.file_name() or ''
-        if view in self._workspace:
+        if self._workspace.contains(view):
             for config in configs:
                 handled = False
                 for session in self._sessions:
                     if config.name == session.config.name and session.handles_path(file_name):
-                        handled = True
-                        break
-                if not handled:
-                    return config
-        else:
-            for config in configs:
-                handled = False
-                for session in self._sessions:
-                    if config.name == session.config.name:
                         handled = True
                         break
                 if not handled:

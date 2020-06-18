@@ -107,6 +107,20 @@ class WindowManager(Manager):
         for session in self._sessions:
             session.update_folders(workspace_folders)
 
+    def enable_config_async(self, config_name: str) -> None:
+        enable_in_project(self._window, config_name)
+        self._configs.update()
+        for listener in self._listeners:
+            self.register_listener(listener)
+        self._listeners.clear()
+        if not self._new_session:
+            sublime.set_timeout_async(self._dequeue_listener_async)
+
+    def disable_config_async(self, config_name: str) -> None:
+        disable_in_project(self._window, config_name)
+        self._configs.update()
+        self.end_config_sessions_async(config_name)
+
     def register_listener(self, listener: AbstractViewListener) -> None:
         sublime.set_timeout_async(lambda: self.register_listener_async(listener))
 
@@ -188,20 +202,6 @@ class WindowManager(Manager):
             if session.config.name == config_name and session.handles_path(file_path):
                 return session
         return None
-
-    def enable_config_async(self, config_name: str) -> None:
-        enable_in_project(self._window, config_name)
-        self._configs.update()
-        for listener in self._listeners:
-            self.register_listener(listener)
-        self._listeners.clear()
-        if not self._new_session:
-            sublime.set_timeout_async(self._dequeue_listener_async)
-
-    def disable_config_async(self, config_name: str) -> None:
-        disable_in_project(self._window, config_name)
-        self._configs.update()
-        self.end_config_sessions_async(config_name)
 
     def _needed_config(self, view: sublime.View) -> Optional[ClientConfig]:
         configs = self._configs.match_view(view)

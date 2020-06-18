@@ -411,3 +411,6 @@ class WorkspaceFolder:
 
     def uri(self) -> str:
         return filename_to_uri(self.path)
+
+    def includes_uri(self, uri: str) -> bool:
+        return uri.startswith(self.uri())

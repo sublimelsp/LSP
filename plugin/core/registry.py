@@ -1,8 +1,7 @@
 from .configurations import ConfigManager
 from .sessions import Session
-from .settings import settings, client_configs
+from .settings import client_configs
 from .typing import Optional, Callable, Dict, Any, Generator, Iterable
-from .windows import DocumentHandlerFactory
 from .windows import WindowManager
 from .windows import WindowRegistry
 import sublime
@@ -24,15 +23,23 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
         return bool(syntax and client_configs.is_syntax_supported(syntax))
 
     @property
-    def manager(self) -> WindowManager:
+    def manager(self) -> WindowManager:  # TODO: Return type is an Optional[WindowManager] !
         if not self._manager:
-            self._manager = windows.lookup(self.view.window())
-
-        assert self._manager
-        return self._manager
+            window = self.view.window()
+            if window:
+                self._manager = windows.lookup(window)
+        return self._manager  # type: ignore
 
     def has_manager(self) -> bool:
         return self._manager is not None
+
+    def purge_changes(self) -> None:
+        # Supermassive hack that will go away later.
+        listeners = sublime_plugin.view_event_listeners.get(self.view.id(), [])
+        for listener in listeners:
+            if listener.__class__.__name__ == 'DocumentSyncListener':
+                listener.purge_changes()  # type: ignore
+                return
 
     def sessions(self, capability: Optional[str]) -> Generator[Session, None, None]:
         yield from self.manager.sessions(self.view, capability)
@@ -64,15 +71,9 @@ def _best_session(view: sublime.View, sessions: Iterable[Session], point: Option
         return None
 
 
-def unload_sessions(window: sublime.Window) -> None:
-    wm = windows.lookup(window)
-    wm.end_sessions()
-
-
 configs = ConfigManager(client_configs.all)
 client_configs.set_listener(configs.update)
-documents = DocumentHandlerFactory(sublime, settings)
-windows = WindowRegistry(configs, documents, sublime)
+windows = WindowRegistry(configs, sublime)
 
 
 def get_position(view: sublime.View, event: Optional[dict] = None) -> int:
@@ -108,4 +109,4 @@ class LspRestartClientCommand(sublime_plugin.TextCommand):
     def run(self, edit: Any) -> None:
         window = self.view.window()
         if window:
-            windows.lookup(window).restart_sessions()
+            windows.lookup(window).restart_sessions_async()

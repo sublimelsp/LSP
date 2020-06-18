@@ -2,9 +2,9 @@ import sublime
 from .core.protocol import Request, Range, DocumentHighlightKind
 from .core.registry import LSPViewEventListener
 from .core.settings import settings
+from .core.types import debounced
 from .core.typing import List, Dict, Optional
 from .core.views import range_to_region, text_document_position_params
-from .core.windows import debounced
 
 SUBLIME_WORD_MASK = 515
 NO_HIGHLIGHT_SCOPES = 'comment, string'

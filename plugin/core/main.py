@@ -9,7 +9,7 @@ from .panels import destroy_output_panels, ensure_panel, PanelName
 from .popups import popups
 from .protocol import Response
 from .protocol import WorkspaceFolder
-from .registry import windows, unload_sessions
+from .registry import windows
 from .rpc import method2attr
 from .sessions import AbstractPlugin
 from .sessions import register_plugin
@@ -116,10 +116,6 @@ def plugin_loaded() -> None:
     windows.set_diagnostics_ui(DiagnosticsPresenter)
     windows.set_server_panel_factory(ensure_server_panel)
     windows.set_settings_factory(settings)
-    sublime.status_message("LSP initialized")
-    window = sublime.active_window()
-    if window:
-        windows.lookup(window).start_active_views()
 
 
 def plugin_unloaded() -> None:
@@ -128,25 +124,41 @@ def plugin_unloaded() -> None:
     unload_settings()
     # TODO: Move to __del__ methods
     for window in sublime.windows():
-        unload_sessions(window)  # unloads view state from document sync and diagnostics
         destroy_output_panels(window)  # references and diagnostics panels
         for view in window.views():
             if view.file_name():
                 remove_highlights(view)
                 for key in ['error', 'warning', 'info', 'hint', 'diagnostics']:
                     view.erase_regions('lsp_{}'.format(key))
-                for key in ['diagnostics', 'clients']:
+                for key in ['diagnostics']:
                     view.erase_status('lsp_{}'.format(key))
-                for key in ['language', 'active', 'diagnostic_phantom']:
+                for key in ['diagnostic_phantom']:
                     view.settings().erase('lsp_{}'.format(key))
 
 
 class Listener(sublime_plugin.EventListener):
+    def _register_windows(self) -> None:
+        for w in sublime.windows():
+            windows.lookup(w)
+
+    def __del__(self) -> None:
+        for w in sublime.windows():
+            windows.discard(w)
+
+    def on_init(self, views: List[sublime.View]) -> None:
+        for view in views:
+            window = view.window()
+            if window:
+                windows.lookup(window)
+
     def on_exit(self) -> None:
         kill_all_subprocesses()
 
-    def on_load_project(self, w: sublime.Window) -> None:
-        windows.lookup(w).on_load_project()
+    def on_load_project_async(self, w: sublime.Window) -> None:
+        windows.lookup(w).on_load_project_async()
 
-    def on_pre_close_project(self, w: sublime.Window) -> None:
-        windows.lookup(w).on_pre_close_project()
+    def on_new_window(self, w: sublime.Window) -> None:
+        windows.lookup(w)
+
+    def on_pre_close_window(self, w: sublime.Window) -> None:
+        windows.discard(w)

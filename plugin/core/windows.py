@@ -15,7 +15,7 @@ from .transports import create_transport
 from .types import ClientConfig
 from .types import Settings
 from .types import WindowLike
-from .typing import Optional, Callable, Any, Dict, Deque, Protocol, Generator
+from .typing import Optional, Callable, Any, Dict, Deque, List, Protocol, Generator
 from .views import extract_variables
 from .workspace import disable_in_project
 from .workspace import enable_in_project

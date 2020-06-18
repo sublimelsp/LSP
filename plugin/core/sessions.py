@@ -415,6 +415,15 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         self.weaksession = weaksession
 
+    def on_workspace_configuration(cls, params: Dict, configuration: Any) -> None:
+        """
+        Override to augment configuration returned for the workspace/configuration request.
+
+        :param      params:         A ConfigurationItem for which configuration is requested.
+        :param      configuration:  The resolved configuration for given params.
+        """
+        pass
+
 
 _plugins = {}  # type: Dict[str, Type[AbstractPlugin]]
 
@@ -476,6 +485,10 @@ class Session(Client):
             if attr is not None:
                 return attr
         raise AttributeError(name)
+
+    # TODO: Create an assurance that the API doesn't change here as it can be used by plugins.
+    def get_workspace_folders(self) -> List[WorkspaceFolder]:
+        return self._workspace_folders
 
     def register_session_view_async(self, sv: SessionViewProtocol) -> None:
         self._session_views.add(sv)
@@ -648,7 +661,10 @@ class Session(Client):
         items = []  # type: List[Any]
         requested_items = params.get("items") or []
         for requested_item in requested_items:
-            items.append(self.config.settings.get(requested_item.get('section') or None))
+            configuration = self.config.settings.get(requested_item.get('section') or None)
+            if self._plugin:
+                self._plugin.on_workspace_configuration(requested_item, configuration)
+            items.append(configuration)
         self.send_response(Response(request_id, sublime.expand_variables(items, self._template_variables())))
 
     def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:

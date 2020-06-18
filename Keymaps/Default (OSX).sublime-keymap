@@ -8,64 +8,319 @@
     //         "text": "LSP: ",
     //     }
     // },
-
-    // Show Code Actions
-    { "keys": ["super+."], "command": "lsp_code_actions", "context": [{"key": "setting.lsp_active"}]},
-
-    // Show/Hide Diagnostics Panel
-    { "keys": ["super+alt+m"], "command": "lsp_show_diagnostics_panel", "context": [{"key": "setting.lsp_active"}]},
-
-    // Show/Hide Language Server Logs Panel
-    // { "keys": ["UNBOUND"], "command": "lsp_toggle_server_panel", "context": [{"key": "setting.lsp_active"}]},
-
-    // Trigger Signature Help
-    { "keys": ["super+alt+space"], "command": "noop", "context": [{ "key": "lsp.signature_help", "operator": "equal", "operand": 0}] },
-
-    // Move Up/Down in Signature Help
-    { "keys": ["up"], "command": "noop", "context": [{ "key": "lsp.signature_help", "operator": "equal", "operand": -1 }] },
-    { "keys": ["down"], "command": "noop", "context": [{ "key": "lsp.signature_help", "operator": "equal", "operand": 1 }] },
-
-     // Find Symbol References
-    { "keys": ["shift+f12"], "command": "lsp_symbol_references", "context": [{"key": "setting.lsp_active"}]},
-
-    // Next/Prevous diagnostics
-    { "keys": ["f8"], "command": "lsp_next_diagnostic", "context": [{"key": "setting.lsp_active"}] },
-    { "keys": ["shift+f8"], "command": "lsp_previous_diagnostic", "context": [{"key": "setting.lsp_active"}] },
-    { "keys": ["escape"], "command": "lsp_hide_diagnostic", "context": [{ "key": "setting.lsp_diagnostic_phantom"}] },
-
-    // Go To Definition
-    // {"keys": ["UNBOUND"], "command": "lsp_symbol_definition", "context": [{"key": "setting.lsp_active"}]},
-
-    // Go To Type Definition
-    // {"keys": ["UNBOUND"], "command": "lsp_symbol_type_definition", "context": [{"key": "setting.lsp_active"}]},
-
-    // Go To Declaration
-    // {"keys": ["UNBOUND"], "command": "lsp_symbol_declaration", "context": [{"key": "setting.lsp_active"}]},
-
-    // Go To Implementation
-    // {"keys": ["UNBOUND"], "command": "lsp_symbol_implementation", "context": [{"key": "setting.lsp_active"}]},
-
-    // Rename Symbol
-    // { "keys": ["UNBOUND"], "command": "lsp_symbol_rename", "context": [{"key": "setting.lsp_active"}]},
-
-    // Format Document
-    // {"keys": ["UNBOUND"], "command": "lsp_format_document", "context": [{"key": "setting.lsp_active"}]},
-
-    // Format Selection
-    // {"keys": ["UNBOUND"], "command": "lsp_format_document_range", "context": [{"key": "setting.lsp_active"}]},
-
-    // Document Symbols (a replacement for ST's "Goto Symbol")
-    // {"keys": ["super+r"], "command": "lsp_document_symbols", "context": [{"key": "setting.lsp_active"}]},
-
-    // Workspace Symbols
-    // {"keys": ["UNBOUND"], "command": "lsp_workspace_symbols", "context": [{"key": "setting.lsp_active"}]},
-
-    // Symbol Hover
-    // {"keys": ["UNBOUND"], "command": "lsp_hover", "context": [{"key": "setting.lsp_active"}]},
-
-    // Expand Selection (a replacement for ST's "Expand Selection")
-    // {"keys": ["super+shift+a"], "command": "lsp_expand_selection", "context": [{"key": "setting.lsp_active"}]},
-
     // Override native save to handle Code-Actions-On-Save
-    { "keys": ["super+s"], "command": "lsp_save", "context": [{ "key": "setting.lsp_active"}] },
+    {
+        "command": "lsp_save",
+        "keys": [
+            "super+s"
+        ],
+        "context": [
+            {
+                "key": "lsp_session_with_capability",
+                "operator": "equal",
+                "operand": "codeActionProvider"
+            }
+        ]
+    },
+    // Show Code Actions
+    {
+        "command": "lsp_code_actions",
+        "keys": [
+            "super+."
+        ],
+        "context": [
+            {
+                "key": "lsp_session_with_capability",
+                "operator": "equal",
+                "operand": "codeActionProvider"
+            }
+        ]
+    },
+    // Show/Hide Diagnostics Panel
+    {
+        "command": "lsp_show_diagnostics_panel",
+        "keys": [
+            "super+alt+m"
+        ],
+        "context": [
+            {
+                "key": "setting.lsp_active"
+            }
+        ]
+    },
+    // Show/Hide Language Server Logs Panel
+    // {
+    //     "command": "lsp_toggle_server_panel",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "setting.lsp_active"
+    //         }
+    //     ]
+    // },
+    // Trigger Signature Help
+    {
+        "command": "noop",
+        "keys": [
+            "super+alt+space"
+        ],
+        "context": [
+            {
+                "key": "lsp.signature_help",
+                "operator": "equal",
+                "operand": 0
+            }
+        ]
+    },
+    // Move Up/Down in Signature Help
+    {
+        "command": "noop",
+        "keys": [
+            "up"
+        ],
+        "context": [
+            {
+                "key": "lsp.signature_help",
+                "operator": "equal",
+                "operand": -1
+            }
+        ]
+    },
+    {
+        "command": "noop",
+        "keys": [
+            "down"
+        ],
+        "context": [
+            {
+                "key": "lsp.signature_help",
+                "operator": "equal",
+                "operand": 1
+            }
+        ]
+    },
+    // Find Symbol References
+    {
+        "command": "lsp_symbol_references",
+        "keys": [
+            "shift+f12"
+        ],
+        "context": [
+            {
+                "key": "lsp_session_with_capability",
+                "operator": "equal",
+                "operand": "referencesProvider"
+            },
+        ]
+    },
+    // Next/Prevous diagnostics
+    {
+        "command": "lsp_next_diagnostic",
+        "keys": [
+            "f8"
+        ],
+        "context": [
+            {
+                "key": "setting.lsp_active"
+            }
+        ]
+    },
+    {
+        "command": "lsp_previous_diagnostic",
+        "keys": [
+            "shift+f8"
+        ],
+        "context": [
+            {
+                "key": "setting.lsp_active"
+            }
+        ]
+    },
+    {
+        "command": "lsp_hide_diagnostic",
+        "keys": [
+            "escape"
+        ],
+        "context": [
+            {
+                "key": "setting.lsp_diagnostic_phantom"
+            }
+        ]
+    },
+    // Go To Definition
+    // {
+    //     "command": "lsp_symbol_definition",
+    //     "keys": [
+    //         "f12"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp_session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "definitionProvider"
+    //         },
+    //         {
+    //             "key": "auto_complete_visible",
+    //             "operator": "equal",
+    //             "operand": false
+    //         }
+    //     ]
+    // },
+    // Go To Type Definition
+    // {
+    //     "command": "lsp_symbol_type_definition",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp_session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "typeDefinitionProvider"
+    //         },
+    //         {
+    //             "key": "auto_complete_visible",
+    //             "operator": "equal",
+    //             "operand": false
+    //         }
+    //     ]
+    // },
+    // Go To Declaration
+    // {
+    //     "command": "lsp_symbol_declaration",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp_session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "declarationProvider"
+    //         },
+    //         {
+    //             "key": "auto_complete_visible",
+    //             "operator": "equal",
+    //             "operand": false
+    //         }
+    //     ]
+    // },
+    // Go To Implementation
+    // {
+    //     "command": "lsp_symbol_implementation",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp_session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "implementationProvider"
+    //         },
+    //         {
+    //             "key": "auto_complete_visible",
+    //             "operator": "equal",
+    //             "operand": false
+    //         }
+    //     ]
+    // },
+    // Rename Symbol
+    // {
+    //     "command": "lsp_symbol_rename",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp_session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "renameProvider"
+    //         }
+    //     ]
+    // },
+    // Format Document
+    // {
+    //     "command": "lsp_format_document",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp_session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "documentFormattingProvider | documentRangeFormattingProvider"
+    //         }
+    //     ]
+    // },
+    // Format Selection
+    // {
+    //     "command": "lsp_format_document_range",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp_session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "documentRangeFormattingProvider"
+    //         }
+    //     ]
+    // },
+    // Document Symbols (a replacement for ST's "Goto Symbol")
+    // {
+    //     "command": "lsp_document_symbols",
+    //     "keys": [
+    //         "super+r"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp_session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "documentSymbolProvider"
+    //         }
+    //     ]
+    // },
+    // Workspace Symbols (a replacement for ST's "Goto Symbol In Project")
+    // {
+    //     "command": "lsp_workspace_symbols",
+    //     "keys": [
+    //         "super+shift+r"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp_session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "workspaceSymbolProvider"
+    //         }
+    //     ]
+    // },
+    // Symbol Hover
+    // {
+    //     "command": "lsp_hover",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp_session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "hoverProvider"
+    //         }
+    //     ]
+    // },
+    // Expand Selection (a replacement for ST's "Expand Selection")
+    // {
+    //     "command": "lsp_expand_selection",
+    //     "keys": [
+    //         "super+shift+a"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp_session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "selectionRangeProvider"
+    //         }
+    //     ]
+    // },
 ]

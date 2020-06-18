@@ -47,6 +47,7 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         }
         self.config2 = deepcopy(self.config1)
         self.config2.name = "TEST-2"
+        self.config2.status_key = "lsp_TEST-2"
         self.wm = windows.lookup(self.window)
         add_config(self.config1)
         add_config(self.config2)
@@ -81,19 +82,22 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         yield from self.await_message("textDocument/didOpen")
         self.view.run_command("insert", {"characters": "a"})
         yield from self.await_message("textDocument/didChange")
-        status_string = self.view.get_status("lsp_clients")
-        self.assertEqual(set(s.strip() for s in status_string.split(',')), set(("TEST", "TEST-2")))
+        self.assertEqual(self.view.get_status("lsp_TEST"), "TEST")
+        self.assertEqual(self.view.get_status("lsp_TEST-2"), "TEST-2")
         close_test_view(self.view)
         yield from self.await_message("textDocument/didClose")
 
     def doCleanups(self) -> Generator:
-        self.wm.end_config_sessions(self.config1.name)
-        self.wm.end_config_sessions(self.config2.name)
+        try:
+            close_test_view(self.view)
+        except Exception:
+            pass
         if self.session1:
+            sublime.set_timeout_async(self.session1.end_async)
             yield lambda: self.session1.state == ClientStates.STOPPING
         if self.session2:
+            sublime.set_timeout_async(self.session2.end_async)
             yield lambda: self.session2.state == ClientStates.STOPPING
-        close_test_view(self.view)
         try:
             remove_config(self.config2)
         except ValueError:

@@ -176,7 +176,7 @@ class ClientConfigs(object):
         if syntax in self._supported_syntaxes_cache:
             return self._supported_syntaxes_cache[syntax]
         scope = syntax2scope(syntax)
-        supported = bool(scope and any(config.match_document(scope) for config in self.all))
+        supported = bool(scope and any(config.match_scope(scope) for config in self.all))
         self._supported_syntaxes_cache[syntax] = supported
         return supported
 

@@ -32,25 +32,30 @@ class WindowConfigManager(object):
         self._temp_disabled_configs = set()  # type: Set[str]
         self.all = self._create_window_configs()
 
-    def match_document(self, scope: str) -> Generator[ClientConfig, None, None]:
+    def match_scope(self, scope: str) -> Generator[ClientConfig, None, None]:
         """
         Yields configurations which match one of their document selectors to the given scope.
         """
         for config in self.all:
-            if config.match_document(scope):
+            if config.match_scope(scope):
                 yield config
 
     def match_view(self, view: sublime.View, include_disabled: bool = False) -> Generator[ClientConfig, None, None]:
         """
         Yields configurations matching with the language's document_selector
         """
-        configs = self.match_document(view2scope(view))
-        if include_disabled:
-            yield from configs
-        else:
-            for config in configs:
-                if config.enabled:
-                    yield config
+        try:
+            configs = self.match_scope(view2scope(view))
+            if include_disabled:
+                yield from configs
+            else:
+                for config in configs:
+                    if config.enabled:
+                        yield config
+        except IndexError:
+            # We're in the worker thread, and the view is already closed. This means view.scope_name(0) returns an
+            # empty string.
+            pass
 
     def is_supported(self, view: Any) -> bool:
         return any(self.match_view(view))

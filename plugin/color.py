@@ -2,10 +2,10 @@ import sublime
 from .core.protocol import Request
 from .core.registry import LSPViewEventListener
 from .core.settings import settings
+from .core.types import debounced
 from .core.typing import List, Optional
 from .core.views import document_color_params
 from .core.views import lsp_color_to_phantom
-from .core.windows import debounced
 
 
 class LspColorListener(LSPViewEventListener):

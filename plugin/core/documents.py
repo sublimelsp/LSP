@@ -1,9 +1,11 @@
-import sublime
-
-from .logging import debug
 from .registry import get_position
 from .registry import LSPViewEventListener
-from .typing import Optional, Iterable
+from .session_view import SessionView
+from .sessions import Session
+from .typing import Any, Callable, Optional, Dict, Generator, Iterable
+from .windows import AbstractViewListener
+import sublime
+import threading
 
 
 SUBLIME_WORD_MASK = 515
@@ -32,48 +34,106 @@ def is_transient_view(view: sublime.View) -> bool:
         return True
 
 
-class DocumentSyncListener(LSPViewEventListener):
-    @classmethod
-    def is_applicable(cls, view_settings: dict) -> bool:
-        return cls.has_supported_syntax(view_settings)
+def _clear_async(lock: threading.Lock, session_views: Dict[str, SessionView]) -> Callable[[], None]:
+
+    def run() -> None:
+        with lock:
+            session_views.clear()
+
+    return run
+
+
+class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:
         return False
 
+    def __init__(self, view: sublime.View) -> None:
+        super().__init__(view)
+        self._file_name = ''
+        self._session_views = {}  # type: Dict[str, SessionView]
+        self._session_views_lock = threading.Lock()
+
+    def __del__(self) -> None:
+        self._clear_async()
+
+    def _clear_async(self) -> None:
+        sublime.set_timeout_async(_clear_async(self._session_views_lock, self._session_views))
+
+    def on_session_initialized_async(self, session: Session) -> None:
+        assert not self.view.is_loading()
+        with self._session_views_lock:
+            if session.config.name not in self._session_views:
+                self._session_views[session.config.name] = SessionView(self, session)
+                self.view.settings().set("lsp_active", True)
+
+    def on_session_shutdown_async(self, session: Session) -> None:
+        with self._session_views_lock:
+            self._session_views.pop(session.config.name, None)
+            if not self._session_views:
+                self.view.settings().erase("lsp_active")
+
+    def session_views(self) -> Generator[SessionView, None, None]:
+        yield from self._session_views.values()
+
+    def _register_async(self) -> None:
+        file_name = self.view.file_name()
+        if file_name:
+            self._file_name = file_name
+            self.manager.register_listener_async(self)
+
+    def _is_regular_view(self) -> bool:
+        v = self.view
+        # Not from the quick panel (CTRL+P), must have a filename on-disk, and not a special view like a console,
+        # output panel or find-in-files panels.
+        return not is_transient_view(v) and bool(v.file_name()) and v.element() is None
+
     def on_load_async(self) -> None:
-        # skip transient views:
-        if not is_transient_view(self.view):
-            self.manager.activate_view(self.view)
-            self.manager.documents.handle_did_open(self.view)
+        if self._is_regular_view():
+            self._register_async()
 
     def on_activated_async(self) -> None:
-        if self.view.file_name() and not is_transient_view(self.view):
-            self.manager.activate_view(self.view)
-            self.manager.documents.handle_did_open(self.view)
+        if self._is_regular_view() and not self.view.is_loading():
+            self._register_async()
+
+    def purge_changes(self) -> None:
+        with self._session_views_lock:
+            for sv in self.session_views():
+                sv.purge_changes()
 
     def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
-        if self.view.file_name():
-            last_change = list(changes)[-1]
-            if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and self.view.size() != 0:
-                # Issue https://github.com/sublimehq/sublime_text/issues/3323
-                # A special situation when changes externally. We receive two changes,
-                # one that removes all content and one that has 0,0,'' parameters. We resend whole
-                # file in that case to fix broken state.
-                debug('Working around the on_text_changed bug {}'.format(self.view.file_name()))
-                self.manager.documents.purge_changes(self.view)
-                self.manager.documents.notify_sessions(self.view, None)
-            else:
-                self.manager.documents.handle_did_change(self.view, changes)
+        if self.view.is_primary():
+            with self._session_views_lock:
+                for sv in self.session_views():
+                    sv.on_text_changed(changes)
 
     def on_pre_save(self) -> None:
-        if self.view.file_name():
-            self.manager.documents.handle_will_save(self.view, reason=1)  # TextDocumentSaveReason.Manual
+        with self._session_views_lock:
+            for sv in self.session_views():
+                sv.on_pre_save()
 
-    def on_post_save_async(self) -> None:
-        self.manager.documents.handle_did_save(self.view)
+    def on_post_save(self) -> None:
+        if self.view.file_name() != self._file_name:
+            self._file_name = ''
+            self._clear_async()
+            sublime.set_timeout_async(self._register_async)
+            return
+        with self._session_views_lock:
+            for sv in self.session_views():
+                sv.on_post_save()
 
     def on_close(self) -> None:
-        if self.view.file_name() and self.view.is_primary() and self.has_manager():
-            self.manager.handle_view_closed(self.view)
-            self.manager.documents.handle_did_close(self.view)
+        self._clear_async()
+
+    def on_query_context(self, key: str, operator: str, operand: Any, match_all: bool) -> bool:
+        capability_prefix = "lsp.capabilities."
+        if key.startswith(capability_prefix):
+            return isinstance(self.view.settings().get(key[len(capability_prefix):]), dict)
+        elif key in ("lsp.sessions", "setting.lsp_active"):
+            return bool(self._session_views)
+        else:
+            return False
+
+    def __str__(self) -> str:
+        return str(self.view.id())

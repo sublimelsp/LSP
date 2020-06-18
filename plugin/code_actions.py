@@ -6,13 +6,13 @@ from .core.registry import LSPViewEventListener
 from .core.registry import sessions_for_view
 from .core.registry import windows
 from .core.settings import settings
+from .core.types import debounced
 from .core.typing import Any, List, Dict, Callable, Optional, Union, Tuple, Mapping, TypedDict
 from .core.views import entire_content_range
 from .core.views import make_link
 from .core.views import offset_to_point
 from .core.views import region_to_range
 from .core.views import text_document_code_action_params
-from .core.windows import debounced
 from .diagnostics import filter_by_point, view_diagnostics
 from .diagnostics import filter_by_range
 import sublime
@@ -88,14 +88,14 @@ class CodeActionsManager:
         actions_handler: Callable[[CodeActionsByConfigName], None],
         request_point: int
     ) -> None:
-        current_location_key = "{}#{}:{}".format(view.file_name(), view.change_count(), request_point)
+        current_location_key = "{}#{}:{}".format(view.buffer_id(), view.change_count(), request_point)
         if current_location_key in self._point_cache:
             actions_handler(self._point_cache[current_location_key].get_actions())
         else:
             self._point_cache.clear()
             point = offset_to_point(view, request_point)
-            diagnostics_by_config = filter_by_point(view_diagnostics(view), point)
-            results = self.request_with_diagnostics(view, Range(point, point), diagnostics_by_config, actions_handler)
+            diagnostics_by_config, extended_range = filter_by_point(view_diagnostics(view), point)
+            results = self.request_with_diagnostics(view, extended_range, diagnostics_by_config, actions_handler)
             self._point_cache[current_location_key] = results
 
     def request_with_diagnostics(
@@ -165,8 +165,7 @@ class CodeActionsManager:
                         diagnostics = diagnostics_by_config.get(config_name, [])
                         if only_with_diagnostics and not diagnostics:
                             continue
-                        view_range = diagnostics[0].range if only_with_diagnostics else request_range
-                        params = text_document_code_action_params(view, file_name, view_range, diagnostics)
+                        params = text_document_code_action_params(view, file_name, request_range, diagnostics)
                         request = Request.codeAction(params)
                         session.send_request(request, actions_collector.create_collector(config_name))
         return actions_collector
@@ -266,7 +265,10 @@ class CodeActionOnSaveTask:
 
     def __init__(self, view: sublime.View, on_save_actions: Dict[str, bool], on_done: Callable[[], None]) -> None:
         self._view = view
-        self._manager = windows.lookup(view.window())
+        window = view.window()
+        if not window:
+            raise AttributeError("missing window")
+        self._manager = windows.lookup(window)
         self._on_save_actions = on_save_actions
         self._on_done = on_done
         self._completed = False
@@ -279,7 +281,12 @@ class CodeActionOnSaveTask:
         self._request_code_actions()
 
     def _request_code_actions(self) -> None:
-        self._manager.documents.purge_changes(self._view)
+        # Supermassive hack that will go away later.
+        listeners = sublime_plugin.view_event_listeners.get(self._view.id(), [])
+        for listener in listeners:
+            if listener.__class__.__name__ == 'DocumentSyncListener':
+                listener.purge_changes()  # type: ignore
+                break
         actions_manager.request_on_save(self._view, self._handle_response, self._on_save_actions)
 
     def _handle_response(self, responses: CodeActionsByConfigName) -> None:
@@ -337,8 +344,8 @@ class LspCodeActionsListener(LSPViewEventListener):
 
     def fire_request(self, current_region: sublime.Region) -> None:
         stored_range = region_to_range(self.view, self._stored_region)
-        diagnostics_by_config = filter_by_range(view_diagnostics(self.view), stored_range)
-        actions_manager.request_for_range(self.view, stored_range, diagnostics_by_config, self.handle_responses)
+        diagnostics_by_config, extended_range = filter_by_range(view_diagnostics(self.view), stored_range)
+        actions_manager.request_for_range(self.view, extended_range, diagnostics_by_config, self.handle_responses)
 
     def handle_responses(self, responses: CodeActionsByConfigName) -> None:
         action_count = sum(map(len, responses.values()))
@@ -405,8 +412,8 @@ class LspCodeActionsCommand(LspTextCommand):
         except IndexError:
             return
         selection_range = region_to_range(view, region)
-        diagnostics_by_config = filter_by_range(view_diagnostics(view), selection_range)
-        actions_manager.request_for_range(view, selection_range, diagnostics_by_config, self.handle_responses)
+        diagnostics_by_config, extended_range = filter_by_range(view_diagnostics(view), selection_range)
+        actions_manager.request_for_range(view, extended_range, diagnostics_by_config, self.handle_responses)
 
     def combine_commands(self) -> 'List[Tuple[str, str, CodeActionOrCommand]]':
         results = []

@@ -2,11 +2,17 @@ from .logging import debug
 from .protocol import WorkspaceFolder
 from .types import WindowLike
 from .typing import List, Any
+import sublime
+import os
 
 
 def is_subpath_of(file_path: str, potential_subpath: str) -> bool:
-    """ Case insensitive, file paths are not normalized when converted from uri"""
-    return file_path.lower().startswith(potential_subpath.lower())
+    try:
+        file_path = os.path.realpath(file_path)
+        potential_subpath = os.path.realpath(potential_subpath)
+        return not os.path.relpath(file_path, potential_subpath).startswith("..")
+    except ValueError:
+        return False
 
 
 class ProjectFolders(object):
@@ -24,6 +30,10 @@ class ProjectFolders(object):
             return any(is_subpath_of(file_path, folder) for folder in self.folders)
         else:
             return True
+
+    def contains(self, view: sublime.View) -> bool:
+        file_path = view.file_name()
+        return self.includes_path(file_path) if file_path else False
 
 
 def get_workspace_folders(folders: List[str]) -> List[WorkspaceFolder]:

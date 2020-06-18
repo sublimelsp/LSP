@@ -1,5 +1,5 @@
 from LSP.plugin.core.protocol import ErrorCode
-from LSP.plugin.core.typing import Any, Generator
+from LSP.plugin.core.typing import Any, Dict, Generator, Optional
 from LSP.plugin.core.url import filename_to_uri
 from setup import TextDocumentTestCase
 import sublime
@@ -23,7 +23,24 @@ class ServerRequests(TextDocumentTestCase):
         yield from self.verify("workspace/workspaceFolders", {}, expected_output)
 
     def test_m_workspace_configuration(self) -> Generator:
-        yield from self.verify("workspace/configuration", {}, [])
+        self.session.config.settings.set("foo.bar", "$hello")
+        self.session.config.settings.set("foo.baz", "$world")
+        self.session.config.settings.set("foo.a", 1)
+        self.session.config.settings.set("foo.b", None)
+        self.session.config.settings.set("foo.c", ["asdf ${hello} ${world}"])
+
+        class TempPlugin:
+
+            @classmethod
+            def additional_variables(cls) -> Optional[Dict[str, str]]:
+                return {"hello": "X", "world": "Y"}
+
+        self.session._plugin_class = TempPlugin  # type: ignore
+        method = "workspace/configuration"
+        params = {"items": [{"section": "foo"}]}
+        expected_output = [{"bar": "X", "baz": "Y", "a": 1, "b": None, "c": ["asdf X Y"]}]
+        yield from self.verify(method, params, expected_output)
+        self.session.config.settings.clear()
 
     def test_m_workspace_applyEdit(self) -> Generator:
         old_change_count = self.insert_characters("hello\nworld\n")

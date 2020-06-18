@@ -6,13 +6,14 @@ from html import escape
 from .code_actions import actions_manager, run_code_action_or_command
 from .code_actions import CodeActionOrCommand
 from .core.popups import popups
-from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation, Point
+from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation
 from .core.registry import LspTextCommand
 from .core.registry import LSPViewEventListener
 from .core.registry import windows
 from .core.settings import settings
 from .core.typing import List, Optional, Any, Dict
 from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from .core.views import offset_to_point
 from .core.views import make_link
 from .core.views import text_document_position_params
 from .diagnostics import filter_by_point, view_diagnostics
@@ -75,7 +76,10 @@ class LspHoverCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, point: Optional[int] = None, event: Optional[dict] = None) -> None:
         hover_point = point or self.view.sel()[0].begin()
-        self._base_dir = windows.lookup(self.view.window()).get_project_path(self.view.file_name() or "")
+        window = self.view.window()
+        if not window:
+            return
+        self._base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
 
         self._hover = None  # type: Optional[Any]
         self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
@@ -84,11 +88,11 @@ class LspHoverCommand(LspTextCommand):
         if self.is_likely_at_symbol(hover_point):
             self.request_symbol_hover(hover_point)
 
-        self._diagnostics_by_config = filter_by_point(view_diagnostics(self.view),
-                                                      Point(*self.view.rowcol(hover_point)))
+        request_point = offset_to_point(self.view, hover_point)
+        self._diagnostics_by_config, _ = filter_by_point(view_diagnostics(self.view), request_point)
         if self._diagnostics_by_config:
             self.request_code_actions(hover_point)
-            self.request_show_hover(hover_point)
+            self.show_hover(hover_point)
 
     def request_symbol_hover(self, point: int) -> None:
         session = self.session('hoverProvider', point)
@@ -99,15 +103,16 @@ class LspHoverCommand(LspTextCommand):
                 lambda response: self.handle_response(response, point))
 
     def request_code_actions(self, point: int) -> None:
+        # TODO: Remove "request_for_point" and cache code action requests for all actions_manager endpoints
         actions_manager.request_for_point(self.view, lambda response: self.handle_code_actions(response, point), point)
 
     def handle_code_actions(self, responses: Dict[str, List[CodeActionOrCommand]], point: int) -> None:
         self._actions_by_config = responses
-        self.request_show_hover(point)
+        sublime.set_timeout(lambda: self.show_hover(point))
 
     def handle_response(self, response: Optional[Any], point: int) -> None:
         self._hover = response
-        self.request_show_hover(point)
+        sublime.set_timeout(lambda: self.show_hover(point))
 
     def symbol_actions_content(self) -> str:
         actions = []
@@ -167,9 +172,6 @@ class LspHoverCommand(LspTextCommand):
     def hover_content(self) -> str:
         content = (self._hover.get('contents') or '') if isinstance(self._hover, dict) else ''
         return minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT)
-
-    def request_show_hover(self, point: int) -> None:
-        sublime.set_timeout(lambda: self.show_hover(point), 50)
 
     def show_hover(self, point: int) -> None:
         contents = self.diagnostics_content() + self.hover_content()

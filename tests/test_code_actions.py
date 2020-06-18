@@ -8,6 +8,8 @@ from LSP.plugin.code_actions import CodeActionsByConfigName
 from LSP.plugin.code_actions import get_matching_kinds
 from LSP.plugin.code_actions import LspCodeActionsListener
 from LSP.plugin.code_actions import run_code_action_or_command
+from LSP.plugin.diagnostics import filter_by_point
+from LSP.plugin.diagnostics import view_diagnostics
 from setup import TextDocumentTestCase
 from test_single_document import TEST_FILE_PATH
 import unittest
@@ -290,7 +292,8 @@ class CodeActionsTestCase(TextDocumentTestCase):
                 ('issue b', Range(Point(1, 0), Point(1, 1)))
             ])
         )
-        actions_manager.request_for_point(self.view, handle_response, 0)
+        diagnostics, extended_range = filter_by_point(view_diagnostics(self.view), Point(0, 0))
+        actions_manager.request_with_diagnostics(self.view, extended_range, diagnostics, handle_response)
         params = yield from self.await_message('textDocument/codeAction')
         self.assertEquals(params['range']['start']['line'], 0)
         self.assertEquals(params['range']['start']['character'], 0)

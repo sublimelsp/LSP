@@ -3,8 +3,9 @@ import sublime
 import webbrowser
 import os
 from html import escape
-from .code_actions import actions_manager, run_code_action_or_command
+from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
+from .code_actions import run_code_action_or_command
 from .core.popups import popups
 from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation
 from .core.registry import LspTextCommand
@@ -88,10 +89,14 @@ class LspHoverCommand(LspTextCommand):
         if self.is_likely_at_symbol(hover_point):
             self.request_symbol_hover(hover_point)
 
+        # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
+        # rather than just the hover point.
         request_point = offset_to_point(self.view, hover_point)
-        self._diagnostics_by_config, _ = filter_by_point(view_diagnostics(self.view), request_point)
+        self._diagnostics_by_config, code_actions_range = filter_by_point(view_diagnostics(self.view), request_point)
         if self._diagnostics_by_config:
-            self.request_code_actions(hover_point)
+            actions_manager.request_with_diagnostics(
+                self.view, code_actions_range, self._diagnostics_by_config,
+                lambda response: self.handle_code_actions(response, hover_point))
             self.show_hover(hover_point)
 
     def request_symbol_hover(self, point: int) -> None:
@@ -101,10 +106,6 @@ class LspHoverCommand(LspTextCommand):
             session.send_request(
                 Request.hover(document_position),
                 lambda response: self.handle_response(response, point))
-
-    def request_code_actions(self, point: int) -> None:
-        # TODO: Remove "request_for_point" and cache code action requests for all actions_manager endpoints
-        actions_manager.request_for_point(self.view, lambda response: self.handle_code_actions(response, point), point)
 
     def handle_code_actions(self, responses: Dict[str, List[CodeActionOrCommand]], point: int) -> None:
         self._actions_by_config = responses

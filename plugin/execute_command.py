@@ -46,7 +46,9 @@ class LspExecuteCommand(LspTextCommand):
         if response:
             msg += "with response: {}".format(response)
 
-        sublime.message_dialog(msg)
+        window = self.view.window()
+        if window:
+            window.status_message(msg)
 
     def _handle_error(self, command: str, error: Dict[str, Any]) -> None:
         msg = "command {} failed. Reason: {}".format(command, error.get("message", "none provided by server :("))

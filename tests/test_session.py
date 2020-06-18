@@ -108,7 +108,7 @@ class SessionTest(unittest.TestCase):
 
     def test_document_sync_capabilities(self) -> None:
         manager = MockManager(sublime.active_window())
-        session = Session(manager=manager, logger=MockLogger(), workspace_folders=[], config=TEST_CONFIG,
+        session = Session(manager=manager, loggers=[MockLogger()], workspace_folders=[], config=TEST_CONFIG,
                           plugin_class=None)
         session.capabilities.assign({
             'textDocumentSync': {

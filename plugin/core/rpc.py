@@ -12,6 +12,10 @@ DEFAULT_SYNC_REQUEST_TIMEOUT = 1.0
 class Logger(metaclass=ABCMeta):
 
     @abstractmethod
+    def stderr_message(self, message: str) -> None:
+        pass
+
+    @abstractmethod
     def outgoing_response(self, request_id: Any, params: Any) -> None:
         pass
 
@@ -121,7 +125,7 @@ class Client(TransportCallbacks):
     def __init__(self, logger: Logger) -> None:
         self.transport = None  # type: Optional[Transport]
         self.request_id = 0  # Our request IDs are always integers.
-        self.logger = logger
+        self._logger = logger
         self._response_handlers = {}  # type: Dict[int, Tuple[Callable, Optional[Callable[[Any], None]]]]
         self._sync_request_result = SyncRequestStatus()
         self._sync_request_lock = Lock()
@@ -139,7 +143,7 @@ class Client(TransportCallbacks):
             self.request_id += 1
             request_id = self.request_id
             self._response_handlers[request_id] = (handler, error_handler)
-        self.logger.outgoing_request(request_id, request.method, request.params, blocking=False)
+        self._logger.outgoing_request(request_id, request.method, request.params, blocking=False)
         self.send_payload(request.to_payload(request_id))
 
     def execute_request(
@@ -159,7 +163,7 @@ class Client(TransportCallbacks):
             try:
                 self.request_id += 1
                 request_id = self.request_id
-                self.logger.outgoing_request(request_id, request.method, request.params, blocking=True)
+                self._logger.outgoing_request(request_id, request.method, request.params, blocking=True)
                 self._sync_request_result.prepare(request_id)  # After this, is_requesting() returns True.
                 self.send_payload(request.to_payload(request_id))
                 self._response_handlers[request_id] = (handler, error_handler)
@@ -204,15 +208,15 @@ class Client(TransportCallbacks):
         self._deferred_responses.clear()
 
     def send_notification(self, notification: Notification) -> None:
-        self.logger.outgoing_notification(notification.method, notification.params)
+        self._logger.outgoing_notification(notification.method, notification.params)
         self.send_payload(notification.to_payload())
 
     def send_response(self, response: Response) -> None:
-        self.logger.outgoing_response(response.request_id, response.result)
+        self._logger.outgoing_response(response.request_id, response.result)
         self.send_payload(response.to_payload())
 
     def send_error_response(self, request_id: Any, error: Error) -> None:
-        self.logger.outgoing_error_response(request_id, error)
+        self._logger.outgoing_error_response(request_id, error)
         self.send_payload({'jsonrpc': '2.0', 'id': request_id, 'error': error.to_lsp()})
 
     def exit(self) -> None:
@@ -238,7 +242,7 @@ class Client(TransportCallbacks):
             result = payload.get("params")
             if "id" in payload:
                 req_id = payload["id"]
-                self.logger.incoming_request(req_id, method, result)
+                self._logger.incoming_request(req_id, method, result)
                 if handler is None:
                     self.send_error_response(req_id, Error(ErrorCode.MethodNotFound, method))
                 else:
@@ -247,7 +251,7 @@ class Client(TransportCallbacks):
             else:
                 if self._sync_request_result.is_idle():
                     res = (handler, result, None, "notification", method)
-                    self.logger.incoming_notification(method, result, res[0] is None)
+                    self._logger.incoming_notification(method, result, res[0] is None)
                     return res
                 else:
                     self._deferred_notifications.append(payload)
@@ -256,7 +260,7 @@ class Client(TransportCallbacks):
             handler, result, is_error = self.response_handler(response_id, payload)
             response_tuple = (handler, result, None, None, None)
             blocking = self._sync_request_result.is_ready()
-            self.logger.incoming_response(response_id, result, is_error, blocking)
+            self._logger.incoming_response(response_id, result, is_error, blocking)
             return response_tuple
         else:
             debug("Unknown payload type: ", payload)

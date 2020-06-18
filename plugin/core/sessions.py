@@ -591,6 +591,7 @@ class Session(Client):
 
     def on_stderr_message(self, message: str) -> None:
         self.call_manager('handle_stderr_log', self, message)
+        self._logger.stderr_message(message)
 
     def _supports_workspace_folders(self) -> bool:
         return self.has_capability("workspace.workspaceFolders.supported")

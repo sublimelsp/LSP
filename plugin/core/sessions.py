@@ -487,7 +487,7 @@ class Session(Client):
         raise AttributeError(name)
 
     # TODO: Create an assurance that the API doesn't change here as it can be used by plugins.
-    def get_workspace_folders(self):
+    def get_workspace_folders(self) -> List[WorkspaceFolder]:
         return self._workspace_folders
 
     def register_session_view_async(self, sv: SessionViewProtocol) -> None:

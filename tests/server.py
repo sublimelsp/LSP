@@ -210,7 +210,7 @@ class Session:
         body = dump(payload)
         content = (
             f"Content-Length: {len(body)}\r\n".encode(ENCODING),
-            f"Content-Type: application/vscode-jsonrpc; charset=utf-8\r\n\r\n".encode(ENCODING),
+            "Content-Type: application/vscode-jsonrpc; charset=utf-8\r\n\r\n".encode(ENCODING),
             body)
         self._writer.writelines(content)
         await self._writer.drain()

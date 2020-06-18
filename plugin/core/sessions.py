@@ -8,7 +8,9 @@ from .rpc import Client
 from .rpc import Logger
 from .settings import client_configs
 from .transports import Transport
-from .types import ClientConfig, ClientStates
+from .types import ClientConfig
+from .types import ClientStates
+from .types import debounced
 from .typing import Dict, Any, Optional, List, Tuple, Generator, Type, Protocol
 from .version import __version__
 from .views import COMPLETION_KINDS
@@ -455,7 +457,7 @@ class Session(Client):
         self.state = ClientStates.STARTING
         self.capabilities = DottedDict()
         self.exiting = False
-        self.views_opened = 0
+        self._views_opened = 0
         self._workspace_folders = workspace_folders
         self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
         self._progress = {}  # type: Dict[Any, Dict[str, str]]
@@ -477,11 +479,13 @@ class Session(Client):
 
     def register_session_view_async(self, sv: SessionViewProtocol) -> None:
         self._session_views.add(sv)
-        self.views_opened += 1
+        self._views_opened += 1
 
-    def unregister_session_view_async(self, sv: SessionViewProtocol) -> bool:
+    def unregister_session_view_async(self, sv: SessionViewProtocol) -> None:
         self._session_views.discard(sv)
-        return not self._session_views
+        if not self._session_views:
+            current_count = self._views_opened
+            debounced(self.end_async, 3000, lambda: self._views_opened == current_count, async_thread=True)
 
     def session_views_async(self) -> Generator[SessionViewProtocol, None, None]:
         """

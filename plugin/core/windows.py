@@ -28,26 +28,6 @@ from weakref import WeakSet
 import sublime
 
 
-def debounced(f: Callable[[], None], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True,
-              async_thread: bool = False) -> None:
-    """
-    Possibly run a function at a later point in time, either on the async thread or on the main thread.
-
-    :param      f:             The function to possibly run
-    :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
-    :param      condition:     The condition that must evaluate to True in order to run the funtion
-    :param      async_thread:  If true, run the function on the async worker thread, otherwise run the function on the
-                               main thread
-    """
-
-    def run() -> None:
-        if condition():
-            f()
-
-    runner = sublime.set_timeout_async if async_thread else sublime.set_timeout
-    runner(run, timeout_ms)
-
-
 class SublimeLike(Protocol):
 
     def set_timeout_async(self, f: Callable, timeout_ms: int = 0) -> None:

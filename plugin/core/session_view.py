@@ -2,6 +2,7 @@ from .logging import debug
 from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindFull
 from .sessions import Session
 from .settings import settings
+from .types import debounced
 from .types import view2scope
 from .typing import Any, Iterable, Optional
 from .views import did_change
@@ -10,7 +11,6 @@ from .views import did_open
 from .views import did_save
 from .views import will_save
 from .windows import AbstractViewListener
-from .windows import debounced
 import sublime
 import weakref
 
@@ -71,10 +71,7 @@ class SessionView:
             # Only send textDocument/didClose when we are the only view left (i.e. there are no other clones).
             if self.session.should_notify_did_close() and not self._has_clones():
                 self.session.send_notification(did_close(self._file_name))
-            if self.session.unregister_session_view_async(self):
-                session = self.session
-                count = session.views_opened
-                debounced(session.end_async, 3000, lambda: session.views_opened == count, async_thread=True)
+            self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
         settings = self.view.settings()  # type: sublime.Settings
         # TODO: Language ID must be UNIQUE!

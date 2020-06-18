@@ -2,6 +2,7 @@ from .collections import DottedDict
 from .logging import debug
 from .types import Settings, ClientConfig, LanguageConfig, syntax2scope
 from .typing import Any, List, Optional, Dict, Callable, Union
+from copy import deepcopy
 import sublime
 
 
@@ -275,6 +276,12 @@ def update_client_config(external_config: ClientConfig, user_override_config: Di
     user_override_languages = read_language_configs(user_override_config)
     if not user_override_languages:
         user_override_languages = external_config.languages
+    user_override_settings = user_override_config.get("settings")
+    if isinstance(user_override_settings, dict):
+        settings = DottedDict(deepcopy(external_config.settings.get()))
+        settings.update(user_override_settings)
+    else:
+        settings = external_config.settings
     return ClientConfig(
         name=external_config.name,
         binary_args=user_override_config.get("command", external_config.binary_args),
@@ -282,7 +289,7 @@ def update_client_config(external_config: ClientConfig, user_override_config: Di
         tcp_port=user_override_config.get("tcp_port", external_config.tcp_port),
         enabled=user_override_config.get("enabled", external_config.enabled),
         init_options=user_override_config.get("init_options", external_config.init_options),
-        settings=user_override_config.get("settings", external_config.settings),
+        settings=settings,
         env=user_override_config.get("env", external_config.env),
         tcp_host=user_override_config.get("tcp_host", external_config.tcp_host),
         tcp_mode=user_override_config.get("tcp_mode", external_config.tcp_mode),

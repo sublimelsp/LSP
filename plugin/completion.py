@@ -201,7 +201,7 @@ class CompletionHandler(LSPViewEventListener):
         session = self.session('completionProvider', locations[0])
         if not session:
             return None
-        self.manager.documents.purge_changes(self.view)
+        self.purge_changes()
         completion_list = sublime.CompletionList()
         capability = session.get_capability('completionProvider') or {}
         can_resolve_completion_items = bool(capability.get('resolveProvider', False))

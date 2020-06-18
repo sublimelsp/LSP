@@ -79,7 +79,8 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings) -> None:
     settings.show_references_in_quick_panel = read_bool_setting(settings_obj, "show_references_in_quick_panel", False)
     settings.disabled_capabilities = read_array_setting(settings_obj, "disabled_capabilities", [])
     settings.log_debug = read_bool_setting(settings_obj, "log_debug", False)
-    settings.log_server = read_bool_setting(settings_obj, "log_server", False)
+    log_server_default = ["panel"] if read_bool_setting(settings_obj, "log_server", False) else []
+    settings.log_server = read_array_setting(settings_obj, "log_server", log_server_default)
     settings.log_stderr = read_bool_setting(settings_obj, "log_stderr", False)
     settings.lsp_format_on_save = read_bool_setting(settings_obj, "lsp_format_on_save", False)
     settings.lsp_code_actions_on_save = read_dict_setting(settings_obj, "lsp_code_actions_on_save", {})
@@ -177,7 +178,7 @@ class ClientConfigs(object):
         if syntax in self._supported_syntaxes_cache:
             return self._supported_syntaxes_cache[syntax]
         scope = syntax2scope(syntax)
-        supported = bool(scope and any(config.match_document(scope) for config in self.all))
+        supported = bool(scope and any(config.match_scope(scope) for config in self.all))
         self._supported_syntaxes_cache[syntax] = supported
         return supported
 

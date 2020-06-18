@@ -1,6 +1,37 @@
 from .collections import DottedDict
-from .typing import Optional, List, Dict, Any, Protocol
+from .logging import debug
+from .typing import Optional, List, Dict, Any, Protocol, Generator, Callable
+import contextlib
 import sublime
+import time
+import functools
+
+
+@contextlib.contextmanager
+def runtime(token: str) -> Generator[None, None, None]:
+    t = time.time()
+    yield
+    debug(token, "running time:", int((time.time() - t) * 1000000), "μs")
+
+
+def debounced(f: Callable[[], None], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True,
+              async_thread: bool = False) -> None:
+    """
+    Possibly run a function at a later point in time, either on the async thread or on the main thread.
+
+    :param      f:             The function to possibly run
+    :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
+    :param      condition:     The condition that must evaluate to True in order to run the funtion
+    :param      async_thread:  If true, run the function on the async worker thread, otherwise run the function on the
+                               main thread
+    """
+
+    def run() -> None:
+        if condition():
+            f()
+
+    runner = sublime.set_timeout_async if async_thread else sublime.set_timeout
+    runner(run, timeout_ms)
 
 
 class Settings(object):
@@ -26,7 +57,7 @@ class Settings(object):
         self.show_references_in_quick_panel = False
         self.disabled_capabilities = []  # type: List[str]
         self.log_debug = False
-        self.log_server = False
+        self.log_server = []  # type: List[str]
         self.log_stderr = False
         self.lsp_format_on_save = False
         self.lsp_code_actions_on_save = {}  # type: Dict[str, bool]
@@ -53,13 +84,14 @@ class LanguageConfig(object):
         self.document_selector = document_selector if document_selector else "source.{}".format(self.id)
         self.feature_selector = feature_selector if feature_selector else self.document_selector
 
+    @functools.lru_cache(None)
     def score_document(self, scope: str) -> int:
         return sublime.score_selector(scope, self.document_selector)
 
     def score_feature(self, scope: str) -> int:
         return sublime.score_selector(scope, self.feature_selector)
 
-    def match_document(self, scope: str) -> bool:
+    def match_scope(self, scope: str) -> bool:
         # Every part of a x.y.z scope seems to contribute 8.
         # An empty selector result in a score of 1.
         # A non-matching non-empty selector results in a score of 0.
@@ -91,9 +123,20 @@ class ClientConfig(object):
         self.settings = settings
         self.env = env
         self.experimental_capabilities = experimental_capabilities
+        self.status_key = "lsp_{}".format(self.name)
 
-    def match_document(self, scope: str) -> bool:
-        return any(language.match_document(scope) for language in self.languages)
+    def set_view_status(self, view: sublime.View, message: str) -> None:
+        status = "{}: {}".format(self.name, message) if message else self.name
+        view.set_status(self.status_key, status)
+
+    def erase_view_status(self, view: sublime.View) -> None:
+        view.erase_status(self.status_key)
+
+    def match_scope(self, scope: str) -> bool:
+        return any(language.match_scope(scope) for language in self.languages)
+
+    def match_view(self, view: sublime.View) -> bool:
+        return self.match_scope(view2scope(view))
 
     def score_feature(self, scope: str) -> int:
         highest_score = 0
@@ -112,7 +155,10 @@ def syntax2scope(syntax: str) -> Optional[str]:
 
 
 def view2scope(view: sublime.View) -> str:
-    return view.scope_name(0).split()[0]
+    try:
+        return view.scope_name(0).split()[0]
+    except IndexError:
+        return ''
 
 
 class ViewLike(Protocol):

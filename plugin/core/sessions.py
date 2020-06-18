@@ -8,9 +8,10 @@ from .rpc import Client
 from .rpc import Logger
 from .settings import client_configs
 from .transports import Transport
-from .types import ClientConfig, ClientStates
-from .types import view2scope
-from .typing import Dict, Any, Optional, List, Tuple, Generator, Type
+from .types import ClientConfig
+from .types import ClientStates
+from .types import debounced
+from .typing import Dict, Any, Optional, List, Tuple, Generator, Type, Protocol
 from .version import __version__
 from .views import COMPLETION_KINDS
 from .views import did_change_configuration
@@ -18,6 +19,7 @@ from .views import extract_variables
 from .views import SYMBOL_KINDS
 from .workspace import is_subpath_of
 from abc import ABCMeta, abstractmethod
+from weakref import WeakSet
 import os
 import sublime
 import weakref
@@ -47,7 +49,7 @@ class Manager(metaclass=ABCMeta):
     # Mutators
 
     @abstractmethod
-    def start(self, configuration: ClientConfig, initiating_view: sublime.View) -> None:
+    def start_async(self, configuration: ClientConfig, initiating_view: sublime.View) -> None:
         """
         Start a new Session with the given configuration. The initiating view is the view that caused this method to
         be called.
@@ -60,7 +62,7 @@ class Manager(metaclass=ABCMeta):
     # Event callbacks
 
     @abstractmethod
-    def on_post_exit(self, session: 'Session', exit_code: int, exception: Optional[Exception]) -> None:
+    def on_post_exit_async(self, session: 'Session', exit_code: int, exception: Optional[Exception]) -> None:
         """
         The given Session has stopped with the given exit code.
         """
@@ -269,6 +271,25 @@ def diff_folders(old: List[WorkspaceFolder],
     return added, removed
 
 
+class SessionViewProtocol(Protocol):
+
+    session = None  # type: Session
+    view = None  # type: sublime.View
+    listener = None  # type: Any
+
+    def register_capability(self, capability: str) -> None:
+        ...
+
+    def unregister_capability(self, capability: str) -> None:
+        ...
+
+    def on_diagnostics(self, diagnostics: Any) -> None:
+        ...
+
+    def shutdown_async(self) -> None:
+        ...
+
+
 class AbstractPlugin(metaclass=ABCMeta):
     """
     Inherit from this class to handle non-standard requests and notifications.
@@ -429,16 +450,22 @@ class Session(Client):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: List[WorkspaceFolder],
                  config: ClientConfig, plugin_class: Optional[Type[AbstractPlugin]]) -> None:
+        super().__init__(logger)
         self.config = config
         self.manager = weakref.ref(manager)
         self.window = manager.window()
         self.state = ClientStates.STARTING
         self.capabilities = DottedDict()
+        self.exiting = False
+        self._views_opened = 0
         self._workspace_folders = workspace_folders
+        self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
         self._progress = {}  # type: Dict[Any, Dict[str, str]]
         self._plugin_class = plugin_class
         self._plugin = None  # type: Optional[AbstractPlugin]
-        super().__init__(logger)
+
+    def __del__(self) -> None:
+        debug(self.config.binary_args, "ended")
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -450,10 +477,25 @@ class Session(Client):
                 return attr
         raise AttributeError(name)
 
+    def register_session_view_async(self, sv: SessionViewProtocol) -> None:
+        self._session_views.add(sv)
+        self._views_opened += 1
+
+    def unregister_session_view_async(self, sv: SessionViewProtocol) -> None:
+        self._session_views.discard(sv)
+        if not self._session_views:
+            current_count = self._views_opened
+            debounced(self.end_async, 3000, lambda: self._views_opened == current_count, async_thread=True)
+
+    def session_views_async(self) -> Generator[SessionViewProtocol, None, None]:
+        """
+        It is only safe to iterate over this in the async thread
+        """
+        yield from self._session_views
+
     def can_handle(self, view: sublime.View, capability: Optional[str] = None) -> bool:
         file_name = view.file_name() or ''
-        scope = view2scope(view)
-        if self.config.match_document(scope) and self.state == ClientStates.READY and self.handles_path(file_name):
+        if self.config.match_view(view) and self.state == ClientStates.READY and self.handles_path(file_name):
             if capability is None or capability in self.capabilities:
                 return True
         return False
@@ -509,16 +551,18 @@ class Session(Client):
         return self.has_capability("didChangeConfigurationProvider")
 
     def handles_path(self, file_path: Optional[str]) -> bool:
+        if self._supports_workspace_folders():
+            # A workspace-aware language server handles any path, both inside and outside the workspaces.
+            return True
+        # If we end up here then the language server is workspace-unaware. This means there can be more than one
+        # language server with the same config name. So we have to actually do the subpath checks.
         if not file_path:
             return False
-
         if not self._workspace_folders:
             return True
-
         for folder in self._workspace_folders:
             if is_subpath_of(file_path, folder.path):
                 return True
-
         return False
 
     def update_folders(self, folders: List[WorkspaceFolder]) -> None:
@@ -538,7 +582,7 @@ class Session(Client):
     def initialize(self, variables: Dict[str, str], transport: Transport) -> None:
         self.transport = transport
         params = get_initialize_params(variables, self._workspace_folders, self.config)
-        self.send_request(Request.initialize(params), self._handle_initialize_result, lambda _: self.end())
+        self.send_request(Request.initialize(params), self._handle_initialize_result, lambda _: self.end_async())
 
     def call_manager(self, method: str, *args: Any) -> None:
         mgr = self.manager()
@@ -547,6 +591,7 @@ class Session(Client):
 
     def on_stderr_message(self, message: str) -> None:
         self.call_manager('handle_stderr_log', self, message)
+        self._logger.stderr_message(message)
 
     def _supports_workspace_folders(self) -> bool:
         return self.has_capability("workspace.workspaceFolders.supported")
@@ -621,24 +666,40 @@ class Session(Client):
 
     def m_client_registerCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/registerCapability request"""
-        registrations = params["registrations"]
-        for registration in registrations:
-            method = registration["method"]
-            capability_path, registration_path = method_to_capability(method)
-            debug("{}: registering capability:".format(self.config.name), capability_path)
-            self.capabilities.set(capability_path, registration.get("registerOptions", {}))
-            self.capabilities.set(registration_path, registration["id"])
-        self.send_response(Response(request_id, None))
+
+        def run() -> None:
+            registrations = params["registrations"]
+            for registration in registrations:
+                method = registration["method"]
+                capability_path, registration_path = method_to_capability(method)
+                debug("{}: registering capability:".format(self.config.name), capability_path)
+                self.capabilities.set(capability_path, registration.get("registerOptions", {}))
+                self.capabilities.set(registration_path, registration["id"])
+                toplevel_key = capability_path.split('.')[0]
+                if toplevel_key.endswith('Provider'):
+                    for sv in self.session_views_async():
+                        sv.register_capability(toplevel_key)
+            self.send_response(Response(request_id, None))
+
+        sublime.set_timeout_async(run)
 
     def m_client_unregisterCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/unregisterCapability request"""
-        unregistrations = params["unregisterations"]  # typo in the official specification
-        for unregistration in unregistrations:
-            capability_path, registration_path = method_to_capability(unregistration["method"])
-            debug("{}: unregistering capability:".format(self.config.name), capability_path)
-            self.capabilities.remove(capability_path)
-            self.capabilities.remove(registration_path)
-        self.send_response(Response(request_id, None))
+
+        def run() -> None:
+            unregistrations = params["unregisterations"]  # typo in the official specification
+            for unregistration in unregistrations:
+                capability_path, registration_path = method_to_capability(unregistration["method"])
+                debug("{}: unregistering capability:".format(self.config.name), capability_path)
+                self.capabilities.remove(capability_path)
+                self.capabilities.remove(registration_path)
+                toplevel_key = capability_path.split('.')[0]
+                if toplevel_key.endswith('Provider'):
+                    for sv in self.session_views_async():
+                        sv.unregister_capability(toplevel_key)
+            self.send_response(Response(request_id, None))
+
+        sublime.set_timeout_async(run)
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
         """handles the window/workDoneProgress/create request"""
@@ -678,8 +739,14 @@ class Session(Client):
             status_msg += fmt.format(progress_percentage)
         return status_msg
 
-    def end(self) -> None:
+    def end_async(self) -> None:
+        # TODO: Ensure this function is called only from the async thread
+        if self.exiting:
+            return
+        self.exiting = True
         self._plugin = None
+        for sv in self.session_views_async():
+            sv.shutdown_async()
         self.capabilities.clear()
         self.state = ClientStates.STOPPING
         self.send_request(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
@@ -688,8 +755,14 @@ class Session(Client):
         self.exit()
 
     def on_transport_close(self, exit_code: int, exception: Optional[Exception]) -> None:
+        self.exiting = True
+        self.state = ClientStates.STOPPING
         super().on_transport_close(exit_code, exception)
-        debug("stopped", self.config.name, "exit code", exit_code)
-        mgr = self.manager()
-        if mgr:
-            mgr.on_post_exit(self, exit_code, exception)
+        self._response_handlers.clear()
+
+        def run_async() -> None:
+            mgr = self.manager()
+            if mgr:
+                mgr.on_post_exit_async(self, exit_code, exception)
+
+        sublime.set_timeout_async(run_async)

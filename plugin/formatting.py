@@ -39,7 +39,7 @@ class FormatOnSaveListener(LSPViewEventListener):
 
     def _purge_changes_if_needed(self) -> None:
         if self._view_maybe_dirty:
-            self.manager.documents.purge_changes(self.view)
+            self.purge_changes()
             self._view_maybe_dirty = False
 
     def _apply_and_purge(self, response: Any) -> None:

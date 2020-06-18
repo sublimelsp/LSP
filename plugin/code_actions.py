@@ -6,13 +6,13 @@ from .core.registry import LSPViewEventListener
 from .core.registry import sessions_for_view
 from .core.registry import windows
 from .core.settings import settings
+from .core.types import debounced
 from .core.typing import Any, List, Dict, Callable, Optional, Union, Tuple, Mapping, TypedDict
 from .core.views import entire_content_range
 from .core.views import make_link
 from .core.views import offset_to_point
 from .core.views import region_to_range
 from .core.views import text_document_code_action_params
-from .core.windows import debounced
 from .diagnostics import filter_by_point, view_diagnostics
 from .diagnostics import filter_by_range
 import sublime
@@ -265,7 +265,10 @@ class CodeActionOnSaveTask:
 
     def __init__(self, view: sublime.View, on_save_actions: Dict[str, bool], on_done: Callable[[], None]) -> None:
         self._view = view
-        self._manager = windows.lookup(view.window())
+        window = view.window()
+        if not window:
+            raise AttributeError("missing window")
+        self._manager = windows.lookup(window)
         self._on_save_actions = on_save_actions
         self._on_done = on_done
         self._completed = False
@@ -278,7 +281,12 @@ class CodeActionOnSaveTask:
         self._request_code_actions()
 
     def _request_code_actions(self) -> None:
-        self._manager.documents.purge_changes(self._view)
+        # Supermassive hack that will go away later.
+        listeners = sublime_plugin.view_event_listeners.get(self._view.id(), [])
+        for listener in listeners:
+            if listener.__class__.__name__ == 'DocumentSyncListener':
+                listener.purge_changes()  # type: ignore
+                break
         actions_manager.request_on_save(self._view, self._handle_response, self._on_save_actions)
 
     def _handle_response(self, responses: CodeActionsByConfigName) -> None:

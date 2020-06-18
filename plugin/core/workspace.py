@@ -32,7 +32,8 @@ class ProjectFolders(object):
             return True
 
     def contains(self, view: sublime.View) -> bool:
-        return self.includes_path(view.file_name() or '')
+        file_path = view.file_name()
+        return self.includes_path(file_path) if file_path else False
 
 
 def get_workspace_folders(folders: List[str]) -> List[WorkspaceFolder]:

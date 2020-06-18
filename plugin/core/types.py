@@ -91,7 +91,7 @@ class LanguageConfig(object):
     def score_feature(self, scope: str) -> int:
         return sublime.score_selector(scope, self.feature_selector)
 
-    def match_document(self, scope: str) -> bool:
+    def match_scope(self, scope: str) -> bool:
         # Every part of a x.y.z scope seems to contribute 8.
         # An empty selector result in a score of 1.
         # A non-matching non-empty selector results in a score of 0.
@@ -132,11 +132,11 @@ class ClientConfig(object):
     def erase_view_status(self, view: sublime.View) -> None:
         view.erase_status(self.status_key)
 
-    def match_document(self, scope: str) -> bool:
-        return any(language.match_document(scope) for language in self.languages)
+    def match_scope(self, scope: str) -> bool:
+        return any(language.match_scope(scope) for language in self.languages)
 
     def match_view(self, view: sublime.View) -> bool:
-        return self.match_document(view2scope(view))
+        return self.match_scope(view2scope(view))
 
     def score_feature(self, scope: str) -> int:
         highest_score = 0

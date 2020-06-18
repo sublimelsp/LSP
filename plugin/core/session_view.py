@@ -50,7 +50,7 @@ class SessionView:
         if not isinstance(languages, dict):
             languages = {}
         for language in session.config.languages:
-            if language.match_document(view2scope(self.view)):
+            if language.match_scope(view2scope(self.view)):
                 languages[session.config.name] = language.id
                 self._language_id = language.id
                 break

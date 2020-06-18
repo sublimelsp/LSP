@@ -32,12 +32,12 @@ class WindowConfigManager(object):
         self._temp_disabled_configs = set()  # type: Set[str]
         self.all = self._create_window_configs()
 
-    def match_document(self, scope: str) -> Generator[ClientConfig, None, None]:
+    def match_scope(self, scope: str) -> Generator[ClientConfig, None, None]:
         """
         Yields configurations which match one of their document selectors to the given scope.
         """
         for config in self.all:
-            if config.match_document(scope):
+            if config.match_scope(scope):
                 yield config
 
     def match_view(self, view: sublime.View, include_disabled: bool = False) -> Generator[ClientConfig, None, None]:
@@ -45,7 +45,7 @@ class WindowConfigManager(object):
         Yields configurations matching with the language's document_selector
         """
         try:
-            configs = self.match_document(view2scope(view))
+            configs = self.match_scope(view2scope(view))
             if include_disabled:
                 yield from configs
             else:

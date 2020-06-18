@@ -434,7 +434,6 @@ def get_plugin(name: str) -> Optional[Type[AbstractPlugin]]:
     return _plugins.get(name, None)
 
 
-# TODO: Create an assurance that the API doesn't change here as it can be used by plugins.
 class Session(Client):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: List[WorkspaceFolder],
@@ -444,7 +443,7 @@ class Session(Client):
         self.window = manager.window()
         self.state = ClientStates.STARTING
         self.capabilities = DottedDict()
-        self.workspace_folders = workspace_folders
+        self._workspace_folders = workspace_folders
         self._progress = {}  # type: Dict[Any, Dict[str, str]]
         self._plugin_class = plugin_class
         self._plugin = None  # type: Optional[AbstractPlugin]
@@ -459,6 +458,10 @@ class Session(Client):
             if attr is not None:
                 return attr
         raise AttributeError(name)
+
+    # TODO: Create an assurance that the API doesn't change here as it can be used by plugins.
+    def get_workspace_folders(self):
+        return self._workspace_folders
 
     def can_handle(self, view: sublime.View, capability: Optional[str] = None) -> bool:
         file_name = view.file_name() or ''
@@ -522,10 +525,10 @@ class Session(Client):
         if not file_path:
             return False
 
-        if not self.workspace_folders:
+        if not self._workspace_folders:
             return True
 
-        for folder in self.workspace_folders:
+        for folder in self._workspace_folders:
             if is_subpath_of(file_path, folder.path):
                 return True
 
@@ -533,7 +536,7 @@ class Session(Client):
 
     def update_folders(self, folders: List[WorkspaceFolder]) -> None:
         if self.should_notify_did_change_workspace_folders():
-            added, removed = diff_folders(self.workspace_folders, folders)
+            added, removed = diff_folders(self._workspace_folders, folders)
             params = {
                 "event": {
                     "added": [a.to_lsp() for a in added],
@@ -543,11 +546,11 @@ class Session(Client):
             notification = Notification.didChangeWorkspaceFolders(params)
             self.send_notification(notification)
         if self._supports_workspace_folders():
-            self.workspace_folders = folders
+            self._workspace_folders = folders
 
     def initialize(self, variables: Dict[str, str], transport: Transport) -> None:
         self.transport = transport
-        params = get_initialize_params(variables, self.workspace_folders, self.config)
+        params = get_initialize_params(variables, self._workspace_folders, self.config)
         self.send_request(Request.initialize(params), self._handle_initialize_result, lambda _: self.end())
 
     def call_manager(self, method: str, *args: Any) -> None:
@@ -575,8 +578,8 @@ class Session(Client):
 
     def _handle_initialize_result(self, result: Any) -> None:
         self.capabilities.assign(result.get('capabilities', dict()))
-        if self.workspace_folders and not self._supports_workspace_folders():
-            self.workspace_folders = self.workspace_folders[:1]
+        if self._workspace_folders and not self._supports_workspace_folders():
+            self._workspace_folders = self._workspace_folders[:1]
         self.state = ClientStates.READY
         if self._plugin_class is not None:
             self._plugin = self._plugin_class(weakref.ref(self))
@@ -606,7 +609,7 @@ class Session(Client):
 
     def m_workspace_workspaceFolders(self, _: Any, request_id: Any) -> None:
         """handles the workspace/workspaceFolders request"""
-        self.send_response(Response(request_id, [wf.to_lsp() for wf in self.workspace_folders]))
+        self.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))
 
     def m_workspace_configuration(self, params: Dict[str, Any], request_id: Any) -> None:
         """handles the workspace/configuration request"""

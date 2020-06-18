@@ -128,7 +128,6 @@ class Client(TransportCallbacks):
         self._sync_request_cvar = Condition(self._sync_request_lock)
         self._deferred_notifications = []  # type: List[Any]
         self._deferred_responses = []  # type: List[Tuple[Optional[Callable], Any]]
-        self.exiting = False
 
     def send_request(
             self,
@@ -217,7 +216,6 @@ class Client(TransportCallbacks):
         self.send_payload({'jsonrpc': '2.0', 'id': request_id, 'error': error.to_lsp()})
 
     def exit(self) -> None:
-        self.exiting = True
         self.send_notification(Notification.exit())
         try:
             self.transport.close()  # type: ignore

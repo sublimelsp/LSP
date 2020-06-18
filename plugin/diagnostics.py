@@ -4,7 +4,7 @@ import re
 import sublime
 import sublime_plugin
 
-from .core.diagnostics import DiagnosticsWalker, DiagnosticsUpdateWalk, DiagnosticsCursor, DocumentsState
+from .core.diagnostics import DiagnosticsWalker, DiagnosticsUpdateWalk, DiagnosticsCursor
 from .core.logging import debug
 from .core.panels import ensure_panel
 from .core.protocol import Diagnostic, DiagnosticSeverity, DiagnosticRelatedInformation, Point, Range
@@ -42,8 +42,12 @@ def view_diagnostics(view: sublime.View) -> Dict[str, List[Diagnostic]]:
     if view.window():
         file_name = view.file_name()
         if file_name:
-            window_diagnostics = windows.lookup(view.window()).diagnostics.get()
-            return window_diagnostics.get(file_name, {})
+            window = view.window()
+            if window:
+                window_diagnostics = windows.lookup(window).diagnostics.get()
+                for file in window_diagnostics:
+                    if os.path.samefile(file, file_name):
+                        return window_diagnostics[file]
     return {}
 
 
@@ -253,7 +257,8 @@ class DiagnosticViewRegions(DiagnosticsUpdateWalk):
 
     def begin_file(self, file_name: str) -> None:
         # TODO: would be nice if walk could skip this updater
-        if file_name == self._view.file_name():
+        file = self._view.file_name()
+        if file and os.path.samefile(file_name, file):
             self._relevant_file = True
 
     def diagnostic(self, diagnostic: Diagnostic) -> None:
@@ -366,7 +371,7 @@ class DiagnosticOutputPanel(DiagnosticsUpdateWalk):
 
 class DiagnosticsPresenter(object):
 
-    def __init__(self, window: sublime.Window, documents_state: DocumentsState) -> None:
+    def __init__(self, window: sublime.Window) -> None:
         self._window = window
         self._dirty = False
         self._received_diagnostics_after_change = False
@@ -377,9 +382,6 @@ class DiagnosticsPresenter(object):
         self._cursor = DiagnosticsCursor(settings.show_diagnostics_severity_level)
         self._phantoms = DiagnosticsPhantoms(self._window)
         self._diagnostics = {}  # type: Dict[str, Dict[str, List[Diagnostic]]]
-        if settings.auto_show_diagnostics_panel == 'saved':
-            setattr(documents_state, 'changed', self.on_document_changed)
-            setattr(documents_state, 'saved', self.on_document_saved)
 
     def on_document_changed(self) -> None:
         self._received_diagnostics_after_change = False

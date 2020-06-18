@@ -224,9 +224,11 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield from self.await_message("textDocument/didOpen")
 
     def await_boilerplate_end(self) -> 'Generator':
-        self.wm.end_config_sessions(self.config.name)  # TODO: Shouldn't this be automatic once the last view closes?
         if self.session:
+            sublime.set_timeout_async(self.session.end_async)
             yield lambda: self.session.state == ClientStates.STOPPING
+            if self.view:
+                yield lambda: self.wm.get_session(self.config.name, self.view.file_name()) is None
 
     def await_clear_view_and_save(self) -> 'Generator':
         assert self.view  # type: Optional[sublime.View]

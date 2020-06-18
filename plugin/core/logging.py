@@ -1,5 +1,7 @@
 from .typing import Any
 import traceback
+import inspect
+import sublime
 
 
 log_debug = False
@@ -20,6 +22,17 @@ def debug(*args: Any) -> None:
     """Print args to the console if the "debug" setting is True."""
     if log_debug:
         printf(*args)
+
+
+def trace() -> None:
+    current_frame = inspect.currentframe()
+    if current_frame is None:
+        debug("TRACE (unknown frame)")
+        return
+    previous_frame = current_frame.f_back
+    file_name, line_number, function_name, _, __ = inspect.getframeinfo(previous_frame)
+    file_name = file_name[len(sublime.packages_path()) + len("/LSP/"):]
+    debug("TRACE {0:<32} {1}:{2}".format(function_name, file_name, line_number))
 
 
 def exception_log(message: str, ex: Exception) -> None:

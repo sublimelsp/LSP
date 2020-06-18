@@ -1,3 +1,4 @@
+from ...third_party import WebsocketServer  # type: ignore
 from .configurations import ConfigManager
 from .configurations import WindowConfigManager
 from .diagnostics import DiagnosticsStorage
@@ -14,7 +15,7 @@ from .transports import create_transport
 from .types import ClientConfig
 from .types import Settings
 from .types import WindowLike
-from .typing import Optional, Callable, Any, Dict, Deque, Protocol, Generator
+from .typing import Optional, Callable, Any, Dict, Deque, List, Protocol, Generator
 from .views import extract_variables
 from .workspace import disable_in_project
 from .workspace import enable_in_project
@@ -23,9 +24,13 @@ from .workspace import sorted_workspace_folders
 from abc import ABCMeta
 from abc import abstractmethod
 from collections import deque
+from copy import deepcopy
+from time import time
 from weakref import ref
 from weakref import WeakSet
+import json
 import sublime
+import threading
 
 
 class SublimeLike(Protocol):
@@ -218,7 +223,7 @@ class WindowManager(Manager):
                     self._window.status_message(cannot_start_reason)
                     return
             config.set_view_status(initiating_view, "starting...")
-            session = Session(self, PanelLogger(self, config.name), workspace_folders, config, plugin_class)
+            session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
             cwd = workspace_folders[0].path if workspace_folders else None
             variables = extract_variables(self._window)  # type: ignore
             if plugin_class is not None:
@@ -243,6 +248,27 @@ class WindowManager(Manager):
             # Continue with handling pending listeners
             self._new_session = None
             sublime.set_timeout_async(self._dequeue_listener_async)
+
+    def _create_logger(self, config_name: str) -> Logger:
+        logger_map = {
+            "panel": PanelLogger,
+            "remote": RemoteLogger,
+        }
+        loggers = []
+        for logger_type in settings.log_server:
+            if logger_type not in logger_map:
+                debug("Invalid logger type ({}) specified for log_server settings".format(logger_type))
+                continue
+            loggers.append(logger_map[logger_type])
+        if len(loggers) == 0:
+            return RouterLogger()  # logs nothing
+        elif len(loggers) == 1:
+            return loggers[0](self, config_name)
+        else:
+            router_logger = RouterLogger()
+            for logger in loggers:
+                router_logger.append(logger(self, config_name))
+            return router_logger
 
     def handle_message_request(self, session: Session, params: Any, request_id: Any) -> None:
         handler = MessageRequestHandler(self._window.active_view(), session, request_id, params,  # type: ignore
@@ -366,6 +392,13 @@ class PanelLogger(Logger):
         self._manager = ref(manager)
         self._server_name = server_name
 
+    def stderr_message(self, message: str) -> None:
+        """
+        Not handled here as stderr messages are handled by WindowManager regardless
+        if this logger is enabled.
+        """
+        pass
+
     def log(self, message: str, params: Any, log_payload: bool = True) -> None:
 
         def run_on_async_worker_thread() -> None:
@@ -426,7 +459,7 @@ class PanelLogger(Logger):
         self.log(self._format_request("<--", method, request_id), params)
 
     def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
-        if not settings.log_server or method == "window/logMessage":
+        if not settings.log_server:
             return
         direction = "<? " if unhandled else "<- "
         self.log(self._format_notification(direction, method), params)
@@ -439,3 +472,189 @@ class PanelLogger(Logger):
 
     def _format_notification(self, direction: str, method: str) -> str:
         return "{} {} {}".format(direction, self._server_name, method)
+
+
+class RemoteLogger(Logger):
+    PORT = 9981
+    DIRECTION_OUTGOING = 1
+    DIRECTION_INCOMING = 2
+    _ws_server = None  # type: Optional[WebsocketServer]
+    _ws_server_thread = None  # type: Optional[threading.Thread]
+
+    def __init__(self, manager: WindowManager, server_name: str) -> None:
+        self._server_name = server_name
+        if not RemoteLogger._ws_server:
+            try:
+                RemoteLogger._ws_server = WebsocketServer(self.PORT)
+                RemoteLogger._ws_server.set_fn_new_client(self._on_new_client)
+                RemoteLogger._ws_server.set_fn_client_left(self._on_client_left)
+                RemoteLogger._ws_server.set_fn_message_received(self._on_message_received)
+                self._start_server()
+            except OSError as ex:
+                if ex.errno == 48:  # Address already in use
+                    debug('WebsocketServer not started - address already in use')
+                    RemoteLogger._ws_server = None
+                else:
+                    raise ex
+
+    def _start_server(self) -> None:
+        def start_async() -> None:
+            if RemoteLogger._ws_server:
+                RemoteLogger._ws_server.run_forever()
+        RemoteLogger._ws_server_thread = threading.Thread(target=start_async)
+        RemoteLogger._ws_server_thread.start()
+
+    def _stop_server(self) -> None:
+        if RemoteLogger._ws_server:
+            RemoteLogger._ws_server.shutdown()
+            RemoteLogger._ws_server = None
+            if RemoteLogger._ws_server_thread:
+                RemoteLogger._ws_server_thread.join()
+                RemoteLogger._ws_server_thread = None
+
+    def _on_new_client(self, client: Dict, server: WebsocketServer) -> None:
+        """Called for every client connecting (after handshake)."""
+        debug("New client connected and was given id %d" % client['id'])
+        # server.send_message_to_all("Hey all, a new client has joined us")
+
+    def _on_client_left(self, client: Dict, server: WebsocketServer) -> None:
+        """Called for every client disconnecting."""
+        debug("Client(%d) disconnected" % client['id'])
+
+    def _on_message_received(self, client: Dict, server: WebsocketServer, message: str) -> None:
+        """Called when a client sends a message."""
+        debug("Client(%d) said: %s" % (client['id'], message))
+
+    def stderr_message(self, message: str) -> None:
+        self._broadcast_json({
+            'server': self._server_name,
+            'time': round(time() * 1000),
+            'method': 'stderr',
+            'params': message,
+            'isError': True,
+            'direction': self.DIRECTION_INCOMING,
+        })
+
+    def outgoing_request(self, request_id: int, method: str, params: Any, blocking: bool) -> None:
+        self._broadcast_json({
+            'server': self._server_name,
+            'id': request_id,
+            'time': round(time() * 1000),
+            'method': method,
+            'params': params,
+            'direction': self.DIRECTION_OUTGOING,
+            'blocking': blocking
+        })
+
+    def incoming_response(self, request_id: int, params: Any, is_error: bool, blocking: bool) -> None:
+        self._broadcast_json({
+            'server': self._server_name,
+            'id': request_id,
+            'time': round(time() * 1000),
+            'params': params,
+            'direction': self.DIRECTION_INCOMING,
+            'isError': is_error,
+            'blocking': blocking
+        })
+
+    def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
+        self._broadcast_json({
+            'server': self._server_name,
+            'id': request_id,
+            'time': round(time() * 1000),
+            'method': method,
+            'params': params,
+            'direction': self.DIRECTION_INCOMING,
+        })
+
+    def outgoing_response(self, request_id: Any, params: Any) -> None:
+        self._broadcast_json({
+            'server': self._server_name,
+            'id': request_id,
+            'time': round(time() * 1000),
+            'params': params,
+            'direction': self.DIRECTION_OUTGOING,
+        })
+
+    def outgoing_error_response(self, request_id: Any, error: Error) -> None:
+        self._broadcast_json({
+            'server': self._server_name,
+            'id': request_id,
+            'isError': True,
+            'params': error.to_lsp(),
+            'time': round(time() * 1000),
+            'direction': self.DIRECTION_OUTGOING,
+        })
+
+    def outgoing_notification(self, method: str, params: Any) -> None:
+        trimmed_params = deepcopy(params)
+        if method.endswith("didOpen"):
+            if isinstance(params, dict) and "textDocument" in params:
+                trimmed_params['textDocument']['text'] = '[trimmed]'
+        elif method.endswith("didChange"):
+            content_changes = params.get("contentChanges")
+            if content_changes and "range" not in content_changes[0]:
+                pass
+        elif method.endswith("didSave"):
+            if isinstance(params, dict) and "text" in params:
+                trimmed_params['text'] = '[trimmed]'
+        self._broadcast_json({
+            'server': self._server_name,
+            'time': round(time() * 1000),
+            'method': method,
+            'params': trimmed_params,
+            'direction': self.DIRECTION_OUTGOING,
+        })
+
+    def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
+        self._broadcast_json({
+            'server': self._server_name,
+            'time': round(time() * 1000),
+            'error': 'Unhandled notification!' if unhandled else None,
+            'method': method,
+            'params': params,
+            'direction': self.DIRECTION_INCOMING,
+        })
+
+    def _broadcast_json(self, data: Dict[str, Any]) -> None:
+        if RemoteLogger._ws_server:
+            json_data = json.dumps(data, sort_keys=True, check_circular=False, separators=(',', ':'))
+            RemoteLogger._ws_server.send_message_to_all(json_data)
+        else:
+            debug('Failed to broadcast a remote log message')
+
+
+class RouterLogger(Logger):
+    def __init__(self) -> None:
+        self._loggers = []  # type: List[Logger]
+
+    def append(self, logger: Logger) -> None:
+        self._loggers.append(logger)
+
+    def stderr_message(self, *args: Any, **kwargs: Any) -> None:
+        self._foreach("stderr_message", *args, **kwargs)
+
+    def outgoing_response(self, *args: Any, **kwargs: Any) -> None:
+        self._foreach("outgoing_response", *args, **kwargs)
+
+    def outgoing_error_response(self, *args: Any, **kwargs: Any) -> None:
+        self._foreach("outgoing_error_response", *args, **kwargs)
+
+    def outgoing_request(self, *args: Any, **kwargs: Any) -> None:
+        self._foreach("outgoing_request", *args, **kwargs)
+
+    def outgoing_notification(self, *args: Any, **kwargs: Any) -> None:
+        self._foreach("outgoing_notification", *args, **kwargs)
+
+    def incoming_response(self, *args: Any, **kwargs: Any) -> None:
+        self._foreach("incoming_response", *args, **kwargs)
+
+    def incoming_request(self, *args: Any, **kwargs: Any) -> None:
+        self._foreach("incoming_request", *args, **kwargs)
+
+    def incoming_notification(self, *args: Any, **kwargs: Any) -> None:
+        self._foreach("incoming_notification", *args, **kwargs)
+
+    def _foreach(self, method: str, *args: Any, **kwargs: Any) -> None:
+        for logger in self._loggers:
+            getattr(logger, method)(*args, **kwargs)

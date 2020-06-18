@@ -26,7 +26,8 @@
   //
   // Only "source.*" actions are supported.
   "lsp_code_actions_on_save": {
-    // "source.fixAll": true
+    // "source.fixAll": true,
+    // "source.organizeImports": true,
   },
 
   // The amount of time the code actions on save are allowed to run for.

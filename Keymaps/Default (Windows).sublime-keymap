@@ -16,7 +16,7 @@
         ],
         "context": [
             {
-                "key": "lsp_session_with_capability",
+                "key": "lsp.session_with_capability",
                 "operator": "equal",
                 "operand": "codeActionProvider"
             }
@@ -30,7 +30,7 @@
         ],
         "context": [
             {
-                "key": "lsp_session_with_capability",
+                "key": "lsp.session_with_capability",
                 "operator": "equal",
                 "operand": "codeActionProvider"
             }
@@ -109,7 +109,7 @@
         ],
         "context": [
             {
-                "key": "lsp_session_with_capability",
+                "key": "lsp.session_with_capability",
                 "operator": "equal",
                 "operand": "referencesProvider"
             },
@@ -157,7 +157,7 @@
     //     ],
     //     "context": [
     //         {
-    //             "key": "lsp_session_with_capability",
+    //             "key": "lsp.session_with_capability",
     //             "operator": "equal",
     //             "operand": "definitionProvider"
     //         },
@@ -176,7 +176,7 @@
     //     ],
     //     "context": [
     //         {
-    //             "key": "lsp_session_with_capability",
+    //             "key": "lsp.session_with_capability",
     //             "operator": "equal",
     //             "operand": "typeDefinitionProvider"
     //         },
@@ -195,7 +195,7 @@
     //     ],
     //     "context": [
     //         {
-    //             "key": "lsp_session_with_capability",
+    //             "key": "lsp.session_with_capability",
     //             "operator": "equal",
     //             "operand": "declarationProvider"
     //         },
@@ -214,7 +214,7 @@
     //     ],
     //     "context": [
     //         {
-    //             "key": "lsp_session_with_capability",
+    //             "key": "lsp.session_with_capability",
     //             "operator": "equal",
     //             "operand": "implementationProvider"
     //         },
@@ -233,7 +233,7 @@
     //     ],
     //     "context": [
     //         {
-    //             "key": "lsp_session_with_capability",
+    //             "key": "lsp.session_with_capability",
     //             "operator": "equal",
     //             "operand": "renameProvider"
     //         }
@@ -247,7 +247,7 @@
     //     ],
     //     "context": [
     //         {
-    //             "key": "lsp_session_with_capability",
+    //             "key": "lsp.session_with_capability",
     //             "operator": "equal",
     //             "operand": "documentFormattingProvider | documentRangeFormattingProvider"
     //         }
@@ -261,7 +261,7 @@
     //     ],
     //     "context": [
     //         {
-    //             "key": "lsp_session_with_capability",
+    //             "key": "lsp.session_with_capability",
     //             "operator": "equal",
     //             "operand": "documentRangeFormattingProvider"
     //         }
@@ -275,7 +275,7 @@
     //     ],
     //     "context": [
     //         {
-    //             "key": "lsp_session_with_capability",
+    //             "key": "lsp.session_with_capability",
     //             "operator": "equal",
     //             "operand": "documentSymbolProvider"
     //         }
@@ -289,7 +289,7 @@
     //     ],
     //     "context": [
     //         {
-    //             "key": "lsp_session_with_capability",
+    //             "key": "lsp.session_with_capability",
     //             "operator": "equal",
     //             "operand": "workspaceSymbolProvider"
     //         }
@@ -303,7 +303,7 @@
     //     ],
     //     "context": [
     //         {
-    //             "key": "lsp_session_with_capability",
+    //             "key": "lsp.session_with_capability",
     //             "operator": "equal",
     //             "operand": "hoverProvider"
     //         }
@@ -317,7 +317,7 @@
     //     ],
     //     "context": [
     //         {
-    //             "key": "lsp_session_with_capability",
+    //             "key": "lsp.session_with_capability",
     //             "operator": "equal",
     //             "operand": "selectionRangeProvider"
     //         }

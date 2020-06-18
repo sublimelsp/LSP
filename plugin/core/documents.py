@@ -127,7 +127,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         self._clear_async()
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool:
-        if key == "lsp_session_with_capability" and operator == sublime.OP_EQUAL and isinstance(operand, str):
+        if key == "lsp.session_with_capability" and operator == sublime.OP_EQUAL and isinstance(operand, str):
             capabilities = [s.strip() for s in operand.split("|")]
             get = self.view.settings().get
             for capability in capabilities:

@@ -2,7 +2,6 @@ import os
 import sublime
 import linecache
 
-from .core.documents import is_at_word
 from .core.panels import ensure_panel
 from .core.protocol import Request, Point
 from .core.registry import get_position
@@ -12,6 +11,7 @@ from .core.settings import PLUGIN_NAME, settings
 from .core.typing import List, Dict, Optional, Tuple, TypedDict
 from .core.url import uri_to_filename
 from .core.views import get_line, text_document_position_params
+from .documents import is_at_word
 
 ReferenceDict = TypedDict('ReferenceDict', {'uri': str, 'range': dict})
 

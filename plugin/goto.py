@@ -1,6 +1,5 @@
 import sublime
 from Default.history_list import get_jump_history_for_view
-from .core.documents import is_at_word
 from .core.logging import debug
 from .core.protocol import Request
 from .core.registry import get_position
@@ -9,6 +8,7 @@ from .core.sessions import method_to_capability
 from .core.typing import List, Optional, Any
 from .core.views import location_to_encoded_filename
 from .core.views import text_document_position_params
+from .documents import is_at_word
 
 
 def process_response_list(responses: list) -> List[str]:

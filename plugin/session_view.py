@@ -1,16 +1,16 @@
-from .logging import debug
-from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindFull
-from .sessions import Session
-from .settings import settings
-from .types import debounced
-from .types import view2scope
-from .typing import Any, Iterable, Optional
-from .views import did_change
-from .views import did_close
-from .views import did_open
-from .views import did_save
-from .views import will_save
-from .windows import AbstractViewListener
+from .core.logging import debug
+from .core.protocol import TextDocumentSyncKindNone, TextDocumentSyncKindFull
+from .core.sessions import Session
+from .core.settings import settings
+from .core.types import debounced
+from .core.types import view2scope
+from .core.typing import Any, Iterable, Optional
+from .core.views import did_change
+from .core.views import did_close
+from .core.views import did_open
+from .core.views import did_save
+from .core.views import will_save
+from .core.windows import AbstractViewListener
 import sublime
 import weakref
 

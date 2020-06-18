@@ -1,6 +1,6 @@
 # Please keep this list sorted (Edit -> Sort Lines)
-from .plugin.code_actions import LspCodeActionsListener
 from .plugin.code_actions import LspCodeActionsCommand
+from .plugin.code_actions import LspCodeActionsListener
 from .plugin.code_actions import LspSaveCommand
 from .plugin.color import LspColorListener
 from .plugin.completion import CompletionHandler
@@ -11,7 +11,6 @@ from .plugin.configuration import LspDisableLanguageServerGloballyCommand
 from .plugin.configuration import LspDisableLanguageServerInProjectCommand
 from .plugin.configuration import LspEnableLanguageServerGloballyCommand
 from .plugin.configuration import LspEnableLanguageServerInProjectCommand
-from .plugin.core.documents import DocumentSyncListener
 from .plugin.core.main import Listener
 from .plugin.core.main import plugin_loaded
 from .plugin.core.main import plugin_unloaded
@@ -24,6 +23,7 @@ from .plugin.diagnostics import LspClearDiagnosticsCommand
 from .plugin.diagnostics import LspHideDiagnosticCommand
 from .plugin.diagnostics import LspNextDiagnosticCommand
 from .plugin.diagnostics import LspPreviousDiagnosticCommand
+from .plugin.documents import DocumentSyncListener
 from .plugin.edit import LspApplyDocumentEditCommand
 from .plugin.edit import LspApplyWorkspaceEditCommand
 from .plugin.execute_command import LspExecuteCommand

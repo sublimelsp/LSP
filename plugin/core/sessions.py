@@ -3,7 +3,7 @@ from .edit import parse_workspace_edit
 from .logging import debug
 from .logging import exception_log
 from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindIncremental, CompletionItemTag
-from .protocol import WorkspaceFolder, Request, Notification, Response
+from .protocol import WorkspaceFolder, Request, Notification, Response, Diagnostic
 from .rpc import Client
 from .rpc import Logger
 from .settings import client_configs
@@ -283,10 +283,21 @@ class SessionViewProtocol(Protocol):
     def unregister_capability(self, capability: str) -> None:
         ...
 
-    def on_diagnostics(self, diagnostics: Any) -> None:
+    def shutdown_async(self) -> None:
         ...
 
-    def shutdown_async(self) -> None:
+    def present_diagnostics_async(self, diagnostics: List[Diagnostic]) -> None:
+        ...
+
+
+class SessionBufferProtocol(Protocol):
+
+    session = None  # type: Session
+    view = None  # type: sublime.View
+    session_views = None  # type: WeakSet[SessionViewProtocol]
+    file_name = None  # type: str
+
+    def on_diagnostics_async(self, diagnostics: List[Dict[str, Any]], version: Optional[int]) -> None:
         ...
 
 
@@ -469,6 +480,7 @@ class Session(Client):
         self._views_opened = 0
         self._workspace_folders = workspace_folders
         self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
+        self._session_buffers = WeakSet()  # type: WeakSet[SessionBufferProtocol]
         self._progress = {}  # type: Dict[Any, Dict[str, str]]
         self._plugin_class = plugin_class
         self._plugin = None  # type: Optional[AbstractPlugin]
@@ -490,6 +502,8 @@ class Session(Client):
     def get_workspace_folders(self) -> List[WorkspaceFolder]:
         return self._workspace_folders
 
+    # --- session view management --------------------------------------------------------------------------------------
+
     def register_session_view_async(self, sv: SessionViewProtocol) -> None:
         self._session_views.add(sv)
         self._views_opened += 1
@@ -505,6 +519,22 @@ class Session(Client):
         It is only safe to iterate over this in the async thread
         """
         yield from self._session_views
+
+    # --- session buffer management ------------------------------------------------------------------------------------
+
+    def register_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
+        self._session_buffers.add(sb)
+
+    def unregister_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
+        self._session_buffers.discard(sb)
+
+    def session_buffers_async(self) -> Generator[SessionBufferProtocol, None, None]:
+        """
+        It is only safe to iterate over this in the async thread
+        """
+        yield from self._session_buffers
+
+    # --- capability observers -----------------------------------------------------------------------------------------
 
     def can_handle(self, view: sublime.View, capability: Optional[str] = None) -> bool:
         file_name = view.file_name() or ''
@@ -640,6 +670,8 @@ class Session(Client):
         if mgr:
             mgr.on_post_initialize(self)
 
+    # --- server request handlers --------------------------------------------------------------------------------------
+
     def m_window_showMessageRequest(self, params: Any, request_id: Any) -> None:
         """handles the window/showMessageRequest request"""
         self.call_manager('handle_message_request', self, params, request_id)
@@ -754,6 +786,8 @@ class Session(Client):
             fmt = ' ({:.1f}%)' if isinstance(progress_percentage, float) else ' ({}%)'
             status_msg += fmt.format(progress_percentage)
         return status_msg
+
+    # --- shutdown dance -----------------------------------------------------------------------------------------------
 
     def end_async(self) -> None:
         # TODO: Ensure this function is called only from the async thread

@@ -1,4 +1,3 @@
-from LSP.plugin.core.documents import DocumentSyncListener
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification, Request
 from LSP.plugin.core.registry import windows
@@ -6,6 +5,7 @@ from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.types import ClientConfig, LanguageConfig, ClientStates
 from LSP.plugin.core.typing import Any, Generator, List, Optional, Tuple
+from LSP.plugin.documents import DocumentSyncListener
 from os import environ
 from os.path import join
 from sublime_plugin import view_event_listeners

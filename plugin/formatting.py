@@ -2,17 +2,15 @@ from .core.edit import parse_text_edit
 from .core.registry import LspTextCommand
 from .core.registry import LSPViewEventListener
 from .core.registry import sessions_for_view
-from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import settings
-from .core.typing import Any, Callable, List, Optional
+from .core.typing import Any, Callable, List, Optional, Iterator
 from .core.views import entire_content_region
 from .core.views import text_document_formatting
 from .core.views import text_document_range_formatting
 from .core.views import will_save_wait_until
 from .save_command import LspSaveCommand, SaveTask
 import sublime
-import sublime_plugin
 
 
 def apply_response_to_view(response: Optional[List[dict]], view: sublime.View) -> None:
@@ -24,42 +22,36 @@ class WillSaveWaitTask(SaveTask):
     @classmethod
     def is_applicable(cls, view: sublime.View) -> bool:
         view_settings = view.settings()
-        return bool(view.window()) and bool(view.file_name()) \
+        return bool(view.file_name()) \
             and LSPViewEventListener.has_supported_syntax({'syntax': view_settings.get('syntax')})
 
     def __init__(self, view: sublime.View, on_complete: Callable[[], None]) -> None:
         super().__init__(view, on_complete)
-        window = self._view.window()
-        if not window:
-            raise AttributeError('missing window')
-        self._manager = windows.lookup(window)
-        self._view_maybe_dirty = False
+        self._session_iterator = None  # type: Optional[Iterator[Session]]
 
     def run(self) -> None:
-        for session in sessions_for_view(self._view, 'textDocumentSync.willSaveWaitUntil'):
+        super().run()
+        self._session_iterator = sessions_for_view(self._view, 'textDocumentSync.willSaveWaitUntil')
+        self._handle_next_session()
+
+    def _handle_next_session(self) -> None:
+        session = next(self._session_iterator, None) if self._session_iterator else None
+        if session:
             self._purge_changes_if_needed()
             self._will_save_wait_until(session)
         else:
             self._on_complete()
 
-    def _purge_changes_if_needed(self) -> None:
-        # Supermassive hack that will go away later.
-        listeners = sublime_plugin.view_event_listeners.get(self._view.id(), [])
-        for listener in listeners:
-            if listener.__class__.__name__ == 'DocumentSyncListener':
-                listener.purge_changes()  # type: ignore
-                break
-
     def _will_save_wait_until(self, session: Session) -> None:
-        session.send_request(will_save_wait_until(self._view, reason=1),  # TextDocumentSaveReason.Manual
-                             lambda response: self._apply_and_purge(response),
-                             lambda error: self._apply_and_purge(None))
+        session.send_request(
+            will_save_wait_until(self._view, reason=1),  # TextDocumentSaveReason.Manual
+            lambda response: self._on_response(response),
+            lambda error: self._on_response(None))
 
-    def _apply_and_purge(self, response: Any) -> None:
-        if response:
+    def _on_response(self, response: Any) -> None:
+        if response and not self._cancelled:
             apply_response_to_view(response, self._view)
-            self._view_maybe_dirty = True
-        self._on_complete()
+        self._handle_next_session()
 
 
 class FormattingTask(SaveTask):
@@ -71,41 +63,22 @@ class FormattingTask(SaveTask):
         return enabled and bool(view.window()) and bool(view.file_name()) \
             and LSPViewEventListener.has_supported_syntax({'syntax': view_settings.get('syntax')})
 
-    def __init__(self, view: sublime.View, on_complete: Callable[[], None]) -> None:
-        super().__init__(view, on_complete)
-        window = self._view.window()
-        if not window:
-            raise AttributeError('missing window')
-        self._manager = windows.lookup(window)
-
     def run(self) -> None:
-        view_format_on_save = self._view.settings().get('lsp_format_on_save', None)
-        enabled = view_format_on_save if isinstance(view_format_on_save, bool) else settings.lsp_format_on_save
-        if enabled:
-            self._purge_changes_if_needed()
-            self._format_on_save()
-        else:
-            self._on_complete()
-
-    def _purge_changes_if_needed(self) -> None:
-        # Supermassive hack that will go away later.
-        listeners = sublime_plugin.view_event_listeners.get(self._view.id(), [])
-        for listener in listeners:
-            if listener.__class__.__name__ == 'DocumentSyncListener':
-                listener.purge_changes()  # type: ignore
-                break
+        super().run()
+        self._purge_changes_if_needed()
+        self._format_on_save()
 
     def _format_on_save(self) -> None:
         session = next(sessions_for_view(self._view, 'documentFormattingProvider'))
         if session:
             session.send_request(text_document_formatting(self._view),
-                                 lambda response: self._apply_and_purge(response),
-                                 lambda error: self._apply_and_purge(None))
+                                 lambda response: self._on_response(response),
+                                 lambda error: self._on_response(None))
         else:
             self._on_complete()
 
-    def _apply_and_purge(self, response: Any) -> None:
-        if response:
+    def _on_response(self, response: Any) -> None:
+        if response and not self._cancelled:
             apply_response_to_view(response, self._view)
         self._on_complete()
 

@@ -6,8 +6,12 @@ import sublime_plugin
 
 class SaveTask(metaclass=ABCMeta):
     """
-    Base class for tasks that are run on save.
+    Base class for tasks that run on save.
+
+    Takes care of timing out lask after specified timeout provided that base run() is called.
     """
+
+    DEFAULT_TASK_TIMEOUT = 1000
 
     @classmethod
     @abstractmethod
@@ -17,21 +21,46 @@ class SaveTask(metaclass=ABCMeta):
     def __init__(self, view: sublime.View, on_done: Callable[[], None]):
         self._view = view
         self._on_done = on_done
+        self._completed = False
         self._cancelled = False
+        self._status_key = 'lsp_save_task_timeout'
 
-    def _on_complete(self) -> None:
-        if not self._cancelled:
+    def run(self) -> None:
+        self._erase_view_status()
+        sublime.set_timeout(self._on_timeout, self.get_task_timeout_ms())
+
+    def _on_timeout(self) -> None:
+        if not self._completed and not self._cancelled:
+            self._set_view_status('LSP: Timeout processing {}'.format(self.__class__.__name__))
+            self._cancelled = True
             self._on_done()
+
+    def get_task_timeout_ms(self) -> int:
+        return self.DEFAULT_TASK_TIMEOUT
 
     def cancel(self) -> None:
         self._cancelled = True
 
-    def _is_canceled(self) -> bool:
-        return self._cancelled
+    def _set_view_status(self, text: str) -> None:
+        self._view.set_status(self._status_key, text)
+        sublime.set_timeout(self._erase_view_status, 5000)
 
-    @abstractmethod
-    def run(self) -> None:
-        pass
+    def _erase_view_status(self) -> None:
+        self._view.erase_status(self._status_key)
+
+    def _on_complete(self) -> None:
+        assert not self._completed
+        self._completed = True
+        if not self._cancelled:
+            self._on_done()
+
+    def _purge_changes_if_needed(self) -> None:
+        # Supermassive hack that will go away later.
+        listeners = sublime_plugin.view_event_listeners.get(self._view.id(), [])
+        for listener in listeners:
+            if listener.__class__.__name__ == 'DocumentSyncListener':
+                listener.purge_changes()  # type: ignore
+                break
 
 
 class LspSaveCommand(sublime_plugin.TextCommand):

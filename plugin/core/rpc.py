@@ -106,6 +106,7 @@ class SyncRequestStatus:
 
     def reset(self) -> None:
         self.__payload = None
+        self.__error = None
         self.__request_id = -1
         self.__response_id = -1
 

@@ -191,9 +191,12 @@ class Client(TransportCallbacks):
     def flush_deferred_notifications(self) -> None:
         for payload in self._deferred_notifications:
             try:
-                handler = self._get_handler(payload["method"])
+                method = payload["method"]
+                handler = self._get_handler(method)
+                result = payload["params"]
+                self._logger.incoming_notification(method, result, handler is None)
                 if handler:
-                    handler(payload["params"])
+                    handler(result)
             except Exception as err:
                 exception_log("Error handling server payload", err)
         self._deferred_notifications.clear()

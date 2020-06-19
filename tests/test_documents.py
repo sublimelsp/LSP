@@ -1,10 +1,10 @@
 from copy import deepcopy
-from LSP.plugin.core.documents import DocumentSyncListener
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.types import ClientStates
 from LSP.plugin.core.typing import Any, Generator
+from LSP.plugin.documents import DocumentSyncListener
 from os.path import join
 from setup import add_config
 from setup import close_test_view

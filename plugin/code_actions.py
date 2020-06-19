@@ -14,6 +14,7 @@ from .core.views import region_to_range
 from .core.views import text_document_code_action_params
 from .diagnostics import filter_by_range
 from .diagnostics import view_diagnostics
+from .save_command import LspSaveCommand, SaveTask
 import sublime
 import sublime_plugin
 
@@ -216,28 +217,20 @@ def get_matching_kinds(user_actions: Dict[str, bool], session_actions: List[str]
     return matching_kinds
 
 
-class LspSaveCommand(sublime_plugin.TextCommand):
+class CodeActionOnSaveTask(SaveTask):
     """
-    A command used as a substitute for native save command. Runs code actions before triggering the
-    native save command.
+    The main task that requests code actions from sessions and runs them.
+
+    The amount of time the task is allowed to run is defined by user-controlled setting. If the task
+    runs longer, the native save will be triggered before waiting for results.
     """
+    @classmethod
+    def is_applicable(cls, view: sublime.View) -> bool:
+        return bool(view.window()) and bool(cls._get_code_actions_on_save(view))
 
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
-        self._task = None  # type: Optional[CodeActionOnSaveTask]
-
-    def run(self, edit: sublime.Edit) -> None:
-        if self._task:
-            self._task.cancel()
-        on_save_actions = self._get_code_actions_on_save(self.view.settings())
-        if on_save_actions:
-            self._task = CodeActionOnSaveTask(self.view, on_save_actions, self._trigger_native_save)
-            self._task.run()
-        else:
-            self._trigger_native_save()
-
-    def _get_code_actions_on_save(self, view_settings: Union[dict, sublime.Settings]) -> Dict[str, bool]:
-        view_code_actions = view_settings.get('lsp_code_actions_on_save') or {}
+    @classmethod
+    def _get_code_actions_on_save(cls, view: sublime.View) -> Dict[str, bool]:
+        view_code_actions = view.settings().get('lsp_code_actions_on_save') or {}
         code_actions = settings.lsp_code_actions_on_save.copy()
         code_actions.update(view_code_actions)
         allowed_code_actions = dict()
@@ -246,30 +239,13 @@ class LspSaveCommand(sublime_plugin.TextCommand):
                 allowed_code_actions[key] = value
         return allowed_code_actions
 
-    def _trigger_native_save(self) -> None:
-        self._task = None
-        # Triggered from set_timeout to preserve original semantics of on_pre_save handling
-        sublime.set_timeout(lambda: self.view.run_command('save', {"async": True}))
-
-
-class CodeActionOnSaveTask:
-    """
-    The main task that requests code actions from sessions and runs them.
-
-    The amount of time the task is allowed to run is defined by user-controlled setting. If the task
-    runs longer, the native save will be triggered before waiting for results.
-    """
-
-    def __init__(self, view: sublime.View, on_save_actions: Dict[str, bool], on_done: Callable[[], None]) -> None:
-        self._view = view
+    def __init__(self, view: sublime.View, on_complete: Callable[[], None]) -> None:
+        super().__init__(view, on_complete)
         window = view.window()
         if not window:
             raise AttributeError("missing window")
         self._manager = windows.lookup(window)
-        self._on_save_actions = on_save_actions
-        self._on_done = on_done
         self._completed = False
-        self._canceled = False
         self._status_key = 'lsp_caos_timeout'
 
     def run(self) -> None:
@@ -284,10 +260,11 @@ class CodeActionOnSaveTask:
             if listener.__class__.__name__ == 'DocumentSyncListener':
                 listener.purge_changes()  # type: ignore
                 break
-        actions_manager.request_on_save(self._view, self._handle_response, self._on_save_actions)
+        on_save_actions = self._get_code_actions_on_save(self._view)
+        actions_manager.request_on_save(self._view, self._handle_response, on_save_actions)
 
     def _handle_response(self, responses: CodeActionsByConfigName) -> None:
-        if self._canceled:
+        if self._is_canceled():
             return
         document_version = self._view.change_count()
         for config_name, code_actions in responses.items():
@@ -297,12 +274,12 @@ class CodeActionOnSaveTask:
         if document_version != self._view.change_count():
             self._request_code_actions()
         else:
-            self._on_complete()
+            self._on_task_done()
 
     def _on_timeout(self) -> None:
-        if not self._completed and not self._canceled:
+        if not self._completed and not self._is_canceled():
             self._set_view_status('LSP: Timeout on processing code actions during saving')
-            self._canceled = True
+            self.cancel()
             self._on_complete()
 
     def _set_view_status(self, text: str) -> None:
@@ -312,12 +289,12 @@ class CodeActionOnSaveTask:
     def _erase_view_status(self) -> None:
         self._view.erase_status(self._status_key)
 
-    def _on_complete(self) -> None:
+    def _on_task_done(self) -> None:
         self._completed = True
-        self._on_done()
+        self._on_complete()
 
-    def cancel(self) -> None:
-        self._canceled = True
+
+LspSaveCommand.register_task(CodeActionOnSaveTask)
 
 
 class LspCodeActionsListener(LSPViewEventListener):

@@ -101,7 +101,6 @@ class LspSaveCommand(sublime_plugin.TextCommand):
         listeners = sublime_plugin.view_event_listeners.get(self.view.id(), [])
         for listener in listeners:
             if listener.__class__.__name__ == 'DocumentSyncListener':
-                print("TRIGGER")
                 listener.on_pre_save()  # type: ignore
                 break
 

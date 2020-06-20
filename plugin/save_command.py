@@ -68,6 +68,7 @@ class LspSaveCommand(sublime_plugin.TextCommand):
     A command used as a substitute for native save command. Runs code actions and document
     formatting before triggering the native save command.
     """
+    SKIP_ON_PRE_SAVE_KEY = 'lsp-skip-pre-save'
     _tasks = []  # type: List[Type[SaveTask]]
 
     @classmethod
@@ -88,9 +89,21 @@ class LspSaveCommand(sublime_plugin.TextCommand):
             if Task.is_applicable(self.view):
                 self._pending_tasks.append(Task(self.view, self._on_task_completed))
         if self._pending_tasks:
+            self._trigger_on_pre_save()
+            # Set so that next "on_pre_save" is skipped as it was triggered already.
+            self.view.settings().set(self.SKIP_ON_PRE_SAVE_KEY, '1')
             self._run_next_task()
         else:
             self._trigger_native_save()
+
+    def _trigger_on_pre_save(self) -> None:
+        # Supermassive hack that will go away later.
+        listeners = sublime_plugin.view_event_listeners.get(self.view.id(), [])
+        for listener in listeners:
+            if listener.__class__.__name__ == 'DocumentSyncListener':
+                print("TRIGGER")
+                listener.on_pre_save()  # type: ignore
+                break
 
     def _run_next_task(self) -> None:
         current_task = self._pending_tasks[0]

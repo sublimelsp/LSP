@@ -286,7 +286,8 @@ class CompletionHandler(LSPViewEventListener):
             flags |= sublime.INHIBIT_REORDER
         if isinstance(response, dict):
             response_items = response["items"] or []
-            if response.get("isIncomplete", False):
+            # TODO: Remove this version check when everyone is past 4074.
+            if response.get("isIncomplete", False) and int(sublime.version()) >= 4075:
                 flags |= sublime.DYNAMIC_COMPLETIONS
         elif isinstance(response, list):
             response_items = response

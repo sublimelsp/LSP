@@ -146,10 +146,7 @@ class JsonRpcTransport(Transport):
                 if d is None:
                     break
                 body = _encode(d)
-                self._writer.writelines((
-                    "Content-Length: {}\r\n".format(len(body)).encode('ascii'),
-                    "Content-Type: application/vscode-jsonrpc; charset=utf-8\r\n\r\n".encode('ascii'),
-                    body))
+                self._writer.writelines(("Content-Length: {}\r\n\r\n".format(len(body)).encode('ascii'), body))
                 self._writer.flush()
         except (BrokenPipeError, AttributeError):
             pass

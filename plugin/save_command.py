@@ -90,7 +90,7 @@ class LspSaveCommand(sublime_plugin.TextCommand):
                 self._pending_tasks.append(Task(self.view, self._on_task_completed))
         if self._pending_tasks:
             self._trigger_on_pre_save()
-            # Set so that next "on_pre_save" is skipped as it was triggered already.
+            # Ensure that the next "on_pre_save" that runs on native save is skipped.
             self.view.settings().set(self.SKIP_ON_PRE_SAVE_KEY, '1')
             self._run_next_task()
         else:

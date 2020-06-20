@@ -69,7 +69,7 @@ class FormattingTask(SaveTask):
         self._format_on_save()
 
     def _format_on_save(self) -> None:
-        session = next(sessions_for_view(self._view, 'documentFormattingProvider'))
+        session = next(sessions_for_view(self._view, 'documentFormattingProvider'), None)
         if session:
             session.send_request(text_document_formatting(self._view),
                                  lambda response: self._on_response(response),

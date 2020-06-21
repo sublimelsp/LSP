@@ -6,8 +6,6 @@ from abc import ABCMeta, abstractmethod
 from threading import Lock
 import sublime
 
-DEFAULT_SYNC_REQUEST_TIMEOUT = 1.0
-
 
 class Logger(metaclass=ABCMeta):
 

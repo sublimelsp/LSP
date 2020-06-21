@@ -1,6 +1,5 @@
 from .logging import debug
 from .protocol import WorkspaceFolder
-from .types import WindowLike
 from .typing import List, Any
 import sublime
 import os
@@ -17,7 +16,7 @@ def is_subpath_of(file_path: str, potential_subpath: str) -> bool:
 
 class ProjectFolders(object):
 
-    def __init__(self, window: WindowLike) -> None:
+    def __init__(self, window: sublime.Window) -> None:
         self._window = window
         self.folders = self._window.folders()  # type: List[str]
 

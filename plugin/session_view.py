@@ -130,7 +130,7 @@ class SessionView:
             # file in that case to fix broken state.
             debug('Working around the on_text_changed bug {}'.format(self.view.file_name()))
             self.purge_changes()
-            notification = did_change(self.view, None)  # type: ignore
+            notification = did_change(self.view, None)
             self.session.send_notification(notification)
             self._massive_hack_changed()
         else:
@@ -148,7 +148,7 @@ class SessionView:
             if sync_kind == TextDocumentSyncKindNone:
                 return
             c = None if sync_kind == TextDocumentSyncKindFull else self._pending_buffer.changes
-            notification = did_change(self.view, c)  # type: ignore
+            notification = did_change(self.view, c)
             self.session.send_notification(notification)
             self._pending_buffer = None
             self._massive_hack_changed()
@@ -156,16 +156,14 @@ class SessionView:
     def on_pre_save(self) -> None:
         if self.session.should_notify_will_save():
             self.purge_changes()
-            # mypy: expected sublime.View, got ViewLike
             # TextDocumentSaveReason.Manual
-            self.session.send_notification(will_save(self.view, 1))  # type: ignore
+            self.session.send_notification(will_save(self.view, 1))
 
     def on_post_save(self) -> None:
         send_did_save, include_text = self.session.should_notify_did_save()
         if send_did_save:
             self.purge_changes()
-            # mypy: expected sublime.View, got ViewLike
-            self.session.send_notification(did_save(self.view, include_text, self._file_name))  # type: ignore
+            self.session.send_notification(did_save(self.view, include_text, self._file_name))
         self._massive_hack_saved()
 
     def on_diagnostics(self, diagnostics: Any) -> None:
@@ -189,16 +187,18 @@ class SessionView:
             # TODO: This method should disappear
             listener = self.listener()
             if listener:
-                mgr = listener.manager  # type: ignore
-                mgr.diagnostics._updatable.on_document_changed()  # type: ignore
+                diagnostics = listener.manager.diagnostics._updatable
+                if diagnostics:
+                    diagnostics.on_document_changed()  # type: ignore
 
     def _massive_hack_saved(self) -> None:
         if settings.auto_show_diagnostics_panel == 'saved':
             # TODO: This method should disappear
             listener = self.listener()
             if listener:
-                mgr = listener.manager  # type: ignore
-                mgr.diagnostics._updatable.on_document_saved()  # type: ignore
+                diagnostics = listener.manager.diagnostics._updatable
+                if diagnostics:
+                    diagnostics.on_document_saved()  # type: ignore
 
     def __str__(self) -> str:
         return '{}-{}'.format(self.view.id(), self.session.config.name)

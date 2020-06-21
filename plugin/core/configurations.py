@@ -1,6 +1,6 @@
 from .collections import DottedDict
 from .logging import debug
-from .types import ClientConfig, WindowLike, view2scope
+from .types import ClientConfig, view2scope
 from .typing import Any, Generator, List, Dict, Set
 from .workspace import enable_in_project, disable_in_project
 from copy import deepcopy
@@ -14,7 +14,7 @@ class ConfigManager(object):
         self._configs = global_configs
         self._managers = {}  # type: Dict[int, WindowConfigManager]
 
-    def for_window(self, window: WindowLike) -> 'WindowConfigManager':
+    def for_window(self, window: sublime.Window) -> 'WindowConfigManager':
         window_configs = WindowConfigManager(window, self._configs)
         self._managers[window.id()] = window_configs
         return window_configs
@@ -26,7 +26,7 @@ class ConfigManager(object):
 
 
 class WindowConfigManager(object):
-    def __init__(self, window: WindowLike, global_configs: List[ClientConfig]) -> None:
+    def __init__(self, window: sublime.Window, global_configs: List[ClientConfig]) -> None:
         self._window = window
         self._global_configs = global_configs
         self._temp_disabled_configs = set()  # type: Set[str]

@@ -234,7 +234,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         assert self.view  # type: Optional[sublime.View]
         self.view.run_command("select_all")
         self.view.run_command("left_delete")
-        self.view.run_command("save")
+        self.view.run_command("lsp_save")
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
 

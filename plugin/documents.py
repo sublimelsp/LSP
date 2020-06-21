@@ -3,6 +3,7 @@ from .core.registry import LSPViewEventListener
 from .core.sessions import Session
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable
 from .core.windows import AbstractViewListener
+from .save_command import LspSaveCommand
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
 import sublime
@@ -114,6 +115,10 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     def on_pre_save(self) -> None:
         if self.view.is_primary():
+            view_settings = self.view.settings()
+            if view_settings.has(LspSaveCommand.SKIP_ON_PRE_SAVE_KEY):
+                view_settings.erase(LspSaveCommand.SKIP_ON_PRE_SAVE_KEY)
+                return
             with self._session_views_lock:
                 for sv in self.session_views():
                     sv.on_pre_save()

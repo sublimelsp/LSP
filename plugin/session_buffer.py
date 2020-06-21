@@ -140,9 +140,9 @@ class SessionBuffer:
             for sv in self.session_views:
                 listener = sv.listener()
                 if listener:
-                    mgr = listener.manager  # type: ignore
-                    mgr.diagnostics._updatable.on_document_changed()  # type: ignore
-                    return
+                    diagnostics = listener.manager.diagnostics._updatable
+                    if diagnostics:
+                        diagnostics.on_document_changed()  # type: ignore
 
     def _massive_hack_saved(self) -> None:
         if settings.auto_show_diagnostics_panel == 'saved':
@@ -150,9 +150,9 @@ class SessionBuffer:
             for sv in self.session_views:
                 listener = sv.listener()
                 if listener:
-                    mgr = listener.manager  # type: ignore
-                    mgr.diagnostics._updatable.on_document_saved()  # type: ignore
-                    return
+                    diagnostics = listener.manager.diagnostics._updatable
+                    if diagnostics:
+                        diagnostics.on_document_saved()  # type: ignore
 
     def __str__(self) -> str:
         return '{}:{}:{}'.format(self.session.config.name, self.id, self.file_name)

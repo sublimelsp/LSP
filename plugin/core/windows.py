@@ -14,8 +14,7 @@ from .settings import settings
 from .transports import create_transport
 from .types import ClientConfig
 from .types import Settings
-from .types import WindowLike
-from .typing import Optional, Callable, Any, Dict, Deque, List, Protocol, Generator
+from .typing import Optional, Callable, Any, Dict, Deque, List, Generator
 from .views import extract_variables
 from .workspace import disable_in_project
 from .workspace import enable_in_project
@@ -33,18 +32,14 @@ import sublime
 import threading
 
 
-class SublimeLike(Protocol):
-
-    def set_timeout_async(self, f: Callable, timeout_ms: int = 0) -> None:
-        ...
-
-    def Region(self, a: int, b: int) -> 'Any':
-        ...
-
-
 class AbstractViewListener(metaclass=ABCMeta):
 
     view = None  # type: sublime.View
+
+    @property
+    @abstractmethod
+    def manager(self) -> "WindowManager":
+        raise NotImplementedError()
 
     @abstractmethod
     def on_session_initialized_async(self, session: Session) -> None:
@@ -62,12 +57,11 @@ def extract_message(params: Any) -> str:
 class WindowManager(Manager):
     def __init__(
         self,
-        window: WindowLike,
+        window: sublime.Window,
         workspace: ProjectFolders,
         settings: Settings,
         configs: WindowConfigManager,
         diagnostics: DiagnosticsStorage,
-        sublime: Any,
         server_panel_factory: Optional[Callable] = None
     ) -> None:
         self._window = window
@@ -76,7 +70,6 @@ class WindowManager(Manager):
         self.diagnostics = diagnostics
         self.server_panel_factory = server_panel_factory
         self._sessions = WeakSet()  # type: WeakSet[Session]
-        self._sublime = sublime
         self._workspace = workspace
         self._pending_listeners = deque()  # type: Deque[AbstractViewListener]
         self._listeners = WeakSet()  # type: WeakSet[AbstractViewListener]
@@ -171,8 +164,7 @@ class WindowManager(Manager):
                     listener.on_session_initialized_async(session)
 
     def window(self) -> sublime.Window:
-        # WindowLike vs. sublime
-        return self._window  # type: ignore
+        return self._window
 
     def sessions(self, view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
         # TODO: Handle views outside the workspace https://github.com/sublimelsp/LSP/issues/997
@@ -221,9 +213,8 @@ class WindowManager(Manager):
                 if plugin_class.needs_update_or_installation():
                     config.set_view_status(initiating_view, "installing...")
                     plugin_class.install_or_update()
-                # WindowLike vs. sublime.Window
                 cannot_start_reason = plugin_class.can_start(
-                    self._window, initiating_view, workspace_folders, config)  # type: ignore
+                    self._window, initiating_view, workspace_folders, config)
                 if cannot_start_reason:
                     config.erase_view_status(initiating_view)
                     self._window.status_message(cannot_start_reason)
@@ -231,13 +222,12 @@ class WindowManager(Manager):
             config.set_view_status(initiating_view, "starting...")
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
             cwd = workspace_folders[0].path if workspace_folders else None
-            variables = extract_variables(self._window)  # type: ignore
+            variables = extract_variables(self._window)
             if plugin_class is not None:
                 additional_variables = plugin_class.additional_variables()
                 if isinstance(additional_variables, dict):
                     variables.update(additional_variables)
-            # WindowLike vs sublime.Window
-            transport = create_transport(config, cwd, self._window, session, variables)  # type: ignore
+            transport = create_transport(config, cwd, self._window, session, variables)
             config.set_view_status(initiating_view, "initialize")
             session.initialize(variables, transport)
             self._new_session = session
@@ -277,9 +267,9 @@ class WindowManager(Manager):
             return router_logger
 
     def handle_message_request(self, session: Session, params: Any, request_id: Any) -> None:
-        handler = MessageRequestHandler(self._window.active_view(), session, request_id, params,  # type: ignore
-                                        session.config.name)
-        handler.show()
+        view = self._window.active_view()
+        if view:
+            MessageRequestHandler(view, session, request_id, params, session.config.name).show()
 
     def restart_sessions_async(self) -> None:
         self.end_sessions_async()
@@ -326,7 +316,7 @@ class WindowManager(Manager):
                 v = self._window.active_view()
                 if not v:
                     return
-                self.start_async(session.config, v)  # type: ignore
+                self.start_async(session.config, v)
             else:
                 self._configs.disable_temporarily(session.config.name)
         if exception:
@@ -348,14 +338,13 @@ class WindowManager(Manager):
             self.handle_server_message(session.config.name, message)
 
     def handle_show_message(self, session: Session, params: Any) -> None:
-        self._sublime.status_message("{}: {}".format(session.config.name, extract_message(params)))
+        sublime.status_message("{}: {}".format(session.config.name, extract_message(params)))
 
 
 class WindowRegistry(object):
-    def __init__(self, configs: ConfigManager, sublime: Any) -> None:
+    def __init__(self, configs: ConfigManager) -> None:
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs
-        self._sublime = sublime
         self._diagnostics_ui_class = None  # type: Optional[Callable]
         self._server_panel_factory = None  # type: Optional[Callable]
         self._settings = None  # type: Optional[Settings]
@@ -374,16 +363,15 @@ class WindowRegistry(object):
             raise RuntimeError("no settings")
         if window.id() in self._windows:
             return self._windows[window.id()]
-        workspace = ProjectFolders(window)  # type: ignore
-        window_configs = self._configs.for_window(window)  # type: ignore
+        workspace = ProjectFolders(window)
+        window_configs = self._configs.for_window(window)
         diagnostics_ui = self._diagnostics_ui_class(window) if self._diagnostics_ui_class else None
         state = WindowManager(
-            window=window,  # type: ignore
+            window=window,
             workspace=workspace,
             settings=self._settings,
             configs=window_configs,
             diagnostics=DiagnosticsStorage(diagnostics_ui),
-            sublime=self._sublime,
             server_panel_factory=self._server_panel_factory)
         self._windows[window.id()] = state
         return state

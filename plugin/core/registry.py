@@ -73,7 +73,7 @@ def _best_session(view: sublime.View, sessions: Iterable[Session], point: Option
 
 configs = ConfigManager(client_configs.all)
 client_configs.set_listener(configs.update)
-windows = WindowRegistry(configs, sublime)
+windows = WindowRegistry(configs)
 
 
 def get_position(view: sublime.View, event: Optional[dict] = None) -> int:

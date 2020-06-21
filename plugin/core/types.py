@@ -1,6 +1,6 @@
 from .collections import DottedDict
 from .logging import debug
-from .typing import Optional, List, Dict, Any, Protocol, Generator, Callable
+from .typing import Optional, List, Dict, Generator, Callable
 import contextlib
 import sublime
 import time
@@ -159,85 +159,3 @@ def view2scope(view: sublime.View) -> str:
         return view.scope_name(0).split()[0]
     except IndexError:
         return ''
-
-
-class ViewLike(Protocol):
-    def id(self) -> int:
-        ...
-
-    def is_valid(self) -> bool:
-        ...
-
-    def file_name(self) -> Optional[str]:
-        ...
-
-    def change_count(self) -> int:
-        ...
-
-    def window(self) -> Optional[Any]:  # WindowLike
-        ...
-
-    def buffer_id(self) -> int:
-        ...
-
-    def substr(self, region: Any) -> str:
-        ...
-
-    def settings(self) -> Any:  # SettingsLike
-        ...
-
-    def size(self) -> int:
-        ...
-
-    def set_status(self, key: str, status: str) -> None:
-        ...
-
-    def sel(self) -> Any:
-        ...
-
-    def score_selector(self, region: Any, scope: str) -> int:
-        ...
-
-    def run_command(self, command_name: str, command_args: Dict[str, Any]) -> None:
-        ...
-
-
-class WindowLike(Protocol):
-    def id(self) -> int:
-        ...
-
-    def is_valid(self) -> bool:
-        ...
-
-    def folders(self) -> List[str]:
-        ...
-
-    def find_open_file(self, path: str) -> Optional[ViewLike]:
-        ...
-
-    def num_groups(self) -> int:
-        ...
-
-    def active_group(self) -> int:
-        ...
-
-    def active_view_in_group(self, group: int) -> ViewLike:
-        ...
-
-    def project_data(self) -> Optional[dict]:
-        ...
-
-    def project_file_name(self) -> Optional[str]:
-        ...
-
-    def active_view(self) -> Optional[ViewLike]:
-        ...
-
-    def status_message(self, msg: str) -> None:
-        ...
-
-    def views(self) -> List[ViewLike]:
-        ...
-
-    def run_command(self, command_name: str, command_args: Dict[str, Any]) -> None:
-        ...

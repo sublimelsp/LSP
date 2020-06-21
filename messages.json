@@ -30,6 +30,9 @@
     "3154-0.10.0": "messages/3154-0.10.0.txt",
     "3154-0.10.1": "messages/3154-0.10.1.txt",
     "3154-0.11.0": "messages/3154-0.11.0.txt",
+    "3154-0.11.1": "messages/3154-0.11.1.txt",
+    "3154-0.11.2": "messages/3154-0.11.2.txt",
     "3154-0.9.8": "messages/3154-0.9.8.txt",
+    "3154-unreleased": "messages/3154-unreleased.txt",
     "install": "messages/install.txt"
 }

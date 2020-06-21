@@ -1,0 +1,9 @@
+=> 3154-0.11.1
+
+- Fix: send initialized notification first (Raoul Wols)
+- Fix IndexError when diagnostic message string is empty (syntheorem)
+- Fix white space within links not being clickable (#1075) (Rafał Chłodnicki)
+- Trigger warning for ST4 users that are still using ST3-version of
+  LSP (#1073) (Rafał Chłodnicki)
+- Fix material color scheme applying padding to the HTML element and causing
+  the box to not be centered (#1070) (Предраг Николић)

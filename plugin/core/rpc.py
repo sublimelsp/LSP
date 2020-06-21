@@ -1,9 +1,9 @@
 from .logging import debug, exception_log
 from .protocol import Request, Notification, Response, Error, ErrorCode
 from .transports import Transport, TransportCallbacks
-from .typing import Any, Dict, Tuple, Callable, Optional, List
+from .typing import Any, Dict, Tuple, Callable, Optional
 from abc import ABCMeta, abstractmethod
-from threading import Condition, Lock
+from threading import Lock
 import sublime
 
 DEFAULT_SYNC_REQUEST_TIMEOUT = 1.0

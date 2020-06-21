@@ -1,11 +1,12 @@
 from .core.protocol import Diagnostic
 from .core.sessions import Session
 from .core.types import view2scope
-from .core.typing import Iterable, List
+from .core.typing import Iterable, List, Tuple
 from .core.windows import AbstractViewListener
 from .session_buffer import SessionBuffer
+from weakref import WeakValueDictionary
+from weakref import ref
 import sublime
-import weakref
 
 
 class SessionView:
@@ -15,7 +16,7 @@ class SessionView:
 
     LANGUAGE_ID_KEY = "lsp_language"
 
-    _session_buffers = weakref.WeakValueDictionary()  # type: weakref.WeakValueDictionary[int, SessionBuffer]
+    _session_buffers = WeakValueDictionary()  # type: WeakValueDictionary[Tuple[str, int], SessionBuffer]
 
     def __init__(self, listener: AbstractViewListener, session: Session) -> None:
         self.view = listener.view
@@ -33,14 +34,15 @@ class SessionView:
                 break
         settings.set(self.LANGUAGE_ID_KEY, languages)
         buffer_id = self.view.buffer_id()
-        session_buffer = self._session_buffers.get(buffer_id)
+        key = (session.config.name, buffer_id)
+        session_buffer = self._session_buffers.get(key)
         if session_buffer is None:
             session_buffer = SessionBuffer(self, buffer_id, self._language_id)
-            self._session_buffers[buffer_id] = session_buffer
+            self._session_buffers[key] = session_buffer
         else:
             session_buffer.add_session_view(self)
         self.session_buffer = session_buffer
-        self.listener = weakref.ref(listener)
+        self.listener = ref(listener)
         session.register_session_view_async(self)
         session.config.set_view_status(self.view, "")
         for capability in self.session.capabilities.toplevel_keys():

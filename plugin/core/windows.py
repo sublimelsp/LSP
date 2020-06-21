@@ -120,6 +120,12 @@ class WindowManager(Manager):
     def listeners(self) -> Generator[AbstractViewListener, None, None]:
         yield from self._listeners
 
+    def listener_for_view(self, view: sublime.View) -> Optional[AbstractViewListener]:
+        for listener in self.listeners():
+            if listener.view == view:
+                return listener
+        return None
+
     def _dequeue_listener_async(self) -> None:
         listener = None  # type: Optional[AbstractViewListener]
         if self._new_listener is not None:

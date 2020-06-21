@@ -4,6 +4,7 @@ from .core.sessions import Session
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable
 from .core.windows import AbstractViewListener
 from .save_command import LspSaveCommand
+from .session_buffer import SessionBuffer
 from .session_view import SessionView
 import sublime
 import threading
@@ -52,7 +53,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self._file_name = ''
         self._session_views = {}  # type: Dict[str, SessionView]
         self._session_views_lock = threading.Lock()
 
@@ -77,6 +77,10 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     def session_views(self) -> Generator[SessionView, None, None]:
         yield from self._session_views.values()
+
+    def session_buffers(self) -> Generator[SessionBuffer, None, None]:
+        for sv in self.session_views():
+            yield sv.session_buffer
 
     def _register_async(self) -> None:
         file_name = self.view.file_name()
@@ -110,23 +114,20 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
                     sv.on_text_changed(changes)
 
     def on_pre_save(self) -> None:
-        view_settings = self.view.settings()
-        if view_settings.has(LspSaveCommand.SKIP_ON_PRE_SAVE_KEY):
-            view_settings.erase(LspSaveCommand.SKIP_ON_PRE_SAVE_KEY)
-            return
-        with self._session_views_lock:
-            for sv in self.session_views():
-                sv.on_pre_save()
+        if self.view.is_primary():
+            view_settings = self.view.settings()
+            if view_settings.has(LspSaveCommand.SKIP_ON_PRE_SAVE_KEY):
+                view_settings.erase(LspSaveCommand.SKIP_ON_PRE_SAVE_KEY)
+                return
+            with self._session_views_lock:
+                for sv in self.session_views():
+                    sv.on_pre_save()
 
     def on_post_save(self) -> None:
-        if self.view.file_name() != self._file_name:
-            self._file_name = ''
-            self._clear_async()
-            sublime.set_timeout_async(self._register_async)
-            return
-        with self._session_views_lock:
-            for sv in self.session_views():
-                sv.on_post_save()
+        if self.view.is_primary():
+            with self._session_views_lock:
+                for sv in self.session_views():
+                    sv.on_post_save()
 
     def on_close(self) -> None:
         self._clear_async()

@@ -24,7 +24,7 @@ class Logger(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def outgoing_request(self, request_id: int, method: str, params: Any, blocking: bool) -> None:
+    def outgoing_request(self, request_id: int, method: str, params: Any) -> None:
         pass
 
     @abstractmethod
@@ -32,7 +32,7 @@ class Logger(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def incoming_response(self, request_id: int, params: Any, is_error: bool, blocking: bool) -> None:
+    def incoming_response(self, request_id: int, params: Any, is_error: bool) -> None:
         pass
 
     @abstractmethod
@@ -42,73 +42,6 @@ class Logger(metaclass=ABCMeta):
     @abstractmethod
     def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
         pass
-
-
-class SyncRequestStatus:
-
-    __slots__ = ('__payload', '__error', '__request_id', '__response_id')
-
-    def __init__(self) -> None:
-        self.__payload = None  # type: Any
-        self.__error = None  # type: Optional[Dict[str, Any]]
-        self.__request_id = -1
-        self.__response_id = -1
-
-    def prepare(self, request_id: int) -> None:
-        assert self.is_idle()
-        assert self.__payload is None
-        assert self.__error is None
-        self.__request_id = request_id
-
-    def request_id(self) -> int:
-        assert not self.is_idle()
-        return self.__request_id
-
-    def set(self, response_id: int, payload: Any) -> None:
-        assert self.is_requesting()
-        assert self.__request_id == response_id
-        self.__payload = payload
-        self.__response_id = response_id
-        assert self.is_ready()
-
-    def set_error(self, response_id: int, error: Dict[str, Any]) -> None:
-        assert self.is_requesting()
-        assert self.__request_id == response_id
-        self.__error = error
-        self.__response_id = response_id
-        assert self.is_ready()
-
-    def is_ready(self) -> bool:
-        return self.__request_id != -1 and self.__request_id == self.__response_id
-
-    def is_requesting(self) -> bool:
-        return self.__request_id != -1 and self.__response_id == -1
-
-    def is_idle(self) -> bool:
-        return self.__request_id == -1
-
-    def has_error(self) -> bool:
-        return self.__error is not None
-
-    def flush(self) -> Any:
-        assert not self.has_error()
-        assert self.is_ready()
-        result = self.__payload
-        self.reset()
-        return result
-
-    def flush_error(self) -> Dict[str, Any]:
-        assert self.__error is not None
-        assert self.is_ready()
-        result = self.__error
-        self.reset()
-        return result
-
-    def reset(self) -> None:
-        self.__payload = None
-        self.__error = None
-        self.__request_id = -1
-        self.__response_id = -1
 
 
 def print_to_status_bar(error: Dict[str, Any]) -> None:
@@ -128,11 +61,7 @@ class Client(TransportCallbacks):
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
         self._response_handlers = {}  # type: Dict[int, Tuple[Callable, Optional[Callable[[Any], None]]]]
-        self._sync_request_result = SyncRequestStatus()
-        self._sync_request_lock = Lock()
-        self._sync_request_cvar = Condition(self._sync_request_lock)
-        self._deferred_notifications = []  # type: List[Any]
-        self._deferred_responses = []  # type: List[Tuple[Optional[Callable], Any]]
+        self._response_handlers_lock = Lock()
 
     def send_request(
             self,
@@ -140,76 +69,12 @@ class Client(TransportCallbacks):
             handler: Callable[[Optional[Any]], None],
             error_handler: Optional[Callable[[Any], None]] = None,
     ) -> None:
-        with self._sync_request_cvar:
+        with self._response_handlers_lock:
             self.request_id += 1
             request_id = self.request_id
             self._response_handlers[request_id] = (handler, error_handler)
-        self._logger.outgoing_request(request_id, request.method, request.params, blocking=False)
+        self._logger.outgoing_request(request_id, request.method, request.params)
         self.send_payload(request.to_payload(request_id))
-
-    def execute_request(
-            self,
-            request: Request,
-            handler: Callable[[Optional[Any]], None],
-            error_handler: Optional[Callable[[Any], None]] = None,
-            timeout: float = DEFAULT_SYNC_REQUEST_TIMEOUT
-    ) -> None:
-        """
-        Sends a request and waits for response up to timeout (default: 1 second), blocking the current thread.
-        """
-        result = None  # type: Any
-        error = None  # type: Optional[Dict[str, Any]]
-        exception = None  # type: Optional[Exception]
-        with self._sync_request_cvar:
-            try:
-                self.request_id += 1
-                request_id = self.request_id
-                self._logger.outgoing_request(request_id, request.method, request.params, blocking=True)
-                self._sync_request_result.prepare(request_id)  # After this, is_requesting() returns True.
-                self.send_payload(request.to_payload(request_id))
-                self._response_handlers[request_id] = (handler, error_handler)
-                # We go to sleep. We wake up once another thread calls .notify() on this condition variable.
-                if not self._sync_request_cvar.wait_for(self._sync_request_result.is_ready, timeout):
-                    error = {"code": ErrorCode.Timeout, "message": "timeout on {}".format(request.method)}
-                elif self._sync_request_result.has_error():
-                    error = self._sync_request_result.flush_error()
-                else:
-                    result = self._sync_request_result.flush()
-            except Exception as ex:
-                exception = ex
-            finally:
-                self._sync_request_result.reset()
-            self.flush_deferred_notifications()
-            self.flush_deferred_responses()
-        if exception is None:
-            if error is not None:
-                if not error_handler:
-                    error_handler = print_to_status_bar
-                error_handler(error)
-            else:
-                handler(result)
-
-    def flush_deferred_notifications(self) -> None:
-        for payload in self._deferred_notifications:
-            try:
-                method = payload["method"]
-                handler = self._get_handler(method)
-                result = payload["params"]
-                self._logger.incoming_notification(method, result, handler is None)
-                if handler:
-                    handler(result)
-            except Exception as err:
-                exception_log("Error handling server payload", err)
-        self._deferred_notifications.clear()
-
-    def flush_deferred_responses(self) -> None:
-        for handler, result in self._deferred_responses:
-            if handler:
-                try:
-                    handler(result)
-                except Exception as err:
-                    exception_log("Error handling server payload", err)
-        self._deferred_responses.clear()
 
     def send_notification(self, notification: Notification) -> None:
         self._logger.outgoing_notification(notification.method, notification.params)
@@ -253,25 +118,21 @@ class Client(TransportCallbacks):
                     tup = (handler, result, req_id, "request", method)
                     return tup
             else:
-                if self._sync_request_result.is_idle():
-                    res = (handler, result, None, "notification", method)
-                    self._logger.incoming_notification(method, result, res[0] is None)
-                    return res
-                else:
-                    self._deferred_notifications.append(payload)
+                res = (handler, result, None, "notification", method)
+                self._logger.incoming_notification(method, result, res[0] is None)
+                return res
         elif "id" in payload:
             response_id = int(payload["id"])
             handler, result, is_error = self.response_handler(response_id, payload)
             response_tuple = (handler, result, None, None, None)
-            blocking = self._sync_request_result.is_ready()
-            self._logger.incoming_response(response_id, result, is_error, blocking)
+            self._logger.incoming_response(response_id, result, is_error)
             return response_tuple
         else:
             debug("Unknown payload type: ", payload)
         return (None, None, None, None, None)
 
     def on_payload(self, payload: Dict[str, Any]) -> None:
-        with self._sync_request_cvar:
+        with self._response_handlers_lock:
             handler, result, req_id, typestr, method = self.deduce_payload(payload)
 
         if handler:
@@ -314,21 +175,7 @@ class Client(TransportCallbacks):
 
     def handle_response(self, response_id: int, handler: Callable,
                         result: Any, is_error: bool) -> Tuple[Optional[Callable], Any, bool]:
-        if self._sync_request_result.is_idle():
-            return (handler, result, is_error)
-        elif self._sync_request_result.is_requesting():
-            if self._sync_request_result.request_id() == response_id:
-                if is_error:
-                    self._sync_request_result.set_error(response_id, result)
-                else:
-                    self._sync_request_result.set(response_id, result)
-                self._sync_request_cvar.notify()
-            else:
-                self._deferred_responses.append((handler, result))
-            return (None, result, is_error)
-        else:  # self._sync_request_result.is_ready()
-            self._deferred_responses.append((handler, result))
-            return (None, None, is_error)
+        return (handler, result, is_error)
 
     def _get_handler(self, method: str) -> Optional[Callable]:
         return getattr(self, method2attr(method), None)

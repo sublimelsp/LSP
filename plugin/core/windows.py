@@ -421,11 +421,10 @@ class PanelLogger(Logger):
             return
         self.log(self._format_response("~~>", request_id), error.to_lsp())
 
-    def outgoing_request(self, request_id: int, method: str, params: Any, blocking: bool) -> None:
+    def outgoing_request(self, request_id: int, method: str, params: Any) -> None:
         if not settings.log_server:
             return
-        direction = "==>" if blocking else "-->"
-        self.log(self._format_request(direction, method, request_id), params)
+        self.log(self._format_request("-->", method, request_id), params)
 
     def outgoing_notification(self, method: str, params: Any) -> None:
         if not settings.log_server:
@@ -444,13 +443,10 @@ class PanelLogger(Logger):
                 log_payload = False
         self.log(self._format_notification(" ->", method), params, log_payload)
 
-    def incoming_response(self, request_id: int, params: Any, is_error: bool, blocking: bool) -> None:
+    def incoming_response(self, request_id: int, params: Any, is_error: bool) -> None:
         if not settings.log_server:
             return
-        if is_error:
-            direction = "<~~"
-        else:
-            direction = "<==" if blocking else "<<<"
+        direction = "<~~" if is_error else "<<<"
         self.log(self._format_response(direction, request_id), params)
 
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
@@ -535,7 +531,7 @@ class RemoteLogger(Logger):
             'direction': self.DIRECTION_INCOMING,
         })
 
-    def outgoing_request(self, request_id: int, method: str, params: Any, blocking: bool) -> None:
+    def outgoing_request(self, request_id: int, method: str, params: Any) -> None:
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
@@ -543,10 +539,9 @@ class RemoteLogger(Logger):
             'method': method,
             'params': params,
             'direction': self.DIRECTION_OUTGOING,
-            'blocking': blocking
         })
 
-    def incoming_response(self, request_id: int, params: Any, is_error: bool, blocking: bool) -> None:
+    def incoming_response(self, request_id: int, params: Any, is_error: bool) -> None:
         self._broadcast_json({
             'server': self._server_name,
             'id': request_id,
@@ -554,7 +549,6 @@ class RemoteLogger(Logger):
             'params': params,
             'direction': self.DIRECTION_INCOMING,
             'isError': is_error,
-            'blocking': blocking
         })
 
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:

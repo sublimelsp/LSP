@@ -34,6 +34,13 @@ UNDERLINE_FLAGS = (sublime.DRAW_SQUIGGLY_UNDERLINE | sublime.DRAW_NO_OUTLINE | s
 BOX_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_EMPTY_AS_OVERWRITE
 
 
+def is_same_file(file_path_a: str, file_path_b: str) -> bool:
+    try:
+        return os.path.samefile(file_path_a, file_path_b)
+    except FileNotFoundError:
+        return False
+
+
 def format_severity(severity: int) -> str:
     return diagnostic_severity_names.get(severity, "???")
 
@@ -46,7 +53,7 @@ def view_diagnostics(view: sublime.View) -> Dict[str, List[Diagnostic]]:
             if window:
                 window_diagnostics = windows.lookup(window).diagnostics.get()
                 for file in window_diagnostics:
-                    if os.path.samefile(file, file_name):
+                    if is_same_file(file, file_name):
                         return window_diagnostics[file]
     return {}
 
@@ -258,7 +265,7 @@ class DiagnosticViewRegions(DiagnosticsUpdateWalk):
     def begin_file(self, file_name: str) -> None:
         # TODO: would be nice if walk could skip this updater
         file = self._view.file_name()
-        if file and os.path.samefile(file_name, file):
+        if file and is_same_file(file_name, file):
             self._relevant_file = True
 
     def diagnostic(self, diagnostic: Diagnostic) -> None:

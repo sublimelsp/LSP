@@ -109,11 +109,11 @@ class LspHoverCommand(LspTextCommand):
 
     def handle_code_actions(self, responses: Dict[str, List[CodeActionOrCommand]], point: int) -> None:
         self._actions_by_config = responses
-        sublime.set_timeout(lambda: self.show_hover(point))
+        self.show_hover(point)
 
     def handle_response(self, response: Optional[Any], point: int) -> None:
         self._hover = response
-        sublime.set_timeout(lambda: self.show_hover(point))
+        self.show_hover(point)
 
     def symbol_actions_content(self) -> str:
         actions = []
@@ -175,6 +175,9 @@ class LspHoverCommand(LspTextCommand):
         return minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT)
 
     def show_hover(self, point: int) -> None:
+        sublime.set_timeout(lambda: self._show_hover(point))
+
+    def _show_hover(self, point: int) -> None:
         contents = self.diagnostics_content() + self.hover_content()
         if contents and settings.show_symbol_action_links:
             contents += self.symbol_actions_content()
@@ -183,16 +186,24 @@ class LspHoverCommand(LspTextCommand):
         _test_contents.append(contents)  # for testing only
 
         if contents:
-            mdpopups.show_popup(
-                self.view,
-                contents,
-                css=popups.stylesheet,
-                md=False,
-                flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
-                location=point,
-                wrapper_class=popups.classname,
-                max_width=800,
-                on_navigate=lambda href: self.on_hover_navigate(href, point))
+            if self.view.is_popup_visible():
+                mdpopups.update_popup(
+                    self.view,
+                    contents,
+                    css=popups.stylesheet,
+                    md=False,
+                    wrapper_class=popups.classname)
+            else:
+                mdpopups.show_popup(
+                    self.view,
+                    contents,
+                    css=popups.stylesheet,
+                    md=False,
+                    flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+                    location=point,
+                    wrapper_class=popups.classname,
+                    max_width=800,
+                    on_navigate=lambda href: self.on_hover_navigate(href, point))
 
     def on_hover_navigate(self, href: str, point: int) -> None:
         for goto_kind in goto_kinds:

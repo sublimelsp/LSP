@@ -113,6 +113,18 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
                 for sv in self.session_views():
                     sv.on_text_changed(changes)
 
+    def on_revert(self) -> None:
+        if self.view.is_primary():
+            with self._session_views_lock:
+                for sv in self.session_views():
+                    sv.on_revert()
+
+    def on_reload(self) -> None:
+        if self.view.is_primary():
+            with self._session_views_lock:
+                for sv in self.session_views():
+                    sv.on_reload()
+
     def on_pre_save(self) -> None:
         if self.view.is_primary():
             view_settings = self.view.settings()

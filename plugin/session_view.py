@@ -113,6 +113,12 @@ class SessionView:
     def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
         self.session_buffer.on_text_changed(changes)
 
+    def on_revert(self) -> None:
+        self.session_buffer.on_revert()
+
+    def on_reload(self) -> None:
+        self.session_buffer.on_reload()
+
     def purge_changes(self) -> None:
         self.session_buffer.purge_changes()
 

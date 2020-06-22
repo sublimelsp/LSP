@@ -120,15 +120,16 @@ def publish_release(args: argparse.Namespace) -> None:
     git('push', repo_url, 'tag', version)
 
     # publish the release
-    post_url = '/repos/{}/releases?access_token={}'.format(GITHUB_REPO, args.token)
+    post_url = '/repos/{}/releases'.format(GITHUB_REPO)
     headers = {
+        'Authorization': 'token {}'.format(args.token),
         'User-Agent': 'Sublime Text',
         'Content-type': 'application/json',
     }
     # get message from /messages/<version>.txt
     text = get_message(os.path.join(MESSAGE_PATH, version + '.txt'))
     # strip message header (version)
-    text = text[text.find('\n') + 1:]
+    text = text[text.find('\n') + 1:].strip()
     # built the JSON request body
     data = json.dumps({
         "tag_name": version,

@@ -1,4 +1,3 @@
-from .core.logging import debug
 from .core.protocol import TextDocumentSyncKindFull
 from .core.protocol import TextDocumentSyncKindNone
 from .core.sessions import SessionViewProtocol
@@ -74,13 +73,8 @@ class SessionBuffer:
         if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and self.view.size() != 0:
             # Issue https://github.com/sublimehq/sublime_text/issues/3323
             # A special situation when changes externally. We receive two changes,
-            # one that removes all content and one that has 0,0,'' parameters. We resend whole
-            # file in that case to fix broken state.
-            debug('Working around the on_text_changed bug {}'.format(self.view.file_name()))
-            self.purge_changes()
-            notification = did_change(self.view, None)  # type: ignore
-            self.session.send_notification(notification)
-            self._massive_hack_changed()
+            # one that removes all content and one that has 0,0,'' parameters.
+            pass
         else:
             change_count = self.view.change_count()
             if self.pending_changes is None:
@@ -90,13 +84,20 @@ class SessionBuffer:
             debounced(self.purge_changes, 500,
                       lambda: self.view.is_valid() and change_count == self.view.change_count())
 
+    def on_revert(self) -> None:
+        self.pending_changes = None  # Don't bother with pending changes
+        self.session.send_notification(did_change(self.view, None))
+        self._massive_hack_changed()
+
+    on_reload = on_revert
+
     def purge_changes(self) -> None:
         if self.pending_changes is not None:
             sync_kind = self.session.text_sync_kind()
             if sync_kind == TextDocumentSyncKindNone:
                 return
             c = None if sync_kind == TextDocumentSyncKindFull else self.pending_changes.changes
-            notification = did_change(self.view, c)  # type: ignore
+            notification = did_change(self.view, c)
             self.session.send_notification(notification)
             self.pending_changes = None
             self._massive_hack_changed()
@@ -106,7 +107,7 @@ class SessionBuffer:
             self.purge_changes()
             # mypy: expected sublime.View, got ViewLike
             # TextDocumentSaveReason.Manual
-            self.session.send_notification(will_save(self.view, 1))  # type: ignore
+            self.session.send_notification(will_save(self.view, 1))
 
     def on_post_save(self) -> None:
         file_name = self.view.file_name()
@@ -127,7 +128,7 @@ class SessionBuffer:
             if send_did_save:
                 self.purge_changes()
                 # mypy: expected sublime.View, got ViewLike
-                self.session.send_notification(did_save(self.view, include_text, self.file_name))  # type: ignore
+                self.session.send_notification(did_save(self.view, include_text, self.file_name))
         self._massive_hack_saved()
 
     def on_diagnostics_async(self, diagnostics: List[Dict[str, Any]], version: Optional[int]) -> None:

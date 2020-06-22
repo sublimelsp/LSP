@@ -3,14 +3,14 @@ import sublime
 import html
 import webbrowser
 
-from .core.popups import popups
+from .core.css import css
 from .core.protocol import Request
 from .core.registry import LSPViewEventListener
 from .core.settings import settings
 from .core.signature_help import create_signature_help, SignatureHelp
 from .core.typing import List, Dict, Optional, Union
-from .core.views import text_document_position_params
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from .core.views import text_document_position_params
 
 
 class ColorSchemeScopeRenderer(object):
@@ -133,11 +133,11 @@ class SignatureHelpListener(LSPViewEventListener):
     def _show_popup(self, content: str, point: int) -> None:
         mdpopups.show_popup(self.view,
                             content,
-                            css=popups.stylesheet,
+                            css=css().popups,
                             md=True,
                             flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
                             location=point,
-                            wrapper_class=popups.classname,
+                            wrapper_class=css().popups_classname,
                             max_width=800,
                             on_hide=self._on_hide,
                             on_navigate=self._on_hover_navigate)
@@ -146,9 +146,9 @@ class SignatureHelpListener(LSPViewEventListener):
     def _update_popup(self, content: str) -> None:
         mdpopups.update_popup(self.view,
                               content,
-                              css=popups.stylesheet,
+                              css=css().popups,
                               md=True,
-                              wrapper_class=popups.classname)
+                              wrapper_class=css().popups_classname)
 
     def _on_hide(self) -> None:
         self._visible = False

@@ -1,11 +1,16 @@
 from ...third_party import WebsocketServer  # type: ignore
 from .configurations import ConfigManager
 from .configurations import WindowConfigManager
-from .diagnostics import DiagnosticsStorage
+from .diagnostics import DiagnosticsCursor
+from .diagnostics import DiagnosticsPhantoms
+from .diagnostics import DiagnosticsWalker
+from .diagnostics import ensure_diagnostics_panel
 from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
+from .protocol import Diagnostic
 from .protocol import Error
+from .protocol import Point
 from .rpc import Logger
 from .sessions import get_plugin
 from .sessions import Manager
@@ -14,8 +19,9 @@ from .settings import settings
 from .transports import create_transport
 from .types import ClientConfig
 from .types import Settings
-from .typing import Optional, Callable, Any, Dict, Deque, List, Generator
+from .typing import Optional, Callable, Any, Dict, Deque, List, Generator, Tuple, Mapping, Iterable
 from .views import extract_variables
+from .views import format_diagnostic_for_panel
 from .workspace import disable_in_project
 from .workspace import enable_in_project
 from .workspace import ProjectFolders
@@ -28,6 +34,7 @@ from time import time
 from weakref import ref
 from weakref import WeakSet
 import json
+import os
 import sublime
 import threading
 
@@ -49,6 +56,18 @@ class AbstractViewListener(metaclass=ABCMeta):
     def on_session_shutdown_async(self, session: Session) -> None:
         raise NotImplementedError()
 
+    @abstractmethod
+    def diagnostics_async(self) -> Dict[str, List[Diagnostic]]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def diagnostics_panel_contribution_async(self) -> List[str]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def update_total_errors_and_warnings_status_async(self) -> None:
+        raise NotImplementedError()
+
 
 def extract_message(params: Any) -> str:
     return params.get("message", "???") if isinstance(params, dict) else "???"
@@ -61,13 +80,11 @@ class WindowManager(Manager):
         workspace: ProjectFolders,
         settings: Settings,
         configs: WindowConfigManager,
-        diagnostics: DiagnosticsStorage,
         server_panel_factory: Optional[Callable] = None
     ) -> None:
         self._window = window
         self._settings = settings
         self._configs = configs
-        self.diagnostics = diagnostics
         self.server_panel_factory = server_panel_factory
         self._sessions = WeakSet()  # type: WeakSet[Session]
         self._workspace = workspace
@@ -75,6 +92,8 @@ class WindowManager(Manager):
         self._listeners = WeakSet()  # type: WeakSet[AbstractViewListener]
         self._new_listener = None  # type: Optional[AbstractViewListener]
         self._new_session = None  # type: Optional[Session]
+        self._cursor = DiagnosticsCursor(settings.show_diagnostics_severity_level)
+        self._phantoms = DiagnosticsPhantoms(self._window)
 
     def on_load_project_async(self) -> None:
         # TODO: Also end sessions that were previously enabled in the .sublime-project, but now disabled or removed
@@ -301,10 +320,6 @@ class WindowManager(Manager):
 
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
         self._sessions.discard(session)
-        for view in self._window.views():
-            file_name = view.file_name()
-            if file_name:
-                self.diagnostics.remove(file_name, session.config.name)
         for listener in self._listeners:
             listener.on_session_shutdown_async(session)
         if exit_code != 0:
@@ -340,17 +355,84 @@ class WindowManager(Manager):
     def handle_show_message(self, session: Session, params: Any) -> None:
         sublime.status_message("{}: {}".format(session.config.name, extract_message(params)))
 
+    def update_diagnostics_panel_async(self) -> None:
+        panel = ensure_diagnostics_panel(self._window)
+        if not panel:
+            return
+        to_render = []  # type: List[str]
+        base_dir = None
+        for listener in self._listeners:
+            contribution = listener.diagnostics_panel_contribution_async()
+            if not contribution:
+                continue
+            file_path = listener.view.file_name() or ""
+            base_dir = self.get_project_path(file_path)  # What about different base dirs for multiple folders?
+            file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
+            to_render.append(" ◌ {}:".format(file_path))
+            to_render.extend(contribution)
+        if isinstance(base_dir, str):
+            panel.settings().set("result_base_dir", base_dir)
+        else:
+            panel.settings().erase("result_base_dir")
+        panel.run_command("lsp_update_panel", {"characters": "\n".join(to_render)})
+
+    def _can_manipulate_diagnostics_panel(self) -> bool:
+        active_panel = self._window.active_panel()
+        if active_panel is not None:
+            if active_panel != "output.diagnostics":
+                # Some panel is visible, but it's not our diagnostics panel.
+                return False
+        # No panel is visible, so we can manipulate our diagnostics panel.
+        return True
+
+    def show_diagnostics_panel_async(self) -> None:
+        if self._can_manipulate_diagnostics_panel():
+            self._window.run_command("show_panel", {"panel": "output.diagnostics"})
+
+    def hide_diagnostics_panel_async(self) -> None:
+        if self._can_manipulate_diagnostics_panel():
+            self._window.run_command("hide_panel", {"panel": "output.diagnostics"})
+
+    def clear_diagnostics_async(self) -> None:
+        # XXX: Remove this functionality?
+        for session in self._sessions:
+            session.clear_diagnostics_async()
+
+    def select_next_diagnostic_async(self) -> None:
+        self._select_diagnostic_async(1)
+
+    def select_previous_diagnostic_async(self) -> None:
+        self._select_diagnostic_async(-1)
+
+    def unselect_diagnostic_async(self) -> None:
+        self._phantoms.set_diagnostic(None)
+
+    def _diagnostics_by_file_async(self) -> Generator[Tuple[str, Mapping[str, Iterable[Diagnostic]]], None, None]:
+        for listener in self._listeners:
+            yield listener.view.file_name(), listener.diagnostics_async()
+
+    def _select_diagnostic_async(self, direction: int) -> None:
+        debug("_select_diagnostic_async", direction)
+        file_path = None  # type: Optional[str]
+        point = None  # type: Optional[Point]
+        if not self._cursor.has_value:
+            active_view = self._window.active_view()
+            if active_view:
+                file_path = active_view.file_name()
+                point = Point(*active_view.rowcol(active_view.sel()[0].begin()))
+        walk = self._cursor.from_diagnostic(direction) if self._cursor.has_value else self._cursor.from_position(
+            direction, file_path, point)
+        walker = DiagnosticsWalker([walk])
+        walker.walk(self._diagnostics_by_file_async())
+        self._phantoms.set_diagnostic(self._cursor.value)
+
 
 class WindowRegistry(object):
     def __init__(self, configs: ConfigManager) -> None:
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs
-        self._diagnostics_ui_class = None  # type: Optional[Callable]
         self._server_panel_factory = None  # type: Optional[Callable]
         self._settings = None  # type: Optional[Settings]
-
-    def set_diagnostics_ui(self, ui_class: Any) -> None:
-        self._diagnostics_ui_class = ui_class
 
     def set_server_panel_factory(self, factory: Callable) -> None:
         self._server_panel_factory = factory
@@ -365,13 +447,11 @@ class WindowRegistry(object):
             return self._windows[window.id()]
         workspace = ProjectFolders(window)
         window_configs = self._configs.for_window(window)
-        diagnostics_ui = self._diagnostics_ui_class(window) if self._diagnostics_ui_class else None
         state = WindowManager(
             window=window,
             workspace=workspace,
             settings=self._settings,
             configs=window_configs,
-            diagnostics=DiagnosticsStorage(diagnostics_ui),
             server_panel_factory=self._server_panel_factory)
         self._windows[window.id()] = state
         return state

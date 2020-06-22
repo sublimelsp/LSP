@@ -56,9 +56,22 @@
   // hint: 4
   "show_diagnostics_severity_level": 4,
 
+  // Delay showing diagnostics by this many seconds (as a floating-point
+  // number). The delay will only kick into action when previously there were
+  // no diagnostics in the view. If there were previous diagnostics in the view,
+  // then the delay setting here is ignored and diagnostics are updated
+  // immediately.
+  "diagnostics_delay": 0.0,
+
+  // Add an additional delay when presenting diagnostics, and when the
+  // auto-complete widget is currently visible. See the setting
+  // "diagnostics_delay".
+  "diagnostics_additional_delay_auto_complete": 0.0,
+
   // Highlighting style of code diagnostics.
-  // Valid values are "underline" or "box"
-  "diagnostics_highlight_style": "underline",
+  // Valid values are "fill", "box", "underline", "stippled", "squiggly" or "".
+  // When set to the empty string (""), no diagnostics are shown in-line.
+  "diagnostics_highlight_style": "squiggly",
 
   // Highlighting style of "highlights": accentuating nearby text entities that
   // are related to the one under your cursor.

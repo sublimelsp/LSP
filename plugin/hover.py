@@ -6,15 +6,16 @@ from html import escape
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import run_code_action_or_command
-from .core.popups import popups
-from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation
+from .core.css import css
+from .core.protocol import Request, Diagnostic, DiagnosticRelatedInformation
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.settings import settings
 from .core.typing import List, Optional, Any, Dict
+from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
-from .core.views import offset_to_point
 from .core.views import make_link
+from .core.views import offset_to_point
 from .core.views import text_document_position_params
 from .diagnostics import filter_by_point, view_diagnostics
 
@@ -23,14 +24,6 @@ SUBLIME_WORD_MASK = 515
 
 
 _test_contents = []  # type: List[str]
-
-
-class_for_severity = {
-    DiagnosticSeverity.Error: 'errors',
-    DiagnosticSeverity.Warning: 'warnings',
-    DiagnosticSeverity.Information: 'info',
-    DiagnosticSeverity.Hint: 'hints'
-}
 
 
 class GotoKind:
@@ -124,13 +117,11 @@ class LspHoverCommand(LspTextCommand):
         diagnostic_message = escape(diagnostic.message, False).replace('\n', '<br>')
         related_infos = [self.format_diagnostic_related_info(info) for info in diagnostic.related_info]
         related_content = "<pre class='related_info'>" + "<br>".join(related_infos) + "</pre>" if related_infos else ""
-
         if diagnostic.source:
-            return "<pre class=\"{}\">[{}] {}{}</pre>".format(class_for_severity[diagnostic.severity],
-                                                              diagnostic.source, diagnostic_message, related_content)
+            content = "[{}] {}{}".format(diagnostic.source, diagnostic_message, related_content)
         else:
-            return "<pre class=\"{}\">{}{}</pre>".format(class_for_severity[diagnostic.severity], diagnostic_message,
-                                                         related_content)
+            content = "{}{}".format(diagnostic_message, related_content)
+        return '<pre class="{}">{}</pre>'.format(DIAGNOSTIC_SEVERITY[diagnostic.severity - 1][1], content)
 
     def diagnostics_content(self) -> str:
         formatted = []
@@ -176,18 +167,18 @@ class LspHoverCommand(LspTextCommand):
                 mdpopups.update_popup(
                     self.view,
                     contents,
-                    css=popups.stylesheet,
+                    css=css().popups,
                     md=False,
-                    wrapper_class=popups.classname)
+                    wrapper_class=css().popups_classname)
             else:
                 mdpopups.show_popup(
                     self.view,
                     contents,
-                    css=popups.stylesheet,
+                    css=css().popups,
                     md=False,
                     flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
                     location=point,
-                    wrapper_class=popups.classname,
+                    wrapper_class=css().popups_classname,
                     max_width=800,
                     on_navigate=lambda href: self.on_hover_navigate(href, point))
 

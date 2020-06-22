@@ -1,85 +1,21 @@
 from .logging import debug
-from .protocol import Diagnostic, DiagnosticSeverity, Point
-from .typing import Protocol, List, Dict, Tuple, Callable, Optional
+from .panels import ensure_panel
+from .protocol import Diagnostic
+from .protocol import DiagnosticRelatedInformation
+from .protocol import DiagnosticSeverity
+from .protocol import Point
+from .typing import Protocol, List, Dict, Tuple, Callable, Optional, Iterable, Generator, Mapping
 from .url import uri_to_filename
+from .views import create_phantom
+from .views import range_to_region
+import html
+import os
+import sublime
 
 
-class DiagnosticsUI(Protocol):
-
-    def update(self, file_name: str, config_name: str, diagnostics: Dict[str, Dict[str, List[Diagnostic]]]) -> None:
-        ...
-
-    def select(self, index: int) -> None:
-        ...
-
-    def deselect(self) -> None:
-        ...
-
-
-class DiagnosticsStorage(object):
-
-    def __init__(self, updateable: Optional[DiagnosticsUI]) -> None:
-        self._diagnostics = {}  # type: Dict[str, Dict[str, List[Diagnostic]]]
-        self._updatable = updateable
-
-    def get(self) -> Dict[str, Dict[str, List[Diagnostic]]]:
-        return self._diagnostics
-
-    def get_by_file(self, file_path: str) -> Dict[str, List[Diagnostic]]:
-        return self._diagnostics.get(file_path, {})
-
-    def _update(self, file_path: str, client_name: str, diagnostics: List[Diagnostic]) -> bool:
-        updated = False
-        if diagnostics:
-            file_diagnostics = self._diagnostics.setdefault(file_path, dict())
-            file_diagnostics[client_name] = diagnostics
-            updated = True
-        else:
-            if file_path in self._diagnostics:
-                if client_name in self._diagnostics[file_path]:
-                    updated = True
-                    del self._diagnostics[file_path][client_name]
-                if not self._diagnostics[file_path]:
-                    del self._diagnostics[file_path]
-        return updated
-
-    def clear(self) -> None:
-        for file_path in list(self._diagnostics):
-            for client_name in list(self._diagnostics[file_path]):
-                if self._update(file_path, client_name, []):
-                    self._notify(file_path, client_name)
-
-    def receive(self, client_name: str, update: dict) -> None:
-        maybe_file_uri = update.get('uri')
-        if maybe_file_uri is not None:
-            file_path = uri_to_filename(maybe_file_uri)
-
-            diagnostics = list(
-                Diagnostic.from_lsp(item) for item in update.get('diagnostics', []))
-
-            if self._update(file_path, client_name, diagnostics):
-                self._notify(file_path, client_name)
-        else:
-            debug('missing uri in diagnostics update')
-
-    def _notify(self, file_path: str, client_name: str) -> None:
-        if self._updatable:
-            self._updatable.update(file_path, client_name, self._diagnostics)
-
-    def remove(self, file_path: str, client_name: str) -> None:
-        self._update(file_path, client_name, [])
-
-    def select_next(self) -> None:
-        if self._updatable:
-            self._updatable.select(1)
-
-    def select_previous(self) -> None:
-        if self._updatable:
-            self._updatable.select(-1)
-
-    def select_none(self) -> None:
-        if self._updatable:
-            self._updatable.deselect()
+def ensure_diagnostics_panel(window: sublime.Window) -> Optional[sublime.View]:
+    return ensure_panel(window, "diagnostics", r"^\s*\S\s+(\S.*):$", r"^\s+([0-9]+):?([0-9]+).*$",
+                        "Packages/LSP/Syntaxes/Diagnostics.sublime-syntax")
 
 
 class DiagnosticsUpdateWalk(object):
@@ -109,7 +45,7 @@ class DiagnosticCursorWalk(DiagnosticsUpdateWalk):
         self._cursor = cursor
         self._direction = direction
         self._current_file_path = ""
-        self._candidate = None  # type: 'Optional[Tuple[str, Diagnostic]]'
+        self._candidate = None  # type: Optional[Tuple[str, Diagnostic]]
 
     def begin_file(self, file_path: str) -> None:
         self._current_file_path = file_path
@@ -249,7 +185,7 @@ class DiagnosticsUpdatedWalk(DiagnosticCursorWalk):
 
 
 class DiagnosticsCursor(object):
-    def __init__(self, show_diagnostics_severity_level: int = DiagnosticSeverity.Warning) -> None:
+    def __init__(self, show_diagnostics_severity_level: int = 2) -> None:
         self._file_diagnostic = None  # type: Optional[Tuple[str, Diagnostic]]
         self.max_severity_level = show_diagnostics_severity_level
 
@@ -286,22 +222,73 @@ class DiagnosticsWalker(object):
     def __init__(self, subs: List[DiagnosticsUpdateWalk]) -> None:
         self._subscribers = subs
 
-    def walk(self, diagnostics_by_file: Dict[str, Dict[str, List[Diagnostic]]]) -> None:
+    def walk(self, diagnostics_by_file: Iterable[Tuple[str, Mapping[str, Iterable[Diagnostic]]]]) -> None:
         self.invoke_each(lambda w: w.begin())
 
-        if diagnostics_by_file:
-            for file_path, source_diagnostics in diagnostics_by_file.items():
+        for file_path, source_diagnostics in diagnostics_by_file:
 
-                self.invoke_each(lambda w: w.begin_file(file_path))
+            self.invoke_each(lambda w: w.begin_file(file_path))
 
-                for origin, diagnostics in source_diagnostics.items():
-                    for diagnostic in diagnostics:
-                        self.invoke_each(lambda w: w.diagnostic(diagnostic))
+            for origin, diagnostics in source_diagnostics.items():
+                for diagnostic in diagnostics:
+                    self.invoke_each(lambda w: w.diagnostic(diagnostic))
 
-                self.invoke_each(lambda w: w.end_file(file_path))
+            self.invoke_each(lambda w: w.end_file(file_path))
 
         self.invoke_each(lambda w: w.end())
 
     def invoke_each(self, func: Callable[[DiagnosticsUpdateWalk], None]) -> None:
         for sub in self._subscribers:
             func(sub)
+
+
+class DiagnosticsPhantoms(object):
+
+    def __init__(self, window: sublime.Window) -> None:
+        self._window = window
+        self._last_phantom_set = None  # type: 'Optional[sublime.PhantomSet]'
+
+    def set_diagnostic(self, file_diagnostic: Optional[Tuple[str, Diagnostic]]) -> None:
+        self.clear()
+        if file_diagnostic:
+            file_path, diagnostic = file_diagnostic
+            view = self._window.open_file(file_path, sublime.TRANSIENT)
+            if view.is_loading():
+                sublime.set_timeout(lambda: self.apply_phantom(view, diagnostic), 500)
+            else:
+                self.apply_phantom(view, diagnostic)
+        else:
+            if self._last_phantom_set:
+                view = self._last_phantom_set.view
+                has_phantom = view.settings().get('lsp_diagnostic_phantom')
+                if not has_phantom:
+                    view.settings().set('lsp_diagnostic_phantom', False)
+
+    def apply_phantom(self, view: sublime.View, diagnostic: Diagnostic) -> None:
+        phantom_set = sublime.PhantomSet(view, "lsp_diagnostics")
+        base_dir = None  # TODO
+        # base_dir = windows.lookup(self._window).get_project_path(file_path)
+        phantom = create_phantom(view, diagnostic, base_dir, self.navigate)
+        phantom_set.update([phantom])
+        view.show_at_center(phantom.region)
+        self._last_phantom_set = phantom_set
+        has_phantom = view.settings().get('lsp_diagnostic_phantom')
+        if not has_phantom:
+            view.settings().set('lsp_diagnostic_phantom', True)
+
+    def navigate(self, href: str) -> None:
+        if href == "hide":
+            self.clear()
+        elif href == "next":
+            self._window.run_command("lsp_next_diagnostic")
+        elif href == "previous":
+            self._window.run_command("lsp_previous_diagnostic")
+        elif href.startswith("location"):
+            # todo: share with hover?
+            _, file_path, location = href.split(":", 2)
+            self._window.open_file(file_path + ":" + location, sublime.ENCODED_POSITION | sublime.TRANSIENT)
+
+    def clear(self) -> None:
+        if self._last_phantom_set:
+            self._last_phantom_set.view.settings().set('lsp_diagnostic_phantom', False)
+            self._last_phantom_set.update([])

@@ -1,8 +1,8 @@
+from .core.diagnostics import ensure_diagnostics_panel
 from .core.main import ensure_server_panel
-from .diagnostics import ensure_diagnostics_panel
 from .core.panels import PanelName
-from sublime_plugin import WindowCommand
 from sublime import Window
+from sublime_plugin import WindowCommand
 
 
 def toggle_output_panel(window: Window, panel_type: str) -> None:

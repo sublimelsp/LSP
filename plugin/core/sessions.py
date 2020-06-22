@@ -7,13 +7,16 @@ from .protocol import WorkspaceFolder, Request, Notification, Response, Diagnost
 from .rpc import Client
 from .rpc import Logger
 from .settings import client_configs
+from .settings import settings
 from .transports import Transport
 from .types import ClientConfig
 from .types import ClientStates
 from .types import debounced
 from .typing import Dict, Any, Optional, List, Tuple, Generator, Type, Protocol
+from .url import uri_to_filename
 from .version import __version__
 from .views import COMPLETION_KINDS
+from .views import DIAGNOSTIC_SEVERITY
 from .views import did_change_configuration
 from .views import extract_variables
 from .views import SYMBOL_KINDS
@@ -46,6 +49,13 @@ class Manager(metaclass=ABCMeta):
         """
         pass
 
+    @abstractmethod
+    def get_project_path(self, file_path: str) -> Optional[str]:
+        """
+        Get the project path for the given file.
+        """
+        pass
+
     # Mutators
 
     @abstractmethod
@@ -57,6 +67,14 @@ class Manager(metaclass=ABCMeta):
         A normal flow of calls would be start -> on_post_initialize -> do language server things -> on_post_exit.
         However, it is possible that the subprocess cannot start, in which case on_post_initialize will never be called.
         """
+        pass
+
+    @abstractmethod
+    def show_diagnostics_panel_async(self) -> None:
+        pass
+
+    @abstractmethod
+    def hide_diagnostics_panel_async(self) -> None:
         pass
 
     # Event callbacks
@@ -286,7 +304,7 @@ class SessionViewProtocol(Protocol):
     def shutdown_async(self) -> None:
         ...
 
-    def present_diagnostics_async(self, diagnostics: List[Diagnostic]) -> None:
+    def present_diagnostics_async(self, flags: int) -> None:
         ...
 
 
@@ -534,6 +552,16 @@ class Session(Client):
         """
         yield from self._session_buffers
 
+    def get_session_buffer_for_uri_async(self, uri: str) -> Optional[SessionBufferProtocol]:
+        file_name = uri_to_filename(uri)
+        for sb in self.session_buffers_async():
+            try:
+                if os.path.samefile(file_name, sb.file_name):
+                    return sb
+            except FileNotFoundError:
+                pass
+        return None
+
     # --- capability observers -----------------------------------------------------------------------------------------
 
     def can_handle(self, view: sublime.View, capability: Optional[str] = None) -> bool:
@@ -632,6 +660,11 @@ class Session(Client):
         if mgr:
             getattr(mgr, method)(*args)
 
+    def clear_diagnostics_async(self) -> None:
+        # XXX: Remove this functionality?
+        for sb in self.session_buffers_async():
+            sb.on_diagnostics_async([], None)
+
     def on_stderr_message(self, message: str) -> None:
         self.call_manager('handle_stderr_log', self, message)
         self._logger.stderr_message(message)
@@ -708,9 +741,14 @@ class Session(Client):
 
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""
-        mgr = self.manager()
-        if mgr:
-            mgr.diagnostics.receive(self.config.name, params)  # type: ignore
+
+        def run() -> None:
+            uri = params["uri"]
+            sb = self.get_session_buffer_for_uri_async(uri)
+            if sb:
+                sb.on_diagnostics_async(params["diagnostics"], params.get("version"))
+
+        sublime.set_timeout_async(run)
 
     def m_client_registerCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/registerCapability request"""

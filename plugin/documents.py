@@ -1,5 +1,6 @@
 from .code_actions import actions_manager
 from .code_actions import CodeActionsByConfigName
+from .core.protocol import Diagnostic
 from .core.protocol import DocumentHighlightKind
 from .core.protocol import Range
 from .core.protocol import Request
@@ -9,6 +10,7 @@ from .core.sessions import Session
 from .core.settings import settings as global_settings
 from .core.types import debounced
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple
+from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import document_color_params
 from .core.views import lsp_color_to_phantom
 from .core.views import make_link
@@ -70,6 +72,7 @@ def _clear_async(lock: threading.Lock, session_views: Dict[str, SessionView]) ->
 class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     ACTIONS_ANNOTATION_KEY = "lsp_action_annotations"
+    TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY = "lsp_total_errors_and_warnings"
     code_actions_debounce_time = 800
     color_boxes_debounce_time = 500
     highlights_debounce_time = 500
@@ -89,6 +92,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms.update([])
         self._clear_highlight_regions()
+        self.view.erase_status(self.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
         self._clear_async()
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
@@ -101,14 +105,41 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
                 self._session_views[session.config.name] = SessionView(self, session)
                 self.view.settings().set("lsp_active", True)
                 added = True
-        if added and "colorProvider" not in global_settings.disabled_capabilities:
-            self._do_color_boxes_async()
+        if added:
+            if "colorProvider" not in global_settings.disabled_capabilities:
+                self._do_color_boxes_async()
+            self.update_total_errors_and_warnings_status_async()
 
     def on_session_shutdown_async(self, session: Session) -> None:
         with self._session_views_lock:
             self._session_views.pop(session.config.name, None)
             if not self._session_views:
                 self.view.settings().erase("lsp_active")
+        self.update_total_errors_and_warnings_status_async()
+
+    def diagnostics_panel_contribution_async(self) -> List[str]:
+        result = []  # type: List[str]
+        with self._session_views_lock:
+            # Sort by severity
+            for severity in range(1, len(DIAGNOSTIC_SEVERITY) + 1):
+                for sb in self.session_buffers():
+                    data = sb.data_per_severity.get(severity)
+                    if data:
+                        result.extend(data.panel_contribution)
+        return result
+
+    def diagnostics_async(self) -> Dict[str, List[Diagnostic]]:
+        result = {}  # type: Dict[str, List[Diagnostic]]
+        with self._session_views_lock:
+            for sv in self.session_views():
+                result[sv.session.config.name] = sv.get_diagnostics_async()
+        return result
+
+    def update_total_errors_and_warnings_status_async(self) -> None:
+        if global_settings.show_diagnostics_count_in_view_status:
+            self.view.set_status(
+                self.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY,
+                "E: {}, W: {}".format(*self._sum_total_errors_and_warnings()))
 
     def session_views(self) -> Generator[SessionView, None, None]:
         yield from self._session_views.values()
@@ -309,6 +340,15 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     def _clear_async(self) -> None:
         sublime.set_timeout_async(_clear_async(self._session_views_lock, self._session_views))
+
+    def _sum_total_errors_and_warnings(self) -> Tuple[int, int]:
+        errors = 0
+        warnings = 0
+        with self._session_views_lock:
+            for sb in self.session_buffers():
+                errors += sb.total_errors
+                warnings += sb.total_warnings
+        return errors, warnings
 
     def __str__(self) -> str:
         return str(self.view.id())

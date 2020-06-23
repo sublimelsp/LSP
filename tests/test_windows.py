@@ -71,10 +71,11 @@ class WindowRegistryTests(unittest.TestCase):
 
         self.assertIsNotNone(wm)
 
-        # closing views triggers window unload detection
         test_window.close()
         wm.handle_view_closed(MockView(__file__))
         test_sublime._run_timeout()
+        test_window = None
+        wm = None
 
         self.assertEqual(len(windows._windows), 0)
 

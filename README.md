@@ -1,9 +1,11 @@
 # LSP
 
+[![License](https://img.shields.io/github/license/sublimelsp/LSP)](https://github.com/sublimelsp/LSP/blob/master/LICENSE)
 [![GitHub release](https://img.shields.io/github/release/sublimelsp/LSP.svg)](https://github.com/sublimelsp/LSP/releases)
 [![Github Action](https://github.com/sublimelsp/LSP/workflows/main/badge.svg?branch=master)](https://github.com/sublimelsp/LSP/actions)
 [![Coverage Status](https://codecov.io/github/sublimelsp/LSP/branch/master/graph/badge.svg)](https://codecov.io/gh/sublimelsp/LSP/tree/master/plugin)
-[![SublimeHQ Discord](https://img.shields.io/discord/280102180189634562?label=SublimeHQ%20Discord&logo=discord&style=flat-square)](#chat)
+[![Documentation](https://readthedocs.org/projects/lsp/badge/)](https://lsp.readthedocs.io/en/latest/)
+[![SublimeHQ Discord](https://img.shields.io/discord/280102180189634562?label=SublimeHQ%20Discord&logo=discord)](#chat)
 
 Language Server Protocol support for Sublime Text 3 that gives you IDE [features](https://lsp.readthedocs.io/en/latest/features/).
 
@@ -78,7 +80,7 @@ LSP uses [mdpopups](https://github.com/facelessuser/sublime-markdown-popups) to 
 If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/en/latest/troubleshooting/) guide for tips and known limitations. If the documentation cannot solve your problem, you can look for help in:
 <a name="chat"></a>
 
-* The [#lsp](https://discordapp.com/channels/280102180189634562/645268178397560865) channel (join the [SublimeHQ Discord](https://discord.gg/RMkk5MR) first!)
+* The [#lsp](https://discordapp.com/channels/280102180189634562/645268178397560865) channel (join the [SublimeHQ Discord](https://discord.gg/TZ5WN8t) first!)
 * By [searching or creating a new issue](https://github.com/sublimelsp/LSP/issues)
 * Search the [old Gitter chat](https://gitter.im/tomv564) (for live chat join Discord instead)
 
@@ -128,7 +130,16 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
 
 - ✅ applyEdit
 - ✅ workspaceEdit
+  - ✅ documentChanges
+  - ❌ resourceOperations
+  - ❌ failureHandling
 - ✅ didChangeConfiguration
 - ❌ didChangeWatchedFiles
 - ✅ symbol
 - ✅ executeCommand
+
+### Window Capabilities
+
+- ✅ workDoneProgress
+  - ✅ create
+  - ❌ cancel

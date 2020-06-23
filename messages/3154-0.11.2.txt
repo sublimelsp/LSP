@@ -1,0 +1,5 @@
+=> 3154-0.11.2
+
+- Don't show dialog for successful workspace/executeCommand (Janos Wortmann)
+- Fix diagnostics for lowercase drive letter in DocumentUri (#1133) (jwortmann)
+- Fix user keybindings template to use array rather than object (#1134) (Rafał Chłodnicki)

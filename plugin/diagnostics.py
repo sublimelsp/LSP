@@ -34,6 +34,13 @@ UNDERLINE_FLAGS = (sublime.DRAW_SQUIGGLY_UNDERLINE | sublime.DRAW_NO_OUTLINE | s
 BOX_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_EMPTY_AS_OVERWRITE
 
 
+def is_same_file(file_path_a: str, file_path_b: str) -> bool:
+    try:
+        return os.path.samefile(file_path_a, file_path_b)
+    except FileNotFoundError:
+        return False
+
+
 def format_severity(severity: int) -> str:
     return diagnostic_severity_names.get(severity, "???")
 
@@ -42,8 +49,12 @@ def view_diagnostics(view: sublime.View) -> Dict[str, List[Diagnostic]]:
     if view.window():
         file_name = view.file_name()
         if file_name:
-            window_diagnostics = windows.lookup(view.window()).diagnostics.get()
-            return window_diagnostics.get(file_name, {})
+            window = view.window()
+            if window:
+                window_diagnostics = windows.lookup(window).diagnostics.get()
+                for file in window_diagnostics:
+                    if is_same_file(file, file_name):
+                        return window_diagnostics[file]
     return {}
 
 
@@ -71,8 +82,8 @@ def filter_by_range(file_diagnostics: Dict[str, List[Diagnostic]], rge: Range) -
 
 class DiagnosticsCursorListener(LSPViewEventListener):
     def __init__(self, view: sublime.View) -> None:
-        self.has_status = False
         super().__init__(view)
+        self.has_status = False
 
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:
@@ -81,18 +92,19 @@ class DiagnosticsCursorListener(LSPViewEventListener):
     def on_selection_modified_async(self) -> None:
         selections = self.view.sel()
         if len(selections) > 0:
-            pos = selections[0].begin()
-            region = self.view.line(pos)
-            line_range = region_to_range(self.view, region)
             file_path = self.view.file_name()
             if file_path:
+                pos = selections[0].begin()
+                region = self.view.line(pos)
+                line_range = region_to_range(self.view, region)
                 diagnostics = filter_by_range(self.manager.diagnostics.get_by_file(file_path), line_range)
                 if diagnostics:
                     flattened = (d for sublist in diagnostics.values() for d in sublist)
                     first_diagnostic = next(flattened, None)
                     if first_diagnostic:
                         self.show_diagnostics_status(first_diagnostic)
-            elif self.has_status:
+                        return
+            if self.has_status:
                 self.clear_diagnostics_status()
 
     def show_diagnostics_status(self, diagnostic: Diagnostic) -> None:
@@ -240,7 +252,8 @@ class DiagnosticViewRegions(DiagnosticsUpdateWalk):
 
     def begin_file(self, file_name: str) -> None:
         # TODO: would be nice if walk could skip this updater
-        if file_name == self._view.file_name():
+        file = self._view.file_name()
+        if file and is_same_file(file_name, file):
             self._relevant_file = True
 
     def diagnostic(self, diagnostic: Diagnostic) -> None:
@@ -251,13 +264,23 @@ class DiagnosticViewRegions(DiagnosticsUpdateWalk):
         self._relevant_file = False
 
     def end(self) -> None:
-        for severity in range(DiagnosticSeverity.Error, DiagnosticSeverity.Hint + 1):
+        for severity in range(settings.show_diagnostics_severity_level + 1):
             region_name = "lsp_" + format_severity(severity)
             if severity in self._regions:
                 regions = self._regions[severity]
                 scope_name = diagnostic_severity_scopes[severity]
+                if settings.diagnostics_gutter_marker == "sign":
+                    diagnostic_severity_icons = {
+                        DiagnosticSeverity.Error: "Packages/LSP/icons/error.png",
+                        DiagnosticSeverity.Warning: "Packages/LSP/icons/warning.png",
+                        DiagnosticSeverity.Information: "Packages/LSP/icons/info.png",
+                        DiagnosticSeverity.Hint: "Packages/LSP/icons/info.png"
+                    }
+                    icon = diagnostic_severity_icons[severity]
+                else:
+                    icon = settings.diagnostics_gutter_marker
                 self._view.add_regions(
-                    region_name, regions, scope_name, settings.diagnostics_gutter_marker,
+                    region_name, regions, scope_name, icon,
                     UNDERLINE_FLAGS if settings.diagnostics_highlight_style == "underline" else BOX_FLAGS)
             else:
                 self._view.erase_regions(region_name)
@@ -333,7 +356,7 @@ class DiagnosticOutputPanel(DiagnosticsUpdateWalk):
     def format_diagnostic(self, diagnostic: Diagnostic) -> str:
         location = "{:>8}:{:<4}".format(
             diagnostic.range.start.row + 1, diagnostic.range.start.col + 1)
-        lines = diagnostic.message.splitlines()
+        lines = diagnostic.message.splitlines() or [""]
         formatted = " {}\t{:<12}\t{:<10}\t{}".format(
             location, diagnostic.source, format_severity(diagnostic.severity), lines[0])
         for line in lines[1:]:

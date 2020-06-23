@@ -56,7 +56,10 @@ class DocumentHighlightListener(sublime_plugin.ViewEventListener):
             self._enabled = True
 
     def _queue(self) -> None:
-        current_point = self.view.sel()[0].begin()
+        try:
+            current_point = self.view.sel()[0].begin()
+        except IndexError:
+            return
         if self._stored_point != current_point:
             self._clear_regions()
             self._stored_point = current_point

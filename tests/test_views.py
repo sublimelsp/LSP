@@ -1,5 +1,4 @@
 from LSP.plugin.core.protocol import Point
-from LSP.plugin.core.typing import Generator
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import did_change
 from LSP.plugin.core.views import did_open
@@ -12,6 +11,7 @@ from LSP.plugin.core.views import text_document_range_formatting
 from LSP.plugin.core.views import uri_from_view
 from LSP.plugin.core.views import will_save
 from LSP.plugin.core.views import will_save_wait_until
+from LSP.plugin.core.views import location_to_encoded_filename
 from unittest.mock import MagicMock
 from unittesting import DeferrableTestCase
 import sublime
@@ -19,10 +19,9 @@ import sublime
 
 class ViewsTest(DeferrableTestCase):
 
-    def setUp(self) -> Generator:
+    def setUp(self) -> None:
         super().setUp()
-        self.view = sublime.active_window().new_file()
-        yield not self.view.is_loading()
+        self.view = sublime.active_window().new_file()  # new_file() always returns a ready view
         self.view.set_scratch(True)
         self.mock_file_name = "C:/Windows" if sublime.platform() == "windows" else "/etc"
         self.view.file_name = MagicMock(return_value=self.mock_file_name)
@@ -102,3 +101,13 @@ class ViewsTest(DeferrableTestCase):
         first_line_length = len(self.view.line(0))
         self.assertEqual(point_to_offset(Point(1, 2), self.view), first_line_length + 3)
         self.assertEqual(point_to_offset(Point(0, first_line_length + 9999), self.view), first_line_length)
+
+    def test_location_to_encoded_filename(self) -> None:
+        self.assertEqual(
+            location_to_encoded_filename(
+                {'uri': 'file:///foo/bar', 'range': {'start': {'line': 0, 'character': 5}}}),
+            '/foo/bar:1:6')
+        self.assertEqual(
+            location_to_encoded_filename(
+                {'targetUri': 'file:///foo/bar', 'targetSelectionRange': {'start': {'line': 1234, 'character': 4321}}}),
+            '/foo/bar:1235:4322')

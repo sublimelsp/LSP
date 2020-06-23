@@ -1,6 +1,8 @@
-from LSP.plugin.core.protocol import WorkspaceFolder
 from LSP.plugin.core.protocol import TextDocumentSyncKindFull, TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
+from LSP.plugin.core.protocol import WorkspaceFolder
+from LSP.plugin.core.sessions import clear_dotted_value
 from LSP.plugin.core.sessions import create_session, Session, get_initialize_params
+from LSP.plugin.core.sessions import set_dotted_value
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.types import Settings
 from LSP.plugin.core.typing import Optional
@@ -10,6 +12,59 @@ from test_mocks import TEST_LANGUAGE
 import sublime
 import unittest
 import unittest.mock
+
+
+class MiscFunctions(unittest.TestCase):
+
+    def test_set_and_clear_dotted_values(self) -> None:
+        d = {"foo": {"bar": "baz"}}
+        set_dotted_value(d, "foo.bar.baz.qux", {"hello": "there"})
+        set_dotted_value(d, "foo.bar.baz.qux.id", "asdf-1234-qwerty")
+        self.assertEqual(d, {
+            "foo": {
+                "bar": {
+                    "baz": {
+                        "qux": {
+                            "hello": "there",
+                            "id": "asdf-1234-qwerty"
+                        }
+                    }
+                }
+            }
+        })
+        d = {"foo": {"bar": 42}}
+        set_dotted_value(d, "foo.bar.baz.qux", {"hello": "there"})
+        set_dotted_value(d, "foo.bar.baz.qux.id", "asdf-1234-qwerty")
+        self.assertEqual(d, {
+            "foo": {
+                "bar": {
+                    "baz": {
+                        "qux": {
+                            "hello": "there",
+                            "id": "asdf-1234-qwerty"
+                        }
+                    }
+                }
+            }
+        })
+        clear_dotted_value(d, "foo.bar.baz.qux")
+        self.assertEqual(d, {
+            "foo": {
+                "bar": {
+                    "baz": {}
+                }
+            }
+        })
+        clear_dotted_value(d, "foo.bar.baz.qux.id")
+        self.assertEqual(d, {
+            "foo": {
+                "bar": {
+                    "baz": {}
+                }
+            }
+        })
+        clear_dotted_value(d, "foo")
+        self.assertEqual(d, {})
 
 
 class SessionTest(unittest.TestCase):
@@ -87,7 +142,6 @@ class SessionTest(unittest.TestCase):
         session.client.transport.close()
 
     def test_can_get_started_session(self):
-
         post_initialize_callback = unittest.mock.Mock()
         session = self.make_session(
             MockClient(),
@@ -141,7 +195,6 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindFull)
         self.assertTrue(session.should_notify_did_change())
         self.assertFalse(session.should_notify_will_save())
-        self.assertFalse(session.should_request_will_save_wait_until())
         self.assertEqual(session.should_notify_did_save(), (True, False))
 
         client.responses = {
@@ -159,8 +212,13 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindNone)
         self.assertFalse(session.should_notify_did_change())
         self.assertTrue(session.should_notify_will_save())
-        self.assertFalse(session.should_request_will_save_wait_until())
         self.assertEqual(session.should_notify_did_save(), (True, False))
+        # Nested capabilities.
+        self.assertTrue(session.has_capability('textDocumentSync.change'))
+        self.assertTrue(session.has_capability('textDocumentSync.save'))
+        self.assertTrue(session.has_capability('textDocumentSync.willSave'))
+        self.assertFalse(session.has_capability('textDocumentSync.willSaveUntil'))
+        self.assertFalse(session.has_capability('textDocumentSync.aintthere'))
 
         client.responses = {
             'initialize': {
@@ -177,7 +235,6 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindIncremental)
         self.assertTrue(session.should_notify_did_change())
         self.assertFalse(session.should_notify_will_save())
-        self.assertTrue(session.should_request_will_save_wait_until())
         self.assertEqual(session.should_notify_did_save(), (True, True))
 
         client.responses = {
@@ -190,7 +247,6 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindIncremental)
         self.assertTrue(session.should_notify_did_change())
         self.assertFalse(session.should_notify_will_save())  # old-style text sync will never send willSave
-        self.assertFalse(session.should_request_will_save_wait_until())
         self.assertEqual(session.should_notify_did_save(), (False, False))
 
         client.responses = {
@@ -203,7 +259,6 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindNone)
         self.assertFalse(session.should_notify_did_change())
         self.assertFalse(session.should_notify_will_save())
-        self.assertFalse(session.should_request_will_save_wait_until())
         self.assertEqual(session.should_notify_did_save(), (False, False))
 
         client.responses = {
@@ -219,5 +274,4 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindIncremental)
         self.assertTrue(session.should_notify_did_change())
         self.assertFalse(session.should_notify_will_save())
-        self.assertFalse(session.should_request_will_save_wait_until())
         self.assertEqual(session.should_notify_did_save(), (False, False))

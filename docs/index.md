@@ -15,7 +15,9 @@ Visit [Langserver.org](https://langserver.org/) or the [list of language server 
 
 For a few languages you can also find dedicated packages on Package Control, which can optionally be installed to simplify the configuration and installation process of a language server and might provide additional features such as automatic updates for the server:
 
+* [LSP-bash](https://packagecontrol.io/packages/LSP-bash)
 * [LSP-css](https://packagecontrol.io/packages/LSP-css)
+* [LSP-dockerfile](https://packagecontrol.io/packages/LSP-dockerfile)
 * [LSP-elm](https://packagecontrol.io/packages/LSP-elm)
 * [LSP-eslint](https://packagecontrol.io/packages/LSP-eslint)
 * [LSP-html](https://packagecontrol.io/packages/LSP-html)
@@ -25,6 +27,7 @@ For a few languages you can also find dedicated packages on Package Control, whi
 * [LSP-serenata](https://packagecontrol.io/packages/LSP-serenata)
 * [LSP-typescript](https://packagecontrol.io/packages/LSP-typescript)
 * [LSP-vue](https://packagecontrol.io/packages/LSP-vue)
+* [LSP-yaml](https://packagecontrol.io/packages/LSP-yaml)
 
 ### Server Configuration<a name="client-config"></a>
 
@@ -98,6 +101,9 @@ Some language servers support multiple languages, which can be specified in the 
 | tcp_host | see instructions below |
 | tcp_mode | see instructions below |
 | experimental_capabilities | Turn on experimental capabilities of a language server. This is a dictionary and differs per language server |
+
+You can figure out the scope with Tools > Developer > Show Scope Name.
+You can figure out the syntax by opening the ST console and running `view.settings().get("syntax")`.
 
 The default transport is stdio, but TCP is also supported.
 The port number can be inserted into the server's arguments by adding a `{port}` placeholder in `command`.
@@ -501,7 +507,7 @@ npm install -g javascript-typescript-langserver
 ```js
 "julials": {
   "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
-  // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using LanguageServer; using LanguageServer.SymbolServer; server=LanguageServer.LanguageServerInstance(stdin,stdout,false); run(server)"], // on Windows
+  // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using Pkg; using LanguageServer; using LanguageServer.SymbolServer; env_path=dirname(Pkg.Types.Context().env.project_file); server=LanguageServer.LanguageServerInstance(stdin,stdout,false,env_path); run(server)"], // on Windows
   "languageId": "julia",
   "scopes": ["source.julia"],
   "settings": {
@@ -754,11 +760,143 @@ If you use a virtualenv for your current project, add a path to it in your [proj
 }
 ```
 
-See: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
+A basic configuration below can be used for bootstrapping your own:
+
+```js
+  //...
+"pyls": {
+  "enabled": true,
+  "command": ["pyls"],
+  "languageId": "python",
+  "scopes": ["source.python"],
+  "syntaxes": [
+    "Packages/Python/Python.sublime-syntax",
+    "Packages/MagicPython/grammars/MagicPython.tmLanguage",
+    "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage",
+  ],
+  "settings": {
+    "pyls": {
+      "env":
+      {
+        // Making Sublime's own libs available to the linters.
+        // "PYTHONPATH": "/Applications/Sublime Text.app/Contents/MacOS/Lib/python33",
+      },
+      // Configuration is computed first from user configuration (in home directory),
+      // overridden by configuration passed in by the language client,
+      // and then overridden by configuration discovered in the workspace.
+      "configurationSources": [
+        "pycodestyle",  // discovered in ~/.config/pycodestyle, setup.cfg, tox.ini and pycodestyle.cfg
+        // "flake8",  // discovered in ~/.config/flake8, setup.cfg, tox.ini and flake8.cfg
+      ],
+      "plugins": {
+        "jedi": {
+          "extra_paths": [
+            // The directory where the pip installation package is located
+          ],
+        },
+        "jedi_completion": {
+          "fuzzy": true,  // Enable fuzzy when requesting autocomplete
+        },
+        "pycodestyle": {
+          "enabled": true,
+          "exclude": [  // Exclude files or directories which match these patterns
+          ],
+          "ignore": [  // Ignore errors and warnings
+            // "E501",  // Line too long (82 &gt; 79 characters)
+          ],
+          // "maxLineLength": 80,  // Set maximum allowed line length
+        },
+        "pydocstyle": {"enabled": false},
+        "pyflakes": {"enabled": true},
+        "pylint": {"enabled": false},
+        "yapf": {"enabled": true},
+        // pyls' 3rd Party Plugins, Mypy type checking for Python 3, Must be installed via pip before enabling
+        "pyls_mypy": {  // Install with: pip install pyls-mypy
+          "enabled": false,
+          "live_mode": true,
+        },
+      }
+    }
+  }
+},
+```
+
+See pylint documentation: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
+
+Description of all built-in settings: https://github.com/palantir/python-language-server/blob/develop/vscode-client/package.json
 
 #### Microsoft's Python Language Server
 
-Alternatively, use Microsoft Python Language Server (using .NET Core runtime). [Instructions](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md).
+Alternatively, use Microsoft Python Language Server (using .NET Core runtime).  
+Here is a basic configuration to be added to your User/LSP.sublime-settings file:
+
+```js
+  //...
+"mspyls": {
+  "enabled": true,
+  "command": [ "dotnet", "exec", "PATH/TO/Microsoft.Python.LanguageServer.dll" ],
+  "languageId": "python",
+  "scopes": [ "source.python" ],
+  "syntaxes": [
+    "Packages/Python/Python.sublime-syntax",
+    "Packages/MagicPython/grammars/MagicPython.tmLanguage",
+    "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage"
+  ],
+  "initializationOptions":
+  {
+    "interpreter":
+    {
+      "properties":
+      {
+        "UseDefaultDatabase": true,
+        "Version": "3.7" // python version
+      }
+    }
+  },
+  "settings":
+  {
+    "python":
+    {
+      // At least an empty "python" object is (currently) required to initialise the language server.
+      // Other options can be defined as explained below.
+    }
+  }
+},
+```
+
+The language server has to be configured as per the Microsoft [documentation](https://github.com/microsoft/python-language-server/blob/master/README.md) and the Sublime Text [instructions](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md).
+An exhaustive list of the configuration options can be found in the VSCode [documentation](https://code.visualstudio.com/docs/python/settings-reference#_python-language-server-settings).
+
+Here is an example of settings:
+
+```js
+  "settings":
+  {
+    "python":
+    {
+      // Solve the 'unresolved import' warning as documented in:
+      // https://github.com/microsoft/python-language-server/blob/master/TROUBLESHOOTING.md#unresolved-import-warnings
+      "autoComplete":
+      {
+          // add extra path for Sublime Text plugins
+          "extraPaths": [ "/opt/sublime_text" ]
+      }
+      // Configure the linting options as documented in:
+      // https://github.com/microsoft/python-language-server/#linting-options-diagnostics
+      "analysis":
+      {
+        "errors": [ "undefined-variable" ],
+        "warnings": [ "unknown-parameter-name" ],
+        "information": [ "unresolved-import" ],
+        "disabled": [ "too-many-function-arguments", "parameter-missing" ]
+      },
+      // "linting":
+      // {
+      //     "enabled": "false"
+      // }
+    }
+  }
+```
 
 ### R<a name="r"></a>
 

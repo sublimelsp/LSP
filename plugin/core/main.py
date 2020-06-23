@@ -157,8 +157,8 @@ class Listener(sublime_plugin.EventListener):
     def on_load_project_async(self, w: sublime.Window) -> None:
         windows.lookup(w).on_load_project_async()
 
-    def on_new_window(self, w: sublime.Window) -> None:
-        windows.lookup(w)
+    def on_new_window_async(self, w: sublime.Window) -> None:
+        sublime.set_timeout(lambda: windows.lookup(w))
 
     def on_pre_close_window(self, w: sublime.Window) -> None:
         windows.discard(w)

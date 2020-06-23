@@ -7,7 +7,7 @@
 [![Documentation](https://readthedocs.org/projects/lsp/badge/)](https://lsp.readthedocs.io/en/latest/)
 [![SublimeHQ Discord](https://img.shields.io/discord/280102180189634562?label=SublimeHQ%20Discord&logo=discord)](#chat)
 
-Language Server Protocol support for Sublime Text 3 that gives you IDE [features](https://lsp.readthedocs.io/en/latest/features/).
+Language Server Protocol support for Sublime Text that gives you IDE [features](https://lsp.readthedocs.io/en/latest/features/).
 
 ![diagnostics screen-shot](docs/images/showcase.gif "TypeScript Server Example")
 

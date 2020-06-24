@@ -9,7 +9,6 @@ from .code_actions import run_code_action_or_command
 from .core.popups import popups
 from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation
 from .core.registry import LspTextCommand
-from .core.registry import LSPViewEventListener
 from .core.registry import windows
 from .core.settings import settings
 from .core.typing import List, Optional, Any, Dict
@@ -21,19 +20,6 @@ from .diagnostics import filter_by_point, view_diagnostics
 
 
 SUBLIME_WORD_MASK = 515
-
-
-class HoverHandler(LSPViewEventListener):
-    @classmethod
-    def is_applicable(cls, view_settings: dict) -> bool:
-        if 'hover' in settings.disabled_capabilities:
-            return False
-        return cls.has_supported_syntax(view_settings)
-
-    def on_hover(self, point: int, hover_zone: int) -> None:
-        if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():
-            return
-        self.view.run_command("lsp_hover", {"point": point})
 
 
 _test_contents = []  # type: List[str]

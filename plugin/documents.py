@@ -71,6 +71,8 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     ACTIONS_ANNOTATION_KEY = "lsp_action_annotations"
     code_actions_debounce_time = 800
+    color_boxes_debounce_time = 500
+    highlights_debounce_time = 500
 
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:
@@ -129,7 +131,8 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         different, current_region = self._update_stored_region_async()
         if different:
             if "colorProvider" not in global_settings.disabled_capabilities:
-                self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region, after_ms=800)
+                self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region,
+                                                          after_ms=self.color_boxes_debounce_time)
 
     def on_selection_modified_async(self) -> None:
         different, current_region = self._update_stored_region_async()
@@ -137,7 +140,8 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             self._clear_highlight_regions()
             self._clear_code_actions_annotation()
             if "documentHighlight" not in global_settings.disabled_capabilities:
-                self._when_selection_remains_stable_async(self._do_highlights, current_region, after_ms=500)
+                self._when_selection_remains_stable_async(self._do_highlights, current_region,
+                                                          after_ms=self.highlights_debounce_time)
             self._when_selection_remains_stable_async(self._do_code_actions, current_region,
                                                       after_ms=self.code_actions_debounce_time)
 

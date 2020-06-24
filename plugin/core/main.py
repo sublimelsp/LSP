@@ -2,7 +2,6 @@ import sublime
 import sublime_plugin
 
 from ..diagnostics import DiagnosticsPresenter
-from ..highlights import remove_highlights
 from .handlers import LanguageHandler
 from .logging import set_debug_logging, set_exception_logging
 from .panels import destroy_output_panels, ensure_panel, PanelName
@@ -127,7 +126,6 @@ def plugin_unloaded() -> None:
         destroy_output_panels(window)  # references and diagnostics panels
         for view in window.views():
             if view.file_name():
-                remove_highlights(view)
                 for key in ['error', 'warning', 'info', 'hint', 'diagnostics']:
                     view.erase_regions('lsp_{}'.format(key))
                 for key in ['diagnostics']:

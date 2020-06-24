@@ -34,7 +34,24 @@ def debounced(f: Callable[[], None], timeout_ms: int = 0, condition: Callable[[]
     runner(run, timeout_ms)
 
 
-class Settings(object):
+def _settings_style_to_add_regions_flag(style: str) -> int:
+    flags = 0
+    if style == "fill":
+        pass
+    elif style == "box":
+        flags = sublime.DRAW_NO_FILL
+    else:
+        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+        if style == "underline":
+            flags |= sublime.DRAW_SOLID_UNDERLINE
+        elif style == "stippled":
+            flags |= sublime.DRAW_STIPPLED_UNDERLINE
+        elif style == "squiggly":
+            flags |= sublime.DRAW_SQUIGGLY_UNDERLINE
+    return flags
+
+
+class Settings:
 
     def __init__(self) -> None:
         self.show_view_status = True
@@ -62,6 +79,13 @@ class Settings(object):
         self.lsp_format_on_save = False
         self.lsp_code_actions_on_save = {}  # type: Dict[str, bool]
         self.code_action_on_save_timeout_ms = 2000
+
+    def document_highlight_style_to_add_regions_flags(self) -> int:
+        return _settings_style_to_add_regions_flag(self.document_highlight_style)
+
+    def diagnostics_highlight_style_to_add_regions_flag(self) -> int:
+        # TODO: Unused for now
+        return _settings_style_to_add_regions_flag(self.diagnostics_highlight_style)
 
 
 class ClientStates(object):

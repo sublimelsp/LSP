@@ -4,9 +4,13 @@ from .core.registry import LSPViewEventListener
 from .core.sessions import Session
 from .core.settings import settings as global_settings
 from .core.types import debounced
-from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable
+from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List
 from .core.views import document_color_params
 from .core.views import lsp_color_to_phantom
+from .core.protocol import Range
+from .core.protocol import DocumentHighlightKind
+from .core.views import text_document_position_params
+from .core.views import range_to_region
 from .core.windows import AbstractViewListener
 from .save_command import LspSaveCommand
 from .session_buffer import SessionBuffer
@@ -16,6 +20,13 @@ import threading
 
 
 SUBLIME_WORD_MASK = 515
+
+_kind2name = {
+    DocumentHighlightKind.Unknown: "unknown",
+    DocumentHighlightKind.Text: "text",
+    DocumentHighlightKind.Read: "read",
+    DocumentHighlightKind.Write: "write"
+}
 
 
 def is_at_word(view: sublime.View, event: Optional[dict]) -> bool:
@@ -66,6 +77,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     def __del__(self) -> None:
         self._stored_point = -1  # Prevent a debounced request to alter the phantoms again
         self._color_phantoms.update([])
+        self._clear_highlight_regions()
         self._clear_async()
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
@@ -105,14 +117,21 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             self._register_async()
 
     def on_modified_async(self) -> None:
-        sel = self.view.sel()
-        if len(sel) < 1:
-            return
-        current_point = sel[0].b
-        if self._stored_point != current_point:
-            self._stored_point = current_point
-            if "colorProvider" not in global_settings.disabled_capabilities:
-                self._when_selection_remains_stable_async(self._do_color_boxes_async, current_point, after_ms=800)
+        current_point = self._get_current_point_async()
+        if current_point is not None:
+            if self._stored_point != current_point:
+                self._stored_point = current_point
+                if "colorProvider" not in global_settings.disabled_capabilities:
+                    self._when_selection_remains_stable_async(self._do_color_boxes_async, current_point, after_ms=800)
+
+    def on_selection_modified_async(self) -> None:
+        current_point = self._get_current_point_async()
+        if current_point is not None:
+            if self._stored_point != current_point:
+                self._clear_highlight_regions()
+                self._stored_point = current_point
+                if "documentHighlight" not in global_settings.disabled_capabilities:
+                    self._when_selection_remains_stable_async(self._do_highlights, current_point, after_ms=500)
 
     def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
         if self.view.is_primary():
@@ -182,6 +201,42 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         color_infos = response if response else []
         self._color_phantoms.update([lsp_color_to_phantom(self.view, color_info) for color_info in color_infos])
 
+    # --- textDocument/documentHighlight -------------------------------------------------------------------------------
+
+    def _clear_highlight_regions(self) -> None:
+        for kind in global_settings.document_highlight_scopes.keys():
+            self.view.erase_regions("lsp_highlight_{}".format(kind))
+
+    def _do_highlights(self) -> None:
+        self._clear_highlight_regions()
+        if len(self.view.sel()) != 1:
+            return
+        point = self.view.sel()[0].begin()
+        session = self.session("documentHighlightProvider", point)
+        if session:
+            params = text_document_position_params(self.view, point)
+            request = Request.documentHighlight(params)
+            session.send_request(request, self._on_highlights)
+
+    def _on_highlights(self, response: Optional[List]) -> None:
+        if not response:
+            return
+        kind2regions = {}  # type: Dict[str, List[sublime.Region]]
+        for kind in range(0, 4):
+            kind2regions[_kind2name[kind]] = []
+        for highlight in response:
+            r = range_to_region(Range.from_lsp(highlight["range"]), self.view)
+            kind = highlight.get("kind", DocumentHighlightKind.Unknown)
+            if kind is not None:
+                kind2regions[_kind2name[kind]].append(r)
+        self._clear_highlight_regions()
+        flags = global_settings.document_highlight_style_to_add_regions_flags()
+        for kind_str, regions in kind2regions.items():
+            if regions:
+                scope = global_settings.document_highlight_scopes.get(kind_str, None)
+                if scope:
+                    self.view.add_regions("lsp_highlight_{}".format(kind_str), regions, scope=scope, flags=flags)
+
     # --- Utility methods ----------------------------------------------------------------------------------------------
 
     def purge_changes(self) -> None:
@@ -197,6 +252,12 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         if file_name:
             self._file_name = file_name
             self.manager.register_listener_async(self)
+
+    def _get_current_point_async(self) -> Optional[int]:
+        try:
+            return self.view.sel()[0].b
+        except IndexError:
+            return None
 
     def _is_regular_view(self) -> bool:
         v = self.view

@@ -1,17 +1,23 @@
+from .code_actions import actions_manager
+from .code_actions import CodeActionsByConfigName
+from .core.protocol import DocumentHighlightKind
+from .core.protocol import Range
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LSPViewEventListener
 from .core.sessions import Session
 from .core.settings import settings as global_settings
 from .core.types import debounced
-from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List
+from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple
 from .core.views import document_color_params
 from .core.views import lsp_color_to_phantom
-from .core.protocol import Range
-from .core.protocol import DocumentHighlightKind
-from .core.views import text_document_position_params
+from .core.views import make_link
 from .core.views import range_to_region
+from .core.views import region_to_range
+from .core.views import text_document_position_params
 from .core.windows import AbstractViewListener
+from .diagnostics import filter_by_range
+from .diagnostics import view_diagnostics
 from .save_command import LspSaveCommand
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
@@ -63,6 +69,9 @@ def _clear_async(lock: threading.Lock, session_views: Dict[str, SessionView]) ->
 
 class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
+    ACTIONS_ANNOTATION_KEY = "lsp_action_annotations"
+    code_actions_debounce_time = 800
+
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:
         return False
@@ -71,11 +80,11 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         super().__init__(view)
         self._session_views = {}  # type: Dict[str, SessionView]
         self._session_views_lock = threading.Lock()
-        self._stored_point = -1
+        self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
 
     def __del__(self) -> None:
-        self._stored_point = -1  # Prevent a debounced request to alter the phantoms again
+        self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms.update([])
         self._clear_highlight_regions()
         self._clear_async()
@@ -117,21 +126,20 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             self._register_async()
 
     def on_modified_async(self) -> None:
-        current_point = self._get_current_point_async()
-        if current_point is not None:
-            if self._stored_point != current_point:
-                self._stored_point = current_point
-                if "colorProvider" not in global_settings.disabled_capabilities:
-                    self._when_selection_remains_stable_async(self._do_color_boxes_async, current_point, after_ms=800)
+        different, current_region = self._update_stored_region_async()
+        if different:
+            if "colorProvider" not in global_settings.disabled_capabilities:
+                self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region, after_ms=800)
 
     def on_selection_modified_async(self) -> None:
-        current_point = self._get_current_point_async()
-        if current_point is not None:
-            if self._stored_point != current_point:
-                self._clear_highlight_regions()
-                self._stored_point = current_point
-                if "documentHighlight" not in global_settings.disabled_capabilities:
-                    self._when_selection_remains_stable_async(self._do_highlights, current_point, after_ms=500)
+        different, current_region = self._update_stored_region_async()
+        if different:
+            self._clear_highlight_regions()
+            self._clear_code_actions_annotation()
+            if "documentHighlight" not in global_settings.disabled_capabilities:
+                self._when_selection_remains_stable_async(self._do_highlights, current_region, after_ms=500)
+            self._when_selection_remains_stable_async(self._do_code_actions, current_region,
+                                                      after_ms=self.code_actions_debounce_time)
 
     def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
         if self.view.is_primary():
@@ -190,6 +198,28 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             return
         self.view.run_command("lsp_hover", {"point": point})
 
+    # --- textDocument/codeAction --------------------------------------------------------------------------------------
+
+    def _do_code_actions(self) -> None:
+        stored_range = region_to_range(self.view, self._stored_region)
+        diagnostics_by_config, extended_range = filter_by_range(view_diagnostics(self.view), stored_range)
+        actions_manager.request_for_range(self.view, extended_range, diagnostics_by_config, self._on_code_actions)
+
+    def _on_code_actions(self, responses: CodeActionsByConfigName) -> None:
+        action_count = sum(map(len, responses.values()))
+        if action_count == 0:
+            return
+        suffix = 's' if action_count > 1 else ''
+        code_actions_link = make_link('subl:lsp_code_actions', '{} code action{}'.format(action_count, suffix))
+        self.view.add_regions(self.ACTIONS_ANNOTATION_KEY,
+                              [sublime.Region(self._stored_region.b, self._stored_region.a)],
+                              flags=sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE,
+                              annotations=["<div class=\"actions\">{}</div>".format(code_actions_link)],
+                              annotation_color='#2196F3')
+
+    def _clear_code_actions_annotation(self) -> None:
+        self.view.erase_regions(self.ACTIONS_ANNOTATION_KEY)
+
     # --- textDocument/documentColor -----------------------------------------------------------------------------------
 
     def _do_color_boxes_async(self) -> None:
@@ -244,8 +274,8 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             for sv in self.session_views():
                 sv.purge_changes()
 
-    def _when_selection_remains_stable_async(self, f: Callable[[], None], pt: int, after_ms: int) -> None:
-        debounced(f, after_ms, lambda: self._stored_point == pt, async_thread=True)
+    def _when_selection_remains_stable_async(self, f: Callable[[], None], r: sublime.Region, after_ms: int) -> None:
+        debounced(f, after_ms, lambda: self._stored_region == r, async_thread=True)
 
     def _register_async(self) -> None:
         file_name = self.view.file_name()
@@ -253,9 +283,17 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             self._file_name = file_name
             self.manager.register_listener_async(self)
 
-    def _get_current_point_async(self) -> Optional[int]:
+    def _update_stored_region_async(self) -> Tuple[bool, sublime.Region]:
+        current_region = self._get_current_region_async()
+        if current_region is not None:
+            if self._stored_region != current_region:
+                self._stored_region = current_region
+                return True, current_region
+        return False, sublime.Region(-1, -1)
+
+    def _get_current_region_async(self) -> Optional[sublime.Region]:
         try:
-            return self.view.sel()[0].b
+            return self.view.sel()[0]
         except IndexError:
             return None
 

@@ -2,13 +2,10 @@ from .core.edit import parse_workspace_edit
 from .core.protocol import Diagnostic
 from .core.protocol import Range, Request
 from .core.registry import LspTextCommand
-from .core.registry import LSPViewEventListener
 from .core.registry import sessions_for_view
 from .core.settings import settings
-from .core.types import debounced
 from .core.typing import Any, List, Dict, Callable, Optional, Union, Tuple, Mapping, TypedDict
 from .core.views import entire_content_range
-from .core.views import make_link
 from .core.views import region_to_range
 from .core.views import text_document_code_action_params
 from .diagnostics import filter_by_range
@@ -265,48 +262,6 @@ class CodeActionOnSaveTask(SaveTask):
 
 
 LspSaveCommand.register_task(CodeActionOnSaveTask)
-
-
-class LspCodeActionsListener(LSPViewEventListener):
-    debounce_time = 800
-
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
-        self._stored_region = sublime.Region(-1, -1)
-
-    def on_selection_modified_async(self) -> None:
-        self.clear_annotations()
-        try:
-            current_region = self.view.sel()[0]
-        except IndexError:
-            return
-        if self._stored_region != current_region:
-            self._stored_region = current_region
-            debounced(
-                lambda: self.fire_request(current_region), self.debounce_time,
-                lambda: self._stored_region == current_region, async_thread=True)
-
-    def fire_request(self, current_region: sublime.Region) -> None:
-        stored_range = region_to_range(self.view, self._stored_region)
-        diagnostics_by_config, extended_range = filter_by_range(view_diagnostics(self.view), stored_range)
-        actions_manager.request_for_range(self.view, extended_range, diagnostics_by_config, self.handle_responses)
-
-    def handle_responses(self, responses: CodeActionsByConfigName) -> None:
-        action_count = sum(map(len, responses.values()))
-        if action_count > 0:
-            self.show_annotations(action_count)
-
-    def show_annotations(self, action_count: int) -> None:
-        suffix = 's' if action_count > 1 else ''
-        code_actions_link = make_link('subl:lsp_code_actions', '{} code action{}'.format(action_count, suffix))
-        self.view.add_regions('lsp_action_annotations',
-                              [sublime.Region(self._stored_region.b, self._stored_region.a)],
-                              flags=sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE,
-                              annotations=["<div class=\"actions\">{}</div>".format(code_actions_link)],
-                              annotation_color='#2196F3')
-
-    def clear_annotations(self) -> None:
-        self.view.erase_regions('lsp_action_annotations')
 
 
 def is_command(command_or_code_action: CodeActionOrCommand) -> bool:

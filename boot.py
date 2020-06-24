@@ -1,7 +1,6 @@
 # Please keep this list sorted (Edit -> Sort Lines)
 from .plugin.code_actions import LspCodeActionsCommand
 from .plugin.code_actions import LspCodeActionsListener
-from .plugin.color import LspColorListener
 from .plugin.completion import CompletionHandler
 from .plugin.completion import LspCompleteInsertTextCommand
 from .plugin.completion import LspCompleteTextEditCommand

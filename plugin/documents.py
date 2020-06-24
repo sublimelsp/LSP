@@ -1,8 +1,12 @@
+from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LSPViewEventListener
 from .core.sessions import Session
 from .core.settings import settings as global_settings
+from .core.types import debounced
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable
+from .core.views import document_color_params
+from .core.views import lsp_color_to_phantom
 from .core.windows import AbstractViewListener
 from .save_command import LspSaveCommand
 from .session_buffer import SessionBuffer
@@ -56,18 +60,26 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         super().__init__(view)
         self._session_views = {}  # type: Dict[str, SessionView]
         self._session_views_lock = threading.Lock()
+        self._stored_point = -1
+        self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
 
     def __del__(self) -> None:
+        self._stored_point = -1  # Prevent a debounced request to alter the phantoms again
+        self._color_phantoms.update([])
         self._clear_async()
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
 
     def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()
+        added = False
         with self._session_views_lock:
             if session.config.name not in self._session_views:
                 self._session_views[session.config.name] = SessionView(self, session)
                 self.view.settings().set("lsp_active", True)
+                added = True
+        if added and "colorProvider" not in global_settings.disabled_capabilities:
+            self._do_color_boxes_async()
 
     def on_session_shutdown_async(self, session: Session) -> None:
         with self._session_views_lock:
@@ -91,6 +103,16 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     def on_activated_async(self) -> None:
         if self._is_regular_view() and not self.view.is_loading():
             self._register_async()
+
+    def on_modified_async(self) -> None:
+        sel = self.view.sel()
+        if len(sel) < 1:
+            return
+        current_point = sel[0].b
+        if self._stored_point != current_point:
+            self._stored_point = current_point
+            if "colorProvider" not in global_settings.disabled_capabilities:
+                self._when_selection_remains_stable_async(self._do_color_boxes_async, current_point, after_ms=800)
 
     def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
         if self.view.is_primary():
@@ -149,12 +171,26 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             return
         self.view.run_command("lsp_hover", {"point": point})
 
+    # --- textDocument/documentColor -----------------------------------------------------------------------------------
+
+    def _do_color_boxes_async(self) -> None:
+        session = self.session("colorProvider")
+        if session:
+            session.send_request(Request.documentColor(document_color_params(self.view)), self._on_color_boxes)
+
+    def _on_color_boxes(self, response: Any) -> None:
+        color_infos = response if response else []
+        self._color_phantoms.update([lsp_color_to_phantom(self.view, color_info) for color_info in color_infos])
+
     # --- Utility methods ----------------------------------------------------------------------------------------------
 
     def purge_changes(self) -> None:
         with self._session_views_lock:
             for sv in self.session_views():
                 sv.purge_changes()
+
+    def _when_selection_remains_stable_async(self, f: Callable[[], None], pt: int, after_ms: int) -> None:
+        debounced(f, after_ms, lambda: self._stored_point == pt, async_thread=True)
 
     def _register_async(self) -> None:
         file_name = self.view.file_name()

@@ -33,7 +33,6 @@ from .plugin.goto import LspSymbolDefinitionCommand
 from .plugin.goto import LspSymbolImplementationCommand
 from .plugin.goto import LspSymbolTypeDefinitionCommand
 from .plugin.highlights import DocumentHighlightListener
-from .plugin.hover import HoverHandler
 from .plugin.hover import LspHoverCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand
 from .plugin.panels import LspToggleServerPanelCommand

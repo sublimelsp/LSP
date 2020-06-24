@@ -1,6 +1,7 @@
 from .core.registry import get_position
 from .core.registry import LSPViewEventListener
 from .core.sessions import Session
+from .core.settings import settings as global_settings
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable
 from .core.windows import AbstractViewListener
 from .save_command import LspSaveCommand
@@ -159,3 +160,10 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     def __str__(self) -> str:
         return str(self.view.id())
+
+    def on_hover(self, point: int, hover_zone: int) -> None:
+        if (hover_zone != sublime.HOVER_TEXT
+                or self.view.is_popup_visible()
+                or "hover" in global_settings.disabled_capabilities):
+            return
+        self.view.run_command("lsp_hover", {"point": point})

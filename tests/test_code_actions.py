@@ -1,15 +1,15 @@
 from copy import deepcopy
+from LSP.plugin.code_actions import actions_manager
+from LSP.plugin.code_actions import CodeActionsByConfigName
+from LSP.plugin.code_actions import get_matching_kinds
+from LSP.plugin.code_actions import run_code_action_or_command
 from LSP.plugin.core.protocol import Point, Range
 from LSP.plugin.core.typing import Any, Dict, Generator, List, Tuple
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
-from LSP.plugin.code_actions import actions_manager
-from LSP.plugin.code_actions import CodeActionsByConfigName
-from LSP.plugin.code_actions import get_matching_kinds
-from LSP.plugin.code_actions import LspCodeActionsListener
-from LSP.plugin.code_actions import run_code_action_or_command
 from LSP.plugin.diagnostics import filter_by_point
 from LSP.plugin.diagnostics import view_diagnostics
+from LSP.plugin.documents import DocumentSyncListener
 from setup import TextDocumentTestCase
 from test_single_document import TEST_FILE_PATH
 import unittest
@@ -187,14 +187,14 @@ class CodeActionMatchingTestCase(unittest.TestCase):
 class CodeActionsListenerTestCase(TextDocumentTestCase):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.original_debounce_time = LspCodeActionsListener.debounce_time
+        self.original_debounce_time = DocumentSyncListener.code_actions_debounce_time
 
     def setUp(self) -> Generator:
         yield from super().setUp()
-        LspCodeActionsListener.debounce_time = 0
+        DocumentSyncListener.code_actions_debounce_time = 0
 
     def tearDown(self) -> Generator:
-        LspCodeActionsListener.debounce_time = self.original_debounce_time
+        DocumentSyncListener.code_actions_debounce_time = self.original_debounce_time
         yield from super().tearDown()
 
     def get_test_server_capabilities(self) -> dict:

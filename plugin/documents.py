@@ -60,8 +60,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     def __del__(self) -> None:
         self._clear_async()
 
-    def _clear_async(self) -> None:
-        sublime.set_timeout_async(_clear_async(self._session_views_lock, self._session_views))
+    # --- Implements AbstractViewListener ------------------------------------------------------------------------------
 
     def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()
@@ -83,17 +82,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         for sv in self.session_views():
             yield sv.session_buffer
 
-    def _register_async(self) -> None:
-        file_name = self.view.file_name()
-        if file_name:
-            self._file_name = file_name
-            self.manager.register_listener_async(self)
-
-    def _is_regular_view(self) -> bool:
-        v = self.view
-        # Not from the quick panel (CTRL+P), must have a filename on-disk, and not a special view like a console,
-        # output panel or find-in-files panels.
-        return not is_transient_view(v) and bool(v.file_name()) and v.element() is None
+    # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
 
     def on_load_async(self) -> None:
         if self._is_regular_view():
@@ -102,11 +91,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     def on_activated_async(self) -> None:
         if self._is_regular_view() and not self.view.is_loading():
             self._register_async()
-
-    def purge_changes(self) -> None:
-        with self._session_views_lock:
-            for sv in self.session_views():
-                sv.purge_changes()
 
     def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
         if self.view.is_primary():
@@ -158,12 +142,34 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         else:
             return False
 
-    def __str__(self) -> str:
-        return str(self.view.id())
-
     def on_hover(self, point: int, hover_zone: int) -> None:
         if (hover_zone != sublime.HOVER_TEXT
                 or self.view.is_popup_visible()
                 or "hover" in global_settings.disabled_capabilities):
             return
         self.view.run_command("lsp_hover", {"point": point})
+
+    # --- Utility methods ----------------------------------------------------------------------------------------------
+
+    def purge_changes(self) -> None:
+        with self._session_views_lock:
+            for sv in self.session_views():
+                sv.purge_changes()
+
+    def _register_async(self) -> None:
+        file_name = self.view.file_name()
+        if file_name:
+            self._file_name = file_name
+            self.manager.register_listener_async(self)
+
+    def _is_regular_view(self) -> bool:
+        v = self.view
+        # Not from the quick panel (CTRL+P), must have a filename on-disk, and not a special view like a console,
+        # output panel or find-in-files panels.
+        return not is_transient_view(v) and bool(v.file_name()) and v.element() is None
+
+    def _clear_async(self) -> None:
+        sublime.set_timeout_async(_clear_async(self._session_views_lock, self._session_views))
+
+    def __str__(self) -> str:
+        return str(self.view.id())

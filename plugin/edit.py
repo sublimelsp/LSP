@@ -58,27 +58,16 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         with temporary_view_setting(self.view, "translate_tabs_to_spaces", False):
             view_version = self.view.change_count()
             last_row, last_col = self.view.rowcol(self.view.size())
-            for change in reversed(sort_by_application_order(changes)):
-                start, end, newText, version = change
+            for start, end, replacement, version in reversed(sort_by_application_order(changes)):
                 if version is not None and version != view_version:
                     debug('ignoring edit due to non-matching document version')
                     continue
                 region = sublime.Region(self.view.text_point(*start), self.view.text_point(*end))
-
-                if start[0] > last_row and newText[0] != '\n':
+                if start[0] > last_row and replacement[0] != '\n':
                     # Handle when a language server (eg gopls) inserts at a row beyond the document
                     # some editors create the line automatically, sublime needs to have the newline prepended.
                     debug('adding new line for edit at line {}, document ended at line {}'.format(start[0], last_row))
-                    self.apply_change(region, '\n' + newText, edit)
+                    self.view.replace(edit, region, '\n' + replacement)
                     last_row, last_col = self.view.rowcol(self.view.size())
                 else:
-                    self.apply_change(region, newText, edit)
-
-    def apply_change(self, region: sublime.Region, newText: str, edit: Any) -> None:
-        if region.empty():
-            self.view.insert(edit, region.a, newText)
-        else:
-            if len(newText) > 0:
-                self.view.replace(edit, region, newText)
-            else:
-                self.view.erase(edit, region)
+                    self.view.replace(edit, region, replacement)

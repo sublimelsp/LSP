@@ -156,26 +156,6 @@ class CompletionHandler(LSPViewEventListener):
             return False
         return cls.has_supported_syntax(view_settings)
 
-    def apply_view_settings(self, session: Session) -> None:
-        settings = self.view.settings()
-        completion_triggers = settings.get('auto_complete_triggers') or []  # type: List[Dict[str, str]]
-        if any(trigger.get('server', None) == session.config.name for trigger in completion_triggers):
-            return
-        # This is to make ST match with labels that have a weird prefix like a space character.
-        settings.set('auto_complete_preserve_order', 'none')
-        trigger_chars = session.get_capability('completionProvider.triggerCharacters') or []
-        if trigger_chars:
-            completion_triggers.append({
-                'characters': "".join(trigger_chars),
-                # Heuristics: Don't auto-complete in comments, and don't trigger auto-complete when we're at the
-                # end of a string. We *do* want to trigger auto-complete in strings because of languages like
-                # Bash and some language servers are allowing the user to auto-complete file-system files in
-                # things like import statements. We may want to move this to the LSP.sublime-settings.
-                'selector': "- comment - punctuation.definition.string.end",
-                'server': session.config.name
-            })
-            settings.set('auto_complete_triggers', completion_triggers)
-
     def on_post_text_command(self, command: str, args: dict) -> None:
         if not self.view.is_popup_visible():
             return
@@ -196,6 +176,26 @@ class CompletionHandler(LSPViewEventListener):
             lambda res: self.handle_response(res, completion_list, can_resolve_completion_items),
             lambda res: self.handle_error(res, completion_list))
         return completion_list
+
+    def apply_view_settings(self, session: Session) -> None:
+        settings = self.view.settings()
+        completion_triggers = settings.get('auto_complete_triggers') or []  # type: List[Dict[str, str]]
+        if any(trigger.get('server', None) == session.config.name for trigger in completion_triggers):
+            return
+        # This is to make ST match with labels that have a weird prefix like a space character.
+        settings.set('auto_complete_preserve_order', 'none')
+        trigger_chars = session.get_capability('completionProvider.triggerCharacters') or []
+        if trigger_chars:
+            completion_triggers.append({
+                'characters': "".join(trigger_chars),
+                # Heuristics: Don't auto-complete in comments, and don't trigger auto-complete when we're at the
+                # end of a string. We *do* want to trigger auto-complete in strings because of languages like
+                # Bash and some language servers are allowing the user to auto-complete file-system files in
+                # things like import statements. We may want to move this to the LSP.sublime-settings.
+                'selector': "- comment - punctuation.definition.string.end",
+                'server': session.config.name
+            })
+            settings.set('auto_complete_triggers', completion_triggers)
 
     def format_completion(self, item: dict, index: int, can_resolve_completion_items: bool) -> sublime.CompletionItem:
         # This is a hot function. Don't do heavy computations or IO in this function.

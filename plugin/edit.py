@@ -2,7 +2,20 @@ import sublime
 import sublime_plugin
 from .core.edit import sort_by_application_order, TextEdit
 from .core.logging import debug
-from .core.typing import List, Dict, Optional, Any
+from .core.typing import List, Dict, Optional, Any, Generator
+from contextlib import contextmanager
+
+
+@contextmanager
+def temporary_view_setting(view: sublime.View, key: str, value: Any) -> Generator[None, None, None]:
+    settings = view.settings()
+    previous_value = settings.get(key)
+    settings.set(key, value)
+    yield
+    if previous_value is None:
+        settings.erase(key)
+    else:
+        settings.set(key, previous_value)
 
 
 class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
@@ -40,7 +53,9 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
     def run(self, edit: Any, changes: Optional[List[TextEdit]] = None) -> None:
         # Apply the changes in reverse, so that we don't invalidate the range
         # of any change that we haven't applied yet.
-        if changes:
+        if not changes:
+            return
+        with temporary_view_setting(self.view, "translate_tabs_to_spaces", False):
             view_version = self.view.change_count()
             last_row, last_col = self.view.rowcol(self.view.size())
             for change in reversed(sort_by_application_order(changes)):

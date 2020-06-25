@@ -8,6 +8,7 @@ from .core.edit import parse_text_edit
 from .core.protocol import Request, InsertTextFormat, Range, CompletionItemTag
 from .core.registry import LspTextCommand
 from .core.registry import LSPViewEventListener
+from .core.sessions import Session
 from .core.settings import settings
 from .core.typing import Any, List, Dict, Optional, Union, Generator
 from .core.views import COMPLETION_KINDS
@@ -143,11 +144,6 @@ def is_deprecated(item: dict) -> bool:
 class CompletionHandler(LSPViewEventListener):
     completions = []  # type: List[dict]
 
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
-        self.initialized = False
-        self.enabled = False
-
     def __del__(self) -> None:
         settings = self.view.settings()
         triggers = settings.get("auto_complete_triggers") or []  # type: List[Dict[str, str]]
@@ -160,31 +156,25 @@ class CompletionHandler(LSPViewEventListener):
             return False
         return cls.has_supported_syntax(view_settings)
 
-    def initialize(self) -> None:
-        self.initialized = True
-        session = self.session('completionProvider')
-        if session:
-            capability = session.get_capability('completionProvider') or dict()  # type: dict
-            # A language server may have an empty dict as CompletionOptions. In that case,
-            # no trigger characters will be registered but we'll still respond to Sublime's
-            # usual query for completions. So the explicit check for None is necessary.
-            self.enabled = True
-            trigger_chars = capability.get('triggerCharacters') or []
-            settings = self.view.settings()
-            if trigger_chars:
-                completion_triggers = settings.get('auto_complete_triggers') or []  # type: List[Dict[str, str]]
-                completion_triggers.append({
-                    'characters': "".join(trigger_chars),
-                    # Heuristics: Don't auto-complete in comments, and don't trigger auto-complete when we're at the
-                    # end of a string. We *do* want to trigger auto-complete in strings because of languages like
-                    # Bash and some language servers are allowing the user to auto-complete file-system files in
-                    # things like import statements. We may want to move this to the LSP.sublime-settings.
-                    'selector': "- comment - punctuation.definition.string.end",
-                    'server': session.config.name
-                })
-                settings.set('auto_complete_triggers', completion_triggers)
-            # This is to make ST match with labels that have a weird prefix like a space character.
-            settings.set("auto_complete_preserve_order", "none")
+    def apply_view_settings(self, session: Session) -> None:
+        settings = self.view.settings()
+        completion_triggers = settings.get('auto_complete_triggers') or []  # type: List[Dict[str, str]]
+        if any(trigger.get('server', None) == session.config.name for trigger in completion_triggers):
+            return
+        # This is to make ST match with labels that have a weird prefix like a space character.
+        settings.set('auto_complete_preserve_order', 'none')
+        trigger_chars = session.get_capability('completionProvider.triggerCharacters') or []
+        if trigger_chars:
+            completion_triggers.append({
+                'characters': "".join(trigger_chars),
+                # Heuristics: Don't auto-complete in comments, and don't trigger auto-complete when we're at the
+                # end of a string. We *do* want to trigger auto-complete in strings because of languages like
+                # Bash and some language servers are allowing the user to auto-complete file-system files in
+                # things like import statements. We may want to move this to the LSP.sublime-settings.
+                'selector': "- comment - punctuation.definition.string.end",
+                'server': session.config.name
+            })
+            settings.set('auto_complete_triggers', completion_triggers)
 
     def on_post_text_command(self, command: str, args: dict) -> None:
         if not self.view.is_popup_visible():
@@ -194,17 +184,13 @@ class CompletionHandler(LSPViewEventListener):
             self.view.hide_popup()
 
     def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[sublime.CompletionList]:
-        if not self.initialized:
-            self.initialize()
-        if not self.enabled:
-            return None
         session = self.session('completionProvider', locations[0])
         if not session:
             return None
+        self.apply_view_settings(session)
         self.purge_changes()
         completion_list = sublime.CompletionList()
-        capability = session.get_capability('completionProvider') or {}
-        can_resolve_completion_items = bool(capability.get('resolveProvider', False))
+        can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
         session.send_request(
             Request.complete(text_document_position_params(self.view, locations[0])),
             lambda res: self.handle_response(res, completion_list, can_resolve_completion_items),

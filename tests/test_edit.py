@@ -1,6 +1,6 @@
 from LSP.plugin.core.edit import sort_by_application_order, parse_workspace_edit, parse_text_edit
 from LSP.plugin.core.url import filename_to_uri
-from LSP.plugin.edit import temporary_setting
+from LSP.plugin.edit import temporary
 from test_protocol import LSP_RANGE
 import sublime
 import unittest
@@ -74,17 +74,17 @@ class SortByApplicationOrderTests(unittest.TestCase):
 
 class TemporarySetting(unittest.TestCase):
 
-    def test_basics(self):
+    def test_basics(self) -> None:
         v = sublime.active_window().active_view()
         s = v.settings()
         key = "__some_setting_that_should_not_exist__"
-        with temporary_setting(s, key, "hello"):
+        with temporary(s, key, "hello"):
             # The value should be modified while in the with-context
             self.assertEqual(s.get(key), "hello")
         # The key should be erased once out of the with-context, because it was not present before.
         self.assertFalse(s.has(key))
         s.set(key, "hello there")
-        with temporary_setting(s, key, "general kenobi"):
+        with temporary(s, key, "general kenobi"):
             # value key should be modified while in the with-context
             self.assertEqual(s.get(key), "general kenobi")
         # The key should remain present, and the value should be restored.

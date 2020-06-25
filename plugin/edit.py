@@ -7,17 +7,16 @@ from contextlib import contextmanager
 
 
 @contextmanager
-def temporary_setting(settings: sublime.Settings, key: str, value: Any) -> Generator[None, None, None]:
-    previous_value = None
-    has_previous_value = settings.has(key)
-    if has_previous_value:
-        previous_value = settings.get(key)
-    settings.set(key, value)
+def temporary(settings: sublime.Settings, key: str, val: Any) -> Generator[None, None, None]:
+    prev_val = None
+    has_prev_val = settings.has(key)
+    if has_prev_val:
+        prev_val = settings.get(key)
+    settings.set(key, val)
     yield
-    if has_previous_value:
-        settings.set(key, previous_value)
-    else:
-        settings.erase(key)
+    settings.erase(key)
+    if has_prev_val and settings.get(key) != prev_val:
+        settings.set(key, prev_val)
 
 
 class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
@@ -57,7 +56,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
         # of any change that we haven't applied yet.
         if not changes:
             return
-        with temporary_setting(self.view.settings(), "translate_tabs_to_spaces", False):
+        with temporary(self.view.settings(), "translate_tabs_to_spaces", False):
             view_version = self.view.change_count()
             last_row, last_col = self.view.rowcol(self.view.size())
             for start, end, replacement, version in reversed(sort_by_application_order(changes)):

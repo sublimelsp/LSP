@@ -42,17 +42,6 @@ class InitializationTests(DeferrableTestCase):
         except Exception:
             pass
 
-    def test_not_enabled(self) -> 'Generator':
-        wm = windows.lookup(self.view.window())
-        wm._configs.all.append(text_config)
-        handler = CompletionHandler(self.view)
-        self.assertFalse(handler.initialized)
-        self.assertFalse(handler.enabled)
-        result = handler.on_query_completions("", [0])
-        yield lambda: handler.initialized
-        yield lambda: not handler.enabled
-        self.assertIsNone(result)
-
     def doCleanups(self) -> 'Generator':
         yield from super().doCleanups()
         wm = windows.lookup(self.view.window())

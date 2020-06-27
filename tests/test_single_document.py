@@ -169,6 +169,16 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         )
         yield from self.__run_formatting_test(original, expected, file_changes)
 
+    def test_tabs_are_respected_even_when_translate_tabs_to_spaces_is_set_to_true(self) -> 'Generator':
+        original = ' ' * 4
+        file_changes = [((0, 0), (0, 4), '\t')]
+        expected = '\t'
+        assert self.view
+        self.view.settings().set("translate_tabs_to_spaces", True)
+        yield from self.__run_formatting_test(original, expected, file_changes)
+        # Make sure the user's settings haven't changed
+        self.assertTrue(self.view.settings().get("translate_tabs_to_spaces"))
+
     def __run_formatting_test(
         self,
         original: 'Iterable[str]',

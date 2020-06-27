@@ -1,5 +1,0 @@
-=> unreleased
-
-Fixes:
- - Expand variables in configuration notifications and requests (#1125) (Raoul Wols)
- - Inconsistencies in number of reported code actions in hover popup and annotations (#1128) (Rafał Chłodnicki)

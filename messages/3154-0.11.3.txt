@@ -1,0 +1,4 @@
+=> 3154-0.11.3
+
+- Respect tabs when applying TextEdits (#1164) (Raoul Wols)
+- Catch crash on trying to update diagnostics in file that doesn't exist (Rafał Chłodnicki)

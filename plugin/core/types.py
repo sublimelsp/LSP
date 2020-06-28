@@ -76,6 +76,7 @@ class Settings:
         self.log_debug = False
         self.log_server = []  # type: List[str]
         self.log_stderr = False
+        self.log_max_size = 8 * 1024
         self.lsp_format_on_save = False
         self.lsp_code_actions_on_save = {}  # type: Dict[str, bool]
         self.code_action_on_save_timeout_ms = 2000

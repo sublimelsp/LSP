@@ -114,7 +114,7 @@
 
   // When logging to the "panel" (see "log_server"), if the params of the request or
   // response or notification exceed this many characters, then print a <snip> to
-  // the panel instead.
+  // the panel instead. If you don't want a limit, set this to zero.
   "log_max_size": 8192,
 
   // User clients configuration can be used to

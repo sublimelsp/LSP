@@ -387,7 +387,7 @@ class PanelLogger(Logger):
         def run_on_async_worker_thread() -> None:
             nonlocal message
             params_str = str(params)
-            if len(params_str) >= settings.log_max_size:
+            if 0 < settings.log_max_size <= len(params_str):
                 params_str = '<params with {} characters>'.format(len(params_str))
             message = "{}: {}".format(message, params_str)
             manager = self._manager()

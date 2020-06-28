@@ -9,6 +9,8 @@ class SaveTask(metaclass=ABCMeta):
     Base class for tasks that run on save.
 
     Takes care of timing out lask after specified timeout provided that base run() is called.
+
+    Note: The whole task runs on the async thread.
     """
 
     DEFAULT_TASK_TIMEOUT = 1000
@@ -25,9 +27,9 @@ class SaveTask(metaclass=ABCMeta):
         self._cancelled = False
         self._status_key = 'lsp_save_task_timeout'
 
-    def run(self) -> None:
+    def run_async(self) -> None:
         self._erase_view_status()
-        sublime.set_timeout(self._on_timeout, self.get_task_timeout_ms())
+        sublime.set_timeout_async(self._on_timeout, self.get_task_timeout_ms())
 
     def _on_timeout(self) -> None:
         if not self._completed and not self._cancelled:
@@ -43,7 +45,7 @@ class SaveTask(metaclass=ABCMeta):
 
     def _set_view_status(self, text: str) -> None:
         self._view.set_status(self._status_key, text)
-        sublime.set_timeout(self._erase_view_status, 5000)
+        sublime.set_timeout_async(self._erase_view_status, 5000)
 
     def _erase_view_status(self) -> None:
         self._view.erase_status(self._status_key)
@@ -54,8 +56,7 @@ class SaveTask(metaclass=ABCMeta):
         if not self._cancelled:
             self._on_done()
 
-    def _purge_changes_if_needed(self) -> None:
-        # TODO: Does this run in the async thread?
+    def _purge_changes_async(self) -> None:
         # Supermassive hack that will go away later.
         listeners = sublime_plugin.view_event_listeners.get(self._view.id(), [])
         for listener in listeners:
@@ -88,12 +89,12 @@ class LspSaveCommand(sublime_plugin.TextCommand):
             self._pending_tasks = []
         for Task in self._tasks:
             if Task.is_applicable(self.view):
-                self._pending_tasks.append(Task(self.view, self._on_task_completed))
+                self._pending_tasks.append(Task(self.view, self._on_task_completed_async))
         if self._pending_tasks:
             self._trigger_on_pre_save()
             # Ensure that the next "on_pre_save" that runs on native save is skipped.
             self.view.settings().set(self.SKIP_ON_PRE_SAVE_KEY, '1')
-            self._run_next_task()
+            sublime.set_timeout_async(self._run_next_task_async)
         else:
             self._trigger_native_save()
 
@@ -105,14 +106,14 @@ class LspSaveCommand(sublime_plugin.TextCommand):
                 listener.on_pre_save()  # type: ignore
                 break
 
-    def _run_next_task(self) -> None:
+    def _run_next_task_async(self) -> None:
         current_task = self._pending_tasks[0]
-        current_task.run()
+        current_task.run_async()
 
-    def _on_task_completed(self) -> None:
+    def _on_task_completed_async(self) -> None:
         self._pending_tasks.pop(0)
         if self._pending_tasks:
-            self._run_next_task()
+            self._run_next_task_async()
         else:
             self._trigger_native_save()
 

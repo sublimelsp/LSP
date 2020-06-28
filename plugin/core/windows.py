@@ -8,6 +8,7 @@ from .diagnostics import ensure_diagnostics_panel
 from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
+from .panels import update_server_panel
 from .protocol import Diagnostic
 from .protocol import Error
 from .protocol import Point
@@ -19,7 +20,7 @@ from .settings import settings
 from .transports import create_transport
 from .types import ClientConfig
 from .types import Settings
-from .typing import Optional, Callable, Any, Dict, Deque, List, Generator, Tuple, Mapping, Iterable
+from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Mapping, Iterable
 from .views import extract_variables
 from .workspace import disable_in_project
 from .workspace import enable_in_project
@@ -79,12 +80,10 @@ class WindowManager(Manager):
         workspace: ProjectFolders,
         settings: Settings,
         configs: WindowConfigManager,
-        server_panel_factory: Optional[Callable] = None
     ) -> None:
         self._window = window
         self._settings = settings
         self._configs = configs
-        self.server_panel_factory = server_panel_factory
         self._sessions = WeakSet()  # type: WeakSet[Session]
         self._workspace = workspace
         self._pending_listeners = deque()  # type: Deque[AbstractViewListener]
@@ -337,12 +336,7 @@ class WindowManager(Manager):
             self._window.status_message("{} exited with an exception: {}".format(session.config.name, exception))
 
     def handle_server_message(self, server_name: str, message: str) -> None:
-        if not self.server_panel_factory:
-            return
-        panel = self.server_panel_factory(self._window)
-        if not panel:
-            return debug("no server panel for window", self._window.id())
-        panel.run_command("lsp_update_server_panel", {"prefix": server_name, "message": message})
+        sublime.set_timeout(lambda: update_server_panel(self._window, server_name, message))
 
     def handle_log_message(self, session: Session, params: Any) -> None:
         self.handle_server_message(session.config.name, extract_message(params))
@@ -433,11 +427,6 @@ class WindowRegistry(object):
     def __init__(self, configs: ConfigManager) -> None:
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs
-        self._server_panel_factory = None  # type: Optional[Callable]
-        self._settings = None  # type: Optional[Settings]
-
-    def set_server_panel_factory(self, factory: Callable) -> None:
-        self._server_panel_factory = factory
 
     def set_settings_factory(self, settings: Settings) -> None:
         self._settings = settings
@@ -453,8 +442,7 @@ class WindowRegistry(object):
             window=window,
             workspace=workspace,
             settings=self._settings,
-            configs=window_configs,
-            server_panel_factory=self._server_panel_factory)
+            configs=window_configs)
         self._windows[window.id()] = state
         return state
 
@@ -475,12 +463,14 @@ class PanelLogger(Logger):
         """
         pass
 
-    def log(self, message: str, params: Any, log_payload: bool = True) -> None:
+    def log(self, message: str, params: Any) -> None:
 
         def run_on_async_worker_thread() -> None:
             nonlocal message
-            if log_payload:
-                message = "{}: {}".format(message, params)
+            params_str = str(params)
+            if 0 < settings.log_max_size <= len(params_str):
+                params_str = '<params with {} characters>'.format(len(params_str))
+            message = "{}: {}".format(message, params_str)
             manager = self._manager()
             if manager is not None:
                 manager.handle_server_message(":", message)
@@ -505,19 +495,7 @@ class PanelLogger(Logger):
     def outgoing_notification(self, method: str, params: Any) -> None:
         if not settings.log_server:
             return
-        # Do not log the payloads if any of these conditions occur because the payloads might contain the entire
-        # content of the view.
-        log_payload = True
-        if method.endswith("didOpen"):
-            log_payload = False
-        elif method.endswith("didChange"):
-            content_changes = params.get("contentChanges")
-            if content_changes and "range" not in content_changes[0]:
-                log_payload = False
-        elif method.endswith("didSave"):
-            if isinstance(params, dict) and "text" in params:
-                log_payload = False
-        self.log(self._format_notification(" ->", method), params, log_payload)
+        self.log(self._format_notification(" ->", method), params)
 
     def incoming_response(self, request_id: int, params: Any, is_error: bool) -> None:
         if not settings.log_server:

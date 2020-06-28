@@ -1,5 +1,5 @@
 from .core.diagnostics import ensure_diagnostics_panel
-from .core.main import ensure_server_panel
+from .core.panels import ensure_server_panel
 from .core.panels import PanelName
 from sublime import Window
 from sublime_plugin import WindowCommand

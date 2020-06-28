@@ -1,3 +1,4 @@
+from .logging import debug
 from .panels import ensure_panel
 from .protocol import Diagnostic
 from .protocol import Point

@@ -114,7 +114,7 @@ class SessionView:
 
     def present_diagnostics_async(self, flags: int) -> None:
         data_per_severity = self.session_buffer.data_per_severity
-        for severity in range(1, len(DIAGNOSTIC_SEVERITY) + 1):
+        for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
             key = self.diagnostics_key(severity)
             data = data_per_severity.get(severity)
             if data is None:

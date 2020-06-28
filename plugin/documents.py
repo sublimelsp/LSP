@@ -18,7 +18,6 @@ from .core.views import text_document_position_params
 from .core.windows import AbstractViewListener
 from .diagnostics import filter_by_range
 from .diagnostics import view_diagnostics
-from .save_command import LspSaveCommand
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
 import sublime
@@ -147,23 +146,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             for sv in self.session_views_async():
                 sv.on_reload_async()
 
-    def on_pre_save(self) -> None:
-        if self.view.is_primary():
-            view_settings = self.view.settings()
-            if view_settings.has(LspSaveCommand.SKIP_ON_PRE_SAVE_KEY):
-                view_settings.erase(LspSaveCommand.SKIP_ON_PRE_SAVE_KEY)
-                return
-        # NOTE: on_pre_save_async is NOT guaranteed to run *before* saving the view. This means calling
-        # self.view.file_name() is NOT guaranteed to give the *previous* filename when saving a view under a different
-        # filename. Thus we're forced to use on_pre_save, stash the old filename, and then do set_timeout_async by hand.
-        file_name = self.view.file_name() or ""
-
-        def run_async() -> None:
-            for sv in self.session_views_async():
-                sv.on_pre_save_async(file_name)
-
-        sublime.set_timeout_async(run_async)
-
     def on_post_save_async(self) -> None:
         if self.view.is_primary():
             for sv in self.session_views_async():
@@ -266,6 +248,10 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     def purge_changes_async(self) -> None:
         for sv in self.session_views_async():
             sv.purge_changes_async()
+
+    def trigger_on_pre_save_async(self) -> None:
+        for sv in self.session_views_async():
+            sv.on_pre_save_async(self.view.file_name() or "")
 
     def _when_selection_remains_stable_async(self, f: Callable[[], None], r: sublime.Region, after_ms: int) -> None:
         debounced(f, after_ms, lambda: self._stored_region == r, async_thread=True)

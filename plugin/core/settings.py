@@ -25,6 +25,16 @@ def read_int_setting(settings_obj: sublime.Settings, key: str, default: int) -> 
         return default
 
 
+def read_float_setting(settings_obj: sublime.Settings, key: str, default: float) -> float:
+    val = settings_obj.get(key)
+    if isinstance(val, int):
+        return float(val)
+    elif isinstance(val, float):
+        return val
+    else:
+        return default
+
+
 def read_dict_setting(settings_obj: sublime.Settings, key: str, default: dict) -> dict:
     val = settings_obj.get(key)
     if isinstance(val, dict):
@@ -69,6 +79,9 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings) -> None:
                                                                        "show_diagnostics_count_in_view_status", False)
     settings.show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
     settings.show_diagnostics_severity_level = read_int_setting(settings_obj, "show_diagnostics_severity_level", 2)
+    settings.diagnostics_delay = read_float_setting(settings_obj, "diagnostics_delay", 0.0)
+    settings.diagnostics_additional_delay_auto_complete = read_float_setting(
+        settings_obj, "diagnostics_additional_delay_auto_complete", 0.0)
     settings.diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
     settings.document_highlight_style = read_str_setting(settings_obj, "document_highlight_style", "stippled")
     settings.document_highlight_scopes = read_dict_setting(settings_obj, "document_highlight_scopes",

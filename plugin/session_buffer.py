@@ -1,4 +1,3 @@
-from .core.logging import debug
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import TextDocumentSyncKindFull
@@ -6,15 +5,13 @@ from .core.protocol import TextDocumentSyncKindNone
 from .core.sessions import SessionViewProtocol
 from .core.settings import settings
 from .core.types import debounced
-from .core.typing import Any, Iterable, Optional, List, Dict, Tuple
+from .core.typing import Any, Iterable, Optional, List, Dict
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import did_change
 from .core.views import did_close
 from .core.views import did_open
 from .core.views import did_save
-from .core.views import format_diagnostic_for_annotation
 from .core.views import format_diagnostic_for_panel
-from .core.views import format_diagnostic_for_related_info
 from .core.views import range_to_region
 from .core.views import will_save
 from weakref import WeakSet
@@ -192,7 +189,7 @@ class SessionBuffer:
                     should_show_diagnostics_panel = True
                 # data.annotations.append(format_diagnostic_for_annotation(diagnostic, index))
         self._publish_diagnostics_to_session_views(
-            change_count,
+            diagnostics_version,
             diagnostics,
             data_per_severity,
             total_errors,
@@ -202,7 +199,7 @@ class SessionBuffer:
 
     def _publish_diagnostics_to_session_views(
         self,
-        change_count: int,
+        diagnostics_version: int,
         diagnostics: List[Diagnostic],
         data_per_severity: Dict[int, DiagnosticSeverityData],
         total_errors: int,
@@ -212,6 +209,7 @@ class SessionBuffer:
 
         def present() -> None:
             self._present_diagnostics_async(
+                diagnostics_version,
                 diagnostics,
                 data_per_severity,
                 total_errors,
@@ -236,18 +234,20 @@ class SessionBuffer:
                 debounced(
                     present,
                     timeout_ms=int(1000.0 * delay_in_seconds),
-                    condition=lambda: self.view.is_valid() and self.view.change_count() == change_count,
+                    condition=lambda: self.view.is_valid() and self.view.change_count() == diagnostics_version,
                     async_thread=True
                 )
 
     def _present_diagnostics_async(
         self,
+        diagnostics_version: int,
         diagnostics: List[Diagnostic],
         data_per_severity: Dict[int, DiagnosticSeverityData],
         total_errors: int,
         total_warnings: int,
         should_show_diagnostics_panel: bool
     ) -> None:
+        self.diagnostics_version = diagnostics_version
         self.diagnostics = diagnostics
         self.data_per_severity = data_per_severity
         self.diagnostics_are_visible = bool(diagnostics)

@@ -1,15 +1,8 @@
-from .logging import debug
 from .panels import ensure_panel
 from .protocol import Diagnostic
-from .protocol import DiagnosticRelatedInformation
-from .protocol import DiagnosticSeverity
 from .protocol import Point
-from .typing import Protocol, List, Dict, Tuple, Callable, Optional, Iterable, Generator, Mapping
-from .url import uri_to_filename
+from .typing import List, Tuple, Callable, Optional, Iterable, Mapping
 from .views import create_phantom
-from .views import range_to_region
-import html
-import os
 import sublime
 
 

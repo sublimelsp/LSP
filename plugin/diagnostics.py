@@ -1,19 +1,9 @@
-import html
-import os
-import re
 import sublime
 import sublime_plugin
 
-from .core.diagnostics import DiagnosticsWalker, DiagnosticsUpdateWalk, DiagnosticsCursor
-from .core.logging import debug
-from .core.panels import ensure_panel
-from .core.protocol import DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation, Point, Range
-from .core.registry import windows, LSPViewEventListener
-from .core.settings import settings, PLUGIN_NAME
-from .core.typing import List, Dict, Optional, Tuple
-from .core.views import range_to_region
-from .core.views import region_to_range
-from .core.views import DIAGNOSTIC_SEVERITY
+from .core.protocol import Diagnostic, Point, Range
+from .core.registry import windows
+from .core.typing import List, Dict, Tuple
 
 
 def view_diagnostics(view: sublime.View) -> Dict[str, List[Diagnostic]]:

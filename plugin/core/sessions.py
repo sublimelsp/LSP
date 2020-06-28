@@ -3,11 +3,10 @@ from .edit import parse_workspace_edit
 from .logging import debug
 from .logging import exception_log
 from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindIncremental, CompletionItemTag
-from .protocol import WorkspaceFolder, Request, Notification, Response, Diagnostic
+from .protocol import WorkspaceFolder, Request, Notification, Response
 from .rpc import Client
 from .rpc import Logger
 from .settings import client_configs
-from .settings import settings
 from .transports import Transport
 from .types import ClientConfig
 from .types import ClientStates
@@ -16,7 +15,6 @@ from .typing import Dict, Any, Optional, List, Tuple, Generator, Type, Protocol
 from .url import uri_to_filename
 from .version import __version__
 from .views import COMPLETION_KINDS
-from .views import DIAGNOSTIC_SEVERITY
 from .views import did_change_configuration
 from .views import extract_variables
 from .views import SYMBOL_KINDS

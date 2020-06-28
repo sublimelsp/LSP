@@ -21,7 +21,6 @@ from .types import ClientConfig
 from .types import Settings
 from .typing import Optional, Callable, Any, Dict, Deque, List, Generator, Tuple, Mapping, Iterable
 from .views import extract_variables
-from .views import format_diagnostic_for_panel
 from .workspace import disable_in_project
 from .workspace import enable_in_project
 from .workspace import ProjectFolders
@@ -409,7 +408,9 @@ class WindowManager(Manager):
 
     def _diagnostics_by_file_async(self) -> Generator[Tuple[str, Mapping[str, Iterable[Diagnostic]]], None, None]:
         for listener in self._listeners:
-            yield listener.view.file_name(), listener.diagnostics_async()
+            file_name = listener.view.file_name()
+            if file_name:
+                yield file_name, listener.diagnostics_async()
 
     def _select_diagnostic_async(self, direction: int) -> None:
         debug("_select_diagnostic_async", direction)

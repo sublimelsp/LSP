@@ -1,7 +1,7 @@
 from .core.protocol import Diagnostic
 from .core.sessions import Session
 from .core.types import view2scope
-from .core.typing import Dict, Iterable, List, Tuple
+from .core.typing import Iterable, List, Tuple
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.windows import AbstractViewListener
 from .session_buffer import SessionBuffer

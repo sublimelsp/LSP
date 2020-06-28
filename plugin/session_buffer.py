@@ -155,7 +155,10 @@ class SessionBuffer:
                 # mypy: expected sublime.View, got ViewLike
                 self.session.send_notification(did_save(self.view, include_text, self.file_name))
         if settings.show_diagnostics_panel_on_save():
-            self._show_or_hide_diagnostics_panel()
+            if self.should_show_diagnostics_panel:
+                mgr = self.session.manager()
+                if mgr:
+                    mgr.show_diagnostics_panel_async()
 
     def on_diagnostics_async(self, raw_diagnostics: List[Dict[str, Any]], version: Optional[int]) -> None:
         diagnostics = []  # type: List[Diagnostic]
@@ -257,16 +260,13 @@ class SessionBuffer:
         flags = settings.diagnostics_highlight_style_to_add_regions_flag()
         for sv in self.session_views:
             sv.present_diagnostics_async(flags)
-        if settings.show_diagnostics_panel_always():
-            self._show_or_hide_diagnostics_panel()
-
-    def _show_or_hide_diagnostics_panel(self) -> None:
         mgr = self.session.manager()
         if mgr:
-            if self.should_show_diagnostics_panel:
-                mgr.show_diagnostics_panel_async()
-            else:
+            mgr.update_diagnostics_panel_async()
+            if not self.should_show_diagnostics_panel:
                 mgr.hide_diagnostics_panel_async()
+            elif settings.show_diagnostics_panel_always():
+                mgr.show_diagnostics_panel_async()
 
     def __str__(self) -> str:
         return '{}:{}:{}'.format(self.session.config.name, self.id, self.file_name)

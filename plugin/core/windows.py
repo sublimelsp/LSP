@@ -372,10 +372,7 @@ class WindowManager(Manager):
     def _can_manipulate_diagnostics_panel(self) -> bool:
         active_panel = self._window.active_panel()
         if active_panel is not None:
-            if active_panel != "output.diagnostics":
-                # Some panel is visible, but it's not our diagnostics panel.
-                return False
-        # No panel is visible, so we can manipulate our diagnostics panel.
+            return active_panel == "output.diagnostics"
         return True
 
     def show_diagnostics_panel_async(self) -> None:

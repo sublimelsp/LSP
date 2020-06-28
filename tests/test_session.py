@@ -36,6 +36,9 @@ class MockManager(Manager):
     def on_post_initialize(self, session: Session) -> None:
         pass
 
+    def update_diagnostics_panel_async(self) -> None:
+        pass
+
     def show_diagnostics_panel_async(self) -> None:
         pass
 

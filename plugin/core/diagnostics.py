@@ -264,6 +264,7 @@ class DiagnosticsPhantoms(object):
         # base_dir = windows.lookup(self._window).get_project_path(file_path)
         phantom = create_phantom(view, diagnostic, base_dir, self.navigate)
         phantom_set.update([phantom])
+        self._window.focus_view(view)
         view.show_at_center(phantom.region)
         self._last_phantom_set = phantom_set
         has_phantom = view.settings().get('lsp_diagnostic_phantom')

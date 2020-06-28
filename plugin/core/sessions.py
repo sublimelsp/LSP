@@ -68,6 +68,10 @@ class Manager(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def update_diagnostics_panel_async(self) -> None:
+        pass
+
+    @abstractmethod
     def show_diagnostics_panel_async(self) -> None:
         pass
 

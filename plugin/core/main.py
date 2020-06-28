@@ -4,7 +4,7 @@ import sublime_plugin
 from ..diagnostics import DiagnosticsPresenter
 from .handlers import LanguageHandler
 from .logging import set_debug_logging, set_exception_logging
-from .panels import destroy_output_panels, ensure_panel, PanelName
+from .panels import destroy_output_panels
 from .popups import popups
 from .protocol import Response
 from .protocol import WorkspaceFolder
@@ -19,10 +19,6 @@ from .transports import kill_all_subprocesses
 from .types import ClientConfig
 from .typing import Optional, List, Type, Callable, Dict, Tuple
 import weakref
-
-
-def ensure_server_panel(window: sublime.Window) -> Optional[sublime.View]:
-    return ensure_panel(window, PanelName.LanguageServers, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
 
 
 def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:
@@ -113,7 +109,6 @@ def plugin_loaded() -> None:
     _forcefully_register_plugins()  # Remove this function: https://github.com/sublimelsp/LSP/issues/899
     client_configs.update_configs()
     windows.set_diagnostics_ui(DiagnosticsPresenter)
-    windows.set_server_panel_factory(ensure_server_panel)
     windows.set_settings_factory(settings)
 
 

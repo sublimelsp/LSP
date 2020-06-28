@@ -245,11 +245,11 @@ class DiagnosticsPhantoms(object):
         self.clear()
         if file_diagnostic:
             file_path, diagnostic = file_diagnostic
-            view = self._window.open_file(file_path, sublime.TRANSIENT)
-            if view.is_loading():
-                sublime.set_timeout(lambda: self.apply_phantom(view, diagnostic), 500)
-            else:
+            view = self._window.find_open_file(file_path)
+            if view:
                 self.apply_phantom(view, diagnostic)
+            else:
+                debug("no view for file", file_path)
         else:
             if self._last_phantom_set:
                 view = self._last_phantom_set.view

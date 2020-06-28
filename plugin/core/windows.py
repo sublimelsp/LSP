@@ -413,7 +413,6 @@ class WindowManager(Manager):
                 yield file_name, listener.diagnostics_async()
 
     def _select_diagnostic_async(self, direction: int) -> None:
-        debug("_select_diagnostic_async", direction)
         file_path = None  # type: Optional[str]
         point = None  # type: Optional[Point]
         if not self._cursor.has_value:
@@ -425,7 +424,9 @@ class WindowManager(Manager):
             direction, file_path, point)
         walker = DiagnosticsWalker([walk])
         walker.walk(self._diagnostics_by_file_async())
-        self._phantoms.set_diagnostic(self._cursor.value)
+        # The actual presentation of the phantom needs to happen on the UI thread, otherwise you'll see a phantom
+        # disappearing and then immediately after a phantom appearing. This is jarring. So run blocking.
+        sublime.set_timeout(lambda: self._phantoms.set_diagnostic(self._cursor.value))
 
 
 class WindowRegistry(object):

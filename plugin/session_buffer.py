@@ -68,7 +68,7 @@ class SessionBuffer:
             if listener:
                 listener.on_session_shutdown_async(self.session)
 
-    def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
+    def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
         last_change = list(changes)[-1]
         if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and self.view.size() != 0:
             # Issue https://github.com/sublimehq/sublime_text/issues/3323
@@ -81,17 +81,17 @@ class SessionBuffer:
                 self.pending_changes = PendingChanges(change_count, changes)
             else:
                 self.pending_changes.update(change_count, changes)
-            debounced(self.purge_changes, 500,
+            debounced(self.purge_changes_async, 500,
                       lambda: self.view.is_valid() and change_count == self.view.change_count())
 
-    def on_revert(self) -> None:
+    def on_revert_async(self) -> None:
         self.pending_changes = None  # Don't bother with pending changes
         self.session.send_notification(did_change(self.view, None))
         self._massive_hack_changed()
 
-    on_reload = on_revert
+    on_reload_async = on_revert_async
 
-    def purge_changes(self) -> None:
+    def purge_changes_async(self) -> None:
         if self.pending_changes is not None:
             sync_kind = self.session.text_sync_kind()
             if sync_kind == TextDocumentSyncKindNone:
@@ -102,14 +102,13 @@ class SessionBuffer:
             self.pending_changes = None
             self._massive_hack_changed()
 
-    def on_pre_save(self) -> None:
+    def on_pre_save_async(self, old_file_name: str) -> None:
         if self.session.should_notify_will_save():
-            self.purge_changes()
-            # mypy: expected sublime.View, got ViewLike
+            self.purge_changes_async()
             # TextDocumentSaveReason.Manual
-            self.session.send_notification(will_save(self.view, 1))
+            self.session.send_notification(will_save(old_file_name, 1))
 
-    def on_post_save(self) -> None:
+    def on_post_save_async(self) -> None:
         file_name = self.view.file_name()
         if file_name and file_name != self.file_name:
             if self.session.should_notify_did_close():
@@ -126,7 +125,7 @@ class SessionBuffer:
         else:
             send_did_save, include_text = self.session.should_notify_did_save()
             if send_did_save:
-                self.purge_changes()
+                self.purge_changes_async()
                 # mypy: expected sublime.View, got ViewLike
                 self.session.send_notification(did_save(self.view, include_text, self.file_name))
         self._massive_hack_saved()

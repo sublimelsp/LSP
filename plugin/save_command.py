@@ -55,11 +55,12 @@ class SaveTask(metaclass=ABCMeta):
             self._on_done()
 
     def _purge_changes_if_needed(self) -> None:
+        # TODO: Does this run in the async thread?
         # Supermassive hack that will go away later.
         listeners = sublime_plugin.view_event_listeners.get(self._view.id(), [])
         for listener in listeners:
             if listener.__class__.__name__ == 'DocumentSyncListener':
-                listener.purge_changes()  # type: ignore
+                listener.purge_changes_async()  # type: ignore
                 break
 
 

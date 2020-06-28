@@ -110,23 +110,23 @@ class SessionView:
         # TODO: Present diagnostics here.
         pass
 
-    def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
-        self.session_buffer.on_text_changed(changes)
+    def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
+        self.session_buffer.on_text_changed_async(changes)
 
-    def on_revert(self) -> None:
-        self.session_buffer.on_revert()
+    def on_revert_async(self) -> None:
+        self.session_buffer.on_revert_async()
 
-    def on_reload(self) -> None:
-        self.session_buffer.on_reload()
+    def on_reload_async(self) -> None:
+        self.session_buffer.on_reload_async()
 
-    def purge_changes(self) -> None:
-        self.session_buffer.purge_changes()
+    def purge_changes_async(self) -> None:
+        self.session_buffer.purge_changes_async()
 
-    def on_pre_save(self) -> None:
-        self.session_buffer.on_pre_save()
+    def on_pre_save_async(self, old_file_name: str) -> None:
+        self.session_buffer.on_pre_save_async(old_file_name)
 
-    def on_post_save(self) -> None:
-        self.session_buffer.on_post_save()
+    def on_post_save_async(self) -> None:
+        self.session_buffer.on_post_save_async()
 
     def __str__(self) -> str:
         return '{}:{}'.format(self.session.config.name, self.view.id())

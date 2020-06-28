@@ -22,7 +22,6 @@ from .save_command import LspSaveCommand
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
 import sublime
-import threading
 
 
 SUBLIME_WORD_MASK = 515
@@ -58,15 +57,6 @@ def is_transient_view(view: sublime.View) -> bool:
         return True
 
 
-def _clear_async(lock: threading.Lock, session_views: Dict[str, SessionView]) -> Callable[[], None]:
-
-    def run() -> None:
-        with lock:
-            session_views.clear()
-
-    return run
-
-
 class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     ACTIONS_ANNOTATION_KEY = "lsp_action_annotations"
@@ -81,7 +71,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self._session_views = {}  # type: Dict[str, SessionView]
-        self._session_views_lock = threading.Lock()
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
 
@@ -89,32 +78,30 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms.update([])
         self._clear_highlight_regions()
-        self._clear_async()
+        self._clear_session_views_async()
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
 
     def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()
         added = False
-        with self._session_views_lock:
-            if session.config.name not in self._session_views:
-                self._session_views[session.config.name] = SessionView(self, session)
-                self.view.settings().set("lsp_active", True)
-                added = True
+        if session.config.name not in self._session_views:
+            self._session_views[session.config.name] = SessionView(self, session)
+            self.view.settings().set("lsp_active", True)
+            added = True
         if added and "colorProvider" not in global_settings.disabled_capabilities:
             self._do_color_boxes_async()
 
     def on_session_shutdown_async(self, session: Session) -> None:
-        with self._session_views_lock:
-            self._session_views.pop(session.config.name, None)
-            if not self._session_views:
-                self.view.settings().erase("lsp_active")
+        self._session_views.pop(session.config.name, None)
+        if not self._session_views:
+            self.view.settings().erase("lsp_active")
 
-    def session_views(self) -> Generator[SessionView, None, None]:
+    def session_views_async(self) -> Generator[SessionView, None, None]:
         yield from self._session_views.values()
 
-    def session_buffers(self) -> Generator[SessionBuffer, None, None]:
-        for sv in self.session_views():
+    def session_buffers_async(self) -> Generator[SessionBuffer, None, None]:
+        for sv in self.session_views_async():
             yield sv.session_buffer
 
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
@@ -145,23 +132,20 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             self._when_selection_remains_stable_async(self._do_code_actions, current_region,
                                                       after_ms=self.code_actions_debounce_time)
 
-    def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
+    def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
         if self.view.is_primary():
-            with self._session_views_lock:
-                for sv in self.session_views():
-                    sv.on_text_changed(changes)
+            for sv in self.session_views_async():
+                sv.on_text_changed_async(changes)
 
-    def on_revert(self) -> None:
+    def on_revert_async(self) -> None:
         if self.view.is_primary():
-            with self._session_views_lock:
-                for sv in self.session_views():
-                    sv.on_revert()
+            for sv in self.session_views_async():
+                sv.on_revert_async()
 
-    def on_reload(self) -> None:
+    def on_reload_async(self) -> None:
         if self.view.is_primary():
-            with self._session_views_lock:
-                for sv in self.session_views():
-                    sv.on_reload()
+            for sv in self.session_views_async():
+                sv.on_reload_async()
 
     def on_pre_save(self) -> None:
         if self.view.is_primary():
@@ -169,18 +153,24 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             if view_settings.has(LspSaveCommand.SKIP_ON_PRE_SAVE_KEY):
                 view_settings.erase(LspSaveCommand.SKIP_ON_PRE_SAVE_KEY)
                 return
-            with self._session_views_lock:
-                for sv in self.session_views():
-                    sv.on_pre_save()
+        # NOTE: on_pre_save_async is NOT guaranteed to run *before* saving the view. This means calling
+        # self.view.file_name() is NOT guaranteed to give the *previous* filename when saving a view under a different
+        # filename. Thus we're forced to use on_pre_save, stash the old filename, and then do set_timeout_async by hand.
+        file_name = self.view.file_name() or ""
 
-    def on_post_save(self) -> None:
+        def run_async() -> None:
+            for sv in self.session_views_async():
+                sv.on_pre_save_async(file_name)
+
+        sublime.set_timeout_async(run_async)
+
+    def on_post_save_async(self) -> None:
         if self.view.is_primary():
-            with self._session_views_lock:
-                for sv in self.session_views():
-                    sv.on_post_save()
+            for sv in self.session_views_async():
+                sv.on_post_save_async()
 
     def on_close(self) -> None:
-        self._clear_async()
+        self._clear_session_views_async()
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool:
         if key == "lsp.session_with_capability" and operator == sublime.OP_EQUAL and isinstance(operand, str):
@@ -273,10 +263,9 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     # --- Utility methods ----------------------------------------------------------------------------------------------
 
-    def purge_changes(self) -> None:
-        with self._session_views_lock:
-            for sv in self.session_views():
-                sv.purge_changes()
+    def purge_changes_async(self) -> None:
+        for sv in self.session_views_async():
+            sv.purge_changes_async()
 
     def _when_selection_remains_stable_async(self, f: Callable[[], None], r: sublime.Region, after_ms: int) -> None:
         debounced(f, after_ms, lambda: self._stored_region == r, async_thread=True)
@@ -307,8 +296,14 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         # output panel or find-in-files panels.
         return not is_transient_view(v) and bool(v.file_name()) and v.element() is None
 
-    def _clear_async(self) -> None:
-        sublime.set_timeout_async(_clear_async(self._session_views_lock, self._session_views))
+    def _clear_session_views_async(self) -> None:
+        session_views = self._session_views
+
+        def clear_async() -> None:
+            nonlocal session_views
+            session_views.clear()
+
+        sublime.set_timeout_async(clear_async)
 
     def __str__(self) -> str:
         return str(self.view.id())

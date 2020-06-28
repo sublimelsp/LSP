@@ -8,7 +8,7 @@ from .core.protocol import Request
 from .core.registry import LSPViewEventListener
 from .core.settings import settings
 from .core.signature_help import create_signature_help, SignatureHelp
-from .core.typing import List, Dict, Optional, Union
+from .core.typing import Any, List, Dict, Optional, Union
 from .core.views import text_document_position_params
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
 
@@ -67,7 +67,8 @@ class SignatureHelpListener(LSPViewEventListener):
 
         self._initialized = True
 
-    def on_modified_async(self) -> None:
+    def on_text_changed_async(self, _: Any) -> None:
+        # TODO: Try to detect user-input versus arbitrary text changes. Look at the length of the text change?
         try:
             pos = self.view.sel()[0].begin()
         except IndexError:
@@ -82,7 +83,7 @@ class SignatureHelpListener(LSPViewEventListener):
         if self._signature_help_triggers:
             last_char = self.view.substr(pos - 1)
             if last_char in self._signature_help_triggers:
-                self.request_signature_help(pos)
+                self.request_signature_help_async(pos)
             elif self._visible:
                 if last_char.isspace():
                     # Peek behind to find the last non-whitespace character.
@@ -91,11 +92,11 @@ class SignatureHelpListener(LSPViewEventListener):
                 if last_char not in self._signature_help_triggers:
                     self.view.hide_popup()
 
-    def request_signature_help(self, point: int) -> None:
+    def request_signature_help_async(self, point: int) -> None:
         self.requested_position = point
         session = self.session('signatureHelpProvider', point)
         if session:
-            self.purge_changes()
+            self.purge_changes_async()
             document_position = text_document_position_params(self.view, point)
             session.send_request(
                 Request.signatureHelp(document_position),
@@ -116,7 +117,7 @@ class SignatureHelpListener(LSPViewEventListener):
             return False  # Let someone else handle this keybinding.
         elif not self._visible:
             if operand == 0:
-                self.request_signature_help(self.view.sel()[0].begin())
+                sublime.set_timeout_async(lambda: self.request_signature_help_async(self.view.sel()[0].begin()))
                 return True
             else:
                 return False  # Let someone else handle this keybinding.

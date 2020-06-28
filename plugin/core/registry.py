@@ -33,12 +33,12 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
     def has_manager(self) -> bool:
         return self._manager is not None
 
-    def purge_changes(self) -> None:
+    def purge_changes_async(self) -> None:
         # Supermassive hack that will go away later.
         listeners = sublime_plugin.view_event_listeners.get(self.view.id(), [])
         for listener in listeners:
             if listener.__class__.__name__ == 'DocumentSyncListener':
-                listener.purge_changes()  # type: ignore
+                listener.purge_changes_async()  # type: ignore
                 return
 
     def sessions(self, capability: Optional[str]) -> Generator[Session, None, None]:

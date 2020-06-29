@@ -32,9 +32,9 @@ class WillSaveWaitTask(SaveTask):
     def run_async(self) -> None:
         super().run_async()
         self._session_iterator = sessions_for_view(self._view, 'textDocumentSync.willSaveWaitUntil')
-        self._handle_next_session()
+        self._handle_next_session_async()
 
-    def _handle_next_session(self) -> None:
+    def _handle_next_session_async(self) -> None:
         session = next(self._session_iterator, None) if self._session_iterator else None
         if session:
             self._purge_changes_async()
@@ -51,7 +51,7 @@ class WillSaveWaitTask(SaveTask):
     def _on_response(self, response: Any) -> None:
         if response and not self._cancelled:
             apply_response_to_view(response, self._view)
-        sublime.set_timeout_async(self._handle_next_session)
+        sublime.set_timeout_async(self._handle_next_session_async)
 
 
 class FormattingTask(SaveTask):

@@ -240,9 +240,9 @@ class CodeActionOnSaveTask(SaveTask):
 
     def run_async(self) -> None:
         super().run_async()
-        self._request_code_actions()
+        self._request_code_actions_async()
 
-    def _request_code_actions(self) -> None:
+    def _request_code_actions_async(self) -> None:
         self._purge_changes_async()
         on_save_actions = self._get_code_actions_on_save(self._view)
         actions_manager.request_on_save(self._view, self._handle_response_async, on_save_actions)
@@ -256,7 +256,8 @@ class CodeActionOnSaveTask(SaveTask):
                 for code_action in code_actions:
                     run_code_action_or_command(self._view, config_name, code_action)
         if document_version != self._view.change_count():
-            self._request_code_actions()
+            # Give on_text_changed_async a chance to trigger.
+            sublime.set_timeout_async(self._request_code_actions_async)
         else:
             self._on_complete()
 

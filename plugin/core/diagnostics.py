@@ -3,7 +3,7 @@ from .panels import ensure_panel
 from .protocol import Diagnostic
 from .protocol import Point
 from .typing import List, Tuple, Callable, Optional, Iterable, Mapping
-from .views import create_phantom
+from .views import diagnostic_to_phantom
 import sublime
 
 
@@ -262,7 +262,7 @@ class DiagnosticsPhantoms(object):
         phantom_set = sublime.PhantomSet(view, "lsp_diagnostics")
         base_dir = None  # TODO
         # base_dir = windows.lookup(self._window).get_project_path(file_path)
-        phantom = create_phantom(view, diagnostic, base_dir, self.navigate)
+        phantom = diagnostic_to_phantom(view, diagnostic, base_dir, self.navigate)
         phantom_set.update([phantom])
         self._window.focus_view(view)
         view.show_at_center(phantom.region)

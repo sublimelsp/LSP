@@ -501,6 +501,17 @@ def format_diagnostic_related_info(info: DiagnosticRelatedInformation, base_dir:
     return '<a href="{}">{}</a>: {}'.format(encoded_filename, text2html(file_path), text2html(info.message))
 
 
+def format_diagnostic_for_html(diagnostic: Diagnostic, base_dir: Optional[str] = None) -> str:
+    diagnostic_message = text2html(diagnostic.message)
+    related_infos = [format_diagnostic_related_info(info, base_dir) for info in diagnostic.related_info]
+    related_content = "<pre class='related_info'>" + "<br>".join(related_infos) + "</pre>" if related_infos else ""
+    if diagnostic.source:
+        content = "[{}] {}{}".format(diagnostic.source, diagnostic_message, related_content)
+    else:
+        content = "{}{}".format(diagnostic_message, related_content)
+    return '<pre class="{}">{}</pre>'.format(DIAGNOSTIC_SEVERITY[diagnostic.severity - 1][1], content)
+
+
 def create_phantom_html(content: str, severity: str) -> str:
     return """<body id=inline-error>
                 <style>{0}</style>
@@ -516,7 +527,7 @@ def create_phantom_html(content: str, severity: str) -> str:
             </body>""".format(css().phantoms, severity, content)
 
 
-def create_phantom(
+def diagnostic_to_phantom(
     view: sublime.View,
     diagnostic: Diagnostic,
     base_dir: Optional[str],

@@ -1,7 +1,7 @@
 from .core.protocol import Diagnostic
 from .core.sessions import Session
 from .core.types import view2scope
-from .core.typing import Iterable, List, Tuple
+from .core.typing import Any, Iterable, List, Tuple
 from .core.windows import AbstractViewListener
 from .session_buffer import SessionBuffer
 from weakref import WeakValueDictionary
@@ -15,6 +15,9 @@ class SessionView:
     """
 
     LANGUAGE_ID_KEY = "lsp_language"
+    SHOW_DEFINITIONS_KEY = "show_definitions"
+    HOVER_PROVIDER_KEY = "hoverProvider"
+    HOVER_PROVIDER_COUNT_KEY = "lsp_hover_provider_count"
 
     _session_buffers = WeakValueDictionary()  # type: WeakValueDictionary[Tuple[str, int], SessionBuffer]
 
@@ -45,14 +48,12 @@ class SessionView:
         self.listener = ref(listener)
         session.register_session_view_async(self)
         session.config.set_view_status(self.view, "")
-        for capability in self.session.capabilities.toplevel_keys():
-            if capability.endswith('Provider'):
-                self.register_capability(capability)
+        if self.session.has_capability(self.HOVER_PROVIDER_KEY):
+            self._increment_hover_count()
 
     def __del__(self) -> None:
-        for capability in self.session.capabilities.toplevel_keys():
-            if capability.endswith('Provider'):
-                self.unregister_capability(capability)
+        if self.session.has_capability(self.HOVER_PROVIDER_KEY):
+            self._decrement_hover_count()
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
         if not self.session.exiting:
@@ -68,38 +69,30 @@ class SessionView:
             else:
                 settings.erase(self.LANGUAGE_ID_KEY)
 
-    def register_capability(self, capability: str) -> None:
-        self._add_self_to_setting(capability)
-        if capability == 'hoverProvider':
-            # TODO: Remember the old value? Detect changes to show_definitions?
-            self.view.settings().set('show_definitions', False)
-
-    def unregister_capability(self, capability: str) -> None:
-        if self._discard_self_from_setting(capability) and capability == 'hoverProvider':
-            # TODO: Remember the old value? Detect changes to show_definitions?
-            self.view.settings().set('show_definitions', True)
-
-    def _add_self_to_setting(self, key: str) -> None:
+    def _increment_hover_count(self) -> None:
         settings = self.view.settings()
-        value = settings.get(key)
-        if isinstance(value, dict):
-            value[self.session.config.name] = None
-        else:
-            value = {self.session.config.name: None}
-        settings.set(key, value)
+        count = settings.get(self.HOVER_PROVIDER_COUNT_KEY, 0)
+        if isinstance(count, int):
+            count += 1
+            settings.set(self.HOVER_PROVIDER_COUNT_KEY, count)
+            settings.set(self.SHOW_DEFINITIONS_KEY, False)
 
-    def _discard_self_from_setting(self, key: str) -> bool:
-        """Returns True when the setting was erased, otherwise False."""
+    def _decrement_hover_count(self) -> None:
         settings = self.view.settings()
-        value = settings.get(key)
-        if isinstance(value, dict):
-            value.pop(self.session.config.name, None)
-        if value:
-            settings.set(key, value)
-            return False
-        else:
-            settings.erase(key)
-            return True
+        count = settings.get(self.HOVER_PROVIDER_COUNT_KEY)
+        if isinstance(count, int):
+            count -= 1
+            if count == 0:
+                settings.erase(self.HOVER_PROVIDER_COUNT_KEY)
+                settings.set(self.SHOW_DEFINITIONS_KEY, True)
+
+    def register_capability_async(self, capability_path: str, options: Any) -> None:
+        if capability_path == self.HOVER_PROVIDER_KEY:
+            self._increment_hover_count()
+
+    def unregister_capability_async(self, capability_path: str) -> None:
+        if capability_path == self.HOVER_PROVIDER_KEY:
+            self._decrement_hover_count()
 
     def shutdown_async(self) -> None:
         listener = self.listener()

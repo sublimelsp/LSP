@@ -18,7 +18,7 @@
             {
                 "key": "lsp.session_with_capability",
                 "operator": "equal",
-                "operand": "codeActionProvider | documentFormattingProvider | documentRangeFormattingProvider"
+                "operand": "textDocumentSync.willSave | codeActionProvider.codeActionKinds | documentFormattingProvider | documentRangeFormattingProvider"
             }
         ]
     },

@@ -17,11 +17,10 @@ from .core.views import text_document_position_params, range_to_region
 
 
 class LspResolveDocsCommand(LspTextCommand):
-    def run(self, edit: sublime.Edit, index: int) -> None:
+    def run(self, edit: sublime.Edit, index: int, event: Optional[dict] = None) -> None:
         item = CompletionHandler.completions[index]
         detail = self.format_documentation(item.get('detail') or "")
         documentation = self.format_documentation(item.get("documentation") or "")
-
         # don't show the detail in the cooperate AC popup if it is already shown in the AC details filed.
         self.is_detail_shown = bool(detail)
         minihtml_content = self.get_content(documentation, detail)

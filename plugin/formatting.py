@@ -29,15 +29,15 @@ class WillSaveWaitTask(SaveTask):
         super().__init__(view, on_complete)
         self._session_iterator = None  # type: Optional[Iterator[Session]]
 
-    def run(self) -> None:
-        super().run()
+    def run_async(self) -> None:
+        super().run_async()
         self._session_iterator = sessions_for_view(self._view, 'textDocumentSync.willSaveWaitUntil')
-        self._handle_next_session()
+        self._handle_next_session_async()
 
-    def _handle_next_session(self) -> None:
+    def _handle_next_session_async(self) -> None:
         session = next(self._session_iterator, None) if self._session_iterator else None
         if session:
-            self._purge_changes_if_needed()
+            self._purge_changes_async()
             self._will_save_wait_until(session)
         else:
             self._on_complete()
@@ -51,7 +51,7 @@ class WillSaveWaitTask(SaveTask):
     def _on_response(self, response: Any) -> None:
         if response and not self._cancelled:
             apply_response_to_view(response, self._view)
-        self._handle_next_session()
+        sublime.set_timeout_async(self._handle_next_session_async)
 
 
 class FormattingTask(SaveTask):
@@ -63,9 +63,9 @@ class FormattingTask(SaveTask):
         return enabled and bool(view.window()) and bool(view.file_name()) \
             and LSPViewEventListener.has_supported_syntax({'syntax': view_settings.get('syntax')})
 
-    def run(self) -> None:
-        super().run()
-        self._purge_changes_if_needed()
+    def run_async(self) -> None:
+        super().run_async()
+        self._purge_changes_async()
         self._format_on_save()
 
     def _format_on_save(self) -> None:
@@ -80,7 +80,7 @@ class FormattingTask(SaveTask):
     def _on_response(self, response: Any) -> None:
         if response and not self._cancelled:
             apply_response_to_view(response, self._view)
-        self._on_complete()
+        sublime.set_timeout_async(self._on_complete)
 
 
 LspSaveCommand.register_task(WillSaveWaitTask)

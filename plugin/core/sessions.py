@@ -297,10 +297,10 @@ class SessionViewProtocol(Protocol):
     view = None  # type: sublime.View
     listener = None  # type: Any
 
-    def register_capability(self, capability: str) -> None:
+    def register_capability_async(self, capability_path: str, options: Any) -> None:
         ...
 
-    def unregister_capability(self, capability: str) -> None:
+    def unregister_capability_async(self, capability_path: str) -> None:
         ...
 
     def shutdown_async(self) -> None:
@@ -761,12 +761,11 @@ class Session(Client):
                 method = registration["method"]
                 capability_path, registration_path = method_to_capability(method)
                 debug("{}: registering capability:".format(self.config.name), capability_path)
-                self.capabilities.set(capability_path, registration.get("registerOptions", {}))
+                options = registration.get("registerOptions", {})
+                self.capabilities.set(capability_path, options)
                 self.capabilities.set(registration_path, registration["id"])
-                toplevel_key = capability_path.split('.')[0]
-                if toplevel_key.endswith('Provider'):
-                    for sv in self.session_views_async():
-                        sv.register_capability(toplevel_key)
+                for sv in self.session_views_async():
+                    sv.register_capability_async(capability_path, options)
             self.send_response(Response(request_id, None))
 
         sublime.set_timeout_async(run)
@@ -781,10 +780,8 @@ class Session(Client):
                 debug("{}: unregistering capability:".format(self.config.name), capability_path)
                 self.capabilities.remove(capability_path)
                 self.capabilities.remove(registration_path)
-                toplevel_key = capability_path.split('.')[0]
-                if toplevel_key.endswith('Provider'):
-                    for sv in self.session_views_async():
-                        sv.unregister_capability(toplevel_key)
+                for sv in self.session_views_async():
+                    sv.unregister_capability_async(capability_path)
             self.send_response(Response(request_id, None))
 
         sublime.set_timeout_async(run)

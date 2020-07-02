@@ -1,7 +1,7 @@
 """
 Module with additional collections.
 """
-from .typing import Optional, Dict, Any, Iterable
+from .typing import Optional, Dict, Any
 
 
 class DottedDict:
@@ -109,12 +109,6 @@ class DottedDict:
                 self._update_recursive(value, key)
             else:
                 self.set(key, value)
-
-    def toplevel_keys(self) -> Iterable[str]:
-        """
-        Iterate over the top-level keys.
-        """
-        return self._d.keys()
 
     def _update_recursive(self, current: Dict[str, Any], prefix: str) -> None:
         for key, value in current.items():

@@ -109,6 +109,23 @@ class RangeTests(unittest.TestCase):
         })
         self.assertTrue(range1.intersects(range2))
 
+    def test_extend(self) -> None:
+        # includes range 1
+        base_range = Range(Point(0, 0), Point(0, 0))
+        other_range = Range(Point(0, 0), Point(0, 3))
+        base_range.extend(other_range)
+        self.assertEqual(base_range, other_range)
+        # includes range 2
+        base_range = Range(Point(1, 0), Point(1, 1))
+        other_range = Range(Point(0, 0), Point(2, 0))
+        base_range.extend(other_range)
+        self.assertEqual(base_range, other_range)
+        # is not extended
+        base_range = Range(Point(1, 0), Point(1, 5))
+        other_range = Range(Point(1, 1), Point(1, 2))
+        base_range.extend(other_range)
+        self.assertEqual(base_range, Range(Point(1, 0), Point(1, 5)))
+
 
 class DiagnosticTests(unittest.TestCase):
 

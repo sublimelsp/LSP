@@ -44,7 +44,6 @@ Here is an example of the `LSP.sublime-settings` file with configurations for th
 {
   // General settings
   "log_stderr": true,
-  "log_payloads": true,
 
   // Language server configurations
   "clients": {
@@ -52,8 +51,7 @@ Here is an example of the `LSP.sublime-settings` file with configurations for th
       "command": ["lsp-tsserver"],
       "enabled": true,
       "languageId": "typescript",
-      "scopes": ["source.ts", "source.tsx"],
-      "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"]
+      "document_selector": "source.ts | source.tsx"
     }
   }
 }
@@ -65,7 +63,6 @@ Some language servers support multiple languages, which can be specified in the 
 {
   // General settings
   "log_stderr": true,
-  "log_payloads": true,
 
   // Language server configurations
   "clients": {
@@ -74,12 +71,10 @@ Some language servers support multiple languages, which can be specified in the 
       "enabled": true,
       "languages": [{
         "languageId": "javascript",
-        "scopes": ["source.js", "source.jsx"],
-        "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"]
+        "document_selector": "source.js | source.jsx"
       }, {
         "languageId": "typescript",
-        "scopes": ["source.ts", "source.tsx"],
-        "syntaxes": ["Packages/TypeScript-TmLanguage/TypeScript.tmLanguage", "Packages/TypeScript-TmLanguage/TypeScriptReact.tmLanguage"]
+        "document_selector": "source.ts | source.tsx"
       }]
     }
   }
@@ -93,14 +88,16 @@ Some language servers support multiple languages, which can be specified in the 
 | env | dict of environment variables to be injected into the language server's process (eg. PYTHONPATH) |
 | settings | per-project settings (equivalent to VS Code's Workspace Settings) |
 | initializationOptions | options to send to the server at startup (rarely used) |
-| scopes | add language flavours, eg. `source.js`, `source.jsx` |
-| syntaxes | syntaxes that enable LSP features on a document, eg. `Packages/Babel/JavaScript (Babel).tmLanguage` |
+| document_selector | This is _the_ connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. If the selector happens to be of the form "source.{languageId}" (which it is in many cases), then you can omit this "document_selector" key altogether, and LSP will assume the selector is "source.{languageId}". For more information, see https://www.sublimetext.com/docs/3/selectors.html |
 | languageId | identifies the language for a document - see [LSP specifications](https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/#textDocumentItem) |
-| languages | group `scope`, `syntax` and `languageId` together for servers that support more than one language |
+| languages | group `document_selector` and `languageId` together for servers that support more than one language |
 | tcp_port | see instructions below |
 | tcp_host | see instructions below |
 | tcp_mode | see instructions below |
 | experimental_capabilities | Turn on experimental capabilities of a language server. This is a dictionary and differs per language server |
+
+You can figure out the scope with Tools > Developer > Show Scope Name.
+You can figure out the syntax by opening the ST console and running `view.settings().get("syntax")`.
 
 The default transport is stdio, but TCP is also supported.
 The port number can be inserted into the server's arguments by adding a `{port}` placeholder in `command`.
@@ -133,9 +130,7 @@ Any global language server settings can be overridden per project by adding an L
       },
       "eslintls": {
         "settings": {
-          "eslint": {
-            "autoFixOnSave": true
-          }
+          "eslint.autoFixOnSave": true
         }
       }
     }
@@ -175,8 +170,7 @@ See the dedicated <a href="cplusplus"/>C/C++ guide</a> for using ccls, cquery or
   ],
   "enabled": true,
   "languageId": "csharp",
-  "scopes": ["source.cs"],
-  "syntaxes": ["Packages/C#/C#.sublime-syntax"]
+  "document_selector": "source.cs"
 }
 ```
 
@@ -190,9 +184,7 @@ See the dedicated <a href="cplusplus"/>C/C++ guide</a> for using ccls, cquery or
   "command": ["java", "-jar", "/PATH/TO/clojure-lsp"],
   "enabled": true,
   "initializationOptions": {},
-  "languageId": "clojure",
-  "scopes": ["source.clojure"],
-  "syntaxes": ["Packages/Clojure/Clojure.sublime-syntax"]
+  "languageId": "clojure" // will match source.clojure
 }
 ```
 
@@ -215,13 +207,11 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 
 2. Add to LSP settings' clients:
 
-```json
+```js
 "dls": {
   "command": ["<PATH TO DLS EXECUTABLE>"],
   "enabled": true,
-  "languageId": "d",
-  "scopes": ["source.d"],
-  "syntaxes": ["Packages/D/D.sublime-syntax"]
+  "languageId": "d" // will match source.d
 }
 ```
 
@@ -231,13 +221,11 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 2. Install the [Dart SDK](https://dart.dev/get-dart) and locate path to `analysis_server.dart.snapshot` in the "snapshots/bin" directory.
 3. Add to LSP settings' clients (adjust the path if necessary):
 
-```json
+```js
 "dart": {
   "command": ["dart", "/usr/local/opt/dart/libexec/bin/snapshots/analysis_server.dart.snapshot", "--lsp"],
   "enabled": true,
-  "languageId": "dart",
-  "scopes": ["source.dart"],
-  "syntaxes": ["Packages/Dart/Dart.tmLanguage"]
+  "languageId": "dart" // will match source.dart
 }
 ```
 
@@ -256,26 +244,18 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 "docker-langserver": {
   "command": ["docker-langserver", "--stdio"],
   "enabled": true,
-  "languageId": "dockerfile",
-  "scopes": ["source.dockerfile"],
+  "languageId": "dockerfile", // will match source.dockerfile
   "settings": {
-    "docker": {
-      "languageserver": {
-        "diagnostics": {
-          // string values must be equal to "ignore", "warning", or "error"
-          "deprecatedMaintainer": "warning",
-          "directiveCasing": "warning",
-          "emptyContinuationLine": "warning",
-          "instructionCasing": "warning",
-          "instructionCmdMultiple": "warning",
-          "instructionEntrypointMultiple": "warning",
-          "instructionHealthcheckMultiple": "warning",
-          "instructionJSONInSingleQuotes": "warning"
-        }
-      }
-    }
+    // string values must be equal to "ignore", "warning", or "error"
+    "docker.languageserver.diagnostics.deprecatedMaintainer": "warning",
+    "docker.languageserver.diagnostics.directiveCasing": "warning",
+    "docker.languageserver.diagnostics.emptyContinuationLine": "warning",
+    "docker.languageserver.diagnostics.instructionCasing": "warning",
+    "docker.languageserver.diagnostics.instructionCmdMultiple": "warning",
+    "docker.languageserver.diagnostics.instructionEntrypointMultiple": "warning",
+    "docker.languageserver.diagnostics.instructionHealthcheckMultiple": "warning",
+    "docker.languageserver.diagnostics.instructionJSONInSingleQuotes": "warning"
   },
-  "syntaxes": ["Packages/Dockerfile Syntax Highlighting/Syntaxes/Dockerfile.sublime-syntax"]
 }
 ```
 
@@ -286,13 +266,11 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
    This will get you a folder containing `language_server.sh` among other things.
 3. Add to LSP settings' clients (adjust the path if necessary):
 
-```json
+```js
 "elixir-ls": {
   "command": ["/home/someUser/somePlace/elixir-ls/release/language_server.sh"],
   "enabled": true,
-  "languageId": "elixir",
-  "scopes": ["source.elixir"],
-  "syntaxes": ["Packages/Elixir/Syntaxes/Elixir.tmLanguage"]
+  "languageId": "elixir" // will match source.elixir
 }
 ```
 
@@ -302,16 +280,14 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 2. See instructions for installing the [elm-language-server](https://github.com/elm-tooling/elm-language-server).
 3. Add to LSP settings' clients:
 
-```json
+```js
 "elm": {
   "command": ["elm-language-server", "--stdio"],
   "enabled": true,
   "initializationOptions": {
     "elmAnalyseTrigger": "change"
   },
-  "languageId": "elm",
-  "scopes": ["source.elm"],
-  "syntaxes": ["Packages/Elm Syntax Highlighting/src/elm.sublime-syntax"]
+  "languageId": "elm" // will match source.elm
 }
 ```
 
@@ -324,16 +300,9 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 "erlang-ls": {
   "command"   : [ "/path/to/my/erlang_ls", "--transport", "stdio" ],
   "enabled"   : true,
-  "languageId": "erlang",
-  "scopes"    : [ "source.erlang" ],
-  "syntaxes"  : ["Packages/Erlang/Erlang.sublime-syntax"]
+  "languageId": "erlang" // will match source.erlang
 }
 ```
-
-> **Note**: Sometimes Erlang LS might take a little time to initialize. The default is 3 seconds so it is a good idea to increase the value for `"initialize_timeout"` in the LSP settings' clients:
-
-        "initialize_timeout": 30
-
 
 ### Flow (JavaScript)<a name="flow"></a>
 
@@ -363,14 +332,7 @@ npm install -g flow-language-server
   "command": ["fortls"],
   "enabled": true,
   "languageId": "fortran",
-  "scopes": [
-    "source.modern-fortran",
-    "source.fixedform-fortran"
-  ],
-  "syntaxes": [
-    "Packages/Fortran/grammars/FortranModern.sublime-syntax",
-    "Packages/Fortran/grammars/FortranFixedForm.sublime-syntax"
-  ]
+  "document_selector": "source.modern-fortran | source.fixedform-fortran"
 }
 ```
 
@@ -408,10 +370,8 @@ npm install -g flow-language-server
 ```js
 "ghcide": {
   "enabled": true,
-  "languageId": "haskell",
-  "command": ["ghcide", "--lsp"],
-  "scopes": ["source.haskell"],
-  "syntaxes": ["Packages/Haskell/Haskell.sublime-syntax"]
+  "languageId": "haskell", // will match source.haskell
+  "command": ["ghcide", "--lsp"]
 }
 ```
 
@@ -448,9 +408,7 @@ npm install -g flow-language-server
     "<TEMP_DIR>/${project_base_name}/jdt_ws"
   ],
   "enabled": true,
-  "languageId": "java",
-  "scopes": ["source.java"],
-  "syntaxes": ["Packages/Java/Java.sublime-syntax"]
+  "languageId": "java" // will match source.java
 }
 ```
 
@@ -461,9 +419,7 @@ Requires IntelliJ to be running.
 ```js
 "intellij": {
   "command": [],
-  "languageId": "java",
-  "scopes": ["source.java"],
-  "syntaxes": ["Packages/Java/Java.sublime-syntax"],
+  "languageId": "java", // will match source.java
   "tcp_port": 8080 // default port
 }
 ```
@@ -506,38 +462,30 @@ npm install -g javascript-typescript-langserver
   "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
   // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using Pkg; using LanguageServer; using LanguageServer.SymbolServer; env_path=dirname(Pkg.Types.Context().env.project_file); server=LanguageServer.LanguageServerInstance(stdin,stdout,false,env_path); run(server)"], // on Windows
   "languageId": "julia",
-  "scopes": ["source.julia"],
   "settings": {
     // Default values from VS Code:
-    "julia": {
-      "format": {
-        "calls": true,        // Format function calls
-        "comments": true,     // Format comments
-        "curly": true,        // Format braces
-        "docs": true,         // Format inline documentation
-        "indent": 4,          // Indent size for formatting
-        "indents": true,      // Format file indents
-        "iterOps": true,      // Format loop iterators
-        "kw": true,           // Remove spaces around = in function keywords
-        "lineends": false,    // [undocumented]
-        "ops": true,          // Format whitespace around operators
-        "tuples": true        // Format tuples
-      },
-      "lint": {
-        "call": false,        // Check calls against existing methods (experimental)
-        "constif": true,      // Check for constant conditionals of if statements
-        "datadecl": false,    // [undocumented]
-        "iter": true,         // Check iterator syntax of loops
-        "lazy": true,         // Check for deterministic lazy boolean operators
-        "modname": true,      // Check for invalid submodule names
-        "nothingcomp": false, // [undocumented]
-        "pirates": true,      // Check for type piracy
-        "run": true,          // run the linter on active files
-        "typeparam": true     // Check for unused DataType parameters
-      }
-    }
-  },
-  "syntaxes": ["Packages/Julia/Julia.sublime-syntax"]
+    "julia.format.calls": true,      // Format function calls
+    "julia.format.comments": true,   // Format comments
+    "julia.format.curly": true,      // Format braces
+    "julia.format.docs": true,       // Format inline documentation
+    "julia.format.indent": 4,        // Indent size for formatting
+    "julia.format.indents": true,    // Format file indents
+    "julia.format.iterOps": true,    // Format loop iterators
+    "julia.format.kw": true,         // Remove spaces around = in function keywords
+    "julia.format.lineends": false,  // [undocumented]
+    "julia.format.ops": true,        // Format whitespace around operators
+    "julia.format.tuples": true      // Format tuples
+    "julia.lint.call": false,        // Check calls against existing methods (experimental)
+    "julia.lint.constif": true,      // Check for constant conditionals of if statements
+    "julia.lint.datadecl": false,    // [undocumented]
+    "julia.lint.iter": true,         // Check iterator syntax of loops
+    "julia.lint.lazy": true,         // Check for deterministic lazy boolean operators
+    "julia.lint.modname": true,      // Check for invalid submodule names
+    "julia.lint.nothingcomp": false, // [undocumented]
+    "julia.lint.pirates": true,      // Check for type piracy
+    "julia.lint.run": true,          // run the linter on active files
+    "julia.lint.typeparam": true     // Check for unused DataType parameters
+  }
 }
 ```
 
@@ -554,14 +502,12 @@ npm install -g javascript-typescript-langserver
 "kotlinls": {
   "command": ["PATH/TO/KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat"],
   "enabled": true,
-  "languageId": "kotlin",
-  "scopes": ["source.Kotlin"],
+  "languageId": "kotlin", // will match source.kotlin
   "settings": {
     "kotlin": {
       // put your server settings here
     }
-  },
-  "syntaxes": ["Packages/kotlin/Kotlin.tmLanguage"]
+  }
 }
 ```
 
@@ -576,12 +522,10 @@ npm install -g javascript-typescript-langserver
   "enabled": true,
   "languages": [{
     "languageId": "latex",
-    "scopes": ["text.tex.latex"],
-    "syntaxes": ["Packages/LaTeX/LaTeX.sublime-syntax"]
+    "document_selector": "text.tex.latex"
   }, {
     "languageId": "bibtex",
-    "scopes": ["text.bibtex"],
-    "syntaxes": ["Packages/LaTeX/Bibtex.sublime-syntax"]
+    "document_selector": "text.bibtex"
   }]
 }
 ```
@@ -595,13 +539,11 @@ npm install -g javascript-typescript-langserver
 1. Install [cc-lsp](https://github.com/cxxxr/cl-lsp) using Roswell.
 2. Add to LSP settings' clients:
 
-```json
+```js
 "cc-lsp": {
   "command": ["cl-lsp", "stdio"],
   "enabled": true,
-  "languageId": "lisp",
-  "scopes": ["source.lisp"],
-  "syntaxes": ["Packages/Lisp/Lisp.sublime-syntax"]
+  "languageId": "lisp" // will match source.lisp
 }
 ```
 
@@ -610,16 +552,14 @@ npm install -g javascript-typescript-langserver
 1. Download the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=sumneko.lua).
 2. Add to LSP settings' clients:
 
-```json
+```js
 "lua-ls": {
   "command": [
     "PATH/TO/sumneko.lua-#.#.#/extension/server/bin/lua-language-server",
     "-E", "PATH/TO/sumneko.lua-#.#.#/extension/server/main.lua"
   ],
   "enabled": true,
-  "languageId": "lua",
-  "scopes": ["source.lua"],
-  "syntaxes": ["Packages/Lua/Lua.sublime-syntax"]
+  "languageId": "lua" // will match source.lua
 }
 ```
 
@@ -636,12 +576,7 @@ Alternatively you can use the less maintained [lua-lsp](https://github.com/Alloy
   "command": ["PATH/TO/reason-language-server.exe"],
   "enabled": true,
   "languageId": "reason",
-  "scopes": ["source.ocaml", "source.reason"],
-  "syntaxes": [
-    "Packages/Ocaml/OCaml.sublime-syntax",
-    "Packages/Reason/Reason.tmLanguage",
-    "Packages/sublime-reason/Reason.tmLanguage"
-  ]
+  "document_selector": "source.ocaml | source.reason"
 }
 ```
 
@@ -711,9 +646,7 @@ More info: [Polymer/polymer-editor-service](https://github.com/Polymer/polymer-e
     "-Stdio"
   ],
   "enabled": true,
-  "languageId": "powershell",
-  "scopes": ["source.powershell"],
-  "syntaxes": ["Packages/PowerShell/Support/PowershellSyntax.tmLanguage"]
+  "languageId": "powershell" // will match source.powershell
 }
 ```
 
@@ -772,48 +705,37 @@ A basic configuration below can be used for bootstrapping your own:
     "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage",
   ],
   "settings": {
-    "pyls": {
-      "env":
-      {
-        // Making Sublime's own libs available to the linters.
-        // "PYTHONPATH": "/Applications/Sublime Text.app/Contents/MacOS/Lib/python33",
-      },
-      // Configuration is computed first from user configuration (in home directory),
-      // overridden by configuration passed in by the language client,
-      // and then overridden by configuration discovered in the workspace.
-      "configurationSources": [
-        "pycodestyle",  // discovered in ~/.config/pycodestyle, setup.cfg, tox.ini and pycodestyle.cfg
-        // "flake8",  // discovered in ~/.config/flake8, setup.cfg, tox.ini and flake8.cfg
-      ],
-      "plugins": {
-        "jedi": {
-          "extra_paths": [
-            // The directory where the pip installation package is located
-          ],
-        },
-        "jedi_completion": {
-          "fuzzy": true,  // Enable fuzzy when requesting autocomplete
-        },
-        "pycodestyle": {
-          "enabled": true,
-          "exclude": [  // Exclude files or directories which match these patterns
-          ],
-          "ignore": [  // Ignore errors and warnings
-            // "E501",  // Line too long (82 &gt; 79 characters)
-          ],
-          // "maxLineLength": 80,  // Set maximum allowed line length
-        },
-        "pydocstyle": {"enabled": false},
-        "pyflakes": {"enabled": true},
-        "pylint": {"enabled": false},
-        "yapf": {"enabled": true},
-        // pyls' 3rd Party Plugins, Mypy type checking for Python 3, Must be installed via pip before enabling
-        "pyls_mypy": {  // Install with: pip install pyls-mypy
-          "enabled": false,
-          "live_mode": true,
-        },
-      }
-    }
+    "pyls.env": {
+      // Making Sublime's own libs available to the linters.
+      // "PYTHONPATH": "/Applications/Sublime Text.app/Contents/MacOS/Lib/python33",
+    },
+    // Configuration is computed first from user configuration (in home directory),
+    // overridden by configuration passed in by the language client,
+    // and then overridden by configuration discovered in the workspace.
+    "pyls.configurationSources": [
+      "pycodestyle", // discovered in ~/.config/pycodestyle, setup.cfg, tox.ini and pycodestyle.cfg
+      // "flake8",   // discovered in ~/.config/flake8, setup.cfg, tox.ini and flake8.cfg
+    ],
+    "pyls.plugins.jedi.extra_paths": [
+      // The directory where the pip installation package is located
+    ],
+    // Enable fuzzy matches when requesting autocomplete
+    "pyls.plugins.jedi.jedi_completion.fuzzy": true,
+    "pyls.plugins.jedi.pycodestyle.enabled": true,
+    "pyls.plugins.jedi.pycodestyle.exclude": [
+      // Exclude files or directories which match these patterns
+    ],
+    "pyls.plugins.jedi.pycodestyle.ignore": [
+      // Exclude files or directories which match these patterns
+    ],
+    // "pyls.plugins.jedi.pycodestyle.maxLineLength: 80" // set maximum allowed line length
+    "pyls.plugins.pydocstyle.enabled" false,
+    "pyls.plugins.pyflakes.enabled": true,
+    "pyls.plugins.pylint.enabled": false,
+    "pyls.plugins.yapf.enabled": true,
+    // pyls' 3rd Party Plugins, Mypy type checking for Python 3, Must be installed via pip before enabling
+    "pyls.plugins.pyls_mypy.enabled": false, // Install with: pip install pyls-mypy
+    "pyls.plugins.pyls_mypy.live_mode": true
   }
 },
 ```
@@ -824,7 +746,76 @@ Description of all built-in settings: https://github.com/palantir/python-languag
 
 #### Microsoft's Python Language Server
 
-Alternatively, use Microsoft Python Language Server (using .NET Core runtime). [Instructions](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md).
+Alternatively, use Microsoft Python Language Server (using .NET Core runtime).  
+Here is a basic configuration to be added to your User/LSP.sublime-settings file:
+
+```js
+  //...
+"mspyls": {
+  "enabled": true,
+  "command": [ "dotnet", "exec", "PATH/TO/Microsoft.Python.LanguageServer.dll" ],
+  "languageId": "python",
+  "scopes": [ "source.python" ],
+  "syntaxes": [
+    "Packages/Python/Python.sublime-syntax",
+    "Packages/MagicPython/grammars/MagicPython.tmLanguage",
+    "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage"
+  ],
+  "initializationOptions":
+  {
+    "interpreter":
+    {
+      "properties":
+      {
+        "UseDefaultDatabase": true,
+        "Version": "3.7" // python version
+      }
+    }
+  },
+  "settings":
+  {
+    "python":
+    {
+      // At least an empty "python" object is (currently) required to initialise the language server.
+      // Other options can be defined as explained below.
+    }
+  }
+},
+```
+
+The language server has to be configured as per the Microsoft [documentation](https://github.com/microsoft/python-language-server/blob/master/README.md) and the Sublime Text [instructions](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md).
+An exhaustive list of the configuration options can be found in the VSCode [documentation](https://code.visualstudio.com/docs/python/settings-reference#_python-language-server-settings).
+
+Here is an example of settings:
+
+```js
+  "settings":
+  {
+    "python":
+    {
+      // Solve the 'unresolved import' warning as documented in:
+      // https://github.com/microsoft/python-language-server/blob/master/TROUBLESHOOTING.md#unresolved-import-warnings
+      "autoComplete":
+      {
+          // add extra path for Sublime Text plugins
+          "extraPaths": [ "/opt/sublime_text" ]
+      }
+      // Configure the linting options as documented in:
+      // https://github.com/microsoft/python-language-server/#linting-options-diagnostics
+      "analysis":
+      {
+        "errors": [ "undefined-variable" ],
+        "warnings": [ "unknown-parameter-name" ],
+        "information": [ "unresolved-import" ],
+        "disabled": [ "too-many-function-arguments", "parameter-missing" ]
+      },
+      // "linting":
+      // {
+      //     "enabled": "false"
+      // }
+    }
+  }
+```
 
 ### R<a name="r"></a>
 
@@ -887,13 +878,11 @@ Then the LSP plugin should launch as configured in `LSP.sublime-settings` using 
 1. Download [terraform-lsp](https://github.com/juliosueiras/terraform-lsp/releases) binary and make it available in your PATH.
 2. Add to LSP settings' clients:
 
-```json
+```js
 "terraform": {
   "command": ["terraform-lsp"],
   "enabled": true,
-  "languageId": "terraform",
-  "scopes": ["source.terraform"],
-  "syntaxes":  ["Packages/Terraform/Terraform.sublime-syntax"]
+  "languageId": "terraform" // will match source.terraform
 }
 ```
 
@@ -923,8 +912,7 @@ Be sure to install [Vue Syntax Highlight](https://packagecontrol.io/packages/Vue
   ],
   "enabled": true,
   "languageId": "xml",
-  "scopes": ["text.xml"],
-  "syntaxes": ["Packages/XML/XML.sublime-syntax"]
+  "document_selector": "text.xml"
 }
 ```
 

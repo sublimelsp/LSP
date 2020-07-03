@@ -1,7 +1,8 @@
 from LSP.plugin.completion import CompletionHandler
-from LSP.plugin.core.registry import is_supported_view
+from LSP.plugin.core.registry import windows
+from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable
-from setup import SUPPORTED_SYNTAX, TextDocumentTestCase, add_config, remove_config, text_config
+from setup import TextDocumentTestCase, add_config, remove_config, text_config
 from unittesting import DeferrableTestCase
 import sublime
 
@@ -29,26 +30,25 @@ additional_edits = {
 class InitializationTests(DeferrableTestCase):
     def setUp(self) -> 'Generator':
         self.view = sublime.active_window().new_file()
-        add_config(text_config)
 
     def test_is_not_applicable(self) -> None:
         self.assertFalse(CompletionHandler.is_applicable(dict()))
 
     def test_is_applicable(self) -> None:
-        self.assertTrue(CompletionHandler.is_applicable(dict(syntax=SUPPORTED_SYNTAX)))
+        add_config(text_config)
+        self.assertTrue(CompletionHandler.is_applicable(dict(syntax="Packages/Text/Plain text.tmLanguage")))
+        try:
+            remove_config(text_config)
+        except Exception:
+            pass
 
-    def test_not_enabled(self) -> 'Generator':
-        self.assertTrue(is_supported_view(self.view))
-        handler = CompletionHandler(self.view)
-        self.assertFalse(handler.initialized)
-        self.assertFalse(handler.enabled)
-        result = handler.on_query_completions("", [0])
-        yield lambda: handler.initialized
-        yield lambda: not handler.enabled
-        self.assertIsNone(result)
-
-    def tearDown(self) -> 'Generator':
-        remove_config(text_config)
+    def doCleanups(self) -> 'Generator':
+        yield from super().doCleanups()
+        wm = windows.lookup(self.view.window())
+        try:
+            wm._configs.all.remove(text_config)
+        except ValueError:
+            pass
         if self.view:
             self.view.set_scratch(True)
             self.view.window().focus_view(self.view)
@@ -607,3 +607,25 @@ class QueryCompletionsTests(TextDocumentTestCase):
         # remove '"k"' is invalid. The code in completion.py must be able to handle this.
         yield self.create_commit_completion_closure()
         self.assertEqual(self.read_file(), '{"keys": []}')
+
+    def test_show_deprecated_flag(self) -> 'Generator':
+        item_with_deprecated_flag = {
+            "label": 'hello',
+            "kind": 2,  # Method
+            "deprecated": True
+        }
+        handler = CompletionHandler(self.view)
+        formatted_completion_item = handler.format_completion(item_with_deprecated_flag, 0, False)
+        self.assertEqual('⚠', formatted_completion_item.kind[1])
+        self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
+
+    def test_show_deprecated_tag(self) -> 'Generator':
+        item_with_deprecated_tags = {
+            "label": 'hello',
+            "kind": 2,  # Method
+            "tags": [CompletionItemTag.Deprecated]
+        }
+        handler = CompletionHandler(self.view)
+        formatted_completion_item = handler.format_completion(item_with_deprecated_tags, 0, False)
+        self.assertEqual('⚠', formatted_completion_item.kind[1])
+        self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])

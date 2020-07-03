@@ -1,42 +1,25 @@
 import mdpopups
 import sublime
-import sublime_plugin
 import webbrowser
 import os
 from html import escape
-from .code_actions import actions_manager, run_code_action_or_command
+from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
-from .core.configurations import is_supported_syntax
+from .code_actions import run_code_action_or_command
 from .core.popups import popups
-from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation, Point
-from .core.registry import session_for_view, LspTextCommand, windows
-from .core.settings import client_configs, settings
+from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation
+from .core.registry import LspTextCommand
+from .core.registry import windows
+from .core.settings import settings
 from .core.typing import List, Optional, Any, Dict
+from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from .core.views import offset_to_point
+from .core.views import make_link
 from .core.views import text_document_position_params
 from .diagnostics import filter_by_point, view_diagnostics
 
 
 SUBLIME_WORD_MASK = 515
-
-
-class HoverHandler(sublime_plugin.ViewEventListener):
-    def __init__(self, view: sublime.View) -> None:
-        self.view = view
-
-    @classmethod
-    def is_applicable(cls, view_settings: dict) -> bool:
-        if 'hover' in settings.disabled_capabilities:
-            return False
-        syntax = view_settings.get('syntax')
-        if syntax:
-            return is_supported_syntax(syntax, client_configs.all)
-        else:
-            return False
-
-    def on_hover(self, point: int, hover_zone: int) -> None:
-        if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():
-            return
-        self.view.run_command("lsp_hover", {"point": point})
 
 
 _test_contents = []  # type: List[str]
@@ -69,6 +52,7 @@ goto_kinds = [
 
 
 class LspHoverCommand(LspTextCommand):
+
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self._base_dir = None   # type: Optional[str]
@@ -77,9 +61,12 @@ class LspHoverCommand(LspTextCommand):
         word_at_sel = self.view.classify(point)
         return bool(word_at_sel & SUBLIME_WORD_MASK)
 
-    def run(self, edit: sublime.Edit, point: Optional[int] = None) -> None:
+    def run(self, edit: sublime.Edit, point: Optional[int] = None, event: Optional[dict] = None) -> None:
         hover_point = point or self.view.sel()[0].begin()
-        self._base_dir = windows.lookup(self.view.window()).get_project_path(self.view.file_name() or "")
+        window = self.view.window()
+        if not window:
+            return
+        self._base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
 
         self._hover = None  # type: Optional[Any]
         self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
@@ -88,43 +75,41 @@ class LspHoverCommand(LspTextCommand):
         if self.is_likely_at_symbol(hover_point):
             self.request_symbol_hover(hover_point)
 
-        self._diagnostics_by_config = filter_by_point(view_diagnostics(self.view),
-                                                      Point(*self.view.rowcol(hover_point)))
+        # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
+        # rather than just the hover point.
+        request_point = offset_to_point(self.view, hover_point)
+        self._diagnostics_by_config, code_actions_range = filter_by_point(view_diagnostics(self.view), request_point)
         if self._diagnostics_by_config:
-            self.request_code_actions(hover_point)
-            self.request_show_hover(hover_point)
+            actions_manager.request_with_diagnostics(
+                self.view, code_actions_range, self._diagnostics_by_config,
+                lambda response: self.handle_code_actions(response, hover_point))
+            self.show_hover(hover_point)
 
     def request_symbol_hover(self, point: int) -> None:
-        # todo: session_for_view looks up windowmanager twice (config and for sessions)
-        # can we memoize some part (eg. where no point is provided?)
-        session = session_for_view(self.view, 'hoverProvider', point)
+        session = self.session('hoverProvider', point)
         if session:
             document_position = text_document_position_params(self.view, point)
-            if session.client:
-                session.client.send_request(
-                    Request.hover(document_position),
-                    lambda response: self.handle_response(response, point))
-
-    def request_code_actions(self, point: int) -> None:
-        actions_manager.request(self.view, point, lambda response: self.handle_code_actions(response, point))
+            session.send_request(
+                Request.hover(document_position),
+                lambda response: self.handle_response(response, point))
 
     def handle_code_actions(self, responses: Dict[str, List[CodeActionOrCommand]], point: int) -> None:
         self._actions_by_config = responses
-        self.request_show_hover(point)
+        self.show_hover(point)
 
     def handle_response(self, response: Optional[Any], point: int) -> None:
         self._hover = response
-        self.request_show_hover(point)
+        self.show_hover(point)
 
     def symbol_actions_content(self) -> str:
         actions = []
         for goto_kind in goto_kinds:
-            if self.has_client_with_capability(goto_kind.lsp_name + "Provider"):
-                actions.append("<a href='{}'>{}</a>".format(goto_kind.lsp_name, goto_kind.label))
-        if self.has_client_with_capability('referencesProvider'):
-            actions.append("<a href='{}'>{}</a>".format('references', 'References'))
-        if self.has_client_with_capability('renameProvider'):
-            actions.append("<a href='{}'>{}</a>".format('rename', 'Rename'))
+            if self.session(goto_kind.lsp_name + "Provider"):
+                actions.append(make_link(goto_kind.lsp_name, goto_kind.label))
+        if self.session('referencesProvider'):
+            actions.append(make_link('references', 'References'))
+        if self.session('renameProvider'):
+            actions.append(make_link('rename', 'Rename'))
         return "<p class='actions'>" + " | ".join(actions) + "</p>"
 
     def format_diagnostic_related_info(self, info: DiagnosticRelatedInformation) -> str:
@@ -132,7 +117,8 @@ class LspHoverCommand(LspTextCommand):
         if self._base_dir and file_path.startswith(self._base_dir):
             file_path = os.path.relpath(file_path, self._base_dir)
         location = "{}:{}:{}".format(file_path, info.location.range.start.row+1, info.location.range.start.col+1)
-        return "<a href='location:{}'>{}</a>: {}".format(location, location, escape(info.message))
+        link = make_link("location:{}".format(location), location)
+        return "{}: {}".format(link, escape(info.message))
 
     def format_diagnostic(self, diagnostic: 'Diagnostic') -> str:
         diagnostic_message = escape(diagnostic.message, False).replace('\n', '<br>')
@@ -162,48 +148,22 @@ class LspHoverCommand(LspTextCommand):
             if config_name in self._actions_by_config:
                 action_count = len(self._actions_by_config[config_name])
                 if action_count > 0:
-                    formatted.append("<div class=\"actions\"><a href='{}:{}'>{} ({})</a></div>".format(
-                        'code-actions', config_name, 'Code Actions', action_count))
+                    href = "{}:{}".format('code-actions', config_name)
+                    text = "{} ({})".format('Code Actions', action_count)
+                    formatted.append("<div class=\"actions\">{}</div>".format(make_link(href, text)))
 
             formatted.append("</div>")
 
         return "".join(formatted)
 
     def hover_content(self) -> str:
-        contents = []  # type: List[Any]
-        if isinstance(self._hover, dict):
-            response_content = self._hover.get('contents')
-            if response_content:
-                if isinstance(response_content, list):
-                    contents = response_content
-                else:
-                    contents = [response_content]
-
-        formatted = []
-        for item in contents:
-            value = ""
-            language = None
-            if isinstance(item, str):
-                value = item
-            else:
-                value = item.get("value")
-                language = item.get("language")
-
-            if language:
-                formatted.append("```{}\n{}\n```\n".format(language, value))
-            else:
-                formatted.append(value)
-
-        if formatted:
-            frontmatter_config = mdpopups.format_frontmatter({'allow_code_wrap': True})
-            return mdpopups.md2html(self.view, frontmatter_config + "\n".join(formatted))
-
-        return ""
-
-    def request_show_hover(self, point: int) -> None:
-        sublime.set_timeout(lambda: self.show_hover(point), 50)
+        content = (self._hover.get('contents') or '') if isinstance(self._hover, dict) else ''
+        return minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT)
 
     def show_hover(self, point: int) -> None:
+        sublime.set_timeout(lambda: self._show_hover(point))
+
+    def _show_hover(self, point: int) -> None:
         contents = self.diagnostics_content() + self.hover_content()
         if contents and settings.show_symbol_action_links:
             contents += self.symbol_actions_content()
@@ -212,16 +172,24 @@ class LspHoverCommand(LspTextCommand):
         _test_contents.append(contents)  # for testing only
 
         if contents:
-            mdpopups.show_popup(
-                self.view,
-                contents,
-                css=popups.stylesheet,
-                md=False,
-                flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
-                location=point,
-                wrapper_class=popups.classname,
-                max_width=800,
-                on_navigate=lambda href: self.on_hover_navigate(href, point))
+            if self.view.is_popup_visible():
+                mdpopups.update_popup(
+                    self.view,
+                    contents,
+                    css=popups.stylesheet,
+                    md=False,
+                    wrapper_class=popups.classname)
+            else:
+                mdpopups.show_popup(
+                    self.view,
+                    contents,
+                    css=popups.stylesheet,
+                    md=False,
+                    flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
+                    location=point,
+                    wrapper_class=popups.classname,
+                    max_width=800,
+                    on_navigate=lambda href: self.on_hover_navigate(href, point))
 
     def on_hover_navigate(self, href: str, point: int) -> None:
         for goto_kind in goto_kinds:

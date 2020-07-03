@@ -1,13 +1,12 @@
-from LSP.plugin.core.documents import DocumentSyncListener
 from LSP.plugin.core.logging import debug
-from LSP.plugin.core.protocol import Notification, Request, WorkspaceFolder
+from LSP.plugin.core.protocol import Notification, Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.types import ClientConfig, LanguageConfig, ClientStates
-from LSP.plugin.core.typing import Any, Optional, Generator
+from LSP.plugin.core.typing import Any, Generator, List, Optional, Tuple
+from LSP.plugin.documents import DocumentSyncListener
 from os import environ
-from os.path import dirname
 from os.path import join
 from sublime_plugin import view_event_listeners
 from test_mocks import basic_responses
@@ -17,14 +16,13 @@ import sublime
 
 CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 
-project_path = dirname(__file__)
-test_file_path = join(project_path, "testfile.txt")
-workspace_folders = [WorkspaceFolder.from_path(project_path)]
 TIMEOUT_TIME = 10000 if CI else 2000
-SUPPORTED_SCOPE = "text.plain"
-SUPPORTED_SYNTAX = "Packages/Text/Plain text.tmLanguage"
-text_language = LanguageConfig("text", [SUPPORTED_SCOPE], [SUPPORTED_SYNTAX])
-text_config = ClientConfig("textls", [], None, languages=[text_language])
+text_language = LanguageConfig(language_id="text", document_selector="text.plain")
+text_config = ClientConfig(
+    name="textls",
+    binary_args=[],
+    tcp_port=None,
+    languages=[text_language])
 
 
 class YieldPromise:
@@ -51,19 +49,25 @@ def make_stdio_test_config() -> ClientConfig:
         name="TEST",
         binary_args=["python3", join("$packages", "LSP", "tests", "server.py")],
         tcp_port=None,
-        languages=[LanguageConfig(
-            language_id="txt",
-            scopes=[SUPPORTED_SCOPE],
-            syntaxes=[SUPPORTED_SYNTAX])],
+        languages=[LanguageConfig(language_id="txt", document_selector="text.plain")],
+        enabled=True)
+
+
+def make_tcp_test_config() -> ClientConfig:
+    return ClientConfig(
+        name="TEST",
+        binary_args=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port"],
+        tcp_port=0,  # select a free one for me
+        languages=[LanguageConfig(language_id="txt", document_selector="text.plain")],
         enabled=True)
 
 
 def add_config(config):
-    client_configs.all.append(config)
+    client_configs.add_for_testing(config)
 
 
 def remove_config(config):
-    client_configs.all.remove(config)
+    client_configs.remove_for_testing(config)
 
 
 def close_test_view(view: sublime.View):
@@ -84,40 +88,29 @@ class SessionType:
 
 class TextDocumentTestCase(DeferrableTestCase):
 
-    def __init__(self, *args: 'Any', **kwargs: 'Any') -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.session = None  # type: Optional[Session]
-        self.config = make_stdio_test_config()
+        # kwargs["tcp"] = True
+        self.config = make_tcp_test_config() if kwargs.get("tcp") else make_stdio_test_config()
 
     def setUp(self) -> 'Generator':
         super().setUp()
         test_name = self.get_test_name()
         server_capabilities = self.get_test_server_capabilities()
-        session_type = self.get_test_session_type()
         self.assertTrue(test_name)
         self.assertTrue(server_capabilities)
-        if session_type == SessionType.Stdio:
-            pass
-        elif session_type == SessionType.TcpCreate:
-            # TODO: make the test server do TCP
-            pass
-        elif session_type == SessionType.TcpConnectExisting:
-            # TODO
-            pass
-        else:
-            self.assertFalse(True)
         window = sublime.active_window()
         self.assertTrue(window)
         self.config.init_options["serverResponse"] = server_capabilities
         add_config(self.config)
         self.wm = windows.lookup(window)
-        self.wm._configs.all.append(self.config)
         filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(test_name)), window)
         open_view = window.find_open_file(filename)
         close_test_view(open_view)
         self.view = window.open_file(filename)
         yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
-        self.assertTrue(self.wm._configs.syntax_supported(self.view))
+        self.assertTrue(self.wm._configs.match_view(self.view))
         self.init_view_settings()
         yield {"condition": self.ensure_document_listener_created, "timeout": TIMEOUT_TIME}
         yield {
@@ -135,12 +128,9 @@ class TextDocumentTestCase(DeferrableTestCase):
     def get_test_server_capabilities(self) -> dict:
         return basic_responses["initialize"]
 
-    def get_test_session_type(self) -> int:
-        return SessionType.Stdio
-
     def init_view_settings(self) -> None:
         s = self.view.settings().set
-        s("auto_complete_selector", SUPPORTED_SCOPE)
+        s("auto_complete_selector", "text")
         s("ensure_newline_at_eof_on_save", False)
         s("rulers", [])
         s("tab_size", 4)
@@ -172,30 +162,61 @@ class TextDocumentTestCase(DeferrableTestCase):
         def error_handler(params: 'Any') -> None:
             debug("Got error:", params, "awaiting timeout :(")
 
-        self.session.client.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
+        self.session.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
+        yield from self.await_promise(promise)
+        return promise.result()
+
+    def make_server_do_fake_request(self, method: str, params: Any) -> YieldPromise:
+        promise = YieldPromise()
+
+        def on_result(params: Any) -> None:
+            promise.fulfill(params)
+
+        def on_error(params: Any) -> None:
+            promise.fulfill(params)
+
+        req = Request("$test/fakeRequest", {"method": method, "params": params})
+        self.session.send_request(req, on_result, on_error)
+        return promise
+
+    def await_promise(self, promise: YieldPromise) -> Generator:
         yield {"condition": promise, "timeout": TIMEOUT_TIME}
 
     def set_response(self, method: str, response: 'Any') -> None:
         self.assertIsNotNone(self.session)
         assert self.session  # mypy
-        self.session.client.send_notification(
+        self.session.send_notification(
             Notification("$test/setResponse", {"method": method, "response": response}))
 
-    def await_client_notification(self, method: str, params: 'Any' = None) -> 'Generator':
+    def set_responses(self, responses: List[Tuple[str, Any]]) -> Generator:
         self.assertIsNotNone(self.session)
         assert self.session  # mypy
         promise = YieldPromise()
 
-        def handler(params: 'Any') -> None:
-            assert params is None
-            promise.fulfill()
+        def handler(params: Any) -> None:
+            promise.fulfill(params)
 
-        def error_handler(params: 'Any') -> None:
+        def error_handler(params: Any) -> None:
             debug("Got error:", params, "awaiting timeout :(")
 
-        self.session.client.send_request(
+        payload = [{"method": method, "response": responses} for method, responses in responses]
+        self.session.send_request(Request("$test/setResponses", payload), handler, error_handler)
+        yield from self.await_promise(promise)
+
+    def await_client_notification(self, method: str, params: Any = None) -> 'Generator':
+        self.assertIsNotNone(self.session)
+        assert self.session  # mypy
+        promise = YieldPromise()
+
+        def handler(params: Any) -> None:
+            promise.fulfill(params)
+
+        def error_handler(params: Any) -> None:
+            debug("Got error:", params, "awaiting timeout :(")
+
+        self.session.send_request(
             Request("$test/sendNotification", {"method": method, "params": params}), handler, error_handler)
-        yield {"condition": promise, "timeout": TIMEOUT_TIME}
+        yield from self.await_promise(promise)
 
     def await_boilerplate_begin(self) -> 'Generator':
         yield from self.await_message("initialize")
@@ -203,15 +224,17 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield from self.await_message("textDocument/didOpen")
 
     def await_boilerplate_end(self) -> 'Generator':
-        self.wm.end_config_sessions(self.config.name)  # TODO: Shouldn't this be automatic once the last view closes?
         if self.session:
-            yield lambda: self.session.client is None
+            sublime.set_timeout_async(self.session.end_async)
+            yield lambda: self.session.state == ClientStates.STOPPING
+            if self.view:
+                yield lambda: self.wm.get_session(self.config.name, self.view.file_name()) is None
 
     def await_clear_view_and_save(self) -> 'Generator':
         assert self.view  # type: Optional[sublime.View]
         self.view.run_command("select_all")
         self.view.run_command("left_delete")
-        self.view.run_command("save")
+        self.view.run_command("lsp_save")
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
 
@@ -240,5 +263,4 @@ class TextDocumentTestCase(DeferrableTestCase):
         # restore the user's configs
         close_test_view(self.view)
         remove_config(self.config)
-        self.wm._configs.all.remove(self.config)
         yield from super().doCleanups()

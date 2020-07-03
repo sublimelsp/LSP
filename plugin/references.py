@@ -2,14 +2,16 @@ import os
 import sublime
 import linecache
 
-from .core.documents import is_at_word, get_position
 from .core.panels import ensure_panel
 from .core.protocol import Request, Point
-from .core.registry import LspTextCommand, windows
+from .core.registry import get_position
+from .core.registry import LspTextCommand
+from .core.registry import windows
 from .core.settings import PLUGIN_NAME, settings
 from .core.typing import List, Dict, Optional, Tuple, TypedDict
 from .core.url import uri_to_filename
 from .core.views import get_line, text_document_position_params
+from .documents import is_at_word
 
 ReferenceDict = TypedDict('ReferenceDict', {'uri': str, 'range': dict})
 
@@ -20,6 +22,9 @@ def ensure_references_panel(window: sublime.Window) -> 'Optional[sublime.View]':
 
 
 class LspSymbolReferencesCommand(LspTextCommand):
+
+    capability = 'referencesProvider'
+
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
         self.reflist = []  # type: List[List[str]]
@@ -28,16 +33,16 @@ class LspSymbolReferencesCommand(LspTextCommand):
         self.base_dir = None  # type: Optional[str]
 
     def is_enabled(self, event: Optional[dict] = None) -> bool:
-        if self.has_client_with_capability('referencesProvider'):
-            return is_at_word(self.view, event)
-        return False
+        return super().is_enabled(event) and is_at_word(self.view, event)
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
-        client = self.client_with_capability('referencesProvider')
+        session = self.session(self.capability)
         file_path = self.view.file_name()
-        if client and file_path:
+        if session and file_path:
             pos = get_position(self.view, event)
             window = self.view.window()
+            if not window:
+                return
             self.word_region = self.view.word(pos)
             self.word = self.view.substr(self.word_region)
 
@@ -50,7 +55,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
             document_position = text_document_position_params(self.view, pos)
             document_position['context'] = {"includeDeclaration": False}
             request = Request.references(document_position)
-            client.send_request(request, lambda response: self.handle_response(response, pos))
+            session.send_request(request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response: Optional[List[ReferenceDict]], pos: int) -> None:
         window = self.view.window()
@@ -157,9 +162,6 @@ class LspSymbolReferencesCommand(LspTextCommand):
         if self.base_dir:
             return os.path.join(self.base_dir, file_path)
         return file_path
-
-    def want_event(self) -> bool:
-        return True
 
     def _group_references_by_file(self, references: List[ReferenceDict]
                                   ) -> Dict[str, List[Tuple[Point, str]]]:

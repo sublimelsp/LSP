@@ -5,6 +5,7 @@ try:
     from mypy_extensions import TypedDict
     from typing import Any
     from typing import Callable
+    from typing import Deque
     from typing import Dict
     from typing import Generator
     from typing import IO
@@ -51,6 +52,9 @@ except ImportError:
         pass
 
     class Callable(Type):  # type: ignore
+        pass
+
+    class Deque(Type):  # type: ignore
         pass
 
     class Dict(Type):  # type: ignore

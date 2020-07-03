@@ -1,56 +1,10 @@
-import sublime
-from copy import deepcopy
+from .collections import DottedDict
 from .logging import debug
-from .types import ClientConfig, LanguageConfig, ViewLike, WindowLike, ConfigRegistry
-from .types import config_supports_syntax, syntax_language
-from .typing import Any, List, Dict, Tuple, Optional, Iterator
+from .types import ClientConfig, view2scope
+from .typing import Any, Generator, List, Dict, Set
 from .workspace import enable_in_project, disable_in_project
-
-
-def get_scope_client_config(view: sublime.View, configs: List[ClientConfig],
-                            point: Optional[int] = None) -> Optional[ClientConfig]:
-    return next(get_scope_client_configs(view, configs, point), None)
-
-
-def get_scope_client_configs(view: sublime.View, configs: List[ClientConfig],
-                             point: Optional[int] = None) -> Iterator[ClientConfig]:
-    # When there are multiple server configurations, all of which are for
-    # similar scopes (e.g. 'source.json', 'source.json.sublime.settings') the
-    # configuration with the most specific scope (highest ranked selector)
-    # in the current position is preferred.
-    if point is None:
-        sel = view.sel()
-        if len(sel) > 0:
-            point = sel[0].begin()
-
-    languages = view.settings().get('lsp_language', None)
-    scope_configs = []  # type: List[Tuple[ClientConfig, Optional[int]]]
-
-    for config in configs:
-        if config.enabled:
-            if languages is None or config.name in languages:
-                for language in config.languages:
-                    for scope in language.scopes:
-                        score = 0
-                        if point is not None:
-                            score = view.score_selector(point, scope)
-                        if score > 0:
-                            scope_configs.append((config, score))
-                            # debug('scope {} score {}'.format(scope, score))
-
-    return (config_score[0] for config_score in sorted(
-        scope_configs, key=lambda config_score: config_score[1], reverse=True))
-
-
-def get_global_client_config(view: sublime.View, global_configs: List[ClientConfig]) -> Optional[ClientConfig]:
-    return get_scope_client_config(view, global_configs)
-
-
-def is_supported_syntax(syntax: str, configs: List[ClientConfig]) -> bool:
-    for config in configs:
-        if config_supports_syntax(config, syntax):
-            return True
-    return False
+from copy import deepcopy
+import sublime
 
 
 class ConfigManager(object):
@@ -58,9 +12,9 @@ class ConfigManager(object):
 
     def __init__(self, global_configs: List[ClientConfig]) -> None:
         self._configs = global_configs
-        self._managers = {}  # type: Dict[int, ConfigRegistry]
+        self._managers = {}  # type: Dict[int, WindowConfigManager]
 
-    def for_window(self, window: WindowLike) -> ConfigRegistry:
+    def for_window(self, window: sublime.Window) -> 'WindowConfigManager':
         window_configs = WindowConfigManager(window, self._configs)
         self._managers[window.id()] = window_configs
         return window_configs
@@ -72,37 +26,39 @@ class ConfigManager(object):
 
 
 class WindowConfigManager(object):
-    def __init__(self, window: WindowLike, global_configs: List[ClientConfig]) -> None:
+    def __init__(self, window: sublime.Window, global_configs: List[ClientConfig]) -> None:
         self._window = window
         self._global_configs = global_configs
-        self._temp_disabled_configs = []  # type: List[str]
+        self._temp_disabled_configs = set()  # type: Set[str]
         self.all = self._create_window_configs()
 
-    def is_supported(self, view: Any) -> bool:
-        return any(self.scope_configs(view))
-
-    def scope_configs(self, view: Any, point: Optional[int] = None) -> Iterator[ClientConfig]:
-        return get_scope_client_configs(view, self.all, point)
-
-    def syntax_configs(self, view: Any, include_disabled: bool = False) -> List[ClientConfig]:
-        syntax = view.settings().get("syntax")
-        return list(filter(lambda c: config_supports_syntax(c, syntax) and (c.enabled or include_disabled), self.all))
-
-    def syntax_supported(self, view: ViewLike) -> bool:
-        syntax = view.settings().get("syntax")
-        for found in filter(lambda c: config_supports_syntax(c, syntax) and c.enabled, self.all):
-            return True
-        return False
-
-    def syntax_config_languages(self, view: ViewLike) -> Dict[str, LanguageConfig]:
-        syntax = view.settings().get("syntax")
-        config_languages = {}
+    def match_scope(self, scope: str) -> Generator[ClientConfig, None, None]:
+        """
+        Yields configurations which match one of their document selectors to the given scope.
+        """
         for config in self.all:
-            if config.enabled:
-                language = syntax_language(config, syntax)
-                if language:
-                    config_languages[config.name] = language
-        return config_languages
+            if config.match_scope(scope):
+                yield config
+
+    def match_view(self, view: sublime.View, include_disabled: bool = False) -> Generator[ClientConfig, None, None]:
+        """
+        Yields configurations matching with the language's document_selector
+        """
+        try:
+            configs = self.match_scope(view2scope(view))
+            if include_disabled:
+                yield from configs
+            else:
+                for config in configs:
+                    if config.enabled:
+                        yield config
+        except IndexError:
+            # We're in the worker thread, and the view is already closed. This means view.scope_name(0) returns an
+            # empty string.
+            pass
+
+    def is_supported(self, view: Any) -> bool:
+        return any(self.match_view(view))
 
     def update(self) -> None:
         self.all = self._create_window_configs()
@@ -119,7 +75,7 @@ class WindowConfigManager(object):
         self.update()
 
     def disable_temporarily(self, config_name: str) -> None:
-        self._temp_disabled_configs.append(config_name)
+        self._temp_disabled_configs.add(config_name)
         self.update()
 
     def _create_window_configs(self) -> List[ClientConfig]:
@@ -129,34 +85,24 @@ class WindowConfigManager(object):
     def _apply_project_overrides(self, client_config: ClientConfig, project_clients: Dict[str, Any]) -> ClientConfig:
         overrides = project_clients.get(client_config.name)
         if overrides:
-            debug('window has override for {}'.format(client_config.name), overrides)
-            client_settings = _merge_dicts(client_config.settings, overrides.get("settings", {}))
-            client_env = _merge_dicts(client_config.env, overrides.get("env", {}))
+            debug('applying .sublime-project override for', client_config.name)
+            settings = DottedDict(deepcopy(client_config.settings.get()))
+            settings.update(overrides.get("settings", {}))
+            env = deepcopy(client_config.env)
+            for key, value in overrides.get("env", {}).items():
+                env[key] = value
             return ClientConfig(
-                client_config.name,
-                overrides.get("command", client_config.binary_args),
-                overrides.get("tcp_port", client_config.tcp_port),
-                [],
-                [],
-                "",
-                client_config.languages,
-                overrides.get("enabled", client_config.enabled),
-                overrides.get("initializationOptions", client_config.init_options),
-                client_settings,
-                client_env,
-                overrides.get("tcp_host", client_config.tcp_host),
-                overrides.get("experimental_capabilities", client_config.experimental_capabilities),
+                name=client_config.name,
+                binary_args=overrides.get("command", client_config.binary_args),
+                languages=client_config.languages,
+                tcp_port=overrides.get("tcp_port", client_config.tcp_port),
+                enabled=overrides.get("enabled", client_config.enabled),
+                init_options=overrides.get("initializationOptions", client_config.init_options),
+                settings=settings,
+                env=env,
+                tcp_host=overrides.get("tcp_host", client_config.tcp_host),
+                experimental_capabilities=overrides.get(
+                    "experimental_capabilities", client_config.experimental_capabilities),
             )
 
         return client_config
-
-
-def _merge_dicts(dict_a: dict, dict_b: dict) -> dict:
-    """Merge dict_b into dict_a with one level of recurse"""
-    result_dict = deepcopy(dict_a)
-    for key, value in dict_b.items():
-        if isinstance(result_dict.get(key), dict) and isinstance(value, dict):
-            result_dict.setdefault(key, {}).update(value)
-        else:
-            result_dict[key] = value
-    return result_dict

@@ -82,15 +82,6 @@ class DiagnosticsStorage(object):
             self._updatable.deselect()
 
 
-class DocumentsState(Protocol):
-
-    def changed(self) -> None:
-        ...
-
-    def saved(self) -> None:
-        ...
-
-
 class DiagnosticsUpdateWalk(object):
 
     def begin(self) -> None:

@@ -86,7 +86,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         assert self.view
         self.view.settings().set("lsp_format_on_save", False)
         self.insert_characters("A")
-        self.view.run_command("save")
+        self.view.run_command("lsp_save")
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
         yield from self.await_clear_view_and_save()
@@ -103,7 +103,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
                 'end': {'line': 0, 'character': 1}
             }
         }])
-        self.view.run_command("save")
+        self.view.run_command("lsp_save")
         yield from self.await_message("textDocument/formatting")
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
@@ -186,6 +186,16 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         )
         yield from self.__run_formatting_test(original, expected, file_changes)
 
+    def test_tabs_are_respected_even_when_translate_tabs_to_spaces_is_set_to_true(self) -> 'Generator':
+        original = ' ' * 4
+        file_changes = [((0, 0), (0, 4), '\t')]
+        expected = '\t'
+        assert self.view
+        self.view.settings().set("translate_tabs_to_spaces", True)
+        yield from self.__run_formatting_test(original, expected, file_changes)
+        # Make sure the user's settings haven't changed
+        self.assertTrue(self.view.settings().get("translate_tabs_to_spaces"))
+
     def __run_formatting_test(
         self,
         original: 'Iterable[str]',
@@ -253,6 +263,32 @@ class SingleDocumentTestCase(TextDocumentTestCase):
     def test_implementation_location_link(self) -> 'Generator':
         yield from self.__run_goto_test(GOTO_RESPONSE_LOCATION_LINK, 'implementation', 'implementation')
 
+    def test_expand_selection(self) -> 'Generator':
+        self.insert_characters("abcba\nabcba\nabcba\n")
+        self.view.run_command("lsp_selection_set", {"regions": [(2, 2)]})
+        self.assertEqual(len(self.view.sel()), 1)
+        self.assertEqual(self.view.substr(self.view.sel()[0]), "")
+        self.assertEqual(self.view.substr(self.view.sel()[0].a), "c")
+        response = [{
+            "parent": {
+                "parent": {
+                    "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 5}}
+                },
+                "range": {"start": {"line": 0, "character": 1}, "end": {"line": 0, "character": 3}}
+            },
+            "range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 3}}
+        }]
+
+        def expand_and_check(a: int, b: int) -> 'Generator':
+            self.set_response("textDocument/selectionRange", response)
+            self.view.run_command("lsp_expand_selection")
+            yield from self.await_message("textDocument/selectionRange")
+            yield lambda: self.view.sel()[0] == sublime.Region(a, b)
+
+        yield from expand_and_check(2, 3)
+        yield from expand_and_check(1, 3)
+        yield from expand_and_check(0, 5)
+
 
 class WillSaveWaitUntilTestCase(TextDocumentTestCase):
 
@@ -273,7 +309,7 @@ class WillSaveWaitUntilTestCase(TextDocumentTestCase):
             }
         }])
         self.view.settings().set("lsp_format_on_save", False)
-        self.view.run_command("save")
+        self.view.run_command("lsp_save")
         yield from self.await_message("textDocument/willSaveWaitUntil")
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")

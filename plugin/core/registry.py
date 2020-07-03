@@ -1,15 +1,12 @@
+from .configurations import ConfigManager
+from .sessions import Session
+from .settings import client_configs
+from .typing import Optional, Callable, Dict, Any, Generator, Iterable
+from .windows import WindowManager
+from .windows import WindowRegistry
 import sublime
 import sublime_plugin
-from .clients import start_window_config
-from .configurations import ConfigManager, is_supported_syntax
-from .handlers import LanguageHandler
-from .logging import debug
-from .rpc import Client
-from .sessions import Session
-from .settings import settings, client_configs
-from .types import ClientConfig, ClientStates, WindowLike
-from .windows import WindowRegistry, DocumentHandlerFactory, WindowManager
-from .typing import Optional, Callable, Dict, Any, Iterable
+
 
 client_start_listeners = {}  # type: Dict[str, Callable]
 client_initialization_listeners = {}  # type: Dict[str, Callable]
@@ -23,151 +20,93 @@ class LSPViewEventListener(sublime_plugin.ViewEventListener):
     @classmethod
     def has_supported_syntax(cls, view_settings: dict) -> bool:
         syntax = view_settings.get('syntax')
-        if syntax:
-            return is_supported_syntax(syntax, client_configs.all)
-        else:
-            return False
+        return bool(syntax and client_configs.is_syntax_supported(syntax))
 
     @property
-    def manager(self) -> WindowManager:
+    def manager(self) -> WindowManager:  # TODO: Return type is an Optional[WindowManager] !
         if not self._manager:
-            self._manager = windows.lookup(self.view.window())
-
-        assert self._manager
-        return self._manager
+            window = self.view.window()
+            if window:
+                self._manager = windows.lookup(window)
+        return self._manager  # type: ignore
 
     def has_manager(self) -> bool:
         return self._manager is not None
 
+    def purge_changes_async(self) -> None:
+        # Supermassive hack that will go away later.
+        listeners = sublime_plugin.view_event_listeners.get(self.view.id(), [])
+        for listener in listeners:
+            if listener.__class__.__name__ == 'DocumentSyncListener':
+                listener.purge_changes_async()  # type: ignore
+                return
 
-class LanguageHandlerDispatcher(object):
+    def sessions(self, capability: Optional[str]) -> Generator[Session, None, None]:
+        yield from self.manager.sessions(self.view, capability)
 
-    def on_start(self, config_name: str, window: WindowLike) -> bool:
-        if config_name in client_start_listeners:
-            return client_start_listeners[config_name](window)
-        else:
-            return True
-
-    def on_initialized(self, config_name: str, window: WindowLike, client: Client) -> None:
-        if config_name in client_initialization_listeners:
-            client_initialization_listeners[config_name](client)
-
-
-def load_handlers() -> None:
-    for handler in LanguageHandler.instantiate_all():
-        register_language_handler(handler)
-    client_configs.update_configs()
+    def session(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
+        return _best_session(self.view, self.sessions(capability), point)
 
 
-def register_language_handler(handler: LanguageHandler) -> None:
-    debug("received config {} from {}".format(handler.name, handler.__class__.__name__))
-    client_configs.add_external_config(handler.config)
-    if handler.on_start:
-        client_start_listeners[handler.name] = handler.on_start
-    if handler.on_initialized:
-        client_initialization_listeners[handler.name] = handler.on_initialized
+def sessions_for_view(view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
+    """
+    Returns all sessions for this view, optionally matching the capability path.
+    """
+    window = view.window()
+    if window:
+        manager = windows.lookup(window)
+        yield from manager.sessions(view, capability)
 
 
-def client_from_session(session: Optional[Session]) -> Optional[Client]:
-    return session.client if session else None
-
-
-def sessions_for_view(view: sublime.View, capability: Optional[str] = None,
-                      point: Optional[int] = None) -> Iterable[Session]:
-    return (session for session in _sessions_for_view_and_window(view, view.window(), point)
-            if not capability or session.has_capability(capability))
-
-
-def session_for_view(view: sublime.View, capability: Optional[str],
-                     point: Optional[int] = None) -> Optional[Session]:
-    return next((session for session in sessions_for_view(view, capability, point)), None)
-
-
-def _sessions_for_view_and_window(view: sublime.View, window: Optional[sublime.Window],
-                                  point: Optional[int] = None) -> Iterable[Session]:
-    if not window:
-        debug("no window for view", view.file_name())
-        return []
-
-    file_path = view.file_name()
-    if not file_path:
-        # debug("no session for unsaved file")
-        return []
-
-    manager = windows.lookup(window)
-    scope_configs = manager._configs.scope_configs(view, point)
-    sessions = (manager.get_session(config.name, file_path) for config in scope_configs)
-    ready_sessions = (session for session in sessions if session and session.state == ClientStates.READY)
-    return ready_sessions
-
-
-def unload_sessions(window: sublime.Window) -> None:
-    wm = windows.lookup(window)
-    wm.end_sessions()
+def _best_session(view: sublime.View, sessions: Iterable[Session], point: Optional[int] = None) -> Optional[Session]:
+    if point is None:
+        try:
+            point = view.sel()[0].b
+        except IndexError:
+            return None
+    scope = view.scope_name(point)
+    try:
+        return max(sessions, key=lambda session: session.config.score_feature(scope))
+    except ValueError:
+        return None
 
 
 configs = ConfigManager(client_configs.all)
 client_configs.set_listener(configs.update)
-documents = DocumentHandlerFactory(sublime, settings)
-handlers_dispatcher = LanguageHandlerDispatcher()
-windows = WindowRegistry(configs, documents, start_window_config, sublime, handlers_dispatcher)
+windows = WindowRegistry(configs)
 
 
-def configs_for_scope(view: Any, point: Optional[int] = None) -> Iterable[ClientConfig]:
-    window = view.window()
-    if window:
-        # todo: don't expose _configs
-        return windows.lookup(window)._configs.scope_configs(view, point)
-    return []
-
-
-def is_supported_view(view: sublime.View) -> bool:
-    # TODO: perhaps make this check for a client instead of a config
-    if configs_for_scope(view):
-        return True
+def get_position(view: sublime.View, event: Optional[dict] = None) -> int:
+    if event:
+        return view.window_to_text((event["x"], event["y"]))
     else:
-        return False
+        return view.sel()[0].begin()
 
 
 class LspTextCommand(sublime_plugin.TextCommand):
-    def __init__(self, view: sublime.View) -> None:
-        super().__init__(view)
 
-    def is_visible(self, event: Optional[dict] = None) -> bool:
-        return is_supported_view(self.view)
+    capability = ''
 
-    def has_client_with_capability(self, capability: str) -> bool:
-        return session_for_view(self.view, capability) is not None
+    def is_enabled(self, event: Optional[dict] = None) -> bool:
+        if self.capability:
+            # At least one active session with the given capability must exist.
+            return bool(self.session(self.capability, get_position(self.view, event)))
+        else:
+            # Any session will do.
+            return any(self.sessions())
 
-    def client_with_capability(self, capability: str) -> Optional[Client]:
-        return client_from_session(session_for_view(self.view, capability))
+    def want_event(self) -> bool:
+        return True
+
+    def session(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
+        return _best_session(self.view, self.sessions(capability), point)
+
+    def sessions(self, capability: Optional[str] = None) -> Generator[Session, None, None]:
+        yield from sessions_for_view(self.view, capability)
 
 
-class LspRestartAllServersCommand(sublime_plugin.TextCommand):
-    def is_enabled(self) -> bool:
-        return is_supported_view(self.view)
-
+class LspRestartClientCommand(sublime_plugin.TextCommand):
     def run(self, edit: Any) -> None:
         window = self.view.window()
         if window:
-            windows.lookup(window).restart_sessions()
-
-
-class LspRestartServerCommand(sublime_plugin.TextCommand):
-    def is_enabled(self) -> bool:
-        return is_supported_view(self.view) and windows.lookup(self.view.window()).has_active_sessions()
-
-    def run(self, edit: Any) -> None:
-        window = self.view.window()
-        if not window:
-            return
-
-        sessions = windows.lookup(window).get_sessions()
-        if sessions:
-            window.show_quick_panel(sessions, lambda index: self.restart_server(index, sessions))
-
-    def restart_server(self, index, sessions) -> None:
-        if index == -1:
-            return
-        windows.lookup(self.view.window()).restart_session(config_name=sessions[index])
-        return
+            windows.lookup(window).restart_sessions_async()

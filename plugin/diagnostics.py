@@ -4,7 +4,7 @@ import re
 import sublime
 import sublime_plugin
 
-from .core.diagnostics import DiagnosticsWalker, DiagnosticsUpdateWalk, DiagnosticsCursor, DocumentsState
+from .core.diagnostics import DiagnosticsWalker, DiagnosticsUpdateWalk, DiagnosticsCursor
 from .core.logging import debug
 from .core.panels import ensure_panel
 from .core.protocol import Diagnostic, DiagnosticSeverity, DiagnosticRelatedInformation, Point, Range
@@ -34,6 +34,13 @@ UNDERLINE_FLAGS = (sublime.DRAW_SQUIGGLY_UNDERLINE | sublime.DRAW_NO_OUTLINE | s
 BOX_FLAGS = sublime.DRAW_NO_FILL | sublime.DRAW_EMPTY_AS_OVERWRITE
 
 
+def is_same_file(file_path_a: str, file_path_b: str) -> bool:
+    try:
+        return os.path.samefile(file_path_a, file_path_b)
+    except FileNotFoundError:
+        return False
+
+
 def format_severity(severity: int) -> str:
     return diagnostic_severity_names.get(severity, "???")
 
@@ -42,31 +49,47 @@ def view_diagnostics(view: sublime.View) -> Dict[str, List[Diagnostic]]:
     if view.window():
         file_name = view.file_name()
         if file_name:
-            window_diagnostics = windows.lookup(view.window()).diagnostics.get()
-            return window_diagnostics.get(file_name, {})
+            window = view.window()
+            if window:
+                window_diagnostics = windows.lookup(window).diagnostics.get()
+                for file in window_diagnostics:
+                    if is_same_file(file, file_name):
+                        return window_diagnostics[file]
     return {}
 
 
-def filter_by_point(file_diagnostics: Dict[str, List[Diagnostic]], point: Point) -> Dict[str, List[Diagnostic]]:
+def filter_by_point(
+    file_diagnostics: Dict[str, List[Diagnostic]],
+    point: Point
+) -> Tuple[Dict[str, List[Diagnostic]], Range]:
     diagnostics_by_config = {}
+    extended_range = Range(point, point)
     for config_name, diagnostics in file_diagnostics.items():
-        point_diagnostics = [
-            diagnostic for diagnostic in diagnostics if diagnostic.range.contains(point)
-        ]
+        point_diagnostics = []
+        for diagnostic in diagnostics:
+            if diagnostic.range.contains(point):
+                point_diagnostics.append(diagnostic)
+                extended_range.extend(diagnostic.range)
         if point_diagnostics:
             diagnostics_by_config[config_name] = point_diagnostics
-    return diagnostics_by_config
+    return (diagnostics_by_config, extended_range)
 
 
-def filter_by_range(file_diagnostics: Dict[str, List[Diagnostic]], rge: Range) -> Dict[str, List[Diagnostic]]:
+def filter_by_range(
+    file_diagnostics: Dict[str, List[Diagnostic]],
+    rge: Range
+) -> Tuple[Dict[str, List[Diagnostic]], Range]:
     diagnostics_by_config = {}
+    extended_range = Range(rge.start, rge.end)
     for config_name, diagnostics in file_diagnostics.items():
-        point_diagnostics = [
-            diagnostic for diagnostic in diagnostics if diagnostic.range.intersects(rge)
-        ]
-        if point_diagnostics:
-            diagnostics_by_config[config_name] = point_diagnostics
-    return diagnostics_by_config
+        intersecting_diagnostics = []
+        for diagnostic in diagnostics:
+            if diagnostic.range.intersects(rge):
+                intersecting_diagnostics.append(diagnostic)
+                extended_range.extend(diagnostic.range)
+        if intersecting_diagnostics:
+            diagnostics_by_config[config_name] = intersecting_diagnostics
+    return (diagnostics_by_config, extended_range)
 
 
 class DiagnosticsCursorListener(LSPViewEventListener):
@@ -86,7 +109,7 @@ class DiagnosticsCursorListener(LSPViewEventListener):
                 pos = selections[0].begin()
                 region = self.view.line(pos)
                 line_range = region_to_range(self.view, region)
-                diagnostics = filter_by_range(self.manager.diagnostics.get_by_file(file_path), line_range)
+                diagnostics, _ = filter_by_range(self.manager.diagnostics.get_by_file(file_path), line_range)
                 if diagnostics:
                     flattened = (d for sublist in diagnostics.values() for d in sublist)
                     first_diagnostic = next(flattened, None)
@@ -241,7 +264,8 @@ class DiagnosticViewRegions(DiagnosticsUpdateWalk):
 
     def begin_file(self, file_name: str) -> None:
         # TODO: would be nice if walk could skip this updater
-        if file_name == self._view.file_name():
+        file = self._view.file_name()
+        if file and is_same_file(file_name, file):
             self._relevant_file = True
 
     def diagnostic(self, diagnostic: Diagnostic) -> None:
@@ -252,13 +276,23 @@ class DiagnosticViewRegions(DiagnosticsUpdateWalk):
         self._relevant_file = False
 
     def end(self) -> None:
-        for severity in range(settings.show_diagnostics_severity_level + 1):
+        for severity in reversed(range(settings.show_diagnostics_severity_level + 1)):
             region_name = "lsp_" + format_severity(severity)
             if severity in self._regions:
                 regions = self._regions[severity]
                 scope_name = diagnostic_severity_scopes[severity]
+                if settings.diagnostics_gutter_marker == "sign":
+                    diagnostic_severity_icons = {
+                        DiagnosticSeverity.Error: "Packages/LSP/icons/error.png",
+                        DiagnosticSeverity.Warning: "Packages/LSP/icons/warning.png",
+                        DiagnosticSeverity.Information: "Packages/LSP/icons/info.png",
+                        DiagnosticSeverity.Hint: "Packages/LSP/icons/info.png"
+                    }
+                    icon = diagnostic_severity_icons[severity]
+                else:
+                    icon = settings.diagnostics_gutter_marker
                 self._view.add_regions(
-                    region_name, regions, scope_name, settings.diagnostics_gutter_marker,
+                    region_name, regions, scope_name, icon,
                     UNDERLINE_FLAGS if settings.diagnostics_highlight_style == "underline" else BOX_FLAGS)
             else:
                 self._view.erase_regions(region_name)
@@ -334,7 +368,7 @@ class DiagnosticOutputPanel(DiagnosticsUpdateWalk):
     def format_diagnostic(self, diagnostic: Diagnostic) -> str:
         location = "{:>8}:{:<4}".format(
             diagnostic.range.start.row + 1, diagnostic.range.start.col + 1)
-        lines = diagnostic.message.splitlines()
+        lines = diagnostic.message.splitlines() or [""]
         formatted = " {}\t{:<12}\t{:<10}\t{}".format(
             location, diagnostic.source, format_severity(diagnostic.severity), lines[0])
         for line in lines[1:]:
@@ -344,7 +378,7 @@ class DiagnosticOutputPanel(DiagnosticsUpdateWalk):
 
 class DiagnosticsPresenter(object):
 
-    def __init__(self, window: sublime.Window, documents_state: DocumentsState) -> None:
+    def __init__(self, window: sublime.Window) -> None:
         self._window = window
         self._dirty = False
         self._received_diagnostics_after_change = False
@@ -355,9 +389,6 @@ class DiagnosticsPresenter(object):
         self._cursor = DiagnosticsCursor(settings.show_diagnostics_severity_level)
         self._phantoms = DiagnosticsPhantoms(self._window)
         self._diagnostics = {}  # type: Dict[str, Dict[str, List[Diagnostic]]]
-        if settings.auto_show_diagnostics_panel == 'saved':
-            setattr(documents_state, 'changed', self.on_document_changed)
-            setattr(documents_state, 'saved', self.on_document_saved)
 
     def on_document_changed(self) -> None:
         self._received_diagnostics_after_change = False

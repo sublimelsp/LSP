@@ -16,67 +16,8 @@ class DiagnosticSeverity(object):
     Hint = 4
 
 
-class SymbolKind(object):
-    File = 1
-    Module = 2
-    Namespace = 3
-    Package = 4
-    Class = 5
-    Method = 6
-    Property = 7
-    Field = 8
-    Constructor = 9
-    Enum = 10
-    Interface = 11
-    Function = 12
-    Variable = 13
-    Constant = 14
-    String = 15
-    Number = 16
-    Boolean = 17
-    Array = 18
-    Object = 19
-    Key = 20
-    Null = 21
-    EnumMember = 22
-    Struct = 23
-    Event = 24
-    Operator = 25
-    TypeParameter = 26
-
-
-symbol_kinds = list(range(SymbolKind.File, SymbolKind.TypeParameter + 1))
-
-
-class CompletionItemKind(object):
-    Text = 1
-    Method = 2
-    Function = 3
-    Constructor = 4
-    Field = 5
-    Variable = 6
-    Class = 7
-    Interface = 8
-    Module = 9
-    Property = 10
-    Unit = 11
-    Value = 12
-    Enum = 13
-    Keyword = 14
-    Snippet = 15
-    Color = 16
-    File = 17
-    Reference = 18
-    Folder = 19
-    EnumMember = 20
-    Constant = 21
-    Struct = 22
-    Event = 23
-    Operator = 24
-    TypeParameter = 25
-
-
-completion_item_kinds = list(range(CompletionItemKind.Text, CompletionItemKind.TypeParameter + 1))
+class CompletionItemTag:
+    Deprecated = 1
 
 
 class InsertTextFormat:
@@ -210,9 +151,6 @@ class ErrorCode:
     # Defined by the protocol
     RequestCancelled = -32800
     ContentModified = -32801
-
-    # Defined by us
-    Timeout = -40000
 
 
 class Error(Exception):
@@ -364,6 +302,21 @@ class Range(object):
         return self.contains(rge.start) or self.contains(rge.end) or \
             rge.contains(self.start) or rge.contains(self.end)
 
+    def extend(self, rge: 'Range') -> 'Range':
+        """
+        Extends current range to fully include another range. If another range is already fully
+        enclosed within the current range then nothing changes.
+
+        :param    rge: The region to extend current with
+
+        :returns: The extended region (itself)
+        """
+        if rge.contains(self.start):
+            self.start = rge.start
+        if rge.contains(self.end):
+            self.end = rge.end
+        return self
+
 
 class Location(object):
     def __init__(self, file_path: str, range: Range) -> None:
@@ -455,3 +408,6 @@ class WorkspaceFolder:
 
     def uri(self) -> str:
         return filename_to_uri(self.path)
+
+    def includes_uri(self, uri: str) -> bool:
+        return uri.startswith(self.uri())

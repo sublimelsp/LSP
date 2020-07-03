@@ -104,7 +104,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
         yield from sessions_for_view(self.view, capability)
 
 
-class LspRestartServerCommand(LspTextCommand, sublime_plugin.TextCommand):
+class LspRestartServerCommand(LspTextCommand):
     def run(self, edit: Any) -> None:
         window = self.view.window()
         if not window:
@@ -120,4 +120,3 @@ class LspRestartServerCommand(LspTextCommand, sublime_plugin.TextCommand):
         window = self.view.window()
         if window:
             windows.lookup(window).end_config_sessions_async(config_name=sessions[index])
-        return

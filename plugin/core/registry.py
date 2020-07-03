@@ -104,10 +104,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
         yield from sessions_for_view(self.view, capability)
 
 
-class LspRestartServerCommand(sublime_plugin.TextCommand):
-    def is_enabled(self) -> bool:
-        return any(self.sessions())
-
+class LspRestartServerCommand(LspTextCommand, sublime_plugin.TextCommand):
     def run(self, edit: Any) -> None:
         window = self.view.window()
         if not window:
@@ -117,11 +114,10 @@ class LspRestartServerCommand(sublime_plugin.TextCommand):
         if sessions:
             window.show_quick_panel(sessions, lambda index: self.restart_server(index, sessions))
 
-    def restart_server(self, index, sessions) -> None:
+    def restart_server(self, index: int, sessions: list) -> None:
         if index == -1:
             return
-        windows.lookup(self.view.window()).restart_session_async(config_name=sessions[index])
+        window = self.view.window()
+        if window:
+            windows.lookup(window).end_config_sessions_async(config_name=sessions[index])
         return
-
-    def sessions(self, capability: Optional[str] = None) -> Generator[Session, None, None]:
-        yield from sessions_for_view(self.view, capability)

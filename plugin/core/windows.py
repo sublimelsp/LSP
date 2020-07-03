@@ -270,6 +270,11 @@ class WindowManager(Manager):
         if view:
             MessageRequestHandler(view, session, request_id, params, session.config.name).show()
 
+    def restart_session_async(self, config_name: str) -> None:
+        self.end_config_sessions_async(config_name)
+        for listener in self._listeners:
+            self.register_listener_async(listener)
+
     def restart_sessions_async(self) -> None:
         self.end_sessions_async()
         for listener in self._listeners:

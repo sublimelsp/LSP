@@ -51,12 +51,7 @@
         "args": {}
     },
     {
-        "caption": "LSP: Restart All Servers",
-        "command": "lsp_restart_all_servers",
-        "args": {}
-    },
-    {
-        "caption": "LSP: Restart Specific Server",
+        "caption": "LSP: Restart Server",
         "command": "lsp_restart_server",
         "args": {}
     },

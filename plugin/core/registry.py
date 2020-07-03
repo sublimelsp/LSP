@@ -7,7 +7,6 @@ from .windows import WindowRegistry
 import sublime
 import sublime_plugin
 
-
 client_start_listeners = {}  # type: Dict[str, Callable]
 client_initialization_listeners = {}  # type: Dict[str, Callable]
 
@@ -105,8 +104,24 @@ class LspTextCommand(sublime_plugin.TextCommand):
         yield from sessions_for_view(self.view, capability)
 
 
-class LspRestartClientCommand(sublime_plugin.TextCommand):
+class LspRestartServerCommand(sublime_plugin.TextCommand):
+    def is_enabled(self) -> bool:
+        return any(self.sessions())
+
     def run(self, edit: Any) -> None:
         window = self.view.window()
-        if window:
-            windows.lookup(window).restart_sessions_async()
+        if not window:
+            return
+
+        sessions = [session.config.name for session in self.sessions()]
+        if sessions:
+            window.show_quick_panel(sessions, lambda index: self.restart_server(index, sessions))
+
+    def restart_server(self, index, sessions) -> None:
+        if index == -1:
+            return
+        windows.lookup(self.view.window()).restart_session_async(config_name=sessions[index])
+        return
+
+    def sessions(self, capability: Optional[str] = None) -> Generator[Session, None, None]:
+        yield from sessions_for_view(self.view, capability)

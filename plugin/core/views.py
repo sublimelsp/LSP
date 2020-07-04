@@ -228,8 +228,8 @@ def did_change_text_document_params(view: sublime.View,
     return result
 
 
-def will_save_text_document_params(view: sublime.View, reason: int) -> Dict[str, Any]:
-    return {"textDocument": text_document_identifier(view), "reason": reason}
+def will_save_text_document_params(view_or_file_name: Union[str, sublime.View], reason: int) -> Dict[str, Any]:
+    return {"textDocument": text_document_identifier(view_or_file_name), "reason": reason}
 
 
 def did_save_text_document_params(
@@ -254,8 +254,8 @@ def did_change(view: sublime.View, changes: Optional[Iterable[sublime.TextChange
     return Notification.didChange(did_change_text_document_params(view, changes))
 
 
-def will_save(view: sublime.View, reason: int) -> Notification:
-    return Notification.willSave(will_save_text_document_params(view, reason))
+def will_save(file_name: str, reason: int) -> Notification:
+    return Notification.willSave(will_save_text_document_params(file_name, reason))
 
 
 def will_save_wait_until(view: sublime.View, reason: int) -> Request:

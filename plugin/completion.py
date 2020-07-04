@@ -17,11 +17,10 @@ from .core.views import text_document_position_params, range_to_region
 
 
 class LspResolveDocsCommand(LspTextCommand):
-    def run(self, edit: sublime.Edit, index: int) -> None:
+    def run(self, edit: sublime.Edit, index: int, event: Optional[dict] = None) -> None:
         item = CompletionHandler.completions[index]
         detail = self.format_documentation(item.get('detail') or "")
         documentation = self.format_documentation(item.get("documentation") or "")
-
         # don't show the detail in the cooperate AC popup if it is already shown in the AC details filed.
         self.is_detail_shown = bool(detail)
         minihtml_content = self.get_content(documentation, detail)
@@ -164,18 +163,22 @@ class CompletionHandler(LSPViewEventListener):
             self.view.hide_popup()
 
     def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[sublime.CompletionList]:
-        session = self.session('completionProvider', locations[0])
+        promise = sublime.CompletionList()
+        sublime.set_timeout_async(lambda: self._on_query_completions_async(promise, locations[0]))
+        return promise
+
+    def _on_query_completions_async(self, promise: sublime.CompletionList, location: int) -> None:
+        session = self.session('completionProvider', location)
         if not session:
-            return None
+            resolve(promise, [])
+            return
         self.apply_view_settings(session)
-        self.purge_changes()
-        completion_list = sublime.CompletionList()
+        self.purge_changes_async()
         can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
         session.send_request(
-            Request.complete(text_document_position_params(self.view, locations[0])),
-            lambda res: self.handle_response(res, completion_list, can_resolve_completion_items),
-            lambda res: self.handle_error(res, completion_list))
-        return completion_list
+            Request.complete(text_document_position_params(self.view, location)),
+            lambda res: self.handle_response(res, promise, can_resolve_completion_items),
+            lambda res: self.handle_error(res, promise))
 
     def apply_view_settings(self, session: Session) -> None:
         settings = self.view.settings()

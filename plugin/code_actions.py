@@ -65,8 +65,8 @@ class CodeActionsCollector:
 
     def _notify_if_all_finished(self) -> None:
         if self._all_requested and self._request_count == self._response_count:
-            # Call back on the main thread
-            sublime.set_timeout(lambda: self._on_complete_handler(self._commands_by_config))
+            # Call back on Sublime's async thread
+            sublime.set_timeout_async(lambda: self._on_complete_handler(self._commands_by_config))
 
     def get_actions(self) -> CodeActionsByConfigName:
         return self._commands_by_config
@@ -238,16 +238,16 @@ class CodeActionOnSaveTask(SaveTask):
     def get_task_timeout_ms(self) -> int:
         return settings.code_action_on_save_timeout_ms
 
-    def run(self) -> None:
-        super().run()
-        self._request_code_actions()
+    def run_async(self) -> None:
+        super().run_async()
+        self._request_code_actions_async()
 
-    def _request_code_actions(self) -> None:
-        self._purge_changes_if_needed()
+    def _request_code_actions_async(self) -> None:
+        self._purge_changes_async()
         on_save_actions = self._get_code_actions_on_save(self._view)
-        actions_manager.request_on_save(self._view, self._handle_response, on_save_actions)
+        actions_manager.request_on_save(self._view, self._handle_response_async, on_save_actions)
 
-    def _handle_response(self, responses: CodeActionsByConfigName) -> None:
+    def _handle_response_async(self, responses: CodeActionsByConfigName) -> None:
         if self._cancelled:
             return
         document_version = self._view.change_count()
@@ -256,7 +256,8 @@ class CodeActionOnSaveTask(SaveTask):
                 for code_action in code_actions:
                     run_code_action_or_command(self._view, config_name, code_action)
         if document_version != self._view.change_count():
-            self._request_code_actions()
+            # Give on_text_changed_async a chance to trigger.
+            sublime.set_timeout_async(self._request_code_actions_async)
         else:
             self._on_complete()
 
@@ -312,7 +313,7 @@ class LspCodeActionsCommand(LspTextCommand):
             return
         selection_range = region_to_range(view, region)
         diagnostics_by_config, extended_range = filter_by_range(view_diagnostics(view), selection_range)
-        actions_manager.request_for_range(view, extended_range, diagnostics_by_config, self.handle_responses)
+        actions_manager.request_for_range(view, extended_range, diagnostics_by_config, self.handle_responses_async)
 
     def combine_commands(self) -> 'List[Tuple[str, str, CodeActionOrCommand]]':
         results = []
@@ -321,7 +322,7 @@ class LspCodeActionsCommand(LspTextCommand):
                 results.append((config, command['title'], command))
         return results
 
-    def handle_responses(self, responses: CodeActionsByConfigName) -> None:
+    def handle_responses_async(self, responses: CodeActionsByConfigName) -> None:
         self.commands_by_config = responses
         self.commands = self.combine_commands()
         self.show_popup_menu()

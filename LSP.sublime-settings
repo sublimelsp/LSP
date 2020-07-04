@@ -56,17 +56,20 @@
   // hint: 4
   "show_diagnostics_severity_level": 4,
 
-  // Delay showing diagnostics by this many seconds (as a floating-point
-  // number). The delay will only kick into action when previously there were
+  // Delay showing diagnostics by this many milliseconds.
+  // The delay will only kick into action when previously there were
   // no diagnostics in the view. If there were previous diagnostics in the view,
   // then the delay setting here is ignored and diagnostics are updated
   // immediately.
   "diagnostics_delay_ms": 0,
 
-  // Add an additional delay when presenting diagnostics, and when the
-  // auto-complete widget is currently visible. The total amount of delay would
-  // be diagnostics_delay_ms + diagnostics_additional_delay_auto_complete_ms.
-  // See also: "diagnostics_delay".
+  // Add an additional delay when the auto-complete widget is currently visible.
+  // Just like the above "diagnostics_delay_ms", the unit is milliseconds.
+  // The total amount of delay would be
+  //
+  //    diagnostics_delay_ms + diagnostics_additional_delay_auto_complete_ms
+  //
+  // See also: "diagnostics_delay_ms".
   "diagnostics_additional_delay_auto_complete_ms": 0,
 
   // Highlighting style of code diagnostics.

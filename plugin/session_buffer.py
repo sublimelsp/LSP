@@ -162,13 +162,9 @@ class SessionBuffer:
     def on_diagnostics_async(self, raw_diagnostics: List[Dict[str, Any]], version: Optional[int]) -> None:
         diagnostics = []  # type: List[Diagnostic]
         data_per_severity = {}  # type: Dict[int, DiagnosticSeverityData]
-        base_dir = None  # type: Optional[str]
         total_errors = 0
         total_warnings = 0
         should_show_diagnostics_panel = False
-        mgr = self.session.manager()
-        if mgr:
-            base_dir = mgr.get_project_path(self.view.file_name() or "")
         change_count = self.view.change_count()
         if version is None:
             version = change_count
@@ -189,7 +185,6 @@ class SessionBuffer:
                     data.panel_contribution.append(format_diagnostic_for_panel(diagnostic))
                 if diagnostic.severity <= settings.auto_show_diagnostics_panel_level:
                     should_show_diagnostics_panel = True
-                # data.annotations.append(format_diagnostic_for_annotation(diagnostic, index))
         self._publish_diagnostics_to_session_views(
             diagnostics_version,
             diagnostics,
@@ -227,9 +222,9 @@ class SessionBuffer:
             present()
         else:
             # There were no diagnostics visible before. Show them a bit later.
-            delay_in_seconds = settings.diagnostics_delay + self.last_text_change_time - time.time()
+            delay_in_seconds = settings.diagnostics_delay_ms / 1000.0 + self.last_text_change_time - time.time()
             if self.view.is_auto_complete_visible():
-                delay_in_seconds += settings.diagnostics_additional_delay_auto_complete
+                delay_in_seconds += settings.diagnostics_additional_delay_auto_complete_ms / 1000.0
             if delay_in_seconds <= 0.0:
                 present()
             else:

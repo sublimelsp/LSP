@@ -70,8 +70,8 @@ class Settings:
             "write": "markup.changed"
         }
         self.diagnostics_gutter_marker = "dot"
-        self.diagnostics_delay = 2.0
-        self.diagnostics_additional_delay_auto_complete = 4.0
+        self.diagnostics_delay_ms = 0
+        self.diagnostics_additional_delay_auto_complete_ms = 0
         self.show_symbol_action_links = False
         self.show_references_in_quick_panel = False
         self.disabled_capabilities = []  # type: List[str]

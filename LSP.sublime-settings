@@ -61,12 +61,13 @@
   // no diagnostics in the view. If there were previous diagnostics in the view,
   // then the delay setting here is ignored and diagnostics are updated
   // immediately.
-  "diagnostics_delay": 0.0,
+  "diagnostics_delay_ms": 0,
 
   // Add an additional delay when presenting diagnostics, and when the
-  // auto-complete widget is currently visible. See the setting
-  // "diagnostics_delay".
-  "diagnostics_additional_delay_auto_complete": 0.0,
+  // auto-complete widget is currently visible. The total amount of delay would
+  // be diagnostics_delay_ms + diagnostics_additional_delay_auto_complete_ms.
+  // See also: "diagnostics_delay".
+  "diagnostics_additional_delay_auto_complete_ms": 0,
 
   // Highlighting style of code diagnostics.
   // Valid values are "fill", "box", "underline", "stippled", "squiggly" or "".

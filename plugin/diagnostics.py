@@ -50,14 +50,6 @@ def filter_by_range(
     return (diagnostics_by_config, extended_range)
 
 
-class LspClearDiagnosticsCommand(sublime_plugin.WindowCommand):
-    def run(self) -> None:
-        sublime.set_timeout_async(self.run_async)
-
-    def run_async(self) -> None:
-        windows.lookup(self.window).clear_diagnostics_async()
-
-
 class LspNextDiagnosticCommand(sublime_plugin.WindowCommand):
 
     def run(self) -> None:

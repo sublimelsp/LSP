@@ -383,11 +383,6 @@ class WindowManager(Manager):
         if self._can_manipulate_diagnostics_panel():
             self._window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
-    def clear_diagnostics_async(self) -> None:
-        # XXX: Remove this functionality?
-        for session in self._sessions:
-            session.clear_diagnostics_async()
-
     def select_next_diagnostic_async(self) -> None:
         self._select_diagnostic_async(1)
 

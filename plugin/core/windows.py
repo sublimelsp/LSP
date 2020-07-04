@@ -68,6 +68,10 @@ class AbstractViewListener(metaclass=ABCMeta):
     def update_total_errors_and_warnings_status_async(self) -> None:
         raise NotImplementedError()
 
+    @abstractmethod
+    def update_diagnostic_in_status_bar_async(self) -> None:
+        raise NotImplementedError()
+
 
 def extract_message(params: Any) -> str:
     return params.get("message", "???") if isinstance(params, dict) else "???"

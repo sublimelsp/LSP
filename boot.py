@@ -15,7 +15,6 @@ from .plugin.core.panels import LspClearPanelCommand
 from .plugin.core.panels import LspUpdatePanelCommand
 from .plugin.core.panels import LspUpdateServerPanelCommand
 from .plugin.core.registry import LspRestartClientCommand
-from .plugin.diagnostics import LspClearDiagnosticsCommand
 from .plugin.diagnostics import LspHideDiagnosticCommand
 from .plugin.diagnostics import LspNextDiagnosticCommand
 from .plugin.diagnostics import LspPreviousDiagnosticCommand

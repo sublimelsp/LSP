@@ -62,6 +62,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     ACTIONS_ANNOTATION_KEY = "lsp_action_annotations"
     TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY = "lsp_total_errors_and_warnings"
+    ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
     code_actions_debounce_time = 800
     color_boxes_debounce_time = 500
     highlights_debounce_time = 500
@@ -123,7 +124,20 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         if global_settings.show_diagnostics_count_in_view_status:
             self.view.set_status(
                 self.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY,
-                "E: {}, W: {}".format(*self._sum_total_errors_and_warnings()))
+                "E: {}, W: {}".format(*self._sum_total_errors_and_warnings_async()))
+
+    def update_diagnostic_in_status_bar_async(self) -> None:
+        if global_settings.show_diagnostics_in_view_status:
+            r = self._get_current_range_async()
+            if r is not None:
+                diags_by_config_name, _ = self.diagnostics_intersecting_range_async(r)
+                if diags_by_config_name:
+                    for diags in diags_by_config_name.values():
+                        diag = next(iter(diags), None)
+                        if diag:
+                            self.view.set_status(self.ACTIVE_DIAGNOSTIC, diag.message)
+                            return
+        self.view.erase_status(self.ACTIVE_DIAGNOSTIC)
 
     def session_views_async(self) -> Generator[SessionView, None, None]:
         yield from self._session_views.values()
@@ -159,6 +173,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
                                                           after_ms=self.highlights_debounce_time)
             self._when_selection_remains_stable_async(self._do_code_actions, current_region,
                                                       after_ms=self.code_actions_debounce_time)
+            self.update_diagnostic_in_status_bar_async()
 
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
         if self.view.is_primary():
@@ -271,7 +286,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
                 if scope:
                     self.view.add_regions("lsp_highlight_{}".format(kind_str), regions, scope=scope, flags=flags)
 
-    # --- Utility methods ----------------------------------------------------------------------------------------------
+    # --- Public utility methods ---------------------------------------------------------------------------------------
 
     def purge_changes_async(self) -> None:
         for sv in self.session_views_async():
@@ -280,6 +295,11 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     def trigger_on_pre_save_async(self) -> None:
         for sv in self.session_views_async():
             sv.on_pre_save_async(self.view.file_name() or "")
+
+    def diagnostics_intersecting_range_async(self, r: Range) -> Tuple[Dict[str, List[Diagnostic]], Range]:
+        return filter_by_range(self.diagnostics_async(), r)
+
+    # --- Private utility methods --------------------------------------------------------------------------------------
 
     def _when_selection_remains_stable_async(self, f: Callable[[], None], r: sublime.Region, after_ms: int) -> None:
         debounced(f, after_ms, lambda: self._stored_region == r, async_thread=True)
@@ -304,6 +324,12 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         except IndexError:
             return None
 
+    def _get_current_range_async(self) -> Optional[Range]:
+        region = self._get_current_region_async()
+        if region is None:
+            return None
+        return region_to_range(self.view, region)
+
     def _is_regular_view(self) -> bool:
         v = self.view
         # Not from the quick panel (CTRL+P), must have a filename on-disk, and not a special view like a console,
@@ -319,7 +345,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
         sublime.set_timeout_async(clear_async)
 
-    def _sum_total_errors_and_warnings(self) -> Tuple[int, int]:
+    def _sum_total_errors_and_warnings_async(self) -> Tuple[int, int]:
         errors = 0
         warnings = 0
         for sb in self.session_buffers_async():

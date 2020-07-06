@@ -1,7 +1,7 @@
 from .configurations import ConfigManager
 from .sessions import Session
 from .settings import client_configs
-from .typing import Optional, Callable, Dict, Any, Generator, Iterable
+from .typing import Optional, Callable, Dict, Any, Generator, Iterable, List
 from .windows import WindowManager
 from .windows import WindowRegistry
 import sublime
@@ -110,13 +110,11 @@ class LspRestartServerCommand(LspTextCommand):
         if not window:
             return
 
-        sessions = [session.config.name for session in self.sessions()]
-        if sessions:
-            window.show_quick_panel(sessions, lambda index: self.restart_server(index, sessions))
+        config_names = [session.config.name for session in self.sessions()]
+        if config_names:
+            window.show_quick_panel(config_names, lambda index: self.restart_server(window, index, config_names))
 
-    def restart_server(self, index: int, sessions: list) -> None:
+    def restart_server(self, window: sublime.Window, index: int, config_names: List[str]) -> None:
         if index == -1:
             return
-        window = self.view.window()
-        if window:
-            windows.lookup(window).end_config_sessions_async(config_name=sessions[index])
+        windows.lookup(window).end_config_sessions_async(config_name=config_names[index])

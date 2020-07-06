@@ -1,6 +1,6 @@
-try:
+import sys
 
-    # ST builds >= 4000
+if sys.version_info >= (3, 5, 0):
 
     from mypy_extensions import TypedDict
     from typing import Any
@@ -20,9 +20,7 @@ try:
     from typing import Union
     from typing_extensions import Protocol
 
-except ImportError:
-
-    # ST builds < 4000
+else:
 
     def _make_type(name: str) -> '_TypeMeta':
         return _TypeMeta(name, (Type,), {})  # type: ignore

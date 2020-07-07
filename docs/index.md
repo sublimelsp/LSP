@@ -230,7 +230,7 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 
 ### Dart<a name="dart"></a>
 
-1. Install the [Dart](https://packagecontrol.io/packages/Dart) package from Package Control for syntax highlighting.
+1. Install the [Dartlight](https://packagecontrol.io/packages/Dartlight) package from Package Control for syntax highlighting.
 2. Install the [Dart SDK](https://dart.dev/get-dart) and locate path to `analysis_server.dart.snapshot` in the "snapshots/bin" directory.
 3. Add to LSP settings' clients (adjust the path if necessary):
 
@@ -240,7 +240,7 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
   "enabled": true,
   "languageId": "dart",
   "scopes": ["source.dart"],
-  "syntaxes": ["Packages/Dart/Dart.tmLanguage"]
+  "syntaxes": ["Packages/Dartlight/Dart.tmLanguage"]
 }
 ```
 

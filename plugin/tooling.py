@@ -36,7 +36,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
         self.view.set_name("--- PARSED SETTINGS ---")
         self.view.assign_syntax("Packages/JSON/JSON.sublime-syntax")
         self.writeline("{")
-        schema = {}  # TODO: Also generate a schema. Sublime settings are not rigid.
+        # schema = {}  TODO: Also generate a schema. Sublime settings are not rigid.
         for k, v in properties.items():
             typ = v["type"]
             description = v.get("description")

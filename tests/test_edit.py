@@ -22,6 +22,14 @@ LSP_EDIT_DOCUMENT_CHANGES = {
     }]
 }
 
+LSP_EDIT_DOCUMENT_CHANGES_2 = {
+    'changes': None,
+    'documentChanges': [{
+        'textDocument': {'uri': URI},
+        'edits': [LSP_TEXT_EDIT]
+    }]
+}
+
 
 class TextEditTests(unittest.TestCase):
 
@@ -49,6 +57,13 @@ class WorkspaceEditTests(unittest.TestCase):
 
     def test_parse_document_changes_from_lsp(self):
         edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES)
+        self.assertIn(FILENAME, edit)
+        self.assertEqual(len(edit), 1)
+        self.assertEqual(len(edit[FILENAME]), 1)
+
+    def test_protocol_violation(self):
+        # This should ignore the None in 'changes'
+        edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_2)
         self.assertIn(FILENAME, edit)
         self.assertEqual(len(edit), 1)
         self.assertEqual(len(edit[FILENAME]), 1)

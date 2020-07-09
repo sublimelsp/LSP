@@ -34,7 +34,8 @@ def parse_text_edit(text_edit: Dict[str, Any], version: int = None) -> TextEdit:
     return (
         parse_range(text_edit['range']['start']),
         parse_range(text_edit['range']['end']),
-        text_edit.get('newText', ''),
+        # Strip away carriage returns -- SublimeText takes care of that.
+        text_edit.get('newText', '').replace("\r", ""),
         version
     )
 

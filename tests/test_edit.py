@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from typing import List, Dict, Optional, Any, Iterable
     assert List and Dict and Optional and Any and Iterable
 
-LSP_TEXT_EDIT = dict(newText='newText', range=LSP_RANGE)
+LSP_TEXT_EDIT = dict(newText='newText\r\n', range=LSP_RANGE)
 FILENAME = 'C:\\file.py' if sublime.platform() == "windows" else '/file.py'
 URI = filename_to_uri(FILENAME)
 LSP_EDIT_CHANGES = {'changes': {URI: [LSP_TEXT_EDIT]}}
@@ -35,7 +35,7 @@ class TextEditTests(unittest.TestCase):
 
     def test_parse_from_lsp(self):
         (start, end, newText, version) = parse_text_edit(LSP_TEXT_EDIT, 0)
-        self.assertEqual(newText, 'newText')
+        self.assertEqual(newText, 'newText\n')  # Without the \r
         self.assertEqual(start[0], 10)
         self.assertEqual(start[1], 4)
         self.assertEqual(end[0], 11)

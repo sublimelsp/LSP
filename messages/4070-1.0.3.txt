@@ -1,0 +1,10 @@
+=> 4070-1.0.3
+
+- Strip away carriage returns (Raoul Wols)
+- Work around spec bugs for PowerShellEditorServices (#1181) (Raoul Wols)
+- Work around broken language servers for textDocument/rename (#1178) (Raoul Wols)
+- Import typing based on version rather than try/except (Rafał Chłodnicki)
+- Remove the session views lock (#1169) (Raoul Wols)
+- Fix broken LspResolveDocs run command (Raoul Wols)
+- Log panel improvements (#1167) (Raoul Wols)
+- Prefer to show most severe diagnostic when multiple overlap (#1168) (Rafał Chłodnicki)

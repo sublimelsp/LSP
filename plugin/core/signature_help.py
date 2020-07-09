@@ -163,20 +163,17 @@ class SignatureHelp(object):
 def create_signature_help(response: Optional[dict]) -> Optional[SignatureHelp]:
     if response is None:
         return None
-
-    signatures = list(parse_signature_information(signature) for signature in response.get("signatures", []))
-    active_signature = response.get("activeSignature", -1)
-    active_parameter = response.get("activeParameter", -1)
-
+    signatures = response.get("signatures") or []
+    signatures = [parse_signature_information(signature) for signature in signatures]
     if signatures:
+        active_signature = response.get("activeSignature", -1)
+        active_parameter = response.get("activeParameter", -1)
         if not 0 <= active_signature < len(signatures):
             debug("activeSignature {} not a valid index for signatures length {}".format(
                 active_signature, len(signatures)))
             active_signature = 0
-
         return SignatureHelp(signatures, active_signature, active_parameter)
-    else:
-        return None
+    return None
 
 
 def find_params_to_split_at(label: str) -> List[int]:

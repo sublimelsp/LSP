@@ -137,7 +137,12 @@ def resolve(completion_list: sublime.CompletionList, items: List[sublime.Complet
 
 
 def is_deprecated(item: dict) -> bool:
-    return item.get("deprecated", False) or CompletionItemTag.Deprecated in item.get("tags", [])
+    if item.get("deprecated", False):
+        return True
+    tags = item.get("tags")
+    if isinstance(tags, list):
+        return CompletionItemTag.Deprecated in tags
+    return False
 
 
 class CompletionHandler(LSPViewEventListener):

@@ -140,7 +140,9 @@ class LspHoverCommand(LspTextCommand):
         sublime.set_timeout(lambda: self._show_hover(point))
 
     def _show_hover(self, point: int) -> None:
-        contents = self.diagnostics_content() + self.hover_content() + self.symbol_actions_content()
+        contents = self.diagnostics_content() + self.hover_content()
+        if contents:
+            contents += self.symbol_actions_content()
 
         _test_contents.clear()
         _test_contents.append(contents)  # for testing only

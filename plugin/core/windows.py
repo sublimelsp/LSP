@@ -2,7 +2,6 @@ from ...third_party import WebsocketServer  # type: ignore
 from .configurations import ConfigManager
 from .configurations import WindowConfigManager
 from .diagnostics import DiagnosticsCursor
-from .diagnostics import DiagnosticsPhantoms
 from .diagnostics import DiagnosticsWalker
 from .diagnostics import ensure_diagnostics_panel
 from .logging import debug
@@ -21,6 +20,7 @@ from .transports import create_transport
 from .types import ClientConfig
 from .types import Settings
 from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Mapping, Iterable
+from .views import diagnostic_to_phantom
 from .views import extract_variables
 from .workspace import disable_in_project
 from .workspace import enable_in_project
@@ -78,6 +78,9 @@ def extract_message(params: Any) -> str:
 
 
 class WindowManager(Manager):
+
+    DIAGNOSTIC_PHANTOM_KEY = "lsp_diagnostic_phantom"
+
     def __init__(
         self,
         window: sublime.Window,
@@ -95,7 +98,7 @@ class WindowManager(Manager):
         self._new_listener = None  # type: Optional[AbstractViewListener]
         self._new_session = None  # type: Optional[Session]
         self._cursor = DiagnosticsCursor(settings.show_diagnostics_severity_level)
-        self._phantoms = DiagnosticsPhantoms(self._window)
+        self._diagnostic_phantom_set = None  # type: Optional[sublime.PhantomSet]
 
     def on_load_project_async(self) -> None:
         # TODO: Also end sessions that were previously enabled in the .sublime-project, but now disabled or removed
@@ -394,7 +397,7 @@ class WindowManager(Manager):
         self._select_diagnostic_async(-1)
 
     def unselect_diagnostic_async(self) -> None:
-        self._phantoms.set_diagnostic(None)
+        self._set_diagnostic_phantom(None)
 
     def _diagnostics_by_file_async(self) -> Generator[Tuple[str, Mapping[str, Iterable[Diagnostic]]], None, None]:
         for listener in self._listeners:
@@ -416,7 +419,49 @@ class WindowManager(Manager):
         walker.walk(self._diagnostics_by_file_async())
         # The actual presentation of the phantom needs to happen on the UI thread, otherwise you'll see a phantom
         # disappearing and then immediately after a phantom appearing. This is jarring. So run blocking.
-        sublime.set_timeout(lambda: self._phantoms.set_diagnostic(self._cursor.value))
+        sublime.set_timeout(lambda: self._set_diagnostic_phantom(self._cursor.value))
+
+    def _set_diagnostic_phantom(self, file_diagnostic: Optional[Tuple[str, Diagnostic]]) -> None:
+        self._clear_diagnostic_phantom()
+        if file_diagnostic:
+            file_path, diagnostic = file_diagnostic
+            view = self._window.find_open_file(file_path)
+            if view:
+                phantom_set = sublime.PhantomSet(view, self.DIAGNOSTIC_PHANTOM_KEY)
+                base_dir = self.get_project_path(file_path)
+                phantom = diagnostic_to_phantom(view, diagnostic, base_dir, self._navigate_diagnostic_phantom)
+                phantom_set.update([phantom])
+                self._window.focus_view(view)
+                view.show_at_center(phantom.region)
+                self._diagnostic_phantom_set = phantom_set
+                has_phantom = view.settings().get(self.DIAGNOSTIC_PHANTOM_KEY)
+                if not has_phantom:
+                    view.settings().set(self.DIAGNOSTIC_PHANTOM_KEY, True)
+            else:
+                debug("no view for file", file_path)
+        else:
+            if self._diagnostic_phantom_set:
+                view = self._diagnostic_phantom_set.view
+                has_phantom = view.settings().get(self.DIAGNOSTIC_PHANTOM_KEY)
+                if not has_phantom:
+                    view.settings().set(self.DIAGNOSTIC_PHANTOM_KEY, False)
+
+    def _navigate_diagnostic_phantom(self, href: str) -> None:
+        if href == "hide":
+            self._clear_diagnostic_phantom()
+        elif href == "next":
+            self._window.run_command("lsp_next_diagnostic")
+        elif href == "previous":
+            self._window.run_command("lsp_previous_diagnostic")
+        elif href.startswith("location"):
+            # todo: share with hover?
+            _, file_path, location = href.split(":", 2)
+            self._window.open_file(file_path + ":" + location, sublime.ENCODED_POSITION | sublime.TRANSIENT)
+
+    def _clear_diagnostic_phantom(self) -> None:
+        if self._diagnostic_phantom_set:
+            self._diagnostic_phantom_set.view.settings().set(self.DIAGNOSTIC_PHANTOM_KEY, False)
+            self._diagnostic_phantom_set.update([])
 
 
 class WindowRegistry(object):

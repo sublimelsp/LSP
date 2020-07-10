@@ -1,9 +1,7 @@
-from .logging import debug
 from .panels import ensure_panel
 from .protocol import Diagnostic
 from .protocol import Point
 from .typing import List, Tuple, Callable, Optional, Iterable, Mapping
-from .views import diagnostic_to_phantom
 import sublime
 
 
@@ -234,56 +232,3 @@ class DiagnosticsWalker(object):
     def invoke_each(self, func: Callable[[DiagnosticsUpdateWalk], None]) -> None:
         for sub in self._subscribers:
             func(sub)
-
-
-class DiagnosticsPhantoms(object):
-
-    def __init__(self, window: sublime.Window) -> None:
-        self._window = window
-        self._last_phantom_set = None  # type: 'Optional[sublime.PhantomSet]'
-
-    def set_diagnostic(self, file_diagnostic: Optional[Tuple[str, Diagnostic]]) -> None:
-        self.clear()
-        if file_diagnostic:
-            file_path, diagnostic = file_diagnostic
-            view = self._window.find_open_file(file_path)
-            if view:
-                self.apply_phantom(view, diagnostic)
-            else:
-                debug("no view for file", file_path)
-        else:
-            if self._last_phantom_set:
-                view = self._last_phantom_set.view
-                has_phantom = view.settings().get('lsp_diagnostic_phantom')
-                if not has_phantom:
-                    view.settings().set('lsp_diagnostic_phantom', False)
-
-    def apply_phantom(self, view: sublime.View, diagnostic: Diagnostic) -> None:
-        phantom_set = sublime.PhantomSet(view, "lsp_diagnostics")
-        base_dir = None  # TODO
-        # base_dir = windows.lookup(self._window).get_project_path(file_path)
-        phantom = diagnostic_to_phantom(view, diagnostic, base_dir, self.navigate)
-        phantom_set.update([phantom])
-        self._window.focus_view(view)
-        view.show_at_center(phantom.region)
-        self._last_phantom_set = phantom_set
-        has_phantom = view.settings().get('lsp_diagnostic_phantom')
-        if not has_phantom:
-            view.settings().set('lsp_diagnostic_phantom', True)
-
-    def navigate(self, href: str) -> None:
-        if href == "hide":
-            self.clear()
-        elif href == "next":
-            self._window.run_command("lsp_next_diagnostic")
-        elif href == "previous":
-            self._window.run_command("lsp_previous_diagnostic")
-        elif href.startswith("location"):
-            # todo: share with hover?
-            _, file_path, location = href.split(":", 2)
-            self._window.open_file(file_path + ":" + location, sublime.ENCODED_POSITION | sublime.TRANSIENT)
-
-    def clear(self) -> None:
-        if self._last_phantom_set:
-            self._last_phantom_set.view.settings().set('lsp_diagnostic_phantom', False)
-            self._last_phantom_set.update([])

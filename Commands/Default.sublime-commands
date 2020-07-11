@@ -16,6 +16,10 @@
         }
     },
     {
+        "caption": "LSP Development: Parse VSCode Package JSON From Clipboard",
+        "command": "lsp_parse_vscode_package_json"
+    },
+    {
         "caption": "LSP: Setup Language Server",
         "command": "lsp_setup_language_server",
         "args": {}

@@ -176,6 +176,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             self.update_diagnostic_in_status_bar_async()
 
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
+        self._clear_highlight_regions()
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_text_changed_async(changes)

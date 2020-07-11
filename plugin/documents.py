@@ -156,13 +156,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         if self._is_regular_view() and not self.view.is_loading():
             self._register_async()
 
-    def on_modified_async(self) -> None:
-        different, current_region = self._update_stored_region_async()
-        if different:
-            if "colorProvider" not in global_settings.disabled_capabilities:
-                self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region,
-                                                          after_ms=self.color_boxes_debounce_time)
-
     def on_selection_modified_async(self) -> None:
         different, current_region = self._update_stored_region_async()
         if different:
@@ -177,6 +170,11 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
         self._clear_highlight_regions()
+        different, current_region = self._update_stored_region_async()
+        if different:
+            if "colorProvider" not in global_settings.disabled_capabilities:
+                self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region,
+                                                          after_ms=self.color_boxes_debounce_time)
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_text_changed_async(changes)

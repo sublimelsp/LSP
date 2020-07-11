@@ -1,85 +1,13 @@
-from .logging import debug
-from .protocol import Diagnostic, DiagnosticSeverity, Point
-from .typing import Protocol, List, Dict, Tuple, Callable, Optional
-from .url import uri_to_filename
+from .panels import ensure_panel
+from .protocol import Diagnostic
+from .protocol import Point
+from .typing import List, Tuple, Callable, Optional, Iterable, Mapping
+import sublime
 
 
-class DiagnosticsUI(Protocol):
-
-    def update(self, file_name: str, config_name: str, diagnostics: Dict[str, Dict[str, List[Diagnostic]]]) -> None:
-        ...
-
-    def select(self, index: int) -> None:
-        ...
-
-    def deselect(self) -> None:
-        ...
-
-
-class DiagnosticsStorage(object):
-
-    def __init__(self, updateable: Optional[DiagnosticsUI]) -> None:
-        self._diagnostics = {}  # type: Dict[str, Dict[str, List[Diagnostic]]]
-        self._updatable = updateable
-
-    def get(self) -> Dict[str, Dict[str, List[Diagnostic]]]:
-        return self._diagnostics
-
-    def get_by_file(self, file_path: str) -> Dict[str, List[Diagnostic]]:
-        return self._diagnostics.get(file_path, {})
-
-    def _update(self, file_path: str, client_name: str, diagnostics: List[Diagnostic]) -> bool:
-        updated = False
-        if diagnostics:
-            file_diagnostics = self._diagnostics.setdefault(file_path, dict())
-            file_diagnostics[client_name] = diagnostics
-            updated = True
-        else:
-            if file_path in self._diagnostics:
-                if client_name in self._diagnostics[file_path]:
-                    updated = True
-                    del self._diagnostics[file_path][client_name]
-                if not self._diagnostics[file_path]:
-                    del self._diagnostics[file_path]
-        return updated
-
-    def clear(self) -> None:
-        for file_path in list(self._diagnostics):
-            for client_name in list(self._diagnostics[file_path]):
-                if self._update(file_path, client_name, []):
-                    self._notify(file_path, client_name)
-
-    def receive(self, client_name: str, update: dict) -> None:
-        maybe_file_uri = update.get('uri')
-        if maybe_file_uri is not None:
-            file_path = uri_to_filename(maybe_file_uri)
-
-            diagnostics = list(
-                Diagnostic.from_lsp(item) for item in update.get('diagnostics', []))
-
-            if self._update(file_path, client_name, diagnostics):
-                self._notify(file_path, client_name)
-        else:
-            debug('missing uri in diagnostics update')
-
-    def _notify(self, file_path: str, client_name: str) -> None:
-        if self._updatable:
-            self._updatable.update(file_path, client_name, self._diagnostics)
-
-    def remove(self, file_path: str, client_name: str) -> None:
-        self._update(file_path, client_name, [])
-
-    def select_next(self) -> None:
-        if self._updatable:
-            self._updatable.select(1)
-
-    def select_previous(self) -> None:
-        if self._updatable:
-            self._updatable.select(-1)
-
-    def select_none(self) -> None:
-        if self._updatable:
-            self._updatable.deselect()
+def ensure_diagnostics_panel(window: sublime.Window) -> Optional[sublime.View]:
+    return ensure_panel(window, "diagnostics", r"^\s*\S\s+(\S.*):$", r"^\s+([0-9]+):?([0-9]+).*$",
+                        "Packages/LSP/Syntaxes/Diagnostics.sublime-syntax")
 
 
 class DiagnosticsUpdateWalk(object):
@@ -109,7 +37,7 @@ class DiagnosticCursorWalk(DiagnosticsUpdateWalk):
         self._cursor = cursor
         self._direction = direction
         self._current_file_path = ""
-        self._candidate = None  # type: 'Optional[Tuple[str, Diagnostic]]'
+        self._candidate = None  # type: Optional[Tuple[str, Diagnostic]]
 
     def begin_file(self, file_path: str) -> None:
         self._current_file_path = file_path
@@ -249,7 +177,7 @@ class DiagnosticsUpdatedWalk(DiagnosticCursorWalk):
 
 
 class DiagnosticsCursor(object):
-    def __init__(self, show_diagnostics_severity_level: int = DiagnosticSeverity.Warning) -> None:
+    def __init__(self, show_diagnostics_severity_level: int = 2) -> None:
         self._file_diagnostic = None  # type: Optional[Tuple[str, Diagnostic]]
         self.max_severity_level = show_diagnostics_severity_level
 
@@ -286,19 +214,18 @@ class DiagnosticsWalker(object):
     def __init__(self, subs: List[DiagnosticsUpdateWalk]) -> None:
         self._subscribers = subs
 
-    def walk(self, diagnostics_by_file: Dict[str, Dict[str, List[Diagnostic]]]) -> None:
+    def walk(self, diagnostics_by_file: Iterable[Tuple[str, Mapping[str, Iterable[Diagnostic]]]]) -> None:
         self.invoke_each(lambda w: w.begin())
 
-        if diagnostics_by_file:
-            for file_path, source_diagnostics in diagnostics_by_file.items():
+        for file_path, source_diagnostics in diagnostics_by_file:
 
-                self.invoke_each(lambda w: w.begin_file(file_path))
+            self.invoke_each(lambda w: w.begin_file(file_path))
 
-                for origin, diagnostics in source_diagnostics.items():
-                    for diagnostic in diagnostics:
-                        self.invoke_each(lambda w: w.diagnostic(diagnostic))
+            for origin, diagnostics in source_diagnostics.items():
+                for diagnostic in diagnostics:
+                    self.invoke_each(lambda w: w.diagnostic(diagnostic))
 
-                self.invoke_each(lambda w: w.end_file(file_path))
+            self.invoke_each(lambda w: w.end_file(file_path))
 
         self.invoke_each(lambda w: w.end())
 

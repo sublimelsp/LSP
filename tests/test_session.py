@@ -24,6 +24,9 @@ class MockManager(Manager):
     def sessions(self, view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
         pass
 
+    def get_project_path(self, file_name: str) -> Optional[str]:
+        return None
+
     def start_async(self, configuration: ClientConfig, initiating_view: sublime.View) -> None:
         pass
 
@@ -31,6 +34,15 @@ class MockManager(Manager):
         pass
 
     def on_post_initialize(self, session: Session) -> None:
+        pass
+
+    def update_diagnostics_panel_async(self) -> None:
+        pass
+
+    def show_diagnostics_panel_async(self) -> None:
+        pass
+
+    def hide_diagnostics_panel_async(self) -> None:
         pass
 
 

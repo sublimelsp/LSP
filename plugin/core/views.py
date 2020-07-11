@@ -1,7 +1,13 @@
 from .collections import DottedDict
+from .css import css
 from .protocol import Diagnostic
-from .protocol import Point, Range, Notification, Request
-from .typing import Optional, Dict, Any, Iterable, List, Union
+from .protocol import DiagnosticRelatedInformation
+from .protocol import DiagnosticSeverity
+from .protocol import Notification
+from .protocol import Point
+from .protocol import Range
+from .protocol import Request
+from .typing import Optional, Dict, Any, Iterable, List, Union, Callable
 from .url import filename_to_uri
 from .url import uri_to_filename
 import linecache
@@ -10,6 +16,14 @@ import os
 import re
 import sublime
 import tempfile
+
+DIAGNOSTIC_SEVERITY = [
+    # Kind       CSS class   Scope for color     Icon resource
+    ("error",   "errors",   "region.redish",    "Packages/LSP/icons/error.png"),
+    ("warning", "warnings", "region.yellowish", "Packages/LSP/icons/warning.png"),
+    ("info",    "info",     "region.bluish",    "Packages/LSP/icons/info.png"),
+    ("hint",    "hints",    "region.bluish",    "Packages/LSP/icons/info.png"),
+]
 
 SYMBOL_KINDS = [
     # Display Name     ST Scope
@@ -458,3 +472,87 @@ def lsp_color_to_phantom(view: sublime.View, color_info: Dict[str, Any]) -> subl
 
 def document_color_params(view: sublime.View) -> Dict[str, Any]:
     return {"textDocument": text_document_identifier(view)}
+
+
+def format_severity(severity: int) -> str:
+    if 1 <= severity <= len(DIAGNOSTIC_SEVERITY):
+        return DIAGNOSTIC_SEVERITY[severity - 1][0]
+    return "???"
+
+
+def format_diagnostic_for_panel(diagnostic: Diagnostic) -> str:
+    location = "{:>8}:{:<4}".format(diagnostic.range.start.row + 1, diagnostic.range.start.col + 1)
+    lines = diagnostic.message.splitlines() or [""]
+    severity = format_severity(diagnostic.severity)
+    formatted = " {}\t{:<12}\t{:<10}\t{}".format(location, diagnostic.source, severity, lines[0])
+    for line in lines[1:]:
+        formatted = formatted + "\n {:<12}\t{:<12}\t{:<10}\t{}".format("", "", "", line)
+    return formatted
+
+
+def format_diagnostic_related_info(info: DiagnosticRelatedInformation, base_dir: Optional[str] = None) -> str:
+    file_path = info.location.file_path
+    if base_dir and file_path.startswith(base_dir):
+        file_path = os.path.relpath(file_path, base_dir)
+    row = info.location.range.start.row + 1
+    col = info.location.range.start.col + 1
+    encoded_filename = "{}:{}:{}".format(info.location.file_path, row, col)
+    file_path = "{}:{}:{}".format(file_path, row, col)
+    return '<a href="{}">{}</a>: {}'.format(encoded_filename, text2html(file_path), text2html(info.message))
+
+
+def format_diagnostic_for_html(diagnostic: Diagnostic, base_dir: Optional[str] = None) -> str:
+    diagnostic_message = text2html(diagnostic.message)
+    related_infos = [format_diagnostic_related_info(info, base_dir) for info in diagnostic.related_info]
+    related_content = "<pre class='related_info'>" + "<br>".join(related_infos) + "</pre>" if related_infos else ""
+    if diagnostic.source:
+        content = "[{}] {}{}".format(diagnostic.source, diagnostic_message, related_content)
+    else:
+        content = "{}{}".format(diagnostic_message, related_content)
+    return '<pre class="{}">{}</pre>'.format(DIAGNOSTIC_SEVERITY[diagnostic.severity - 1][1], content)
+
+
+def create_phantom_html(content: str, severity: str) -> str:
+    return """<body id=inline-error>
+                <style>{0}</style>
+                <div class="{1}-arrow"></div>
+                <div class="{1} container">
+                    <div class="toolbar">
+                        <a href="hide">×</a>
+                        <a href="previous">↑</a>
+                        <a href="next">↓</a>
+                    </div>
+                    <div class="content">{2}</div>
+                </div>
+            </body>""".format(css().phantoms, severity, content)
+
+
+def diagnostic_to_phantom(
+    view: sublime.View,
+    diagnostic: Diagnostic,
+    base_dir: Optional[str],
+    on_navigate: Callable[[str], None]
+) -> sublime.Phantom:
+    """
+    Creates a "cursor" phantom.
+
+    The hyperref for the on_navigate callback can contain the following links:
+    - "hide"
+    - "previous"
+    - "next"
+    """
+    region = range_to_region(diagnostic.range, view)
+    message = text2html(diagnostic.message)
+    if diagnostic.source:
+        message = "<p>[{}] {}</p>".format(diagnostic.source, message)
+    else:
+        message = "<p>{}</p>".format(message)
+    additional_infos = "<br>".join([format_diagnostic_related_info(info, base_dir) for info in diagnostic.related_info])
+    severity = "error" if diagnostic.severity == DiagnosticSeverity.Error else "warning"
+    content = message + "<p class='additional'>" + additional_infos + "</p>" if additional_infos else message
+    return sublime.Phantom(
+        region,
+        create_phantom_html(content, severity),
+        sublime.LAYOUT_BELOW,
+        on_navigate
+    )

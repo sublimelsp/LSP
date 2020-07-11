@@ -2,9 +2,9 @@ from .collections import DottedDict
 from .logging import debug
 from .typing import Optional, List, Dict, Generator, Callable
 import contextlib
+import functools
 import sublime
 import time
-import functools
 
 
 @contextlib.contextmanager
@@ -70,6 +70,8 @@ class Settings:
             "write": "markup.changed"
         }
         self.diagnostics_gutter_marker = "dot"
+        self.diagnostics_delay_ms = 0
+        self.diagnostics_additional_delay_auto_complete_ms = 0
         self.show_symbol_action_links = False
         self.show_references_in_quick_panel = False
         self.disabled_capabilities = []  # type: List[str]
@@ -80,6 +82,12 @@ class Settings:
         self.lsp_format_on_save = False
         self.lsp_code_actions_on_save = {}  # type: Dict[str, bool]
         self.code_action_on_save_timeout_ms = 2000
+
+    def show_diagnostics_panel_always(self) -> bool:
+        return self.auto_show_diagnostics_panel == "always"
+
+    def show_diagnostics_panel_on_save(self) -> bool:
+        return self.auto_show_diagnostics_panel == "saved"
 
     def document_highlight_style_to_add_regions_flags(self) -> int:
         return _settings_style_to_add_regions_flag(self.document_highlight_style)

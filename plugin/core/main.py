@@ -1,11 +1,11 @@
 import sublime
 import sublime_plugin
 
-from ..diagnostics import DiagnosticsPresenter
+from .css import load as load_css
+from .css import unload as unload_css
 from .handlers import LanguageHandler
 from .logging import set_debug_logging, set_exception_logging
 from .panels import destroy_output_panels
-from .popups import popups
 from .protocol import Response
 from .protocol import WorkspaceFolder
 from .registry import windows
@@ -103,30 +103,22 @@ def _forcefully_register_plugins() -> None:
 
 def plugin_loaded() -> None:
     load_settings()
-    popups.load_css()
+    load_css()
     set_debug_logging(settings.log_debug)
     set_exception_logging(True)
     _forcefully_register_plugins()  # Remove this function: https://github.com/sublimelsp/LSP/issues/899
     client_configs.update_configs()
-    windows.set_diagnostics_ui(DiagnosticsPresenter)
     windows.set_settings_factory(settings)
 
 
 def plugin_unloaded() -> None:
     # Also needs to handle package being disabled or removed
     # https://github.com/sublimelsp/LSP/issues/375
+    unload_css()
     unload_settings()
     # TODO: Move to __del__ methods
     for window in sublime.windows():
         destroy_output_panels(window)  # references and diagnostics panels
-        for view in window.views():
-            if view.file_name():
-                for key in ['error', 'warning', 'info', 'hint', 'diagnostics']:
-                    view.erase_regions('lsp_{}'.format(key))
-                for key in ['diagnostics']:
-                    view.erase_status('lsp_{}'.format(key))
-                for key in ['diagnostic_phantom']:
-                    view.settings().erase('lsp_{}'.format(key))
 
 
 class Listener(sublime_plugin.EventListener):

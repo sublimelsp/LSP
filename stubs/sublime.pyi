@@ -835,7 +835,7 @@ class View:
 
     def add_regions(self, key: str, regions: List[Region], scope: str = ..., icon: str = ..., flags: int = ...,
                     annotations: List[str] = ..., annotation_color: str = ...,
-                    on_navigate: Callable[[str], None] = ...) -> None:
+                    on_navigate: Callable[[str], None] = ..., on_close: Callable[[], None] = ...) -> None:
         ...
 
     def get_regions(self, key: str) -> List[Region]:

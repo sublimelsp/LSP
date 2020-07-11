@@ -69,6 +69,9 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings) -> None:
                                                                        "show_diagnostics_count_in_view_status", False)
     settings.show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)
     settings.show_diagnostics_severity_level = read_int_setting(settings_obj, "show_diagnostics_severity_level", 2)
+    settings.diagnostics_delay_ms = read_int_setting(settings_obj, "diagnostics_delay_ms", 0)
+    settings.diagnostics_additional_delay_auto_complete_ms = read_int_setting(
+        settings_obj, "diagnostics_additional_delay_auto_complete_ms", 0)
     settings.diagnostics_highlight_style = read_str_setting(settings_obj, "diagnostics_highlight_style", "underline")
     settings.document_highlight_style = read_str_setting(settings_obj, "document_highlight_style", "stippled")
     settings.document_highlight_scopes = read_dict_setting(settings_obj, "document_highlight_scopes",

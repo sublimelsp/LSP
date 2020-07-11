@@ -1,6 +1,6 @@
+from .core.diagnostics import ensure_diagnostics_panel
 from .core.panels import ensure_server_panel
 from .core.panels import PanelName
-from .diagnostics import ensure_diagnostics_panel
 from sublime import Window
 from sublime_plugin import WindowCommand
 

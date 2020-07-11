@@ -2,19 +2,19 @@ import mdpopups
 import sublime
 import webbrowser
 import os
-from html import escape
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import run_code_action_or_command
-from .core.popups import popups
-from .core.protocol import Request, DiagnosticSeverity, Diagnostic, DiagnosticRelatedInformation
+from .core.css import css
+from .core.protocol import Request, Diagnostic
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.settings import settings
 from .core.typing import List, Optional, Any, Dict
+from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
-from .core.views import offset_to_point
 from .core.views import make_link
+from .core.views import offset_to_point
 from .core.views import text_document_position_params
 from .diagnostics import filter_by_point, view_diagnostics
 
@@ -23,14 +23,6 @@ SUBLIME_WORD_MASK = 515
 
 
 _test_contents = []  # type: List[str]
-
-
-class_for_severity = {
-    DiagnosticSeverity.Error: 'errors',
-    DiagnosticSeverity.Warning: 'warnings',
-    DiagnosticSeverity.Information: 'info',
-    DiagnosticSeverity.Hint: 'hints'
-}
 
 
 class GotoKind:
@@ -102,35 +94,18 @@ class LspHoverCommand(LspTextCommand):
         self.show_hover(point)
 
     def symbol_actions_content(self) -> str:
-        actions = []
-        for goto_kind in goto_kinds:
-            if self.session(goto_kind.lsp_name + "Provider"):
-                actions.append(make_link(goto_kind.lsp_name, goto_kind.label))
-        if self.session('referencesProvider'):
-            actions.append(make_link('references', 'References'))
-        if self.session('renameProvider'):
-            actions.append(make_link('rename', 'Rename'))
-        return "<p class='actions'>" + " | ".join(actions) + "</p>"
-
-    def format_diagnostic_related_info(self, info: DiagnosticRelatedInformation) -> str:
-        file_path = info.location.file_path
-        if self._base_dir and file_path.startswith(self._base_dir):
-            file_path = os.path.relpath(file_path, self._base_dir)
-        location = "{}:{}:{}".format(file_path, info.location.range.start.row+1, info.location.range.start.col+1)
-        link = make_link("location:{}".format(location), location)
-        return "{}: {}".format(link, escape(info.message))
-
-    def format_diagnostic(self, diagnostic: 'Diagnostic') -> str:
-        diagnostic_message = escape(diagnostic.message, False).replace('\n', '<br>')
-        related_infos = [self.format_diagnostic_related_info(info) for info in diagnostic.related_info]
-        related_content = "<pre class='related_info'>" + "<br>".join(related_infos) + "</pre>" if related_infos else ""
-
-        if diagnostic.source:
-            return "<pre class=\"{}\">[{}] {}{}</pre>".format(class_for_severity[diagnostic.severity],
-                                                              diagnostic.source, diagnostic_message, related_content)
-        else:
-            return "<pre class=\"{}\">{}{}</pre>".format(class_for_severity[diagnostic.severity], diagnostic_message,
-                                                         related_content)
+        if settings.show_symbol_action_links:
+            actions = []
+            for goto_kind in goto_kinds:
+                if self.session(goto_kind.lsp_name + "Provider"):
+                    actions.append(make_link(goto_kind.lsp_name, goto_kind.label))
+            if self.session('referencesProvider'):
+                actions.append(make_link('references', 'References'))
+            if self.session('renameProvider'):
+                actions.append(make_link('rename', 'Rename'))
+            if actions:
+                return "<p class='actions'>" + " | ".join(actions) + "</p>"
+        return ""
 
     def diagnostics_content(self) -> str:
         formatted = []
@@ -138,7 +113,8 @@ class LspHoverCommand(LspTextCommand):
             by_severity = {}  # type: Dict[int, List[str]]
             formatted.append("<div class='diagnostics'>")
             for diagnostic in self._diagnostics_by_config[config_name]:
-                by_severity.setdefault(diagnostic.severity, []).append(self.format_diagnostic(diagnostic))
+                by_severity.setdefault(diagnostic.severity, []).append(
+                    format_diagnostic_for_html(diagnostic, self._base_dir))
 
             for severity, items in by_severity.items():
                 formatted.append("<div>")
@@ -165,7 +141,7 @@ class LspHoverCommand(LspTextCommand):
 
     def _show_hover(self, point: int) -> None:
         contents = self.diagnostics_content() + self.hover_content()
-        if contents and settings.show_symbol_action_links:
+        if contents:
             contents += self.symbol_actions_content()
 
         _test_contents.clear()
@@ -176,18 +152,18 @@ class LspHoverCommand(LspTextCommand):
                 mdpopups.update_popup(
                     self.view,
                     contents,
-                    css=popups.stylesheet,
+                    css=css().popups,
                     md=False,
-                    wrapper_class=popups.classname)
+                    wrapper_class=css().popups_classname)
             else:
                 mdpopups.show_popup(
                     self.view,
                     contents,
-                    css=popups.stylesheet,
+                    css=css().popups,
                     md=False,
                     flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY,
                     location=point,
-                    wrapper_class=popups.classname,
+                    wrapper_class=css().popups_classname,
                     max_width=800,
                     on_navigate=lambda href: self.on_hover_navigate(href, point))
 

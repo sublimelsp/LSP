@@ -69,11 +69,6 @@
         "command": "lsp_show_diagnostics_panel"
     },
     {
-        "caption": "LSP: Clear Diagnostics",
-        "command": "lsp_clear_diagnostics",
-        "args": {}
-    },
-    {
         "caption": "LSP: Next Diagnostic",
         "command": "lsp_next_diagnostic",
         "args": {}

@@ -2,10 +2,11 @@ from .core.protocol import Diagnostic
 from .core.sessions import Session
 from .core.types import view2scope
 from .core.typing import Any, Iterable, List, Tuple
+from .core.views import DIAGNOSTIC_SEVERITY
 from .core.windows import AbstractViewListener
 from .session_buffer import SessionBuffer
-from weakref import WeakValueDictionary
 from weakref import ref
+from weakref import WeakValueDictionary
 import sublime
 
 
@@ -68,6 +69,8 @@ class SessionView:
                 settings.set(self.LANGUAGE_ID_KEY, languages)
             else:
                 settings.erase(self.LANGUAGE_ID_KEY)
+        for severity in range(1, len(DIAGNOSTIC_SEVERITY) + 1):
+            self.view.erase_regions(self.diagnostics_key(severity))
 
     def _increment_hover_count(self) -> None:
         settings = self.view.settings()
@@ -99,9 +102,27 @@ class SessionView:
         if listener:
             listener.on_session_shutdown_async(self.session)
 
-    def present_diagnostics_async(self, diagnostics: List[Diagnostic]) -> None:
-        # TODO: Present diagnostics here.
-        pass
+    def diagnostics_key(self, severity: int) -> str:
+        return "lsp{}d{}".format(self.session.config.name, severity)
+
+    def present_diagnostics_async(self, flags: int) -> None:
+        data_per_severity = self.session_buffer.data_per_severity
+        for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
+            key = self.diagnostics_key(severity)
+            data = data_per_severity.get(severity)
+            if data is None:
+                self.view.erase_regions(key)
+            elif data.icon or flags != (sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE):
+                self.view.add_regions(key, data.regions, data.scope, data.icon, flags)
+            else:
+                self.view.erase_regions(key)
+        listener = self.listener()
+        if listener:
+            listener.update_total_errors_and_warnings_status_async()
+            listener.update_diagnostic_in_status_bar_async()
+
+    def get_diagnostics_async(self) -> List[Diagnostic]:
+        return self.session_buffer.diagnostics
 
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
         self.session_buffer.on_text_changed_async(changes)

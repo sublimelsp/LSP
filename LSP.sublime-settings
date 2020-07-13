@@ -41,6 +41,13 @@
   // hint: 4
   "auto_show_diagnostics_panel_level": 2,
 
+  // Only show diagnostics in the panel with a severity equal to or less than:
+  // error: 1
+  // warning: 2
+  // info: 3
+  // hint: 4
+  "diagnostics_panel_include_severity_level": 4,
+
   // Show errors and warnings count in the status bar
   "show_diagnostics_count_in_view_status": false,
 

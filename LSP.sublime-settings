@@ -41,13 +41,6 @@
   // hint: 4
   "auto_show_diagnostics_panel_level": 2,
 
-  // Only show diagnostics in the panel with a severity equal to or less than:
-  // error: 1
-  // warning: 2
-  // info: 3
-  // hint: 4
-  "diagnostics_panel_include_severity_level": 4,
-
   // Show errors and warnings count in the status bar
   "show_diagnostics_count_in_view_status": false,
 
@@ -55,13 +48,20 @@
   // under the cursor in status bar if available.
   "show_diagnostics_in_view_status": true,
 
-  // Show the diagnostics with level less than or equal to
-  // the given value.
+  // Show highlights and gutter markers in the file views for diagnostics
+  // with level equal to or less than:
   // error: 1
   // warning: 2
   // info: 3
   // hint: 4
   "show_diagnostics_severity_level": 4,
+
+  // Only show diagnostics in the panel with level equal to or less than:
+  // error: 1
+  // warning: 2
+  // info: 3
+  // hint: 4
+  "diagnostics_panel_include_severity_level": 4,
 
   // Delay showing diagnostics by this many milliseconds.
   // The delay will only kick into action when previously there were

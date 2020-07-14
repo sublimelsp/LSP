@@ -181,7 +181,7 @@ class SessionBuffer:
                     total_errors += 1
                 elif diagnostic.severity == DiagnosticSeverity.Warning:
                     total_warnings += 1
-                if diagnostic.severity <= settings.show_diagnostics_severity_level:
+                if diagnostic.severity <= settings.diagnostics_panel_include_severity_level:
                     data.panel_contribution.append(format_diagnostic_for_panel(diagnostic))
                 if diagnostic.severity <= settings.auto_show_diagnostics_panel_level:
                     should_show_diagnostics_panel = True

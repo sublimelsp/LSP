@@ -57,6 +57,7 @@ class Settings:
         self.show_view_status = True
         self.auto_show_diagnostics_panel = 'always'
         self.auto_show_diagnostics_panel_level = 2
+        self.diagnostics_panel_include_severity_level = 4
         self.show_diagnostics_count_in_view_status = False
         self.show_diagnostics_in_view_status = True
         self.show_diagnostics_severity_level = 2

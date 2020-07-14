@@ -30,6 +30,7 @@ from abc import ABCMeta
 from abc import abstractmethod
 from collections import deque
 from copy import deepcopy
+from subprocess import CalledProcessError
 from time import time
 from weakref import ref
 from weakref import WeakSet
@@ -262,6 +263,8 @@ class WindowManager(Manager):
                 "Server will be disabled for this window"
             ]).format(config.name, str(e))
             exception_log("Unable to start {}".format(config.name), e)
+            if isinstance(e, CalledProcessError):
+                print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
             self._configs.disable_temporarily(config.name)
             config.erase_view_status(initiating_view)
             sublime.message_dialog(message)

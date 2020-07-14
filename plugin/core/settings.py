@@ -65,6 +65,9 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings) -> None:
                                                                                     "auto_show_diagnostics_panel",
                                                                                     'always')
     settings.auto_show_diagnostics_panel_level = read_int_setting(settings_obj, "auto_show_diagnostics_panel_level", 2)
+    settings.diagnostics_panel_include_severity_level = read_int_setting(settings_obj,
+                                                                         "diagnostics_panel_include_severity_level",
+                                                                         4)
     settings.show_diagnostics_count_in_view_status = read_bool_setting(settings_obj,
                                                                        "show_diagnostics_count_in_view_status", False)
     settings.show_diagnostics_in_view_status = read_bool_setting(settings_obj, "show_diagnostics_in_view_status", True)

@@ -31,12 +31,12 @@ class ServerNotifications(TextDocumentTestCase):
                 }
             ]
         })
-        yield lambda: len(self.view.get_regions("lsp_error")) > 0
-        yield lambda: len(self.view.get_regions("lsp_warning")) > 0
-        yield lambda: len(self.view.get_regions("lsp_info")) > 0
-        errors = self.view.get_regions("lsp_error")
-        warnings = self.view.get_regions("lsp_warning")
-        info = self.view.get_regions("lsp_info")
+        yield lambda: len(self.view.get_regions("lspTESTd1")) > 0
+        yield lambda: len(self.view.get_regions("lspTESTd2")) > 0
+        yield lambda: len(self.view.get_regions("lspTESTd3")) > 0
+        errors = self.view.get_regions("lspTESTd1")
+        warnings = self.view.get_regions("lspTESTd2")
+        info = self.view.get_regions("lspTESTd3")
         self.assertEqual(errors[0], sublime.Region(0, 1))
         self.assertEqual(warnings[0], sublime.Region(2, 3))
         self.assertEqual(info[0], sublime.Region(4, 5))

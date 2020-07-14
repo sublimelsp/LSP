@@ -406,8 +406,18 @@ def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allo
     if is_plain_text:
         return text2html(result)
     else:
-        frontmatter_config = mdpopups.format_frontmatter({'allow_code_wrap': True})
-        return mdpopups.md2html(view, frontmatter_config + result)
+        frontmatter = {
+            "allow_code_wrap": True,
+            "markdown_extensions": [
+                {
+                    "pymdownx.escapeall": {
+                        "hardbreak": False,
+                        "nbsp": False
+                    }
+                }
+            ]
+        }
+        return mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)
 
 
 REPLACEMENT_MAP = {

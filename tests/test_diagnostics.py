@@ -1,17 +1,11 @@
 import unittest
-from collections import OrderedDict
 from unittest import mock
 from LSP.plugin.core.diagnostics import (
-    DiagnosticsStorage, DiagnosticsWalker, DiagnosticsCursor, CURSOR_FORWARD, CURSOR_BACKWARD)
+    DiagnosticsWalker, DiagnosticsCursor, CURSOR_FORWARD, CURSOR_BACKWARD)
 from LSP.plugin.core.protocol import Diagnostic, Point, Range, DiagnosticSeverity
 from test_protocol import LSP_MINIMAL_DIAGNOSTIC
+from LSP.plugin.core.typing import List, Dict, Tuple
 import sublime
-
-
-TYPE_CHECKING = False
-if TYPE_CHECKING:
-    from typing import List, Dict
-    assert List and Dict
 
 
 test_file_path = "test.py" if sublime.platform() == "windows" else "/test.py"
@@ -26,91 +20,25 @@ def at_row(row: int) -> Diagnostic:
     return Diagnostic('message', Range(Point(row, 0), Point(row, 1)), DiagnosticSeverity.Error, None, dict(), [])
 
 
-def diagnostics(test_file_diags: 'List[Diagnostic]',
-                second_file_diags: 'List[Diagnostic]' = []) -> 'Dict[str, Dict[str, List[Diagnostic]]]':
-    diags = OrderedDict()  # type: Dict[str, Dict[str, List[Diagnostic]]]
+def diagnostics(test_file_diags: List[Diagnostic],
+                second_file_diags: List[Diagnostic] = []) -> List[Tuple[str, Dict[str, List[Diagnostic]]]]:
+    diags = []  # type: List[Tuple[str, Dict[str, List[Diagnostic]]]]
     if test_file_diags:
         source_diags = {}
         source_diags[test_server_name] = test_file_diags
-        diags[test_file_path] = source_diags
+        diags.append((test_file_path, source_diags))
     if second_file_diags:
         source_diags = {}
         source_diags[test_server_name] = second_file_diags
-        diags[second_file_path] = source_diags
+        diags.append((second_file_path, source_diags))
     return diags
 
 
-def make_update(diagnostics: 'List[dict]') -> dict:
+def make_update(diagnostics: List[dict]) -> dict:
     return {
         'uri': 'file:///test.py',
         'diagnostics': diagnostics
     }
-
-
-class DiagnosticsStorageTest(unittest.TestCase):
-
-    def test_empty_diagnostics(self):
-        wd = DiagnosticsStorage(None)
-        self.assertEqual(wd.get_by_file(__file__), {})
-        self.assertEqual(wd.get(), {})
-
-    def test_receive_diagnostics(self):
-        ui = mock.Mock()
-        wd = DiagnosticsStorage(ui)
-
-        wd.receive("test_server", make_update([LSP_MINIMAL_DIAGNOSTIC]))
-        view_diags = wd.get_by_file(test_file_path)
-        self.assertEqual(len(view_diags["test_server"]), 1)
-        self.assertEqual(view_diags["test_server"][0].message, LSP_MINIMAL_DIAGNOSTIC['message'])
-        self.assertIn(test_file_path, wd.get())
-        ui.update.assert_called_with(
-            test_file_path, "test_server", {test_file_path: {'test_server': [minimal_diagnostic]}})
-
-        wd.receive("test_server", make_update([]))
-        view_diags = wd.get_by_file(test_file_path)
-        self.assertEqual(len(view_diags), 0)
-        self.assertEqual(wd.get(), {})
-        ui.update.assert_called_with(test_file_path, "test_server", {})
-
-    def test_remove_diagnostics(self):
-        ui = mock.Mock()
-        wd = DiagnosticsStorage(ui)
-
-        wd.receive("test_server", make_update([LSP_MINIMAL_DIAGNOSTIC]))
-        view_diags = wd.get_by_file(test_file_path)
-        self.assertEqual(len(view_diags["test_server"]), 1)
-
-        wd.remove(test_file_path, "test_server")
-
-        view_diags = wd.get_by_file(test_file_path)
-        self.assertEqual(len(view_diags), 0)
-        self.assertEqual(wd.get(), {})
-        ui.update.assert_called_with(test_file_path, "test_server", {})
-
-    def test_clear_diagnostics(self):
-        ui = mock.Mock()
-        wd = DiagnosticsStorage(ui)
-
-        wd.receive("test_server", make_update([LSP_MINIMAL_DIAGNOSTIC]))
-        wd.clear()
-
-        view_diags = wd.get_by_file(test_file_path)
-        self.assertEqual(len(view_diags), 0)
-        self.assertEqual(wd.get(), {})
-        ui.update.assert_called_with(test_file_path, "test_server", {})
-
-    def test_select(self):
-        ui = mock.Mock()
-        wd = DiagnosticsStorage(ui)
-
-        wd.select_next()
-        ui.select.assert_called_with(1)
-
-        wd.select_previous()
-        ui.select.assert_called_with(-1)
-
-        wd.select_none()
-        assert ui.deselect.call_count > 0
 
 
 class DiagnosticsWalkerTests(unittest.TestCase):
@@ -126,12 +54,10 @@ class DiagnosticsWalkerTests(unittest.TestCase):
         assert walk.end.call_count == 1
 
     def test_one_diagnosic(self):
-
         walk = mock.Mock()
         walker = DiagnosticsWalker([walk])
-        diags = {}  # type: Dict[str, Dict[str, List[Diagnostic]]]
-        diags[test_file_path] = {}
-        diags[test_file_path]["test_server"] = [minimal_diagnostic]
+        diags = []  # type: List[Tuple[str, Dict[str, List[Diagnostic]]]]
+        diags.append((test_file_path, {"test_server": [minimal_diagnostic]}))
         walker.walk(diags)
 
         assert walk.begin.call_count == 1

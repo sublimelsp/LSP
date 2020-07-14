@@ -33,7 +33,7 @@ For LSP servers that can handle [workspace/executeCommand](https://microsoft.git
 
 Example:
 
-```json
+```js
 [
   // ...
   {
@@ -89,7 +89,7 @@ The following example overrides `ctrl+r` to use LSP's symbol provider when we're
 ```
 
 More useful keybindings (OS-X), edit Package Settings -> LSP -> Key Bindings
-```
+```js
   { "keys": ["f2"], "command": "lsp_symbol_rename" },
   { "keys": ["f12"], "command": "lsp_symbol_definition" },
   { "keys": ["super+option+r"], "command": "lsp_document_symbols" },
@@ -103,10 +103,25 @@ Some completion items can have documentation associated with them.
 ![documentation popup](images/show-docs-popup.png)
 
 To show the documentation popup you can click the **More** link in the bottom of the autocomplete,
-or you can use the default sublime keybinding `f12` to trigger it.
+or you can use the default sublime keybinding <kbd>F12</kbd> to trigger it.
 
 You can change the default keybinding by remapping the command as below:
 
+```js
+{
+    "command": "auto_complete_open_link",
+    "keys": ["f12"],
+    "context": [
+        {
+            "key": "auto_complete_visible",
+            "operator": "equal",
+            "operand": true
+        }
+    ]
+},
+```
+Note that <kbd>F12</kbd> may conflict with your Goto Definition keybinding. To avoid the conflict, make sure that you
+have a context which checks that the AC widget is not visible:
 ```js
 {
     "command": "lsp_symbol_definition",
@@ -127,6 +142,7 @@ You can change the default keybinding by remapping the command as below:
     ]
 },
 ```
+There is an example of this in LSP's default keybindings.
 
 ### Mouse map configuration
 

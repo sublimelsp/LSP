@@ -33,7 +33,7 @@ For LSP servers that can handle [workspace/executeCommand](https://microsoft.git
 
 Example:
 
-```json
+```js
 [
   // ...
   {
@@ -61,25 +61,35 @@ The following variables will be expanded, but only if they are top-level array i
 
 ### Overriding keybindings
 
-Sublime's keybindings can be edited from the `Preferences: Key Bindings` command.
-The following example overrides `f12` to use LSP's go to definition when in javascript/typescript:
+LSP's keybindings can be edited from the `Preferences: LSP Keybindings` command from the command palette.
+There is a special context called `lsp.session_with_capability` that can check whether there is a language server active
+with the given [LSP capability](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize).
+Refer to the `ServerCapabilities` structure in that link.
+The following example overrides `ctrl+r` to use LSP's symbol provider when we're in a javascript or typescript view:
 
-```
+```js
 {
-	"keys": ["f12"],
-	"command": "lsp_symbol_definition",
-	"context": [
-		{
-			"key": "selector",
-			"operator": "equal",
-			"operand": "source.ts, source.js"
-		}
-	]
-}
+    "command": "lsp_document_symbols",
+    "keys": [
+        "ctrl+r"
+    ],
+    "context": [
+        {
+            "key": "lsp.session_with_capability",
+            "operator": "equal",
+            "operand": "documentSymbolProvider"
+        },
+        {
+            "key": "selector",
+            "operator": "equal",
+            "operand": "source.ts, source.js"
+        }
+    ]
+},
 ```
 
 More useful keybindings (OS-X), edit Package Settings -> LSP -> Key Bindings
-```
+```js
   { "keys": ["f2"], "command": "lsp_symbol_rename" },
   { "keys": ["f12"], "command": "lsp_symbol_definition" },
   { "keys": ["super+option+r"], "command": "lsp_document_symbols" },
@@ -93,17 +103,46 @@ Some completion items can have documentation associated with them.
 ![documentation popup](images/show-docs-popup.png)
 
 To show the documentation popup you can click the **More** link in the bottom of the autocomplete,
-or you can use the default sublime keybinding `f12` to trigger it.
+or you can use the default sublime keybinding <kbd>F12</kbd> to trigger it.
 
-You can change the default keybinding by remaping the command bellow:
+You can change the default keybinding by remapping the command as below:
 
-```
-{ "keys": ["f12"], "command": "auto_complete_open_link", "context":
-	[
-		{ "key": "auto_complete_visible", "operator": "equal", "operand": true },
-	]
+```js
+{
+    "command": "auto_complete_open_link",
+    "keys": ["f12"],
+    "context": [
+        {
+            "key": "auto_complete_visible",
+            "operator": "equal",
+            "operand": true
+        }
+    ]
 },
 ```
+Note that <kbd>F12</kbd> may conflict with your Goto Definition keybinding. To avoid the conflict, make sure that you
+have a context which checks that the AC widget is not visible:
+```js
+{
+    "command": "lsp_symbol_definition",
+    "keys": [
+        "f12"
+    ],
+    "context": [
+        {
+            "key": "lsp.session_with_capability",
+            "operator": "equal",
+            "operand": "definitionProvider"
+        },
+        {
+            "key": "auto_complete_visible",
+            "operator": "equal",
+            "operand": false
+        }
+    ]
+},
+```
+There is an example of this in LSP's default keybindings.
 
 ### Mouse map configuration
 
@@ -126,12 +165,14 @@ Add these settings to LSP settings, your Sublime settings, Syntax-specific setti
 * `code_action_on_save_timeout_ms` `2000` *the amount of time the code actions on save are allowed to run for*
 * `show_references_in_quick_panel` `false` *show symbol references in Sublime's quick panel instead of the bottom panel*
 * `show_view_status` `true` *show permanent language server status in the status bar*
+* 'diagnostics_delay_ms' `0` *delay showing diagnostics by this many milliseconds*
+* `diagnostics_additional_delay_auto_complete_ms` `0` *additional delay when the AC widget is visible*
 * `auto_show_diagnostics_panel` `always` (`never`, `saved`) *open the diagnostics panel automatically if there are diagnostics*
 * `show_diagnostics_count_in_view_status` `false` *show errors and warnings count in the status bar*
 * `show_diagnostics_in_view_status` `true` *when on a diagnostic with the cursor, show the text in the status bar*
-* `diagnostics_highlight_style` `"underline"` *highlight style of code diagnostics, `"underline"` or `"box"`*
+* `diagnostics_highlight_style` `"underline"` *highlight style of code diagnostics: "box", "underline", "stippled", "squiggly" or ""*
 * `highlight_active_signature_parameter`: *highlight the active parameter of the currently active signature*
-* `document_highlight_style`: *document highlight style: "underline", "stippled", "squiggly" or ""*
+* `document_highlight_style`: *document highlight style: "box", "underline", "stippled", "squiggly" or ""*
 * `document_highlight_scopes`: *customize your sublime text scopes for document highlighting*
 * `diagnostics_gutter_marker` `"dot"` *gutter marker for code diagnostics: "dot", "circle", "bookmark", "sign" or ""*
 * `show_symbol_action_links` `false` *show links to symbol actions like go to, references and rename in the hover popup*
@@ -139,6 +180,4 @@ Add these settings to LSP settings, your Sublime settings, Syntax-specific setti
 * `log_debug` `false` *show debug logging in the sublime console*
 * `log_server` `[]` *log communication from and to language servers*
 * `log_stderr` `false` *show language server stderr output in the console*
-
-
-
+* `log_max_size` `8192` *max  number of characters of payloads to print*

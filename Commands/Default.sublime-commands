@@ -89,5 +89,10 @@
     {
         "caption": "LSP: Rename Symbol",
         "command": "lsp_symbol_rename"
+    },
+    {
+        // Note: this has to live here because otherwise the input handler doesn't trigger.
+        "caption": "LSP: Rename",
+        "command": "lsp_rename_basic"
     }
 ]

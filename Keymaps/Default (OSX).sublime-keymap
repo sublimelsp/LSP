@@ -23,19 +23,19 @@
         ]
     },
     // Show Code Actions
-    {
-        "command": "lsp_code_actions",
-        "keys": [
-            "super+."
-        ],
-        "context": [
-            {
-                "key": "lsp.session_with_capability",
-                "operator": "equal",
-                "operand": "codeActionProvider"
-            }
-        ]
-    },
+    // {
+    //     "command": "lsp_code_actions",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp.session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "codeActionProvider"
+    //         }
+    //     ]
+    // },
     // Show/Hide Diagnostics Panel
     {
         "command": "lsp_show_diagnostics_panel",

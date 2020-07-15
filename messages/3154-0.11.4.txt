@@ -1,0 +1,5 @@
+=> 3154-0.11.4
+
+- Update docs in LSP.sublime-settings for LSP: Toggle Log Panel command (Raoul Wols)
+- Update docs to replace abandoned Dart Package (Salomon May)
+- Prefer to show most severe diagnostic when multiple overlap (#1168) (Rafał Chłodnicki)

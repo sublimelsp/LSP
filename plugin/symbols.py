@@ -1,10 +1,11 @@
 from .core.protocol import Request, Range
 from .core.registry import LspTextCommand
-from .core.typing import Any, List, Optional, Tuple, Dict
+from .core.typing import Any, List, Optional, Tuple, Dict, Generator
 from .core.views import location_to_encoded_filename
 from .core.views import range_to_region
 from .core.views import SYMBOL_KINDS
 from .core.views import text_document_identifier
+from contextlib import contextmanager
 import os
 import sublime
 import sublime_plugin
@@ -20,6 +21,13 @@ def format_symbol_scope(kind: int) -> str:
     if 1 <= kind <= len(SYMBOL_KINDS):
         return SYMBOL_KINDS[kind - 1][1]
     return 'comment'
+
+
+@contextmanager
+def _additional_name(names: List[str], name: str) -> Generator[None, None, None]:
+    names.append(name)
+    yield
+    names.pop(-1)
 
 
 class LspSelectionClearCommand(sublime_plugin.TextCommand):
@@ -58,7 +66,6 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         super().__init__(view)
         self.old_regions = []  # type: List[sublime.Region]
         self.regions = []  # type: List[Tuple[sublime.Region, Optional[sublime.Region], str]]
-        self.found_at_least_one_nonempty_detail = False
         self.is_first_selection = False
 
     def run(self, edit: sublime.Edit) -> None:
@@ -119,28 +126,27 @@ class LspDocumentSymbolsCommand(LspTextCommand):
 
     def process_document_symbols(self, items: List[Dict[str, Any]]) -> List[List[str]]:
         quick_panel_items = []  # type: List[List[str]]
-        self.found_at_least_one_nonempty_detail = False
+        names = []  # type: List[str]
         for item in items:
-            self.process_document_symbol_recursive(quick_panel_items, item, 0)
-        if self.found_at_least_one_nonempty_detail:
-            return quick_panel_items
-        else:
-            return [[item[0], item[1]] for item in quick_panel_items]
+            self.process_document_symbol_recursive(quick_panel_items, item, names)
+        return quick_panel_items
 
     def process_document_symbol_recursive(self, quick_panel_items: List[List[str]], item: Dict[str, Any],
-                                          depth: int) -> None:
+                                          names: List[str]) -> None:
         kind = item['kind']
         self.regions.append((range_to_region(Range.from_lsp(item['range']), self.view),
                              range_to_region(Range.from_lsp(item['selectionRange']), self.view),
                              format_symbol_scope(kind)))
-        name = ' ' * (4 * depth) + item['name']
-        quick_panel_item = [name, format_symbol_kind(kind), item.get('detail') or '']
-        if quick_panel_item[2]:
-            self.found_at_least_one_nonempty_detail = True
-        quick_panel_items.append(quick_panel_item)
-        children = item.get('children') or []
-        for child in children:
-            self.process_document_symbol_recursive(quick_panel_items, child, depth + 1)
+        name = item['name']
+        with _additional_name(names, name):
+            kind_and_detail = format_symbol_kind(kind)
+            detail = item.get('detail')
+            if detail:
+                kind_and_detail += " - {}".format(detail)
+            quick_panel_items.append([name, " → ".join(names), kind_and_detail])
+            children = item.get('children') or []
+            for child in children:
+                self.process_document_symbol_recursive(quick_panel_items, child, names)
 
     def process_symbol_informations(self, items: List[Dict[str, Any]]) -> List[List[str]]:
         quick_panel_items = []  # type: List[List[str]]

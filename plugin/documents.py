@@ -228,12 +228,22 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         if action_count == 0:
             return
         suffix = 's' if action_count > 1 else ''
-        code_actions_link = make_link('subl:lsp_code_actions', '{} code action{}'.format(action_count, suffix))
-        self.view.add_regions(self.ACTIONS_ANNOTATION_KEY,
-                              [sublime.Region(self._stored_region.b, self._stored_region.a)],
-                              flags=sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE,
-                              annotations=["<div class=\"actions\">{}</div>".format(code_actions_link)],
-                              annotation_color='#2196F3')
+        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+        region = sublime.Region(self._stored_region.b, self._stored_region.a)
+
+        if global_settings.show_code_actions == 'annotation':
+            code_actions_link = make_link('subl:lsp_code_actions', '{} code action{}'.format(action_count, suffix))
+            self.view.add_regions(self.ACTIONS_ANNOTATION_KEY,
+                                  [region],
+                                  flags=flags,
+                                  annotations=["<div class=\"actions\">{}</div>".format(code_actions_link)],
+                                  annotation_color='#2196F3')
+        elif global_settings.show_code_actions == 'bulb':
+            self.view.add_regions(self.ACTIONS_ANNOTATION_KEY,
+                                  [region],
+                                  'markup.changed',
+                                  'Packages/LSP/icons/lightbulb.png',
+                                  flags)
 
     def _clear_code_actions_annotation(self) -> None:
         self.view.erase_regions(self.ACTIONS_ANNOTATION_KEY)

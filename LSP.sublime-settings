@@ -8,6 +8,11 @@
   // Valid values are "never", "always" and "saved"
   "auto_show_diagnostics_panel": "saved",
 
+  // Show code actions:
+  // "annotation" - show an annotation on the right when code actions are available.
+  // "bulb" - show a bulb in the gutter when code actions are available.
+  "show_code_actions": "annotation",
+
   // Run the server's formatProvider (if supported) on a document before saving.
   // This option is also supported in syntax-specific settings and/or in the
   // "settings" section of project files.

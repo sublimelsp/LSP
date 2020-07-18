@@ -39,7 +39,7 @@ Example:
   {
     "caption": "Thread First",
     "command": "lsp_execute",
-    "args": { 
+    "args": {
       "command_name": "thread-first",
       "command_args": ["${file_uri}", 0, 0]
     }
@@ -162,6 +162,7 @@ Add these settings to LSP settings, your Sublime settings, Syntax-specific setti
 ### Package settings (LSP)
 
 * `only_show_lsp_completions` `false` *disable sublime word completion and snippets from autocomplete lists*
+* `show_code_actions` `annotation` *Show code actions: "annotation", "bulb" *
 * `code_action_on_save_timeout_ms` `2000` *the amount of time the code actions on save are allowed to run for*
 * `show_references_in_quick_panel` `false` *show symbol references in Sublime's quick panel instead of the bottom panel*
 * `show_view_status` `true` *show permanent language server status in the status bar*

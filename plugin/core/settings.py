@@ -90,6 +90,7 @@ def update_settings(settings: Settings, settings_obj: sublime.Settings) -> None:
     settings.log_stderr = read_bool_setting(settings_obj, "log_stderr", False)
     settings.log_max_size = read_int_setting(settings_obj, "log_max_size", 8 * 1024)
     settings.lsp_format_on_save = read_bool_setting(settings_obj, "lsp_format_on_save", False)
+    settings.show_code_actions = read_str_setting(settings_obj, "show_code_actions", "annotation")
     settings.lsp_code_actions_on_save = read_dict_setting(settings_obj, "lsp_code_actions_on_save", {})
     settings.code_action_on_save_timeout_ms = read_int_setting(settings_obj, "code_action_on_save_timeout_ms", 2000)
 

@@ -68,7 +68,7 @@ MISSING_LABEL_SIGNATURE = """<div class="highlight"><pre>
 <entity.name.function></entity.name.function>
 </pre></div>"""
 
-OVERLOADS_FIRST = """**1** of **2** overloads (use the ↑ ↓ keys to navigate):
+OVERLOADS_FIRST = """**1** of **2** overloads (use the ↑ ↓ keys to navigate, press ESC to hide):
 
 <div class="highlight"><pre>
 
@@ -81,7 +81,7 @@ OVERLOADS_FIRST = """**1** of **2** overloads (use the ↑ ↓ keys to navigate)
 <p><b>value</b>: {'value': 'A number to foobar on'}</p>"""
 
 
-OVERLOADS_SECOND = """**2** of **2** overloads (use the ↑ ↓ keys to navigate):
+OVERLOADS_SECOND = """**2** of **2** overloads (use the ↑ ↓ keys to navigate, press ESC to hide):
 
 <div class="highlight"><pre>
 
@@ -94,7 +94,7 @@ OVERLOADS_SECOND = """**2** of **2** overloads (use the ↑ ↓ keys to navigate
 <p>{'value': 'Foobaring with a multiplier'}</p>
 <p><b>value</b>: {'value': 'A number to foobar on'}</p>"""
 
-OVERLOADS_SECOND_SECOND_PARAMETER = """**2** of **2** overloads (use the ↑ ↓ keys to navigate):
+OVERLOADS_SECOND_SECOND_PARAMETER = """**2** of **2** overloads (use the ↑ ↓ keys to navigate, press ESC to hide):
 
 <div class="highlight"><pre>
 

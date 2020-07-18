@@ -156,7 +156,7 @@ class SignatureHelp(object):
         return self._signatures[self._active_signature_index]
 
     def _build_overload_selector(self) -> str:
-        return "**{}** of **{}** overloads (use the ↑ ↓ keys to navigate):\n".format(
+        return "**{}** of **{}** overloads (use the ↑ ↓ keys to navigate, press ESC to hide):\n".format(
             str(self._active_signature_index + 1), str(len(self._signatures)))
 
 

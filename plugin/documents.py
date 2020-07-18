@@ -60,7 +60,7 @@ def is_transient_view(view: sublime.View) -> bool:
 
 class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
-    ACTIONS_ANNOTATION_KEY = "lsp_action_annotations"
+    CODE_ACTIONS_KEY = "lsp_code_action"
     TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY = "lsp_total_errors_and_warnings"
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
     code_actions_debounce_time = 800
@@ -233,20 +233,20 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
         if global_settings.show_code_actions == 'annotation':
             code_actions_link = make_link('subl:lsp_code_actions', '{} code action{}'.format(action_count, suffix))
-            self.view.add_regions(self.ACTIONS_ANNOTATION_KEY,
+            self.view.add_regions(self.CODE_ACTIONS_KEY,
                                   [region],
                                   flags=flags,
                                   annotations=["<div class=\"actions\">{}</div>".format(code_actions_link)],
                                   annotation_color='#2196F3')
         elif global_settings.show_code_actions == 'bulb':
-            self.view.add_regions(self.ACTIONS_ANNOTATION_KEY,
+            self.view.add_regions(self.CODE_ACTIONS_KEY,
                                   [region],
                                   'markup.changed',
                                   'Packages/LSP/icons/lightbulb.png',
                                   flags)
 
     def _clear_code_actions_annotation(self) -> None:
-        self.view.erase_regions(self.ACTIONS_ANNOTATION_KEY)
+        self.view.erase_regions(self.CODE_ACTIONS_KEY)
 
     # --- textDocument/documentColor -----------------------------------------------------------------------------------
 

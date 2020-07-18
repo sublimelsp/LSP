@@ -65,10 +65,13 @@ class LspResolveDocsCommand(LspTextCommand):
                 lambda res: self.handle_resolve_response(res))
 
     def handle_resolve_response(self, item: Optional[dict]) -> None:
-        if not item:
-            return
-        detail = self.format_documentation(item.get('detail') or "")
-        documentation = self.format_documentation(item.get("documentation") or "")
+        detail = ""
+        documentation = ""
+        if item:
+            detail = self.format_documentation(item.get('detail') or "")
+            documentation = self.format_documentation(item.get("documentation") or "")
+        if not documentation:
+            documentation = "<i>No documentation available.</i>"
         minihtml_content = self.get_content(documentation, detail)
         show = self.update_popup if self.view.is_popup_visible() else self.show_popup
         # NOTE: Update/show popups from the main thread, or else the popup might make the AC widget disappear.

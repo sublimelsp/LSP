@@ -474,7 +474,7 @@ npm install -g javascript-typescript-langserver
     "julia.format.kw": true,         // Remove spaces around = in function keywords
     "julia.format.lineends": false,  // [undocumented]
     "julia.format.ops": true,        // Format whitespace around operators
-    "julia.format.tuples": true      // Format tuples
+    "julia.format.tuples": true,     // Format tuples
     "julia.lint.call": false,        // Check calls against existing methods (experimental)
     "julia.lint.constif": true,      // Check for constant conditionals of if statements
     "julia.lint.datadecl": false,    // [undocumented]

@@ -17,6 +17,14 @@ def format_symbol_kind(kind: int) -> str:
     return str(kind)
 
 
+def _kind_and_detail(item: Dict[str, Any]) -> str:
+    kind = format_symbol_kind(item["kind"])
+    detail = item.get("detail")
+    if isinstance(detail, str) and detail:
+        return "{} | {}".format(kind, detail)
+    return kind
+
+
 def format_symbol_scope(kind: int) -> str:
     if 1 <= kind <= len(SYMBOL_KINDS):
         return SYMBOL_KINDS[kind - 1][1]
@@ -139,11 +147,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                              format_symbol_scope(kind)))
         name = item['name']
         with _additional_name(names, name):
-            kind_and_detail = format_symbol_kind(kind)
-            detail = item.get('detail')
-            if detail:
-                kind_and_detail += " - {}".format(detail)
-            quick_panel_items.append([name, " → ".join(names), kind_and_detail])
+            quick_panel_items.append([name, "{} | {}".format(_kind_and_detail(item), " > ".join(names))])
             children = item.get('children') or []
             for child in children:
                 self.process_document_symbol_recursive(quick_panel_items, child, names)
@@ -154,7 +158,11 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             kind = item['kind']
             self.regions.append((range_to_region(Range.from_lsp(item['location']['range']), self.view),
                                  None, format_symbol_scope(kind)))
-            quick_panel_items.append([item['name'], format_symbol_kind(kind)])
+            container = item.get("containerName")
+            second_row = _kind_and_detail(item)
+            if container:
+                second_row += " | {}".format(container)
+            quick_panel_items.append([item['name'], second_row])
         return quick_panel_items
 
 

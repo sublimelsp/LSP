@@ -227,7 +227,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         action_count = sum(map(len, responses.values()))
         if action_count == 0:
             return
-        suffix = 's' if action_count > 1 else ''
         regions = [sublime.Region(self._stored_region.b, self._stored_region.a)]
         scope = ""
         icon = ""
@@ -239,6 +238,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             icon = 'Packages/LSP/icons/lightbulb.png'
         else:
             # else show_code_actions == 'annotation'
+            suffix = 's' if action_count > 1 else ''
             code_actions_link = make_link('subl:lsp_code_actions', '{} code action{}'.format(action_count, suffix))
             annotations = ["<div class=\"actions\">{}</div>".format(code_actions_link)]
             annotation_color = '#2196F3'

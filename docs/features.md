@@ -10,7 +10,7 @@
 
 **Document actions**
 
-* Show Code Actions: `super+.`
+* Show Code Actions: UNBOUND
 * Symbol References: `shift+f12`
 * Rename Symbol: UNBOUND
     * Recommendation: Override `F2` (next bookmark)

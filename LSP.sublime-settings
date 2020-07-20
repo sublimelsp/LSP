@@ -50,6 +50,7 @@
 
   // Show highlights and gutter markers in the file views for diagnostics
   // with level equal to or less than:
+  // none: 0
   // error: 1
   // warning: 2
   // info: 3

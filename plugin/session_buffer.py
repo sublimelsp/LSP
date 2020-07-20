@@ -185,14 +185,14 @@ class SessionBuffer:
                     data.panel_contribution.append(format_diagnostic_for_panel(diagnostic))
                 if diagnostic.severity <= settings.auto_show_diagnostics_panel_level:
                     should_show_diagnostics_panel = True
-        self._publish_diagnostics_to_session_views(
-            diagnostics_version,
-            diagnostics,
-            data_per_severity,
-            total_errors,
-            total_warnings,
-            should_show_diagnostics_panel
-        )
+            self._publish_diagnostics_to_session_views(
+                diagnostics_version,
+                diagnostics,
+                data_per_severity,
+                total_errors,
+                total_warnings,
+                should_show_diagnostics_panel
+            )
 
     def _publish_diagnostics_to_session_views(
         self,

@@ -32,8 +32,6 @@ from .plugin.hover import LspHoverCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand
 from .plugin.panels import LspToggleServerPanelCommand
 from .plugin.references import LspSymbolReferencesCommand
-from .plugin.rename import LspRenameBasicCommand
-from .plugin.rename import LspRenamePrepareCommand
 from .plugin.rename import LspSymbolRenameCommand
 from .plugin.save_command import LspSaveCommand
 from .plugin.selection_range import LspExpandSelectionCommand

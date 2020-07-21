@@ -289,6 +289,33 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield from expand_and_check(1, 3)
         yield from expand_and_check(0, 5)
 
+    def test_rename(self) -> 'Generator':
+        self.insert_characters("foo\nfoo\nfoo\n")
+        self.set_response("textDocument/rename", {
+                'changes': {
+                    filename_to_uri(TEST_FILE_PATH): [
+                        {
+                            'range': {'start': {'character': 0, 'line': 0}, 'end': {'character': 3, 'line': 0}},
+                            'newText': 'bar'
+                        },
+                        {
+                            'range': {'start': {'character': 0, 'line': 1}, 'end': {'character': 3, 'line': 1}},
+                            'newText': 'bar'
+                        },
+                        {
+                            'range': {'start': {'character': 0, 'line': 2}, 'end': {'character': 3, 'line': 2}},
+                            'newText': 'bar'
+                        }
+                    ]
+                }
+            }
+        )
+        self.view.run_command("lsp_selection_set", {"regions": [(0, 0)]})
+        self.view.run_command("lsp_symbol_rename", {"new_name": "bar"})
+        yield from self.await_message("textDocument/rename")
+        yield from self.await_view_change(9)
+        self.assertEqual(self.view.substr(sublime.Region(0, self.view.size())), "bar\nbar\nbar\n")
+
 
 class WillSaveWaitUntilTestCase(TextDocumentTestCase):
 

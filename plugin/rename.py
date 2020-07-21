@@ -42,7 +42,6 @@ class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
 class LspSymbolRenameCommand(LspTextCommand):
 
     capability = 'renameProvider'
-    placeholder = ""
 
     def is_enabled(self, event: Optional[dict] = None) -> bool:
         if self.session("renameProvider.prepareProvider"):
@@ -52,7 +51,6 @@ class LspSymbolRenameCommand(LspTextCommand):
         return super().is_enabled(event) and is_at_word(self.view, event)
 
     def input(self, args: dict) -> Optional[sublime_plugin.TextInputHandler]:
-        print("the args are:", args)
         if "new_name" not in args:
             return RenameSymbolInputHandler(self.view, args.get("placeholder", ""))
         else:

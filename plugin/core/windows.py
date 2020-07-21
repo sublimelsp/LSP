@@ -42,6 +42,8 @@ import threading
 
 class AbstractViewListener(metaclass=ABCMeta):
 
+    TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY = "lsp_total_errors_and_warnings"
+
     view = None  # type: sublime.View
 
     @property
@@ -66,7 +68,7 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def update_total_errors_and_warnings_status_async(self) -> None:
+    def sum_total_errors_and_warnings_async(self) -> Tuple[int, int]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -76,6 +78,17 @@ class AbstractViewListener(metaclass=ABCMeta):
 
 def extract_message(params: Any) -> str:
     return params.get("message", "???") if isinstance(params, dict) else "???"
+
+
+def set_diagnostics_count(view: sublime.View, errors: int, warnings: int) -> None:
+    try:
+        key = AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY
+        if settings.show_diagnostics_count_in_view_status:
+            view.set_status(key, "E: {}, W: {}".format(errors, warnings))
+        else:
+            view.erase_status(key)
+    except Exception:
+        pass
 
 
 class WindowManager(Manager):
@@ -100,6 +113,8 @@ class WindowManager(Manager):
         self._new_session = None  # type: Optional[Session]
         self._cursor = DiagnosticsCursor(settings.show_diagnostics_severity_level)
         self._diagnostic_phantom_set = None  # type: Optional[sublime.PhantomSet]
+        self.total_error_count = 0
+        self.total_warning_count = 0
 
     def on_load_project_async(self) -> None:
         # TODO: Also end sessions that were previously enabled in the .sublime-project, but now disabled or removed
@@ -128,6 +143,7 @@ class WindowManager(Manager):
         sublime.set_timeout_async(lambda: self.register_listener_async(listener))
 
     def register_listener_async(self, listener: AbstractViewListener) -> None:
+        set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
         if not self._workspace.contains(listener.view):
             # TODO: Handle views outside the workspace https://github.com/sublimelsp/LSP/issues/997
             return
@@ -364,7 +380,13 @@ class WindowManager(Manager):
             return
         to_render = []  # type: List[str]
         base_dir = None
-        for listener in self._listeners:
+        self.total_error_count = 0
+        self.total_warning_count = 0
+        listeners = list(self._listeners)
+        for listener in listeners:
+            local_errors, local_warnings = listener.sum_total_errors_and_warnings_async()
+            self.total_error_count += local_errors
+            self.total_warning_count += local_warnings
             contribution = listener.diagnostics_panel_contribution_async()
             if not contribution:
                 continue
@@ -378,6 +400,8 @@ class WindowManager(Manager):
         else:
             panel.settings().erase("result_base_dir")
         panel.run_command("lsp_update_panel", {"characters": "\n".join(to_render)})
+        for listener in listeners:
+            set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
 
     def _can_manipulate_diagnostics_panel(self) -> bool:
         active_panel = self._window.active_panel()

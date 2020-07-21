@@ -67,6 +67,13 @@ def is_transient_view(view: sublime.View) -> bool:
         return True
 
 
+def previous_non_whitespace_char(view: sublime.View, pt: int) -> str:
+    prev = view.substr(pt - 1)
+    if prev.isspace():
+        return view.substr(view.find_by_class(pt, False, ~0) - 1)
+    return prev
+
+
 class ColorSchemeScopeRenderer:
     def __init__(self, view: sublime.View) -> None:
         self._scope_styles = {}  # type: dict
@@ -254,7 +261,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             elif self._sighelp and self._sighelp.has_multiple_signatures() and not self.view.is_auto_complete_visible():
                 # We use the "operand" for the number -1 or +1. See the keybindings.
                 self._sighelp.select_signature(operand)
-                self._update_popup(self._sighelp.build_popup_content(self._sighelp_renderer))
+                self._update_sighelp_popup(self._sighelp.build_popup_content(self._sighelp_renderer))
                 return True  # We handled this keybinding.
         return False
 
@@ -264,6 +271,11 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
                 or "hover" in global_settings.disabled_capabilities):
             return
         self.view.run_command("lsp_hover", {"point": point})
+
+    def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
+        if command_name in ("next_field", "prev_field") and args is None:
+            if "signatureHelp" not in global_settings.disabled_capabilities:
+                sublime.set_timeout_async(self._do_signature_help)
 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
 
@@ -275,60 +287,44 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             return
         if not self.view.match_selector(pos, self.view.settings().get("auto_complete_selector") or ""):  # ???
             return
-        provider = None  # type: Optional[Dict[str, Any]]
-        session = None  # type: Optional[Session]
-        for sv in self.session_views_async():
-            provider = sv.session.get_capability("signatureHelpProvider")
-            if provider:
-                session = sv.session
-                break
-        if not provider or not session:
+        session = self.session("signatureHelpProvider")
+        if not session:
             return
-        triggers = provider.get("triggerCharacters") or []
+        triggers = session.get_capability("signatureHelpProvider.triggerCharacters")
         if not triggers:
             return
-        last_char = self.view.substr(pos - 1)
+        last_char = previous_non_whitespace_char(self.view, pos)
         if last_char in triggers:
             self.purge_changes_async()
             params = text_document_position_params(self.view, pos)
             session.send_request(Request.signatureHelp(params), lambda resp: self._on_signature_help(resp, pos))
-        elif self.view.is_popup_visible():
-            if last_char.isspace():
-                # Peek behind to find the last non-whitespace character.
-                last_non_white_space_position = self.view.find_by_class(pos, False, ~0)
-                last_char = self.view.substr(last_non_white_space_position - 1)
-            if last_char not in triggers:
-                # TODO: Refactor popup usage to a common class. We now have sigHelp, completionDocs, hover, and diags
-                # all using a popup. Most of these systems assume they have exclusive access to a popup, while in
-                # reality there is only one popup per view.
-                self.view.hide_popup()
+        else:
+            # TODO: Refactor popup usage to a common class. We now have sigHelp, completionDocs, hover, and diags
+            # all using a popup. Most of these systems assume they have exclusive access to a popup, while in
+            # reality there is only one popup per view.
+            self.view.hide_popup()
+            self._sighelp = None
 
     def _on_signature_help(self, response: Optional[Dict], point: int) -> None:
-        region = self._get_current_region_async()
-        if region is None:
-            return
-        if point != region.b:
-            return
         self._sighelp = create_signature_help(response)
         if self._sighelp:
             content = self._sighelp.build_popup_content(self._sighelp_renderer)
 
             def render_sighelp_on_main_thread() -> None:
                 if self.view.is_popup_visible():
-                    self._update_popup(content)
+                    self._update_sighelp_popup(content)
                 else:
-                    self._show_popup(content, point)
+                    self._show_sighelp_popup(content, point)
 
             sublime.set_timeout(render_sighelp_on_main_thread)
 
-    def _show_popup(self, content: str, point: int) -> None:
+    def _show_sighelp_popup(self, content: str, point: int) -> None:
         # TODO: There are a bunch of places in the code where we assume we have exclusive access to a popup. The reality
         # is that there is really only one popup per view. Refactor everything that interacts with the popup to a common
         # class.
         flags = 0
         flags |= sublime.HIDE_ON_MOUSE_MOVE_AWAY
         flags |= sublime.COOPERATE_WITH_AUTO_COMPLETE
-        flags |= sublime.KEEP_ON_SELECTION_MODIFIED
         mdpopups.show_popup(self.view,
                             content,
                             css=css().popups,
@@ -337,21 +333,21 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
                             location=point,
                             wrapper_class=css().popups_classname,
                             max_width=800,
-                            on_hide=self._on_hide,
-                            on_navigate=self._on_signature_help_navigate)
+                            on_hide=self._on_sighelp_hide,
+                            on_navigate=self._on_sighelp_navigate)
         self._visible = True
 
-    def _update_popup(self, content: str) -> None:
+    def _update_sighelp_popup(self, content: str) -> None:
         mdpopups.update_popup(self.view,
                               content,
                               css=css().popups,
                               md=True,
                               wrapper_class=css().popups_classname)
 
-    def _on_hide(self) -> None:
+    def _on_sighelp_hide(self) -> None:
         self._visible = False
 
-    def _on_signature_help_navigate(self, href: str) -> None:
+    def _on_sighelp_navigate(self, href: str) -> None:
         webbrowser.open_new_tab(href)
 
     # --- textDocument/codeAction --------------------------------------------------------------------------------------

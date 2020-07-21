@@ -5,7 +5,7 @@ from .core.protocol import Range
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
-from .core.typing import Any, Dict, Optional, Tuple
+from .core.typing import Any, Optional
 from .core.views import range_to_region
 from .core.views import text_document_position_params
 from .documents import is_at_word

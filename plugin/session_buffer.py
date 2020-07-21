@@ -169,7 +169,6 @@ class SessionBuffer:
         if version is None:
             version = change_count
         if version == change_count:
-            diagnostics_version = version
             for index, diagnostic in enumerate(map(Diagnostic.from_lsp, raw_diagnostics)):
                 diagnostics.append(diagnostic)
                 data = data_per_severity.get(diagnostic.severity)
@@ -185,14 +184,14 @@ class SessionBuffer:
                     data.panel_contribution.append(format_diagnostic_for_panel(diagnostic))
                 if diagnostic.severity <= settings.auto_show_diagnostics_panel_level:
                     should_show_diagnostics_panel = True
-            self._publish_diagnostics_to_session_views(
-                diagnostics_version,
-                diagnostics,
-                data_per_severity,
-                total_errors,
-                total_warnings,
-                should_show_diagnostics_panel
-            )
+        self._publish_diagnostics_to_session_views(
+            version,
+            diagnostics,
+            data_per_severity,
+            total_errors,
+            total_warnings,
+            should_show_diagnostics_panel
+        )
 
     def _publish_diagnostics_to_session_views(
         self,

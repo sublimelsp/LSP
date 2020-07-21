@@ -61,7 +61,6 @@ def is_transient_view(view: sublime.View) -> bool:
 class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     ACTIONS_ANNOTATION_KEY = "lsp_action_annotations"
-    TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY = "lsp_total_errors_and_warnings"
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
     code_actions_debounce_time = 800
     color_boxes_debounce_time = 500
@@ -80,7 +79,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     def __del__(self) -> None:
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms.update([])
-        self.view.erase_status(self.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
+        self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
         self._clear_highlight_regions()
         self._clear_session_views_async()
 
@@ -96,13 +95,11 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         if added:
             if "colorProvider" not in global_settings.disabled_capabilities:
                 self._do_color_boxes_async()
-            self.update_total_errors_and_warnings_status_async()
 
     def on_session_shutdown_async(self, session: Session) -> None:
         self._session_views.pop(session.config.name, None)
         if not self._session_views:
             self.view.settings().erase("lsp_active")
-        self.update_total_errors_and_warnings_status_async()
 
     def diagnostics_panel_contribution_async(self) -> List[str]:
         result = []  # type: List[str]
@@ -119,12 +116,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         for sv in self.session_views_async():
             result[sv.session.config.name] = sv.get_diagnostics_async()
         return result
-
-    def update_total_errors_and_warnings_status_async(self) -> None:
-        if global_settings.show_diagnostics_count_in_view_status:
-            self.view.set_status(
-                self.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY,
-                "E: {}, W: {}".format(*self._sum_total_errors_and_warnings_async()))
 
     def update_diagnostic_in_status_bar_async(self) -> None:
         if global_settings.show_diagnostics_in_view_status:
@@ -298,6 +289,14 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     def diagnostics_intersecting_range_async(self, r: Range) -> Tuple[Dict[str, List[Diagnostic]], Range]:
         return filter_by_range(self.diagnostics_async(), r)
 
+    def sum_total_errors_and_warnings_async(self) -> Tuple[int, int]:
+        errors = 0
+        warnings = 0
+        for sb in self.session_buffers_async():
+            errors += sb.total_errors
+            warnings += sb.total_warnings
+        return errors, warnings
+
     # --- Private utility methods --------------------------------------------------------------------------------------
 
     def _when_selection_remains_stable_async(self, f: Callable[[], None], r: sublime.Region, after_ms: int) -> None:
@@ -343,14 +342,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             session_views.clear()
 
         sublime.set_timeout_async(clear_async)
-
-    def _sum_total_errors_and_warnings_async(self) -> Tuple[int, int]:
-        errors = 0
-        warnings = 0
-        for sb in self.session_buffers_async():
-            errors += sb.total_errors
-            warnings += sb.total_warnings
-        return errors, warnings
 
     def __str__(self) -> str:
         return str(self.view.id())

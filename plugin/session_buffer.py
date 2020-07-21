@@ -77,6 +77,9 @@ class SessionBuffer:
         self.should_show_diagnostics_panel = False
 
     def __del__(self) -> None:
+        mgr = self.session.manager()
+        if mgr:
+            mgr.update_diagnostics_panel_async()
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
         if not self.session.exiting:

@@ -105,7 +105,7 @@
   // Show code actions:
   // "annotation" - show an annotation on the right when code actions are available.
   // "bulb" - show a bulb in the gutter when code actions are available.
-  // Note: Due to API limitations, the "bulb" icon can not be clicked so the code actions can only triggered
+  // Note: Due to API limitations, the "bulb" icon can not be clicked so the code actions can only be triggered
   // using a keyboard shortcut or the context menu.
   "show_code_actions": "annotation",
 

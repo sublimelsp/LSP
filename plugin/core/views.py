@@ -28,7 +28,7 @@ DIAGNOSTIC_SEVERITY = [
 # The scope names mainly come from http://www.sublimetext.com/docs/3/scope_naming.html
 SYMBOL_KINDS = [
     # Display Name     ST Scope
-    ("File",           "comment"),
+    ("File",           "string"),
     ("Module",         "entity.name.namespace"),
     ("Namespace",      "entity.name.namespace"),
     ("Package",        "entity.name.namespace"),

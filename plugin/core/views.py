@@ -25,34 +25,35 @@ DIAGNOSTIC_SEVERITY = [
     ("hint",    "hints",    "region.bluish",    "Packages/LSP/icons/info.png"),
 ]
 
+# The scope names mainly come from http://www.sublimetext.com/docs/3/scope_naming.html
 SYMBOL_KINDS = [
     # Display Name     ST Scope
     ("File",           "comment"),
-    ("Module",         "comment"),
-    ("Namespace",      "keyword.control"),
-    ("Package",        "comment"),
+    ("Module",         "entity.name.namespace"),
+    ("Namespace",      "entity.name.namespace"),
+    ("Package",        "entity.name.namespace"),
     ("Class",          "entity.name.class"),
     ("Method",         "entity.name.function"),
-    ("Property",       "comment"),
-    ("Field",          "comment"),
-    ("Constructor",    "entity.name.function"),
-    ("Enum",           "comment"),
-    ("Interface",      "entity.name.class"),
+    ("Property",       "variable.other.member"),
+    ("Field",          "variable.other.member"),
+    ("Constructor",    "entity.name.function.constructor"),
+    ("Enum",           "entity.name.enum"),
+    ("Interface",      "entity.name.interface"),
     ("Function",       "entity.name.function"),
-    ("Variable",       "variable"),
-    ("Constant",       "constant"),
+    ("Variable",       "variable.other.readwrite"),
+    ("Constant",       "variable.other.constant"),
     ("String",         "string"),
     ("Number",         "constant.numeric"),
-    ("Boolean",        "constant"),
-    ("Array",          "variable"),
-    ("Object",         "variable"),
-    ("Key",            "comment"),
-    ("Null",           "comment"),
-    ("Enum Member",    "comment"),
-    ("Struct",         "comment"),
-    ("Event",          "comment"),
-    ("Operator",       "comment"),
-    ("Type Parameter", "comment"),
+    ("Boolean",        "constant.language"),
+    ("Array",          "meta.sequence"),  # Unsure about this one [scope taken from JSON.sublime-syntax]
+    ("Object",         "meta.mapping"),  # Unsure about this one [scope taken from JSON.sublime-syntax]
+    ("Key",            "string meta.mapping.key"),  # Unsure about this one [scope taken from JSON.sublime-syntax]
+    ("Null",           "constant.language"),
+    ("Enum Member",    "storage.type.enum keyword.declaration.enum"),  # ???
+    ("Struct",         "entity.name.struct"),
+    ("Event",          "storage.modifier"),   # Unsure about this one [scope taken from C#.sublime-syntax]
+    ("Operator",       "keyword.operator"),
+    ("Type Parameter", "storage.type"),
 ]
 
 COMPLETION_KINDS = [

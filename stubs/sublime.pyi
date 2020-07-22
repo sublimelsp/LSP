@@ -27,6 +27,7 @@ HTML = ...  # type: int
 COOPERATE_WITH_AUTO_COMPLETE = ...  # type: int
 HIDE_ON_MOUSE_MOVE = ...  # type: int
 HIDE_ON_MOUSE_MOVE_AWAY = ...  # type: int
+KEEP_ON_SELECTION_MODIFIED = ...  # type: int
 DRAW_EMPTY = ...  # type: int
 HIDE_ON_MINIMAP = ...  # type: int
 DRAW_EMPTY_AS_OVERWRITE = ...  # type: int

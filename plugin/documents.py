@@ -1,5 +1,6 @@
 from .code_actions import actions_manager
 from .code_actions import CodeActionsByConfigName
+from .core.css import css
 from .core.protocol import Diagnostic
 from .core.protocol import DocumentHighlightKind
 from .core.protocol import Range
@@ -8,12 +9,17 @@ from .core.registry import get_position
 from .core.registry import LSPViewEventListener
 from .core.sessions import Session
 from .core.settings import settings as global_settings
+from .core.signature_help import create_signature_help
+from .core.signature_help import SignatureHelp
 from .core.types import debounced
-from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple
+from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import document_color_params
+from .core.views import FORMAT_MARKUP_CONTENT
+from .core.views import FORMAT_STRING
 from .core.views import lsp_color_to_phantom
 from .core.views import make_link
+from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import region_to_range
 from .core.views import text_document_position_params
@@ -22,7 +28,10 @@ from .diagnostics import filter_by_range
 from .diagnostics import view_diagnostics
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
+import html
+import mdpopups
 import sublime
+import webbrowser
 
 
 SUBLIME_WORD_MASK = 515
@@ -58,6 +67,39 @@ def is_transient_view(view: sublime.View) -> bool:
         return True
 
 
+def previous_non_whitespace_char(view: sublime.View, pt: int) -> str:
+    prev = view.substr(pt - 1)
+    if prev.isspace():
+        return view.substr(view.find_by_class(pt, False, ~0) - 1)
+    return prev
+
+
+class ColorSchemeScopeRenderer:
+    def __init__(self, view: sublime.View) -> None:
+        self._scope_styles = {}  # type: dict
+        self._view = view
+        for scope in ["entity.name.function", "variable.parameter", "punctuation"]:
+            self._scope_styles[scope] = mdpopups.scope2style(view, scope)
+
+    def function(self, content: str, escape: bool = True) -> str:
+        return self._wrap_with_scope_style(content, "entity.name.function", escape=escape)
+
+    def punctuation(self, content: str) -> str:
+        return self._wrap_with_scope_style(content, "punctuation")
+
+    def parameter(self, content: str, emphasize: bool = False) -> str:
+        return self._wrap_with_scope_style(content, "variable.parameter", emphasize)
+
+    def markup(self, content: Union[str, Dict[str, str]]) -> str:
+        return minihtml(self._view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
+
+    def _wrap_with_scope_style(self, content: str, scope: str, emphasize: bool = False, escape: bool = True) -> str:
+        color = self._scope_styles[scope]["color"]
+        additional_styles = 'font-weight: bold; text-decoration: underline;' if emphasize else ''
+        content = html.escape(content, quote=False) if escape else content
+        return '<span style="color: {};{}">{}</span>'.format(color, additional_styles, content)
+
+
 class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     ACTIONS_ANNOTATION_KEY = "lsp_action_annotations"
@@ -75,6 +117,8 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         self._session_views = {}  # type: Dict[str, SessionView]
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
+        self._sighelp = None  # type: Optional[SignatureHelp]
+        self._sighelp_renderer = ColorSchemeScopeRenderer(self.view)
 
     def __del__(self) -> None:
         self._stored_region = sublime.Region(-1, -1)
@@ -162,13 +206,16 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
         self._clear_highlight_regions()
         different, current_region = self._update_stored_region_async()
-        if different:
-            if "colorProvider" not in global_settings.disabled_capabilities:
-                self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region,
-                                                          after_ms=self.color_boxes_debounce_time)
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_text_changed_async(changes)
+        if not different:
+            return
+        if "colorProvider" not in global_settings.disabled_capabilities:
+            self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region,
+                                                      after_ms=self.color_boxes_debounce_time)
+        if "signatureHelp" not in global_settings.disabled_capabilities:
+            self._do_signature_help()
 
     def on_revert_async(self) -> None:
         if self.view.is_primary():
@@ -197,8 +244,17 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             return False
         elif key in ("lsp.sessions", "setting.lsp_active"):
             return bool(self._session_views)
-        else:
-            return False
+        elif key == "lsp.signature_help":
+            if not self.view.is_popup_visible():
+                if operand == 0:
+                    sublime.set_timeout_async(self._do_signature_help)
+                    return True
+            elif self._sighelp and self._sighelp.has_multiple_signatures() and not self.view.is_auto_complete_visible():
+                # We use the "operand" for the number -1 or +1. See the keybindings.
+                self._sighelp.select_signature(operand)
+                self._update_sighelp_popup(self._sighelp.build_popup_content(self._sighelp_renderer))
+                return True  # We handled this keybinding.
+        return False
 
     def on_hover(self, point: int, hover_zone: int) -> None:
         if (hover_zone != sublime.HOVER_TEXT
@@ -206,6 +262,84 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
                 or "hover" in global_settings.disabled_capabilities):
             return
         self.view.run_command("lsp_hover", {"point": point})
+
+    def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
+        if command_name in ("next_field", "prev_field") and args is None:
+            if "signatureHelp" not in global_settings.disabled_capabilities:
+                sublime.set_timeout_async(self._do_signature_help)
+
+    # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
+
+    def _do_signature_help(self) -> None:
+        # NOTE: We take the beginning of the region to check the previous char (see last_char variable). This is for
+        # when a language server inserts a snippet completion.
+        pos = self._stored_region.a
+        if pos == -1:
+            return
+        if not self.view.match_selector(pos, self.view.settings().get("auto_complete_selector") or ""):  # ???
+            return
+        session = self.session("signatureHelpProvider")
+        if not session:
+            return
+        triggers = session.get_capability("signatureHelpProvider.triggerCharacters")
+        if not triggers:
+            return
+        last_char = previous_non_whitespace_char(self.view, pos)
+        if last_char in triggers:
+            self.purge_changes_async()
+            params = text_document_position_params(self.view, pos)
+            session.send_request(Request.signatureHelp(params), lambda resp: self._on_signature_help(resp, pos))
+        else:
+            # TODO: Refactor popup usage to a common class. We now have sigHelp, completionDocs, hover, and diags
+            # all using a popup. Most of these systems assume they have exclusive access to a popup, while in
+            # reality there is only one popup per view.
+            self.view.hide_popup()
+            self._sighelp = None
+
+    def _on_signature_help(self, response: Optional[Dict], point: int) -> None:
+        self._sighelp = create_signature_help(response)
+        if self._sighelp:
+            content = self._sighelp.build_popup_content(self._sighelp_renderer)
+
+            def render_sighelp_on_main_thread() -> None:
+                if self.view.is_popup_visible():
+                    self._update_sighelp_popup(content)
+                else:
+                    self._show_sighelp_popup(content, point)
+
+            sublime.set_timeout(render_sighelp_on_main_thread)
+
+    def _show_sighelp_popup(self, content: str, point: int) -> None:
+        # TODO: There are a bunch of places in the code where we assume we have exclusive access to a popup. The reality
+        # is that there is really only one popup per view. Refactor everything that interacts with the popup to a common
+        # class.
+        flags = 0
+        flags |= sublime.HIDE_ON_MOUSE_MOVE_AWAY
+        flags |= sublime.COOPERATE_WITH_AUTO_COMPLETE
+        mdpopups.show_popup(self.view,
+                            content,
+                            css=css().popups,
+                            md=True,
+                            flags=flags,
+                            location=point,
+                            wrapper_class=css().popups_classname,
+                            max_width=800,
+                            on_hide=self._on_sighelp_hide,
+                            on_navigate=self._on_sighelp_navigate)
+        self._visible = True
+
+    def _update_sighelp_popup(self, content: str) -> None:
+        mdpopups.update_popup(self.view,
+                              content,
+                              css=css().popups,
+                              md=True,
+                              wrapper_class=css().popups_classname)
+
+    def _on_sighelp_hide(self) -> None:
+        self._visible = False
+
+    def _on_sighelp_navigate(self, href: str) -> None:
+        webbrowser.open_new_tab(href)
 
     # --- textDocument/codeAction --------------------------------------------------------------------------------------
 
@@ -309,6 +443,15 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             self.manager.register_listener_async(self)
 
     def _update_stored_region_async(self) -> Tuple[bool, sublime.Region]:
+        """
+        Stores the current first selection in a variable.
+        Note that due to this function (supposedly) running in the async worker thread of ST, it can happen that the
+        view is already closed. In that case it returns Region(-1, -1). It also returns that value if there's no first
+        selection.
+
+        :returns:   A tuple with two elements. The second element is the new region, the first element signals whether
+                    the previous region was different from the newly stored region.
+        """
         current_region = self._get_current_region_async()
         if current_region is not None:
             if self._stored_region != current_region:

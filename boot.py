@@ -29,6 +29,7 @@ from .plugin.goto import LspSymbolDefinitionCommand
 from .plugin.goto import LspSymbolImplementationCommand
 from .plugin.goto import LspSymbolTypeDefinitionCommand
 from .plugin.hover import LspHoverCommand
+from .plugin.hover import LspRunCommandFromPointCommand
 from .plugin.panels import LspShowDiagnosticsPanelCommand
 from .plugin.panels import LspToggleServerPanelCommand
 from .plugin.references import LspSymbolReferencesCommand

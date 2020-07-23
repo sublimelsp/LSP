@@ -268,6 +268,10 @@ def list_syntaxes() -> Sequence[Dict[str, Any]]:
     ...
 
 
+def command_url(cmd: str, args: Optional[dict] = ...) -> str:
+    ...
+
+
 class CompletionItem:
     flags = ...  # type: int
 

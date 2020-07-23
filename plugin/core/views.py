@@ -457,7 +457,7 @@ def make_link(href: str, text: str) -> str:
     return "<a href='{}'>{}</a>".format(href, text.replace(' ', '&nbsp;'))
 
 
-def make_command_link(command: str, text: str, command_args: Optional[dict] = None):
+def make_command_link(command: str, text: str, command_args: Optional[dict] = None) -> str:
     return make_link(sublime.command_url(command, command_args), text)
 
 

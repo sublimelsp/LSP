@@ -102,23 +102,20 @@ class LspHoverCommand(LspTextCommand):
             actions = []
             for link_kind in link_kinds:
                 if self.session('{}Provider'.format(link_kind.lsp_name)):
-                    actions.append(self.create_action_link(
-                        link_kind.label, link_kind.subl_cmd_name, point, link_kind.supports_side_by_side))
+                    command = 'lsp_run_command_from_point'
+                    args = {
+                        'command_name': link_kind.subl_cmd_name,
+                        'point': point,
+                    }
+                    link = make_command_link(command, link_kind.label, args)
+                    if link_kind.supports_side_by_side:
+                        subcommand_args = {'side_by_side': True}
+                        args['command_args'] = subcommand_args
+                        link += ' ' + make_command_link(command, '◨', args)
+                    actions.append(link)
             if actions:
                 return "<p class='actions'>" + " | ".join(actions) + "</p>"
         return ""
-
-    def create_action_link(self, text: str, command_name: str, point: int, supports_side_by_side: bool) -> str:
-        command_args = {
-            'command_name': command_name,
-            'command_args': {},
-            'point': point,
-        }
-        link = make_command_link('lsp_run_command_from_point', text, command_args)
-        if supports_side_by_side:
-            command_args['command_args']['side_by_side'] = True
-            link += ' ' + make_command_link('lsp_run_command_from_point', '◨', command_args)
-        return link
 
     def diagnostics_content(self) -> str:
         formatted = []
@@ -201,8 +198,7 @@ class LspHoverCommand(LspTextCommand):
 
 
 class LspRunCommandFromPointCommand(sublime_plugin.TextCommand):
-    def run(self, edit: sublime.Edit, command_name: str, command_args: Optional[dict] = None,
-            point: Optional[int] = None) -> None:
+    def run(self, edit: sublime.Edit, point: int, command_name: str, command_args: Optional[dict] = None) -> None:
         sel = self.view.sel()
         sel.clear()
         sel.add(sublime.Region(point, point))

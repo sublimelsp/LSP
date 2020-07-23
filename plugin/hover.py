@@ -109,8 +109,7 @@ class LspHoverCommand(LspTextCommand):
                     }
                     link = make_command_link(command, link_kind.label, args)
                     if link_kind.supports_side_by_side:
-                        subcommand_args = {'side_by_side': True}
-                        args['command_args'] = subcommand_args
+                        args['command_args'] = {'side_by_side': True}
                         link += ' ' + make_command_link(command, '◨', args)
                     actions.append(link)
             if actions:

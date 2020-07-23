@@ -152,6 +152,7 @@
     // Go To Definition
     // {
     //     "command": "lsp_symbol_definition",
+    //     // "args": { "side_by_side": true },
     //     "keys": [
     //         "f12"
     //     ],
@@ -171,6 +172,7 @@
     // Go To Type Definition
     // {
     //     "command": "lsp_symbol_type_definition",
+    //     // "args": { "side_by_side": true },
     //     "keys": [
     //         "UNBOUND"
     //     ],
@@ -190,6 +192,7 @@
     // Go To Declaration
     // {
     //     "command": "lsp_symbol_declaration",
+    //     // "args": { "side_by_side": true },
     //     "keys": [
     //         "UNBOUND"
     //     ],
@@ -209,6 +212,7 @@
     // Go To Implementation
     // {
     //     "command": "lsp_symbol_implementation",
+    //     // "args": { "side_by_side": true },
     //     "keys": [
     //         "UNBOUND"
     //     ],

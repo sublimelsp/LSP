@@ -18,7 +18,6 @@ from .sessions import Session
 from .settings import settings
 from .transports import create_transport
 from .types import ClientConfig
-from .types import Settings
 from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Mapping, Iterable
 from .views import diagnostic_to_phantom
 from .views import extract_variables
@@ -99,11 +98,9 @@ class WindowManager(Manager):
         self,
         window: sublime.Window,
         workspace: ProjectFolders,
-        settings: Settings,
         configs: WindowConfigManager,
     ) -> None:
         self._window = window
-        self._settings = settings
         self._configs = configs
         self._sessions = WeakSet()  # type: WeakSet[Session]
         self._workspace = workspace
@@ -368,7 +365,7 @@ class WindowManager(Manager):
         self.handle_server_message(session.config.name, extract_message(params))
 
     def handle_stderr_log(self, session: Session, message: str) -> None:
-        if self._settings.log_stderr:
+        if settings.log_stderr:
             self.handle_server_message(session.config.name, message)
 
     def handle_show_message(self, session: Session, params: Any) -> None:
@@ -496,21 +493,12 @@ class WindowRegistry(object):
         self._windows = {}  # type: Dict[int, WindowManager]
         self._configs = configs
 
-    def set_settings_factory(self, settings: Settings) -> None:
-        self._settings = settings
-
     def lookup(self, window: sublime.Window) -> WindowManager:
-        if not self._settings:
-            raise RuntimeError("no settings")
         if window.id() in self._windows:
             return self._windows[window.id()]
         workspace = ProjectFolders(window)
         window_configs = self._configs.for_window(window)
-        state = WindowManager(
-            window=window,
-            workspace=workspace,
-            settings=self._settings,
-            configs=window_configs)
+        state = WindowManager(window=window, workspace=workspace, configs=window_configs)
         self._windows[window.id()] = state
         return state
 

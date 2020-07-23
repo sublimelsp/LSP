@@ -108,7 +108,6 @@ def plugin_loaded() -> None:
     set_exception_logging(True)
     _forcefully_register_plugins()  # Remove this function: https://github.com/sublimelsp/LSP/issues/899
     client_configs.update_configs()
-    windows.set_settings_factory(settings)
 
 
 def plugin_unloaded() -> None:

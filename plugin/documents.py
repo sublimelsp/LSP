@@ -18,7 +18,7 @@ from .core.views import document_color_params
 from .core.views import FORMAT_MARKUP_CONTENT
 from .core.views import FORMAT_STRING
 from .core.views import lsp_color_to_phantom
-from .core.views import make_link
+from .core.views import make_command_link
 from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import region_to_range
@@ -361,10 +361,9 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         if global_settings.show_code_actions == 'bulb':
             scope = 'markup.changed'
             icon = 'Packages/LSP/icons/lightbulb.png'
-        else:
-            # else show_code_actions == 'annotation'
+        else:  # 'annotation'
             suffix = 's' if action_count > 1 else ''
-            code_actions_link = make_link('subl:lsp_code_actions', '{} code action{}'.format(action_count, suffix))
+            code_actions_link = make_command_link('lsp_code_actions', '{} code action{}'.format(action_count, suffix))
             annotations = ["<div class=\"actions\">{}</div>".format(code_actions_link)]
             annotation_color = '#2196F3'
         self.view.add_regions(self.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)

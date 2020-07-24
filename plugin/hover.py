@@ -110,7 +110,7 @@ class LspHoverCommand(LspTextCommand):
                     link = make_command_link(command, link_kind.label, args)
                     if link_kind.supports_side_by_side:
                         args['command_args'] = {'side_by_side': True}
-                        link += ' ' + make_command_link(command, '◨', args)
+                        link += ' ' + make_command_link(command, '◨', args, 'icon')
                     actions.append(link)
             if actions:
                 return "<p class='actions'>" + " | ".join(actions) + "</p>"

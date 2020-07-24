@@ -1,7 +1,7 @@
 import mdpopups
 import sublime
+import sublime_plugin
 import webbrowser
-import os
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import run_code_action_or_command
@@ -13,6 +13,7 @@ from .core.settings import settings
 from .core.typing import List, Optional, Any, Dict
 from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from .core.views import make_command_link
 from .core.views import make_link
 from .core.views import offset_to_point
 from .core.views import text_document_position_params
@@ -25,21 +26,24 @@ SUBLIME_WORD_MASK = 515
 _test_contents = []  # type: List[str]
 
 
-class GotoKind:
+class LinkKind:
 
-    __slots__ = ("lsp_name", "label", "subl_cmd_name")
+    __slots__ = ("lsp_name", "label", "subl_cmd_name", "supports_side_by_side")
 
-    def __init__(self, lsp_name: str, label: str, subl_cmd_name: str) -> None:
+    def __init__(self, lsp_name: str, label: str, subl_cmd_name: str, supports_side_by_side: bool) -> None:
         self.lsp_name = lsp_name
         self.label = label
         self.subl_cmd_name = subl_cmd_name
+        self.supports_side_by_side = supports_side_by_side
 
 
-goto_kinds = [
-    GotoKind("definition", "Definition", "definition"),
-    GotoKind("typeDefinition", "Type Definition", "type_definition"),
-    GotoKind("declaration", "Declaration", "declaration"),
-    GotoKind("implementation", "Implementation", "implementation")
+link_kinds = [
+    LinkKind("definition", "Definition", "lsp_symbol_definition", True),
+    LinkKind("typeDefinition", "Type Definition", "lsp_symbol_type_definition", True),
+    LinkKind("declaration", "Declaration", "lsp_symbol_declaration", True),
+    LinkKind("implementation", "Implementation", "lsp_symbol_implementation", True),
+    LinkKind("references", "References", "lsp_symbol_references", False),
+    LinkKind("rename", "Rename", "lsp_symbol_rename", False),
 ]
 
 
@@ -93,16 +97,21 @@ class LspHoverCommand(LspTextCommand):
         self._hover = response
         self.show_hover(point)
 
-    def symbol_actions_content(self) -> str:
+    def symbol_actions_content(self, point: int) -> str:
         if settings.show_symbol_action_links:
             actions = []
-            for goto_kind in goto_kinds:
-                if self.session(goto_kind.lsp_name + "Provider"):
-                    actions.append(make_link(goto_kind.lsp_name, goto_kind.label))
-            if self.session('referencesProvider'):
-                actions.append(make_link('references', 'References'))
-            if self.session('renameProvider'):
-                actions.append(make_link('rename', 'Rename'))
+            for link_kind in link_kinds:
+                if self.session('{}Provider'.format(link_kind.lsp_name)):
+                    command = 'lsp_run_command_from_point'
+                    args = {
+                        'command_name': link_kind.subl_cmd_name,
+                        'point': point,
+                    }
+                    link = make_command_link(command, link_kind.label, args)
+                    if link_kind.supports_side_by_side:
+                        args['command_args'] = {'side_by_side': True}
+                        link += ' ' + make_command_link(command, '◨', args)
+                    actions.append(link)
             if actions:
                 return "<p class='actions'>" + " | ".join(actions) + "</p>"
         return ""
@@ -142,7 +151,7 @@ class LspHoverCommand(LspTextCommand):
     def _show_hover(self, point: int) -> None:
         contents = self.diagnostics_content() + self.hover_content()
         if contents:
-            contents += self.symbol_actions_content()
+            contents += self.symbol_actions_content(point)
 
         _test_contents.clear()
         _test_contents.append(contents)  # for testing only
@@ -168,14 +177,8 @@ class LspHoverCommand(LspTextCommand):
                     on_navigate=lambda href: self.on_hover_navigate(href, point))
 
     def on_hover_navigate(self, href: str, point: int) -> None:
-        for goto_kind in goto_kinds:
-            if href == goto_kind.lsp_name:
-                self.run_command_from_point(point, "lsp_symbol_" + goto_kind.subl_cmd_name)
-                return
-        if href == 'references':
-            self.run_command_from_point(point, "lsp_symbol_references")
-        elif href == 'rename':
-            self.run_command_from_point(point, "lsp_symbol_rename")
+        if href.startswith('subl:'):
+            pass
         elif href.startswith('code-actions'):
             _, config_name = href.split(":")
             titles = [command["title"] for command in self._actions_by_config[config_name]]
@@ -184,12 +187,6 @@ class LspHoverCommand(LspTextCommand):
             sel.add(sublime.Region(point, point))
 
             self.view.show_popup_menu(titles, lambda i: self.handle_code_action_select(config_name, i))
-        elif href.startswith('location'):
-            _, file_path, location = href.split(":", 2)
-            file_path = os.path.join(self._base_dir, file_path) if self._base_dir else file_path
-            window = self.view.window()
-            if window:
-                window.open_file(file_path + ":" + location, sublime.ENCODED_POSITION | sublime.TRANSIENT)
         else:
             webbrowser.open_new_tab(href)
 
@@ -198,8 +195,10 @@ class LspHoverCommand(LspTextCommand):
             selected = self._actions_by_config[config_name][index]
             run_code_action_or_command(self.view, config_name, selected)
 
-    def run_command_from_point(self, point: int, command_name: str, args: Optional[Any] = None) -> None:
+
+class LspRunCommandFromPointCommand(sublime_plugin.TextCommand):
+    def run(self, edit: sublime.Edit, point: int, command_name: str, command_args: Optional[dict] = None) -> None:
         sel = self.view.sel()
         sel.clear()
         sel.add(sublime.Region(point, point))
-        self.view.run_command(command_name, args)
+        self.view.run_command(command_name, command_args)

@@ -458,6 +458,10 @@ def make_link(href: str, text: str) -> str:
     return "<a href='{}'>{}</a>".format(href, text.replace(' ', '&nbsp;'))
 
 
+def make_command_link(command: str, text: str, command_args: Optional[dict] = None) -> str:
+    return make_link(sublime.command_url(command, command_args), text)
+
+
 COLOR_BOX_HTML = """
 <style>html {{padding: 0}}</style>
 <div style='padding: 0.4em;

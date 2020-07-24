@@ -19,6 +19,8 @@ HOVER_MARGIN = ...  # type: int
 ENCODED_POSITION = ...  # type: int
 TRANSIENT = ...  # type: int
 FORCE_GROUP = ...  # type: int
+ADD_TO_SELECTION_SEMI_TRANSIENT = ...  # type: int
+ADD_TO_SELECTION = ...  # type: int
 IGNORECASE = ...  # type: int
 LITERAL = ...  # type: int
 MONOSPACE_FONT = ...  # type: int
@@ -263,6 +265,10 @@ def get_macro() -> Sequence[dict]:
 
 
 def list_syntaxes() -> Sequence[Dict[str, Any]]:
+    ...
+
+
+def command_url(cmd: str, args: Optional[dict] = ...) -> str:
     ...
 
 

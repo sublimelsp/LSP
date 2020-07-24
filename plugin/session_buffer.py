@@ -5,6 +5,7 @@ from .core.protocol import TextDocumentSyncKindNone
 from .core.sessions import SessionViewProtocol
 from .core.settings import settings
 from .core.types import debounced
+from .core.types import Debouncer
 from .core.typing import Any, Iterable, Optional, List, Dict
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import did_change
@@ -75,6 +76,7 @@ class SessionBuffer:
         self.total_errors = 0
         self.total_warnings = 0
         self.should_show_diagnostics_panel = False
+        self.diagnostics_debouncer = Debouncer()
 
     def __del__(self) -> None:
         mgr = self.session.manager()
@@ -217,6 +219,8 @@ class SessionBuffer:
                 should_show_diagnostics_panel
             )
 
+        self.diagnostics_debouncer.cancel_pending()
+
         if not bool(diagnostics) and not self.diagnostics_are_visible:
             # Nothing was previously visible, and nothing will become visible. So do nothing.
             pass
@@ -231,7 +235,7 @@ class SessionBuffer:
             if delay_in_seconds <= 0.0:
                 present()
             else:
-                debounced(
+                self.diagnostics_debouncer.debounce(
                     present,
                     timeout_ms=int(1000.0 * delay_in_seconds),
                     condition=lambda: self.view.is_valid() and self.view.change_count() == diagnostics_version,

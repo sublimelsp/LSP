@@ -1,6 +1,7 @@
 from .collections import DottedDict
 from .logging import debug
 from .typing import Optional, List, Dict, Generator, Callable
+from threading import RLock
 import contextlib
 import functools
 import sublime
@@ -49,6 +50,43 @@ def _settings_style_to_add_regions_flag(style: str) -> int:
         elif style == "squiggly":
             flags |= sublime.DRAW_SQUIGGLY_UNDERLINE
     return flags
+
+
+class Debouncer:
+
+    def __init__(self) -> None:
+        self._current_id = -1
+        self._next_id = 0
+        self._current_id_lock = RLock()
+
+    def debounce(self, f: Callable[[], None], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True,
+                 async_thread: bool = False) -> None:
+        """
+        Possibly run a function at a later point in time, either on the async thread or on the main thread.
+
+        :param      f:             The function to possibly run
+        :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
+        :param      condition:     The condition that must evaluate to True in order to run the funtion
+        :param      async_thread:  If true, run the function on the async worker thread, otherwise run
+                                   the function on the main thread
+        """
+
+        def run(debounce_id: int) -> None:
+            with self._current_id_lock:
+                if debounce_id != self._current_id:
+                    return
+            if condition():
+                f()
+
+        runner = sublime.set_timeout_async if async_thread else sublime.set_timeout
+        with self._current_id_lock:
+            current_id = self._current_id = self._next_id
+        self._next_id += 1
+        runner(lambda: run(current_id), timeout_ms)
+
+    def cancel_pending(self) -> None:
+        with self._current_id_lock:
+            self._current_id = -1
 
 
 class Settings:

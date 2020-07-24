@@ -454,12 +454,13 @@ def text2html(content: str) -> str:
     return re.sub(REPLACEMENT_RE, _replace_match, content)
 
 
-def make_link(href: str, text: str) -> str:
-    return "<a href='{}'>{}</a>".format(href, text.replace(' ', '&nbsp;'))
+def make_link(href: str, text: str, class_name: Optional[str] = None) -> str:
+    return "<a href='{}' class='{}'>{}</a>".format(href, class_name, text.replace(' ', '&nbsp;'))
 
 
-def make_command_link(command: str, text: str, command_args: Optional[dict] = None) -> str:
-    return make_link(sublime.command_url(command, command_args), text)
+def make_command_link(command: str, text: str, command_args: Optional[dict] = None,
+                      class_name: Optional[str] = None) -> str:
+    return make_link(sublime.command_url(command, command_args), text, class_name)
 
 
 COLOR_BOX_HTML = """

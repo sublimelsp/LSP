@@ -46,9 +46,8 @@
     color: var(--whitish);
     padding: 0.5rem;
 }
-.lsp_popup .actions a {
+.lsp_popup .actions a.icon {
     text-decoration: none;
-    color: var(--foreground);
 }
 pre.related_info {
     border-top: 1px solid color(var(--background) alpha(0.25));

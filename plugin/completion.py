@@ -13,6 +13,7 @@ from .core.settings import settings
 from .core.typing import Any, List, Dict, Optional, Union, Generator
 from .core.views import COMPLETION_KINDS
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from .core.views import make_command_link
 from .core.views import text_document_position_params, range_to_region
 
 
@@ -232,7 +233,7 @@ class CompletionHandler(LSPViewEventListener):
 
         st_details = ""
         if can_resolve_completion_items or item.get("documentation"):
-            st_details += "<a href='subl:lsp_resolve_docs {{\"index\": {}}}'>More</a>".format(index)
+            st_details += make_command_link("lsp_resolve_docs", "More", {"index": index})
             st_details += " | " if lsp_detail else ""
 
         st_details += "<p>{}</p>".format(lsp_detail)

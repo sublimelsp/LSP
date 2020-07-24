@@ -49,7 +49,7 @@ SYMBOL_KINDS = [
     ("Object",         "meta.mapping"),  # Unsure about this one [scope taken from JSON.sublime-syntax]
     ("Key",            "meta.mapping.key string"),  # Unsure about this one [scope taken from JSON.sublime-syntax]
     ("Null",           "constant.language"),
-    ("Enum Member",    "storage.type.enum keyword.declaration.enum"),  # ???
+    ("Enum Member",    "constant.other.enum"),  # Based on Java.sublime-syntax and C#.sublime-syntax
     ("Struct",         "entity.name.struct"),
     ("Event",          "storage.modifier"),   # Unsure about this one [scope taken from C#.sublime-syntax]
     ("Operator",       "keyword.operator"),

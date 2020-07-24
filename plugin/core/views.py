@@ -47,7 +47,7 @@ SYMBOL_KINDS = [
     ("Boolean",        "constant.language"),
     ("Array",          "meta.sequence"),  # Unsure about this one [scope taken from JSON.sublime-syntax]
     ("Object",         "meta.mapping"),  # Unsure about this one [scope taken from JSON.sublime-syntax]
-    ("Key",            "string meta.mapping.key"),  # Unsure about this one [scope taken from JSON.sublime-syntax]
+    ("Key",            "meta.mapping.key string"),  # Unsure about this one [scope taken from JSON.sublime-syntax]
     ("Null",           "constant.language"),
     ("Enum Member",    "storage.type.enum keyword.declaration.enum"),  # ???
     ("Struct",         "entity.name.struct"),

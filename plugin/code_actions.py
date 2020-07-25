@@ -137,8 +137,8 @@ class CodeActionsManager:
                 else:
                     self._response_cache = None
 
-        actions_collector = CodeActionsCollector(actions_handler)
-        with actions_collector:
+        collector = CodeActionsCollector(actions_handler)
+        with collector:
             file_name = view.file_name()
             if file_name:
                 for session in sessions_for_view(view, 'codeActionProvider'):
@@ -149,9 +149,8 @@ class CodeActionsManager:
                             params = text_document_code_action_params(
                                 view, file_name, request_range, [], matching_kinds)
                             request = Request.codeAction(params)
-                            collect, onerror = self._filtering_collector(
-                                session.config.name, matching_kinds, actions_collector)
-                            session.send_request(request, collect, onerror)
+                            session.send_request(
+                                request, *filtering_collector(session.config.name, matching_kinds, collector))
                     else:
                         config_name = session.config.name
                         diagnostics = diagnostics_by_config.get(config_name, [])
@@ -159,30 +158,32 @@ class CodeActionsManager:
                             continue
                         params = text_document_code_action_params(view, file_name, request_range, diagnostics)
                         request = Request.codeAction(params)
-                        session.send_request(request, actions_collector.create_collector(config_name))
+                        session.send_request(request, collector.create_collector(config_name))
         if use_cache:
-            self._response_cache = (location_cache_key, actions_collector)
-        return actions_collector
+            self._response_cache = (location_cache_key, collector)
+        return collector
 
-    def _filtering_collector(
-        self,
-        config_name: str,
-        kinds: List[str],
-        actions_collector: CodeActionsCollector
-    ) -> Tuple[Callable[[CodeActionsResponse], None], Callable[[Any], None]]:
-        """
-        Filters actions returned from the session so that only matching kinds are collected.
 
-        Since older servers don't support the "context.only" property, these will return all
-        actions that need to be filtered.
-        """
-        def actions_filter(actions: CodeActionsResponse) -> List[CodeActionOrCommand]:
-            return [a for a in (actions or []) if a.get('kind') in kinds]
-        collector = actions_collector.create_collector(config_name)
-        return (
-            lambda actions: collector(actions_filter(actions)),
-            lambda error: collector([])
-        )
+def filtering_collector(
+    config_name: str,
+    kinds: List[str],
+    actions_collector: CodeActionsCollector
+) -> Tuple[Callable[[CodeActionsResponse], None], Callable[[Any], None]]:
+    """
+    Filters actions returned from the session so that only matching kinds are collected.
+
+    Since older servers don't support the "context.only" property, these will return all
+    actions that need to be filtered.
+    """
+
+    def actions_filter(actions: CodeActionsResponse) -> List[CodeActionOrCommand]:
+        return [a for a in (actions or []) if a.get('kind') in kinds]
+
+    collector = actions_collector.create_collector(config_name)
+    return (
+        lambda actions: collector(actions_filter(actions)),
+        lambda error: collector([])
+    )
 
 
 actions_manager = CodeActionsManager()

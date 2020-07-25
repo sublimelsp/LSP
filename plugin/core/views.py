@@ -116,7 +116,7 @@ def extract_variables(window: sublime.Window) -> Dict[str, str]:
 def point_to_offset(point: Point, view: sublime.View) -> int:
     # @see https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/#position
     # If the character value is greater than the line length it defaults back to the line length.
-    return min(view.text_point_utf16(point.row, point.col), view.line(view.text_point(point.row, 0)).b)
+    return view.text_point_utf16(point.row, point.col, clamp_column=True)
 
 
 def offset_to_point(view: sublime.View, offset: int) -> Point:
@@ -210,7 +210,7 @@ def render_text_change(change: sublime.TextChange) -> Dict[str, Any]:
         "range": {
             "start": {"line": change.a.row, "character": change.a.col_utf16},
             "end":   {"line": change.b.row, "character": change.b.col_utf16}},
-        "rangeLength": abs(change.b.pt - change.a.pt),
+        "rangeLength": change.len_utf16,
         "text": change.str
     }
 

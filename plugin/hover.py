@@ -82,7 +82,7 @@ class LspHoverCommand(LspTextCommand):
             self.show_hover(hover_point)
 
     def request_symbol_hover(self, point: int) -> None:
-        session = self.session('hoverProvider', point)
+        session = self.best_session('hoverProvider', point)
         if session:
             document_position = text_document_position_params(self.view, point)
             session.send_request(
@@ -101,7 +101,7 @@ class LspHoverCommand(LspTextCommand):
         if settings.show_symbol_action_links:
             actions = []
             for link_kind in link_kinds:
-                if self.session('{}Provider'.format(link_kind.lsp_name)):
+                if self.best_session('{}Provider'.format(link_kind.lsp_name)):
                     command = 'lsp_run_command_from_point'
                     args = {
                         'command_name': link_kind.subl_cmd_name,

@@ -47,7 +47,7 @@ class LspGotoCommand(LspTextCommand):
         return super().is_enabled(event) and is_at_word(self.view, event)
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None, side_by_side: bool = False) -> None:
-        session = self.session(self.capability)
+        session = self.best_session(self.capability)
         if session:
             pos = get_position(self.view, event)
             request = Request(self.method, text_document_position_params(self.view, pos))

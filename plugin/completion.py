@@ -59,7 +59,7 @@ class LspResolveDocsCommand(LspTextCommand):
         webbrowser.open(url)
 
     def do_resolve(self, item: dict) -> None:
-        session = self.session('completionProvider.resolveProvider')
+        session = self.best_session('completionProvider.resolveProvider')
         if session:
             session.send_request(
                 Request.resolveCompletionItem(item),

@@ -36,7 +36,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
         return super().is_enabled(event) and is_at_word(self.view, event)
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
-        session = self.session(self.capability)
+        session = self.best_session(self.capability)
         file_path = self.view.file_name()
         if session and file_path:
             pos = get_position(self.view, event)

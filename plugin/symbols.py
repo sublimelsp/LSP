@@ -77,7 +77,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.is_first_selection = False
 
     def run(self, edit: sublime.Edit) -> None:
-        session = self.session(self.capability)
+        session = self.best_session(self.capability)
         if session:
             session.send_request(
                 Request.documentSymbols({"textDocument": text_document_identifier(self.view)}), self.handle_response)
@@ -184,7 +184,7 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
 
     def run(self, edit: sublime.Edit, symbol_query_input: str = "") -> None:
         if symbol_query_input:
-            session = self.session(self.capability)
+            session = self.best_session(self.capability)
             if session:
                 self.view.set_status("lsp_workspace_symbols", "Searching for '{}'...".format(symbol_query_input))
                 request = Request.workspaceSymbol({"query": symbol_query_input})

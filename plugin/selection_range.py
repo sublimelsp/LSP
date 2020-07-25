@@ -22,7 +22,7 @@ class LspExpandSelectionCommand(LspTextCommand):
         return True
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
-        session = self.session(self.capability, get_position(self.view, event))
+        session = self.best_session(self.capability, get_position(self.view, event))
         if session:
             params = selection_range_params(self.view)
             self._regions.extend(self.view.sel())

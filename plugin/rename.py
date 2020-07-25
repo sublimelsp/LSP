@@ -44,7 +44,7 @@ class LspSymbolRenameCommand(LspTextCommand):
     capability = 'renameProvider'
 
     def is_enabled(self, event: Optional[dict] = None) -> bool:
-        if self.session("renameProvider.prepareProvider"):
+        if self.best_session("renameProvider.prepareProvider"):
             # The language server will tell us if the selection is on a valid token.
             return True
         # TODO: check what kind of scope we're in.
@@ -68,7 +68,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             if new_name:
                 return self._do_rename(get_position(self.view, event), new_name)
             else:
-                session = self.session("{}.prepareProvider".format(self.capability))
+                session = self.best_session("{}.prepareProvider".format(self.capability))
                 if session:
                     params = text_document_position_params(self.view, get_position(self.view, event))
                     request = Request("textDocument/prepareRename", params)
@@ -85,7 +85,7 @@ class LspSymbolRenameCommand(LspTextCommand):
                 raise TypeError("required positional argument")
 
     def _do_rename(self, position: int, new_name: str) -> None:
-        session = self.session(self.capability)
+        session = self.best_session(self.capability)
         if session:
             params = text_document_position_params(self.view, position)
             params["newName"] = new_name

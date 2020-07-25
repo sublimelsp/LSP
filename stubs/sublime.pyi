@@ -784,13 +784,13 @@ class View:
     def rowcol_utf16(self, tp: int) -> Tuple[int, int]:
         ...
 
-    def text_point(self, row: int, col: int) -> int:
+    def text_point(self, row: int, col: int, *, clamp_column: bool = False) -> int:
         ...
 
-    def text_point_utf8(self, row: int, col_utf8: int) -> int:
+    def text_point_utf8(self, row: int, col_utf8: int, *, clamp_column: bool = False) -> int:
         ...
 
-    def text_point_utf16(self, row: int, col_utf16: int) -> int:
+    def text_point_utf16(self, row: int, col_utf16: int, *, clamp_column: bool = False) -> int:
         ...
 
     def visible_region(self) -> Region:
@@ -961,3 +961,5 @@ class TextChange:
     a = ...  # type: HistoricPosition
     b = ...  # type: HistoricPosition
     str = ...  # type: str
+    len_utf8 = ...  # type: int
+    len_utf16 = ...  # type: int

@@ -84,13 +84,27 @@ def get_position(view: sublime.View, event: Optional[dict] = None) -> int:
 
 
 class LspTextCommand(sublime_plugin.TextCommand):
+    """
+    Inherit from this class to define your requests that should be triggered via the command palette and/or a
+    keybinding.
+    """
 
+    # When this is defined in a derived class, the command is enabled if and only if there exists a session attached
+    # to the view that has the given capability. When both `capability` and `session_name` are defined, `capability`
+    # wins.
     capability = ''
+
+    # When this is defined in a derived class, the command is enabled if and only if there exists a session attached
+    # to the view that has the given name. When both `capability` and `session_name` are defined, `capability` wins.
+    session_name = ''
 
     def is_enabled(self, event: Optional[dict] = None) -> bool:
         if self.capability:
             # At least one active session with the given capability must exist.
             return bool(self.best_session(self.capability, get_position(self.view, event)))
+        elif self.session_name:
+            # There must exist an active session with the given (config) name.
+            return bool(self.session_by_name(self.session_name))
         else:
             # Any session will do.
             return any(self.sessions())
@@ -100,6 +114,13 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
     def best_session(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
         return _best_session(self.view, self.sessions(capability), point)
+
+    def session_by_name(self, name: Optional[str] = None) -> Optional[Session]:
+        target = name if name else self.session_name
+        for session in self.sessions():
+            if session.config.name == target:
+                return session
+        return None
 
     def sessions(self, capability: Optional[str] = None) -> Generator[Session, None, None]:
         yield from sessions_for_view(self.view, capability)

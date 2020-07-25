@@ -9,6 +9,8 @@ class CSS:
         self.notification = sublime.load_resource("Packages/LSP/notification.css")
         self.notification_classname = "notification"
         self.phantoms = sublime.load_resource("Packages/LSP/phantoms.css")
+        self.annotations = sublime.load_resource("Packages/LSP/annotations.css")
+        self.annotations_classname = "lsp_annotation"
 
 
 _css = None  # type: Optional[CSS]

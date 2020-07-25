@@ -528,6 +528,16 @@ def format_diagnostic_for_html(diagnostic: Diagnostic, base_dir: Optional[str] =
     return '<pre class="{}">{}</pre>'.format(DIAGNOSTIC_SEVERITY[diagnostic.severity - 1][1], content)
 
 
+def format_diagnostic_for_annotation(diagnostic: Diagnostic) -> str:
+    diagnostic_message = text2html(diagnostic.message)
+    if diagnostic.source:
+        content = "[{}] {}".format(diagnostic.source, diagnostic_message)
+    else:
+        content = diagnostic_message
+    return '<body id="annotation"><style>{0}</style><div class="{1}"><div class="{2}">{3}</div></div></body>'.format(
+        css().annotations, css().annotations_classname, DIAGNOSTIC_SEVERITY[diagnostic.severity - 1][1], content)
+
+
 def create_phantom_html(content: str, severity: str) -> str:
     return """<body id=inline-error>
                 <style>{0}</style>

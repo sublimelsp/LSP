@@ -103,7 +103,6 @@ class ColorSchemeScopeRenderer:
 class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     CODE_ACTIONS_KEY = "lsp_code_action"
-    ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
     code_actions_debounce_time = 800
     color_boxes_debounce_time = 500
     highlights_debounce_time = 500
@@ -161,18 +160,12 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             result[sv.session.config.name] = sv.get_diagnostics_async()
         return result
 
-    def update_diagnostic_in_status_bar_async(self) -> None:
-        if global_settings.show_diagnostics_in_view_status:
-            r = self._get_current_range_async()
-            if r is not None:
-                diags_by_config_name, _ = self.diagnostics_intersecting_range_async(r)
-                if diags_by_config_name:
-                    for diags in diags_by_config_name.values():
-                        diag = next(iter(diags), None)
-                        if diag:
-                            self.view.set_status(self.ACTIVE_DIAGNOSTIC, diag.message)
-                            return
-        self.view.erase_status(self.ACTIVE_DIAGNOSTIC)
+    def update_active_diagnostic_async(self) -> None:
+        r = self._get_current_range_async()
+        if r is None:
+            return
+        for sv in self.session_views_async():
+            sv.update_active_diagnostic_async(r)
 
     def session_views_async(self) -> Generator[SessionView, None, None]:
         yield from self._session_views.values()
@@ -201,7 +194,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
                                                           after_ms=self.highlights_debounce_time)
             self._when_selection_remains_stable_async(self._do_code_actions, current_region,
                                                       after_ms=self.code_actions_debounce_time)
-            self.update_diagnostic_in_status_bar_async()
+            self.update_active_diagnostic_async()
 
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
         self._clear_highlight_regions()
@@ -365,7 +358,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             suffix = 's' if action_count > 1 else ''
             code_actions_link = make_command_link('lsp_code_actions', '{} code action{}'.format(action_count, suffix))
             annotations = ["<div class=\"actions\">{}</div>".format(code_actions_link)]
-            annotation_color = '#2196F3'
+            annotation_color = self.view.style_for_scope("region.bluish")["foreground"]
         self.view.add_regions(self.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)
 
     def _clear_code_actions_annotation(self) -> None:

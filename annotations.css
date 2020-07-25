@@ -1,0 +1,20 @@
+.lsp_annotation {
+    margin: 0;
+    border-width: 0;
+}
+.lsp_annotation .errors {
+    background-color: color(var(--redish) alpha(0.25));
+    color: var(--foreground);
+}
+.lsp_annotation .warnings {
+    background-color: color(var(--yellowish) alpha(0.25));
+    color: var(--foreground);
+}
+.lsp_annotation .info {
+    background-color: color(var(--bluish) alpha(0.25));
+    color: var(--foreground);
+}
+.lsp_annotation .hints {
+    background-color: color(var(--bluish) alpha(0.25));
+    color: var(--foreground);
+}

@@ -1,9 +1,12 @@
 from .core.protocol import Diagnostic
+from .core.protocol import Range
 from .core.sessions import Session
 from .core.settings import settings as global_settings
 from .core.types import view2scope
 from .core.typing import Any, Iterable, List, Tuple
 from .core.views import DIAGNOSTIC_SEVERITY
+from .core.views import format_diagnostic_for_annotation
+from .core.views import range_to_region
 from .core.windows import AbstractViewListener
 from .session_buffer import SessionBuffer
 from weakref import ref
@@ -106,6 +109,9 @@ class SessionView:
     def diagnostics_key(self, severity: int) -> str:
         return "lsp{}d{}".format(self.session.config.name, severity)
 
+    def active_diagnostics_key(self) -> str:
+        return "lsp{}d_".format(self.session.config.name)
+
     def present_diagnostics_async(self, flags: int) -> None:
         data_per_severity = self.session_buffer.data_per_severity
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
@@ -120,10 +126,30 @@ class SessionView:
                 self.view.erase_regions(key)
         listener = self.listener()
         if listener:
-            listener.update_diagnostic_in_status_bar_async()
+            listener.update_active_diagnostic_async()
 
     def get_diagnostics_async(self) -> List[Diagnostic]:
         return self.session_buffer.diagnostics
+
+    def update_active_diagnostic_async(self, r: Range) -> None:
+        key = self.active_diagnostics_key()
+        if global_settings.show_diagnostics_in_view_status:
+            diags = []  # type: List[Diagnostic]
+            for diag in self.session_buffer.diagnostics:
+                if diag.range.intersects(r):
+                    diags.append(diag)
+            if diags:
+                diags = sorted(diags, key=lambda d: d.severity)
+                diag = diags[0]
+                regions = [range_to_region(diag.range, self.view)]
+                scope = DIAGNOSTIC_SEVERITY[diag.severity - 1][2]
+                icon = ""
+                flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+                annotations = [format_diagnostic_for_annotation(diag)]
+                annotation_color = self.view.style_for_scope(scope)["foreground"]
+                self.view.add_regions(key, regions, scope, icon, flags, annotations, annotation_color)
+                return
+        self.view.erase_regions(key)
 
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
         self.session_buffer.on_text_changed_async(changes)

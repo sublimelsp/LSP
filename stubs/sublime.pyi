@@ -919,6 +919,9 @@ class View:
     def transform_region_from(self, region: Region, change_id: Any) -> Region:
         ...
 
+    def style_for_scope(self, scope: str) -> Dict[str, Any]:
+        ...
+
 
 class Phantom:
     region = ...  # type: Region

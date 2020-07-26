@@ -1,15 +1,11 @@
 from .configurations import ConfigManager
 from .sessions import Session
 from .settings import client_configs
-from .typing import Optional, Callable, Dict, Any, Generator, Iterable
+from .typing import Optional, Any, Generator, Iterable
 from .windows import WindowManager
 from .windows import WindowRegistry
 import sublime
 import sublime_plugin
-
-
-client_start_listeners = {}  # type: Dict[str, Callable]
-client_initialization_listeners = {}  # type: Dict[str, Callable]
 
 
 class LSPViewEventListener(sublime_plugin.ViewEventListener):

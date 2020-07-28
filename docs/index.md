@@ -421,27 +421,17 @@ Requires IntelliJ to be running.
 }
 ```
 
+### ESLint<a name="eslint"></a>
+
+1. Make sure you have `node` installed.
+2. Install the [LSP-eslint](https://packagecontrol.io/packages/LSP-eslint) helper package. It will install the
+   server for you in $DATA/Cache.
+
 ### JavaScript/TypeScript<a name="typescript"></a>
 
-Different servers wrapping Microsoft's TypeScript services, most support plain JavaScript:
-
-Theia's [typescript-language-server](https://github.com/theia-ide/typescript-language-server):
-
-```sh
-npm install -g typescript-language-server
-```
-
-My own [tomv564/lsp-tsserver](https://github.com/tomv564/lsp-tsserver):
-
-```sh
-npm install -g lsp-tsserver
-```
-
-Sourcegraph's [javascript-typescript-langserver](https://github.com/sourcegraph/javascript-typescript-langserver):
-
-```sh
-npm install -g javascript-typescript-langserver
-```
+1. Make sure you have `node` installed.
+2. Install the [LSP-typescript](https://packagecontrol.io/packages/LSP-typescript) helper package. It will install the
+   server for you in $DATA/Cache.
 
 ### Julia<a name="julia"></a>
 

@@ -287,62 +287,6 @@
       "command": ["ocaml-language-server", "--stdio"],
       "languageId": "reason" // will match source.reason
     },
-    //"eslint": { },
-    // Install the LSP-eslint package, which comes with its own settings file
-    "lsp-tsserver":
-    {
-      "command": ["lsp-tsserver"],
-      "languages": [{
-        "document_selector": "source.js",
-        "languageId": "javascript"
-      }, {
-        "document_selector": "source.jsx",
-        "languageId": "javascriptreact"
-      }, {
-        "document_selector": "source.ts",
-        "languageId": "typescript"
-      }, {
-        "document_selector": "source.tsx",
-        "languageId": "typescriptreact"
-      }
-      ]
-    },
-    "javascript-typescript-langserver":
-    {
-      "command": ["javascript-typescript-stdio"],
-      "languages": [{
-        "document_selector": "source.js",
-        "languageId": "javascript"
-      }, {
-        "document_selector": "source.jsx",
-        "languageId": "javascriptreact"
-      }, {
-        "document_selector": "source.ts",
-        "languageId": "typescript"
-      }, {
-        "document_selector": "source.tsx",
-        "languageId": "typescriptreact"
-      }
-      ]
-    },
-    "typescript-language-server":
-    {
-      "command": ["typescript-language-server", "--stdio"],
-      "languages": [{
-        "document_selector": "source.js",
-        "languageId": "javascript"
-      }, {
-        "document_selector": "source.jsx",
-        "languageId": "javascriptreact"
-      }, {
-        "document_selector": "source.ts",
-        "languageId": "typescript"
-      }, {
-        "document_selector": "source.tsx",
-        "languageId": "typescriptreact"
-      }
-      ]
-    },
     "ocaml":
     {
       "command": ["ocaml-language-server", "--stdio"],

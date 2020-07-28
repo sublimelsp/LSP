@@ -225,12 +225,7 @@
       //   }
       // }
     },
-    "rls":
-    {
-      "command": ["rustup", "run", "nightly", "rls"],
-      "languageId": "rust" // will match source.rust
-    },
-     "rust-analyzer":
+    "rust-analyzer":
     {
       "command": ["rust-analyzer"],
       "languageId": "rust" // will match source.rust

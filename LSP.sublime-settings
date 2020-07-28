@@ -235,16 +235,6 @@
       "command": ["rust-analyzer"],
       "languageId": "rust" // will match source.rust
     },
-    "bashls":
-    {
-        "command":
-        [
-            "bash-language-server", // add .cmd on windows
-            "start"
-        ],
-        "languageId": "bash",
-        "document_selector": "source.shell.bash",
-    },
     "clangd":
     {
       "command": ["clangd"],

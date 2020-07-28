@@ -155,7 +155,7 @@ If you use or would like to use language servers that are not in this list, plea
 
 ### C/C++
 
-See the dedicated <a href="cplusplus"/>C/C++ guide</a> for using ccls, cquery or clangd.
+See the dedicated <a href="cplusplus"/>C/C++ guide</a> for using ccls or clangd.
 
 ### C&#35;<a name="csharp"></a>
 

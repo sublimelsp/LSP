@@ -147,11 +147,8 @@ If you use or would like to use language servers that are not in this list, plea
 
 ### Bash<a name="bash"></a>
 
-1. Install the [Bash Language Server](https://github.com/mads-hartmann/bash-language-server):
-
-        npm i -g bash-language-server
-
-2. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `bashls`.
+1. Make sure you have `node` installed.
+2. Download the [LSP-bash](https://packagecontrol.io/packages/LSP-bash) helper package.
 
 ### C/C++
 

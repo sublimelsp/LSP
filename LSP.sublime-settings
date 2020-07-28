@@ -247,36 +247,6 @@
         },
       ]
     },
-    "cquery":
-    {
-      "command":
-      [
-        "cquery",
-        "--log-all-to-stderr"
-      ],
-      "initializationOptions":
-      {
-        "cacheDirectory": "/tmp/cquery"
-      },
-      "languages":
-      [
-        {
-          "languageId": "c" // will match source.c
-        },
-        {
-          "languageId": "cpp",
-          "document_selector": "source.c++"
-        },
-        {
-          "languageId": "objective-c",
-          "document_selector": "source.objc"
-        },
-        {
-          "languageId": "objective-cpp",
-          "document_selector": "source.objc++"
-        }
-      ]
-    },
     "dart": {
       "command": [
         // Specify a dart command like the below in your LSP User settings.

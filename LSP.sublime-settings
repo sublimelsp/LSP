@@ -327,28 +327,10 @@
       ],
       "languageId": "haskell" // will match source.haskell
     },
-    "intelephense-ls":
-    {
-        "command": ["intelephense", "--stdio"],
-        "document_selector": "source.php | embedding.php",
-        "languageId": "php",
-        "initializationOptions": {
-        //   "clearCache": false,
-          "storagePath": null,
-        //   "globalStoragePath": "/tmp/intelephense",
-        //   "licenceKey": "",
-        }
-    },
     "reason":
     {
       "command": ["ocaml-language-server", "--stdio"],
       "languageId": "reason" // will match source.reason
-    },
-    "phpls":
-    {
-        "command": ["php", "~/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"],
-        "document_selector": "source.php | embedding.php",
-        "languageId": "php"
     },
     //"eslint": { },
     // Install the LSP-eslint package, which comes with its own settings file

@@ -581,22 +581,9 @@ Alternatively you can use the less maintained [lua-lsp](https://github.com/Alloy
 
 #### Intelephense
 
-```sh
-npm i intelephense -g
-```
-
-See [bmewburn/intelephense-docs](https://github.com/bmewburn/intelephense-docs)
-
-
-#### PHP Language server
-
-See: [felixfbecker/php-language-server](https://github.com/felixfbecker/php-language-server)
-
-Global installation:
-
-1. modify `~/.composer/composer.json` to set `"minimum-stability": "dev"` and `"prefer-stable": true`
-2. run `composer global require felixfbecker/language-server`
-3. run `composer run-script --working-dir=~/.composer/vendor/felixfbecker/language-server parse-stubs`
+1. Make sure you have `node` installed.
+2. Install the [LSP-intelephense](https://packagecontrol.io/packages/LSP-intelephense) helper package. It installs
+   and updates the server for you in $DATA/Cache.
 
 ### Polymer<a name="polymer"></a>
 

@@ -1,0 +1,33 @@
+// VSCode language ID -> SublimeText base scope selector
+// These are the "exceptional" language IDs. If a language ID is not in this
+// map, then the rule is that we prepend the ID with "source." and assume
+// that's the base scope selector. For instance, the language ID "julia"
+// would become "source.julia", and the language ID "rust" would become
+// "source.rust".
+//
+// If you believe an entry in this dictionary is missing, please submit a pull
+// request at github.com/sublimelsp/LSP.
+{
+    "bat": "source.dosbatch",
+    "bibtex": "text.bibtex",
+    "cpp": "source.c++",
+    "csharp": "source.cs",
+    "html": "embedding.php | text.html.basic",
+    "javascript": "source.js",
+    "javascriptreact": "source.jsx", // 3rdparty
+    "jsonc": "source.json",
+    "latex": "text.tex.latex",
+    "markdown": "text.html.markdown",
+    "objective-c": "source.objc",
+    "objective-cpp": "source.objc++",
+    "php": "source.php | embedding.php",
+    "ruby": "text.html.ruby | source.ruby",
+    "shaderlab": "source.glsl | source.essl", // 3rdparty
+    "shellscript": "source.shell.bash",
+    "typescript": "source.ts",
+    "typescriptreact": "source.tsx",
+    "txt": "text.plain",
+    "vue": "text.html.vue", // 3rdparty
+    "xml": "text.xml",
+    "xsl": "text.xml", // 3rdparty
+}

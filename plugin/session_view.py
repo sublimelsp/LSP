@@ -2,7 +2,7 @@ from .core.protocol import Diagnostic
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import view2scope
-from .core.typing import Any, Iterable, List, Tuple
+from .core.typing import Any, Iterable, List, Tuple, Optional, Dict
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.windows import AbstractViewListener
 from .session_buffer import SessionBuffer
@@ -90,13 +90,23 @@ class SessionView:
                 settings.erase(self.HOVER_PROVIDER_COUNT_KEY)
                 settings.set(self.SHOW_DEFINITIONS_KEY, True)
 
-    def register_capability_async(self, capability_path: str, options: Any) -> None:
+    def get_capability(self, capability_path: str) -> Optional[Any]:
+        return self.session_buffer.get_capability(capability_path)
+
+    def has_capability(self, capability_path: str) -> bool:
+        value = self.session_buffer.get_capability(capability_path)
+        return isinstance(value, dict) or bool(value)
+
+    def on_capability_added_async(self, capability_path: str, options: Dict[str, Any]) -> None:
         if capability_path == self.HOVER_PROVIDER_KEY:
             self._increment_hover_count()
 
-    def unregister_capability_async(self, capability_path: str) -> None:
-        if capability_path == self.HOVER_PROVIDER_KEY:
+    def on_capability_removed_async(self, discarded: Dict[str, Any]) -> None:
+        if self.HOVER_PROVIDER_KEY in discarded:
             self._decrement_hover_count()
+
+    def has_capability_async(self, capability_path: str) -> bool:
+        return self.session_buffer.has_capability(capability_path)
 
     def shutdown_async(self) -> None:
         listener = self.listener()
@@ -126,22 +136,22 @@ class SessionView:
         return self.session_buffer.diagnostics
 
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
-        self.session_buffer.on_text_changed_async(changes)
+        self.session_buffer.on_text_changed_async(self.view, changes)
 
     def on_revert_async(self) -> None:
-        self.session_buffer.on_revert_async()
+        self.session_buffer.on_revert_async(self.view)
 
     def on_reload_async(self) -> None:
-        self.session_buffer.on_reload_async()
+        self.session_buffer.on_reload_async(self.view)
 
     def purge_changes_async(self) -> None:
-        self.session_buffer.purge_changes_async()
+        self.session_buffer.purge_changes_async(self.view)
 
     def on_pre_save_async(self, old_file_name: str) -> None:
-        self.session_buffer.on_pre_save_async(old_file_name)
+        self.session_buffer.on_pre_save_async(self.view, old_file_name)
 
     def on_post_save_async(self) -> None:
-        self.session_buffer.on_post_save_async()
+        self.session_buffer.on_post_save_async(self.view)
 
     def __str__(self) -> str:
         return '{}:{}'.format(self.session.config.name, self.view.id())

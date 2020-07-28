@@ -1,5 +1,6 @@
 from .collections import DottedDict
 from .logging import debug
+from .protocol import TextDocumentSyncKindNone
 from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, TypeVar, Tuple
 from threading import RLock
 import contextlib
@@ -214,6 +215,75 @@ class ClientStates:
     STOPPING = 2
 
 
+class DocumentFilter:
+    """
+    A document filter denotes a document through properties like language, scheme or pattern. An example is a filter
+    that applies to TypeScript files on disk. Another example is a filter that applies to JSON files with name
+    package.json:
+
+        { "language": "typescript", scheme: "file" }
+        { "language": "json", "pattern": "**/package.json" }
+
+    Sublime Text doesn't understand what a language ID is, so we have to maintain a global translation map from language
+    IDs to selectors. Sublime Text also has no support for patterns. We use the wcmatch library for this.
+    """
+
+    __slots__ = ("language", "scheme", "pattern", "selector", "feature_selector")
+
+    def __init__(
+        self,
+        language: Optional[str] = None,
+        scheme: Optional[str] = None,
+        pattern: Optional[str] = None,
+        feature_selector: str = ""
+    ) -> None:
+        self.language = language
+        self.scheme = scheme
+        self.pattern = pattern
+        self.feature_selector = feature_selector
+        if language:
+            # This the connection between VSCode language IDs and ST selectors.
+            lang_id_map = sublime.load_settings("language-ids.sublime-settings")
+            self.selector = lang_id_map.get(language, "source.{}".format(language))  # type: Optional[str]
+        else:
+            self.selector = None
+
+    def matches(self, view: sublime.View) -> bool:
+        """Does this filter match the view? An empty filter matches any view."""
+        if self.selector:
+            if not view.match_selector(0, self.selector):
+                return False
+        if self.scheme:
+            # Can be "file" or "untitled"?
+            pass
+        if self.pattern:
+            # TODO: use facelessuser's wcmatch library here
+            pass
+        return True
+
+    def score_feature(self, view: sublime.View, pt: int) -> int:
+        return view.score_selector(pt, self.feature_selector)
+
+
+class DocumentSelector:
+    """
+    A DocumentSelector is a list of DocumentFilters. A view matches a DocumentSelector if and only if any one of its
+    filters matches against the view.
+    """
+
+    __slots__ = ("filters",)
+
+    def __init__(self, document_selector: List[Dict[str, Any]]) -> None:
+        self.filters = [DocumentFilter(**document_filter) for document_filter in document_selector]
+
+    def __bool__(self) -> bool:
+        return bool(self.filters)
+
+    def matches(self, view: sublime.View) -> bool:
+        """Does this selector match the view? A selector with no filters matches all views."""
+        return any(filter(lambda f: f.matches(view), self.filters)) if self.filters else True  # type: ignore
+
+
 class LanguageConfig:
 
     __slots__ = ('id', 'document_selector', 'feature_selector')
@@ -247,10 +317,165 @@ class LanguageConfig:
             self.__class__.__name__, repr(self.id), repr(self.document_selector), repr(self.feature_selector))
 
 
+# method -> (capability dotted path, optional registration dotted path)
+# these are the EXCEPTIONS. The general rule is: method foo/bar --> (barProvider, barProvider.id)
+_METHOD_TO_CAPABILITY_EXCEPTIONS = {
+    'workspace/symbol': ('workspaceSymbolProvider', None),
+    'workspace/didChangeWorkspaceFolders': ('workspace.workspaceFolders',
+                                            'workspace.workspaceFolders.changeNotifications'),
+    'textDocument/didOpen': ('textDocumentSync.didOpen', None),
+    'textDocument/didClose': ('textDocumentSync.didClose', None),
+    'textDocument/didChange': ('textDocumentSync.change', None),
+    'textDocument/didSave': ('textDocumentSync.save', None),
+    'textDocument/willSave': ('textDocumentSync.willSave', None),
+    'textDocument/willSaveWaitUntil': ('textDocumentSync.willSaveWaitUntil', None),
+    'textDocument/formatting': ('documentFormattingProvider', None),
+    'textDocument/documentColor': ('colorProvider', None)
+}  # type: Dict[str, Tuple[str, Optional[str]]]
+
+
+def method_to_capability(method: str) -> Tuple[str, str]:
+    """
+    Given a method, returns the corresponding capability path, and the associated path to stash the registration key.
+
+    Examples:
+
+        textDocument/definition --> (definitionProvider, definitionProvider.id)
+        textDocument/references --> (referencesProvider, referencesProvider.id)
+        textDocument/didOpen --> (textDocumentSync.didOpen, textDocumentSync.didOpen.id)
+    """
+    capability_path, registration_path = _METHOD_TO_CAPABILITY_EXCEPTIONS.get(method, (None, None))
+    if capability_path is None:
+        capability_path = method.split('/')[1] + "Provider"
+    if registration_path is None:
+        # This path happens to coincide with the StaticRegistrationOptions' id, which is on purpose. As a consequence,
+        # if a server made a "registration" via the initialize response, it can call client/unregisterCapability at
+        # a later date, and the capability will pop from the capabilities dict.
+        registration_path = capability_path + ".id"
+    return capability_path, registration_path
+
+
+def normalize_text_sync(textsync: Union[None, int, Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Brings legacy text sync capabilities to the most modern format
+    """
+    result = {}  # type: Dict[str, Any]
+    if isinstance(textsync, int):
+        change = {"syncKind": textsync}  # type: Optional[Dict[str, Any]]
+        if textsync > TextDocumentSyncKindNone:
+            result["textDocumentSync"] = {"didOpen": {}, "didClose": {}, "change": change}
+        else:
+            result["textDocumentSync"] = {"change": change}
+    elif isinstance(textsync, dict):
+        new = {}
+        change = textsync.get("change")
+        if isinstance(change, int):
+            new["change"] = {"syncKind": change}
+        elif isinstance(change, dict):
+            new["change"] = change
+
+        def maybe_assign_bool_or_dict(key: str) -> None:
+            assert isinstance(textsync, dict)
+            value = textsync.get(key)
+            if isinstance(value, bool) and value:
+                new[key] = {}
+            elif isinstance(value, dict):
+                new[key] = value
+
+        open_close = textsync.get("openClose")
+        if isinstance(open_close, bool):
+            if open_close:
+                new["didOpen"] = {}
+                new["didClose"] = {}
+        else:
+            maybe_assign_bool_or_dict("didOpen")
+            maybe_assign_bool_or_dict("didClose")
+        maybe_assign_bool_or_dict("willSave")
+        maybe_assign_bool_or_dict("willSaveWaitUntil")
+        maybe_assign_bool_or_dict("save")
+        result["textDocumentSync"] = new
+    return result
+
+
+class Capabilities(DottedDict):
+    """
+    Maintains static and dynamic capabilities
+
+    Static capabilities come from a response to the initialize request (from Client -> Server).
+    Dynamic capabilities can be registered at any moment with client/registerCapability and client/unregisterCapability
+    (from Server -> Client).
+    """
+
+    def register(
+        self,
+        registration_id: str,
+        capability_path: str,
+        registration_path: str,
+        options: Dict[str, Any]
+    ) -> None:
+        stored_registration_id = self.get(registration_path)
+        if isinstance(stored_registration_id, str):
+            msg = "{} is already registered at {} with ID {}, overwriting"
+            debug(msg.format(capability_path, registration_path, stored_registration_id))
+        self.set(capability_path, options)
+        self.set(registration_path, registration_id)
+
+    def unregister(
+        self,
+        registration_id: str,
+        capability_path: str,
+        registration_path: str
+    ) -> Optional[Dict[str, Any]]:
+        stored_registration_id = self.get(registration_path)
+        if not isinstance(stored_registration_id, str):
+            debug("stored registration ID at", registration_path, "is not a string")
+            return None
+        elif stored_registration_id != registration_id:
+            msg = "stored registration ID ({}) is not the same as the provided registration ID ({})"
+            debug(msg.format(stored_registration_id, registration_id))
+            return None
+        else:
+            discarded = self.get(capability_path)
+            self.remove(capability_path)
+            self.remove(registration_path)
+            return discarded
+
+    def assign(self, d: Dict[str, Any]) -> None:
+        textsync = normalize_text_sync(d.pop("textDocumentSync", None))
+        super().assign(d)
+        if textsync:
+            self.update(textsync)
+
+    def should_notify_did_open(self) -> bool:
+        return "textDocumentSync.didOpen" in self
+
+    def text_sync_kind(self) -> int:
+        value = self.get("textDocumentSync.change.syncKind")
+        return value if isinstance(value, int) else TextDocumentSyncKindNone
+
+    def should_notify_did_change(self) -> bool:
+        return self.text_sync_kind() > TextDocumentSyncKindNone
+
+    def should_notify_will_save(self) -> bool:
+        return "textDocumentSync.willSave" in self
+
+    def should_notify_did_save(self) -> Tuple[bool, bool]:
+        save = self.get("textDocumentSync.save")
+        if isinstance(save, bool):
+            return save, False
+        elif isinstance(save, dict):
+            return True, bool(save.get("includeText"))
+        else:
+            return False, False
+
+    def should_notify_did_close(self) -> bool:
+        return "textDocumentSync.didClose" in self
+
+
 class ClientConfig:
     def __init__(self,
                  name: str,
-                 languages: List[LanguageConfig],
+                 languages: List[LanguageConfig],  # replace with DocumentSelector?
                  command: Optional[List[str]] = None,
                  binary_args: Optional[List[str]] = None,  # DEPRECATED
                  tcp_port: Optional[int] = None,

@@ -4,9 +4,10 @@ from .core.protocol import TextDocumentSyncKindFull
 from .core.protocol import TextDocumentSyncKindNone
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
+from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import Debouncer
-from .core.typing import Any, Iterable, Optional, List, Dict
+from .core.typing import Any, Iterable, Optional, List, Dict, Tuple
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import did_change
 from .core.views import did_close
@@ -50,23 +51,26 @@ class SessionBuffer:
     """
     Holds state per session per buffer.
 
-    It stores the filename, handles document synchronization for the buffer, and stores/receives diagnostics.
+    It stores the filename, handles document synchronization for the buffer, and stores/receives diagnostics for the
+    buffer. The diagnostics are then published further to the views attached to this buffer. It also maintains the
+    dynamically registered capabilities applicable to this particular buffer.
     """
 
     def __init__(self, session_view: SessionViewProtocol, buffer_id: int, language_id: str) -> None:
-        self.view = session_view.view
+        view = session_view.view
+        file_name = view.file_name()
+        if not file_name:
+            raise ValueError("missing filename")
+        self.opened = False
+        # Every SessionBuffer has its own personal capabilities due to "dynamic registration".
+        self.capabilities = Capabilities()
         self.session = session_view.session
         self.session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
         self.session_views.add(session_view)
-        file_name = self.view.file_name()
-        if not file_name:
-            raise ValueError("missing filename")
         self.file_name = file_name
+        self.language_id = language_id
         self.id = buffer_id
         self.pending_changes = None  # type: Optional[PendingChanges]
-        if self.session.should_notify_did_open():
-            self.session.send_notification(did_open(self.view, language_id))
-        self.session.register_session_buffer_async(self)
         self.diagnostics = []  # type: List[Diagnostic]
         self.data_per_severity = {}  # type: Dict[int, DiagnosticSeverityData]
         self.diagnostics_version = -1
@@ -77,6 +81,8 @@ class SessionBuffer:
         self.total_warnings = 0
         self.should_show_diagnostics_panel = False
         self.diagnostics_debouncer = Debouncer()
+        self._check_did_open(view)
+        self.session.register_session_buffer_async(self)
 
     def __del__(self) -> None:
         mgr = self.session.manager()
@@ -86,9 +92,18 @@ class SessionBuffer:
         # in unregistering ourselves from the session.
         if not self.session.exiting:
             # Only send textDocument/didClose when we are the only view left (i.e. there are no other clones).
-            if self.session.should_notify_did_close():
-                self.session.send_notification(did_close(self.file_name))
+            self._check_did_close()
             self.session.unregister_session_buffer_async(self)
+
+    def _check_did_open(self, view: sublime.View) -> None:
+        if not self.opened and self.should_notify_did_open():
+            self.session.send_notification(did_open(view, self.language_id))
+            self.opened = True
+
+    def _check_did_close(self) -> None:
+        if self.opened and self.should_notify_did_close():
+            self.session.send_notification(did_close(self.file_name))
+            self.opened = False
 
     def add_session_view(self, sv: SessionViewProtocol) -> None:
         self.session_views.add(sv)
@@ -99,70 +114,124 @@ class SessionBuffer:
             if listener:
                 listener.on_session_shutdown_async(self.session)
 
-    def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
+    def register_capability_async(
+        self,
+        registration_id: str,
+        capability_path: str,
+        registration_path: str,
+        options: Dict[str, Any]
+    ) -> None:
+        self.capabilities.register(registration_id, capability_path, registration_path, options)
+        view = None  # type: Optional[sublime.View]
+        for sv in self.session_views:
+            sv.on_capability_added_async(capability_path, options)
+            if view is None:
+                view = sv.view
+        if view is not None:
+            if capability_path.startswith("textDocumentSync."):
+                self._check_did_open(view)
+
+    def unregister_capability_async(
+        self,
+        registration_id: str,
+        capability_path: str,
+        registration_path: str
+    ) -> None:
+        discarded = self.capabilities.unregister(registration_id, capability_path, registration_path)
+        if discarded is None:
+            return
+        for sv in self.session_views:
+            sv.on_capability_removed_async(discarded)
+
+    def get_capability(self, capability_path: str) -> Optional[Any]:
+        value = self.capabilities.get(capability_path)
+        return value if value is not None else self.session.get_capability(capability_path)
+
+    def has_capability(self, capability: str) -> bool:
+        value = self.get_capability(capability)
+        return value is not False and value is not None
+
+    def text_sync_kind(self) -> int:
+        value = self.capabilities.text_sync_kind()
+        return value if value > TextDocumentSyncKindNone else self.session.text_sync_kind()
+
+    def should_notify_did_open(self) -> bool:
+        return self.capabilities.should_notify_did_open() or self.session.should_notify_did_open()
+
+    def should_notify_did_change(self) -> bool:
+        return self.capabilities.should_notify_did_change() or self.session.should_notify_did_change()
+
+    def should_notify_will_save(self) -> bool:
+        return self.capabilities.should_notify_will_save() or self.session.should_notify_will_save()
+
+    def should_notify_did_save(self) -> Tuple[bool, bool]:
+        do_it, include_text = self.capabilities.should_notify_did_save()
+        return (do_it, include_text) if do_it else self.session.should_notify_did_save()
+
+    def should_notify_did_close(self) -> bool:
+        return self.capabilities.should_notify_did_close() or self.session.should_notify_did_close()
+
+    def on_text_changed_async(self, view: sublime.View, changes: Iterable[sublime.TextChange]) -> None:
         self.last_text_change_time = time.time()
         last_change = list(changes)[-1]
-        if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and self.view.size() != 0:
+        if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and view.size() != 0:
             # Issue https://github.com/sublimehq/sublime_text/issues/3323
             # A special situation when changes externally. We receive two changes,
             # one that removes all content and one that has 0,0,'' parameters.
             pass
         else:
-            change_count = self.view.change_count()
+            change_count = view.change_count()
             if self.pending_changes is None:
                 self.pending_changes = PendingChanges(change_count, changes)
             else:
                 self.pending_changes.update(change_count, changes)
-            debounced(self.purge_changes_async, 500,
-                      lambda: self.view.is_valid() and change_count == self.view.change_count())
+            debounced(lambda: self.purge_changes_async(view), 500,
+                      lambda: view.is_valid() and change_count == view.change_count())
 
-    def on_revert_async(self) -> None:
+    def on_revert_async(self, view: sublime.View) -> None:
         self.pending_changes = None  # Don't bother with pending changes
-        self.session.send_notification(did_change(self.view, None))
+        self.session.send_notification(did_change(view, None))
 
     on_reload_async = on_revert_async
 
-    def purge_changes_async(self) -> None:
+    def purge_changes_async(self, view: sublime.View) -> None:
         if self.pending_changes is not None:
-            sync_kind = self.session.text_sync_kind()
+            sync_kind = self.text_sync_kind()
             if sync_kind == TextDocumentSyncKindNone:
                 return
             c = None if sync_kind == TextDocumentSyncKindFull else self.pending_changes.changes
-            notification = did_change(self.view, c)
+            notification = did_change(view, c)
             self.session.send_notification(notification)
             self.pending_changes = None
 
-    def on_pre_save_async(self, old_file_name: str) -> None:
-        if self.session.should_notify_will_save():
-            self.purge_changes_async()
+    def on_pre_save_async(self, view: sublime.View, old_file_name: str) -> None:
+        if self.should_notify_will_save():
+            self.purge_changes_async(view)
             # TextDocumentSaveReason.Manual
             self.session.send_notification(will_save(old_file_name, 1))
 
-    def on_post_save_async(self) -> None:
-        file_name = self.view.file_name()
+    def on_post_save_async(self, view: sublime.View) -> None:
+        file_name = view.file_name()
         if file_name and file_name != self.file_name:
-            if self.session.should_notify_did_close():
-                self.session.send_notification(did_close(self.file_name))
+            self._check_did_close()
             self.file_name = file_name
-            if self.session.should_notify_did_open():
-                # TODO: Language ID should be UNIQUE!
-                language_ids = self.view.settings().get("lsp_language")
-                if isinstance(language_ids, dict):
-                    for config_name, language_id in language_ids.items():
-                        if config_name == self.session.config.name:
-                            self.session.send_notification(did_open(self.view, language_id))
-                            break
+            self._check_did_open(view)
         else:
-            send_did_save, include_text = self.session.should_notify_did_save()
+            send_did_save, include_text = self.should_notify_did_save()
             if send_did_save:
-                self.purge_changes_async()
+                self.purge_changes_async(view)
                 # mypy: expected sublime.View, got ViewLike
-                self.session.send_notification(did_save(self.view, include_text, self.file_name))
+                self.session.send_notification(did_save(view, include_text, self.file_name))
         if userprefs().show_diagnostics_panel_on_save():
             if self.should_show_diagnostics_panel:
                 mgr = self.session.manager()
                 if mgr:
                     mgr.show_diagnostics_panel_async()
+
+    def some_view(self) -> Optional[sublime.View]:
+        for sv in self.session_views:
+            return sv.view
+        return None
 
     def on_diagnostics_async(self, raw_diagnostics: List[Dict[str, Any]], version: Optional[int]) -> None:
         diagnostics = []  # type: List[Diagnostic]
@@ -170,7 +239,10 @@ class SessionBuffer:
         total_errors = 0
         total_warnings = 0
         should_show_diagnostics_panel = False
-        change_count = self.view.change_count()
+        view = self.some_view()
+        if view is None:
+            return
+        change_count = view.change_count()
         if version is None:
             version = change_count
         if version == change_count:
@@ -181,7 +253,7 @@ class SessionBuffer:
                 if data is None:
                     data = DiagnosticSeverityData(diagnostic.severity)
                     data_per_severity[diagnostic.severity] = data
-                data.regions.append(range_to_region(diagnostic.range, self.view))
+                data.regions.append(range_to_region(diagnostic.range, view))
                 if diagnostic.severity == DiagnosticSeverity.Error:
                     total_errors += 1
                 elif diagnostic.severity == DiagnosticSeverity.Warning:
@@ -230,7 +302,10 @@ class SessionBuffer:
         else:
             # There were no diagnostics visible before. Show them a bit later.
             delay_in_seconds = userprefs().diagnostics_delay_ms / 1000.0 + self.last_text_change_time - time.time()
-            if self.view.is_auto_complete_visible():
+            view = self.some_view()
+            if view is None:
+                return
+            if view.is_auto_complete_visible():
                 delay_in_seconds += userprefs().diagnostics_additional_delay_auto_complete_ms / 1000.0
             if delay_in_seconds <= 0.0:
                 present()
@@ -238,7 +313,7 @@ class SessionBuffer:
                 self.diagnostics_debouncer.debounce(
                     present,
                     timeout_ms=int(1000.0 * delay_in_seconds),
-                    condition=lambda: self.view.is_valid() and self.view.change_count() == diagnostics_version,
+                    condition=lambda: bool(view and view.is_valid() and view.change_count() == diagnostics_version),
                     async_thread=True
                 )
 

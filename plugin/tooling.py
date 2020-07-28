@@ -3,6 +3,7 @@ from .core.registry import windows
 from .core.transports import create_transport
 from .core.transports import Transport
 from .core.transports import TransportCallbacks
+from .core.types import Capabilities
 from .core.types import ClientConfig
 from .core.typing import Any, Callable, Dict, List, Optional
 from .core.version import __version__
@@ -237,6 +238,42 @@ class LspDumpWindowConfigs(sublime_plugin.WindowCommand):
         view.set_syntax_file("Packages/Python/Python.sublime-syntax")
         for config in windows.lookup(self.window).get_config_manager().get_configs():
             view.run_command("append", {"characters": str(config) + "\n"})
+
+
+class LspDumpBufferCapabilities(sublime_plugin.TextCommand):
+    """
+    Very basic command to dump the current view's static and dynamically registered capabilities.
+    """
+
+    def run(self, edit: sublime.Edit) -> None:
+        window = self.view.window()
+        if not window:
+            return
+        file_name = self.view.file_name()
+        if not file_name:
+            return
+        manager = windows.lookup(window)
+        listener = manager.listener_for_view(self.view)
+        if not listener or not any(listener.session_views_async()):
+            sublime.error_message("There is no language server running for this view.")
+            return
+        v = window.new_file()
+        v.set_scratch(True)
+        v.assign_syntax("Packages/Markdown/Markdown.sublime-settings")
+        v.set_name("{} (capabilities)".format(os.path.basename(file_name)))
+
+        def p(s: str) -> None:
+            v.run_command("append", {"characters": s + "\n"})
+
+        def print_capabilities(capabilities: Capabilities) -> str:
+            return "```json\n{}\n```".format(json.dumps(capabilities.get(), indent=4, sort_keys=True))
+
+        for sv in listener.session_views_async():
+            p("# {}\n".format(sv.session.config.name))
+            p("## Global capabilities\n")
+            p(print_capabilities(sv.session.capabilities) + "\n")
+            p("## View-specific capabilities\n")
+            p(print_capabilities(sv.session_buffer.capabilities) + "\n")
 
 
 class ServerTestRunner(TransportCallbacks):

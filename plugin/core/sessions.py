@@ -1,17 +1,24 @@
-from .collections import DottedDict
 from .edit import parse_workspace_edit
 from .logging import debug
 from .logging import exception_log
-from .protocol import TextDocumentSyncKindNone, TextDocumentSyncKindIncremental, CompletionItemTag
-from .protocol import WorkspaceFolder, Request, Notification, Response
+from .protocol import CompletionItemTag
+from .protocol import Error
+from .protocol import ErrorCode
+from .protocol import Notification
+from .protocol import Request
+from .protocol import Response
+from .protocol import WorkspaceFolder
 from .rpc import Client
 from .rpc import Logger
 from .settings import client_configs
 from .transports import Transport
+from .types import Capabilities
 from .types import ClientConfig
 from .types import ClientStates
 from .types import debounced
 from .types import diff
+from .types import DocumentSelector
+from .types import method_to_capability
 from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol
 from .url import uri_to_filename
 from .version import __version__
@@ -237,53 +244,20 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     }
 
 
-# method -> (capability dotted path, optional registration dotted path)
-# these are the EXCEPTIONS. The general rule is: method foo/bar --> (barProvider, barProvider.id)
-METHOD_TO_CAPABILITY_EXCEPTIONS = {
-    'workspace/symbol': ('workspaceSymbolProvider', None),
-    'workspace/didChangeWorkspaceFolders': ('workspace.workspaceFolders',
-                                            'workspace.workspaceFolders.changeNotifications'),
-    'textDocument/didOpen': ('textDocumentSync.openClose', None),
-    'textDocument/didChange': ('textDocumentSync.change', None),
-    'textDocument/didSave': ('textDocumentSync.save', None),
-    'textDocument/willSave': ('textDocumentSync.willSave', None),
-    'textDocument/willSaveWaitUntil': ('textDocumentSync.willSaveWaitUntil', None),
-    'textDocument/formatting': ('documentFormattingProvider', None),
-    'textDocument/documentColor': ('colorProvider', None)
-}  # type: Dict[str, Tuple[str, Optional[str]]]
-
-
-def method_to_capability(method: str) -> Tuple[str, str]:
-    """
-    Given a method, returns the corresponding capability path, and the associated path to stash the registration key.
-
-    Examples:
-
-        textDocument/definition --> (definitionProvider, definitionProvider.id)
-        textDocument/references --> (referencesProvider, referencesProvider.id)
-        textDocument/didOpen --> (textDocumentSync.openClose, textDocumentSync.openClose.id)
-    """
-    capability_path, registration_path = METHOD_TO_CAPABILITY_EXCEPTIONS.get(method, (None, None))
-    if capability_path is None:
-        capability_path = method.split('/')[1] + "Provider"
-    if registration_path is None:
-        # This path happens to coincide with the StaticRegistrationOptions' id, which is on purpose. As a consequence,
-        # if a server made a "registration" via the initialize response, it can call client/unregisterCapability at
-        # a later date, and the capability will pop from the capabilities dict.
-        registration_path = capability_path + ".id"
-    return capability_path, registration_path
-
-
 class SessionViewProtocol(Protocol):
 
     session = None  # type: Session
     view = None  # type: sublime.View
     listener = None  # type: Any
+    session_buffer = None  # type: Any
 
-    def register_capability_async(self, capability_path: str, options: Any) -> None:
+    def on_capability_added_async(self, capability_path: str, options: Dict[str, Any]) -> None:
         ...
 
-    def unregister_capability_async(self, capability_path: str) -> None:
+    def on_capability_removed_async(self, discarded_capabilities: Dict[str, Any]) -> None:
+        ...
+
+    def has_capability_async(self, capability_path: str) -> bool:
         ...
 
     def shutdown_async(self) -> None:
@@ -296,9 +270,25 @@ class SessionViewProtocol(Protocol):
 class SessionBufferProtocol(Protocol):
 
     session = None  # type: Session
-    view = None  # type: sublime.View
     session_views = None  # type: WeakSet[SessionViewProtocol]
     file_name = None  # type: str
+
+    def register_capability_async(
+        self,
+        registration_id: str,
+        capability_path: str,
+        registration_path: str,
+        options: Dict[str, Any]
+    ) -> None:
+        ...
+
+    def unregister_capability_async(
+        self,
+        registration_id: str,
+        capability_path: str,
+        registration_path: str
+    ) -> None:
+        ...
 
     def on_diagnostics_async(self, diagnostics: List[Dict[str, Any]], version: Optional[int]) -> None:
         ...
@@ -469,6 +459,40 @@ def get_plugin(name: str) -> Optional[Type[AbstractPlugin]]:
     return _plugins.get(name, None)
 
 
+class _RegistrationData:
+
+    __slots__ = ("registration_id", "capability_path", "registration_path", "options", "session_buffers", "selector")
+
+    def __init__(
+        self,
+        registration_id: str,
+        capability_path: str,
+        registration_path: str,
+        options: Dict[str, Any]
+    ) -> None:
+        self.registration_id = registration_id
+        self.registration_path = registration_path
+        self.capability_path = capability_path
+        document_selector = options.pop("documentSelector", None)
+        if not isinstance(document_selector, list):
+            document_selector = []
+        self.selector = DocumentSelector(document_selector)
+        self.options = options
+        self.session_buffers = WeakSet()  # type: WeakSet[SessionBufferProtocol]
+
+    def __del__(self) -> None:
+        for sb in self.session_buffers:
+            sb.unregister_capability_async(self.registration_id, self.capability_path, self.registration_path)
+
+    def check_applicable(self, sb: SessionBufferProtocol) -> None:
+        for sv in sb.session_views:
+            if self.selector.matches(sv.view):
+                self.session_buffers.add(sb)
+                sb.register_capability_async(
+                    self.registration_id, self.capability_path, self.registration_path, self.options)
+            return
+
+
 class Session(Client):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: List[WorkspaceFolder],
@@ -478,8 +502,9 @@ class Session(Client):
         self.manager = weakref.ref(manager)
         self.window = manager.window()
         self.state = ClientStates.STARTING
-        self.capabilities = DottedDict()
+        self.capabilities = Capabilities()
         self.exiting = False
+        self._registrations = {}  # type: Dict[str, _RegistrationData]
         self._init_callback = None  # type: Optional[InitCallback]
         self._exit_result = None  # type: Optional[Tuple[int, Optional[Exception]]]
         self._views_opened = 0
@@ -525,10 +550,18 @@ class Session(Client):
         """
         yield from self._session_views
 
+    def session_view_for_view_async(self, view: sublime.View) -> Optional[SessionViewProtocol]:
+        for sv in self.session_views_async():
+            if sv.view == view:
+                return sv
+        return None
+
     # --- session buffer management ------------------------------------------------------------------------------------
 
     def register_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
         self._session_buffers.add(sb)
+        for data in self._registrations.values():
+            data.check_applicable(sb)
 
     def unregister_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
         self._session_buffers.discard(sb)
@@ -554,8 +587,14 @@ class Session(Client):
     def can_handle(self, view: sublime.View, capability: Optional[str] = None) -> bool:
         file_name = view.file_name() or ''
         if self.config.match_view(view) and self.state == ClientStates.READY and self.handles_path(file_name):
-            if capability is None or capability in self.capabilities:
+            # If there's no capability requirement then this session can handle the view
+            if capability is None:
                 return True
+            sv = self.session_view_for_view_async(view)
+            if sv:
+                return sv.has_capability_async(capability)
+            else:
+                return self.has_capability(capability)
         return False
 
     def has_capability(self, capability: str) -> bool:
@@ -566,47 +605,24 @@ class Session(Client):
         return self.capabilities.get(capability)
 
     def should_notify_did_open(self) -> bool:
-        if self.has_capability('textDocumentSync.openClose'):
-            return True
-        textsync = self.get_capability('textDocumentSync')
-        return isinstance(textsync, int) and textsync > TextDocumentSyncKindNone
+        return self.capabilities.should_notify_did_open()
 
     def text_sync_kind(self) -> int:
-        textsync = self.capabilities.get('textDocumentSync')
-        if isinstance(textsync, dict):
-            change = textsync.get('change', TextDocumentSyncKindNone)
-            if isinstance(change, dict):
-                # dynamic registration
-                return TextDocumentSyncKindIncremental  # or TextDocumentSyncKindFull?
-            return int(change)
-        if isinstance(textsync, int):
-            return textsync
-        return TextDocumentSyncKindNone
+        return self.capabilities.text_sync_kind()
 
     def should_notify_did_change(self) -> bool:
-        return self.text_sync_kind() > TextDocumentSyncKindNone
+        return self.capabilities.should_notify_did_change()
 
     def should_notify_will_save(self) -> bool:
-        return self.has_capability('textDocumentSync.willSave')
+        return self.capabilities.should_notify_will_save()
 
     def should_notify_did_save(self) -> Tuple[bool, bool]:
-        textsync = self.capabilities.get('textDocumentSync')
-        if isinstance(textsync, dict):
-            options = textsync.get('save')
-            if isinstance(options, dict):
-                return True, bool(options.get('includeText'))
-            elif isinstance(options, bool):
-                return options, False
-        return False, False
+        return self.capabilities.should_notify_did_save()
 
     def should_notify_did_close(self) -> bool:
-        return self.should_notify_did_open()
+        return self.capabilities.should_notify_did_close()
 
-    def should_notify_did_change_workspace_folders(self) -> bool:
-        return self.has_capability("workspace.workspaceFolders.changeNotifications")
-
-    def should_notify_did_change_configuration(self) -> bool:
-        return self.has_capability("didChangeConfigurationProvider")
+    # --- misc methods -------------------------------------------------------------------------------------------------
 
     def handles_path(self, file_path: Optional[str]) -> bool:
         if self._supports_workspace_folders():
@@ -749,14 +765,21 @@ class Session(Client):
         def run() -> None:
             registrations = params["registrations"]
             for registration in registrations:
-                method = registration["method"]
-                capability_path, registration_path = method_to_capability(method)
+                registration_id = registration["id"]
+                capability_path, registration_path = method_to_capability(registration["method"])
                 debug("{}: registering capability:".format(self.config.name), capability_path)
-                options = registration.get("registerOptions", {})
-                self.capabilities.set(capability_path, options)
-                self.capabilities.set(registration_path, registration["id"])
-                for sv in self.session_views_async():
-                    sv.register_capability_async(capability_path, options)
+                options = registration.get("registerOptions")  # type: Optional[Dict[str, Any]]
+                if not isinstance(options, dict):
+                    options = {}
+                data = _RegistrationData(registration_id, capability_path, registration_path, options)
+                self._registrations[registration_id] = data
+                if data.selector:
+                    # The registration is applicable only to certain buffers, so let's check which buffers apply.
+                    for sb in self.session_buffers_async():
+                        data.check_applicable(sb)
+                else:
+                    # The registration applies globally to all buffers.
+                    self.capabilities.register(registration_id, capability_path, registration_path, options)
             self.send_response(Response(request_id, None))
 
         sublime.set_timeout_async(run)
@@ -767,12 +790,16 @@ class Session(Client):
         def run() -> None:
             unregistrations = params["unregisterations"]  # typo in the official specification
             for unregistration in unregistrations:
+                registration_id = unregistration["id"]
                 capability_path, registration_path = method_to_capability(unregistration["method"])
                 debug("{}: unregistering capability:".format(self.config.name), capability_path)
-                self.capabilities.remove(capability_path)
-                self.capabilities.remove(registration_path)
-                for sv in self.session_views_async():
-                    sv.unregister_capability_async(capability_path)
+                data = self._registrations.pop(registration_id, None)
+                if not data:
+                    message = "no registration data found for registration ID {}".format(registration_id)
+                    self.send_error_response(request_id, Error(ErrorCode.InvalidParams, message))
+                    return
+                elif not data.selector:
+                    self.capabilities.unregister(registration_id, capability_path, registration_path)
             self.send_response(Response(request_id, None))
 
         sublime.set_timeout_async(run)
@@ -831,6 +858,7 @@ class Session(Client):
         for sv in self.session_views_async():
             sv.shutdown_async()
         self.capabilities.clear()
+        self._registrations.clear()
         self.state = ClientStates.STOPPING
         self.send_request(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
 

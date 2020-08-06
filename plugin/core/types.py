@@ -133,7 +133,6 @@ class Settings:
         return _settings_style_to_add_regions_flag(self.document_highlight_style)
 
     def diagnostics_highlight_style_to_add_regions_flag(self) -> int:
-        # TODO: Unused for now
         return _settings_style_to_add_regions_flag(self.diagnostics_highlight_style)
 
 
@@ -199,8 +198,9 @@ class ClientConfig(object):
         self.status_key = "lsp_{}".format(self.name)
 
     def set_view_status(self, view: sublime.View, message: str) -> None:
-        status = "{}: {}".format(self.name, message) if message else self.name
-        view.set_status(self.status_key, status)
+        if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
+            status = "{}: {}".format(self.name, message) if message else self.name
+            view.set_status(self.status_key, status)
 
     def erase_view_status(self, view: sublime.View) -> None:
         view.erase_status(self.status_key)

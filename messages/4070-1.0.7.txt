@@ -1,0 +1,21 @@
+=> 4070-1.0.7
+
+The following **default** server configurations were removed:
+- javascript-typescript-langserver: use the LSP-typescript helper package
+- typescript-language-server: inferior alternative
+- lsp-tsserver: inferior alternative
+- intelephense-ls: use the LSP-intelephense helper package
+- phpls: no longer maintained
+- cquery: no longer maintained
+- bashls: use the LSP-bash helper package
+- rls: use the rust-analyzer instead
+- eslint: use the LSP-eslint helper package
+
+More generally, the idea is to move towards more helper packages.
+Experience shows it takes more than a few lines of JSON config to get a
+good language server experience for some servers.
+
+Features and bugfixes:
+- Fix: show_view_status wasn't working properly (#1230) (Raoul Wols)
+- Fix: compatibility with ST 4080+ (#1231) (Rafał Chłodnicki)
+- API: Get session by name (Raoul Wols)

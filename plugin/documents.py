@@ -108,7 +108,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         self.listener = ref(listener)
 
     # Created to have symmetry with "attach". Weird naming in internal API...
-    def detach(self):
+    def detach(self) -> None:
         self.remove()
 
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:

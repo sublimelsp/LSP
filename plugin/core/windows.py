@@ -78,6 +78,14 @@ class AbstractViewListener(metaclass=ABCMeta):
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
         raise NotImplementedError()
 
+    @abstractmethod
+    def on_revert_async(self) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def on_reload_async(self) -> None:
+        raise NotImplementedError()
+
 
 def extract_message(params: Any) -> str:
     return params.get("message", "???") if isinstance(params, dict) else "???"

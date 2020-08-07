@@ -116,6 +116,16 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         if listener:
             listener.on_text_changed_async(changes)
 
+    def on_reload_async(self) -> None:
+        listener = self.listener()
+        if listener:
+            listener.on_reload_async()
+
+    def on_revert_async(self) -> None:
+        listener = self.listener()
+        if listener:
+            listener.on_revert_async()
+
 
 class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
@@ -200,28 +210,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         for sv in self.session_views_async():
             yield sv.session_buffer
 
-    # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
-
-    def on_load_async(self) -> None:
-        if self._is_regular_view():
-            self._register_async()
-
-    def on_activated_async(self) -> None:
-        if self._is_regular_view() and not self.view.is_loading():
-            self._register_async()
-
-    def on_selection_modified_async(self) -> None:
-        different, current_region = self._update_stored_region_async()
-        if different:
-            self._clear_highlight_regions()
-            self._clear_code_actions_annotation()
-            if "documentHighlight" not in global_settings.disabled_capabilities:
-                self._when_selection_remains_stable_async(self._do_highlights, current_region,
-                                                          after_ms=self.highlights_debounce_time)
-            self._when_selection_remains_stable_async(self._do_code_actions, current_region,
-                                                      after_ms=self.code_actions_debounce_time)
-            self.update_diagnostic_in_status_bar_async()
-
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
         self._clear_highlight_regions()
         different, current_region = self._update_stored_region_async()
@@ -245,6 +233,28 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_reload_async()
+
+    # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
+
+    def on_load_async(self) -> None:
+        if self._is_regular_view():
+            self._register_async()
+
+    def on_activated_async(self) -> None:
+        if self._is_regular_view() and not self.view.is_loading():
+            self._register_async()
+
+    def on_selection_modified_async(self) -> None:
+        different, current_region = self._update_stored_region_async()
+        if different:
+            self._clear_highlight_regions()
+            self._clear_code_actions_annotation()
+            if "documentHighlight" not in global_settings.disabled_capabilities:
+                self._when_selection_remains_stable_async(self._do_highlights, current_region,
+                                                          after_ms=self.highlights_debounce_time)
+            self._when_selection_remains_stable_async(self._do_code_actions, current_region,
+                                                      after_ms=self.code_actions_debounce_time)
+            self.update_diagnostic_in_status_bar_async()
 
     def on_post_save_async(self) -> None:
         if self.view.is_primary():

@@ -28,9 +28,11 @@ from .diagnostics import filter_by_range
 from .diagnostics import view_diagnostics
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
+from weakref import ref
 import html
 import mdpopups
 import sublime
+import sublime_plugin
 import webbrowser
 
 
@@ -100,6 +102,21 @@ class ColorSchemeScopeRenderer:
         return '<span style="color: {};{}">{}</span>'.format(color, additional_styles, content)
 
 
+class TextChangeListener(sublime_plugin.TextChangeListener):
+    def __init__(self, buffer: Any, listener: AbstractViewListener) -> None:
+        super().__init__(buffer)
+        self.listener = ref(listener)
+        self.attach(buffer)
+
+    def detach(self) -> None:
+        self.remove()
+
+    def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
+        listener = self.listener()
+        if listener:
+            listener.on_text_changed_async(changes)
+
+
 class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     CODE_ACTIONS_KEY = "lsp_code_action"
@@ -114,6 +131,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
+        self._text_changed_listener = TextChangeListener(view.buffer(), self)
         self._session_views = {}  # type: Dict[str, SessionView]
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
@@ -121,6 +139,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         self._sighelp_renderer = ColorSchemeScopeRenderer(self.view)
 
     def __del__(self) -> None:
+        self._text_changed_listener.detach()
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms.update([])
         self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)

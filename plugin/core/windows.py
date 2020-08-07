@@ -74,6 +74,10 @@ class AbstractViewListener(metaclass=ABCMeta):
     def update_diagnostic_in_status_bar_async(self) -> None:
         raise NotImplementedError()
 
+    @abstractmethod
+    def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
+        raise NotImplementedError()
+
 
 def extract_message(params: Any) -> str:
     return params.get("message", "???") if isinstance(params, dict) else "???"

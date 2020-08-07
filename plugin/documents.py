@@ -106,9 +106,9 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
     def __init__(self, buffer: Any, listener: AbstractViewListener) -> None:
         super().__init__(buffer)
         self.listener = ref(listener)
-        self.attach(buffer)
 
-    def detach(self) -> None:
+    # Created to have symmetry with "attach". Weird naming in internal API...
+    def detach(self):
         self.remove()
 
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
@@ -146,7 +146,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
         self._sighelp = None  # type: Optional[SignatureHelp]
         self._sighelp_renderer = ColorSchemeScopeRenderer(self.view)
-        self._text_change_listener = None  # type: Optional[TextChangeListener]
+        self._text_change_listener = TextChangeListener(self.view.buffer(), self)
 
     def __del__(self) -> None:
         self._stored_region = sublime.Region(-1, -1)
@@ -167,15 +167,14 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         if added:
             if "colorProvider" not in global_settings.disabled_capabilities:
                 self._do_color_boxes_async()
-            if not self._text_change_listener:
-                self._text_change_listener = TextChangeListener(self.view.buffer(), self)
+            if not self._text_change_listener.is_attached():
+                self._text_change_listener.attach(self.view.buffer())
 
     def on_session_shutdown_async(self, session: Session) -> None:
         self._session_views.pop(session.config.name, None)
         if not self._session_views:
             self.view.settings().erase("lsp_active")
-            if self._text_change_listener:
-                self._text_change_listener.detach()
+            self._text_change_listener.detach()
 
     def diagnostics_panel_contribution_async(self) -> List[str]:
         result = []  # type: List[str]

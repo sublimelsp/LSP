@@ -141,15 +141,14 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self._text_changed_listener = TextChangeListener(view.buffer(), self)
         self._session_views = {}  # type: Dict[str, SessionView]
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
         self._sighelp = None  # type: Optional[SignatureHelp]
         self._sighelp_renderer = ColorSchemeScopeRenderer(self.view)
+        self._text_change_listener = None  # type: Optional[TextChangeListener]
 
     def __del__(self) -> None:
-        self._text_changed_listener.detach()
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms.update([])
         self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
@@ -168,11 +167,15 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         if added:
             if "colorProvider" not in global_settings.disabled_capabilities:
                 self._do_color_boxes_async()
+            if not self._text_change_listener:
+                self._text_change_listener = TextChangeListener(self.view.buffer(), self)
 
     def on_session_shutdown_async(self, session: Session) -> None:
         self._session_views.pop(session.config.name, None)
         if not self._session_views:
             self.view.settings().erase("lsp_active")
+            if self._text_change_listener:
+                self._text_change_listener.detach()
 
     def diagnostics_panel_contribution_async(self) -> List[str]:
         result = []  # type: List[str]

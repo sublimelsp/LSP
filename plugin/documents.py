@@ -28,9 +28,11 @@ from .diagnostics import filter_by_range
 from .diagnostics import view_diagnostics
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
+from weakref import ref
 import html
 import mdpopups
 import sublime
+import sublime_plugin
 import webbrowser
 
 
@@ -100,6 +102,31 @@ class ColorSchemeScopeRenderer:
         return '<span style="color: {};{}">{}</span>'.format(color, additional_styles, content)
 
 
+class TextChangeListener(sublime_plugin.TextChangeListener):
+    def __init__(self, buffer: Any, listener: AbstractViewListener) -> None:
+        super().__init__(buffer)
+        self.listener = ref(listener)
+
+    # Created to have symmetry with "attach". Weird naming in internal API...
+    def detach(self) -> None:
+        self.remove()
+
+    def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
+        listener = self.listener()
+        if listener:
+            listener.on_text_changed_async(changes)
+
+    def on_reload_async(self) -> None:
+        listener = self.listener()
+        if listener:
+            listener.on_reload_async()
+
+    def on_revert_async(self) -> None:
+        listener = self.listener()
+        if listener:
+            listener.on_revert_async()
+
+
 class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     CODE_ACTIONS_KEY = "lsp_code_action"
@@ -119,6 +146,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
         self._sighelp = None  # type: Optional[SignatureHelp]
         self._sighelp_renderer = ColorSchemeScopeRenderer(self.view)
+        self._text_change_listener = TextChangeListener(self.view.buffer(), self)
 
     def __del__(self) -> None:
         self._stored_region = sublime.Region(-1, -1)
@@ -139,11 +167,14 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         if added:
             if "colorProvider" not in global_settings.disabled_capabilities:
                 self._do_color_boxes_async()
+            if not self._text_change_listener.is_attached():
+                self._text_change_listener.attach(self.view.buffer())
 
     def on_session_shutdown_async(self, session: Session) -> None:
         self._session_views.pop(session.config.name, None)
         if not self._session_views:
             self.view.settings().erase("lsp_active")
+            self._text_change_listener.detach()
 
     def diagnostics_panel_contribution_async(self) -> List[str]:
         result = []  # type: List[str]
@@ -181,28 +212,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         for sv in self.session_views_async():
             yield sv.session_buffer
 
-    # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
-
-    def on_load_async(self) -> None:
-        if self._is_regular_view():
-            self._register_async()
-
-    def on_activated_async(self) -> None:
-        if self._is_regular_view() and not self.view.is_loading():
-            self._register_async()
-
-    def on_selection_modified_async(self) -> None:
-        different, current_region = self._update_stored_region_async()
-        if different:
-            self._clear_highlight_regions()
-            self._clear_code_actions_annotation()
-            if "documentHighlight" not in global_settings.disabled_capabilities:
-                self._when_selection_remains_stable_async(self._do_highlights, current_region,
-                                                          after_ms=self.highlights_debounce_time)
-            self._when_selection_remains_stable_async(self._do_code_actions, current_region,
-                                                      after_ms=self.code_actions_debounce_time)
-            self.update_diagnostic_in_status_bar_async()
-
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
         self._clear_highlight_regions()
         different, current_region = self._update_stored_region_async()
@@ -226,6 +235,28 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_reload_async()
+
+    # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
+
+    def on_load_async(self) -> None:
+        if self._is_regular_view():
+            self._register_async()
+
+    def on_activated_async(self) -> None:
+        if self._is_regular_view() and not self.view.is_loading():
+            self._register_async()
+
+    def on_selection_modified_async(self) -> None:
+        different, current_region = self._update_stored_region_async()
+        if different:
+            self._clear_highlight_regions()
+            self._clear_code_actions_annotation()
+            if "documentHighlight" not in global_settings.disabled_capabilities:
+                self._when_selection_remains_stable_async(self._do_highlights, current_region,
+                                                          after_ms=self.highlights_debounce_time)
+            self._when_selection_remains_stable_async(self._do_code_actions, current_region,
+                                                      after_ms=self.code_actions_debounce_time)
+            self.update_diagnostic_in_status_bar_async()
 
     def on_post_save_async(self) -> None:
         if self.view.is_primary():

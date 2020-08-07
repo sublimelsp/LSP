@@ -264,12 +264,22 @@ def get_macro() -> Sequence[dict]:
     ...
 
 
-def list_syntaxes() -> Sequence[Dict[str, Any]]:
+def syntax_from_path(syntax_path: str) -> Optional[Syntax]:
     ...
 
 
 def command_url(cmd: str, args: Optional[dict] = ...) -> str:
     ...
+
+
+class Syntax:
+    path = ...  # type: str
+    name = ...  # type: str
+    hidden = ...  # type: bool
+    scope = ...  # type: str
+
+    def __init__(self, path: str, name: str, hidden: bool, scope: str) -> None:
+        ...
 
 
 class CompletionItem:
@@ -632,6 +642,9 @@ class View:
         ...
 
     def id(self) -> int:
+        ...
+
+    def buffer(self) -> Any:
         ...
 
     def buffer_id(self) -> int:

@@ -220,11 +220,9 @@ class ClientConfig(object):
         return highest_score
 
 
-def syntax2scope(syntax: str) -> Optional[str]:
-    try:
-        return next(filter(lambda d: d['path'] == syntax, sublime.list_syntaxes()))['scope']
-    except StopIteration:
-        return None
+def syntax2scope(syntax_path: str) -> Optional[str]:
+    syntax = sublime.syntax_from_path(syntax_path)
+    return syntax.scope if syntax else None
 
 
 def view2scope(view: sublime.View) -> str:

@@ -20,6 +20,7 @@ from .views import extract_variables
 from .views import SYMBOL_KINDS
 from .workspace import is_subpath_of
 from abc import ABCMeta, abstractmethod
+from copy import deepcopy
 from weakref import WeakSet
 import os
 import sublime
@@ -729,7 +730,7 @@ class Session(Client):
         items = []  # type: List[Any]
         requested_items = params.get("items") or []
         for requested_item in requested_items:
-            configuration = self.config.settings.get(requested_item.get('section') or None)
+            configuration = deepcopy(self.config.settings.get(requested_item.get('section') or None))
             if self._plugin:
                 self._plugin.on_workspace_configuration(requested_item, configuration)
             items.append(configuration)

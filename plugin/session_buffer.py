@@ -55,6 +55,7 @@ class SessionBuffer:
 
     def __init__(self, session_view: SessionViewProtocol, buffer_id: int, language_id: str) -> None:
         self.view = session_view.view
+        self.revert_change_count = -1
         self.session = session_view.session
         self.session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
         self.session_views.add(session_view)
@@ -111,12 +112,20 @@ class SessionBuffer:
             change_count = self.view.change_count()
             if self.pending_changes is None:
                 self.pending_changes = PendingChanges(change_count, changes)
+            elif self.pending_changes.version == change_count:
+                # Changes were already recorded, and this notification comes from a clone view
+                return
             else:
                 self.pending_changes.update(change_count, changes)
             debounced(self.purge_changes_async, 500,
                       lambda: self.view.is_valid() and change_count == self.view.change_count())
 
     def on_revert_async(self) -> None:
+        change_count = self.view.change_count()
+        if self.revert_change_count == change_count:
+            # We already reverted, and this notification comes from a clone view
+            return
+        self.revert_change_count = change_count
         self.pending_changes = None  # Don't bother with pending changes
         self.session.send_notification(did_change(self.view, None))
 

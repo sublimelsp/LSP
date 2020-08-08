@@ -644,7 +644,7 @@ class View:
     def id(self) -> int:
         ...
 
-    def buffer(self) -> Any:
+    def buffer(self) -> "Optional[Buffer]":
         ...
 
     def buffer_id(self) -> int:
@@ -930,6 +930,19 @@ class View:
         ...
 
     def transform_region_from(self, region: Region, change_id: Any) -> Region:
+        ...
+
+
+class Buffer:
+    buffer_id = ... # type: int
+
+    def __init__(self, id: int) -> None:
+        ...
+
+    def views(self) -> Optional[List[View]]:
+        ...
+
+    def primary_view(self) -> Optional[View]:
         ...
 
 

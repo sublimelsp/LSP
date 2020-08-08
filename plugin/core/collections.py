@@ -2,6 +2,7 @@
 Module with additional collections.
 """
 from .typing import Optional, Dict, Any
+from copy import deepcopy
 
 
 class DottedDict:
@@ -73,6 +74,19 @@ class DottedDict:
                 return
             current = next_current
         current.pop(keys[-1], None)
+
+    def copy(self, path: Optional[str] = None) -> Any:
+        """
+        Get a copy of the value from the dictionary or copy of whole dictionary.
+
+        :param      path:  The path, e.g. foo.bar.baz, or None.
+
+        :returns:   A copy of the value stored at the path, or None if it doesn't exist.
+                    Note that this cannot distinguish between None values and
+                    paths that don't exist. If the path is None, returns a copy of the
+                    entire dictionary.
+        """
+        return deepcopy(self.get(path))
 
     def __bool__(self) -> bool:
         """

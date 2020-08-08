@@ -117,3 +117,16 @@ class DottedDictTests(TestCase):
         self.verify(d, "a.b.y", 2)
         d.clear()
         self.assertFalse(d)
+
+    def test_copy_whole(self) -> None:
+        d = DottedDict({"a": {"b": {"c": {"x": "x", "y": "y"}}}})
+        d_copy = d.copy()
+        d_copy['a'] = None
+        self.assertNotEqual(d.get()['a'], d_copy['a'])
+
+    def test_copy_partial(self) -> None:
+        d = DottedDict({"a": {"b": {"c": 'd'}}})
+        d_copy = d.copy('a.b')
+        self.assertEqual(d_copy['c'], 'd')
+        d_copy['c'] = None
+        self.assertNotEqual(d.get('a.b.c'), d_copy['c'])

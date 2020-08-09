@@ -435,8 +435,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         point = self.view.sel()[0].begin()
         if self.is_in_higlighted_region(point):
             return
-        else:
-            self._clear_highlight_regions()
+        self._clear_highlight_regions()
         session = self.session("documentHighlightProvider", point)
         if session:
             params = text_document_position_params(self.view, point)

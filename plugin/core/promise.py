@@ -1,3 +1,4 @@
+from .typing import Any, List, Optional
 import functools
 import threading
 
@@ -57,20 +58,6 @@ class Promise:
         Promise(do_work_async_1).then(do_more_work_async).then(process_value)
     """
 
-    def __init__(self, executor):
-        """Initialize Promise object.
-
-        Arguments:
-            executor: A function that is executed immediately by this Promise.
-            It gets passed a "resolve" function. The "resolve" function, when
-            called, resolves the Promise with the value passed to it.
-        """
-        self.value = None
-        self.resolved = False
-        self.mutex = threading.Lock()
-        self.callbacks = []
-        self._invoke_executor(executor)
-
     @classmethod
     def resolve(cls, resolve_value=None):
         """Immediately resolves a Promise.
@@ -85,6 +72,51 @@ class Promise:
             return resolve_fn(resolve_value)
 
         return cls(executor)
+
+    @classmethod
+    def all(cls, promises: List['Promise']) -> 'Promise':
+        """
+        Takes a list of promises and returns a Promise that gets resolved when all promises
+        gets resolved.
+
+        :param      promises: The list of promises
+
+        :returns:   A promise that gets resolved when all passed promises gets resolved.
+                    Gets passed a list with all resolved values.
+        """
+        def handler(resolve):
+            def recheck_resolve_status(_: Any):
+                # We're being called from a Promise that is holding a lock so don't try to use
+                # any methods that would try to acquire it.
+                if all(p.resolved for p in promises):
+                    resolve([p.value for p in promises])
+            for p in promises:
+                if not isinstance(p, Promise):
+                    raise Exception('Value is not a Promise')
+                p.then(recheck_resolve_status)
+
+        if promises:
+            return Promise(handler)
+        return Promise.resolve()
+
+    def __init__(self, executor):
+        """Initialize Promise object.
+
+        Arguments:
+            executor: A function that is executed immediately by this Promise.
+            It gets passed a "resolve" function. The "resolve" function, when
+            called, resolves the Promise with the value passed to it.
+        """
+        self.value = None
+        self.resolved = False
+        self.mutex = threading.Lock()
+        self.callbacks = []
+        self._invoke_executor(executor)
+
+    def __repr__(self):
+        if self.resolved:
+            return 'Promise({})'.format(self.value)
+        return 'Promise(<pending>)'
 
     def then(self, callback):
         """Create a new promise and chain it with this promise.
@@ -133,7 +165,7 @@ class Promise:
         return Promise(async_executor)
 
     def _invoke_executor(self, executor):
-        def resolve_fn(new_value):
+        def resolve_fn(new_value: Optional[Any] = None):
             self._do_resolve(new_value)
 
         executor(resolve_fn)
@@ -144,10 +176,10 @@ class Promise:
             raise RuntimeError(
                 "cannot set the value of an already resolved promise")
         with self.mutex:
+            self.resolved = True
             self.value = new_value
             for callback in self.callbacks:
                 callback(new_value)
-            self.resolved = True
 
     def _add_callback(self, callback):
         with self.mutex:

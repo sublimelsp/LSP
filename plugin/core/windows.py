@@ -736,8 +736,6 @@ class RemoteLogger(Logger):
         if RemoteLogger._ws_server:
             json_data = json.dumps(data, sort_keys=True, check_circular=False, separators=(',', ':'))
             RemoteLogger._ws_server.send_message_to_all(json_data)
-        else:
-            debug('Failed to broadcast a remote log message')
 
 
 class RouterLogger(Logger):

@@ -171,10 +171,14 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
                 self._text_change_listener.attach(self.view.buffer())
 
     def on_session_shutdown_async(self, session: Session) -> None:
-        self._session_views.pop(session.config.name, None)
-        if not self._session_views:
-            self.view.settings().erase("lsp_active")
-            self._text_change_listener.detach()
+        removed_session = self._session_views.pop(session.config.name, None)
+        if removed_session:
+            if not self._session_views:
+                self.view.settings().erase("lsp_active")
+                self._text_change_listener.detach()
+        else:
+            # SessionView was likely not created for this config so remove status here.
+            session.config.erase_view_status(self.view)
 
     def diagnostics_panel_contribution_async(self) -> List[str]:
         result = []  # type: List[str]

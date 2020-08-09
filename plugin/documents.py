@@ -252,10 +252,12 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     def on_selection_modified_async(self) -> None:
         different, current_region = self._update_stored_region_async()
         if different:
-            self._clear_code_actions_annotation()
             if "documentHighlight" not in global_settings.disabled_capabilities:
-                self._when_selection_remains_stable_async(self._do_highlights, current_region,
-                                                          after_ms=self.highlights_debounce_time)
+                if not self.is_in_higlighted_region(current_region.b):
+                    self._clear_highlight_regions()
+                    self._when_selection_remains_stable_async(self._do_highlights, current_region,
+                                                              after_ms=self.highlights_debounce_time)
+            self._clear_code_actions_annotation()
             self._when_selection_remains_stable_async(self._do_code_actions, current_region,
                                                       after_ms=self.code_actions_debounce_time)
             self.update_diagnostic_in_status_bar_async()
@@ -433,9 +435,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         if len(self.view.sel()) != 1:
             return
         point = self.view.sel()[0].begin()
-        if self.is_in_higlighted_region(point):
-            return
-        self._clear_highlight_regions()
         session = self.session("documentHighlightProvider", point)
         if session:
             params = text_document_position_params(self.view, point)

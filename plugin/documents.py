@@ -152,7 +152,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms.update([])
         self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
-        self._clear_highlight_regions()
         self._clear_session_views_async()
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
@@ -213,13 +212,16 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             yield sv.session_buffer
 
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
-        self._clear_highlight_regions()
         different, current_region = self._update_stored_region_async()
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_text_changed_async(changes)
         if not different:
             return
+        if "documentHighlight" not in global_settings.disabled_capabilities:
+            self._clear_highlight_regions()
+            self._when_selection_remains_stable_async(self._do_highlights, current_region,
+                                                      after_ms=self.highlights_debounce_time)
         if "colorProvider" not in global_settings.disabled_capabilities:
             self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region,
                                                       after_ms=self.color_boxes_debounce_time)
@@ -249,7 +251,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     def on_selection_modified_async(self) -> None:
         different, current_region = self._update_stored_region_async()
         if different:
-            self._clear_highlight_regions()
             self._clear_code_actions_annotation()
             if "documentHighlight" not in global_settings.disabled_capabilities:
                 self._when_selection_remains_stable_async(self._do_highlights, current_region,
@@ -419,11 +420,22 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         for kind in global_settings.document_highlight_scopes.keys():
             self.view.erase_regions("lsp_highlight_{}".format(kind))
 
+    def is_in_higlighted_region(self, point: int) -> bool:
+        for kind in global_settings.document_highlight_scopes.keys():
+            regions = self.view.get_regions("lsp_highlight_{}".format(kind))
+            for r in regions:
+                if r.contains(point):
+                    return True
+        return False
+
     def _do_highlights(self) -> None:
-        self._clear_highlight_regions()
         if len(self.view.sel()) != 1:
             return
         point = self.view.sel()[0].begin()
+        if self.is_in_higlighted_region(point):
+            return
+        else:
+            self._clear_highlight_regions()
         session = self.session("documentHighlightProvider", point)
         if session:
             params = text_document_position_params(self.view, point)

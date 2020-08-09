@@ -434,7 +434,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     def _do_highlights(self) -> None:
         if not len(self.view.sel()):
             return
-        point = self.view.sel()[0].begin()
+        point = self.view.sel()[0].b
         session = self.session("documentHighlightProvider", point)
         if session:
             params = text_document_position_params(self.view, point)

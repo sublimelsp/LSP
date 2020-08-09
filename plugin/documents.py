@@ -153,6 +153,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         self._color_phantoms.update([])
         self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
         self._clear_session_views_async()
+        self._clear_highlight_regions()
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
 

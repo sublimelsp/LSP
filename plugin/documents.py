@@ -253,7 +253,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         different, current_region = self._update_stored_region_async()
         if different:
             if "documentHighlight" not in global_settings.disabled_capabilities:
-                if not self.is_in_higlighted_region(current_region.b):
+                if not self._is_in_higlighted_region(current_region.b):
                     self._clear_highlight_regions()
                     self._when_selection_remains_stable_async(self._do_highlights, current_region,
                                                               after_ms=self.highlights_debounce_time)
@@ -423,7 +423,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         for kind in global_settings.document_highlight_scopes.keys():
             self.view.erase_regions("lsp_highlight_{}".format(kind))
 
-    def is_in_higlighted_region(self, point: int) -> bool:
+    def _is_in_higlighted_region(self, point: int) -> bool:
         for kind in global_settings.document_highlight_scopes.keys():
             regions = self.view.get_regions("lsp_highlight_{}".format(kind))
             for r in regions:

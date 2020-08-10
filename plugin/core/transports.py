@@ -45,6 +45,7 @@ class JsonRpcTransport(Transport):
 
     def __init__(self, name: str, process: subprocess.Popen, socket: Optional[socket.socket], reader: IO[bytes],
                  writer: IO[bytes], stderr: Optional[IO[bytes]], callback_object: TransportCallbacks) -> None:
+        self._closed = False
         self._process = process
         self._socket = socket
         self._reader = reader
@@ -58,7 +59,6 @@ class JsonRpcTransport(Transport):
         self._reader_thread.start()
         self._writer_thread.start()
         self._stderr_thread.start()
-        self._closed = False
 
     def send(self, payload: Dict[str, Any]) -> None:
         self._send_queue.put_nowait(payload)
@@ -157,9 +157,9 @@ class JsonRpcTransport(Transport):
     def _stderr_loop(self) -> None:
         try:
             while self._stderr:
-                message = self._stderr.readline().decode('utf-8', 'replace').rstrip()
-                if not message:
+                if self._closed:
                     break
+                message = self._stderr.readline().decode('utf-8', 'replace').rstrip()
                 callback_object = self._callback_object()
                 if callback_object:
                     callback_object.on_stderr_message(message)

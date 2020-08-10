@@ -8,7 +8,7 @@ from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LSPViewEventListener
 from .core.sessions import Session
-from .core.settings import settings as global_settings
+from .core.settings import userprefs
 from .core.signature_help import create_signature_help
 from .core.signature_help import SignatureHelp
 from .core.types import debounced
@@ -165,7 +165,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             self.view.settings().set("lsp_active", True)
             added = True
         if added:
-            if "colorProvider" not in global_settings.disabled_capabilities:
+            if "colorProvider" not in userprefs().disabled_capabilities:
                 self._do_color_boxes_async()
             if not self._text_change_listener.is_attached():
                 self._text_change_listener.attach(self.view.buffer())
@@ -197,7 +197,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         return result
 
     def update_diagnostic_in_status_bar_async(self) -> None:
-        if global_settings.show_diagnostics_in_view_status:
+        if userprefs().show_diagnostics_in_view_status:
             r = self._get_current_range_async()
             if r is not None:
                 diags_by_config_name, _ = self.diagnostics_intersecting_range_async(r)
@@ -223,14 +223,14 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
                 sv.on_text_changed_async(changes)
         if not different:
             return
-        if "documentHighlight" not in global_settings.disabled_capabilities:
+        if "documentHighlight" not in userprefs().disabled_capabilities:
             self._clear_highlight_regions()
             self._when_selection_remains_stable_async(self._do_highlights, current_region,
                                                       after_ms=self.highlights_debounce_time)
-        if "colorProvider" not in global_settings.disabled_capabilities:
+        if "colorProvider" not in userprefs().disabled_capabilities:
             self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region,
                                                       after_ms=self.color_boxes_debounce_time)
-        if "signatureHelp" not in global_settings.disabled_capabilities:
+        if "signatureHelp" not in userprefs().disabled_capabilities:
             self._do_signature_help()
 
     def on_revert_async(self) -> None:
@@ -256,7 +256,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     def on_selection_modified_async(self) -> None:
         different, current_region = self._update_stored_region_async()
         if different:
-            if "documentHighlight" not in global_settings.disabled_capabilities:
+            if "documentHighlight" not in userprefs().disabled_capabilities:
                 if not self._is_in_higlighted_region(current_region.b):
                     self._clear_highlight_regions()
                     self._when_selection_remains_stable_async(self._do_highlights, current_region,
@@ -298,13 +298,13 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     def on_hover(self, point: int, hover_zone: int) -> None:
         if (hover_zone != sublime.HOVER_TEXT
                 or self.view.is_popup_visible()
-                or "hover" in global_settings.disabled_capabilities):
+                or "hover" in userprefs().disabled_capabilities):
             return
         self.view.run_command("lsp_hover", {"point": point})
 
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
         if command_name in ("next_field", "prev_field") and args is None:
-            if "signatureHelp" not in global_settings.disabled_capabilities:
+            if "signatureHelp" not in userprefs().disabled_capabilities:
                 sublime.set_timeout_async(self._do_signature_help)
 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
@@ -397,7 +397,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
         annotations = []
         annotation_color = ""
-        if global_settings.show_code_actions == 'bulb':
+        if userprefs().show_code_actions == 'bulb':
             scope = 'markup.changed'
             icon = 'Packages/LSP/icons/lightbulb.png'
         else:  # 'annotation'
@@ -424,11 +424,11 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 
     def _clear_highlight_regions(self) -> None:
-        for kind in global_settings.document_highlight_scopes.keys():
+        for kind in userprefs().document_highlight_scopes.keys():
             self.view.erase_regions("lsp_highlight_{}".format(kind))
 
     def _is_in_higlighted_region(self, point: int) -> bool:
-        for kind in global_settings.document_highlight_scopes.keys():
+        for kind in userprefs().document_highlight_scopes.keys():
             regions = self.view.get_regions("lsp_highlight_{}".format(kind))
             for r in regions:
                 if r.contains(point):
@@ -457,10 +457,10 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             if kind is not None:
                 kind2regions[_kind2name[kind]].append(r)
         self._clear_highlight_regions()
-        flags = global_settings.document_highlight_style_to_add_regions_flags()
+        flags = userprefs().document_highlight_style_to_add_regions_flags()
         for kind_str, regions in kind2regions.items():
             if regions:
-                scope = global_settings.document_highlight_scopes.get(kind_str, None)
+                scope = userprefs().document_highlight_scopes.get(kind_str, None)
                 if scope:
                     self.view.add_regions("lsp_highlight_{}".format(kind_str), regions, scope=scope, flags=flags)
 

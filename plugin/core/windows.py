@@ -15,7 +15,7 @@ from .rpc import Logger
 from .sessions import get_plugin
 from .sessions import Manager
 from .sessions import Session
-from .settings import settings
+from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
 from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Mapping, Iterable
@@ -94,7 +94,7 @@ def extract_message(params: Any) -> str:
 def set_diagnostics_count(view: sublime.View, errors: int, warnings: int) -> None:
     try:
         key = AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY
-        if settings.show_diagnostics_count_in_view_status:
+        if userprefs().show_diagnostics_count_in_view_status:
             view.set_status(key, "E: {}, W: {}".format(errors, warnings))
         else:
             view.erase_status(key)
@@ -120,7 +120,7 @@ class WindowManager(Manager):
         self._listeners = WeakSet()  # type: WeakSet[AbstractViewListener]
         self._new_listener = None  # type: Optional[AbstractViewListener]
         self._new_session = None  # type: Optional[Session]
-        self._cursor = DiagnosticsCursor(settings.show_diagnostics_severity_level)
+        self._cursor = DiagnosticsCursor(userprefs().show_diagnostics_severity_level)
         self._diagnostic_phantom_set = None  # type: Optional[sublime.PhantomSet]
         self.total_error_count = 0
         self.total_warning_count = 0
@@ -303,7 +303,7 @@ class WindowManager(Manager):
             "remote": RemoteLogger,
         }
         loggers = []
-        for logger_type in settings.log_server:
+        for logger_type in userprefs().log_server:
             if logger_type not in logger_map:
                 debug("Invalid logger type ({}) specified for log_server settings".format(logger_type))
                 continue
@@ -377,7 +377,7 @@ class WindowManager(Manager):
         self.handle_server_message(session.config.name, extract_message(params))
 
     def handle_stderr_log(self, session: Session, message: str) -> None:
-        if settings.log_stderr:
+        if userprefs().log_stderr:
             self.handle_server_message(session.config.name, message)
 
     def handle_show_message(self, session: Session, params: Any) -> None:
@@ -536,7 +536,7 @@ class PanelLogger(Logger):
         def run_on_async_worker_thread() -> None:
             nonlocal message
             params_str = str(params)
-            if 0 < settings.log_max_size <= len(params_str):
+            if 0 < userprefs().log_max_size <= len(params_str):
                 params_str = '<params with {} characters>'.format(len(params_str))
             message = "{}: {}".format(message, params_str)
             manager = self._manager()
@@ -546,38 +546,38 @@ class PanelLogger(Logger):
         sublime.set_timeout_async(run_on_async_worker_thread)
 
     def outgoing_response(self, request_id: Any, params: Any) -> None:
-        if not settings.log_server:
+        if not userprefs().log_server:
             return
         self.log(self._format_response(">>>", request_id), params)
 
     def outgoing_error_response(self, request_id: Any, error: Error) -> None:
-        if not settings.log_server:
+        if not userprefs().log_server:
             return
         self.log(self._format_response("~~>", request_id), error.to_lsp())
 
     def outgoing_request(self, request_id: int, method: str, params: Any) -> None:
-        if not settings.log_server:
+        if not userprefs().log_server:
             return
         self.log(self._format_request("-->", method, request_id), params)
 
     def outgoing_notification(self, method: str, params: Any) -> None:
-        if not settings.log_server:
+        if not userprefs().log_server:
             return
         self.log(self._format_notification(" ->", method), params)
 
     def incoming_response(self, request_id: int, params: Any, is_error: bool) -> None:
-        if not settings.log_server:
+        if not userprefs().log_server:
             return
         direction = "<~~" if is_error else "<<<"
         self.log(self._format_response(direction, request_id), params)
 
     def incoming_request(self, request_id: Any, method: str, params: Any) -> None:
-        if not settings.log_server:
+        if not userprefs().log_server:
             return
         self.log(self._format_request("<--", method, request_id), params)
 
     def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
-        if not settings.log_server:
+        if not userprefs().log_server:
             return
         direction = "<? " if unhandled else "<- "
         self.log(self._format_notification(direction, method), params)

@@ -1,6 +1,6 @@
 from .core.protocol import Diagnostic
 from .core.sessions import Session
-from .core.settings import settings as global_settings
+from .core.settings import userprefs
 from .core.types import view2scope
 from .core.typing import Any, Iterable, List, Tuple
 from .core.views import DIAGNOSTIC_SEVERITY
@@ -113,7 +113,7 @@ class SessionView:
             data = data_per_severity.get(severity)
             if data is None:
                 self.view.erase_regions(key)
-            elif ((severity <= global_settings.show_diagnostics_severity_level) and
+            elif ((severity <= userprefs().show_diagnostics_severity_level) and
                     (data.icon or flags != (sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE))):
                 self.view.add_regions(key, data.regions, data.scope, data.icon, flags)
             else:

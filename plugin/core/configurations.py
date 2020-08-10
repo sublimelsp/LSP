@@ -10,7 +10,7 @@ import sublime
 class ConfigManager(object):
     """Distributes language client configuration between windows"""
 
-    def __init__(self, global_configs: List[ClientConfig]) -> None:
+    def __init__(self, global_configs: Dict[str, ClientConfig]) -> None:
         self._configs = global_configs
         self._managers = {}  # type: Dict[int, WindowConfigManager]
 
@@ -26,7 +26,7 @@ class ConfigManager(object):
 
 
 class WindowConfigManager(object):
-    def __init__(self, window: sublime.Window, global_configs: List[ClientConfig]) -> None:
+    def __init__(self, window: sublime.Window, global_configs: Dict[str, ClientConfig]) -> None:
         self._window = window
         self._global_configs = global_configs
         self._temp_disabled_configs = set()  # type: Set[str]
@@ -65,6 +65,7 @@ class WindowConfigManager(object):
         for config in self.all:
             if config.name in self._temp_disabled_configs:
                 config.enabled = False
+        self._window.run_command("lsp_restart_client")
 
     def enable_config(self, config_name: str) -> None:
         enable_in_project(self._window, config_name)
@@ -80,7 +81,7 @@ class WindowConfigManager(object):
 
     def _create_window_configs(self) -> List[ClientConfig]:
         project_clients_dict = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
-        return [self._apply_project_overrides(c, project_clients_dict) for c in self._global_configs]
+        return [self._apply_project_overrides(c, project_clients_dict) for c in self._global_configs.values()]
 
     def _apply_project_overrides(self, client_config: ClientConfig, project_clients: Dict[str, Any]) -> ClientConfig:
         overrides = project_clients.get(client_config.name)

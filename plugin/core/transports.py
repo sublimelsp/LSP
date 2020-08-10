@@ -157,9 +157,9 @@ class JsonRpcTransport(Transport):
     def _stderr_loop(self) -> None:
         try:
             while self._stderr:
-                if self._closed:
-                    break
                 message = self._stderr.readline().decode('utf-8', 'replace').rstrip()
+                if not message:
+                    break
                 callback_object = self._callback_object()
                 if callback_object:
                     callback_object.on_stderr_message(message)

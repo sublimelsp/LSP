@@ -137,6 +137,7 @@ class JsonRpcTransport(Transport):
         callback_object = self._callback_object()
         if callback_object:
             callback_object.on_transport_close(exit_code, exception)
+        self.close()
 
     def _write_loop(self) -> None:
         exception = None  # type: Optional[Exception]

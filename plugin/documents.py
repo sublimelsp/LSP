@@ -234,7 +234,6 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
         different, current_region = self._update_stored_region_async()
-        handled = False
         for sv in self.session_views_async():
             sv.on_text_changed_async(changes)
         if not different:

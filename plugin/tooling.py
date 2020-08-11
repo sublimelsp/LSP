@@ -37,12 +37,13 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
         self.view.assign_syntax("Packages/JSON/JSON.sublime-syntax")
         self.writeline("{")
         # schema = {}  TODO: Also generate a schema. Sublime settings are not rigid.
-        for k, v in properties.items():
+        for k, v in sorted(properties.items()):
             typ = v["type"]
             description = v.get("description")
             if isinstance(description, str):
-                for line in textwrap.wrap(description, width=73):
-                    self.writeline4('// {}'.format(line))
+                for line in description.splitlines():
+                    for wrapped_line in textwrap.wrap(line, width=73):
+                        self.writeline4('// {}'.format(wrapped_line))
             else:
                 self.writeline4('// unknown setting')
             enum = v.get("enum")
@@ -67,5 +68,12 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
                 else:
                     self.writeline4('// UNKNOWN TYPE: {} <-- NEEDS ATTENTION'.format(typ))
                     value = ""
-            self.writeline4('"{}": {},'.format(k, json.dumps(value)))
+            value_lines = json.dumps(value, ensure_ascii=False, indent=4).splitlines()
+            for index, line in enumerate(value_lines, 1):
+                is_last_line = index == len(value_lines)
+                terminator = ',' if is_last_line else ''
+                if index == 1:
+                    self.writeline4('"{}": {}{}'.format(k, line, terminator))
+                else:
+                    self.writeline4('{}{}'.format(line, terminator))
         self.writeline("}")

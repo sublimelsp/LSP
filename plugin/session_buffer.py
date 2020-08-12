@@ -117,7 +117,6 @@ class SessionBuffer:
                       lambda: self.view.is_valid() and change_count == self.view.change_count())
 
     def on_revert_async(self) -> None:
-        change_count = self.view.change_count()
         self.pending_changes = None  # Don't bother with pending changes
         self.session.send_notification(did_change(self.view, None))
 

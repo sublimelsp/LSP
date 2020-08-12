@@ -117,12 +117,8 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
 
     @classmethod
     def is_applicable(cls, buffer: sublime.Buffer) -> bool:
-        views = buffer.views()
-        if views:
-            for view in views:
-                if view.element() is None:
-                    return True
-        return False
+        # FIXME: Cannot reliably use primary_view().file_name()
+        return buffer.primary_view().element() is None  # type: ignore
 
     def __init__(self, buffer: sublime.Buffer) -> None:
         super().__init__(buffer)
@@ -234,8 +230,9 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
         different, current_region = self._update_stored_region_async()
-        for sv in self.session_views_async():
-            sv.on_text_changed_async(changes)
+        if self.view.is_primary():
+            for sv in self.session_views_async():
+                sv.on_text_changed_async(changes)
         if not different:
             return
         if "documentHighlight" not in global_settings.disabled_capabilities:
@@ -249,21 +246,23 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             self._do_signature_help()
 
     def on_revert_async(self) -> None:
-        for sv in self.session_views_async():
-            sv.on_revert_async()
+        if self.view.is_primary():
+            for sv in self.session_views_async():
+                sv.on_revert_async()
 
     def on_reload_async(self) -> None:
-        for sv in self.session_views_async():
-            sv.on_reload_async()
+        if self.view.is_primary():
+            for sv in self.session_views_async():
+                sv.on_reload_async()
 
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
 
     def on_load_async(self) -> None:
-        if self._text_change_listener is None and is_regular_view(self.view):
+        if not self._text_change_listener and is_regular_view(self.view):
             self._register_async()
 
     def on_activated_async(self) -> None:
-        if self._text_change_listener is None and not self.view.is_loading() and is_regular_view(self.view):
+        if not self._text_change_listener and not self.view.is_loading() and is_regular_view(self.view):
             self._register_async()
 
     def on_selection_modified_async(self) -> None:
@@ -280,8 +279,9 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             self.update_diagnostic_in_status_bar_async()
 
     def on_post_save_async(self) -> None:
-        for sv in self.session_views_async():
-            sv.on_post_save_async()
+        if self.view.is_primary():
+            for sv in self.session_views_async():
+                sv.on_post_save_async()
 
     def on_close(self) -> None:
         self._clear_session_views_async()
@@ -504,17 +504,35 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     def _register_async(self) -> None:
         file_name = self.view.file_name()
-        if file_name:
-            self._file_name = file_name
-            buf = self.view.buffer()
-            if buf is not None:
-                text_change_listener = TextChangeListener.ids_to_listeners.get(buf.buffer_id)
-                if text_change_listener is not None:
-                    text_change_listener.view_listeners.add(self)
-                    self._text_change_listener = ref(text_change_listener)
-                    self.manager.register_listener_async(self)
-                    return
+        if not file_name:
+            debug("listener", self, "has  no file name")
+            return
+        self._file_name = file_name
+        buf = self.view.buffer()
+        if not buf:
             debug("not tracking bufferless view", self.view.id())
+            return
+        text_change_listener = TextChangeListener.ids_to_listeners.get(buf.buffer_id)
+        if not text_change_listener:
+            debug("couldn't find a text change listener for listener", self)
+            return
+        text_change_listener.view_listeners.add(self)
+        self._text_change_listener = ref(text_change_listener)
+        self.manager.register_listener_async(self)
+        views = buf.views()
+        if not isinstance(views, list):
+            debug("skipping clone checks listener", self)
+            return
+        self_id = self.view.id()
+        for view in views:
+            view_id = view.id()
+            if view_id == self_id:
+                continue
+            listeners = list(sublime_plugin.view_event_listeners[view_id])
+            for listener in listeners:
+                if isinstance(listener, DocumentSyncListener):
+                    debug("registering clone listener", listener)
+                    listener.on_load_async()
 
     def _update_stored_region_async(self) -> Tuple[bool, sublime.Region]:
         """

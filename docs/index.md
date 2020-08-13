@@ -398,11 +398,11 @@ npm install -g flow-language-server
     "-XX:+UseG1GC",
     "-XX:+UseStringDeduplication",
     "-jar",
-    "PATH/TO/jdt-language-server-latest/plugins/org.eclipse.equinox.launcher_*.jar"
+    "PATH/TO/jdt-language-server-latest/plugins/org.eclipse.equinox.launcher_*.jar" // 1. replace the PATH/TO with your own 2. replace * with the file version
     "-configuration",
-    "PATH/TO/jdt-language-server-latest/config_{win|mac|linux}", // depending on the OS
+    "PATH/TO/jdt-language-server-latest/config_{win|mac|linux}", // 1. replace the PATH/TO with your own 2. choose the config folder based on the OS
     "-data",
-    "<TEMP_DIR>/${project_base_name}/jdt_ws"
+    "<TEMP_DIR>/${project_base_name}/jdt_ws" // replace <TEMP_DIR> with the temp folder in your system. macOS: echo $TMPDIR
   ],
   "enabled": true,
   "languageId": "java" // will match source.java

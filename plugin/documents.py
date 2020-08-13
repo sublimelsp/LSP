@@ -138,7 +138,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
             listener.on_revert_async()
 
     def __repr__(self) -> str:
-        return str(self.buffer.buffer_id)
+        return "TextChangeListener({})".format(self.buffer.buffer_id)
 
 
 class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
@@ -531,7 +531,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             listeners = list(sublime_plugin.view_event_listeners[view_id])
             for listener in listeners:
                 if isinstance(listener, DocumentSyncListener):
-                    debug("registering clone listener", listener)
+                    debug("also registering listener", listener)
                     listener.on_load_async()
 
     def _update_stored_region_async(self) -> Tuple[bool, sublime.Region]:
@@ -573,4 +573,4 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         sublime.set_timeout_async(clear_async)
 
     def __repr__(self) -> str:
-        return str(self.view.id())
+        return "ViewListener({})".format(self.view.id())

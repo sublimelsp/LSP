@@ -22,12 +22,14 @@ from LSP.plugin.core.views import text_document_range_formatting
 from LSP.plugin.core.views import uri_from_view
 from LSP.plugin.core.views import will_save
 from LSP.plugin.core.views import will_save_wait_until
+from unittest import skipIf
 from unittest.mock import MagicMock
 from unittesting import DeferrableTestCase
 import re
 import sublime
 
 
+@skipIf(sublime.version() == "4081", "see: https://github.com/sublimehq/sublime_text/issues/3561")
 class ViewsTest(DeferrableTestCase):
 
     def setUp(self) -> None:

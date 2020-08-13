@@ -29,7 +29,7 @@ import re
 import sublime
 
 
-@skipIf(sublime.version() == "4081", "see: https://github.com/sublimehq/sublime_text/issues/3561")
+@skipIf(sublime.version() == "4081", "see: https://github.com/sublimehq/sublime_text/issues/3558")
 class ViewsTest(DeferrableTestCase):
 
     def setUp(self) -> None:

@@ -104,7 +104,8 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
             window.show_quick_panel(config_names, lambda index: self.on_selected(index, configs, active_view),
                                     placeholder='Select server to troubleshoot')
 
-    def on_selected(self, selected_index: int, configs: List[ClientConfig], active_view: sublime.View) -> None:
+    def on_selected(self, selected_index: int, configs: List[ClientConfig],
+                    active_view: Optional[sublime.View]) -> None:
         if selected_index == -1:
             return
         config = configs[selected_index]
@@ -114,12 +115,14 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
         sublime.set_timeout_async(lambda: self.test_run_server_async(config, self.window, active_view, output_sheet))
 
     def test_run_server_async(self, config: ClientConfig, window: sublime.Window,
-                              active_view: sublime.View, output_sheet: sublime.HtmlSheet) -> None:
-        self.test_runner = ServerTestRunner(
+                              active_view: Optional[sublime.View], output_sheet: sublime.HtmlSheet) -> None:
+        server = ServerTestRunner(
             config, window,
             lambda output, exit_code: self.update_sheet(config, active_view, output_sheet, output, exit_code))
+        # Store the instance so that it's not GC'ed before it's finished.
+        self.test_runner = server  # type: Optional[ServerTestRunner]
 
-    def update_sheet(self, config: ClientConfig, active_view: sublime.View, output_sheet: sublime.HtmlSheet,
+    def update_sheet(self, config: ClientConfig, active_view: Optional[sublime.View], output_sheet: sublime.HtmlSheet,
                      server_output: str, exit_code: int) -> None:
         self.test_runner = None
         frontmatter = mdpopups.format_frontmatter({'allow_code_wrap': True})
@@ -130,10 +133,11 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
         formatted = '{}{}\n{}'.format(frontmatter, copy_link, contents)
         mdpopups.update_html_sheet(output_sheet, formatted, css=css().sheets, wrapper_class=css().sheets_classname)
 
-    def get_contents(self, config: ClientConfig, active_view: sublime.View, server_output: str, exit_code: int) -> str:
+    def get_contents(self, config: ClientConfig, active_view: Optional[sublime.View],
+                     server_output: str, exit_code: int) -> str:
         lines = []
 
-        def l(s: str):
+        def l(s: str) -> None:
             lines.append(s)
 
         l('# Troubleshooting: {}'.format(config.name))
@@ -207,7 +211,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
 
 
 class LspCopyToClipboardFromBase64Command(sublime_plugin.ApplicationCommand):
-    def run(self, contents: str):
+    def run(self, contents: str) -> None:
         sublime.set_clipboard(b64decode(contents).decode())
 
 
@@ -220,10 +224,10 @@ class ServerTestRunner(TransportCallbacks):
 
     CLOSE_TIMEOUT_SEC = 2
 
-    def __init__(self, config: ClientConfig, window: sublime.Window, on_close: Callable[[str, int], None]):
-        self._on_close = on_close
+    def __init__(self, config: ClientConfig, window: sublime.Window, on_close: Callable[[str, int], None]) -> None:
+        self._on_close = on_close  # type: Optional[Callable[[str, int], None]]
         self._transport = None  # type: Optional[Transport]
-        self._stderr_lines = []
+        self._stderr_lines = []  # type: List[str]
         try:
             cwd = window.folders()[0] if window.folders() else None
             variables = extract_variables(window)

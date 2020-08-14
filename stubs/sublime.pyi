@@ -442,7 +442,8 @@ class Window:
                          on_select: Callable,
                          flags: int = ...,
                          selected_index: int = ...,
-                         on_highlight: Optional[Callable] = ...) -> None:
+                         on_highlight: Optional[Callable] = ...,
+                         placeholder: Optional[str] = ...) -> None:
         ...
 
     def is_sidebar_visible(self) -> bool:
@@ -618,6 +619,19 @@ class Sheet:
         ...
 
     def view(self) -> 'Optional[View]':
+        ...
+
+
+class HtmlSheet:
+    sheet_id = ...  # type: Any
+
+    def __init__(self, id: Any) -> None:
+        ...
+
+    def set_name(self, name: str) -> None:
+        ...
+
+    def set_contents(self, contents: str) -> None:
         ...
 
 

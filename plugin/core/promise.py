@@ -3,16 +3,6 @@ import functools
 import threading
 
 
-class PromiseError(Exception):
-    """A failed Promise is to be resolved with this PromiseError.
-
-    Normal errors and exceptions can't be caught by the application due to
-    multi-threading. Therefore a function should return PromiseError to indicate
-    a failure to be handled by `.then()`
-    """
-    pass
-
-
 class Promise:
     """A simple implementation of the Promise specification.
 
@@ -85,11 +75,13 @@ class Promise:
                     Gets passed a list with all resolved values.
         """
         def handler(resolve):
+
             def recheck_resolve_status(_: Any):
                 # We're being called from a Promise that is holding a lock so don't try to use
                 # any methods that would try to acquire it.
                 if all(p.resolved for p in promises):
                     resolve([p.value for p in promises])
+
             for p in promises:
                 if not isinstance(p, Promise):
                     raise Exception('Value is not a Promise')
@@ -99,11 +91,11 @@ class Promise:
             return Promise(handler)
         return Promise.resolve()
 
-    def __init__(self, executor):
+    def __init__(self, fullfill_func):
         """Initialize Promise object.
 
         Arguments:
-            executor: A function that is executed immediately by this Promise.
+            fullfill_func: A function that is executed immediately by this Promise.
             It gets passed a "resolve" function. The "resolve" function, when
             called, resolves the Promise with the value passed to it.
         """
@@ -111,7 +103,7 @@ class Promise:
         self.resolved = False
         self.mutex = threading.Lock()
         self.callbacks = []
-        self._invoke_executor(executor)
+        fullfill_func(lambda value=None: self._do_resolve(value))
 
     def __repr__(self):
         if self.resolved:
@@ -144,31 +136,25 @@ class Promise:
             else:
                 resolve_fn(result)
 
-        def sync_executor(resolve_fn):
+        def sync_wrapper(resolve_fn):
             """Call resolve_fn immediately with the resolved value.
 
-            An executor that will immediately resolve resolve_fn with the
+            A wrapper function that will immediately resolve resolve_fn with the
             resolved value of this promise.
             """
             callback_wrapper(resolve_fn, self._get_value())
 
-        def async_executor(resolve_fn):
+        def async_wrapper(resolve_fn):
             """Queue resolve_fn to be called after this promise resolves later.
 
-            An executor that will resolve received resolve_fn when this promise
+            A wrapper function that will resolve received resolve_fn when this promise
             resolves later.
             """
             self._add_callback(functools.partial(callback_wrapper, resolve_fn))
 
         if self._is_resolved():
-            return Promise(sync_executor)
-        return Promise(async_executor)
-
-    def _invoke_executor(self, executor):
-        def resolve_fn(new_value: Optional[Any] = None):
-            self._do_resolve(new_value)
-
-        executor(resolve_fn)
+            return Promise(sync_wrapper)
+        return Promise(async_wrapper)
 
     def _do_resolve(self, new_value):
         # No need to block as we can't change from resolved to unresolved.

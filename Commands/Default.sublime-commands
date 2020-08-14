@@ -20,6 +20,10 @@
         "command": "lsp_parse_vscode_package_json"
     },
     {
+        "caption": "LSP: Troubleshoot Server",
+        "command": "lsp_troubleshoot_server"
+    },
+    {
         "caption": "LSP: Setup Language Server",
         "command": "lsp_setup_language_server",
         "args": {}

@@ -41,4 +41,6 @@ from .plugin.symbols import LspSelectionAddCommand
 from .plugin.symbols import LspSelectionClearCommand
 from .plugin.symbols import LspSelectionSetCommand
 from .plugin.symbols import LspWorkspaceSymbolsCommand
+from .plugin.tooling import LspCopyToClipboardFromBase64Command
 from .plugin.tooling import LspParseVscodePackageJson
+from .plugin.tooling import LspTroubleshootServerCommand

@@ -29,7 +29,6 @@ from .diagnostics import filter_by_range
 from .diagnostics import view_diagnostics
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
-from weakref import ref
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import html
@@ -160,7 +159,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
         self._sighelp = None  # type: Optional[SignatureHelp]
         self._sighelp_renderer = ColorSchemeScopeRenderer(self.view)
-        self._text_change_listener = None  # type: Optional[ref[TextChangeListener]]
+        self._text_change_listener_found = False
 
     def __del__(self) -> None:
         self._stored_region = sublime.Region(-1, -1)
@@ -187,7 +186,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         if removed_session:
             if not self._session_views:
                 self.view.settings().erase("lsp_active")
-                self._text_change_listener = None
+                self._text_change_listener_found = False
         else:
             # SessionView was likely not created for this config so remove status here.
             session.config.erase_view_status(self.view)
@@ -258,11 +257,11 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
 
     def on_load_async(self) -> None:
-        if not self._text_change_listener and is_regular_view(self.view):
+        if not self._text_change_listener_found and is_regular_view(self.view):
             self._register_async()
 
     def on_activated_async(self) -> None:
-        if not self._text_change_listener and not self.view.is_loading() and is_regular_view(self.view):
+        if not self._text_change_listener_found and not self.view.is_loading() and is_regular_view(self.view):
             self._register_async()
 
     def on_selection_modified_async(self) -> None:
@@ -503,25 +502,20 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         debounced(f, after_ms, lambda: self._stored_region == r, async_thread=True)
 
     def _register_async(self) -> None:
-        file_name = self.view.file_name()
-        if not file_name:
-            debug("listener", self, "has  no file name")
-            return
-        self._file_name = file_name
         buf = self.view.buffer()
         if not buf:
             debug("not tracking bufferless view", self.view.id())
             return
         text_change_listener = TextChangeListener.ids_to_listeners.get(buf.buffer_id)
         if not text_change_listener:
-            debug("couldn't find a text change listener for listener", self)
+            debug("couldn't find a text change listener for", self)
             return
         text_change_listener.view_listeners.add(self)
-        self._text_change_listener = ref(text_change_listener)
+        self._text_change_listener_found = True
         self.manager.register_listener_async(self)
         views = buf.views()
         if not isinstance(views, list):
-            debug("skipping clone checks listener", self)
+            debug("skipping clone checks for", self)
             return
         self_id = self.view.id()
         for view in views:
@@ -531,7 +525,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
             listeners = list(sublime_plugin.view_event_listeners[view_id])
             for listener in listeners:
                 if isinstance(listener, DocumentSyncListener):
-                    debug("also registering listener", listener)
+                    debug("also registering", listener)
                     listener.on_load_async()
 
     def _update_stored_region_async(self) -> Tuple[bool, sublime.Region]:

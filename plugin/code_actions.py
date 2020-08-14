@@ -273,7 +273,9 @@ def is_command(command_or_code_action: CodeActionOrCommand) -> bool:
     return isinstance(command_field, str)
 
 
-def run_code_action_or_command(view: sublime.View, config_name: str, command_or_code_action: CodeActionOrCommand) -> Promise:
+def run_code_action_or_command(
+    view: sublime.View, config_name: str, command_or_code_action: CodeActionOrCommand
+) -> Promise:
     if is_command(command_or_code_action):
         return execute_server_command(view, config_name, command_or_code_action)
     else:

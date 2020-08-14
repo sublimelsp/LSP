@@ -206,7 +206,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
     def read_resource(self, path: str) -> Optional[str]:
         try:
             return sublime.load_resource(path)
-        except Exception as e:
+        except Exception:
             return None
 
 
@@ -225,7 +225,7 @@ class ServerTestRunner(TransportCallbacks):
     CLOSE_TIMEOUT_SEC = 2
 
     def __init__(self, config: ClientConfig, window: sublime.Window, on_close: Callable[[str, int], None]) -> None:
-        self._on_close = on_close  # type: Optional[Callable[[str, int], None]]
+        self._on_close = on_close  # type: Callable[[str, int], None]
         self._transport = None  # type: Optional[Transport]
         self._stderr_lines = []  # type: List[str]
         try:
@@ -247,8 +247,6 @@ class ServerTestRunner(TransportCallbacks):
         self._stderr_lines.append(message)
 
     def on_transport_close(self, exit_code: int, exception: Optional[Exception]) -> None:
-        close_callback = self._on_close
-        self._on_close = None
         self._transport = None
         output = str(exception) if exception else '\n'.join(self._stderr_lines).rstrip()
-        sublime.set_timeout(lambda: close_callback(output, exit_code))
+        sublime.set_timeout(lambda: self._on_close(output, exit_code))

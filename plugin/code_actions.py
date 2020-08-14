@@ -293,8 +293,9 @@ def run_code_action_or_command(view: sublime.View, config_name: str, command_or_
 def execute_server_command(view: sublime.View, config_name: str, command: Mapping[str, Any]) -> Promise:
     session = next((session for session in sessions_for_view(view) if session.config.name == config_name), None)
     if session:
-        return Promise(lambda resolve: session.send_request(Request.executeCommand(command),
-                                                            lambda _: resolve(), lambda _: resolve()))
+        send_request = session.send_request
+        return Promise(lambda resolve: send_request(
+            Request.executeCommand(command), lambda _: resolve(), lambda _: resolve()))
     return Promise.resolve()
 
 

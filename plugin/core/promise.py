@@ -1,6 +1,10 @@
-from .typing import Any, List, Optional
+from .typing import Any, Callable, List
 import functools
 import threading
+
+ResolveFunc = Callable[..., None]  # Optional argument not supported in Callable so using "..."
+FullfillFunc = Callable[[ResolveFunc], None]
+ThenFunc = Callable[[Any], Any]
 
 
 class Promise:
@@ -49,7 +53,7 @@ class Promise:
     """
 
     @classmethod
-    def resolve(cls, resolve_value=None):
+    def resolve(cls, resolve_value: Any = None) -> 'Promise':
         """Immediately resolves a Promise.
 
         Convenience function for creating a Promise that gets immediately
@@ -58,10 +62,10 @@ class Promise:
         Arguments:
             resolve_value: The value to resolve the promise with.
         """
-        def executor(resolve_fn):
-            return resolve_fn(resolve_value)
+        def fullfill_func(resolve_fn: ResolveFunc) -> None:
+            resolve_fn(resolve_value)
 
-        return cls(executor)
+        return cls(fullfill_func)
 
     @classmethod
     def all(cls, promises: List['Promise']) -> 'Promise':
@@ -74,9 +78,9 @@ class Promise:
         :returns:   A promise that gets resolved when all passed promises gets resolved.
                     Gets passed a list with all resolved values.
         """
-        def handler(resolve):
+        def handler(resolve: ResolveFunc) -> None:
 
-            def recheck_resolve_status(_: Any):
+            def recheck_resolve_status(_: Any) -> None:
                 # We're being called from a Promise that is holding a lock so don't try to use
                 # any methods that would try to acquire it.
                 if all(p.resolved for p in promises):
@@ -91,7 +95,7 @@ class Promise:
             return Promise(handler)
         return Promise.resolve()
 
-    def __init__(self, fullfill_func):
+    def __init__(self, fullfill_func: FullfillFunc) -> None:
         """Initialize Promise object.
 
         Arguments:
@@ -99,18 +103,18 @@ class Promise:
             It gets passed a "resolve" function. The "resolve" function, when
             called, resolves the Promise with the value passed to it.
         """
-        self.value = None
+        self.value = None  # type: Any
         self.resolved = False
         self.mutex = threading.Lock()
-        self.callbacks = []
+        self.callbacks = []  # type: List[ResolveFunc]
         fullfill_func(lambda value=None: self._do_resolve(value))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.resolved:
             return 'Promise({})'.format(self.value)
         return 'Promise(<pending>)'
 
-    def then(self, callback):
+    def then(self, callback: ThenFunc) -> 'Promise':
         """Create a new promise and chain it with this promise.
 
         When this promise gets resolved, the callback will be called with the
@@ -121,7 +125,7 @@ class Promise:
         Arguments:
             callback: The callback to call when this promise gets resolved.
         """
-        def callback_wrapper(resolve_fn, resolve_value):
+        def callback_wrapper(resolve_fn: ThenFunc, resolve_value: Any) -> None:
             """A wrapper called when this promise resolves.
 
             Arguments:
@@ -136,7 +140,7 @@ class Promise:
             else:
                 resolve_fn(result)
 
-        def sync_wrapper(resolve_fn):
+        def sync_wrapper(resolve_fn: ThenFunc) -> None:
             """Call resolve_fn immediately with the resolved value.
 
             A wrapper function that will immediately resolve resolve_fn with the
@@ -144,7 +148,7 @@ class Promise:
             """
             callback_wrapper(resolve_fn, self._get_value())
 
-        def async_wrapper(resolve_fn):
+        def async_wrapper(resolve_fn: ThenFunc) -> None:
             """Queue resolve_fn to be called after this promise resolves later.
 
             A wrapper function that will resolve received resolve_fn when this promise
@@ -156,25 +160,24 @@ class Promise:
             return Promise(sync_wrapper)
         return Promise(async_wrapper)
 
-    def _do_resolve(self, new_value):
+    def _do_resolve(self, new_value: Any) -> None:
         # No need to block as we can't change from resolved to unresolved.
         if self.resolved:
-            raise RuntimeError(
-                "cannot set the value of an already resolved promise")
+            raise RuntimeError("cannot set the value of an already resolved promise")
         with self.mutex:
             self.resolved = True
             self.value = new_value
             for callback in self.callbacks:
                 callback(new_value)
 
-    def _add_callback(self, callback):
+    def _add_callback(self, callback: ResolveFunc) -> None:
         with self.mutex:
             self.callbacks.append(callback)
 
-    def _is_resolved(self):
+    def _is_resolved(self) -> bool:
         with self.mutex:
             return self.resolved
 
-    def _get_value(self):
+    def _get_value(self) -> Any:
         with self.mutex:
             return self.value

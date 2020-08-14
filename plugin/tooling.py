@@ -211,7 +211,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
 
 
 class LspCopyToClipboardFromBase64Command(sublime_plugin.ApplicationCommand):
-    def run(self, contents: str) -> None:
+    def run(self, contents: str = '') -> None:
         sublime.set_clipboard(b64decode(contents).decode())
 
 

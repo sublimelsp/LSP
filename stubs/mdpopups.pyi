@@ -50,6 +50,35 @@ def md2html(
 ) -> str: ...
 
 
+def new_html_sheet(
+    window: sublime.Window,
+    name: str,
+    contents: str,
+    md: bool = True,
+    css=None,  # type: Optional[str]
+    flags: int = 0,
+    group: int = -1,
+    wrapper_class=None,  # type: Optional[str]
+    template_vars=None,  # type: Optional[str]
+    template_env_options=None,  # type: Optional[dict]
+    nl2br: bool = True,
+    allow_code_wrap: bool = False
+) -> sublime.HtmlSheet: ...
+
+
+def update_html_sheet(
+    sheet: sublime.HtmlSheet,
+    contents: str,
+    md: bool = True,
+    css=None,  # type: Optional[str]
+    wrapper_class=None,  # type: Optional[str]
+    template_vars=None,  # type: Optional[str]
+    template_env_options=None,  # type: Optional[dict]
+    nl2br: bool = True,
+    allow_code_wrap: bool = False
+) -> None: ...
+
+
 def scope2style(
     view: sublime.View,
     scope: str,

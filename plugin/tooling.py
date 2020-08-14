@@ -150,11 +150,11 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
         lines += [' - {}'.format(p) for p in os.environ['PATH'].split(os.pathsep)]
 
         line('## Server Test Run')
-        line(' - exit code: {}\n - output\n```\n{}\n```'.format(exit_code, server_output))
+        line(' - exit code: {}\n - output\n{}'.format(exit_code, self.code_block(server_output)))
 
         line('## Server Configuration')
-        line(' - command\n```js\n{}\n```'.format(config.binary_args))
-        line(' - shell command\n```sh\n{}\n```'.format(list2cmdline(config.binary_args)))
+        line(' - command\n{}'.format(self.json_dump(config.binary_args)))
+        line(' - shell command\n{}'.format(self.code_block(list2cmdline(config.binary_args), 'sh')))
         line(' - languages')
         languages = [
             {
@@ -163,44 +163,47 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
                 'feature_selector': lang.feature_selector,
             } for lang in config.languages
         ]
-        line('```js\n{}\n```'.format(self.json_dump(languages)))
+        line(self.json_dump(languages))
         line(' - init_options')
-        line('```js\n{}\n```'.format(self.json_dump(config.init_options)))
+        line(self.json_dump(config.init_options))
         line(' - settings')
-        line('```js\n{}\n```'.format(self.json_dump(config.settings.get())))
+        line(self.json_dump(config.settings.get()))
         line(' - env')
-        line('```\n{}\n```'.format(self.json_dump(config.env)))
+        line(self.json_dump(config.env))
 
         line('\n## Active view')
         if active_view:
-            line(' - File name\n```\n{}\n```'.format(active_view.file_name()))
+            line(' - File name\n{}'.format(self.code_block(active_view.file_name() or 'None')))
             line(' - Settings')
             keys = ['auto_complete_selector', 'lsp_active', 'syntax']
             settings = {}
             view_settings = active_view.settings()
             for key in keys:
                 settings[key] = view_settings.get(key)
-            line('```js\n{}\n```'.format(self.json_dump(settings)))
+            line(self.json_dump(settings))
         else:
             line('no active view found!')
 
         window = self.window
         line('\n## Project / Workspace')
         line(' - folders')
-        line('```js\n{}\n```'.format(window.folders()))
+        line(self.json_dump(window.folders()))
         is_project = bool(window.project_file_name())
         line(' - is project: {}'.format(is_project))
         if is_project:
-            line(' - project data:\n```js\n{}\n```'.format(self.json_dump(window.project_data())))
+            line(' - project data:\n{}'.format(self.json_dump(window.project_data())))
 
         line('\n## LSP configuration\n')
         lsp_settings = self.read_resource('Packages/User/LSP.sublime-settings')
-        line('```js\n{}\n```'.format(lsp_settings) if lsp_settings else 'no LSP settings')
+        line(self.code_block(lsp_settings, 'js') if lsp_settings else 'no LSP settings')
 
         return '\n'.join(lines)
 
     def json_dump(self, contents: Any) -> str:
-        return json.dumps(contents, indent=2, sort_keys=True, ensure_ascii=False)
+        return self.code_block(json.dumps(contents, indent=2, sort_keys=True, ensure_ascii=False), 'js')
+
+    def code_block(self, contents: str, lang: str = '') -> str:
+        return '```{}\n{}\n```'.format(lang, contents)
 
     def read_resource(self, path: str) -> Optional[str]:
         try:

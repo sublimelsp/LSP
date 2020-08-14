@@ -137,25 +137,25 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
                      server_output: str, exit_code: int) -> str:
         lines = []
 
-        def l(s: str) -> None:
+        def line(s: str) -> None:
             lines.append(s)
 
-        l('# Troubleshooting: {}'.format(config.name))
+        line('# Troubleshooting: {}'.format(config.name))
 
-        l('## Version')
-        l(' - LSP: {}'.format('.'.join([str(n) for n in __version__])))
-        l(' - Sublime Text: {}'.format(sublime.version()))
+        line('## Version')
+        line(' - LSP: {}'.format('.'.join([str(n) for n in __version__])))
+        line(' - Sublime Text: {}'.format(sublime.version()))
 
-        l('## System PATH')
+        line('## System PATH')
         lines += [' - {}'.format(p) for p in os.environ['PATH'].split(os.pathsep)]
 
-        l('## Server Test Run')
-        l(' - exit code: {}\n - output\n```\n{}\n```'.format(exit_code, server_output))
+        line('## Server Test Run')
+        line(' - exit code: {}\n - output\n```\n{}\n```'.format(exit_code, server_output))
 
-        l('## Server Configuration')
-        l(' - command\n```js\n{}\n```'.format(config.binary_args))
-        l(' - shell command\n```sh\n{}\n```'.format(list2cmdline(config.binary_args)))
-        l(' - languages')
+        line('## Server Configuration')
+        line(' - command\n```js\n{}\n```'.format(config.binary_args))
+        line(' - shell command\n```sh\n{}\n```'.format(list2cmdline(config.binary_args)))
+        line(' - languages')
         languages = [
             {
                 'language_id': lang.id,
@@ -163,39 +163,39 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
                 'feature_selector': lang.feature_selector,
             } for lang in config.languages
         ]
-        l('```js\n{}\n```'.format(self.json_dump(languages)))
-        l(' - init_options')
-        l('```js\n{}\n```'.format(self.json_dump(config.init_options)))
-        l(' - settings')
-        l('```js\n{}\n```'.format(self.json_dump(config.settings.get())))
-        l(' - env')
-        l('```\n{}\n```'.format(self.json_dump(config.env)))
+        line('```js\n{}\n```'.format(self.json_dump(languages)))
+        line(' - init_options')
+        line('```js\n{}\n```'.format(self.json_dump(config.init_options)))
+        line(' - settings')
+        line('```js\n{}\n```'.format(self.json_dump(config.settings.get())))
+        line(' - env')
+        line('```\n{}\n```'.format(self.json_dump(config.env)))
 
-        l('\n## Active view')
+        line('\n## Active view')
         if active_view:
-            l(' - File name\n```\n{}\n```'.format(active_view.file_name()))
-            l(' - Settings')
+            line(' - File name\n```\n{}\n```'.format(active_view.file_name()))
+            line(' - Settings')
             keys = ['auto_complete_selector', 'lsp_active', 'syntax']
             settings = {}
             view_settings = active_view.settings()
             for key in keys:
                 settings[key] = view_settings.get(key)
-            l('```js\n{}\n```'.format(self.json_dump(settings)))
+            line('```js\n{}\n```'.format(self.json_dump(settings)))
         else:
-            l('no active view found!')
+            line('no active view found!')
 
         window = self.window
-        l('\n## Project / Workspace')
-        l(' - folders')
-        l('```js\n{}\n```'.format(window.folders()))
+        line('\n## Project / Workspace')
+        line(' - folders')
+        line('```js\n{}\n```'.format(window.folders()))
         is_project = bool(window.project_file_name())
-        l(' - is project: {}'.format(is_project))
+        line(' - is project: {}'.format(is_project))
         if is_project:
-            l(' - project data:\n```js\n{}\n```'.format(self.json_dump(window.project_data())))
+            line(' - project data:\n```js\n{}\n```'.format(self.json_dump(window.project_data())))
 
-        l('\n## LSP configuration\n')
+        line('\n## LSP configuration\n')
         lsp_settings = self.read_resource('Packages/User/LSP.sublime-settings')
-        l('```js\n{}\n```'.format(lsp_settings) if lsp_settings else 'no LSP settings')
+        line('```js\n{}\n```'.format(lsp_settings) if lsp_settings else 'no LSP settings')
 
         return '\n'.join(lines)
 

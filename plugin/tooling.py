@@ -199,7 +199,6 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
 
         return '\n'.join(lines)
 
-
     def json_dump(self, contents: Any) -> str:
         return json.dumps(contents, indent=2, sort_keys=True, ensure_ascii=False)
 

@@ -19,6 +19,7 @@ from .plugin.diagnostics import LspHideDiagnosticCommand
 from .plugin.diagnostics import LspNextDiagnosticCommand
 from .plugin.diagnostics import LspPreviousDiagnosticCommand
 from .plugin.documents import DocumentSyncListener
+from .plugin.documents import TextChangeListener
 from .plugin.edit import LspApplyDocumentEditCommand
 from .plugin.edit import LspApplyWorkspaceEditCommand
 from .plugin.execute_command import LspExecuteCommand
@@ -41,4 +42,6 @@ from .plugin.symbols import LspSelectionAddCommand
 from .plugin.symbols import LspSelectionClearCommand
 from .plugin.symbols import LspSelectionSetCommand
 from .plugin.symbols import LspWorkspaceSymbolsCommand
+from .plugin.tooling import LspCopyToClipboardFromBase64Command
 from .plugin.tooling import LspParseVscodePackageJson
+from .plugin.tooling import LspTroubleshootServerCommand

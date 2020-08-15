@@ -32,6 +32,9 @@ class WindowConfigManager(object):
         self._temp_disabled_configs = set()  # type: Set[str]
         self.all = self._create_window_configs()
 
+    def get_configs(self) -> List[ClientConfig]:
+        return sorted(self.all, key=lambda config: config.name)
+
     def match_scope(self, scope: str) -> Generator[ClientConfig, None, None]:
         """
         Yields configurations which match one of their document selectors to the given scope.

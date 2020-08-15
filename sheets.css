@@ -1,0 +1,12 @@
+.lsp_sheet {
+    padding:  1rem;
+}
+.lsp_sheet h1 {
+    margin-top: 0;
+}
+.lsp_sheet h2,
+.lsp_sheet h3,
+.lsp_sheet h4,
+.lsp_sheet p {
+    margin-top: 1rem;
+}

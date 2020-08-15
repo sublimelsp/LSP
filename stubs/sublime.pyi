@@ -442,7 +442,8 @@ class Window:
                          on_select: Callable,
                          flags: int = ...,
                          selected_index: int = ...,
-                         on_highlight: Optional[Callable] = ...) -> None:
+                         on_highlight: Optional[Callable] = ...,
+                         placeholder: Optional[str] = ...) -> None:
         ...
 
     def is_sidebar_visible(self) -> bool:
@@ -621,6 +622,19 @@ class Sheet:
         ...
 
 
+class HtmlSheet:
+    sheet_id = ...  # type: Any
+
+    def __init__(self, id: Any) -> None:
+        ...
+
+    def set_name(self, name: str) -> None:
+        ...
+
+    def set_contents(self, contents: str) -> None:
+        ...
+
+
 class View:
     view_id = ...  # type: Any
     selection = ...  # type: Any
@@ -644,7 +658,7 @@ class View:
     def id(self) -> int:
         ...
 
-    def buffer(self) -> Any:
+    def buffer(self) -> "Optional[Buffer]":
         ...
 
     def buffer_id(self) -> int:
@@ -930,6 +944,19 @@ class View:
         ...
 
     def transform_region_from(self, region: Region, change_id: Any) -> Region:
+        ...
+
+
+class Buffer:
+    buffer_id = ... # type: int
+
+    def __init__(self, id: int) -> None:
+        ...
+
+    def views(self) -> Optional[List[View]]:
+        ...
+
+    def primary_view(self) -> Optional[View]:
         ...
 
 

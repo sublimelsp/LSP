@@ -74,18 +74,6 @@ class AbstractViewListener(metaclass=ABCMeta):
     def update_diagnostic_in_status_bar_async(self) -> None:
         raise NotImplementedError()
 
-    @abstractmethod
-    def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def on_revert_async(self) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def on_reload_async(self) -> None:
-        raise NotImplementedError()
-
 
 def extract_message(params: Any) -> str:
     return params.get("message", "???") if isinstance(params, dict) else "???"
@@ -124,6 +112,9 @@ class WindowManager(Manager):
         self._diagnostic_phantom_set = None  # type: Optional[sublime.PhantomSet]
         self.total_error_count = 0
         self.total_warning_count = 0
+
+    def get_config_manager(self) -> WindowConfigManager:
+        return self._configs
 
     def on_load_project_async(self) -> None:
         # TODO: Also end sessions that were previously enabled in the .sublime-project, but now disabled or removed

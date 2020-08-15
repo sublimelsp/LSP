@@ -1,8 +1,22 @@
+from .core.css import css
+from .core.registry import windows
+from .core.transports import create_transport
+from .core.transports import Transport
+from .core.transports import TransportCallbacks
+from .core.types import ClientConfig
+from .core.typing import Any, Callable, Dict, List, Optional
+from .core.version import __version__
+from .core.views import extract_variables
+from .core.views import make_command_link
+from base64 import b64decode
+from base64 import b64encode
+from subprocess import list2cmdline
+import json
+import mdpopups
+import os
 import sublime
 import sublime_plugin
-import json
 import textwrap
-from .core.typing import Optional
 
 
 class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
@@ -77,3 +91,167 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
                 else:
                     self.writeline4('{}{}'.format(line, terminator))
         self.writeline("}")
+
+
+class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallbacks):
+
+    def run(self) -> None:
+        window = self.window
+        active_view = window.active_view()
+        configs = [c for c in windows.lookup(window).get_config_manager().get_configs() if c.enabled]
+        config_names = [config.name for config in configs]
+        if config_names:
+            window.show_quick_panel(config_names, lambda index: self.on_selected(index, configs, active_view),
+                                    placeholder='Select server to troubleshoot')
+
+    def on_selected(self, selected_index: int, configs: List[ClientConfig],
+                    active_view: Optional[sublime.View]) -> None:
+        if selected_index == -1:
+            return
+        config = configs[selected_index]
+        output_sheet = mdpopups.new_html_sheet(
+            self.window, 'Server: {}'.format(config.name), '# Running server test...',
+            css=css().sheets, wrapper_class=css().sheets_classname)
+        sublime.set_timeout_async(lambda: self.test_run_server_async(config, self.window, active_view, output_sheet))
+
+    def test_run_server_async(self, config: ClientConfig, window: sublime.Window,
+                              active_view: Optional[sublime.View], output_sheet: sublime.HtmlSheet) -> None:
+        server = ServerTestRunner(
+            config, window,
+            lambda output, exit_code: self.update_sheet(config, active_view, output_sheet, output, exit_code))
+        # Store the instance so that it's not GC'ed before it's finished.
+        self.test_runner = server  # type: Optional[ServerTestRunner]
+
+    def update_sheet(self, config: ClientConfig, active_view: Optional[sublime.View], output_sheet: sublime.HtmlSheet,
+                     server_output: str, exit_code: int) -> None:
+        self.test_runner = None
+        frontmatter = mdpopups.format_frontmatter({'allow_code_wrap': True})
+        contents = self.get_contents(config, active_view, server_output, exit_code)
+        # The href needs to be encoded to avoid having markdown parser ruin it.
+        copy_link = make_command_link('lsp_copy_to_clipboard_from_base64', '<kbd>Copy to clipboard</kbd>',
+                                      {'contents': b64encode(contents.encode()).decode()})
+        formatted = '{}{}\n{}'.format(frontmatter, copy_link, contents)
+        mdpopups.update_html_sheet(output_sheet, formatted, css=css().sheets, wrapper_class=css().sheets_classname)
+
+    def get_contents(self, config: ClientConfig, active_view: Optional[sublime.View],
+                     server_output: str, exit_code: int) -> str:
+        lines = []
+
+        def line(s: str) -> None:
+            lines.append(s)
+
+        line('# Troubleshooting: {}'.format(config.name))
+
+        line('## Version')
+        line(' - LSP: {}'.format('.'.join([str(n) for n in __version__])))
+        line(' - Sublime Text: {}'.format(sublime.version()))
+
+        line('## Server Test Run')
+        line(' - exit code: {}\n - output\n{}'.format(exit_code, self.code_block(server_output)))
+
+        line('## Server Configuration')
+        line(' - command\n{}'.format(self.json_dump(config.binary_args)))
+        line(' - shell command\n{}'.format(self.code_block(list2cmdline(config.binary_args), 'sh')))
+        line(' - languages')
+        languages = [
+            {
+                'language_id': lang.id,
+                'document_selector': lang.document_selector,
+                'feature_selector': lang.feature_selector,
+            } for lang in config.languages
+        ]
+        line(self.json_dump(languages))
+        line(' - init_options')
+        line(self.json_dump(config.init_options))
+        line(' - settings')
+        line(self.json_dump(config.settings.get()))
+        line(' - env')
+        line(self.json_dump(config.env))
+
+        line('\n## Active view')
+        if active_view:
+            line(' - File name\n{}'.format(self.code_block(active_view.file_name() or 'None')))
+            line(' - Settings')
+            keys = ['auto_complete_selector', 'lsp_active', 'syntax']
+            settings = {}
+            view_settings = active_view.settings()
+            for key in keys:
+                settings[key] = view_settings.get(key)
+            line(self.json_dump(settings))
+        else:
+            line('no active view found!')
+
+        window = self.window
+        line('\n## Project / Workspace')
+        line(' - folders')
+        line(self.json_dump(window.folders()))
+        is_project = bool(window.project_file_name())
+        line(' - is project: {}'.format(is_project))
+        if is_project:
+            line(' - project data:\n{}'.format(self.json_dump(window.project_data())))
+
+        line('\n## LSP configuration\n')
+        lsp_settings_contents = self.read_resource('Packages/User/LSP.sublime-settings')
+        if lsp_settings_contents is not None:
+            line(self.json_dump(sublime.decode_value(lsp_settings_contents)))
+        else:
+            line('<not found>')
+
+        line('## System PATH')
+        lines += [' - {}'.format(p) for p in os.environ['PATH'].split(os.pathsep)]
+
+        return '\n'.join(lines)
+
+    def json_dump(self, contents: Any) -> str:
+        return self.code_block(json.dumps(contents, indent=2, sort_keys=True, ensure_ascii=False), 'json')
+
+    def code_block(self, contents: str, lang: str = '') -> str:
+        return '```{}\n{}\n```'.format(lang, contents)
+
+    def read_resource(self, path: str) -> Optional[str]:
+        try:
+            return sublime.load_resource(path)
+        except Exception:
+            return None
+
+
+class LspCopyToClipboardFromBase64Command(sublime_plugin.ApplicationCommand):
+    def run(self, contents: str = '') -> None:
+        sublime.set_clipboard(b64decode(contents).decode())
+
+
+class ServerTestRunner(TransportCallbacks):
+    """
+    Used to start the server and collect any potential stderr output and the exit code.
+
+    Server is automatically closed after defined timeout.
+    """
+
+    CLOSE_TIMEOUT_SEC = 2
+
+    def __init__(self, config: ClientConfig, window: sublime.Window, on_close: Callable[[str, int], None]) -> None:
+        self._on_close = on_close  # type: Callable[[str, int], None]
+        self._transport = None  # type: Optional[Transport]
+        self._stderr_lines = []  # type: List[str]
+        try:
+            cwd = window.folders()[0] if window.folders() else None
+            variables = extract_variables(window)
+            self._transport = create_transport(config, cwd, window, self, variables)
+            sublime.set_timeout_async(self.force_close_transport, self.CLOSE_TIMEOUT_SEC * 1000)
+        except Exception as ex:
+            self.on_transport_close(-1, ex)
+
+    def force_close_transport(self) -> None:
+        if self._transport:
+            self._transport.close()
+
+    def on_payload(self, payload: Dict[str, Any]) -> None:
+        pass
+
+    def on_stderr_message(self, message: str) -> None:
+        self._stderr_lines.append(message)
+
+    def on_transport_close(self, exit_code: int, exception: Optional[Exception]) -> None:
+        self._transport = None
+        output = str(exception) if exception else '\n'.join(self._stderr_lines).rstrip()
+        sublime.set_timeout(lambda: self._on_close(output, exit_code))

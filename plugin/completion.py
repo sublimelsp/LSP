@@ -152,17 +152,21 @@ def is_deprecated(item: dict) -> bool:
 class CompletionHandler(LSPViewEventListener):
     completions = []  # type: List[dict]
 
-    def __del__(self) -> None:
-        settings = self.view.settings()
-        triggers = settings.get("auto_complete_triggers") or []  # type: List[Dict[str, str]]
-        triggers = [trigger for trigger in triggers if 'server' not in trigger]
-        settings.set("auto_complete_triggers", triggers)
-
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:
         if 'completion' in userprefs().disabled_capabilities:
             return False
         return cls.has_supported_syntax(view_settings)
+
+    @classmethod
+    def applies_to_primary_view_only(cls) -> bool:
+        return False
+
+    def __del__(self) -> None:
+        settings = self.view.settings()
+        triggers = settings.get("auto_complete_triggers") or []  # type: List[Dict[str, str]]
+        triggers = [trigger for trigger in triggers if 'server' not in trigger]
+        settings.set("auto_complete_triggers", triggers)
 
     def on_post_text_command(self, command: str, args: dict) -> None:
         if not self.view.is_popup_visible():

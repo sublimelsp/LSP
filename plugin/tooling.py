@@ -192,7 +192,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
 
         line('\n## LSP configuration\n')
         lsp_settings_contents = self.read_resource('Packages/User/LSP.sublime-settings')
-        if lsp_settings_contents != None:
+        if lsp_settings_contents is not None:
             line(self.json_dump(sublime.decode_value(lsp_settings_contents)))
         else:
             line('<not found>')

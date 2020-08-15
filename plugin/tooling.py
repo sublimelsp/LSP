@@ -191,8 +191,11 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
             line(' - project data:\n{}'.format(self.json_dump(window.project_data())))
 
         line('\n## LSP configuration\n')
-        lsp_settings = sublime.decode_value(self.read_resource('Packages/User/LSP.sublime-settings'))
-        line(self.json_dump(lsp_settings or '<missing>') if lsp_settings else 'no LSP settings')
+        lsp_settings_contents = self.read_resource('Packages/User/LSP.sublime-settings')
+        if lsp_settings_contents != None:
+            line(self.json_dump(sublime.decode_value(lsp_settings_contents)))
+        else:
+            line('<not found>')
 
         line('## System PATH')
         lines += [' - {}'.format(p) for p in os.environ['PATH'].split(os.pathsep)]

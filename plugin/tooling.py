@@ -146,9 +146,6 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
         line(' - LSP: {}'.format('.'.join([str(n) for n in __version__])))
         line(' - Sublime Text: {}'.format(sublime.version()))
 
-        line('## System PATH')
-        lines += [' - {}'.format(p) for p in os.environ['PATH'].split(os.pathsep)]
-
         line('## Server Test Run')
         line(' - exit code: {}\n - output\n{}'.format(exit_code, self.code_block(server_output)))
 
@@ -194,13 +191,16 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
             line(' - project data:\n{}'.format(self.json_dump(window.project_data())))
 
         line('\n## LSP configuration\n')
-        lsp_settings = self.read_resource('Packages/User/LSP.sublime-settings')
-        line(self.code_block(lsp_settings, 'js') if lsp_settings else 'no LSP settings')
+        lsp_settings = sublime.decode_value(self.read_resource('Packages/User/LSP.sublime-settings'))
+        line(self.json_dump(lsp_settings) if lsp_settings else 'no LSP settings')
+
+        line('## System PATH')
+        lines += [' - {}'.format(p) for p in os.environ['PATH'].split(os.pathsep)]
 
         return '\n'.join(lines)
 
     def json_dump(self, contents: Any) -> str:
-        return self.code_block(json.dumps(contents, indent=2, sort_keys=True, ensure_ascii=False), 'js')
+        return self.code_block(json.dumps(contents, indent=2, sort_keys=True, ensure_ascii=False), 'json')
 
     def code_block(self, contents: str, lang: str = '') -> str:
         return '```{}\n{}\n```'.format(lang, contents)

@@ -113,6 +113,9 @@ class WindowManager(Manager):
         self.total_error_count = 0
         self.total_warning_count = 0
 
+    def get_config_manager(self) -> WindowConfigManager:
+        return self._configs
+
     def on_load_project_async(self) -> None:
         # TODO: Also end sessions that were previously enabled in the .sublime-project, but now disabled or removed
         # from the .sublime-project.

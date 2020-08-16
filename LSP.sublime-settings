@@ -333,11 +333,10 @@
       "command":
       [
         "solargraph",
-        "socket"
+        "stdio"
       ],
       "languageId": "ruby",
       "document_selector": "source.ruby | text.html.ruby",
-      "tcp_port": 7658,
       // Enable RuboCop linting
       // "initializationOptions": {
       //   "diagnostics": true

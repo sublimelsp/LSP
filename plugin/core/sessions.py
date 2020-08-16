@@ -11,6 +11,7 @@ from .transports import Transport
 from .types import ClientConfig
 from .types import ClientStates
 from .types import debounced
+from .types import diff
 from .typing import Dict, Any, Optional, List, Tuple, Generator, Type, Protocol
 from .url import uri_to_filename
 from .version import __version__
@@ -226,7 +227,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     }
     if config.experimental_capabilities is not None:
         capabilities['experimental'] = config.experimental_capabilities
-    params = {
+    return {
         "processId": os.getpid(),
         "clientInfo": {
             "name": "Sublime Text LSP",
@@ -235,11 +236,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "rootUri": first_folder.uri() if first_folder else None,
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
-        "capabilities": capabilities
+        "capabilities": capabilities,
+        "initializationOptions": sublime.expand_variables(config.init_options.get(), variables)
     }
-    if config.init_options is not None:
-        params['initializationOptions'] = sublime.expand_variables(config.init_options, variables)
-    return params
 
 
 # method -> (capability dotted path, optional registration dotted path)
@@ -277,19 +276,6 @@ def method_to_capability(method: str) -> Tuple[str, str]:
         # a later date, and the capability will pop from the capabilities dict.
         registration_path = capability_path + ".id"
     return capability_path, registration_path
-
-
-def diff_folders(old: List[WorkspaceFolder],
-                 new: List[WorkspaceFolder]) -> Tuple[List[WorkspaceFolder], List[WorkspaceFolder]]:
-    added = []  # type: List[WorkspaceFolder]
-    removed = []  # type: List[WorkspaceFolder]
-    for folder in old:
-        if folder not in new:
-            removed.append(folder)
-    for folder in new:
-        if folder not in old:
-            added.append(folder)
-    return added, removed
 
 
 class SessionViewProtocol(Protocol):
@@ -507,7 +493,7 @@ class Session(Client):
         self._plugin = None  # type: Optional[AbstractPlugin]
 
     def __del__(self) -> None:
-        debug(self.config.binary_args, "ended")
+        debug(self.config.command, "ended")
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -641,7 +627,7 @@ class Session(Client):
 
     def update_folders(self, folders: List[WorkspaceFolder]) -> None:
         if self.should_notify_did_change_workspace_folders():
-            added, removed = diff_folders(self._workspace_folders, folders)
+            added, removed = diff(self._workspace_folders, folders)
             params = {
                 "event": {
                     "added": [a.to_lsp() for a in added],

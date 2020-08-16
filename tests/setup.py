@@ -20,7 +20,7 @@ TIMEOUT_TIME = 10000 if CI else 2000
 text_language = LanguageConfig(language_id="text", document_selector="text.plain")
 text_config = ClientConfig(
     name="textls",
-    binary_args=[],
+    command=[],
     tcp_port=None,
     languages=[text_language])
 
@@ -47,7 +47,7 @@ class YieldPromise:
 def make_stdio_test_config() -> ClientConfig:
     return ClientConfig(
         name="TEST",
-        binary_args=["python3", join("$packages", "LSP", "tests", "server.py")],
+        command=["python3", join("$packages", "LSP", "tests", "server.py")],
         tcp_port=None,
         languages=[LanguageConfig(language_id="txt", document_selector="text.plain")],
         enabled=True)
@@ -56,7 +56,7 @@ def make_stdio_test_config() -> ClientConfig:
 def make_tcp_test_config() -> ClientConfig:
     return ClientConfig(
         name="TEST",
-        binary_args=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port"],
+        command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port"],
         tcp_port=0,  # select a free one for me
         languages=[LanguageConfig(language_id="txt", document_selector="text.plain")],
         enabled=True)
@@ -102,7 +102,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.assertTrue(server_capabilities)
         window = sublime.active_window()
         self.assertTrue(window)
-        self.config.init_options["serverResponse"] = server_capabilities
+        self.config.init_options.set("serverResponse", server_capabilities)
         add_config(self.config)
         self.wm = windows.lookup(window)
         filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(test_name)), window)
@@ -261,6 +261,9 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def doCleanups(self) -> 'Generator':
         # restore the user's configs
-        close_test_view(self.view)
+        try:
+            close_test_view(self.view)
+        except Exception as ex:
+            print("exception:", str(ex))
         remove_config(self.config)
         yield from super().doCleanups()

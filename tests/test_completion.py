@@ -44,10 +44,9 @@ class InitializationTests(DeferrableTestCase):
 
     def doCleanups(self) -> 'Generator':
         yield from super().doCleanups()
-        wm = windows.lookup(self.view.window())
         try:
-            wm._configs.all.remove(text_config)
-        except ValueError:
+            remove_config(text_config)
+        except Exception:
             pass
         if self.view:
             self.view.set_scratch(True)

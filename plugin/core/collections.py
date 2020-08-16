@@ -19,6 +19,13 @@ class DottedDict:
         if d is not None:
             self.update(d)
 
+    @classmethod
+    def from_base_and_override(cls, base: "DottedDict", override: Optional[Dict[str, Any]]) -> "DottedDict":
+        result = DottedDict(base.copy())
+        if override:
+            result.update(override)
+        return result
+
     def get(self, path: Optional[str] = None) -> Any:
         """
         Get a value from the dictionary.
@@ -131,3 +138,6 @@ class DottedDict:
                 self._update_recursive(value, path)
             else:
                 self.set(path, value)
+
+    def __repr__(self) -> str:
+        return repr(self._d)

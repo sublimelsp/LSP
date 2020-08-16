@@ -1,6 +1,6 @@
 from .collections import DottedDict
 from .logging import debug
-from .typing import Any, Optional, List, Dict, Generator, Callable, Union
+from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, TypeVar, Tuple
 from threading import RLock
 import contextlib
 import functools
@@ -13,6 +13,20 @@ def runtime(token: str) -> Generator[None, None, None]:
     t = time.time()
     yield
     debug(token, "running time:", int((time.time() - t) * 1000000), "μs")
+
+
+T = TypeVar("T")
+
+
+def diff(old: Iterable[T], new: Iterable[T]) -> Tuple[Set[T], Set[T]]:
+    """
+    Return a tuple of (added, removed) items
+    """
+    old_set = old if isinstance(old, set) else set(old)
+    new_set = new if isinstance(new, set) else set(new)
+    added = new_set - old_set
+    removed = old_set - new_set
+    return added, removed
 
 
 def debounced(f: Callable[[], None], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True,
@@ -89,22 +103,6 @@ class Debouncer:
             self._current_id = -1
 
 
-def read_bool_setting(settings_obj: sublime.Settings, key: str, default: bool) -> bool:
-    val = settings_obj.get(key)
-    if isinstance(val, bool):
-        return val
-    else:
-        return default
-
-
-def read_int_setting(settings_obj: sublime.Settings, key: str, default: int) -> int:
-    val = settings_obj.get(key)
-    if isinstance(val, int):
-        return val
-    else:
-        return default
-
-
 def read_dict_setting(settings_obj: sublime.Settings, key: str, default: dict) -> dict:
     val = settings_obj.get(key)
     if isinstance(val, dict):
@@ -121,42 +119,34 @@ def read_list_setting(settings_obj: sublime.Settings, key: str, default: list) -
         return default
 
 
-def read_str_setting(settings_obj: sublime.Settings, key: str, default: str) -> str:
-    val = settings_obj.get(key)
-    if isinstance(val, str):
-        return val
-    else:
-        return default
-
-
 class Settings:
 
     # This is only for mypy
-    show_view_status = None  # type: bool
     auto_show_diagnostics_panel = None  # type: str
     auto_show_diagnostics_panel_level = None  # type: int
+    code_action_on_save_timeout_ms = None  # type: int
+    diagnostics_additional_delay_auto_complete_ms = None  # type: int
+    diagnostics_delay_ms = None  # type: int
+    diagnostics_gutter_marker = None  # type: str
+    diagnostics_highlight_style = None  # type: str
     diagnostics_panel_include_severity_level = None  # type: int
+    disabled_capabilities = None  # type: List[str]
+    document_highlight_scopes = None  # type: Dict[str, str]
+    document_highlight_style = None  # type: str
+    log_debug = None  # type: bool
+    log_max_size = None  # type: int
+    log_server = None  # type: List[str]
+    log_stderr = None  # type: bool
+    lsp_code_actions_on_save = None  # type: Dict[str, bool]
+    lsp_format_on_save = None  # type: bool
+    only_show_lsp_completions = None  # type: bool
+    show_code_actions = None  # type: bool
     show_diagnostics_count_in_view_status = None  # type: bool
     show_diagnostics_in_view_status = None  # type: bool
     show_diagnostics_severity_level = None  # type: int
-    only_show_lsp_completions = None  # type: bool
-    diagnostics_highlight_style = None  # type: str
-    document_highlight_style = None  # type: str
-    document_highlight_scopes = None  # type: Dict[str, str]
-    diagnostics_gutter_marker = None  # type: str
-    diagnostics_delay_ms = None  # type: int
-    diagnostics_additional_delay_auto_complete_ms = None  # type: int
-    show_symbol_action_links = None  # type: bool
     show_references_in_quick_panel = None  # type: bool
-    disabled_capabilities = None  # type: List[str]
-    log_debug = None  # type: bool
-    log_server = None  # type: List[str]
-    log_stderr = None  # type: bool
-    log_max_size = None  # type: int
-    lsp_format_on_save = None  # type: bool
-    show_code_actions = None  # type: bool
-    lsp_code_actions_on_save = None  # type: Dict[str, bool]
-    code_action_on_save_timeout_ms = None  # type: int
+    show_symbol_action_links = None  # type: bool
+    show_view_status = None  # type: bool
 
     def __init__(self, s: sublime.Settings) -> None:
         self.update(s)
@@ -164,40 +154,34 @@ class Settings:
     def update(self, s: sublime.Settings) -> None:
 
         def r(name: str, default: Union[bool, int, str, list, dict]) -> None:
-            reader = globals().get("read_{}_setting".format(default.__class__.__name__))
-            assert callable(reader)
-            setattr(self, name, reader(s, name, default))
+            val = s.get(name)
+            setattr(self, name, val if isinstance(val, default.__class__) else default)
 
-        r("show_view_status", True)
-        r("auto_show_diagnostics_panel", "always")
+        # r("auto_show_diagnostics_panel", "always")
         r("auto_show_diagnostics_panel_level", 2)
+        r("code_action_on_save_timeout_ms", 2000)
+        r("diagnostics_additional_delay_auto_complete_ms", 0)
+        r("diagnostics_delay_ms", 0)
+        r("diagnostics_gutter_marker", "dot")
+        r("diagnostics_highlight_style", "underline")
         r("diagnostics_panel_include_severity_level", 4)
+        r("disabled_capabilities", [])
+        r("document_highlight_scopes", {"unknown": "text", "text": "text", "read": "markup.inserted", "write": "markup.changed"})  # noqa
+        r("document_highlight_style", "stippled")
+        r("log_debug", False)
+        r("log_max_size", 8 * 1024)
+        # r("log_server", [])
+        r("log_stderr", False)
+        r("lsp_code_actions_on_save", {})
+        r("lsp_format_on_save", False)
+        r("only_show_lsp_completions", False)
+        r("show_code_actions", "annotation")
         r("show_diagnostics_count_in_view_status", False)
         r("show_diagnostics_in_view_status", True)
         r("show_diagnostics_severity_level", 2)
-        r("only_show_lsp_completions", False)
-        r("diagnostics_highlight_style", "underline")
-        r("document_highlight_style", "stippled")
-        r("document_highlight_scopes", {
-            "unknown": "text",
-            "text": "text",
-            "read": "markup.inserted",
-            "write": "markup.changed"
-        })
-        r("diagnostics_gutter_marker", "dot")
-        r("diagnostics_delay_ms", 0)
-        r("diagnostics_additional_delay_auto_complete_ms", 0)
-        r("show_symbol_action_links", False)
         r("show_references_in_quick_panel", False)
-        r("disabled_capabilities", [])
-        r("log_debug", False)
-        # r("log_server", [])
-        r("log_stderr", False)
-        r("log_max_size", 8 * 1024)
-        r("lsp_format_on_save", False)
-        r("show_code_actions", "annotation")
-        r("lsp_code_actions_on_save", {})
-        r("code_action_on_save_timeout_ms", 2000)
+        r("show_symbol_action_links", False)
+        r("show_view_status", True)
 
         # Backwards-compatible with the bool setting
         log_server = s.get("log_server")
@@ -207,6 +191,15 @@ class Settings:
             self.log_server = log_server
         else:
             self.log_server = []
+
+        # Backwards-compatible with the bool setting
+        auto_show_diagnostics_panel = s.get("auto_show_diagnostics_panel")
+        if isinstance(auto_show_diagnostics_panel, bool):
+            self.auto_show_diagnostics_panel = "always" if auto_show_diagnostics_panel else "never"
+        elif isinstance(auto_show_diagnostics_panel, str):
+            self.auto_show_diagnostics_panel = auto_show_diagnostics_panel
+        else:
+            self.auto_show_diagnostics_panel = "always"
 
     def show_diagnostics_panel_always(self) -> bool:
         return self.auto_show_diagnostics_panel == "always"
@@ -221,13 +214,13 @@ class Settings:
         return _settings_style_to_add_regions_flag(self.diagnostics_highlight_style)
 
 
-class ClientStates(object):
+class ClientStates:
     STARTING = 0
     READY = 1
     STOPPING = 2
 
 
-class LanguageConfig(object):
+class LanguageConfig:
 
     __slots__ = ('id', 'document_selector', 'feature_selector')
 
@@ -255,26 +248,26 @@ class LanguageConfig(object):
         # We want to match at least one part of an x.y.z, and we don't want to match on empty selectors.
         return self.score_document(scope) >= 8
 
+    def __repr__(self) -> str:
+        return "{}(language_id={}, document_selector={}, feature_selector={})".format(
+            self.__class__.__name__, repr(self.id), repr(self.document_selector), repr(self.feature_selector))
 
-class ClientConfig(object):
+
+class ClientConfig:
     def __init__(self,
                  name: str,
-                 binary_args: List[str],
+                 command: List[str],
                  languages: List[LanguageConfig],
                  tcp_port: Optional[int],
                  enabled: bool = True,
-                 init_options: dict = dict(),
+                 init_options: DottedDict = DottedDict(),
                  settings: DottedDict = DottedDict(),
-                 env: dict = dict(),
-                 tcp_host: Optional[str] = None,
-                 tcp_mode: Optional[str] = None,
-                 experimental_capabilities: dict = dict()) -> None:
+                 env: Dict[str, str] = {},
+                 experimental_capabilities: Optional[Dict[str, Any]] = None) -> None:
         self.name = name
-        self.binary_args = binary_args
+        self.command = command
         self.languages = languages
         self.tcp_port = tcp_port
-        self.tcp_host = tcp_host
-        self.tcp_mode = tcp_mode
         self.enabled = enabled
         self.init_options = init_options
         self.settings = settings
@@ -289,57 +282,45 @@ class ClientConfig(object):
         settings.update(read_dict_setting(s, "settings", {}))  # overrides from the user
         return ClientConfig(
             name=name,
-            binary_args=read_list_setting(s, "command", []),
+            command=read_list_setting(s, "command", []),
             languages=_read_language_configs(s),
-            tcp_port=s.get("tcp_port", None),
+            tcp_port=s.get("tcp_port"),
             # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
-            init_options=s.get("initializationOptions"),  # type: ignore
+            init_options=DottedDict(s.get("initializationOptions")),
             settings=settings,
             env=read_dict_setting(s, "env", {}),
-            tcp_host=s.get("tcp_host", None),
-            tcp_mode=s.get("tcp_mode", None),
-            experimental_capabilities=s.get("experimental_capabilities", None)  # type: ignore
+            experimental_capabilities=s.get("experimental_capabilities")
         )
 
     @classmethod
     def from_dict(cls, name: str, d: Dict[str, Any]) -> "ClientConfig":
         return ClientConfig(
             name=name,
-            binary_args=d.get("command", []),
+            command=d.get("command", []),
             languages=_read_language_configs(d),
-            tcp_port=d.get("tcp_port", None),
+            tcp_port=d.get("tcp_port"),
             enabled=d.get("enabled", False),
-            init_options=d.get("initializationOptions", dict()),
-            settings=DottedDict(d.get("settings", None)),
+            init_options=DottedDict(d.get("initializationOptions")),
+            settings=DottedDict(d.get("settings")),
             env=d.get("env", dict()),
-            tcp_host=d.get("tcp_host", None),
-            tcp_mode=d.get("tcp_mode", None),
             experimental_capabilities=d.get("experimental_capabilities", dict())
         )
 
-    def update(self, user_override_config: Dict[str, Any]) -> "ClientConfig":
-        user_override_languages = _read_language_configs(user_override_config)
-        if not user_override_languages:
-            user_override_languages = self.languages
-        user_override_settings = user_override_config.get("settings")
-        if isinstance(user_override_settings, dict):
-            settings = DottedDict(self.settings.copy())
-            settings.update(user_override_settings)
-        else:
-            settings = self.settings
+    def update(self, override: Dict[str, Any]) -> "ClientConfig":
+        languages = _read_language_configs(override)
+        if not languages:
+            languages = self.languages
         return ClientConfig(
             name=self.name,
-            binary_args=user_override_config.get("command", self.binary_args),
-            languages=user_override_languages,
-            tcp_port=user_override_config.get("tcp_port", self.tcp_port),
-            enabled=user_override_config.get("enabled", self.enabled),
-            init_options=user_override_config.get("init_options", self.init_options),
-            settings=settings,
-            env=user_override_config.get("env", self.env),
-            tcp_host=user_override_config.get("tcp_host", self.tcp_host),
-            tcp_mode=user_override_config.get("tcp_mode", self.tcp_mode),
-            experimental_capabilities=user_override_config.get(
+            command=override.get("command", self.command),
+            languages=languages,
+            tcp_port=override.get("tcp_port", self.tcp_port),
+            enabled=override.get("enabled", self.enabled),
+            init_options=DottedDict.from_base_and_override(self.init_options, override.get("initializationOptions")),
+            settings=DottedDict.from_base_and_override(self.settings, override.get("settings")),
+            env=override.get("env", self.env),
+            experimental_capabilities=override.get(
                 "experimental_capabilities", self.experimental_capabilities)
         )
 
@@ -364,6 +345,13 @@ class ClientConfig(object):
             if score > highest_score:
                 highest_score = score
         return highest_score
+
+    def __repr__(self) -> str:
+        items = []  # type: List[str]
+        for k, v in self.__dict__.items():
+            if not k.startswith("_"):
+                items.append("{}={}".format(k, repr(getattr(self, k))))
+        return "{}({})".format(self.__class__.__name__, ", ".join(items))
 
 
 def syntax2scope(syntax_path: str) -> Optional[str]:

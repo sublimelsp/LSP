@@ -63,7 +63,7 @@ def _forcefully_register_plugins() -> None:
                     file_base_name = "LSP-" + file_base_name[len("lsp-"):]
                 settings = sublime.load_settings("{}.sublime-settings".format(file_base_name))
                 cfg = cls.handler.config  # type: ignore
-                settings.set("command", cfg.binary_args)
+                settings.set("command", cfg.command)
                 settings.set("settings", cfg.settings.get(None))
                 settings.set("initializationOptions", cfg.init_options)
                 langs = []  # type: List[Dict[str, str]]

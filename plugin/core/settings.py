@@ -1,10 +1,11 @@
 from .collections import DottedDict
 from .logging import debug
 from .types import ClientConfig
+from .types import diff
 from .types import read_dict_setting
 from .types import Settings
 from .types import syntax2scope
-from .typing import Any, Optional, Dict, Callable
+from .typing import Any, Optional, Dict, Callable, Set
 import sublime
 
 
@@ -16,45 +17,54 @@ class ClientConfigs:
     def __init__(self) -> None:
         self.all = {}  # type: Dict[str, ClientConfig]
         self.external = {}  # type: Dict[str, ClientConfig]
-        self._listener = None  # type: Optional[Callable[[], None]]
+        self._listener = None  # type: Optional[Callable[[Set[str], Set[str]], None]]
         self._supported_syntaxes_cache = {}  # type: Dict[str, bool]
 
-    def _notify_listener(self) -> None:
+    def _notify_listener(self, added: Set[str], removed: Set[str]) -> None:
         if callable(self._listener):
-            self._listener()
+            self._listener(added, removed)
 
     def add_for_testing(self, config: ClientConfig) -> None:
+        assert config.name not in self.all
         self.all[config.name] = config
         self._supported_syntaxes_cache.clear()
-        self._notify_listener()
+        self._notify_listener({config.name}, set())
 
     def remove_for_testing(self, config: ClientConfig) -> None:
-        self.all.pop(config.name, None)
+        self.all.pop(config.name)
         self._supported_syntaxes_cache.clear()
-        self._notify_listener()
+        self._notify_listener(set(), {config.name})
 
     def add_external_config(self, name: str, s: sublime.Settings, file: str) -> None:
+        assert name not in self.external
+        assert name not in self.all
         config = ClientConfig.from_sublime_settings(name, s, file)
         self.external[name] = config
         self.all[name] = config
-        self._notify_listener()
+        self._notify_listener({name}, set())
 
     def remove_external_config(self, name: str) -> None:
-        self.external.pop(name, None)
-        self.all.pop(name, None)
-        self._notify_listener()
+        assert name in self.external
+        assert name in self.all
+        self.external.pop(name)
+        self.all.pop(name)
+        self._notify_listener(set(), {name})
 
     def update_configs(self) -> None:
-        settings = sublime.load_settings("LSP.sublime-settings")
-        clients = DottedDict(read_dict_setting(settings, "default_clients", {}))
-        clients.update(read_dict_setting(settings, "clients", {}))
+        global _settings_obj
+        if _settings_obj is None:
+            return
+        clients = DottedDict(read_dict_setting(_settings_obj, "default_clients", {}))
+        clients.update(read_dict_setting(_settings_obj, "clients", {}))
         self._supported_syntaxes_cache.clear()
+        old = set(self.all.keys())
         self.all.clear()
         self.all.update(self.external)
         self.all.update({name: ClientConfig.from_dict(name, d) for name, d in clients.get().items()})
+        added, removed = diff(old, self.all.keys())
         debug("enabled configs:", ", ".join(sorted(c.name for c in self.all.values() if c.enabled)))
-        debug("disabled configs: ", ", ".join(sorted(c.name for c in self.all.values() if not c.enabled)))
-        self._notify_listener()
+        debug("disabled configs:", ", ".join(sorted(c.name for c in self.all.values() if not c.enabled)))
+        self._notify_listener(added, removed)
 
     def _set_enabled(self, config_name: str, is_enabled: bool) -> None:
         settings = sublime.load_settings("LSP.sublime-settings")
@@ -92,7 +102,7 @@ def _on_sublime_settings_changed() -> None:
     global _settings_obj
     global _settings
     global client_configs
-    if _settings_obj is None or _settings is None:
+    if _settings_obj is None:
         return
     _settings.update(_settings_obj)
     client_configs.update_configs()
@@ -105,7 +115,6 @@ def load_settings() -> None:
     if _settings_obj is None:
         _settings_obj = sublime.load_settings("LSP.sublime-settings")
         _settings = Settings(_settings_obj)
-        client_configs.update_configs()
         _settings_obj.add_on_change("LSP", _on_sublime_settings_changed)
 
 

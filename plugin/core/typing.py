@@ -17,6 +17,7 @@ if sys.version_info >= (3, 5, 0):
     from typing import Set
     from typing import Tuple
     from typing import Type
+    from typing import TypeVar
     from typing import Union
     from typing_extensions import Protocol
 
@@ -89,3 +90,6 @@ else:
         pass
 
     Protocol = object  # type: ignore
+
+    def TypeVar(ignore: str) -> Any:  # type: ignore
+        return object

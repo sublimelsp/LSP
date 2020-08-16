@@ -8,8 +8,8 @@ from LSP.plugin.core.typing import List, Any, Callable
 
 
 TEST_LANGUAGE = LanguageConfig("test", "text.plain")
-TEST_CONFIG = ClientConfig(name="test", binary_args=[], languages=[TEST_LANGUAGE], tcp_port=None)
-DISABLED_CONFIG = ClientConfig("test", binary_args=[], languages=[TEST_LANGUAGE], tcp_port=None, enabled=False)
+TEST_CONFIG = ClientConfig(name="test", command=[], languages=[TEST_LANGUAGE], tcp_port=None)
+DISABLED_CONFIG = ClientConfig("test", command=[], languages=[TEST_LANGUAGE], tcp_port=None, enabled=False)
 
 basic_responses = {
     'initialize': {

@@ -316,7 +316,9 @@ class WindowManager(Manager):
 
     def restart_sessions_async(self) -> None:
         self.end_sessions_async()
-        for listener in self._listeners:
+        listeners = list(self._listeners)
+        self._listeners.clear()
+        for listener in listeners:
             self.register_listener_async(listener)
 
     def end_sessions_async(self) -> None:

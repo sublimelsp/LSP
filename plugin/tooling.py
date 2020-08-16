@@ -150,8 +150,8 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
         line(' - exit code: {}\n - output\n{}'.format(exit_code, self.code_block(server_output)))
 
         line('## Server Configuration')
-        line(' - command\n{}'.format(self.json_dump(config.binary_args)))
-        line(' - shell command\n{}'.format(self.code_block(list2cmdline(config.binary_args), 'sh')))
+        line(' - command\n{}'.format(self.json_dump(config.command)))
+        line(' - shell command\n{}'.format(self.code_block(list2cmdline(config.command), 'sh')))
         line(' - languages')
         languages = [
             {

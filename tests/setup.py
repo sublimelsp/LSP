@@ -152,10 +152,11 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def await_message(self, method: str, promise: Optional[YieldPromise] = None) -> 'Generator':
         """
-        Awaits until the server responds with data returned for a request with specified method.
-        If server has already received a request with specified method before, it will immediately
-        return the response for that previous request. If it hasn't received such request yet, it
-        will wait for it and then respond or we're time out.
+        Awaits until server receives a request with a specified method.
+
+        If the server has already received a request with a specified method before, it will
+        immediately return the response for that previous request. If it hasn't received such
+        request yet, it will wait for it and then respond.
 
         :param      method: The method type that we are awaiting response for.
         :param      promise: The optional promise to fullfill on response.

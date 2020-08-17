@@ -151,6 +151,18 @@ class TextDocumentTestCase(DeferrableTestCase):
         return False
 
     def await_message(self, method: str, promise: Optional[YieldPromise] = None) -> 'Generator':
+        """
+        Awaits until server receives a request with a specified method.
+
+        If the server has already received a request with a specified method before, it will
+        immediately return the response for that previous request. If it hasn't received such
+        request yet, it will wait for it and then respond.
+
+        :param      method: The method type that we are awaiting response for.
+        :param      promise: The optional promise to fullfill on response.
+
+        :returns:   A generator with resolved value.
+        """
         self.assertIsNotNone(self.session)
         assert self.session  # mypy
         if promise is None:
@@ -234,7 +246,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         assert self.view  # type: Optional[sublime.View]
         self.view.run_command("select_all")
         self.view.run_command("left_delete")
-        self.view.run_command("lsp_save")
+        self.view.run_command("save")
         yield from self.await_message("textDocument/didChange")
         yield from self.await_message("textDocument/didSave")
 

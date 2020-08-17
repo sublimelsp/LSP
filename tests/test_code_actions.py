@@ -83,6 +83,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         self.set_response('textDocument/codeAction', [code_action])
         self.view.run_command('lsp_save')
         yield from self.await_message('textDocument/codeAction')
+        yield from self.await_message('textDocument/didSave')
         self.assertEquals(entire_content(self.view), 'const x = 1;')
         self.assertEquals(self.view.is_dirty(), False)
 
@@ -115,6 +116,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         self.view.run_command('lsp_save')
         yield from self.await_message('textDocument/codeAction')
         yield from self.await_message('textDocument/codeAction')
+        yield from self.await_message('textDocument/didSave')
         self.assertEquals(entire_content(self.view), 'const x = 1;\nAnd again!')
         self.assertEquals(self.view.is_dirty(), False)
 
@@ -129,6 +131,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         self.set_response('textDocument/codeAction', [code_action])
         self.view.run_command('lsp_save')
         yield from self.await_message('textDocument/codeAction')
+        yield from self.await_message('textDocument/didSave')
         self.assertEquals(entire_content(self.view), 'const x = 1;')
         self.assertEquals(self.view.is_dirty(), False)
 
@@ -136,8 +139,9 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         yield from self._setup_document_with_missing_semicolon()
         initial_content = 'const x = 1'
         self.view.run_command('lsp_save')
+        yield from self.await_message('textDocument/didSave')
         self.assertEquals(entire_content(self.view), initial_content)
-        yield lambda: not self.view.is_dirty()
+        self.assertEquals(self.view.is_dirty(), False)
 
     def test_does_not_apply_unsupported_kind(self) -> Generator:
         yield from self._setup_document_with_missing_semicolon()
@@ -149,6 +153,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         )
         self.set_response('textDocument/codeAction', [code_action])
         self.view.run_command('lsp_save')
+        yield from self.await_message('textDocument/didSave')
         self.assertEquals(entire_content(self.view), 'const x = 1')
 
     def _setup_document_with_missing_semicolon(self) -> Generator:

@@ -256,16 +256,21 @@ class LanguageConfig:
 class ClientConfig:
     def __init__(self,
                  name: str,
-                 command: List[str],
                  languages: List[LanguageConfig],
-                 tcp_port: Optional[int],
+                 command: Optional[List[str]] = None,
+                 binary_args: Optional[List[str]] = None,  # DEPRECATED
+                 tcp_port: Optional[int] = None,
                  enabled: bool = True,
                  init_options: DottedDict = DottedDict(),
                  settings: DottedDict = DottedDict(),
                  env: Dict[str, str] = {},
                  experimental_capabilities: Optional[Dict[str, Any]] = None) -> None:
         self.name = name
-        self.command = command
+        if isinstance(command, list):
+            self.command = command
+        else:
+            assert isinstance(binary_args, list)
+            self.command = binary_args
         self.languages = languages
         self.tcp_port = tcp_port
         self.enabled = enabled

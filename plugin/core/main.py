@@ -1,6 +1,7 @@
 import sublime
 import sublime_plugin
 
+from .collections import DottedDict
 from .css import load as load_css
 from .css import unload as unload_css
 from .handlers import LanguageHandler
@@ -65,7 +66,11 @@ def _forcefully_register_plugins() -> None:
                 cfg = cls.handler.config  # type: ignore
                 settings.set("command", cfg.command)
                 settings.set("settings", cfg.settings.get(None))
-                settings.set("initializationOptions", cfg.init_options)
+                if isinstance(cfg.init_options, DottedDict):
+                    init_options = cfg.init_options.get()
+                elif isinstance(cfg.init_options, dict):
+                    init_options = cfg.init_options
+                settings.set("initializationOptions", init_options)
                 langs = []  # type: List[Dict[str, str]]
                 for language in cfg.languages:
                     langs.append({

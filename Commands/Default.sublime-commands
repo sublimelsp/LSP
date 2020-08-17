@@ -24,6 +24,10 @@
         "command": "lsp_troubleshoot_server"
     },
     {
+        "caption": "LSP: Dump Window Configs",
+        "command": "lsp_dump_window_configs"
+    },
+    {
         "caption": "LSP: Setup Language Server",
         "command": "lsp_setup_language_server",
         "args": {}

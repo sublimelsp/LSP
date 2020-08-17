@@ -17,10 +17,10 @@ class ConfigManager(object):
         self._managers[window.id()] = window_configs
         return window_configs
 
-    def update(self, added: Set[str], removed: Set[str]) -> None:
+    def update(self) -> None:
         for window in sublime.windows():
             if window.id() in self._managers:
-                self._managers[window.id()].update(added, removed)
+                self._managers[window.id()].update()
 
 
 class WindowConfigManager(object):
@@ -29,7 +29,7 @@ class WindowConfigManager(object):
         self._global_configs = global_configs
         self._temp_disabled_configs = set()  # type: Set[str]
         self.all = {}  # type: Dict[str, ClientConfig]
-        self.update(set(self._global_configs.keys()), set())
+        self.update()
 
     def get_configs(self) -> List[ClientConfig]:
         return sorted(self.all.values(), key=lambda config: config.name)
@@ -62,31 +62,28 @@ class WindowConfigManager(object):
     def is_supported(self, view: Any) -> bool:
         return any(self.match_view(view))
 
-    def update(self, added: Set[str], removed: Set[str]) -> None:
+    def update(self) -> None:
         project_settings = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
-        for name in removed:
-            self.all.pop(name, None)
-        for name in added:
-            config = self._global_configs.get(name)
+        self.all.clear()
+        for name in self._global_configs.keys():
+            config = self._global_configs[name]
             overrides = project_settings.get(config.name)
             if isinstance(overrides, dict):
                 debug('applying .sublime-project override for', config.name)
                 config = config.update(overrides)
             self.all[name] = config
         for name in self._temp_disabled_configs:
-            config = self.all.get(name)
-            if config:
-                config.enabled = False
+            self.all[name].enabled = False
         self._window.run_command("lsp_recheck_sessions")
 
     def enable_config(self, config_name: str) -> None:
         enable_in_project(self._window, config_name)
-        self.update(set(), set())
+        self.update()
 
     def disable_config(self, config_name: str) -> None:
         disable_in_project(self._window, config_name)
-        self.update(set(), set())
+        self.update()
 
     def disable_temporarily(self, config_name: str) -> None:
         self._temp_disabled_configs.add(config_name)
-        self.update(set(), set())
+        self.update()

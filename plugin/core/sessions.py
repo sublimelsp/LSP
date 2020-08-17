@@ -448,22 +448,24 @@ _plugins = {}  # type: Dict[str, Type[AbstractPlugin]]
 
 def register_plugin(plugin: Type[AbstractPlugin]) -> None:
     global _plugins
+    name = plugin.name()
     try:
-        name = plugin.name()
         client_configs.add_external_config(name, *plugin.configuration())
         _plugins[name] = plugin
+        debug('Registered plugin "{}"'.format(name))
     except Exception as ex:
-        exception_log("Failed to register plugin", ex)
+        exception_log('Failed to register plugin "{}"'.format(name), ex)
 
 
 def unregister_plugin(plugin: Type[AbstractPlugin]) -> None:
     global _plugins
+    name = plugin.name()
     try:
-        name = plugin.name()
         client_configs.remove_external_config(name)
         _plugins.pop(name, None)
+        debug('Unregistered plugin "{}"'.format(name))
     except Exception as ex:
-        exception_log("Failed to unregister plugin", ex)
+        exception_log('Failed to unregister plugin "{}"'.format(name), ex)
     finally:
         client_configs.update_configs()
 

@@ -1,5 +1,4 @@
 from LSP.plugin.completion import CompletionHandler
-from LSP.plugin.core.registry import windows
 from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable
 from setup import TextDocumentTestCase, add_config, remove_config, text_config

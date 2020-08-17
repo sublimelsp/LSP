@@ -159,11 +159,14 @@ class JsonRpcTransport(Transport):
         try:
             while self._stderr:
                 if self._closed:
+                    # None message already posted, just return
+                    return
+                message = self._stderr.readline().decode('utf-8', 'replace')
+                if message == '':
                     break
-                message = self._stderr.readline().decode('utf-8', 'replace').rstrip()
                 callback_object = self._callback_object()
                 if callback_object:
-                    callback_object.on_stderr_message(message)
+                    callback_object.on_stderr_message(message.rstrip())
                 else:
                     break
         except (BrokenPipeError, AttributeError):

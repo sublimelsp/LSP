@@ -105,18 +105,12 @@ class Debouncer:
 
 def read_dict_setting(settings_obj: sublime.Settings, key: str, default: dict) -> dict:
     val = settings_obj.get(key)
-    if isinstance(val, dict):
-        return val
-    else:
-        return default
+    return val if isinstance(val, dict) else default
 
 
 def read_list_setting(settings_obj: sublime.Settings, key: str, default: list) -> list:
     val = settings_obj.get(key)
-    if isinstance(val, list):
-        return val
-    else:
-        return default
+    return val if isinstance(val, list) else default
 
 
 class Settings:

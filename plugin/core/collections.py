@@ -140,4 +140,4 @@ class DottedDict:
                 self.set(path, value)
 
     def __repr__(self) -> str:
-        return repr(self._d)
+        return "{}({})".format(self.__class__.__name__, repr(self._d))

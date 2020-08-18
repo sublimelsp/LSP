@@ -3,7 +3,7 @@ from .core.protocol import DiagnosticSeverity
 from .core.protocol import TextDocumentSyncKindFull
 from .core.protocol import TextDocumentSyncKindNone
 from .core.sessions import SessionViewProtocol
-from .core.settings import settings
+from .core.settings import userprefs
 from .core.types import debounced
 from .core.types import Debouncer
 from .core.typing import Any, Iterable, Optional, List, Dict
@@ -42,8 +42,8 @@ class DiagnosticSeverityData:
         self.annotations = []  # type: List[str]
         self.panel_contribution = []  # type: List[str]
         _, __, self.scope, self.icon = DIAGNOSTIC_SEVERITY[severity - 1]
-        if settings.diagnostics_gutter_marker != "sign":
-            self.icon = settings.diagnostics_gutter_marker
+        if userprefs().diagnostics_gutter_marker != "sign":
+            self.icon = userprefs().diagnostics_gutter_marker
 
 
 class SessionBuffer:
@@ -158,7 +158,7 @@ class SessionBuffer:
                 self.purge_changes_async()
                 # mypy: expected sublime.View, got ViewLike
                 self.session.send_notification(did_save(self.view, include_text, self.file_name))
-        if settings.show_diagnostics_panel_on_save():
+        if userprefs().show_diagnostics_panel_on_save():
             if self.should_show_diagnostics_panel:
                 mgr = self.session.manager()
                 if mgr:
@@ -186,9 +186,9 @@ class SessionBuffer:
                     total_errors += 1
                 elif diagnostic.severity == DiagnosticSeverity.Warning:
                     total_warnings += 1
-                if diagnostic.severity <= settings.diagnostics_panel_include_severity_level:
+                if diagnostic.severity <= userprefs().diagnostics_panel_include_severity_level:
                     data.panel_contribution.append(format_diagnostic_for_panel(diagnostic))
-                if diagnostic.severity <= settings.auto_show_diagnostics_panel_level:
+                if diagnostic.severity <= userprefs().auto_show_diagnostics_panel_level:
                     should_show_diagnostics_panel = True
             self._publish_diagnostics_to_session_views(
                 diagnostics_version,
@@ -229,9 +229,9 @@ class SessionBuffer:
             present()
         else:
             # There were no diagnostics visible before. Show them a bit later.
-            delay_in_seconds = settings.diagnostics_delay_ms / 1000.0 + self.last_text_change_time - time.time()
+            delay_in_seconds = userprefs().diagnostics_delay_ms / 1000.0 + self.last_text_change_time - time.time()
             if self.view.is_auto_complete_visible():
-                delay_in_seconds += settings.diagnostics_additional_delay_auto_complete_ms / 1000.0
+                delay_in_seconds += userprefs().diagnostics_additional_delay_auto_complete_ms / 1000.0
             if delay_in_seconds <= 0.0:
                 present()
             else:
@@ -258,7 +258,7 @@ class SessionBuffer:
         self.total_errors = total_errors
         self.total_warnings = total_warnings
         self.should_show_diagnostics_panel = should_show_diagnostics_panel
-        flags = settings.diagnostics_highlight_style_to_add_regions_flag()
+        flags = userprefs().diagnostics_highlight_style_to_add_regions_flag()
         for sv in self.session_views:
             sv.present_diagnostics_async(flags)
         mgr = self.session.manager()
@@ -266,7 +266,7 @@ class SessionBuffer:
             mgr.update_diagnostics_panel_async()
             if not self.should_show_diagnostics_panel:
                 mgr.hide_diagnostics_panel_async()
-            elif settings.show_diagnostics_panel_always():
+            elif userprefs().show_diagnostics_panel_always():
                 mgr.show_diagnostics_panel_async()
 
     def __str__(self) -> str:

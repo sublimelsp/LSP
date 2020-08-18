@@ -1,5 +1,4 @@
 from LSP.plugin.completion import CompletionHandler
-from LSP.plugin.core.registry import windows
 from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable
 from setup import TextDocumentTestCase, add_config, remove_config, text_config
@@ -44,10 +43,9 @@ class InitializationTests(DeferrableTestCase):
 
     def doCleanups(self) -> 'Generator':
         yield from super().doCleanups()
-        wm = windows.lookup(self.view.window())
         try:
-            wm._configs.all.remove(text_config)
-        except ValueError:
+            remove_config(text_config)
+        except Exception:
             pass
         if self.view:
             self.view.set_scratch(True)

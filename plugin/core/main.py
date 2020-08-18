@@ -1,6 +1,7 @@
 import sublime
 import sublime_plugin
 
+from .collections import DottedDict
 from .css import load as load_css
 from .css import unload as unload_css
 from .handlers import LanguageHandler
@@ -14,7 +15,9 @@ from .sessions import AbstractPlugin
 from .sessions import register_plugin
 from .sessions import Session
 from .settings import client_configs
-from .settings import settings, load_settings, unload_settings
+from .settings import load_settings
+from .settings import unload_settings
+from .settings import userprefs
 from .transports import kill_all_subprocesses
 from .types import ClientConfig
 from .typing import Optional, List, Type, Callable, Dict, Tuple
@@ -61,9 +64,13 @@ def _forcefully_register_plugins() -> None:
                     file_base_name = "LSP-" + file_base_name[len("lsp-"):]
                 settings = sublime.load_settings("{}.sublime-settings".format(file_base_name))
                 cfg = cls.handler.config  # type: ignore
-                settings.set("command", cfg.binary_args)
+                settings.set("command", cfg.command)
                 settings.set("settings", cfg.settings.get(None))
-                settings.set("initializationOptions", cfg.init_options)
+                if isinstance(cfg.init_options, DottedDict):
+                    init_options = cfg.init_options.get()
+                elif isinstance(cfg.init_options, dict):
+                    init_options = cfg.init_options
+                settings.set("initializationOptions", init_options)
                 langs = []  # type: List[Dict[str, str]]
                 for language in cfg.languages:
                     langs.append({
@@ -104,7 +111,7 @@ def _forcefully_register_plugins() -> None:
 def plugin_loaded() -> None:
     load_settings()
     load_css()
-    set_debug_logging(settings.log_debug)
+    set_debug_logging(userprefs().log_debug)
     set_exception_logging(True)
     _forcefully_register_plugins()  # Remove this function: https://github.com/sublimelsp/LSP/issues/899
     client_configs.update_configs()

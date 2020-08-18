@@ -14,6 +14,7 @@ from .plugin.core.main import plugin_unloaded
 from .plugin.core.panels import LspClearPanelCommand
 from .plugin.core.panels import LspUpdatePanelCommand
 from .plugin.core.panels import LspUpdateServerPanelCommand
+from .plugin.core.registry import LspRecheckSessionsCommand
 from .plugin.core.registry import LspRestartClientCommand
 from .plugin.diagnostics import LspHideDiagnosticCommand
 from .plugin.diagnostics import LspNextDiagnosticCommand
@@ -43,5 +44,6 @@ from .plugin.symbols import LspSelectionClearCommand
 from .plugin.symbols import LspSelectionSetCommand
 from .plugin.symbols import LspWorkspaceSymbolsCommand
 from .plugin.tooling import LspCopyToClipboardFromBase64Command
+from .plugin.tooling import LspDumpWindowConfigs
 from .plugin.tooling import LspParseVscodePackageJson
 from .plugin.tooling import LspTroubleshootServerCommand

@@ -9,7 +9,7 @@ from .core.css import css
 from .core.protocol import Request, Diagnostic
 from .core.registry import LspTextCommand
 from .core.registry import windows
-from .core.settings import settings
+from .core.settings import userprefs
 from .core.typing import List, Optional, Any, Dict
 from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
@@ -98,7 +98,7 @@ class LspHoverCommand(LspTextCommand):
         self.show_hover(point)
 
     def symbol_actions_content(self, point: int) -> str:
-        if settings.show_symbol_action_links:
+        if userprefs().show_symbol_action_links:
             actions = []
             for link_kind in link_kinds:
                 if self.best_session('{}Provider'.format(link_kind.lsp_name)):

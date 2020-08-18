@@ -1,16 +1,14 @@
-from .collections import DottedDict
 from .logging import debug
 from .types import ClientConfig, view2scope
 from .typing import Any, Generator, List, Dict, Set
 from .workspace import enable_in_project, disable_in_project
-from copy import deepcopy
 import sublime
 
 
 class ConfigManager(object):
     """Distributes language client configuration between windows"""
 
-    def __init__(self, global_configs: List[ClientConfig]) -> None:
+    def __init__(self, global_configs: Dict[str, ClientConfig]) -> None:
         self._configs = global_configs
         self._managers = {}  # type: Dict[int, WindowConfigManager]
 
@@ -26,20 +24,21 @@ class ConfigManager(object):
 
 
 class WindowConfigManager(object):
-    def __init__(self, window: sublime.Window, global_configs: List[ClientConfig]) -> None:
+    def __init__(self, window: sublime.Window, global_configs: Dict[str, ClientConfig]) -> None:
         self._window = window
         self._global_configs = global_configs
         self._temp_disabled_configs = set()  # type: Set[str]
-        self.all = self._create_window_configs()
+        self.all = {}  # type: Dict[str, ClientConfig]
+        self.update()
 
     def get_configs(self) -> List[ClientConfig]:
-        return sorted(self.all, key=lambda config: config.name)
+        return sorted(self.all.values(), key=lambda config: config.name)
 
     def match_scope(self, scope: str) -> Generator[ClientConfig, None, None]:
         """
         Yields configurations which match one of their document selectors to the given scope.
         """
-        for config in self.all:
+        for config in self.all.values():
             if config.match_scope(scope):
                 yield config
 
@@ -64,10 +63,18 @@ class WindowConfigManager(object):
         return any(self.match_view(view))
 
     def update(self) -> None:
-        self.all = self._create_window_configs()
-        for config in self.all:
-            if config.name in self._temp_disabled_configs:
-                config.enabled = False
+        project_settings = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
+        self.all.clear()
+        for name in self._global_configs.keys():
+            config = self._global_configs[name]
+            overrides = project_settings.get(config.name)
+            if isinstance(overrides, dict):
+                debug('applying .sublime-project override for', config.name)
+                config = config.update(overrides)
+            self.all[name] = config
+        for name in self._temp_disabled_configs:
+            self.all[name].enabled = False
+        self._window.run_command("lsp_recheck_sessions")
 
     def enable_config(self, config_name: str) -> None:
         enable_in_project(self._window, config_name)
@@ -80,32 +87,3 @@ class WindowConfigManager(object):
     def disable_temporarily(self, config_name: str) -> None:
         self._temp_disabled_configs.add(config_name)
         self.update()
-
-    def _create_window_configs(self) -> List[ClientConfig]:
-        project_clients_dict = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
-        return [self._apply_project_overrides(c, project_clients_dict) for c in self._global_configs]
-
-    def _apply_project_overrides(self, client_config: ClientConfig, project_clients: Dict[str, Any]) -> ClientConfig:
-        overrides = project_clients.get(client_config.name)
-        if overrides:
-            debug('applying .sublime-project override for', client_config.name)
-            settings = DottedDict(deepcopy(client_config.settings.get()))
-            settings.update(overrides.get("settings", {}))
-            env = deepcopy(client_config.env)
-            for key, value in overrides.get("env", {}).items():
-                env[key] = value
-            return ClientConfig(
-                name=client_config.name,
-                binary_args=overrides.get("command", client_config.binary_args),
-                languages=client_config.languages,
-                tcp_port=overrides.get("tcp_port", client_config.tcp_port),
-                enabled=overrides.get("enabled", client_config.enabled),
-                init_options=overrides.get("initializationOptions", client_config.init_options),
-                settings=settings,
-                env=env,
-                tcp_host=overrides.get("tcp_host", client_config.tcp_host),
-                experimental_capabilities=overrides.get(
-                    "experimental_capabilities", client_config.experimental_capabilities),
-            )
-
-        return client_config

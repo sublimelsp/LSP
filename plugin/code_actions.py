@@ -4,7 +4,7 @@ from .core.protocol import Diagnostic
 from .core.protocol import Range, Request
 from .core.registry import LspTextCommand
 from .core.registry import sessions_for_view
-from .core.settings import settings
+from .core.settings import userprefs
 from .core.typing import Any, List, Dict, Callable, Optional, Union, Tuple, Mapping, TypedDict
 from .core.views import entire_content_range
 from .core.views import region_to_range
@@ -229,7 +229,7 @@ class CodeActionOnSaveTask(SaveTask):
     @classmethod
     def _get_code_actions_on_save(cls, view: sublime.View) -> Dict[str, bool]:
         view_code_actions = view.settings().get('lsp_code_actions_on_save') or {}
-        code_actions = settings.lsp_code_actions_on_save.copy()
+        code_actions = userprefs().lsp_code_actions_on_save.copy()
         code_actions.update(view_code_actions)
         allowed_code_actions = dict()
         for key, value in code_actions.items():
@@ -238,7 +238,7 @@ class CodeActionOnSaveTask(SaveTask):
         return allowed_code_actions
 
     def get_task_timeout_ms(self) -> int:
-        return settings.code_action_on_save_timeout_ms
+        return userprefs().code_action_on_save_timeout_ms
 
     def run_async(self) -> None:
         super().run_async()

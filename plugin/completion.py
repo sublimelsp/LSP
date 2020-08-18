@@ -9,7 +9,7 @@ from .core.protocol import Request, InsertTextFormat, Range, CompletionItemTag
 from .core.registry import LspTextCommand
 from .core.registry import LSPViewEventListener
 from .core.sessions import Session
-from .core.settings import settings
+from .core.settings import userprefs
 from .core.typing import Any, List, Dict, Optional, Union, Generator
 from .core.views import COMPLETION_KINDS
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
@@ -154,7 +154,7 @@ class CompletionHandler(LSPViewEventListener):
 
     @classmethod
     def is_applicable(cls, view_settings: dict) -> bool:
-        if 'completion' in settings.disabled_capabilities:
+        if 'completion' in userprefs().disabled_capabilities:
             return False
         return cls.has_supported_syntax(view_settings)
 
@@ -282,7 +282,7 @@ class CompletionHandler(LSPViewEventListener):
                         can_resolve_completion_items: bool) -> None:
         response_items = []  # type: List[Dict]
         flags = 0
-        if settings.only_show_lsp_completions:
+        if userprefs().only_show_lsp_completions:
             flags |= sublime.INHIBIT_WORD_COMPLETIONS
             flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
             flags |= sublime.INHIBIT_REORDER

@@ -7,7 +7,8 @@ from .core.protocol import Request, Point
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
-from .core.settings import PLUGIN_NAME, settings
+from .core.settings import PLUGIN_NAME
+from .core.settings import userprefs
 from .core.typing import List, Dict, Optional, Tuple, TypedDict
 from .core.url import uri_to_filename
 from .core.views import get_line, text_document_position_params
@@ -73,7 +74,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
 
             references_by_file = self._group_references_by_file(response)
 
-            if settings.show_references_in_quick_panel:
+            if userprefs().show_references_in_quick_panel:
                 self.show_quick_panel(references_by_file)
             else:
                 self.show_references_panel(references_by_file)

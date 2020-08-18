@@ -14,7 +14,7 @@ def create_config_items(configs: List[ClientConfig]) -> List[List[str]]:
 
 class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:
-        self._items = create_config_items([config for config in client_configs.all if not config.enabled])
+        self._items = create_config_items([config for config in client_configs.all.values() if not config.enabled])
         if len(self._items) > 0:
             self.window.show_quick_panel(self._items, self._on_done)
         else:
@@ -29,7 +29,7 @@ class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
 class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:
         wm = windows.lookup(self.window)
-        self._items = create_config_items([config for config in wm._configs.all if not config.enabled])
+        self._items = create_config_items([config for config in wm._configs.all.values() if not config.enabled])
         if len(self._items) > 0:
             self.window.show_quick_panel(self._items, self._on_done)
         else:
@@ -44,7 +44,7 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
 
 class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:
-        self._items = create_config_items([config for config in client_configs.all if config.enabled])
+        self._items = create_config_items([config for config in client_configs.all.values() if config.enabled])
         if len(self._items) > 0:
             self.window.show_quick_panel(self._items, self._on_done)
         else:
@@ -61,7 +61,7 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
 class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:
         wm = windows.lookup(self.window)
-        self._items = create_config_items([config for config in wm._configs.all if config.enabled])
+        self._items = create_config_items([config for config in wm._configs.all.values() if config.enabled])
         if len(self._items) > 0:
             self.window.show_quick_panel(self._items, self._on_done)
         else:

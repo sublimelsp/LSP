@@ -150,8 +150,8 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
         line(' - exit code: {}\n - output\n{}'.format(exit_code, self.code_block(server_output)))
 
         line('## Server Configuration')
-        line(' - command\n{}'.format(self.json_dump(config.binary_args)))
-        line(' - shell command\n{}'.format(self.code_block(list2cmdline(config.binary_args), 'sh')))
+        line(' - command\n{}'.format(self.json_dump(config.command)))
+        line(' - shell command\n{}'.format(self.code_block(list2cmdline(config.command), 'sh')))
         line(' - languages')
         languages = [
             {
@@ -162,7 +162,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
         ]
         line(self.json_dump(languages))
         line(' - init_options')
-        line(self.json_dump(config.init_options))
+        line(self.json_dump(config.init_options.get()))
         line(' - settings')
         line(self.json_dump(config.settings.get()))
         line(' - env')
@@ -218,6 +218,21 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
 class LspCopyToClipboardFromBase64Command(sublime_plugin.ApplicationCommand):
     def run(self, contents: str = '') -> None:
         sublime.set_clipboard(b64decode(contents).decode())
+
+
+class LspDumpWindowConfigs(sublime_plugin.WindowCommand):
+    """
+    Very basic command to dump all of the window's resolved configurations.
+    """
+
+    def run(self) -> None:
+        view = self.window.new_file()
+        view.set_scratch(True)
+        view.set_name("Window {} configs".format(self.window.id()))
+        view.settings().set("word_wrap", False)
+        view.set_syntax_file("Packages/Python/Python.sublime-syntax")
+        for config in windows.lookup(self.window).get_config_manager().get_configs():
+            view.run_command("append", {"characters": str(config) + "\n"})
 
 
 class ServerTestRunner(TransportCallbacks):

@@ -1,0 +1,14 @@
+=> 4070-1.0.8
+
+Features and bugfixes:
+- Restart servers when (project) settings change (#1252) (Raoul Wols)
+- solargraph (ruby server): use stdio instead of socket (#1250) (Oleg Smelov)
+- Add LSP: Troubleshoot Server to Command Palette (#1251) (Rafał Chłodnicki)
+- TextChangeListener improvements (#1246) (Raoul Wols)
+- Fix save task leaving document in dirty state sometimes (#1236) (Rafał Chłodnicki)
+- add few comments on java setting (Zhongjie Shen)
+- Improve script for parsing VSCode's configuration (#1245) (Rafał Chłodnicki)
+- Fix freeze when force-closing a running server (Rafał Chłodnicki)
+- Don't clear highlight on each cursor move (#1233) (Предраг Николић / Predrag Nikolic)
+- Don't close the transport and server on it writing empty line to stderr (Rafał Chłodnicki)
+- Fix exception and stuck view status when server returns error from initialize (Rafał Chłodnicki)

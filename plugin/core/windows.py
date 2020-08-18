@@ -117,13 +117,18 @@ class WindowManager(Manager):
         return self._configs
 
     def on_load_project_async(self) -> None:
+        self._workspace.update()
         self._configs.update()
 
     def enable_config_async(self, config_name: str) -> None:
         enable_in_project(self._window, config_name)
+        # TODO: Why doesn't enable_in_project cause on_load_project_async to be called?
+        self._configs.update()
 
     def disable_config_async(self, config_name: str) -> None:
         disable_in_project(self._window, config_name)
+        # TODO: Why doesn't disable_in_project cause on_load_project_async to be called?
+        self._configs.update()
 
     def register_listener(self, listener: AbstractViewListener) -> None:
         sublime.set_timeout_async(lambda: self.register_listener_async(listener))

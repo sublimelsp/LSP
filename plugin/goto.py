@@ -58,7 +58,7 @@ class LspGotoCommand(LspTextCommand):
         if window is None:
             return
         if response:
-            if any(view.sel()):
+            if len(view.sel()) > 0:
                 view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in view.sel()]})
             if isinstance(response, dict):
                 locations = [location_to_encoded_filename(response)]

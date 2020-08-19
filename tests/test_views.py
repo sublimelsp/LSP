@@ -192,7 +192,7 @@ class ViewsTest(DeferrableTestCase):
 
     def test_minihtml_format_marked_string(self) -> None:
         content = "<div>text\n</div>"
-        expect = "<div>text</div>"
+        expect = "<div>text\n</div>"
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING), expect)
 
     def test_minihtml_format_markup_content(self) -> None:
@@ -225,8 +225,8 @@ class ViewsTest(DeferrableTestCase):
             {'value': 'import sys', 'language': 'python'},
             {'value': 'let x', 'language': 'js'}
         ]
-        expect = ''.join([
-            '<div class="highlight"><pre><span>import</span><span> </span><span>sys</span><br></pre></div>'
+        expect = '\n\n'.join([
+            '<div class="highlight"><pre><span>import</span><span> </span><span>sys</span><br></pre></div>',
             '<div class="highlight"><pre><span>let</span><span> </span><span>x</span><br></pre></div>'
         ])
         allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT

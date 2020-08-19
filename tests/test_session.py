@@ -1,3 +1,4 @@
+from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.protocol import Error
 from LSP.plugin.core.protocol import TextDocumentSyncKindFull, TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
 from LSP.plugin.core.protocol import WorkspaceFolder
@@ -109,15 +110,12 @@ class SessionTest(unittest.TestCase):
     def test_initialize_params(self) -> None:
         wf = WorkspaceFolder.from_path("/foo/bar/baz")
         params = get_initialize_params(
-            {}, [wf], ClientConfig(name="test", command=[""], languages=[], tcp_port=None, init_options=None))
-        self.assertNotIn("initializationOptions", params)
-        params = get_initialize_params(
-            {}, [wf], ClientConfig(name="test", command=[""], languages=[], tcp_port=None, init_options={}))
+            {}, [wf], ClientConfig(name="test", command=[""], languages=[], tcp_port=None, init_options=DottedDict()))
         self.assertIn("initializationOptions", params)
         self.assertEqual(params["initializationOptions"], {})
         params = get_initialize_params(
             {}, [wf], ClientConfig(
-                name="test", command=[""], languages=[], tcp_port=None, init_options={"foo": "bar"}))
+                name="test", command=[""], languages=[], tcp_port=None, init_options=DottedDict({"foo": "bar"})))
         self.assertIn("initializationOptions", params)
         self.assertEqual(params["initializationOptions"], {"foo": "bar"})
 

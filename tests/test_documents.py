@@ -33,26 +33,32 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         return False
 
     def setUp(self) -> Generator:
-        self.window = sublime.active_window()
-        self.assertTrue(self.window)
-        self.config1 = deepcopy(make_stdio_test_config())
-        self.config1.init_options["serverResponse"] = {
-            'capabilities': {
-                'textDocumentSync': {
-                    "openClose": True,
-                    "change": 1,
-                    "save": True
-                },
+        init_options = {
+            "serverResponse": {
+                "capabilities": {
+                    "textDocumentSync": {
+                        "openClose": True,
+                        "change": 1,
+                        "save": True
+                    },
+                }
             }
         }
-        self.config2 = deepcopy(self.config1)
+        self.window = sublime.active_window()
+        self.assertTrue(self.window)
+        self.session1 = None
+        self.session2 = None
+        self.config1 = make_stdio_test_config()
+        self.config1.init_options.assign(init_options)
+        self.config2 = make_stdio_test_config()
+        self.config2.init_options.assign(init_options)
         self.config2.name = "TEST-2"
         self.config2.status_key = "lsp_TEST-2"
         self.wm = windows.lookup(self.window)
         add_config(self.config1)
         add_config(self.config2)
-        self.wm._configs.all.append(self.config1)
-        self.wm._configs.all.append(self.config2)
+        self.wm._configs.all[self.config1.name] = self.config1
+        self.wm._configs.all[self.config2.name] = self.config2
 
     def test_sends_did_open_to_multiple_sessions(self) -> Generator:
         filename = expand(join("$packages", "LSP", "tests", "testfile.txt"), self.window)
@@ -106,14 +112,8 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
             remove_config(self.config1)
         except ValueError:
             pass
-        try:
-            self.wm._configs.all.remove(self.config2)
-        except ValueError:
-            pass
-        try:
-            self.wm._configs.all.remove(self.config1)
-        except ValueError:
-            pass
+        self.wm._configs.all.pop(self.config2.name, None)
+        self.wm._configs.all.pop(self.config1.name, None)
         yield from super().doCleanups()
 
     def await_message(self, method: str) -> Generator:

@@ -119,10 +119,17 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         # FIXME: Cannot reliably use primary_view().file_name()
         return buffer.primary_view().element() is None  # type: ignore
 
-    def __init__(self, buffer: sublime.Buffer) -> None:
-        super().__init__(buffer)
+    def __init__(self) -> None:
+        super().__init__()
         self.view_listeners = WeakSet()  # type: WeakSet[DocumentSyncListener]
+
+    def attach(self, buffer: sublime.Buffer) -> None:
+        super().attach(buffer)
         self.ids_to_listeners[self.buffer.buffer_id] = self
+
+    def detach(self) -> None:
+        self.ids_to_listeners.pop(self.buffer.buffer_id, None)
+        super().detach()
 
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
         for listener in list(self.view_listeners):

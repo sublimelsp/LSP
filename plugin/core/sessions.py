@@ -12,7 +12,7 @@ from .types import ClientConfig
 from .types import ClientStates
 from .types import debounced
 from .types import diff
-from .typing import Dict, Any, Optional, List, Tuple, Generator, Type, Protocol
+from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol
 from .url import uri_to_filename
 from .version import __version__
 from .views import COMPLETION_KINDS
@@ -25,6 +25,9 @@ from weakref import WeakSet
 import os
 import sublime
 import weakref
+
+
+InitCallback = Callable[['Session', bool], None]
 
 
 class Manager(metaclass=ABCMeta):
@@ -86,14 +89,6 @@ class Manager(metaclass=ABCMeta):
     def on_post_exit_async(self, session: 'Session', exit_code: int, exception: Optional[Exception]) -> None:
         """
         The given Session has stopped with the given exit code.
-        """
-        pass
-
-    @abstractmethod
-    def on_post_initialize(self, session: 'Session') -> None:
-        """
-        The language server returned a response from the initialize request. The response is stored in
-        session.capabilities.
         """
         pass
 
@@ -484,6 +479,8 @@ class Session(Client):
         self.state = ClientStates.STARTING
         self.capabilities = DottedDict()
         self.exiting = False
+        self._init_callback = None  # type: Optional[InitCallback]
+        self._init_error = None  # type: Optional[Tuple[int, Exception]]
         self._views_opened = 0
         self._workspace_folders = workspace_folders
         self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
@@ -639,10 +636,34 @@ class Session(Client):
         if self._supports_workspace_folders():
             self._workspace_folders = folders
 
-    def initialize(self, variables: Dict[str, str], transport: Transport) -> None:
+    def initialize(self, variables: Dict[str, str], transport: Transport, init_callback: InitCallback) -> None:
         self.transport = transport
         params = get_initialize_params(variables, self._workspace_folders, self.config)
-        self.send_request(Request.initialize(params), self._handle_initialize_result, lambda _: self.end_async())
+        self._init_callback = init_callback
+        self.send_request(Request.initialize(params), self._handle_initialize_success, self._handle_initialize_error)
+
+    def _handle_initialize_success(self, result: Any) -> None:
+        self.capabilities.assign(result.get('capabilities', dict()))
+        if self._workspace_folders and not self._supports_workspace_folders():
+            self._workspace_folders = self._workspace_folders[:1]
+        self.state = ClientStates.READY
+        if self._plugin_class is not None:
+            self._plugin = self._plugin_class(weakref.ref(self))
+        self.send_notification(Notification.initialized())
+        self._maybe_send_did_change_configuration()
+        execute_commands = self.get_capability('executeCommandProvider.commands')
+        if execute_commands:
+            debug("{}: Supported execute commands: {}".format(self.config.name, execute_commands))
+        code_action_kinds = self.get_capability('codeActionProvider.codeActionKinds')
+        if code_action_kinds:
+            debug('{}: supported code action kinds: {}'.format(self.config.name, code_action_kinds))
+        self._init_callback(self, False)
+        self._init_callback = None
+
+    def _handle_initialize_error(self, result: Any) -> None:
+        self._init_error = (result.get('code', -1), Exception(result.get('message', 'Error initializing server')))
+        # Init callback called after transport is closed to avoid pre-mature GC of Session.
+        self.end_async()
 
     def call_manager(self, method: str, *args: Any) -> None:
         mgr = self.manager()
@@ -672,25 +693,6 @@ class Session(Client):
             if extra_vars:
                 variables.update(extra_vars)
         return variables
-
-    def _handle_initialize_result(self, result: Any) -> None:
-        self.capabilities.assign(result.get('capabilities', dict()))
-        if self._workspace_folders and not self._supports_workspace_folders():
-            self._workspace_folders = self._workspace_folders[:1]
-        self.state = ClientStates.READY
-        if self._plugin_class is not None:
-            self._plugin = self._plugin_class(weakref.ref(self))
-        self.send_notification(Notification.initialized())
-        self._maybe_send_did_change_configuration()
-        execute_commands = self.get_capability('executeCommandProvider.commands')
-        if execute_commands:
-            debug("{}: Supported execute commands: {}".format(self.config.name, execute_commands))
-        code_action_kinds = self.get_capability('codeActionProvider.codeActionKinds')
-        if code_action_kinds:
-            debug('{}: supported code action kinds: {}'.format(self.config.name, code_action_kinds))
-        mgr = self.manager()
-        if mgr:
-            mgr.on_post_initialize(self)
 
     # --- server request handlers --------------------------------------------------------------------------------------
 
@@ -833,10 +835,17 @@ class Session(Client):
         self.state = ClientStates.STOPPING
         super().on_transport_close(exit_code, exception)
         self._response_handlers.clear()
+        if self._init_error:
+            init_code, init_exception = self._init_error
+            exit_code = init_code
+            exception = init_exception
 
         def run_async() -> None:
             mgr = self.manager()
             if mgr:
+                if self._init_callback:
+                    self._init_callback(self, True)
+                    self._init_callback = None
                 mgr.on_post_exit_async(self, exit_code, exception)
 
         sublime.set_timeout_async(run_async)

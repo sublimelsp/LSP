@@ -98,7 +98,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
     def run(self) -> None:
         window = self.window
         active_view = window.active_view()
-        configs = [c for c in windows.lookup(window).get_config_manager().get_configs() if c.enabled]
+        configs = windows.lookup(window).get_config_manager().get_configs()
         config_names = [config.name for config in configs]
         if config_names:
             window.show_quick_panel(config_names, lambda index: self.on_selected(index, configs, active_view),
@@ -178,6 +178,10 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
             for key in keys:
                 settings[key] = view_settings.get(key)
             line(self.json_dump(settings))
+            if settings['syntax']:
+                syntax = sublime.syntax_from_path(settings['syntax'])
+                if syntax:
+                    line(' - root scope\n{}'.format(self.code_block(syntax.scope)))
         else:
             line('no active view found!')
 

@@ -948,7 +948,7 @@ class View:
 
 
 class Buffer:
-    buffer_id = ... # type: int
+    buffer_id = ...  # type: int
 
     def __init__(self, id: int) -> None:
         ...
@@ -1003,3 +1003,14 @@ class TextChange:
     str = ...  # type: str
     len_utf8 = ...  # type: int
     len_utf16 = ...  # type: int
+
+
+class QuickPanelItem:
+    def __init__(
+        self,
+        trigger: str,
+        details: str = "",
+        annotation: str = "",
+        kind: Tuple[int, str, str] = KIND_AMBIGUOUS
+    ) -> None:
+        ...

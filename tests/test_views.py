@@ -22,14 +22,12 @@ from LSP.plugin.core.views import text_document_range_formatting
 from LSP.plugin.core.views import uri_from_view
 from LSP.plugin.core.views import will_save
 from LSP.plugin.core.views import will_save_wait_until
-from unittest import skipIf
 from unittest.mock import MagicMock
 from unittesting import DeferrableTestCase
 import re
 import sublime
 
 
-@skipIf(sublime.version() == "4081", "see: https://github.com/sublimehq/sublime_text/issues/3558")
 class ViewsTest(DeferrableTestCase):
 
     def setUp(self) -> None:
@@ -192,7 +190,7 @@ class ViewsTest(DeferrableTestCase):
 
     def test_minihtml_format_marked_string(self) -> None:
         content = "<div>text\n</div>"
-        expect = "<div>text</div>"
+        expect = "<div>text\n</div>"
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING), expect)
 
     def test_minihtml_format_markup_content(self) -> None:
@@ -225,8 +223,8 @@ class ViewsTest(DeferrableTestCase):
             {'value': 'import sys', 'language': 'python'},
             {'value': 'let x', 'language': 'js'}
         ]
-        expect = ''.join([
-            '<div class="highlight"><pre><span>import</span><span> </span><span>sys</span><br></pre></div>'
+        expect = '\n\n'.join([
+            '<div class="highlight"><pre><span>import</span><span> </span><span>sys</span><br></pre></div>',
             '<div class="highlight"><pre><span>let</span><span> </span><span>x</span><br></pre></div>'
         ])
         allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT

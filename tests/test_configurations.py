@@ -13,35 +13,35 @@ import unittest
 class GlobalConfigManagerTests(unittest.TestCase):
 
     def test_empty_configs(self):
-        manager = ConfigManager([])
+        manager = ConfigManager({})
         window_mgr = manager.for_window(sublime.active_window())
-        self.assertEqual(window_mgr.all, [])
+        self.assertEqual(list(window_mgr.all.values()), [])
 
     def test_global_config(self):
-        manager = ConfigManager([TEST_CONFIG])
+        manager = ConfigManager({TEST_CONFIG.name: TEST_CONFIG})
         window_mgr = manager.for_window(sublime.active_window())
-        self.assertEqual(window_mgr.all, [TEST_CONFIG])
+        self.assertEqual(list(window_mgr.all.values()), [TEST_CONFIG])
 
     def test_override_config(self):
-        manager = ConfigManager([TEST_CONFIG])
+        manager = ConfigManager({TEST_CONFIG.name: TEST_CONFIG})
         self.assertTrue(TEST_CONFIG.enabled)
         win = sublime.active_window()
         win.project_data = MagicMock(return_value={'settings': {'LSP': {TEST_CONFIG.name: {"enabled": False}}}})
         window_mgr = manager.for_window(win)
-        self.assertFalse(window_mgr.all[0].enabled)
+        self.assertFalse(list(window_mgr.all.values())[0].enabled)
 
 
 class WindowConfigManagerTests(unittest.TestCase):
 
     def test_no_configs(self):
         view = sublime.active_window().active_view()
-        manager = WindowConfigManager(sublime.active_window(), [])
+        manager = WindowConfigManager(sublime.active_window(), {})
         self.assertFalse(manager.is_supported(view))
 
     def test_with_single_config(self):
         window = sublime.active_window()
         view = window.active_view()
-        manager = WindowConfigManager(window, [TEST_CONFIG])
+        manager = WindowConfigManager(window, {TEST_CONFIG.name: TEST_CONFIG})
         view.scope_name = MagicMock(return_value='text.plain ')
         self.assertTrue(manager.is_supported(view))
         self.assertEqual(list(manager.match_view(view)), [TEST_CONFIG])
@@ -58,7 +58,7 @@ class WindowConfigManagerTests(unittest.TestCase):
                 }
             }
         })
-        manager = WindowConfigManager(window, [DISABLED_CONFIG])
+        manager = WindowConfigManager(window, {DISABLED_CONFIG.name: DISABLED_CONFIG})
         manager.update()
         view.scope_name = MagicMock(return_value='text.plain ')
         configs = list(manager.match_view(view))
@@ -80,7 +80,7 @@ class WindowConfigManagerTests(unittest.TestCase):
             }
         })
 
-        manager = WindowConfigManager(window, [DISABLED_CONFIG])
+        manager = WindowConfigManager(window, {DISABLED_CONFIG.name: DISABLED_CONFIG})
         manager.update()
 
         # crash handler disables config and shows popup

@@ -1,4 +1,3 @@
-from copy import deepcopy
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows

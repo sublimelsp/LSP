@@ -140,13 +140,13 @@ class TextChangeListener:
     def is_applicable(cls, buffer: Buffer) -> bool:
         ...
 
-    def __init__(self, buffer: Buffer) -> None:
+    def __init__(self) -> None:
         ...
 
     def attach(self, buffer: Buffer) -> None:
         ...
 
-    def remove(self) -> None:
+    def detach(self) -> None:
         ...
 
     def is_attached(self) -> bool:

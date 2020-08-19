@@ -11,23 +11,21 @@ import sublime
 import sublime_plugin
 
 
+def unpack_lsp_kind(kind: int) -> Tuple[int, str, str, str]:
+    if 1 <= kind <= len(SYMBOL_KINDS):
+        return SYMBOL_KINDS[kind - 1]
+    return sublime.KIND_ID_AMBIGUOUS, "?", "???", "comment"
+
+
 def format_symbol_kind(kind: int) -> str:
     if 1 <= kind <= len(SYMBOL_KINDS):
-        return SYMBOL_KINDS[kind - 1][0]
+        return SYMBOL_KINDS[kind - 1][2]
     return str(kind)
 
 
-def _kind_and_detail(item: Dict[str, Any]) -> str:
-    kind = format_symbol_kind(item["kind"])
-    detail = item.get("detail")
-    if isinstance(detail, str) and detail:
-        return "{} | {}".format(kind, detail)
-    return kind
-
-
-def format_symbol_scope(kind: int) -> str:
+def get_symbol_scope_from_lsp_kind(kind: int) -> str:
     if 1 <= kind <= len(SYMBOL_KINDS):
-        return SYMBOL_KINDS[kind - 1][1]
+        return SYMBOL_KINDS[kind - 1][3]
     return 'comment'
 
 
@@ -125,44 +123,59 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.view.show_at_center(region.a)
         self.view.add_regions(self.REGIONS_KEY, [region], self.scope(index), '', sublime.DRAW_NO_FILL)
 
-    def process_symbols(self, items: List[Dict[str, Any]]) -> List[List[str]]:
+    def process_symbols(self, items: List[Dict[str, Any]]) -> List[sublime.QuickPanelItem]:
         self.regions.clear()
         if 'selectionRange' in items[0]:
             return self.process_document_symbols(items)
         else:
             return self.process_symbol_informations(items)
 
-    def process_document_symbols(self, items: List[Dict[str, Any]]) -> List[List[str]]:
-        quick_panel_items = []  # type: List[List[str]]
+    def process_document_symbols(self, items: List[Dict[str, Any]]) -> List[sublime.QuickPanelItem]:
+        quick_panel_items = []  # type: List[sublime.QuickPanelItem]
         names = []  # type: List[str]
         for item in items:
             self.process_document_symbol_recursive(quick_panel_items, item, names)
         return quick_panel_items
 
-    def process_document_symbol_recursive(self, quick_panel_items: List[List[str]], item: Dict[str, Any],
+    def process_document_symbol_recursive(self, quick_panel_items: List[sublime.QuickPanelItem], item: Dict[str, Any],
                                           names: List[str]) -> None:
-        kind = item['kind']
+        lsp_kind = item["kind"]
         self.regions.append((range_to_region(Range.from_lsp(item['range']), self.view),
                              range_to_region(Range.from_lsp(item['selectionRange']), self.view),
-                             format_symbol_scope(kind)))
+                             get_symbol_scope_from_lsp_kind(lsp_kind)))
         name = item['name']
         with _additional_name(names, name):
-            quick_panel_items.append([name, "{} | {}".format(_kind_and_detail(item), " > ".join(names))])
+            st_kind, st_icon, st_display_type, _ = unpack_lsp_kind(lsp_kind)
+            formatted_names = " > ".join(names)
+            st_details = item.get("detail") or ""
+            if st_details:
+                st_details = "{} | {}".format(st_details, formatted_names)
+            else:
+                st_details = formatted_names
+            quick_panel_items.append(
+                sublime.QuickPanelItem(
+                    trigger=name,
+                    details=st_details,
+                    annotation=st_display_type,
+                    kind=(st_kind, st_icon, st_display_type)))
             children = item.get('children') or []
             for child in children:
                 self.process_document_symbol_recursive(quick_panel_items, child, names)
 
-    def process_symbol_informations(self, items: List[Dict[str, Any]]) -> List[List[str]]:
-        quick_panel_items = []  # type: List[List[str]]
+    def process_symbol_informations(self, items: List[Dict[str, Any]]) -> List[sublime.QuickPanelItem]:
+        quick_panel_items = []  # type: List[sublime.QuickPanelItem]
         for item in items:
-            kind = item['kind']
+            lsp_kind = item['kind']
             self.regions.append((range_to_region(Range.from_lsp(item['location']['range']), self.view),
-                                 None, format_symbol_scope(kind)))
+                                 None, get_symbol_scope_from_lsp_kind(lsp_kind)))
             container = item.get("containerName")
-            second_row = _kind_and_detail(item)
-            if container:
-                second_row += " | {}".format(container)
-            quick_panel_items.append([item['name'], second_row])
+            st_kind, st_icon, st_display_type, _ = unpack_lsp_kind(lsp_kind)
+            quick_panel_items.append(
+                sublime.QuickPanelItem(
+                    trigger=item["name"],
+                    details=container or "",
+                    annotation=st_display_type,
+                    kind=(st_kind, st_icon, st_display_type)))
         return quick_panel_items
 
 

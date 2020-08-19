@@ -27,33 +27,33 @@ DIAGNOSTIC_SEVERITY = [
 
 # The scope names mainly come from http://www.sublimetext.com/docs/3/scope_naming.html
 SYMBOL_KINDS = [
-    # Display Name     ST Scope
-    ("File",           "string"),
-    ("Module",         "entity.name.namespace"),
-    ("Namespace",      "entity.name.namespace"),
-    ("Package",        "entity.name.namespace"),
-    ("Class",          "entity.name.class"),
-    ("Method",         "entity.name.function"),
-    ("Property",       "variable.other.member"),
-    ("Field",          "variable.other.member"),
-    ("Constructor",    "entity.name.function.constructor"),
-    ("Enum",           "entity.name.enum"),
-    ("Interface",      "entity.name.interface"),
-    ("Function",       "entity.name.function"),
-    ("Variable",       "variable.other.readwrite"),
-    ("Constant",       "variable.other.constant"),
-    ("String",         "string"),
-    ("Number",         "constant.numeric"),
-    ("Boolean",        "constant.language"),
-    ("Array",          "meta.sequence"),  # Unsure about this one [scope taken from JSON.sublime-syntax]
-    ("Object",         "meta.mapping"),  # Unsure about this one [scope taken from JSON.sublime-syntax]
-    ("Key",            "meta.mapping.key string"),  # Unsure about this one [scope taken from JSON.sublime-syntax]
-    ("Null",           "constant.language"),
-    ("Enum Member",    "constant.other.enum"),  # Based on Java.sublime-syntax and C#.sublime-syntax
-    ("Struct",         "entity.name.struct"),
-    ("Event",          "storage.modifier"),   # Unsure about this one [scope taken from C#.sublime-syntax]
-    ("Operator",       "keyword.operator"),
-    ("Type Parameter", "storage.type"),
+    # ST Kind                    Icon  Display Name      ST Scope
+    (sublime.KIND_ID_NAVIGATION, "f", "File",           "string"),
+    (sublime.KIND_ID_NAMESPACE,  "m", "Module",         "entity.name.namespace"),
+    (sublime.KIND_ID_NAMESPACE,  "n", "Namespace",      "entity.name.namespace"),
+    (sublime.KIND_ID_NAMESPACE,  "p", "Package",        "entity.name.namespace"),
+    (sublime.KIND_ID_TYPE,       "c", "Class",          "entity.name.class"),
+    (sublime.KIND_ID_FUNCTION,   "m", "Method",         "entity.name.function"),
+    (sublime.KIND_ID_VARIABLE,   "p", "Property",       "variable.other.member"),
+    (sublime.KIND_ID_VARIABLE,   "f", "Field",          "variable.other.member"),
+    (sublime.KIND_ID_FUNCTION,   "c", "Constructor",    "entity.name.function.constructor"),
+    (sublime.KIND_ID_TYPE,       "e", "Enum",           "entity.name.enum"),
+    (sublime.KIND_ID_VARIABLE,   "i", "Interface",      "entity.name.interface"),
+    (sublime.KIND_ID_FUNCTION,   "f", "Function",       "entity.name.function"),
+    (sublime.KIND_ID_VARIABLE,   "v", "Variable",       "variable.other.readwrite"),
+    (sublime.KIND_ID_VARIABLE,   "c", "Constant",       "variable.other.constant"),
+    (sublime.KIND_ID_MARKUP,     "s", "String",         "string"),
+    (sublime.KIND_ID_VARIABLE,   "n", "Number",         "constant.numeric"),
+    (sublime.KIND_ID_VARIABLE,   "b", "Boolean",        "constant.language"),
+    (sublime.KIND_ID_TYPE,       "a", "Array",          "meta.sequence"),  # [scope taken from JSON.sublime-syntax]
+    (sublime.KIND_ID_TYPE,       "o", "Object",         "meta.mapping"),  # [scope taken from JSON.sublime-syntax]
+    (sublime.KIND_ID_NAVIGATION, "k", "Key",            "meta.mapping.key string"),  # [from JSON.sublime-syntax]
+    (sublime.KIND_ID_VARIABLE,   "n", "Null",           "constant.language"),
+    (sublime.KIND_ID_VARIABLE,   "e", "Enum Member",    "constant.other.enum"),  # Based on {Java,C#}.sublime-syntax
+    (sublime.KIND_ID_TYPE,       "s", "Struct",         "entity.name.struct"),
+    (sublime.KIND_ID_TYPE,       "e", "Event",          "storage.modifier"),   # [scope taken from C#.sublime-syntax]
+    (sublime.KIND_ID_FUNCTION,   "o", "Operator",       "keyword.operator"),
+    (sublime.KIND_ID_TYPE,       "t", "Type Parameter", "storage.type"),
 ]
 
 COMPLETION_KINDS = [

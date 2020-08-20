@@ -98,7 +98,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
     def run(self) -> None:
         window = self.window
         active_view = window.active_view()
-        configs = windows.lookup(window).get_config_manager().get_configs()
+        configs = [c for c in windows.lookup(window).get_config_manager().get_configs() if c.enabled]
         config_names = [config.name for config in configs]
         if config_names:
             window.show_quick_panel(config_names, lambda index: self.on_selected(index, configs, active_view),

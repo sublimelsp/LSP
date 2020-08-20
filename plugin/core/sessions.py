@@ -657,8 +657,9 @@ class Session(Client):
         code_action_kinds = self.get_capability('codeActionProvider.codeActionKinds')
         if code_action_kinds:
             debug('{}: supported code action kinds: {}'.format(self.config.name, code_action_kinds))
-        self._init_callback(self, False)
-        self._init_callback = None
+        if self._init_callback:
+            self._init_callback(self, False)
+            self._init_callback = None
 
     def _handle_initialize_error(self, result: Any) -> None:
         self._init_error = (result.get('code', -1), Exception(result.get('message', 'Error initializing server')))

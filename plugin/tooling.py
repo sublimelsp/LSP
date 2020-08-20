@@ -178,7 +178,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
             for key in keys:
                 settings[key] = view_settings.get(key)
             line(self.json_dump(settings))
-            if settings['syntax']:
+            if isinstance(settings['syntax'], str):
                 syntax = sublime.syntax_from_path(settings['syntax'])
                 if syntax:
                     line(' - root scope\n{}'.format(self.code_block(syntax.scope)))

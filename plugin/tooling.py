@@ -181,7 +181,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
             if isinstance(settings['syntax'], str):
                 syntax = sublime.syntax_from_path(settings['syntax'])
                 if syntax:
-                    line(' - root scope\n{}'.format(self.code_block(syntax.scope)))
+                    line(' - base scope\n{}'.format(self.code_block(syntax.scope)))
         else:
             line('no active view found!')
 

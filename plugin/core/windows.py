@@ -130,7 +130,7 @@ class WindowManager(Manager):
         # TODO: Why doesn't disable_in_project cause on_load_project_async to be called?
         self._configs.update()
 
-    def register_listener(self, listener: AbstractViewListener) -> None:
+    def _register_listener(self, listener: AbstractViewListener) -> None:
         sublime.set_timeout_async(lambda: self.register_listener_async(listener))
 
     def register_listener_async(self, listener: AbstractViewListener) -> None:
@@ -261,7 +261,9 @@ class WindowManager(Manager):
                     variables.update(additional_variables)
             transport = create_transport(config, cwd, self._window, session, variables)
             config.set_view_status(initiating_view, "initialize")
-            session.initialize(variables, transport)
+            session.initialize(
+                variables, transport,
+                lambda session, is_error: self._on_post_session_initialize(initiating_view, session, is_error))
             self._new_session = session
         except Exception as e:
             message = "\n\n".join([
@@ -277,6 +279,16 @@ class WindowManager(Manager):
             sublime.message_dialog(message)
             # Continue with handling pending listeners
             self._new_session = None
+            sublime.set_timeout_async(self._dequeue_listener_async)
+
+    def _on_post_session_initialize(
+        self, initiating_view: sublime.View, session: Session, is_error: bool = False
+    ) -> None:
+        if is_error:
+            session.config.erase_view_status(initiating_view)
+            self._new_listener = None
+            self._new_session = None
+        else:
             sublime.set_timeout_async(self._dequeue_listener_async)
 
     def _create_logger(self, config_name: str) -> Logger:
@@ -332,27 +344,23 @@ class WindowManager(Manager):
                     candidate = folder
         return candidate
 
-    def on_post_initialize(self, session: Session) -> None:
-        sublime.set_timeout_async(self._dequeue_listener_async)
-
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
         self._sessions.discard(session)
         for listener in self._listeners:
             listener.on_session_shutdown_async(session)
-        if exit_code != 0:
-            self._window.status_message("{} exited with status code {}".format(session.config.name, exit_code))
-            fmt = "{0} exited with status code {1}.\n\nDo you want to restart {0}?\n\nIf you choose Cancel, {0} will "\
-                  "be disabled for this window until you restart Sublime Text."
-            msg = fmt.format(session.config.name, exit_code)
-            if sublime.ok_cancel_dialog(msg, "Restart {}".format(session.config.name)):
-                v = self._window.active_view()
-                if not v:
-                    return
-                self.start_async(session.config, v)
+        if exit_code != 0 or exception:
+            config = session.config
+            msg = "{} exited with status code {}".format(config.name, exit_code)
+            if exception:
+                msg += " and message:\n\n---\n{}\n---".format(str(exception))
+            msg += "\n\nDo you want to restart {0}?\n\nIf you choose Cancel, {0} will "\
+                   "be disabled for this window until you restart Sublime Text.".format(config.name)
+            if sublime.ok_cancel_dialog(msg, "Restart {}".format(config.name)):
+                view = self._window.active_view()
+                if view:
+                    self.start_async(config, view)
             else:
-                self._configs.disable_temporarily(session.config.name)
-        if exception:
-            self._window.status_message("{} exited with an exception: {}".format(session.config.name, exception))
+                self._configs.disable_temporarily(config.name)
 
     def handle_server_message(self, server_name: str, message: str) -> None:
         sublime.set_timeout(lambda: update_server_panel(self._window, server_name, message))

@@ -79,11 +79,14 @@ class Promise:
                     Gets passed a list with all resolved values.
         """
         def handler(resolve: ResolveFunc) -> None:
+            was_resolved = False
 
             def recheck_resolve_status(_: Any) -> None:
+                nonlocal was_resolved
                 # We're being called from a Promise that is holding a lock so don't try to use
                 # any methods that would try to acquire it.
-                if all(p.resolved for p in promises):
+                if not was_resolved and all(p.resolved for p in promises):
+                    was_resolved = True
                     resolve([p.value for p in promises])
 
             for p in promises:

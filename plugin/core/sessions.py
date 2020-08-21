@@ -480,7 +480,7 @@ class Session(Client):
         self.capabilities = DottedDict()
         self.exiting = False
         self._init_callback = None  # type: Optional[InitCallback]
-        self._init_error = None  # type: Optional[Tuple[int, Exception]]
+        self._exit_result = None  # type: Optional[Tuple[int, Optional[Exception]]]
         self._views_opened = 0
         self._workspace_folders = workspace_folders
         self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
@@ -662,7 +662,7 @@ class Session(Client):
             self._init_callback = None
 
     def _handle_initialize_error(self, result: Any) -> None:
-        self._init_error = (result.get('code', -1), Exception(result.get('message', 'Error initializing server')))
+        self._exit_result = (result.get('code', -1), Exception(result.get('message', 'Error initializing server')))
         # Init callback called after transport is closed to avoid pre-mature GC of Session.
         self.end_async()
 
@@ -816,6 +816,11 @@ class Session(Client):
 
     # --- shutdown dance -----------------------------------------------------------------------------------------------
 
+    def exit(self) -> None:
+        # exit() is only called when doing an explicit session shutdown. Ignore errors on exit then.
+        self._exit_result = (0, None)
+        super().exit()
+
     def end_async(self) -> None:
         # TODO: Ensure this function is called only from the async thread
         if self.exiting:
@@ -836,10 +841,9 @@ class Session(Client):
         self.state = ClientStates.STOPPING
         super().on_transport_close(exit_code, exception)
         self._response_handlers.clear()
-        if self._init_error:
-            init_code, init_exception = self._init_error
-            exit_code = init_code
-            exception = init_exception
+        if self._exit_result:
+            # Override potential exit error with a saved one.
+            exit_code, exception = self._exit_result
 
         def run_async() -> None:
             mgr = self.manager()

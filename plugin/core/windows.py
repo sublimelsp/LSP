@@ -590,9 +590,11 @@ class RemoteLogger(Logger):
     DIRECTION_INCOMING = 2
     _ws_server = None  # type: Optional[WebsocketServer]
     _ws_server_thread = None  # type: Optional[threading.Thread]
+    _last_id = 0
 
     def __init__(self, manager: WindowManager, server_name: str) -> None:
-        self._server_name = server_name
+        RemoteLogger._last_id += 1
+        self._server_name = '{} ({})'.format(server_name, RemoteLogger._last_id)
         if not RemoteLogger._ws_server:
             try:
                 RemoteLogger._ws_server = WebsocketServer(self.PORT)

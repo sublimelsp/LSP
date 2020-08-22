@@ -130,6 +130,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
             panel_items = self.process_document_symbols(items)
         else:
             panel_items = self.process_symbol_informations(items)
+        # Sort both lists in sync according to the range's begin point.
         sorted_results = zip(*sorted(zip(self.regions, panel_items), key=lambda item: item[0][0].begin()))
         sorted_regions, sorted_panel_items = sorted_results
         self.regions = list(sorted_regions)

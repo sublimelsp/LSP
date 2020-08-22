@@ -125,10 +125,16 @@ class LspDocumentSymbolsCommand(LspTextCommand):
 
     def process_symbols(self, items: List[Dict[str, Any]]) -> List[sublime.QuickPanelItem]:
         self.regions.clear()
+        panel_items = []
         if 'selectionRange' in items[0]:
-            return self.process_document_symbols(items)
+            panel_items = self.process_document_symbols(items)
         else:
-            return self.process_symbol_informations(items)
+            panel_items = self.process_symbol_informations(items)
+        # Sort both lists in sync according to the range's begin point.
+        sorted_results = zip(*sorted(zip(self.regions, panel_items), key=lambda item: item[0][0].begin()))
+        sorted_regions, sorted_panel_items = sorted_results
+        self.regions = list(sorted_regions)
+        return list(sorted_panel_items)
 
     def process_document_symbols(self, items: List[Dict[str, Any]]) -> List[sublime.QuickPanelItem]:
         quick_panel_items = []  # type: List[sublime.QuickPanelItem]

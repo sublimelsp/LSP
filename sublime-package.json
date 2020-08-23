@@ -81,7 +81,7 @@
                 },
                 "enabled": {
                   "type": "boolean",
-                  "default": true,
+                  "default": false,
                   "description": "Whether this configuration is enabled or disabled."
                 },
                 "tcp_port": {

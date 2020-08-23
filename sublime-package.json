@@ -45,11 +45,11 @@
                 },
                 "syntaxes": {
                   "type": "array",
-                  "description": "Do not use this property. Instead, use \"document_selector\"."
+                  "deprecationMessage": "Use \"document_selector\" instead."
                 },
                 "scopes": {
                   "type": "array",
-                  "description": "Do not use this property. Instead, use \"feature_selector\"."
+                  "deprecationMessage": "Use \"feature_selector\" instead."
                 }
               },
               "required": [
@@ -109,15 +109,15 @@
                 },
                 "languageId": {
                   "type": "string",
-                  "description": "Do not use this property. instead use \"languages\"."
+                  "deprecationMessage": "Use \"languages\" instead."
                 },
                 "syntaxes": {
                   "type": "array",
-                  "description": "Do not use this property. Instead, use \"languages\"."
+                  "deprecationMessage": "Use \"languages\" instead."
                 },
                 "scopes": {
                   "type": "array",
-                  "description": "Do not use this property. Instead, use \"languages\"."
+                  "deprecationMessage": "Use \"languages\" instead."
                 }
               }
             }

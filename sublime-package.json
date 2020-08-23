@@ -158,7 +158,7 @@
                   "deprecationMessage": "Use an array instead."
                 }
               ],
-              "default": "always",
+              "default": "saved",
               "description": "Open and close the diagnostics panel automatically, depending on available diagnostics. For backward-compatibility, this can also be a boolean. In that case, if set to `false`, don't show the diagnostics panel, and when set to `true`, always show the diagnostics panel."
             },
             "code_action_on_save_timeout_ms": {

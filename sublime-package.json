@@ -74,6 +74,9 @@
                     "path/to/language-server-binary",
                     "--some-option"
                   ],
+                  "items": {
+                    "type": "string"
+                  },
                   "description": "The command to start the language server."
                 },
                 "enabled": {

@@ -176,7 +176,7 @@
             "show_diagnostics_count_in_view_status": {
               "type": "boolean",
               "default": false,
-              "description": "Show errors and warnings count in the status bar"
+              "description": "Show errors and warnings count in the status bar."
             },
             "lsp_format_on_save": {
               "$ref": "#/definitions/lsp_format_on_save"

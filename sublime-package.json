@@ -200,6 +200,7 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 4,
+              "default": 4,
               "description": "Only show diagnostics in the panel with level equal to or less than:\nerror: 1,\nwarning: 2,\ninfo: 3,\nhint: 4"
             },
             "diagnostics_delay_ms": {

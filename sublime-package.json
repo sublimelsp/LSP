@@ -236,7 +236,7 @@
                 "squiggly",
                 ""
               ],
-              "default": "squiggly",
+              "default": "underline",
               "description": "Highlighting style of \"highlights\": accentuating nearby text entities that are related to the one under your cursor. When set to the empty string (\"\"), no diagnostics are shown in-line."
             },
             "document_highlight_scopes": {

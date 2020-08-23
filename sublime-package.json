@@ -163,7 +163,7 @@
             },
             "code_action_on_save_timeout_ms": {
               "type": "integer",
-              "default": 0,
+              "default": 2000,
               "description": "The amount of time the code actions on save are allowed to run for."
             },
             "auto_show_diagnostics_panel_level": {

@@ -363,7 +363,7 @@
               "additionalProperties": {
                 "$ref": "#/definitions/ClientConfig"
               },
-              "description": "The big dictionary of your configured language servers. The keys of this dictionary are free-form. They give a humany-friendly name to the server configuration. They are shown in the bottom-left corner in the status bar once attached to a view (unless you have \"show_view_status\" set to `false`)."
+              "description": "The dictionary of your configured language servers. The keys of this dictionary are free-form. They give a humany-friendly name to the server configuration. They are shown in the bottom-left corner in the status bar once attached to a view (unless you have \"show_view_status\" set to `false`)."
             },
             "default_clients": {
               "additionalProperties": {

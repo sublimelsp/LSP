@@ -20,7 +20,7 @@
             // The LanguageConfig class
             "LanguageConfig": {
               "type": "object",
-              "description": "The ",
+              "description": "A language configuration defines which servers are attached to which views",
               "properties": {
                 "languageId": {
                   "type": "string",

@@ -94,7 +94,6 @@
                   "description": "An array which defines to which views this language server should be attached.",
                   "type": "array",
                   "minItems": 1,
-                  "uniqueItems": true,
                   "items": {
                     "$ref": "#/definitions/LanguageConfig"
                   },

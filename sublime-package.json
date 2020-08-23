@@ -15,7 +15,6 @@
             },
             "lsp_code_actions_on_save": {
               "type": "object",
-              "default": {},
               "description": "A dictionary of code action identifiers that should be triggered on save.\n\nCode action identifiers are not officially standardized so refer to specific server's documentation on what is supported but `source.fixAll` is commonly used to apply fix-on-save code actions.\n\nThis option is also supported in syntax-specific settings and/or in the \"settings\" section of project files. Settings from all those places will be merged and more specific (syntax and project) settings will override less specific (from LSP or Sublime settings).\n\nOnly \"source.*\" actions are supported."
             },
             // The LanguageConfig class
@@ -40,12 +39,10 @@
                 },
                 "syntaxes": {
                   "type": "array",
-                  "default": [],
                   "description": "Do not use this property. Instead, use \"document_selector\"."
                 },
                 "scopes": {
                   "type": "array",
-                  "default": [],
                   "description": "Do not use this property. Instead, use \"feature_selector\"."
                 }
               },
@@ -86,42 +83,34 @@
                 },
                 "initializationOptions": {
                   "type": "object",
-                  "default": {},
                   "description": "The initializationOptions that are passed to the language server process during the `initialize` phase. This is a rather free-form dictionary of key-value pairs and is different per language server. Look up documentation of your specific langauge server to see what the possible key-value pairs can be."
                 },
                 "settings": {
                   "type": "object",
-                  "default": {},
                   "description": "The server settings. This is a rather free-form dictionary of key-value pairs and is different per language server. Look up documentation of your specific langauge server to see what the possible key-value pairs can be."
                 },
                 "experimental_capabilities": {
                   "type": "object",
-                  "default": {},
                   "description": "Experimental capabilities that are passed to the language server process during the `initialize` phase. This is different per language server, so you'll need to look up documentation for your particular language server."
                 },
                 "env": {
                   "type": "object",
-                  "default": {},
                   "description": "Specify environment variables to pass to the language server process on startup.",
                   "additionalProperties": {
                     "type": "string",
-                    "default": "",
                     "description": "The value for this environment variable."
                   },
                 },
                 "languageId": {
                   "type": "string",
-                  "default": "",
                   "description": "Do not use this property. instead use \"languages\"."
                 },
                 "syntaxes": {
                   "type": "array",
-                  "default": [],
                   "description": "Do not use this property. Instead, use \"languages\"."
                 },
                 "scopes": {
                   "type": "array",
-                  "default": [],
                   "description": "Do not use this property. Instead, use \"languages\"."
                 }
               }
@@ -307,7 +296,6 @@
               },
               "uniqueItems": true,
               "minItems": 0,
-              "default": [],
               "description": "Disable language server capabilities."
             },
             "log_debug": {
@@ -333,7 +321,6 @@
                   "type": "boolean"
                 }
               ],
-              "default": [],
               "description": "Log communication from and to language servers. Possible flags:\n- \"panel\": log to the LSP Language Servers output panel\n- \"remote\": start a local websocket server on port 9981. Can be connected to with a websocket client to receive the log messages in real time. For backward-compatibility, when set to `true`, enables the \"panel\" logger and when set to `false` disables logging. This output panel can be toggled from the command palette with the command \"LSP: Toggle Log Panel\"."
             },
             "log_stderr": {
@@ -351,7 +338,6 @@
               "additionalProperties": {
                 "$ref": "#/definitions/ClientConfig"
               },
-              "default": {},
               "description": "The big dictionary of your configured language servers."
             },
             "default_clients": {
@@ -359,7 +345,6 @@
                 "$ref": "#/definitions/ClientConfig"
               },
               "description": "DO NOT MODIFY THIS SETTING! Use \"clients\" to override settings instead!",
-              "default": {}
             }
           },
           "additionalProperties": false

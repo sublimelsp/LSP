@@ -23,6 +23,11 @@
               },
               "description": "A dictionary of code action identifiers that should be triggered on save.\n\nCode action identifiers are not officially standardized so refer to specific server's documentation on what is supported but `source.fixAll` is commonly used to apply fix-on-save code actions.\n\nThis option is also supported in syntax-specific settings and/or in the \"settings\" section of project files. Settings from all those places will be merged and more specific (syntax and project) settings will override less specific (from LSP or Sublime settings).\n\nOnly \"source.*\" actions are supported."
             },
+            // Deprecated syntaxes and scopes
+            "useLanguagesInstead": {
+              "type": "string",
+              "deprecationMessage": "Use \"languages\" instead."
+            },
             // The LanguageConfig class
             "LanguageConfig": {
               "type": "object",
@@ -54,11 +59,14 @@
               },
               "required": [
                 "languageId"
-              ]
+              ],
+              "additionalProperties": false
             },
             // The ClientConfig class
             "ClientConfig": {
               "type": "object",
+              "additionalProperties": false,
+              "description": "The configuration that informs LSP on how to start your language server and to which views it should attach the language server process",
               "properties": {
                 "command": {
                   "type": "array",
@@ -80,6 +88,7 @@
                   "description": "When specified, the TCP port to use to connect to the language server process. If not specified, STDIO is used as the transport. When set to zero, a free TCP port is chosen. You can use that free TCP port number as a template variable, i.e. as ${tcp_port} in the \"command\"."
                 },
                 "languages": {
+                  "description": "An array which defines to which views this language server should be attached.",
                   "type": "array",
                   "minItems": 1,
                   "uniqueItems": true,
@@ -108,16 +117,21 @@
                   },
                 },
                 "languageId": {
-                  "type": "string",
-                  "deprecationMessage": "Use \"languages\" instead."
+                  "$ref": "#/definitions/useLanguagesInstead"
+                },
+                "document_selector": {
+                  "$ref": "#/definitions/useLanguagesInstead"
+                },
+                "feature_selector": {
+                  "$ref": "#/definitions/useLanguagesInstead"
                 },
                 "syntaxes": {
                   "type": "array",
-                  "deprecationMessage": "Use \"languages\" instead."
+                  "$ref": "#/definitions/useLanguagesInstead"
                 },
                 "scopes": {
                   "type": "array",
-                  "deprecationMessage": "Use \"languages\" instead."
+                  "$ref": "#/definitions/useLanguagesInstead"
                 }
               }
             }
@@ -138,7 +152,8 @@
                   ]
                 },
                 {
-                  "type": "boolean"
+                  "type": "boolean",
+                  "deprecationMessage": "Use an array instead."
                 }
               ],
               "default": "always",
@@ -324,7 +339,8 @@
                   "minItems": 0
                 },
                 {
-                  "type": "boolean"
+                  "type": "boolean",
+                  "deprecationMessage": "Use an array instead."
                 }
               ],
               "description": "Log communication from and to language servers. Possible flags:\n- \"panel\": log to the LSP Language Servers output panel\n- \"remote\": start a local websocket server on port 9981. Can be connected to with a websocket client to receive the log messages in real time. For backward-compatibility, when set to `true`, enables the \"panel\" logger and when set to `false` disables logging. This output panel can be toggled from the command palette with the command \"LSP: Toggle Log Panel\"."
@@ -344,7 +360,7 @@
               "additionalProperties": {
                 "$ref": "#/definitions/ClientConfig"
               },
-              "description": "The big dictionary of your configured language servers."
+              "description": "The big dictionary of your configured language servers. The keys of this dictionary are free-form. They give a humany-friendly name to the server configuration. They are shown in the bottom-left corner in the status bar once attached to a view (unless you have \"show_view_status\" set to `false`)."
             },
             "default_clients": {
               "additionalProperties": {

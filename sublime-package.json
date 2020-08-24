@@ -176,7 +176,7 @@
               "minimum": 1,
               "maximum": 4,
               "default": 2,
-              "markdownDescription": "Open the diagnostics panel automatically when diagnostics level is equal to or less than:\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`"
+              "markdownDescription": "Open the diagnostics panel automatically when diagnostics level is equal to or less than:\n\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`"
             },
             "show_diagnostics_count_in_view_status": {
               "type": "boolean",
@@ -199,14 +199,14 @@
               "default": 4,
               "minimum": 0,
               "maximum": 4,
-              "markdownDescription": "Show highlights and gutter markers in the file views for diagnostics with level equal to or less than:\n- _none_: `0`,\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`"
+              "markdownDescription": "Show highlights and gutter markers in the file views for diagnostics with level equal to or less than:\n\n- _none_: `0`,\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`"
             },
             "diagnostics_panel_include_severity_level": {
               "type": "integer",
               "minimum": 1,
               "maximum": 4,
               "default": 4,
-              "markdownDescription": "Only show diagnostics in the panel with level equal to or less than:\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`"
+              "markdownDescription": "Only show diagnostics in the panel with level equal to or less than:\n\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`"
             },
             "diagnostics_delay_ms": {
               "type": "integer",
@@ -351,7 +351,7 @@
                   "deprecationMessage": "Use an array instead."
                 }
               ],
-              "markdownDescription": "Log communication from and to language servers. Possible flags:\n- \"panel\": log to the LSP Language Servers output panel\n- \"remote\": start a local websocket server on port 9981. Can be connected to with a websocket client to receive the log messages in real time. For backward-compatibility, when set to `true`, enables the \"panel\" logger and when set to `false` disables logging. This output panel can be toggled from the command palette with the command \"LSP: Toggle Log Panel\"."
+              "markdownDescription": "Log communication from and to language servers. Possible flags:\n\n- `\"panel\"`: log to the LSP Language Servers output panel\n- `\"remote\"`: start a local websocket server on port 9981. Can be connected to with a websocket client to receive the log messages in real time.\n\nFor backward-compatibility, when set to `true`, enables the `\"panel\"` logger and when set to `false` disables logging. This output panel can be toggled from the command palette with the command **LSP: Toggle Log Panel**."
             },
             "log_stderr": {
               "type": "boolean",

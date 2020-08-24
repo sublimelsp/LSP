@@ -3,6 +3,7 @@ import mdpopups
 import sublime
 import sublime_plugin
 import webbrowser
+from .core.css import css
 from .core.logging import debug
 from .core.edit import parse_text_edit
 from .core.protocol import Request, InsertTextFormat, Range, CompletionItemTag
@@ -50,6 +51,8 @@ class LspResolveDocsCommand(LspTextCommand):
             self.view,
             minihtml_content,
             flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
+            css=css().popups,
+            wrapper_class=css().popups_classname,
             max_width=viewport_width,
             allow_code_wrap=True,
             on_navigate=self.on_navigate

@@ -2,10 +2,8 @@
   "contributions": {
     "settings": [
       {
-        "file_patterns": [
-          "/LSP.sublime-settings"
-        ],
         "schema": {
+          "$id": "sublime://settings/LSP",
           "definitions": {
             // User preferences that are shared with "Preferences.sublime-settings"
             "lsp_format_on_save": {
@@ -137,7 +135,14 @@
                 }
               }
             }
-          },
+          }
+        }
+      },
+      {
+        "file_patterns": [
+          "/LSP.sublime-settings"
+        ],
+        "schema": {
           "properties": {
             "show_view_status": {
               "type": "boolean",
@@ -179,10 +184,10 @@
               "description": "Show errors and warnings count in the status bar."
             },
             "lsp_format_on_save": {
-              "$ref": "#/definitions/lsp_format_on_save"
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save"
             },
             "lsp_code_actions_on_save": {
-              "$ref": "#/definitions/lsp_code_actions_on_save",
+              "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save",
             },
             "show_diagnostics_in_view_status": {
               "type": "boolean",
@@ -361,13 +366,13 @@
             },
             "clients": {
               "additionalProperties": {
-                "$ref": "#/definitions/ClientConfig"
+                "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
               },
               "description": "The dictionary of your configured language servers. The keys of this dictionary are free-form. They give a humany-friendly name to the server configuration. They are shown in the bottom-left corner in the status bar once attached to a view (unless you have \"show_view_status\" set to `false`)."
             },
             "default_clients": {
               "additionalProperties": {
-                "$ref": "#/definitions/ClientConfig"
+                "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
               },
               "description": "DO NOT MODIFY THIS SETTING! Use \"clients\" to override settings instead!",
             }
@@ -382,10 +387,10 @@
         "schema": {
           "properties": {
             "lsp_format_on_save": {
-              "$ref": "#/definitions/lsp_format_on_save",
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save",
             },
             "lsp_code_actions_on_save": {
-              "$ref": "#/definitions/lsp_code_actions_on_save"
+              "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save"
             }
           }
         }

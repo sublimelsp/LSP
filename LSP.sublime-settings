@@ -1,5 +1,4 @@
 {
-
   // Show permanent language server status in the status bar.
   "show_view_status": true,
 
@@ -201,47 +200,49 @@
   //     "env": { },
   //   }
   // }
-  "clients": {
-
-  },
+  "clients": {},
 
   // Default clients configuration
   // DO NOT MODIFY THIS SETTING!
   // Use "clients" to override settings instead!
-  "default_clients":
-  {
-    "pyls":
-    {
-      "command": ["pyls"],
-      "languageId": "python" // will match source.python
-      // "settings": {
-      //   "pyls": {
-      //       "configurationSources": ["flake8"],
-      //       "plugins": {
-      //           "pyflakes": {
-      //               "enabled": false
-      //           }
-      //       }
-      //   }
-      // }
+  "default_clients": {
+    "pyls": {
+      "command": [
+        "pyls"
+      ],
+      "languages": [
+        {
+          "languageId": "python"
+        }
+      ],
     },
-    "rust-analyzer":
-    {
-      "command": ["rust-analyzer"],
-      "languageId": "rust" // will match source.rust
+    "rust-analyzer": {
+      "command": [
+        "rust-analyzer"
+      ],
+      "languages": [
+        {
+          "languageId": "rust"
+        }
+      ],
     },
-    "clangd":
-    {
-      "command": ["clangd"],
-      "languages": [{
+    "clangd": {
+      "command": [
+        "clangd"
+      ],
+      "languages": [
+        {
           "languageId": "c" // will match source.c
-        },{
+        },
+        {
           "document_selector": "source.c++",
           "languageId": "cpp"
-        },{
+        },
+        {
           "document_selector": "source.objc",
           "languageId": "objective-c"
-        },{
+        },
+        {
           "document_selector": "source.objc++",
           "languageId": "objective-cpp"
         },
@@ -252,120 +253,177 @@
         // Specify a dart command like the below in your LSP User settings.
         // "dart", "/usr/local/opt/dart/libexec/bin/snapshots/analysis_server.dart.snapshot", "--lsp"
       ],
-      "languageId": "dart" // will match source.dart
+      "languages": [
+        {
+          "languageId": "dart"
+        }
+      ],
     },
     "elixir-ls": {
       "command": [
         // Specify path to language_server.sh from https://github.com/elixir-lsp/elixir-ls here
         // "/home/someUser/somePlace/elixir-ls/release/language_server.sh"
       ],
-      "languageId": "elixir", // will match source.elixir
-      "settings": {
-      }
+      "languages": [
+        {
+          "languageId": "elixir"
+        }
+      ],
+      "settings": {}
     },
     "erlang-ls": {
-      "command"   : [ "erlang_ls", "--transport", "stdio" ],
-      "languageId": "erlang" // will match source.erlang
+      "command": [
+        "erlang_ls",
+        "--transport",
+        "stdio"
+      ],
+      "languages": [
+        {
+          "languageId": "erlang"
+        }
+      ],
     },
-    "flow":
-    {
-      "command": ["flow", "lsp"],
-      "document_selector": "source.js",
-      "languageId": "javascript"
+    "flow": {
+      "command": [
+        "flow",
+        "lsp"
+      ],
+      "languages": [
+        {
+          "languageId": "javascript",
+          "document_selector": "source.js"
+        }
+      ],
     },
-    "haskell-ide-engine":
-    {
-      "command":
-      [
+    "haskell-ide-engine": {
+      "command": [
         "hie",
         "--lsp"
       ],
-      "languageId": "haskell" // will match source.haskell
+      "languages": [
+        {
+          "languageId": "haskell"
+        }
+      ],
     },
-    "reason":
-    {
-      "command": ["ocaml-language-server", "--stdio"],
-      "languageId": "reason" // will match source.reason
+    "ocaml": {
+      "command": [
+        "ocaml-language-server",
+        "--stdio"
+      ],
+      "languages": [
+        {
+          "languageId": "reason"
+        },
+        {
+          "languageId": "ocaml"
+        }
+      ],
     },
-    "ocaml":
-    {
-      "command": ["ocaml-language-server", "--stdio"],
-      "languageId": "ocaml" // will match source.ocaml
+    "gopls": {
+      "command": [
+        "gopls"
+      ],
+      "languages": [
+        {
+          "languageId": "go"
+        }
+      ],
     },
-    "golsp":
-    {
-      "command": ["go-langserver"],
-      "languageId": "go" // will match source.go
+    "jdtls": {
+      "command": [
+        "java",
+        "-jar",
+        "PATH_TO_JDT_SERVER/plugins/org.eclipse.equinox.launcher_1.4.0.v20161219-1356.jar",
+        "-configuration",
+        "PATH_TO_CONFIG_DIR"
+      ],
+      "languages": [
+        {
+          "languageId": "java"
+        }
+      ],
     },
-    "gopls":
-    {
-      "command": ["gopls"],
-      "languageId": "go" // will match source.go
-    },
-    "jdtls":
-    {
-      "command": ["java", "-jar", "PATH_TO_JDT_SERVER/plugins/org.eclipse.equinox.launcher_1.4.0.v20161219-1356.jar", "-configuration", "PATH_TO_CONFIG_DIR"],
-      "languageId": "java" // will match source.java
-    },
-    "polymer-ide":
-    {
-      "command": ["polymer-editor-service"],
-      "languages": [{
+    "polymer-ide": {
+      "command": [
+        "polymer-editor-service"
+      ],
+      "languages": [
+        {
           "document_selector": "text.html.basic | source.html",
           "languageId": "html"
-        },{
+        },
+        {
           "document_selector": "source.js",
           "languageId": "javascript"
-        },{
+        },
+        {
           "languageId": "css" // will match source.css
-        },{
+        },
+        {
           "languageId": "json" // will match source.json
         }
       ],
       "settings": {
-        "polymer-ide": {
-          "analyzeWholePackage": false,
-          "fixOnSave": false
-        }
+        "polymer-ide.analyzeWholePackage": false,
+        "polymer-ide.fixOnSave": false
       }
     },
     "ruby": {
-      "command":
-      [
+      "command": [
         "solargraph",
         "stdio"
       ],
-      "languageId": "ruby",
-      "document_selector": "source.ruby | text.html.ruby",
-      // Enable RuboCop linting
-      // "initializationOptions": {
-      //   "diagnostics": true
-      // },
+      "languages": [
+        {
+          "languageId": "ruby",
+          "document_selector": "source.ruby | text.html.ruby"
+        }
+      ],
+      "initializationOptions": {
+        "diagnostics": false
+      },
     },
     "sorbet": {
-      "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman"],
-      "languageId": "ruby",
-      "document_selector": "source.ruby | text.html.ruby"
-    },
-    "vscode-css":
-    {
-      "command":
-      [
-        "css-languageserver", "--stdio"
+      "command": [
+        "srb",
+        "tc",
+        "--typed",
+        "true",
+        "--enable-all-experimental-lsp-features",
+        "--lsp",
+        "--disable-watchman"
       ],
-      "languageId": "css" // will match source.css
-    },
-    "rlang":
-    {
-      "command":
-      [
-        "R", "--slave", "-e", "languageserver::run()"
+      "languages": [
+        {
+          "languageId": "ruby",
+          "document_selector": "source.ruby | text.html.ruby"
+        }
       ],
-      "languageId": "r" // will match source.r
+    },
+    "rlang": {
+      "command": [
+        "R",
+        "--slave",
+        "-e",
+        "languageserver::run()"
+      ],
+      "languages": [
+        {
+          "languageId": "r"
+        }
+      ],
     },
     "sourcekit-lsp": {
-      "command": ["xcrun", "sourcekit-lsp"],
-      "languageId": "swift" // will match source.swift
+      "command": [
+        "xcrun",
+        "sourcekit-lsp"
+      ],
+      "languages": [
+        {
+          "languageId": "swift"
+        }
+      ],
     },
   }
 }

@@ -279,6 +279,8 @@ class ClientConfig:
         base = sublime.decode_value(sublime.load_resource(file))
         settings = DottedDict(base.get("settings", {}))  # defined by the plugin author
         settings.update(read_dict_setting(s, "settings", {}))  # overrides from the user
+        init_options = DottedDict(base.get("initializationOptions", {}))
+        init_options.update(read_dict_setting(s, "initializationOptions", {}))
         return ClientConfig(
             name=name,
             command=read_list_setting(s, "command", []),
@@ -286,7 +288,7 @@ class ClientConfig:
             tcp_port=s.get("tcp_port"),
             # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
-            init_options=DottedDict(s.get("initializationOptions")),
+            init_options=init_options,
             settings=settings,
             env=read_dict_setting(s, "env", {}),
             experimental_capabilities=s.get("experimental_capabilities")

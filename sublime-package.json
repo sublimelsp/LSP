@@ -1,0 +1,400 @@
+{
+  "contributions": {
+    "settings": [
+      {
+        "schema": {
+          "$id": "sublime://settings/LSP",
+          "definitions": {
+            // User preferences that are shared with "Preferences.sublime-settings"
+            "lsp_format_on_save": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Run the server's formatProvider (if supported) on a document before saving. This option is also supported in syntax-specific settings and/or in the `\"settings\"` section of project files."
+            },
+            "lsp_code_actions_on_save": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "boolean"
+              },
+              "propertyNames": {
+                "pattern": "^source\\."
+              },
+              "markdownDescription": "A dictionary of code action identifiers that should be triggered on save.\n\nCode action identifiers are not officially standardized so refer to specific server's documentation on what is supported but `source.fixAll` is commonly used to apply fix-on-save code actions.\n\nThis option is also supported in syntax-specific settings and/or in the `\"settings\"` section of project files. Settings from all those places will be merged and more specific (syntax and project) settings will override less specific (from LSP or Sublime settings).\n\nOnly \"source.*\" actions are supported."
+            },
+            // Deprecated syntaxes and scopes
+            "useLanguagesInstead": {
+              "type": "string",
+              "deprecationMessage": "Use \"languages\" instead."
+            },
+            // The LanguageConfig class
+            "LanguageConfig": {
+              "type": "object",
+              "markdownDescription": "A language configuration defines which servers are attached to which views",
+              "properties": {
+                "languageId": {
+                  "type": "string",
+                  "default": "somelang",
+                  "markdownDescription": "The VSCode \"Language ID\". This value serves two purposes:\n\n1. It is sent to the language server so that it knows with what kind of file it is dealing with.\n2. When `\"document_selector\"` is not provided, this is the connection between your files and language servers.\n\nFor more information, refer to the [textDocumentItem of the LSP specification](https://microsoft.github.io/language-server-protocol/specification#textDocumentItem)."
+                },
+                "document_selector": {
+                  "type": "string",
+                  "default": "source.somelang",
+                  "markdownDescription": "The Sublime Text selector to attach the language server process to applicable views. If not specified, it defaults to \"source.${languageId}\". This is the connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. If the selector happens to be of the form \"source.{languageId}\" (which it is in many cases), then you can omit this `\"document_selector\"` key altogether, and LSP will assume the selector is \"source.{languageId}\".\n\nFor more information, refer to the [Sublime Text docs on selectors](https://www.sublimetext.com/docs/3/selectors.html)"
+                },
+                "feature_selector": {
+                  "type": "string",
+                  "default": "source.somelang",
+                  "markdownDescription": "The Sublime Text selector to use to give preference to this language server when multiple servers are attached to a view. For certain capabilities, like code completion, only one language server is chosen. The selector specified here decides which language server is chosen above others."
+                },
+                "syntaxes": {
+                  "type": "array",
+                  "deprecationMessage": "Use \"document_selector\" instead."
+                },
+                "scopes": {
+                  "type": "array",
+                  "deprecationMessage": "Use \"feature_selector\" instead."
+                }
+              },
+              "required": [
+                "languageId"
+              ],
+              "additionalProperties": false
+            },
+            // The ClientConfig class
+            "ClientConfig": {
+              "type": "object",
+              "additionalProperties": false,
+              "markdownDescription": "The configuration that informs LSP on how to start your language server and to which views it should attach the language server process",
+              "properties": {
+                "command": {
+                  "type": "array",
+                  "default": [
+                    "path/to/language-server-binary",
+                    "--some-option"
+                  ],
+                  "items": {
+                    "type": "string"
+                  },
+                  "markdownDescription": "The command to start the language server."
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "markdownDescription": "Whether this configuration is enabled or disabled."
+                },
+                "tcp_port": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 0,
+                  "markdownDescription": "When specified, the TCP port to use to connect to the language server process. If not specified, STDIO is used as the transport. When set to zero, a free TCP port is chosen. You can use that free TCP port number as a template variable, i.e. as `${tcp_port}` in the `\"command\"`."
+                },
+                "languages": {
+                  "markdownDescription": "An array which defines to which views this language server should be attached.",
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "$ref": "#/definitions/LanguageConfig"
+                  },
+                },
+                "initializationOptions": {
+                  "type": "object",
+                  "markdownDescription": "The initializationOptions that are passed to the language server process during the _initialize_ phase. This is a rather free-form dictionary of key-value pairs and is different per language server. Look up documentation of your specific langauge server to see what the possible key-value pairs can be."
+                },
+                "settings": {
+                  "type": "object",
+                  "markdownDescription": "The server settings. This is a rather free-form dictionary of key-value pairs and is different per language server. Look up documentation of your specific langauge server to see what the possible key-value pairs can be."
+                },
+                "experimental_capabilities": {
+                  "type": "object",
+                  "markdownDescription": "Experimental capabilities that are passed to the language server process during the _initialize_ phase. This is different per language server, so you'll need to look up documentation for your particular language server."
+                },
+                "env": {
+                  "type": "object",
+                  "markdownDescription": "Specify environment variables to pass to the language server process on startup.",
+                  "additionalProperties": {
+                    "type": "string",
+                    "markdownDescription": "The value for this environment variable."
+                  },
+                },
+                "languageId": {
+                  "$ref": "#/definitions/useLanguagesInstead"
+                },
+                "document_selector": {
+                  "$ref": "#/definitions/useLanguagesInstead"
+                },
+                "feature_selector": {
+                  "$ref": "#/definitions/useLanguagesInstead"
+                },
+                "syntaxes": {
+                  "type": "array",
+                  "$ref": "#/definitions/useLanguagesInstead"
+                },
+                "scopes": {
+                  "type": "array",
+                  "$ref": "#/definitions/useLanguagesInstead"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "file_patterns": [
+          "/LSP.sublime-settings"
+        ],
+        "schema": {
+          "properties": {
+            "show_view_status": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Show permanent language server status in the status bar."
+            },
+            "auto_show_diagnostics_panel": {
+              "oneOf": [
+                {
+                  "enum": [
+                    "never",
+                    "always",
+                    "saved"
+                  ]
+                },
+                {
+                  "type": "boolean",
+                  "deprecationMessage": "Use an array instead."
+                }
+              ],
+              "default": "saved",
+              "markdownDescription": "Open and close the diagnostics panel automatically, depending on available diagnostics. For backward-compatibility, this can also be a boolean. In that case, if set to `false`, don't show the diagnostics panel, and when set to `true`, always show the diagnostics panel."
+            },
+            "code_action_on_save_timeout_ms": {
+              "type": "integer",
+              "default": 2000,
+              "markdownDescription": "The amount of time the code actions on save are allowed to run for."
+            },
+            "auto_show_diagnostics_panel_level": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4,
+              "default": 2,
+              "markdownDescription": "Open the diagnostics panel automatically when diagnostics level is equal to or less than:\n\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`"
+            },
+            "show_diagnostics_count_in_view_status": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Show errors and warnings count in the status bar."
+            },
+            "lsp_format_on_save": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save"
+            },
+            "lsp_code_actions_on_save": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save",
+            },
+            "show_diagnostics_in_view_status": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Show the diagnostics description of the code under the cursor in status bar if available."
+            },
+            "show_diagnostics_severity_level": {
+              "type": "integer",
+              "default": 4,
+              "minimum": 0,
+              "maximum": 4,
+              "markdownDescription": "Show highlights and gutter markers in the file views for diagnostics with level equal to or less than:\n\n- _none_: `0`,\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`"
+            },
+            "diagnostics_panel_include_severity_level": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4,
+              "default": 4,
+              "markdownDescription": "Only show diagnostics in the panel with level equal to or less than:\n\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`"
+            },
+            "diagnostics_delay_ms": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0,
+              "markdownDescription": "Delay showing diagnostics by this many milliseconds. The delay will only kick into action when previously there were no diagnostics in the view. If there were previous diagnostics in the view, then the delay setting here is ignored and diagnostics are updated immediately."
+            },
+            "diagnostics_additional_delay_auto_complete_ms": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0,
+              "markdownDescription": "Add an additional delay when the auto-complete widget is currently visible. Just like `\"diagnostics_delay_ms\"`, the unit is milliseconds. The total amount of delay would be `diagnostics_delay_ms + diagnostics_additional_delay_auto_complete_ms`."
+            },
+            "diagnostics_highlight_style": {
+              "enum": [
+                "fill",
+                "box",
+                "underline",
+                "stippled",
+                "squiggly",
+                ""
+              ],
+              "default": "squiggly",
+              "markdownDescription": "Highlighting style of code diagnostics. When set to the empty string (`\"\"`), no diagnostics are shown in-line."
+            },
+            "document_highlight_style": {
+              "enum": [
+                "fill",
+                "box",
+                "underline",
+                "stippled",
+                "squiggly",
+                ""
+              ],
+              "default": "underline",
+              "markdownDescription": "Highlighting style of `\"highlights\"`: accentuating nearby text entities that are related to the one under your cursor. When set to the empty string (`\"\"`), no diagnostics are shown in-line."
+            },
+            "document_highlight_scopes": {
+              "type": "object",
+              "properties": {
+                "unknown": {
+                  "type": "string",
+                  "default": "text",
+                  "markdownDescription": "What Sublime Text scope should receive the LSP `\"unknown\"` scope?"
+                },
+                "text": {
+                  "type": "string",
+                  "default": "text",
+                  "markdownDescription": "What Sublime Text scope should receive the LSP `\"text\"` scope?"
+                },
+                "read": {
+                  "type": "string",
+                  "default": "markup.inserted",
+                  "markdownDescription": "What Sublime Text scope should receive the LSP `\"read\"` scope?"
+                },
+                "write": {
+                  "type": "string",
+                  "default": "markup.changed",
+                  "markdownDescription": "What Sublime Text scope should receive the LSP `\"write\"` scope?"
+                },
+                "additionalProperties": false
+              },
+              "default": {
+                "unknown": "text",
+                "text": "text",
+                "read": "markup.inserted",
+                "write": "markup.changed"
+              },
+              "markdownDescription": "Map the LSP scopes `\"unknown\"`, `\"text\"`, `\"read\"` and `\"write\"` to the given Sublime Text scopes. You can use those scopes in your .sublime-color-scheme to color the document highlight scopes."
+            },
+            "diagnostics_gutter_marker": {
+              "enum": [
+                "dot",
+                "circle",
+                "bookmark",
+                "sign",
+                ""
+              ],
+              "default": "dot",
+              "markdownDescription": "Gutter marker for code diagnostics."
+            },
+            "show_code_actions": {
+              "enum": [
+                "annotation",
+                "bulb"
+              ],
+              "default": "annotation",
+              "markdownDescription": "Where to show `\"code actions\"`. Either as an `\"annotation\"` to the right, or as a `\"bulb\"` in the gutter area. Due to API limitations, the `\"bulb\"` icon can not be clicked so the code actions can only be triggered using a keyboard shortcut or the context menu."
+            },
+            "show_symbol_action_links": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Show symbol action links in hover popup if available."
+            },
+            "only_show_lsp_completions": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Disable Sublime Text's explicit and word completion."
+            },
+            "show_references_in_quick_panel": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Show symbol references in Sublime's quick panel instead of the bottom panel."
+            },
+            "disabled_capabilities": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "hover",
+                  "completion",
+                  "colorProvider",
+                  "documentHighlight",
+                  "signatureHelp"
+                ]
+              },
+              "uniqueItems": true,
+              "minItems": 0,
+              "markdownDescription": "Disable language server capabilities."
+            },
+            "log_debug": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Show verbose debug messages in the sublime console."
+            },
+            "log_server": {
+              "oneOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "panel",
+                      "remote",
+                    ]
+                  },
+                  "uniqueItems": true,
+                  "minItems": 0
+                },
+                {
+                  "type": "boolean",
+                  "deprecationMessage": "Use an array instead."
+                }
+              ],
+              "markdownDescription": "Log communication from and to language servers. Possible flags:\n\n- `\"panel\"`: log to the LSP Language Servers output panel\n- `\"remote\"`: start a local websocket server on port 9981. Can be connected to with a websocket client to receive the log messages in real time.\n\nFor backward-compatibility, when set to `true`, enables the `\"panel\"` logger and when set to `false` disables logging. This output panel can be toggled from the command palette with the command **LSP: Toggle Log Panel**."
+            },
+            "log_stderr": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Show language server stderr output in the Language Servers output panel. This output panel can be toggled from the command palette with the command \"LSP: Toggle Log Panel\"."
+            },
+            "log_max_size": {
+              "type": "integer",
+              "default": 8192,
+              "minimum": 0,
+              "markdownDescription": "When logging to the `\"panel\"` (see `\"log_server\"`), if the params of the request or response or notification exceed this many characters, then print a `<snip>` to the panel instead. If you don't want a limit, set this to zero."
+            },
+            "clients": {
+              "additionalProperties": {
+                "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
+              },
+              "markdownDescription": "The dictionary of your configured language servers. The keys of this dictionary are free-form. They give a humany-friendly name to the server configuration. They are shown in the bottom-left corner in the status bar once attached to a view (unless you have `\"show_view_status\"` set to `false`)."
+            },
+            "default_clients": {
+              "additionalProperties": {
+                "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
+              },
+              "markdownDescription": "**DO NOT MODIFY THIS SETTING!** Use `\"clients\"` to override settings instead!",
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "file_patterns": [
+          "/Preferences.sublime-settings"
+        ],
+        "schema": {
+          "properties": {
+            "lsp_format_on_save": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save",
+            },
+            "lsp_code_actions_on_save": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

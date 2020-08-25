@@ -394,6 +394,32 @@
             }
           }
         }
+      },
+      {
+        "file_patterns": [
+          "/*.sublime-project"
+        ],
+        "schema": {
+          "properties": {
+            "settings": {
+              "properties": {
+                "LSP": {
+                  "type": "object",
+                  "markdownDescription": "The dictionary of your configured language servers or overrides for existing configurations. The keys of this dictionary are free-form. They give a humany-friendly name to the server configuration. They are shown in the bottom-left corner in the status bar once attached to a view (unless you have `\"show_view_status\"` set to `false`).",
+                  "additionalProperties": {
+                    "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
+                  },
+                },
+                "lsp_format_on_save": {
+                  "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save",
+                },
+                "lsp_code_actions_on_save": {
+                  "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save"
+                }
+              }
+            }
+          }
+        }
       }
     ]
   }

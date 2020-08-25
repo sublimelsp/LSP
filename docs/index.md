@@ -113,7 +113,25 @@ Set `tcp_mode` to "host", leave `tcp_port` unset for automatic port selection.
 
 ### Per-project overrides
 
-Any global language server settings can be overridden per project by adding an LSP settings block to your `.sublime-project` file:
+Global LSP settings (which currently are `lsp_format_on_save` and `lsp_code_actions_on_save`) can be overridden per-project in `.sublime-project` file:
+
+```json
+{
+  "folders":
+  [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "lsp_format_on_save": true,
+  }
+}
+```
+
+Also global language server settings can be added or overridden per-project by adding an `LSP` object within the `settings` object. A new server configurations can be added there or existing global configurations can be overridden (either fully or partially). Those can override server configurations defined within the `clients` key in `LSP.sublime-settings` or those provided by external packages.
+
+> **Note**: The `settings` and `initializationOptions` objects for server configurations will be merged with globally defined server configurations so it's possible to override only certain properties from those objects.
 
 ```json
 {
@@ -128,9 +146,10 @@ Any global language server settings can be overridden per project by adding an L
       "jsts": {
         "enabled": false,
       },
-      "eslintls": {
+      "eslint": {
         "settings": {
-          "eslint.autoFixOnSave": true
+          "eslint.autoFixOnSave": true  // This property will be merged with original settings for
+                                        // this client (potentially overriding original value).
         }
       }
     }

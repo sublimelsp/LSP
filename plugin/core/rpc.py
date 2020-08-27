@@ -160,20 +160,16 @@ class Client(TransportCallbacks):
         handler, error_handler = self._response_handlers.pop(response_id, (None, None))
         if not handler:
             error = {"code": ErrorCode.InvalidParams, "message": "unknown response ID {}".format(response_id)}
-            return self.handle_response(response_id, print_to_status_bar, error, True)
+            return (print_to_status_bar, error, True)
         if "result" in response and "error" not in response:
-            return self.handle_response(response_id, handler, response["result"], False)
+            return (handler, response["result"], False)
         if not error_handler:
             error_handler = print_to_status_bar
         if "result" not in response and "error" in response:
             error = response["error"]
         else:
             error = {"code": ErrorCode.InvalidParams, "message": "invalid response payload"}
-        return self.handle_response(response_id, error_handler, error, True)
-
-    def handle_response(self, response_id: int, handler: Callable,
-                        result: Any, is_error: bool) -> Tuple[Optional[Callable], Any, bool]:
-        return (handler, result, is_error)
+        return (error_handler, error, True)
 
     def _get_handler(self, method: str) -> Optional[Callable]:
         return getattr(self, method2attr(method), None)

@@ -410,12 +410,6 @@
                     "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
                   },
                 },
-                "lsp_format_on_save": {
-                  "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save",
-                },
-                "lsp_code_actions_on_save": {
-                  "$ref": "sublime://settings/LSP#/definitions/lsp_code_actions_on_save"
-                }
               }
             }
           }

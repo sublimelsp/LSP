@@ -46,6 +46,7 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 * [Flow (JavaScript)](https://lsp.readthedocs.io/en/latest/#flow)
 * [Fortran](https://lsp.readthedocs.io/en/latest/#fortran)
 * [Go](https://lsp.readthedocs.io/en/latest/#go)
+* [Haskell](https://lsp.readthedocs.io/en/latest/#haskell)
 * [HTML](https://lsp.readthedocs.io/en/latest/#html)
 * [Java](https://lsp.readthedocs.io/en/latest/#java)
 * [JavaScript/TypeScript](https://lsp.readthedocs.io/en/latest/#typescript)

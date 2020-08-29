@@ -415,6 +415,11 @@ def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allo
                         "hardbreak": False,
                         "nbsp": False
                     }
+                },
+                {
+                    "pymdownx.magiclink": {
+                        "repo_url_shortener": True
+                    }
                 }
             ]
         }

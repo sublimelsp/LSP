@@ -1,6 +1,6 @@
 {
     "*": {
-        ">=3124": [
+        "3124 - 4069": [
             "pygments",
             "python-markdown",
             "mdpopups",
@@ -8,6 +8,16 @@
             "markupsafe",
             "pymdownx",
             "pyyaml"
+        ],
+        ">=4070": [
+            "pygments",
+            "python-markdown",
+            "mdpopups",
+            "python-jinja2",
+            "markupsafe",
+            "pymdownx",
+            "pyyaml",
+            "wcmatch"
         ]
     }
 }

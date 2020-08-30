@@ -418,6 +418,10 @@ def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allo
                 },
                 {
                     "pymdownx.magiclink": {
+                        # links are displayed without the initial ftp://, http://, https://, or ftps://.
+                        "hide_protocol": True,
+                        # GitHub, Bitbucket, and GitLab commit, pull, and issue links are are rendered in a shorthand
+                        # syntax.
                         "repo_url_shortener": True
                     }
                 }

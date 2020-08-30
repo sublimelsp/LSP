@@ -1,4 +1,3 @@
-import html
 import mdpopups
 import sublime
 import sublime_plugin
@@ -6,21 +5,19 @@ import webbrowser
 from .core.css import css
 from .core.logging import debug
 from .core.edit import parse_text_edit
-from .core.protocol import Request, InsertTextFormat, Range, CompletionItemTag
+from .core.protocol import Request, InsertTextFormat, Range
 from .core.registry import LspTextCommand
-from .core.registry import LSPViewEventListener
-from .core.sessions import Session
-from .core.settings import userprefs
-from .core.typing import Any, List, Dict, Optional, Union, Generator
-from .core.views import COMPLETION_KINDS
+from .core.typing import Any, List, Dict, Optional, Generator
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
-from .core.views import make_command_link
-from .core.views import text_document_position_params, range_to_region
+from .core.views import range_to_region
 
 
 class LspResolveDocsCommand(LspTextCommand):
+
+    completions = []  # type: List[Dict[str, Any]]
+
     def run(self, edit: sublime.Edit, index: int, event: Optional[dict] = None) -> None:
-        item = CompletionHandler.completions[index]
+        item = self.completions[index]
         detail = self.format_documentation(item.get('detail') or "")
         documentation = self.format_documentation(item.get("documentation") or "")
         # don't show the detail in the cooperate AC popup if it is already shown in the AC details filed.
@@ -141,167 +138,3 @@ class LspCompleteTextEditCommand(LspCompleteCommand):
 def resolve(completion_list: sublime.CompletionList, items: List[sublime.CompletionItem], flags: int = 0) -> None:
     # Resolve the promise on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).
     sublime.set_timeout(lambda: completion_list.set_completions(items, flags))
-
-
-def is_deprecated(item: dict) -> bool:
-    if item.get("deprecated", False):
-        return True
-    tags = item.get("tags")
-    if isinstance(tags, list):
-        return CompletionItemTag.Deprecated in tags
-    return False
-
-
-class CompletionHandler(LSPViewEventListener):
-    completions = []  # type: List[dict]
-
-    @classmethod
-    def is_applicable(cls, view_settings: dict) -> bool:
-        if 'completion' in userprefs().disabled_capabilities:
-            return False
-        return cls.has_supported_syntax(view_settings)
-
-    @classmethod
-    def applies_to_primary_view_only(cls) -> bool:
-        return False
-
-    def __del__(self) -> None:
-        settings = self.view.settings()
-        triggers = settings.get("auto_complete_triggers") or []  # type: List[Dict[str, str]]
-        triggers = [trigger for trigger in triggers if 'server' not in trigger]
-        settings.set("auto_complete_triggers", triggers)
-
-    def on_post_text_command(self, command: str, args: dict) -> None:
-        if not self.view.is_popup_visible():
-            return
-        if command in ["hide_auto_complete", "move", "commit_completion"] or 'delete' in command:
-            # hide the popup when `esc` or arrows are pressed pressed
-            self.view.hide_popup()
-
-    def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[sublime.CompletionList]:
-        promise = sublime.CompletionList()
-        sublime.set_timeout_async(lambda: self._on_query_completions_async(promise, locations[0]))
-        return promise
-
-    def _on_query_completions_async(self, promise: sublime.CompletionList, location: int) -> None:
-        session = self.session('completionProvider', location)
-        if not session:
-            resolve(promise, [])
-            return
-        self.apply_view_settings(session)
-        self.purge_changes_async()
-        can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
-        session.send_request(
-            Request.complete(text_document_position_params(self.view, location)),
-            lambda res: self.handle_response(res, promise, can_resolve_completion_items),
-            lambda res: self.handle_error(res, promise))
-
-    def apply_view_settings(self, session: Session) -> None:
-        settings = self.view.settings()
-        completion_triggers = settings.get('auto_complete_triggers') or []  # type: List[Dict[str, str]]
-        if any(trigger.get('server', None) == session.config.name for trigger in completion_triggers):
-            return
-        # This is to make ST match with labels that have a weird prefix like a space character.
-        settings.set('auto_complete_preserve_order', 'none')
-        trigger_chars = session.get_capability('completionProvider.triggerCharacters') or []
-        if trigger_chars:
-            completion_triggers.append({
-                'characters': "".join(trigger_chars),
-                # Heuristics: Don't auto-complete in comments, and don't trigger auto-complete when we're at the
-                # end of a string. We *do* want to trigger auto-complete in strings because of languages like
-                # Bash and some language servers are allowing the user to auto-complete file-system files in
-                # things like import statements. We may want to move this to the LSP.sublime-settings.
-                'selector': "- comment - punctuation.definition.string.end",
-                'server': session.config.name
-            })
-            settings.set('auto_complete_triggers', completion_triggers)
-
-    def format_completion(self, item: dict, index: int, can_resolve_completion_items: bool) -> sublime.CompletionItem:
-        # This is a hot function. Don't do heavy computations or IO in this function.
-        item_kind = item.get("kind")
-        if isinstance(item_kind, int) and 1 <= item_kind <= len(COMPLETION_KINDS):
-            kind = COMPLETION_KINDS[item_kind - 1]
-        else:
-            kind = sublime.KIND_AMBIGUOUS
-
-        if is_deprecated(item):
-            kind = (kind[0], '⚠', "⚠ {} - Deprecated".format(kind[2]))
-
-        lsp_label = item["label"]
-        lsp_filter_text = item.get("filterText")
-        lsp_detail = html.escape(item.get("detail") or "").replace('\n', ' ')
-
-        if lsp_filter_text and lsp_filter_text != lsp_label:
-            st_trigger = lsp_filter_text
-            st_annotation = lsp_label
-        else:
-            st_trigger = lsp_label
-            st_annotation = ""
-
-        st_details = ""
-        if can_resolve_completion_items or item.get("documentation"):
-            st_details += make_command_link("lsp_resolve_docs", "More", {"index": index})
-            st_details += " | " if lsp_detail else ""
-
-        st_details += "<p>{}</p>".format(lsp_detail)
-
-        # NOTE: Some servers return "textEdit": null. We have to check if it's truthy.
-        if item.get("textEdit"):
-            # text edits are complex and can do anything. Use a command completion.
-            completion = sublime.CompletionItem.command_completion(
-                trigger=st_trigger,
-                command="lsp_complete_text_edit",
-                args=item,
-                annotation=st_annotation,
-                kind=kind,
-                details=st_details)
-            completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
-        elif item.get("additionalTextEdits") or item.get("command"):
-            # It's an insertText, but additionalEdits or a command requires us to use a command completion.
-            completion = sublime.CompletionItem.command_completion(
-                trigger=st_trigger,
-                command="lsp_complete_insert_text",
-                args=item,
-                annotation=st_annotation,
-                kind=kind,
-                details=st_details)
-        else:
-            # A plain old completion suffices for insertText with no additionalTextEdits and no command.
-            if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.PlainText:
-                st_format = sublime.COMPLETION_FORMAT_TEXT
-            else:
-                st_format = sublime.COMPLETION_FORMAT_SNIPPET
-            completion = sublime.CompletionItem(
-                trigger=st_trigger,
-                annotation=st_annotation,
-                completion=item.get("insertText") or item["label"],
-                completion_format=st_format,
-                kind=kind,
-                details=st_details)
-
-        return completion
-
-    def handle_response(self, response: Optional[Union[dict, List]], completion_list: sublime.CompletionList,
-                        can_resolve_completion_items: bool) -> None:
-        response_items = []  # type: List[Dict]
-        flags = 0
-        if userprefs().only_show_lsp_completions:
-            flags |= sublime.INHIBIT_WORD_COMPLETIONS
-            flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
-            flags |= sublime.INHIBIT_REORDER
-        if isinstance(response, dict):
-            response_items = response["items"] or []
-            if response.get("isIncomplete", False):
-                flags |= sublime.DYNAMIC_COMPLETIONS
-        elif isinstance(response, list):
-            response_items = response
-        response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
-        CompletionHandler.completions = response_items
-        items = [self.format_completion(response_item, index, can_resolve_completion_items)
-                 for index, response_item in enumerate(response_items)]
-        resolve(completion_list, items, flags)
-
-    def handle_error(self, error: dict, completion_list: sublime.CompletionList) -> None:
-        resolve(completion_list, [])
-        CompletionHandler.completions = []
-        sublime.status_message('Completion error: ' + str(error.get('message')))

@@ -251,6 +251,11 @@ class ViewsTest(DeferrableTestCase):
         expect = ""
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_STRING), expect)
 
+    def test_minihtml_magiclinks(self) -> None:
+        content = {'value': 'https://github.com/sublimelsp/LSP', 'kind': 'markdown'}
+        expect = '<p><a href="https://github.com/sublimelsp/LSP">https://github.com/sublimelsp/LSP</a></p>'
+        self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT), expect)
+
     def _strip_style_attributes(self, content: str) -> str:
         return re.sub(r'\s+style="[^"]+"', '', content)
 

@@ -1,8 +1,7 @@
-from LSP.plugin.completion import CompletionHandler
 from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable
-from setup import TextDocumentTestCase, add_config, remove_config, text_config
-from unittesting import DeferrableTestCase
+from LSP.plugin.core.views import format_completion
+from setup import TextDocumentTestCase
 import sublime
 
 
@@ -24,33 +23,6 @@ additional_edits = {
         }
     ]
 }
-
-
-class InitializationTests(DeferrableTestCase):
-    def setUp(self) -> 'Generator':
-        self.view = sublime.active_window().new_file()
-
-    def test_is_not_applicable(self) -> None:
-        self.assertFalse(CompletionHandler.is_applicable(dict()))
-
-    def test_is_applicable(self) -> None:
-        add_config(text_config)
-        self.assertTrue(CompletionHandler.is_applicable(dict(syntax="Packages/Text/Plain text.tmLanguage")))
-        try:
-            remove_config(text_config)
-        except Exception:
-            pass
-
-    def doCleanups(self) -> 'Generator':
-        yield from super().doCleanups()
-        try:
-            remove_config(text_config)
-        except Exception:
-            pass
-        if self.view:
-            self.view.set_scratch(True)
-            self.view.window().focus_view(self.view)
-            self.view.window().run_command("close_file")
 
 
 class QueryCompletionsTests(TextDocumentTestCase):
@@ -612,8 +584,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             "kind": 2,  # Method
             "deprecated": True
         }
-        handler = CompletionHandler(self.view)
-        formatted_completion_item = handler.format_completion(item_with_deprecated_flag, 0, False)
+        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False)
         self.assertEqual('⚠', formatted_completion_item.kind[1])
         self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
 
@@ -623,7 +594,6 @@ class QueryCompletionsTests(TextDocumentTestCase):
             "kind": 2,  # Method
             "tags": [CompletionItemTag.Deprecated]
         }
-        handler = CompletionHandler(self.view)
-        formatted_completion_item = handler.format_completion(item_with_deprecated_tags, 0, False)
+        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False)
         self.assertEqual('⚠', formatted_completion_item.kind[1])
         self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])

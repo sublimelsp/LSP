@@ -490,7 +490,7 @@ class _RegistrationData:
                 self.session_buffers.add(sb)
                 sb.register_capability_async(
                     self.registration_id, self.capability_path, self.registration_path, self.options)
-            return
+                return
 
 
 class Session(Client):

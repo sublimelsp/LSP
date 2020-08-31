@@ -1,9 +1,12 @@
-// VSCode language ID -> SublimeText base scope selector
+// Language ID -> SublimeText base scope selector
 // These are the "exceptional" language IDs. If a language ID is not in this
 // map, then the rule is that we prepend the ID with "source." and assume
 // that's the base scope selector. For instance, the language ID "julia"
 // would become "source.julia", and the language ID "rust" would become
 // "source.rust".
+//
+// The official list is maintained at
+// https://microsoft.github.io/language-server-protocol/specification#textDocumentItem
 //
 // If you believe an entry in this dictionary is missing, please submit a pull
 // request at github.com/sublimelsp/LSP.

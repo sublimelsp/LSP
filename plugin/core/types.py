@@ -242,7 +242,7 @@ class DocumentFilter:
         self.pattern = pattern
         self.feature_selector = feature_selector
         if language:
-            # This the connection between VSCode language IDs and ST selectors.
+            # This the connection between Language IDs and ST selectors.
             lang_id_map = sublime.load_settings("language-ids.sublime-settings")
             self.selector = lang_id_map.get(language, "source.{}".format(language))  # type: Optional[str]
         else:

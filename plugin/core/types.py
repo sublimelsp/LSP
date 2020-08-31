@@ -3,6 +3,7 @@ from .logging import debug
 from .protocol import TextDocumentSyncKindNone
 from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, TypeVar, Tuple
 from threading import RLock
+from wcmatch.glob import globmatch
 import contextlib
 import functools
 import sublime
@@ -257,8 +258,8 @@ class DocumentFilter:
             # Can be "file" or "untitled"?
             pass
         if self.pattern:
-            # TODO: use facelessuser's wcmatch library here
-            pass
+            if not globmatch(view.file_name() or "", self.pattern):
+                return False
         return True
 
     def score_feature(self, view: sublime.View, pt: int) -> int:

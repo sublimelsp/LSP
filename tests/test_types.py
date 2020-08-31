@@ -1,5 +1,9 @@
-import unittest
 from LSP.plugin.core.types import diff
+from LSP.plugin.core.types import DocumentSelector
+from LSP.plugin.core.typing import List
+from unittest.mock import MagicMock
+import sublime
+import unittest
 
 
 class TestDiff(unittest.TestCase):
@@ -34,3 +38,36 @@ class TestDiff(unittest.TestCase):
         added, removed = diff(set(), new)
         self.assertEqual(added, new)
         self.assertFalse(removed)
+
+
+class TestDocumentSelector(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self._opened_views = []  # type: List[sublime.View]
+
+    def tearDown(self) -> None:
+        for view in self._opened_views:
+            view.close()
+        self._opened_views.clear()
+
+    def _make_view(self, syntax: str, file_name: str) -> sublime.View:
+        view = sublime.active_window().new_file(0, syntax)
+        self._opened_views.append(view)
+        view.set_scratch(True)
+        self.assertFalse(view.is_loading())
+        view.file_name = MagicMock(return_value=file_name)
+        return view
+
+    def test_language(self) -> None:
+        selector = DocumentSelector([{"language": "txt"}])
+        view = self._make_view("Packages/Text/Plain text.tmLanguage", "foobar.txt")
+        self.assertTrue(selector.matches(view))
+        view = self._make_view("Packages/Python/Python.sublime-syntax", "hello.py")
+        self.assertFalse(selector.matches(view))
+
+    def test_pattern(self) -> None:
+        selector = DocumentSelector([{"language": "html", "pattern": "**/*.component.html"}])
+        view = self._make_view("Packages/HTML/HTML.sublime-syntax", "index.html")
+        self.assertFalse(selector.matches(view))
+        view = self._make_view("Packages/HTML/HTML.sublime-syntax", "components/foo.component.html")
+        self.assertTrue(selector.matches(view))

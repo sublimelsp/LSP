@@ -1,5 +1,7 @@
 from .code_actions import actions_manager
 from .code_actions import CodeActionsByConfigName
+from .completion import LspResolveDocsCommand
+from .completion import resolve
 from .core.css import css
 from .core.logging import debug
 from .core.protocol import Diagnostic
@@ -16,6 +18,7 @@ from .core.types import debounced
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import document_color_params
+from .core.views import format_completion
 from .core.views import FORMAT_MARKUP_CONTENT
 from .core.views import FORMAT_STRING
 from .core.views import lsp_color_to_phantom
@@ -169,6 +172,10 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         self._text_change_listener_found = False
 
     def __del__(self) -> None:
+        settings = self.view.settings()
+        triggers = settings.get("auto_complete_triggers") or []  # type: List[Dict[str, str]]
+        triggers = [trigger for trigger in triggers if 'server' not in trigger]
+        settings.set("auto_complete_triggers", triggers)
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms.update([])
         self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
@@ -324,6 +331,18 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         if command_name in ("next_field", "prev_field") and args is None:
             if "signatureHelp" not in userprefs().disabled_capabilities:
                 sublime.set_timeout_async(self._do_signature_help)
+        if not self.view.is_popup_visible():
+            return
+        if command_name in ["hide_auto_complete", "move", "commit_completion"] or 'delete' in command_name:
+            # hide the popup when `esc` or arrows are pressed pressed
+            self.view.hide_popup()
+
+    def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[sublime.CompletionList]:
+        if "completion" in userprefs().disabled_capabilities:
+            return None
+        promise = sublime.CompletionList()
+        sublime.set_timeout_async(lambda: self._on_query_completions_async(promise, locations[0]))
+        return promise
 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
 
@@ -481,6 +500,66 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
                 scope = userprefs().document_highlight_scopes.get(kind_str, None)
                 if scope:
                     self.view.add_regions("lsp_highlight_{}".format(kind_str), regions, scope=scope, flags=flags)
+
+    # --- textDocument/complete ----------------------------------------------------------------------------------------
+
+    def _on_query_completions_async(self, promise: sublime.CompletionList, location: int) -> None:
+        session = self.session('completionProvider', location)
+        if not session:
+            resolve(promise, [])
+            return
+        self._apply_view_settings(session)
+        self.purge_changes_async()
+        can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
+        session.send_request(
+            Request.complete(text_document_position_params(self.view, location)),
+            lambda res: self._on_complete_result(res, promise, can_resolve_completion_items),
+            lambda res: self._on_complete_error(res, promise))
+
+    def _apply_view_settings(self, session: Session) -> None:
+        settings = self.view.settings()
+        completion_triggers = settings.get('auto_complete_triggers') or []  # type: List[Dict[str, str]]
+        if any(trigger.get('server', None) == session.config.name for trigger in completion_triggers):
+            return
+        # This is to make ST match with labels that have a weird prefix like a space character.
+        settings.set('auto_complete_preserve_order', 'none')
+        trigger_chars = session.get_capability('completionProvider.triggerCharacters') or []
+        if trigger_chars:
+            completion_triggers.append({
+                'characters': "".join(trigger_chars),
+                # Heuristics: Don't auto-complete in comments, and don't trigger auto-complete when we're at the
+                # end of a string. We *do* want to trigger auto-complete in strings because of languages like
+                # Bash and some language servers are allowing the user to auto-complete file-system files in
+                # things like import statements. We may want to move this to the LSP.sublime-settings.
+                'selector': "- comment - punctuation.definition.string.end",
+                'server': session.config.name
+            })
+            settings.set('auto_complete_triggers', completion_triggers)
+
+    def _on_complete_result(self, response: Optional[Union[dict, List]], completion_list: sublime.CompletionList,
+                            can_resolve_completion_items: bool) -> None:
+        response_items = []  # type: List[Dict]
+        flags = 0
+        if userprefs().only_show_lsp_completions:
+            flags |= sublime.INHIBIT_WORD_COMPLETIONS
+            flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
+            flags |= sublime.INHIBIT_REORDER
+        if isinstance(response, dict):
+            response_items = response["items"] or []
+            if response.get("isIncomplete", False):
+                flags |= sublime.DYNAMIC_COMPLETIONS
+        elif isinstance(response, list):
+            response_items = response
+        response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
+        LspResolveDocsCommand.completions = response_items
+        items = [format_completion(response_item, index, can_resolve_completion_items)
+                 for index, response_item in enumerate(response_items)]
+        resolve(completion_list, items, flags)
+
+    def _on_complete_error(self, error: dict, completion_list: sublime.CompletionList) -> None:
+        resolve(completion_list, [])
+        LspResolveDocsCommand.completions = []
+        sublime.status_message('Completion error: ' + str(error.get('message')))
 
     # --- Public utility methods ---------------------------------------------------------------------------------------
 

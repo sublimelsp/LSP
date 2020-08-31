@@ -1,8 +1,10 @@
 from .collections import DottedDict
 from .css import css
+from .protocol import CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
 from .protocol import DiagnosticSeverity
+from .protocol import InsertTextFormat
 from .protocol import Notification
 from .protocol import Point
 from .protocol import Range
@@ -10,6 +12,7 @@ from .protocol import Request
 from .typing import Optional, Dict, Any, Iterable, List, Union, Callable
 from .url import filename_to_uri
 from .url import uri_to_filename
+import html
 import linecache
 import mdpopups
 import os
@@ -581,3 +584,78 @@ def diagnostic_to_phantom(
         sublime.LAYOUT_BELOW,
         on_navigate
     )
+
+
+def _is_completion_item_deprecated(item: dict) -> bool:
+    if item.get("deprecated", False):
+        return True
+    tags = item.get("tags")
+    if isinstance(tags, list):
+        return CompletionItemTag.Deprecated in tags
+    return False
+
+
+def format_completion(item: dict, index: int, can_resolve_completion_items: bool) -> sublime.CompletionItem:
+    # This is a hot function. Don't do heavy computations or IO in this function.
+    item_kind = item.get("kind")
+    if isinstance(item_kind, int) and 1 <= item_kind <= len(COMPLETION_KINDS):
+        kind = COMPLETION_KINDS[item_kind - 1]
+    else:
+        kind = sublime.KIND_AMBIGUOUS
+
+    if _is_completion_item_deprecated(item):
+        kind = (kind[0], '⚠', "⚠ {} - Deprecated".format(kind[2]))
+
+    lsp_label = item["label"]
+    lsp_filter_text = item.get("filterText")
+    lsp_detail = html.escape(item.get("detail") or "").replace('\n', ' ')
+
+    if lsp_filter_text and lsp_filter_text != lsp_label:
+        st_trigger = lsp_filter_text
+        st_annotation = lsp_label
+    else:
+        st_trigger = lsp_label
+        st_annotation = ""
+
+    st_details = ""
+    if can_resolve_completion_items or item.get("documentation"):
+        st_details += make_command_link("lsp_resolve_docs", "More", {"index": index})
+        st_details += " | " if lsp_detail else ""
+
+    st_details += "<p>{}</p>".format(lsp_detail)
+
+    # NOTE: Some servers return "textEdit": null. We have to check if it's truthy.
+    if item.get("textEdit"):
+        # text edits are complex and can do anything. Use a command completion.
+        completion = sublime.CompletionItem.command_completion(
+            trigger=st_trigger,
+            command="lsp_complete_text_edit",
+            args=item,
+            annotation=st_annotation,
+            kind=kind,
+            details=st_details)
+        completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
+    elif item.get("additionalTextEdits") or item.get("command"):
+        # It's an insertText, but additionalEdits or a command requires us to use a command completion.
+        completion = sublime.CompletionItem.command_completion(
+            trigger=st_trigger,
+            command="lsp_complete_insert_text",
+            args=item,
+            annotation=st_annotation,
+            kind=kind,
+            details=st_details)
+    else:
+        # A plain old completion suffices for insertText with no additionalTextEdits and no command.
+        if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.PlainText:
+            st_format = sublime.COMPLETION_FORMAT_TEXT
+        else:
+            st_format = sublime.COMPLETION_FORMAT_SNIPPET
+        completion = sublime.CompletionItem(
+            trigger=st_trigger,
+            annotation=st_annotation,
+            completion=item.get("insertText") or item["label"],
+            completion_format=st_format,
+            kind=kind,
+            details=st_details)
+
+    return completion

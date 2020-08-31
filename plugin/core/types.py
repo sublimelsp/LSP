@@ -3,7 +3,9 @@ from .logging import debug
 from .protocol import TextDocumentSyncKindNone
 from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, TypeVar, Tuple
 from threading import RLock
+from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
+from wcmatch.glob import GLOBSTAR
 import contextlib
 import functools
 import sublime
@@ -258,7 +260,7 @@ class DocumentFilter:
             # Can be "file" or "untitled"?
             pass
         if self.pattern:
-            if not globmatch(view.file_name() or "", self.pattern):
+            if not globmatch(view.file_name() or "", self.pattern, flags=GLOBSTAR | BRACE):
                 return False
         return True
 

@@ -1,5 +1,8 @@
 from typing import Any, Optional
 
+BRACE: int = ...
+GLOBSTAR: int = ...
+
 
 def globmatch(
     filename: Any,

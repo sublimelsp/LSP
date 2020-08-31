@@ -281,7 +281,7 @@ class DocumentSelector:
 
     def matches(self, view: sublime.View) -> bool:
         """Does this selector match the view? A selector with no filters matches all views."""
-        return any(filter(lambda f: f.matches(view), self.filters)) if self.filters else True  # type: ignore
+        return any(f.matches(view) for f in self.filters) if self.filters else True
 
 
 class LanguageConfig:

@@ -586,7 +586,7 @@ def diagnostic_to_phantom(
     )
 
 
-def _is_deprecated(item: dict) -> bool:
+def _is_completion_item_deprecated(item: dict) -> bool:
     if item.get("deprecated", False):
         return True
     tags = item.get("tags")
@@ -603,7 +603,7 @@ def format_completion(item: dict, index: int, can_resolve_completion_items: bool
     else:
         kind = sublime.KIND_AMBIGUOUS
 
-    if _is_deprecated(item):
+    if _is_completion_item_deprecated(item):
         kind = (kind[0], '⚠', "⚠ {} - Deprecated".format(kind[2]))
 
     lsp_label = item["label"]

@@ -34,7 +34,7 @@
                 "languageId": {
                   "type": "string",
                   "default": "somelang",
-                  "markdownDescription": "The VSCode \"Language ID\". This value serves two purposes:\n\n1. It is sent to the language server so that it knows with what kind of file it is dealing with.\n2. When `\"document_selector\"` is not provided, this is the connection between your files and language servers.\n\nFor more information, refer to the [textDocumentItem of the LSP specification](https://microsoft.github.io/language-server-protocol/specification#textDocumentItem)."
+                  "markdownDescription": "The \"Language ID\". This value serves two purposes:\n\n1. It is sent to the language server so that it knows with what kind of file it is dealing with.\n2. When `\"document_selector\"` is not provided, this is the connection between your files and language servers.\n\nFor more information, refer to the [textDocumentItem of the LSP specification](https://microsoft.github.io/language-server-protocol/specification#textDocumentItem)."
                 },
                 "document_selector": {
                   "type": "string",

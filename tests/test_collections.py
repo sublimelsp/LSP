@@ -130,3 +130,10 @@ class DottedDictTests(TestCase):
         self.assertEqual(d_copy['c'], 'd')
         d_copy['c'] = None
         self.assertNotEqual(d.get('a.b.c'), d_copy['c'])
+
+    def test_update_empty_dict(self) -> None:
+        d = DottedDict({})
+        d.update({"a": {}})
+        self.assertEqual(d.get(), {"a": {}})
+        d.update({"a": {"b": {}}})
+        self.assertEqual(d.get(), {"a": {"b": {}}})

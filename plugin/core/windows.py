@@ -15,6 +15,7 @@ from .rpc import Logger
 from .sessions import get_plugin
 from .sessions import Manager
 from .sessions import Session
+from .sessions import SessionViewProtocol
 from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
@@ -72,6 +73,10 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def update_diagnostic_in_status_bar_async(self) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def session_views_async(self) -> Iterable[SessionViewProtocol]:
         raise NotImplementedError()
 
 

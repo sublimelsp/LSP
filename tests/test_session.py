@@ -134,6 +134,19 @@ class SessionTest(unittest.TestCase):
 
         session.capabilities.assign({
             'textDocumentSync': {
+                "didOpen": {},
+                "didClose": {},
+                "change": TextDocumentSyncKindFull,
+                "save": True}})  # A boolean with value true means "send didSave"
+        self.assertTrue(session.should_notify_did_open())
+        self.assertTrue(session.should_notify_did_close())
+        self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindFull)
+        self.assertTrue(session.should_notify_did_change())
+        self.assertFalse(session.should_notify_will_save())
+        self.assertEqual(session.should_notify_did_save(), (True, False))
+
+        session.capabilities.assign({
+            'textDocumentSync': {
                 "openClose": False,
                 "change": TextDocumentSyncKindNone,
                 "save": {},  # An empty dict means "send didSave"

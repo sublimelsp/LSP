@@ -132,6 +132,8 @@ class DottedDict:
                 self.set(key, value)
 
     def _update_recursive(self, current: Dict[str, Any], prefix: str) -> None:
+        if not current:
+            return self.set(prefix, current)
         for key, value in current.items():
             path = "{}.{}".format(prefix, key)
             if isinstance(value, dict):

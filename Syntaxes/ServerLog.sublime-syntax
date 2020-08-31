@@ -6,7 +6,7 @@ hidden: true
 scope: output.lsp.log
 
 variables:
-  method: '[[:alnum:]/$]+'
+  method: '[[:alnum:]/$#]+'
   servername: '[[:alnum:]_-]+'
   id: '[^\s:]+'
 

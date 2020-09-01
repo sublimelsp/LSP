@@ -68,7 +68,7 @@ class ServerRequests(TextDocumentTestCase):
                      "registerOptions": {"documentSelector": [{"language": "txt"}]}},
                     {"method": "textDocument/didChange", "id": "adsf",
                      "registerOptions": {"syncKind": TextDocumentSyncKindFull, "documentSelector": [
-                       {"language": "txt", "pattern": "**/*.txt"}
+                       {"language": "txt"}
                      ]}}
                 ]
             },

@@ -98,12 +98,14 @@ class LspColorListener(sublime_plugin.ViewEventListener):
             alpha = color['alpha']
 
             content = """
-            <style>html {{padding: 0}}</style>
+            <style>html {{padding: 0; background-color: var(--background)}}</style>
+            <body id='lsp-color-box'>
             <div style='padding: 0.4em;
                         margin-top: 0.2em;
                         border: 1px solid color(var(--foreground) alpha(0.25));
                         background-color: rgba({}, {}, {}, {})'>
-            </div>""".format(red, green, blue, alpha)
+            </div>
+            </body>""".format(red, green, blue, alpha)
 
             range = Range.from_lsp(color_info['range'])
             region = range_to_region(range, self.view)

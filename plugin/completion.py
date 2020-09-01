@@ -35,11 +35,11 @@ class LspResolveDocsCommand(LspTextCommand):
         return minihtml(self.view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
 
     def get_content(self, documentation: str, detail: str) -> str:
-        content = ""
+        content = mdpopups.format_frontmatter({"allow_code_wrap": True})
         if detail and not self.is_detail_shown:
-            content += "<div class='highlight' style='margin: 6px'>{}</div>".format(detail)
+            content += "<div class='highlight'>{}</div>".format(detail)
         if documentation:
-            content += "<div style='margin: 6px'>{}</div>".format(documentation)
+            content += "<div>{}</div>".format(documentation)
         return content
 
     def show_popup(self, minihtml_content: str) -> None:
@@ -51,7 +51,6 @@ class LspResolveDocsCommand(LspTextCommand):
             css=css().popups,
             wrapper_class=css().popups_classname,
             max_width=viewport_width,
-            allow_code_wrap=True,
             on_navigate=self.on_navigate
         )
 
@@ -79,7 +78,12 @@ class LspResolveDocsCommand(LspTextCommand):
         sublime.set_timeout(lambda: show(minihtml_content))
 
     def update_popup(self, minihtml_content: str) -> None:
-        mdpopups.update_popup(self.view, minihtml_content)
+        mdpopups.update_popup(
+            self.view,
+            minihtml_content,
+            css=css().popups,
+            wrapper_class=css().popups_classname,
+        )
 
 
 class LspCompleteCommand(sublime_plugin.TextCommand):

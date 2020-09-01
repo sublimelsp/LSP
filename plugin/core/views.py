@@ -476,12 +476,14 @@ def make_command_link(command: str, text: str, command_args: Optional[dict] = No
 
 
 COLOR_BOX_HTML = """
-<style>html {{padding: 0}}</style>
+<style>html {{padding: 0; background-color: var(--background)}}</style>
+<body id='lsp-color-box'>
 <div style='padding: 0.4em;
             margin-top: 0.2em;
             border: 1px solid color(var(--foreground) alpha(0.25));
             background-color: rgba({}, {}, {}, {})'>
-</div>"""
+</div>
+</body>"""
 
 
 def lsp_color_to_html(color_info: Dict[str, Any]) -> str:

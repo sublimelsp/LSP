@@ -576,7 +576,7 @@ class Session(Client):
         file_name = uri_to_filename(uri)
         for sb in self.session_buffers_async():
             try:
-                if os.path.samefile(file_name, sb.file_name):
+                if sb.file_name == file_name or os.path.samefile(file_name, sb.file_name):
                     return sb
             except FileNotFoundError:
                 pass

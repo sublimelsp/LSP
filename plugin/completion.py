@@ -35,7 +35,7 @@ class LspResolveDocsCommand(LspTextCommand):
         return minihtml(self.view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
 
     def get_content(self, documentation: str, detail: str) -> str:
-        content = mdpopups.format_frontmatter({"allow_code_wrap": True})
+        content = ""
         if detail and not self.is_detail_shown:
             content += "<div class='highlight'>{}</div>".format(detail)
         if documentation:

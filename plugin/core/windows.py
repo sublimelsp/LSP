@@ -486,10 +486,8 @@ class WindowManager(Manager):
             self._window.run_command("lsp_next_diagnostic")
         elif href == "previous":
             self._window.run_command("lsp_previous_diagnostic")
-        elif href.startswith("location"):
-            # todo: share with hover?
-            _, file_path, location = href.split(":", 2)
-            self._window.open_file(file_path + ":" + location, sublime.ENCODED_POSITION | sublime.TRANSIENT)
+        elif href.startswith("file://"):
+            self._window.open_file(href[len("file://"):], sublime.ENCODED_POSITION)
 
     def _clear_diagnostic_phantom(self) -> None:
         if self._diagnostic_phantom_set:

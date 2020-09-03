@@ -6,6 +6,7 @@ from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .code_actions import run_code_action_or_command
 from .core.css import css
+from .core.logging import debug
 from .core.protocol import Request, Diagnostic
 from .core.registry import LspTextCommand
 from .core.registry import windows
@@ -174,21 +175,27 @@ class LspHoverCommand(LspTextCommand):
                     location=point,
                     wrapper_class=css().popups_classname,
                     max_width=800,
-                    on_navigate=lambda href: self.on_hover_navigate(href, point))
+                    on_navigate=lambda href: self._on_navigate(href, point))
 
-    def on_hover_navigate(self, href: str, point: int) -> None:
-        if href.startswith('subl:'):
+    def _on_navigate(self, href: str, point: int) -> None:
+        if href.startswith("subl:"):
             pass
-        elif href.startswith('code-actions'):
+        elif href.startswith('code-actions:'):
             _, config_name = href.split(":")
             titles = [command["title"] for command in self._actions_by_config[config_name]]
             sel = self.view.sel()
             sel.clear()
             sel.add(sublime.Region(point, point))
-
             self.view.show_popup_menu(titles, lambda i: self.handle_code_action_select(config_name, i))
+        elif href.startswith("file://"):
+            window = self.view.window()
+            if window:
+                window.open_file(href[len("file://"):], flags=sublime.ENCODED_POSITION)
         else:
-            webbrowser.open_new_tab(href)
+            if not (href.lower().startswith("http://") or href.lower().startswith("https://")):
+                href = "http://" + href
+            if not webbrowser.open(href):
+                debug("failed to open:", href)
 
     def handle_code_action_select(self, config_name: str, index: int) -> None:
         if index > -1:

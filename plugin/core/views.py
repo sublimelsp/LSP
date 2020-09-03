@@ -520,7 +520,7 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> str:
     return formatted
 
 
-def format_diagnostic_related_info(info: DiagnosticRelatedInformation, base_dir: Optional[str] = None) -> str:
+def _format_diagnostic_related_info(info: DiagnosticRelatedInformation, base_dir: Optional[str] = None) -> str:
     file_path = info.location.file_path
     if base_dir and file_path.startswith(base_dir):
         file_path = os.path.relpath(file_path, base_dir)
@@ -528,12 +528,12 @@ def format_diagnostic_related_info(info: DiagnosticRelatedInformation, base_dir:
     col = info.location.range.start.col + 1
     encoded_filename = "{}:{}:{}".format(info.location.file_path, row, col)
     file_path = "{}:{}:{}".format(file_path, row, col)
-    return '<a href="{}">{}</a>: {}'.format(encoded_filename, text2html(file_path), text2html(info.message))
+    return '<a href="file://{}">{}</a>: {}'.format(encoded_filename, text2html(file_path), text2html(info.message))
 
 
 def format_diagnostic_for_html(diagnostic: Diagnostic, base_dir: Optional[str] = None) -> str:
     diagnostic_message = text2html(diagnostic.message)
-    related_infos = [format_diagnostic_related_info(info, base_dir) for info in diagnostic.related_info]
+    related_infos = [_format_diagnostic_related_info(info, base_dir) for info in diagnostic.related_info]
     related_content = "<pre class='related_info'>" + "<br>".join(related_infos) + "</pre>" if related_infos else ""
     if diagnostic.source:
         content = "[{}] {}{}".format(diagnostic.source, diagnostic_message, related_content)
@@ -577,7 +577,7 @@ def diagnostic_to_phantom(
         message = "<p>[{}] {}</p>".format(diagnostic.source, message)
     else:
         message = "<p>{}</p>".format(message)
-    additional_infos = "<br>".join([format_diagnostic_related_info(info, base_dir) for info in diagnostic.related_info])
+    additional_infos = "<br>".join([_format_diagnostic_related_info(i, base_dir) for i in diagnostic.related_info])
     severity = "error" if diagnostic.severity == DiagnosticSeverity.Error else "warning"
     content = message + "<p class='additional'>" + additional_infos + "</p>" if additional_infos else message
     return sublime.Phantom(

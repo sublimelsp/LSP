@@ -122,7 +122,7 @@
                   "$ref": "#/definitions/ClientInitializationOptions"
                 },
                 "settings": {
-                  "ref": "#/definitions/ClientSettings"
+                  "$ref": "#/definitions/ClientSettings"
                 },
                 "experimental_capabilities": {
                   "$ref": "#/definitions/ClientExperimentalCapabilities",
@@ -440,7 +440,7 @@
               "$ref": "sublime://settings/LSP#/definitions/ClientInitializationOptions"
             },
             "settings": {
-              "ref": "sublime://settings/LSP#/definitions/ClientSettings"
+              "$ref": "sublime://settings/LSP#/definitions/ClientSettings"
             },
             "experimental_capabilities": {
               "$ref": "sublime://settings/LSP#/definitions/ClientExperimentalCapabilities",

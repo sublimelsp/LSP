@@ -185,7 +185,7 @@ class ViewsTest(DeferrableTestCase):
 
     def test_minihtml_format_string(self) -> None:
         content = "<div>text\n</div>"
-        expect = "&lt;div&gt;text<br>&lt;/div&gt;"
+        expect = "<p>&lt;div&gt;text<br>&lt;/div&gt;</p>"
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_STRING), expect)
 
     def test_minihtml_format_marked_string(self) -> None:
@@ -200,7 +200,7 @@ class ViewsTest(DeferrableTestCase):
 
     def test_minihtml_handles_markup_content_plaintext(self) -> None:
         content = {'value': 'type TVec2i = specialize TGVec2<Integer>', 'kind': 'plaintext'}
-        expect = "type TVec2i = specialize TGVec2&lt;Integer&gt;"
+        expect = "<p>type TVec2i = specialize TGVec2&lt;Integer&gt;</p>"
         allowed_formats = FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT
         self.assertEqual(minihtml(self.view, content, allowed_formats=allowed_formats), expect)
 

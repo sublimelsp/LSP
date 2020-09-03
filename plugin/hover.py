@@ -187,10 +187,10 @@ class LspHoverCommand(LspTextCommand):
             sel.clear()
             sel.add(sublime.Region(point, point))
             self.view.show_popup_menu(titles, lambda i: self.handle_code_action_select(config_name, i))
-        elif href.startswith("file://"):
+        elif href.startswith("location:"):
             window = self.view.window()
             if window:
-                window.open_file(href[len("file://"):], flags=sublime.ENCODED_POSITION)
+                window.open_file(href[len("location:"):], flags=sublime.ENCODED_POSITION)
         else:
             if not (href.lower().startswith("http://") or href.lower().startswith("https://")):
                 href = "http://" + href

@@ -528,7 +528,7 @@ def _format_diagnostic_related_info(info: DiagnosticRelatedInformation, base_dir
     col = info.location.range.start.col + 1
     encoded_filename = "{}:{}:{}".format(info.location.file_path, row, col)
     file_path = "{}:{}:{}".format(file_path, row, col)
-    return '<a href="file://{}">{}</a>: {}'.format(encoded_filename, text2html(file_path), text2html(info.message))
+    return '<a href="location:{}">{}</a>: {}'.format(encoded_filename, text2html(file_path), text2html(info.message))
 
 
 def format_diagnostic_for_html(diagnostic: Diagnostic, base_dir: Optional[str] = None) -> str:

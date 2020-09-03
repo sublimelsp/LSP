@@ -408,7 +408,7 @@ def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allo
             is_plain_text = False
             result = "```{}\n{}\n```\n".format(language, value)
     if is_plain_text:
-        return text2html(result)
+        return "<p>{}</p>".format(text2html(result)) if result else ''
     else:
         frontmatter = {
             "allow_code_wrap": True,

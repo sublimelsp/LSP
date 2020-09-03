@@ -1,0 +1,12 @@
+=> 4070-1.0.11
+
+- Fix related diagnostic links not working (#1293) (Raoul Wols)
+- Use common popups styling for the documentation popup (#1290) (Rafał Chłodnicki)
+- Fix diagnostics not being displayed in the view for virtual files (Rafał Chłodnicki)
+- Add id for color box phantoms (Janos Wortmann)
+- Implement pattern matching for DocumentFilter (#1286) (Raoul Wols)
+- Capabilities per SessionBuffer (#1282) (Raoul Wols)
+- Hide the scheme in markdown magic links (Raoul Wols)
+- Auto-create links with pymdownx magiclink (#1281) (Raoul Wols)
+- Update README.md for Haskell (Nikos Baxevanis)
+- Make symbol highlight faster by reducing the debounce time (#1271) (Предраг Николић / Predrag Nikolic)

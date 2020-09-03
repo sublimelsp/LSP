@@ -8,8 +8,9 @@ from .core.protocol import Diagnostic
 from .core.protocol import DocumentHighlightKind
 from .core.protocol import Range
 from .core.protocol import Request
+from .core.registry import best_session
 from .core.registry import get_position
-from .core.registry import LSPViewEventListener
+from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.signature_help import create_signature_help
@@ -28,6 +29,7 @@ from .core.views import range_to_region
 from .core.views import region_to_range
 from .core.views import text_document_position_params
 from .core.windows import AbstractViewListener
+from .core.windows import WindowManager
 from .diagnostics import filter_by_range
 from .diagnostics import view_diagnostics
 from .session_buffer import SessionBuffer
@@ -150,7 +152,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         return "TextChangeListener({})".format(self.buffer.buffer_id)
 
 
-class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
+class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListener):
 
     CODE_ACTIONS_KEY = "lsp_code_action"
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
@@ -164,6 +166,7 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
+        self._manager = None  # type: Optional[WindowManager]
         self._session_views = {}  # type: Dict[str, SessionView]
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
@@ -562,6 +565,20 @@ class DocumentSyncListener(LSPViewEventListener, AbstractViewListener):
         sublime.status_message('Completion error: ' + str(error.get('message')))
 
     # --- Public utility methods ---------------------------------------------------------------------------------------
+
+    @property
+    def manager(self) -> WindowManager:  # TODO: Return type is an Optional[WindowManager] !
+        if not self._manager:
+            window = self.view.window()
+            if window:
+                self._manager = windows.lookup(window)
+        return self._manager  # type: ignore
+
+    def sessions(self, capability: Optional[str]) -> Generator[Session, None, None]:
+        yield from self.manager.sessions(self.view, capability)
+
+    def session(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
+        return best_session(self.view, self.sessions(capability), point)
 
     def get_capability_async(self, session: Session, capability_path: str) -> Optional[Any]:
         for sv in self.session_views_async():

@@ -192,6 +192,7 @@ class LspHoverCommand(LspTextCommand):
             if window:
                 window.open_file(href[len("location:"):], flags=sublime.ENCODED_POSITION)
         else:
+            # NOTE: Remove this check when on py3.8.
             if not (href.lower().startswith("http://") or href.lower().startswith("https://")):
                 href = "http://" + href
             if not webbrowser.open(href):

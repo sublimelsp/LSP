@@ -2,38 +2,9 @@ from .configurations import ConfigManager
 from .sessions import Session
 from .settings import client_configs
 from .typing import Optional, Any, Generator, Iterable
-from .windows import WindowManager
 from .windows import WindowRegistry
 import sublime
 import sublime_plugin
-
-
-class LSPViewEventListener(sublime_plugin.ViewEventListener):
-    def __init__(self, view: sublime.View) -> None:
-        self._manager = None  # type: Optional[WindowManager]
-        super().__init__(view)
-
-    @classmethod
-    def has_supported_syntax(cls, view_settings: dict) -> bool:
-        syntax = view_settings.get('syntax')
-        return bool(syntax and client_configs.is_syntax_supported(syntax))
-
-    @property
-    def manager(self) -> WindowManager:  # TODO: Return type is an Optional[WindowManager] !
-        if not self._manager:
-            window = self.view.window()
-            if window:
-                self._manager = windows.lookup(window)
-        return self._manager  # type: ignore
-
-    def has_manager(self) -> bool:
-        return self._manager is not None
-
-    def sessions(self, capability: Optional[str]) -> Generator[Session, None, None]:
-        yield from self.manager.sessions(self.view, capability)
-
-    def session(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
-        return _best_session(self.view, self.sessions(capability), point)
 
 
 def sessions_for_view(view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
@@ -46,7 +17,7 @@ def sessions_for_view(view: sublime.View, capability: Optional[str] = None) -> G
         yield from manager.sessions(view, capability)
 
 
-def _best_session(view: sublime.View, sessions: Iterable[Session], point: Optional[int] = None) -> Optional[Session]:
+def best_session(view: sublime.View, sessions: Iterable[Session], point: Optional[int] = None) -> Optional[Session]:
     if point is None:
         try:
             point = view.sel()[0].b
@@ -101,7 +72,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
         return True
 
     def best_session(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
-        return _best_session(self.view, self.sessions(capability), point)
+        return best_session(self.view, self.sessions(capability), point)
 
     def session_by_name(self, name: Optional[str] = None) -> Optional[Session]:
         target = name if name else self.session_name

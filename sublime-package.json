@@ -26,7 +26,34 @@
               "type": "string",
               "deprecationMessage": "Use \"languages\" instead."
             },
-            // The LanguageConfig class
+            "ClientInitializationOptions": {
+              "type": "object",
+              "markdownDescription": "The initializationOptions that are passed to the language server process during the _initialize_ phase. This is a rather free-form dictionary of key-value pairs and is different per language server. Look up documentation of your specific langauge server to see what the possible key-value pairs can be."
+            },
+            "ClientSettings": {
+              "type": "object",
+              "markdownDescription": "The server settings. This is a rather free-form dictionary of key-value pairs and is different per language server. Look up documentation of your specific langauge server to see what the possible key-value pairs can be."
+            },
+            "ClientExperimentalCapabilities": {
+              "type": "object",
+              "markdownDescription": "Experimental capabilities that are passed to the language server process during the _initialize_ phase. This is different per language server, so you'll need to look up documentation for your particular language server."
+            },
+            "ClientEnv": {
+              "type": "object",
+              "markdownDescription": "Specify environment variables to pass to the language server process on startup.",
+              "additionalProperties": {
+                "type": "string",
+                "markdownDescription": "The value for this environment variable."
+              },
+            },
+            "ClientLanguages": {
+              "markdownDescription": "An array which defines to which views this language server should be attached.",
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/definitions/LanguageConfig"
+              },
+            },
             "LanguageConfig": {
               "type": "object",
               "markdownDescription": "A language configuration defines which servers are attached to which views",
@@ -89,32 +116,19 @@
                   "markdownDescription": "When specified, the TCP port to use to connect to the language server process. If not specified, STDIO is used as the transport. When set to zero, a free TCP port is chosen. You can use that free TCP port number as a template variable, i.e. as `${tcp_port}` in the `\"command\"`."
                 },
                 "languages": {
-                  "markdownDescription": "An array which defines to which views this language server should be attached.",
-                  "type": "array",
-                  "minItems": 1,
-                  "items": {
-                    "$ref": "#/definitions/LanguageConfig"
-                  },
+                  "$ref": "#/definitions/ClientLanguages"
                 },
                 "initializationOptions": {
-                  "type": "object",
-                  "markdownDescription": "The initializationOptions that are passed to the language server process during the _initialize_ phase. This is a rather free-form dictionary of key-value pairs and is different per language server. Look up documentation of your specific langauge server to see what the possible key-value pairs can be."
+                  "$ref": "#/definitions/ClientInitializationOptions"
                 },
                 "settings": {
-                  "type": "object",
-                  "markdownDescription": "The server settings. This is a rather free-form dictionary of key-value pairs and is different per language server. Look up documentation of your specific langauge server to see what the possible key-value pairs can be."
+                  "ref": "#/definitions/ClientSettings"
                 },
                 "experimental_capabilities": {
-                  "type": "object",
-                  "markdownDescription": "Experimental capabilities that are passed to the language server process during the _initialize_ phase. This is different per language server, so you'll need to look up documentation for your particular language server."
+                  "$ref": "#/definitions/ClientExperimentalCapabilities",
                 },
                 "env": {
-                  "type": "object",
-                  "markdownDescription": "Specify environment variables to pass to the language server process on startup.",
-                  "additionalProperties": {
-                    "type": "string",
-                    "markdownDescription": "The value for this environment variable."
-                  },
+                  "$ref": "#/definitions/ClientEnv"
                 },
                 "languageId": {
                   "$ref": "#/definitions/useLanguagesInstead"
@@ -414,7 +428,29 @@
             }
           }
         }
-      }
+      },
+      {
+        "schema": {
+          "$id": "sublime://settings/LSP-plugin-base",
+          "properties": {
+            "languages": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientLanguages"
+            },
+            "initializationOptions": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientInitializationOptions"
+            },
+            "settings": {
+              "ref": "sublime://settings/LSP#/definitions/ClientSettings"
+            },
+            "experimental_capabilities": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientExperimentalCapabilities",
+            },
+            "env": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientEnv"
+            },
+          },
+        }
+      },
     ]
   }
 }

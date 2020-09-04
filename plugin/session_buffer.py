@@ -234,6 +234,57 @@ class SessionBuffer:
         return None
 
     def on_diagnostics_async(self, raw_diagnostics: List[Dict[str, Any]], version: Optional[int]) -> None:
+        try:
+            from LSP.plugin.core.views import format_severity
+            from SublimeLinter.lint import backend, style, util
+            from SublimeLinter import sublime_linter
+        except ImportError:
+            pass
+        else:
+            view = self.some_view()
+            if view is None:
+                return
+            file_name = util.get_filename(view)
+            errors = []
+            # In the following `self._source_name` is a hack, we need
+            # in SL speak a `linter_name` or provider name (type: str)
+            # from somewhere, even if `raw_diagnostics` is empty.
+            for diag in map(Diagnostic.from_lsp, raw_diagnostics):
+                self._source_name = diag.source
+                region = range_to_region(diag.range, view)
+                lint_error = {
+                    "filename": file_name,
+                    "linter": diag.source,  # sic! see above; `diag.source` is `Optional[str]`
+                    "line": diag.range.start.row,
+                    "start": diag.range.start.col,
+                    "end": diag.range.start.col + len(region),
+                    "region": region,
+                    "error_type": format_severity(diag.severity),
+                    # This is typically the rule name, like "semi" or "F802"
+                    "code": str(diag._lsp_diagnostic.get("code", "")),
+                    "msg": diag.message,
+
+                    # That's an optimization.  Very cheap because we work
+                    # on a "virtual" view over there, t.i. not querying the
+                    # real view.
+                    "offending_text": view.substr(region),
+                }
+                lint_error.update({
+                    "uid": backend.make_error_uid(lint_error),
+                    "priority": style.get_value("priority", lint_error, 0)
+                })
+
+                errors.append(lint_error)
+
+            try:
+                linter_name = self._source_name
+            except AttributeError:
+                # shit
+                ...
+            else:
+                sublime_linter.update_file_errors(file_name, linter_name, errors, reason=None)
+            return
+
         diagnostics = []  # type: List[Diagnostic]
         data_per_severity = {}  # type: Dict[int, DiagnosticSeverityData]
         total_errors = 0

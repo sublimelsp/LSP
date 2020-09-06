@@ -583,7 +583,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return self._manager  # type: ignore
 
     def sessions(self, capability: Optional[str]) -> Generator[Session, None, None]:
-        yield from self.manager.sessions(self.view, capability)
+        for sb in self.session_buffers_async():
+            if capability is None or sb.has_capability(capability):
+                yield sb.session
 
     def session(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
         return best_session(self.view, self.sessions(capability), point)

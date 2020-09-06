@@ -476,7 +476,7 @@ def make_command_link(command: str, text: str, command_args: Optional[dict] = No
 
 
 COLOR_BOX_HTML = """
-<style>html {{padding: 0; background-color: var(--background)}}</style>
+<style>html {{padding: 0; background-color: transparent}}</style>
 <body id='lsp-color-box'>
 <div style='padding: 0.4em;
             margin-top: 0.2em;

@@ -68,12 +68,11 @@ def position_is_word(view: sublime.View, position: int) -> bool:
 
 def is_transient_view(view: sublime.View) -> bool:
     window = view.window()
-    if window:
-        if window.get_view_index(view)[1] == -1:
-            return True  # Quick panel transient views
-        return view == window.transient_view_in_group(window.active_group())
-    else:
+    if not window:
         return True
+    if window.get_view_index(view)[1] == -1:
+        return True  # Quick panel transient views
+    return view == window.transient_view_in_group(window.active_group())
 
 
 def is_regular_view(v: sublime.View) -> bool:
@@ -121,8 +120,9 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
 
     @classmethod
     def is_applicable(cls, buffer: sublime.Buffer) -> bool:
-        # FIXME: Cannot reliably use primary_view().file_name()
-        return buffer.primary_view().element() is None  # type: ignore
+        v = buffer.primary_view()
+        # FIXME: Cannot check if the view is transient
+        return v is not None and bool(v.file_name()) and v.element() is None
 
     def __init__(self) -> None:
         super().__init__()

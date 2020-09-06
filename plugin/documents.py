@@ -360,28 +360,21 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         session = self.session("signatureHelpProvider")
         if not session:
             return
-
-        def do_request() -> None:
+        triggers = session.get_capability("signatureHelpProvider.triggerCharacters") or []
+        if not manual and not triggers:
+            return
+        last_char = previous_non_whitespace_char(self.view, pos)
+        if manual or last_char in triggers:
             self.purge_changes_async()
             params = text_document_position_params(self.view, pos)
             assert session
             session.send_request(Request.signatureHelp(params), lambda resp: self._on_signature_help(resp, pos))
-
-        if manual:
-            do_request()
         else:
-            triggers = session.get_capability("signatureHelpProvider.triggerCharacters")
-            if not triggers:
-                return
-            last_char = previous_non_whitespace_char(self.view, pos)
-            if last_char in triggers:
-                do_request()
-            else:
-                # TODO: Refactor popup usage to a common class. We now have sigHelp, completionDocs, hover, and diags
-                # all using a popup. Most of these systems assume they have exclusive access to a popup, while in
-                # reality there is only one popup per view.
-                self.view.hide_popup()
-                self._sighelp = None
+            # TODO: Refactor popup usage to a common class. We now have sigHelp, completionDocs, hover, and diags
+            # all using a popup. Most of these systems assume they have exclusive access to a popup, while in
+            # reality there is only one popup per view.
+            self.view.hide_popup()
+            self._sighelp = None
 
     def _on_signature_help(self, response: Optional[Dict], point: int) -> None:
         self._sighelp = create_signature_help(response)

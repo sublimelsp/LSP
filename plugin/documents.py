@@ -259,7 +259,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region,
                                                       after_ms=self.color_boxes_debounce_time)
         if "signatureHelp" not in userprefs().disabled_capabilities:
-            self._do_signature_help()
+            self._do_signature_help(manual=False)
 
     def on_revert_async(self) -> None:
         if self.view.is_primary():
@@ -314,7 +314,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         elif key == "lsp.signature_help":
             if not self.view.is_popup_visible():
                 if operand == 0:
-                    sublime.set_timeout_async(self._do_signature_help)
+                    sublime.set_timeout_async(lambda: self._do_signature_help(manual=True))
                     return True
             elif self._sighelp and self._sighelp.has_multiple_signatures() and not self.view.is_auto_complete_visible():
                 # We use the "operand" for the number -1 or +1. See the keybindings.
@@ -333,7 +333,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
         if command_name in ("next_field", "prev_field") and args is None:
             if "signatureHelp" not in userprefs().disabled_capabilities:
-                sublime.set_timeout_async(self._do_signature_help)
+                sublime.set_timeout_async(lambda: self._do_signature_help(manual=True))
         if not self.view.is_popup_visible():
             return
         if command_name in ["hide_auto_complete", "move", "commit_completion"] or 'delete' in command_name:
@@ -349,7 +349,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
 
-    def _do_signature_help(self) -> None:
+    def _do_signature_help(self, manual: bool) -> None:
         # NOTE: We take the beginning of the region to check the previous char (see last_char variable). This is for
         # when a language server inserts a snippet completion.
         pos = self._stored_region.a
@@ -360,20 +360,28 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         session = self.session("signatureHelpProvider")
         if not session:
             return
-        triggers = session.get_capability("signatureHelpProvider.triggerCharacters")
-        if not triggers:
-            return
-        last_char = previous_non_whitespace_char(self.view, pos)
-        if last_char in triggers:
+
+        def do_request() -> None:
             self.purge_changes_async()
             params = text_document_position_params(self.view, pos)
+            assert session
             session.send_request(Request.signatureHelp(params), lambda resp: self._on_signature_help(resp, pos))
+
+        if manual:
+            do_request()
         else:
-            # TODO: Refactor popup usage to a common class. We now have sigHelp, completionDocs, hover, and diags
-            # all using a popup. Most of these systems assume they have exclusive access to a popup, while in
-            # reality there is only one popup per view.
-            self.view.hide_popup()
-            self._sighelp = None
+            triggers = session.get_capability("signatureHelpProvider.triggerCharacters")
+            if not triggers:
+                return
+            last_char = previous_non_whitespace_char(self.view, pos)
+            if last_char in triggers:
+                do_request()
+            else:
+                # TODO: Refactor popup usage to a common class. We now have sigHelp, completionDocs, hover, and diags
+                # all using a popup. Most of these systems assume they have exclusive access to a popup, while in
+                # reality there is only one popup per view.
+                self.view.hide_popup()
+                self._sighelp = None
 
     def _on_signature_help(self, response: Optional[Dict], point: int) -> None:
         self._sighelp = create_signature_help(response)

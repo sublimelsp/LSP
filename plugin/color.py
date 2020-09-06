@@ -98,7 +98,7 @@ class LspColorListener(sublime_plugin.ViewEventListener):
             alpha = color['alpha']
 
             content = """
-            <style>html {{padding: 0; background-color: var(--background)}}</style>
+            <style>html {{padding: 0; background-color: transparent}}</style>
             <body id='lsp-color-box'>
             <div style='padding: 0.4em;
                         margin-top: 0.2em;

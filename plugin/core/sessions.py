@@ -584,9 +584,11 @@ class Session(Client):
 
     # --- capability observers -----------------------------------------------------------------------------------------
 
-    def can_handle(self, view: sublime.View, capability: Optional[str] = None) -> bool:
+    def can_handle(self, view: sublime.View, capability: Optional[str], inside_workspace: bool) -> bool:
         file_name = view.file_name() or ''
-        if self.config.match_view(view) and self.state == ClientStates.READY and self.handles_path(file_name):
+        if (self.config.match_view(view)
+                and self.state == ClientStates.READY
+                and self.handles_path(file_name, inside_workspace)):
             # If there's no capability requirement then this session can handle the view
             if capability is None:
                 return True
@@ -624,7 +626,7 @@ class Session(Client):
 
     # --- misc methods -------------------------------------------------------------------------------------------------
 
-    def handles_path(self, file_path: Optional[str]) -> bool:
+    def handles_path(self, file_path: Optional[str], inside_workspace: bool) -> bool:
         if self._supports_workspace_folders():
             # A workspace-aware language server handles any path, both inside and outside the workspaces.
             return True
@@ -634,10 +636,13 @@ class Session(Client):
             return False
         if not self._workspace_folders:
             return True
-        for folder in self._workspace_folders:
-            if is_subpath_of(file_path, folder.path):
-                return True
-        return False
+        if inside_workspace:
+            for folder in self._workspace_folders:
+                if is_subpath_of(file_path, folder.path):
+                    return True
+            return False
+        else:
+            return True
 
     def update_folders(self, folders: List[WorkspaceFolder]) -> None:
         if self.should_notify_did_change_workspace_folders():

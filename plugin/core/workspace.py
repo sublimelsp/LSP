@@ -1,6 +1,6 @@
 from .logging import debug
 from .protocol import WorkspaceFolder
-from .typing import List, Any
+from .typing import List, Any, Union
 import sublime
 import os
 
@@ -30,8 +30,8 @@ class ProjectFolders(object):
         else:
             return True
 
-    def contains(self, view: sublime.View) -> bool:
-        file_path = view.file_name()
+    def contains(self, view_or_file_name: Union[str, sublime.View]) -> bool:
+        file_path = view_or_file_name.file_name() if isinstance(view_or_file_name, sublime.View) else view_or_file_name
         return self.includes_path(file_path) if file_path else False
 
 

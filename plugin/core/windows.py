@@ -140,9 +140,6 @@ class WindowManager(Manager):
 
     def register_listener_async(self, listener: AbstractViewListener) -> None:
         set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
-        if not self._workspace.contains(listener.view):
-            # TODO: Handle views outside the workspace https://github.com/sublimelsp/LSP/issues/997
-            return
         self._pending_listeners.appendleft(listener)
         if self._new_listener is None:
             self._dequeue_listener_async()
@@ -190,26 +187,24 @@ class WindowManager(Manager):
         else:
             # debug("no new config found for listener", listener)
             self._new_listener = None
-            return self._dequeue_listener_async()
+            self._dequeue_listener_async()
 
     def _publish_sessions_to_listener_async(self, listener: AbstractViewListener) -> None:
-        # TODO: Handle views outside the workspace https://github.com/sublimelsp/LSP/issues/997
-        if self._workspace.contains(listener.view):
-            for session in self._sessions:
-                if session.can_handle(listener.view):
-                    # debug("registering session", session.config.name, "to listener", listener)
-                    listener.on_session_initialized_async(session)
+        inside_workspace = self._workspace.contains(listener.view)
+        for session in self._sessions:
+            if session.can_handle(listener.view, None, inside_workspace):
+                # debug("registering session", session.config.name, "to listener", listener)
+                listener.on_session_initialized_async(session)
 
     def window(self) -> sublime.Window:
         return self._window
 
     def sessions(self, view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
-        # TODO: Handle views outside the workspace https://github.com/sublimelsp/LSP/issues/997
-        if self._workspace.contains(view):
-            sessions = list(self._sessions)
-            for session in sessions:
-                if session.can_handle(view, capability):
-                    yield session
+        inside_workspace = self._workspace.contains(view)
+        sessions = list(self._sessions)
+        for session in sessions:
+            if session.can_handle(view, capability, inside_workspace):
+                yield session
 
     def get_session(self, config_name: str, file_path: str) -> Optional[Session]:
         return self._find_session(config_name, file_path)
@@ -218,8 +213,9 @@ class WindowManager(Manager):
         return not bool(self._find_session(config_name, file_path))
 
     def _find_session(self, config_name: str, file_path: str) -> Optional[Session]:
+        inside = self._workspace.contains(file_path)
         for session in self._sessions:
-            if session.config.name == config_name and session.handles_path(file_path):
+            if session.config.name == config_name and session.handles_path(file_path, inside):
                 return session
         return None
 
@@ -227,15 +223,15 @@ class WindowManager(Manager):
         configs = self._configs.match_view(view)
         handled = False
         file_name = view.file_name() or ''
-        if self._workspace.contains(view):
-            for config in configs:
-                handled = False
-                for session in self._sessions:
-                    if config.name == session.config.name and session.handles_path(file_name):
-                        handled = True
-                        break
-                if not handled:
-                    return config
+        inside = self._workspace.contains(view)
+        for config in configs:
+            handled = False
+            for session in self._sessions:
+                if config.name == session.config.name and session.handles_path(file_name, inside):
+                    handled = True
+                    break
+            if not handled:
+                return config
         return None
 
     def start_async(self, config: ClientConfig, initiating_view: sublime.View) -> None:

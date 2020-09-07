@@ -277,13 +277,7 @@ def did_close(file_name: str) -> Notification:
 def formatting_options(settings: sublime.Settings) -> Dict[str, Any]:
     # Build 4085 allows "trim_trailing_white_space_on_save" to be a string so we have to account for that in a
     # backwards-compatible way.
-    trim_trailing_white_space = settings.get("trim_trailing_white_space_on_save")
-    if isinstance(trim_trailing_white_space, bool):
-        pass
-    elif isinstance(trim_trailing_white_space, str):
-        trim_trailing_white_space = (trim_trailing_white_space != "none")
-    else:
-        trim_trailing_white_space = False
+    trim_trailing_white_space = settings.get("trim_trailing_white_space_on_save") not in (False, "none")
     return {
         # Size of a tab in spaces.
         "tabSize": settings.get("tab_size", 4),

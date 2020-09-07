@@ -275,13 +275,16 @@ def did_close(file_name: str) -> Notification:
 
 
 def formatting_options(settings: sublime.Settings) -> Dict[str, Any]:
+    # Build 4085 allows "trim_trailing_white_space_on_save" to be a string so we have to account for that in a
+    # backwards-compatible way.
+    trim_trailing_white_space = settings.get("trim_trailing_white_space_on_save") not in (False, "none")
     return {
         # Size of a tab in spaces.
         "tabSize": settings.get("tab_size", 4),
         # Prefer spaces over tabs.
         "insertSpaces": settings.get("translate_tabs_to_spaces", False),
         # Trim trailing whitespace on a line. (since 3.15)
-        "trimTrailingWhitespace": settings.get("trim_trailing_white_space_on_save", False),
+        "trimTrailingWhitespace": trim_trailing_white_space,
         # Insert a newline character at the end of the file if one does not exist. (since 3.15)
         "insertFinalNewline": settings.get("ensure_newline_at_eof_on_save", False),
         # Trim all newlines after the final newline at the end of the file. (sine 3.15)

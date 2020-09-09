@@ -323,13 +323,13 @@ class WindowManager(Manager):
             MessageRequestHandler(view, session, request_id, params, session.config.name).show()
 
     def restart_sessions_async(self) -> None:
-        self.end_sessions_async()
+        self._end_sessions_async()
         listeners = list(self._listeners)
         self._listeners.clear()
         for listener in listeners:
             self.register_listener_async(listener)
 
-    def end_sessions_async(self) -> None:
+    def _end_sessions_async(self) -> None:
         for session in self._sessions:
             session.end_async()
         self._sessions.clear()

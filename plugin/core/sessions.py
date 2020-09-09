@@ -506,7 +506,7 @@ class Session(Client):
         self.exiting = False
         self._registrations = {}  # type: Dict[str, _RegistrationData]
         self._init_callback = None  # type: Optional[InitCallback]
-        self._exit_result = None  # type: Optional[Tuple[int, Optional[Exception]]]
+        self._initialize_error = None  # type: Optional[Tuple[int, Optional[Exception]]]
         self._views_opened = 0
         self._workspace_folders = workspace_folders
         self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
@@ -679,7 +679,7 @@ class Session(Client):
             self._init_callback = None
 
     def _handle_initialize_error(self, result: Any) -> None:
-        self._exit_result = (result.get('code', -1), Exception(result.get('message', 'Error initializing server')))
+        self._initialize_error = (result.get('code', -1), Exception(result.get('message', 'Error initializing server')))
         # Init callback called after transport is closed to avoid pre-mature GC of Session.
         self.end_async()
 
@@ -844,11 +844,6 @@ class Session(Client):
 
     # --- shutdown dance -----------------------------------------------------------------------------------------------
 
-    def exit(self) -> None:
-        # exit() is only called when doing an explicit session shutdown. Ignore errors on exit then.
-        self._exit_result = (0, None)
-        super().exit()
-
     def end_async(self) -> None:
         # TODO: Ensure this function is called only from the async thread
         if self.exiting:
@@ -870,9 +865,9 @@ class Session(Client):
         self.state = ClientStates.STOPPING
         super().on_transport_close(exit_code, exception)
         self._response_handlers.clear()
-        if self._exit_result:
+        if self._initialize_error:
             # Override potential exit error with a saved one.
-            exit_code, exception = self._exit_result
+            exit_code, exception = self._initialize_error
 
         def run_async() -> None:
             mgr = self.manager()

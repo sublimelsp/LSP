@@ -22,14 +22,13 @@ class LspResolveDocsCommand(LspTextCommand):
         documentation = self.format_documentation(item.get("documentation") or "")
         # don't show the detail in the cooperate AC popup if it is already shown in the AC details filed.
         self.is_detail_shown = bool(detail)
-        minihtml_content = self.get_content(documentation, detail)
-        # NOTE: For some reason, ST does not like it when we show a popup from within this run method.
-        sublime.set_timeout(lambda: self.show_popup(minihtml_content))
-
         if not detail or not documentation:
             # To make sure that the detail or documentation fields doesn't exist we need to resove the completion item.
             # If those fields appear after the item is resolved we show them in the popup.
             self.do_resolve(item)
+        else:
+            minihtml_content = self.get_content(documentation, detail)
+            self.show_popup(minihtml_content)
 
     def format_documentation(self, content: str) -> str:
         return minihtml(self.view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)

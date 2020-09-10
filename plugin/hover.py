@@ -183,9 +183,7 @@ class LspHoverCommand(LspTextCommand):
         elif href.startswith('code-actions:'):
             _, config_name = href.split(":")
             titles = [command["title"] for command in self._actions_by_config[config_name]]
-            sel = self.view.sel()
-            sel.clear()
-            sel.add(sublime.Region(point, point))
+            self.view.run_command("lsp_selection_set", {"regions": [(point, point)]})
             self.view.show_popup_menu(titles, lambda i: self.handle_code_action_select(config_name, i))
         elif href.startswith("location:"):
             window = self.view.window()

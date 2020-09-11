@@ -25,10 +25,12 @@ class LspResolveDocsCommand(LspTextCommand):
         if not detail or not documentation:
             # To make sure that the detail or documentation fields doesn't exist we need to resove the completion item.
             # If those fields appear after the item is resolved we show them in the popup.
-            self.do_resolve(item)
-        else:
-            minihtml_content = self.get_content(documentation, detail)
-            self.show_popup(minihtml_content)
+            session = self.best_session('completionProvider.resolveProvider')
+            if session:
+                session.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
+                return
+        minihtml_content = self.get_content(documentation, detail)
+        self.show_popup(minihtml_content)
 
     def format_documentation(self, content: Union[str, Dict[str, str]]) -> str:
         return minihtml(self.view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
@@ -55,13 +57,6 @@ class LspResolveDocsCommand(LspTextCommand):
 
     def on_navigate(self, url: str) -> None:
         webbrowser.open(url)
-
-    def do_resolve(self, item: dict) -> None:
-        session = self.best_session('completionProvider.resolveProvider')
-        if session:
-            session.send_request(
-                Request.resolveCompletionItem(item),
-                lambda res: self.handle_resolve_response(res))
 
     def handle_resolve_response(self, item: Optional[dict]) -> None:
         detail = ""

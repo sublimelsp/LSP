@@ -634,15 +634,12 @@ class Session(Client):
         # language server with the same config name. So we have to actually do the subpath checks.
         if not file_path:
             return False
-        if not self._workspace_folders:
+        if not self._workspace_folders or not inside_workspace:
             return True
-        if inside_workspace:
-            for folder in self._workspace_folders:
-                if is_subpath_of(file_path, folder.path):
-                    return True
-            return False
-        else:
-            return True
+        for folder in self._workspace_folders:
+            if is_subpath_of(file_path, folder.path):
+                return True
+        return False
 
     def update_folders(self, folders: List[WorkspaceFolder]) -> None:
         if self.should_notify_did_change_workspace_folders():

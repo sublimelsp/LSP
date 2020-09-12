@@ -15,22 +15,23 @@
     "bibtex": "text.bibtex",
     "cpp": "source.c++",
     "csharp": "source.cs",
-    "html": "embedding.php | text.html.basic",
+    "html": "embedding.php | text.html.basic | text.html.ngx", // https://github.com/princemaple/ngx-html-syntax
     "javascript": "source.js",
-    "javascriptreact": "source.jsx", // 3rdparty
+    "javascriptreact": "source.jsx",
     "jsonc": "source.json",
     "latex": "text.tex.latex",
     "markdown": "text.html.markdown",
     "objective-c": "source.objc",
     "objective-cpp": "source.objc++",
     "php": "source.php | embedding.php",
+    "r": "source.r | text.html.markdown.rmarkdown", // https://github.com/REditorSupport/sublime-ide-r
     "ruby": "text.html.ruby | source.ruby",
-    "shaderlab": "source.glsl | source.essl", // 3rdparty
+    "shaderlab": "source.unity_shader | source.shader", // https://github.com/petereichinger/Unity3D-Shader, https://github.com/waqiju/unity_shader_st3
     "shellscript": "source.shell.bash",
     "typescript": "source.ts",
     "typescriptreact": "source.tsx",
     "txt": "text.plain",
-    "vue": "text.html.vue", // 3rdparty
-    "xml": "text.xml",
-    "xsl": "text.xml", // 3rdparty
+    "vue": "text.html.vue", // https://github.com/vuejs/vue-syntax-highlight
+    "xml": "text.xml - text.xml.xsl",
+    "xsl": "text.xml.xsl", // https://github.com/packagecontrol/XSL
 }

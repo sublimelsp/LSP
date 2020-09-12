@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: SublimeHQ Discord
+    url: https://discord.gg/TZ5WN8t
+    about: 'Feel free to ask questions on the #lsp channel.'
+  - name: Documentation
+    url: https://lsp.readthedocs.io/
+    about: Check our documentation before reporting issues.

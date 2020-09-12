@@ -39,19 +39,19 @@ class ClientConfigs:
         self._notify_listener()
 
     def add_external_config(self, name: str, s: sublime.Settings, file: str) -> None:
-        assert name not in self.external
-        assert name not in self.all
+        if name in self.external:
+            return debug(name, "is already registered")
         config = ClientConfig.from_sublime_settings(name, s, file)
         self.external[name] = config
         self.all[name] = config
         self._notify_listener()
 
     def remove_external_config(self, name: str) -> None:
-        assert name in self.external
-        assert name in self.all
-        self.external.pop(name)
-        self.all.pop(name)
-        self._notify_listener()
+        self.external.pop(name, None)
+        if self.all.pop(name, None):
+            self._notify_listener()
+        else:
+            debug(name, "was not registered")
 
     def update_configs(self) -> None:
         global _settings_obj

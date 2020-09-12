@@ -32,4 +32,4 @@ If applicable, add screenshots to help explain your problem.
 **Additional context**
 Add any other context about the problem here. For example, whether you're using a helper
 package or your manual server configuration in LSP.sublime-settings. When using
-a manual server configuration please include it here.
+a manual server configuration please include it here if you believe it's applicable.

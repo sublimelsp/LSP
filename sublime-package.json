@@ -315,10 +315,15 @@
               "default": false,
               "markdownDescription": "Show symbol action links in hover popup if available."
             },
-            "only_show_lsp_completions": {
+            "inhibit_explicit_completions": {
               "type": "boolean",
               "default": false,
-              "markdownDescription": "Disable Sublime Text's explicit and word completion."
+              "markdownDescription": "Disable Sublime Text's snippet completions."
+            },
+            "inhibit_word_completions": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Disable Sublime Text's word completions. When set to `true`, this also disables Sublime Text's internal completion sorting algorithm and instead uses the sorting defined by the relevant language server."
             },
             "show_references_in_quick_panel": {
               "type": "boolean",

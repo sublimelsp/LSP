@@ -23,11 +23,13 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
-**Desktop (please complete the following information):**
+**Environment (please complete the following information):**
 - OS: [e.g. Ubuntu 20.04 or macOS 10.15]
 - Sublime Text version: [e.g. 4085]
 - LSP version: [e.g. 1.0.12, run `Package Control: List Packages` to find the version]
 - Language servers used: [e.g. clangd, gopls, dart, Vetur, intelephense, HIE]
 
 **Additional context**
-Add any other context about the problem here.
+Add any other context about the problem here. For example, whether you're using a helper
+package or your manual server configuration in LSP.sublime-settings. When using
+a manual server configuration please include it here.

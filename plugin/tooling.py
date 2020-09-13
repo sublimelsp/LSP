@@ -53,7 +53,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
         self.writeline("{")
         # schema = {}  TODO: Also generate a schema. Sublime settings are not rigid.
         for k, v in sorted(properties.items()):
-            typ = v["type"]
+            typ = v.get("type")
             description = v.get("description")
             if isinstance(description, str):
                 for line in description.splitlines():

@@ -1,5 +1,6 @@
 import sublime
 from copy import deepcopy
+from .collections import DottedDict
 from .logging import debug
 from .types import ClientConfig, LanguageConfig, ViewLike, WindowLike, ConfigRegistry
 from .types import config_supports_syntax, syntax_language
@@ -129,9 +130,13 @@ class WindowConfigManager(object):
     def _apply_project_overrides(self, client_config: ClientConfig, project_clients: Dict[str, Any]) -> ClientConfig:
         overrides = project_clients.get(client_config.name)
         if overrides:
-            debug('window has override for {}'.format(client_config.name), overrides)
-            client_settings = _merge_dicts(client_config.settings, overrides.get("settings", {}))
-            client_env = _merge_dicts(client_config.env, overrides.get("env", {}))
+            debug('applying .sublime-project override for', client_config.name)
+            init_options = DottedDict.from_base_and_override(
+                client_config.init_options, overrides.get("initializationOptions", {}))
+            settings = DottedDict.from_base_and_override(client_config.settings, overrides.get("settings", {}))
+            env = deepcopy(client_config.env)
+            for key, value in overrides.get("env", {}).items():
+                env[key] = value
             return ClientConfig(
                 client_config.name,
                 overrides.get("command", client_config.binary_args),
@@ -141,22 +146,11 @@ class WindowConfigManager(object):
                 "",
                 client_config.languages,
                 overrides.get("enabled", client_config.enabled),
-                overrides.get("initializationOptions", client_config.init_options),
-                client_settings,
-                client_env,
+                init_options,
+                settings,
+                env,
                 overrides.get("tcp_host", client_config.tcp_host),
                 overrides.get("experimental_capabilities", client_config.experimental_capabilities),
             )
 
         return client_config
-
-
-def _merge_dicts(dict_a: dict, dict_b: dict) -> dict:
-    """Merge dict_b into dict_a with one level of recurse"""
-    result_dict = deepcopy(dict_a)
-    for key, value in dict_b.items():
-        if isinstance(result_dict.get(key), dict) and isinstance(value, dict):
-            result_dict.setdefault(key, {}).update(value)
-        else:
-            result_dict[key] = value
-    return result_dict

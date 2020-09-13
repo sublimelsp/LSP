@@ -228,7 +228,7 @@ def create_transport(config: ClientConfig, cwd: Optional[str], window: sublime.W
     if tcp_port:
         sock = _connect_tcp(tcp_port)
         if sock is None:
-            raise RuntimeError("Failed to connect on port {}".format(config.tcp_port))
+            raise RuntimeError("Failed to connect on port {}".format(tcp_port))
         reader = sock.makefile('rwb')  # type: IO[bytes]
         writer = reader
     else:

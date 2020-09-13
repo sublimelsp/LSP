@@ -1,6 +1,6 @@
 from .logging import exception_log, debug
 from .types import ClientConfig
-from .typing import Dict, Any, Optional, IO, Protocol
+from .typing import Dict, Any, Optional, IO, Protocol, List, Callable, Tuple
 from abc import ABCMeta, abstractmethod
 from contextlib import closing
 from queue import Queue
@@ -176,27 +176,7 @@ class JsonRpcTransport(Transport):
         self._send_queue.put_nowait(None)
 
 
-def create_transport(config: ClientConfig, cwd: Optional[str], window: sublime.Window,
-                     callback_object: TransportCallbacks, variables: Dict[str, str]) -> JsonRpcTransport:
-    tcp_port = None  # type: Optional[int]
-    if config.tcp_port is not None:
-        tcp_port = _find_free_port() if config.tcp_port == 0 else config.tcp_port
-    if tcp_port is not None:
-        variables["port"] = str(tcp_port)
-    args = sublime.expand_variables(config.command, variables)
-    args = [os.path.expanduser(arg) for arg in args]
-    if tcp_port is not None:
-        # DEPRECATED -- replace {port} with $port or ${port} in your client config
-        args = [a.replace('{port}', str(tcp_port)) for a in args]
-    env = os.environ.copy()
-    for var, value in config.env.items():
-        env[var] = sublime.expand_variables(value, variables)
-    if tcp_port is not None:
-        stdout = subprocess.DEVNULL
-        stdin = subprocess.DEVNULL
-    else:
-        stdout = subprocess.PIPE
-        stdin = subprocess.PIPE
+def _fixup_startup_args(args: List[str]) -> Any:
     if sublime.platform() == "windows":
         startupinfo = subprocess.STARTUPINFO()  # type: ignore
         startupinfo.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW  # type: ignore
@@ -214,26 +194,131 @@ def create_transport(config: ClientConfig, cwd: Optional[str], window: sublime.W
                     break
     else:
         startupinfo = None
+    return startupinfo
+
+
+def _start_subprocess(
+    args: List[str],
+    stdin: int,
+    stdout: int,
+    stderr: int,
+    startupinfo: Any,
+    env: Dict[str, str],
+    cwd: Optional[str]
+) -> subprocess.Popen:
     debug("starting {} in {}".format(args, cwd if cwd else os.getcwd()))
     process = subprocess.Popen(
         args=args,
         stdin=stdin,
         stdout=stdout,
-        stderr=subprocess.PIPE,
+        stderr=stderr,
         startupinfo=startupinfo,
         env=env,
         cwd=cwd)
     _subprocesses.add(process)
-    sock = None  # type: Optional[socket.socket]
-    if tcp_port:
-        sock = _connect_tcp(tcp_port)
-        if sock is None:
-            raise RuntimeError("Failed to connect on port {}".format(tcp_port))
+    return process
+
+
+def _start_tcp_listener(tcp_port: Optional[int]) -> socket.socket:
+    sock = socket.socket()
+    sock.bind(('localhost', tcp_port or 0))
+    sock.settimeout(TCP_CONNECT_TIMEOUT)
+    sock.listen(1)
+    return sock
+
+
+class _SubprocessData:
+    def __init__(self) -> None:
+        self.process = None  # type: Optional[subprocess.Popen]
+
+
+def _await_tcp_connection(
+    name: str,
+    tcp_port: int,
+    listener_socket: socket.socket,
+    subprocess_starter: Callable[[], subprocess.Popen]
+) -> Tuple[subprocess.Popen, IO[bytes], IO[bytes]]:
+
+    # After we have accepted one client connection, we can close the listener socket.
+    with closing(listener_socket):
+
+        # We need to be able to start the process while also awaiting a client connection.
+        def start_in_background(d: _SubprocessData) -> None:
+            # Sleep for one second, because the listener socket needs to be in the "accept" state before starting the
+            # subprocess. This is hacky, and will get better when we can use asyncio.
+            time.sleep(1)
+            process = subprocess_starter()
+            d.process = process
+
+        data = _SubprocessData()
+        thread = threading.Thread(target=lambda: start_in_background(data))
+        thread.start()
+        # Await one client connection (blocking!)
+        sock, _ = listener_socket.accept()
+        thread.join()
         reader = sock.makefile('rwb')  # type: IO[bytes]
         writer = reader
+        assert data.process
+        return data.process, reader, writer
+
+
+def create_transport(config: ClientConfig, cwd: Optional[str], window: sublime.Window,
+                     callback_object: TransportCallbacks, variables: Dict[str, str]) -> JsonRpcTransport:
+    tcp_port = None  # type: Optional[int]
+    listener_socket = None  # type: Optional[socket.socket]
+    if config.tcp_port is not None:
+        # < 0 means we're hosting a TCP server
+        if config.tcp_port < 0:
+            # -1 means pick any free port
+            if config.tcp_port < -1:
+                tcp_port = -config.tcp_port
+            # Create a listener socket for incoming connections
+            listener_socket = _start_tcp_listener(tcp_port)
+            tcp_port = int(listener_socket.getsockname()[1])
+        else:
+            tcp_port = _find_free_port() if config.tcp_port == 0 else config.tcp_port
+    if tcp_port is not None:
+        variables["port"] = str(tcp_port)
+    args = sublime.expand_variables(config.command, variables)
+    args = [os.path.expanduser(arg) for arg in args]
+    if tcp_port is not None:
+        # DEPRECATED -- replace {port} with $port or ${port} in your client config
+        args = [a.replace('{port}', str(tcp_port)) for a in args]
+    env = os.environ.copy()
+    for var, value in config.env.items():
+        env[var] = sublime.expand_variables(value, variables)
+    if tcp_port is not None:
+        assert config.tcp_port is not None
+        if config.tcp_port < 0:
+            stdout = subprocess.PIPE
+        else:
+            stdout = subprocess.DEVNULL
+        stdin = subprocess.DEVNULL
     else:
-        reader = process.stdout  # type: ignore
-        writer = process.stdin  # type: ignore
+        stdout = subprocess.PIPE
+        stdin = subprocess.PIPE
+    startupinfo = _fixup_startup_args(args)
+    sock = None  # type: Optional[socket.socket]
+    process = None  # type: Optional[subprocess.Popen]
+
+    def start_subprocess() -> subprocess.Popen:
+        return _start_subprocess(args, stdin, stdout, subprocess.PIPE, startupinfo, env, cwd)
+
+    if listener_socket:
+        assert isinstance(tcp_port, int) and tcp_port > 0
+        process, reader, writer = _await_tcp_connection(config.name, tcp_port, listener_socket, start_subprocess)
+    else:
+        process = start_subprocess()
+        if tcp_port:
+            sock = _connect_tcp(tcp_port)
+            if sock is None:
+                raise RuntimeError("Failed to connect on port {}".format(tcp_port))
+            reader = sock.makefile('rwb')  # type: ignore
+            writer = reader
+        else:
+            reader = process.stdout  # type: ignore
+            writer = process.stdin  # type: ignore
+    assert writer
     return JsonRpcTransport(config.name, process, sock, reader, writer, process.stderr, callback_object)
 
 

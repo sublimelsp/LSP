@@ -113,10 +113,10 @@ class ClientConfigs(object):
 
         all_config_names = set(self._default_settings) | set(self._global_settings)
         for config_name in all_config_names.difference(set(self._external_configs)):
-            merged_settings = self._default_settings.get(config_name, dict())
+            merged_settings = DottedDict(self._default_settings.get(config_name, dict()))
             user_settings = self._global_settings.get(config_name, dict())
             merged_settings.update(user_settings)
-            self.all.append(read_client_config(config_name, merged_settings))
+            self.all.append(read_client_config(config_name, merged_settings.get()))
 
         debug('global configs', list('{}={}'.format(c.name, c.enabled) for c in self.all))
         if self._listener:

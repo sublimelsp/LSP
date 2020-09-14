@@ -2,5 +2,5 @@
 
 - Backport support for dotted settings (#1321) (Rafał Chłodnicki)
 - Add support for "LanguageHandler.additional_variables" plugin API (#1324) (Rafał Chłodnicki)
-- Add support for expanding "cache_path", "temp_dir" and "home" variables in "command", "settings"
+- Add support for expanding "$cache_path", "$temp_dir" and "$home" variables in "command", "settings"
   and "initializationOptions" (#1324) (Rafał Chłodnicki)

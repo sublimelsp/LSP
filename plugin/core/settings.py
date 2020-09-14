@@ -217,5 +217,6 @@ def update_client_config(config: ClientConfig, settings: dict) -> ClientConfig:
         settings.get("env", config.env),
         settings.get("tcp_host", config.tcp_host),
         settings.get("tcp_mode", config.tcp_mode),
-        settings.get("experimental_capabilities", config.experimental_capabilities)
+        settings.get("experimental_capabilities", config.experimental_capabilities),
+        config.additional_variables
     )

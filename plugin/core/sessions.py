@@ -7,11 +7,14 @@ from .rpc import Client, attach_stdio_client, Response
 from .transports import start_tcp_transport, start_tcp_listener, TCPTransport, Transport
 from .types import ClientConfig, ClientStates, Settings
 from .typing import Callable, Dict, Any, Optional, List, Tuple
+from .views import extract_variables
 from .workspace import is_subpath_of
 import os
+import sublime
 
 
-def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: ClientConfig) -> dict:
+def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: ClientConfig,
+                          variables: Dict[str, str] = dict()) -> dict:
     first_folder = workspace_folders[0] if workspace_folders else None
     capabilities = {
         "textDocument": {
@@ -135,7 +138,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
         "capabilities": capabilities
     }
     if config.init_options is not None:
-        initializeParams['initializationOptions'] = config.init_options.get()
+        initializeParams['initializationOptions'] = sublime.expand_variables(config.init_options.get(), variables)
 
     return initializeParams
 
@@ -289,9 +292,6 @@ class Session(object):
     def should_notify_did_change_workspace_folders(self) -> bool:
         return self.has_capability("workspace.workspaceFolders.changeNotifications")
 
-    def should_notify_did_change_configuration(self) -> bool:
-        return self.has_capability("didChangeConfigurationProvider")
-
     def handles_path(self, file_path: Optional[str]) -> bool:
         if not file_path:
             return False
@@ -320,7 +320,7 @@ class Session(object):
             self._workspace_folders = folders
 
     def _initialize(self) -> None:
-        params = get_initialize_params(self._workspace_folders, self.config)
+        params = get_initialize_params(self._workspace_folders, self.config, self._template_variables())
         self.client.send_request(
             Request.initialize(params),
             self._handle_initialize_result,
@@ -334,6 +334,14 @@ class Session(object):
 
     def on_notification(self, method: str, handler: Callable) -> None:
         self.client.on_notification(method, handler)
+
+    def maybe_send_did_change_configuration(self) -> None:
+        if self.config.settings:
+            self.client.send_notification(
+                Notification.didChangeConfiguration({
+                    'settings': sublime.expand_variables(self.config.settings.get(), self._template_variables())
+                })
+            )
 
     def _handle_initialize_error(self, error: Any) -> None:
         self.state = ClientStates.STOPPING
@@ -373,7 +381,12 @@ class Session(object):
         for requested_item in requested_items:
             configuration = self.config.settings.copy(requested_item.get('section') or None)
             items.append(configuration)
-        self.client.send_response(Response(request_id, items))
+        self.client.send_response(Response(request_id, sublime.expand_variables(items, self._template_variables())))
+
+    def _template_variables(self) -> Dict[str, str]:
+        variables = extract_variables(sublime.active_window())
+        variables.update(self.config.additional_variables)
+        return variables
 
     def _handle_register_capability(self, params: Any, request_id: Any) -> None:
         registrations = params["registrations"]

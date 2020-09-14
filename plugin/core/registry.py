@@ -62,7 +62,9 @@ def load_handlers() -> None:
 
 def register_language_handler(handler: LanguageHandler) -> None:
     debug("received config {} from {}".format(handler.name, handler.__class__.__name__))
-    client_configs.add_external_config(handler.config)
+    handler_config = handler.config
+    handler_config.additional_variables = handler.additional_variables()
+    client_configs.add_external_config(handler_config)
     if handler.on_start:
         client_start_listeners[handler.name] = handler.on_start
     if handler.on_initialized:

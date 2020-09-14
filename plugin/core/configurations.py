@@ -151,6 +151,7 @@ class WindowConfigManager(object):
                 env,
                 overrides.get("tcp_host", client_config.tcp_host),
                 overrides.get("experimental_capabilities", client_config.experimental_capabilities),
+                client_config.additional_variables
             )
 
         return client_config

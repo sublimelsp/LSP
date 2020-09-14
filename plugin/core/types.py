@@ -62,7 +62,7 @@ class ClientConfig(object):
                  tcp_host: Optional[str] = None,
                  tcp_mode: Optional[str] = None,
                  experimental_capabilities: dict = dict(),
-                 additional_variables: dict = dict()) -> None:
+                 additional_variables: Dict[str, str] = dict()) -> None:
         self.name = name
         self.binary_args = binary_args
         self.tcp_port = tcp_port

@@ -1,0 +1,3 @@
+=> 3154-0.12.0
+
+- Backport support for dotted settings (#1321) (Rafał Chłodnicki)

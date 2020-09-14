@@ -135,7 +135,7 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
         "capabilities": capabilities
     }
     if config.init_options is not None:
-        initializeParams['initializationOptions'] = config.init_options
+        initializeParams['initializationOptions'] = config.init_options.get()
 
     return initializeParams
 
@@ -371,14 +371,8 @@ class Session(object):
         items = []  # type: List[Any]
         requested_items = params.get("items") or []
         for requested_item in requested_items:
-            if 'section' in requested_item:
-                section = requested_item['section']
-                if section:
-                    items.append(get_dotted_value(self.config.settings, section))
-                else:
-                    items.append(self.config.settings)
-            else:
-                items.append(self.config.settings)
+            configuration = self.config.settings.copy(requested_item.get('section') or None)
+            items.append(configuration)
         self.client.send_response(Response(request_id, items))
 
     def _handle_register_capability(self, params: Any, request_id: Any) -> None:

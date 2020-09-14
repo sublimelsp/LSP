@@ -109,7 +109,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             self.assertFalse(True)
         window = sublime.active_window()
         self.assertTrue(window)
-        self.config.init_options["serverResponse"] = server_capabilities
+        self.config.init_options.set("serverResponse", server_capabilities)
         add_config(self.config)
         self.wm = windows.lookup(window)
         self.wm._configs.all.append(self.config)

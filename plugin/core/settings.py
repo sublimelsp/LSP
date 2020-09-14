@@ -1,3 +1,4 @@
+from .collections import DottedDict
 from .logging import debug
 from .types import Settings, ClientConfig, LanguageConfig
 from .typing import List, Optional, Dict, Callable
@@ -112,10 +113,10 @@ class ClientConfigs(object):
 
         all_config_names = set(self._default_settings) | set(self._global_settings)
         for config_name in all_config_names.difference(set(self._external_configs)):
-            merged_settings = self._default_settings.get(config_name, dict())
+            merged_settings = DottedDict(self._default_settings.get(config_name, dict()))
             user_settings = self._global_settings.get(config_name, dict())
             merged_settings.update(user_settings)
-            self.all.append(read_client_config(config_name, merged_settings))
+            self.all.append(read_client_config(config_name, merged_settings.get()))
 
         debug('global configs', list('{}={}'.format(c.name, c.enabled) for c in self.all))
         if self._listener:
@@ -170,7 +171,16 @@ def read_language_configs(client_config: dict) -> List[LanguageConfig]:
     return list(map(read_language_config, client_config.get("languages", [])))
 
 
-def read_client_config(name: str, client_config: Dict) -> ClientConfig:
+def read_client_config(name: str, client_config: Dict, base_settings_path: Optional[str] = None) -> ClientConfig:
+    if base_settings_path:
+        base = sublime.decode_value(sublime.load_resource(base_settings_path))
+        settings = DottedDict(base.get("settings", {}))
+        init_options = DottedDict(base.get("initializationOptions", {}))
+    else:
+        settings = DottedDict()
+        init_options = DottedDict()
+    settings.update(client_config.get("settings", {}))  # overrides from the user
+    init_options.update(client_config.get("initializationOptions", {}))  # overrides from the user
     languages = read_language_configs(client_config)
 
     return ClientConfig(
@@ -182,8 +192,8 @@ def read_client_config(name: str, client_config: Dict) -> ClientConfig:
         client_config.get("languageId", ""),
         languages,
         client_config.get("enabled", False),
-        client_config.get("initializationOptions", dict()),
-        client_config.get("settings", dict()),
+        init_options,
+        settings,
         client_config.get("env", dict()),
         client_config.get("tcp_host", None),
         client_config.get("tcp_mode", None),
@@ -202,8 +212,8 @@ def update_client_config(config: ClientConfig, settings: dict) -> ClientConfig:
         settings.get("languageId", default_language.id),
         read_language_configs(settings) or config.languages,
         settings.get("enabled", config.enabled),
-        settings.get("init_options", config.init_options),
-        settings.get("settings", config.settings),
+        DottedDict.from_base_and_override(config.init_options, settings.get("init_options")),
+        DottedDict.from_base_and_override(config.settings, settings.get("settings")),
         settings.get("env", config.env),
         settings.get("tcp_host", config.tcp_host),
         settings.get("tcp_mode", config.tcp_mode),

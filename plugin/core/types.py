@@ -1,3 +1,4 @@
+from .collections import DottedDict
 from .typing import Optional, List, Dict, Any, Iterator, Protocol
 
 
@@ -55,8 +56,8 @@ class ClientConfig(object):
                  languageId: Optional[str] = None,
                  languages: List[LanguageConfig] = [],
                  enabled: bool = True,
-                 init_options: dict = dict(),
-                 settings: dict = dict(),
+                 init_options: DottedDict = DottedDict(),
+                 settings: DottedDict = DottedDict(),
                  env: dict = dict(),
                  tcp_host: Optional[str] = None,
                  tcp_mode: Optional[str] = None,

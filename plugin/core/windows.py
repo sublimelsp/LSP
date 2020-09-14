@@ -357,9 +357,8 @@ class WindowManager(Manager):
             msg += "\n\nDo you want to restart {0}?\n\nIf you choose Cancel, {0} will "\
                    "be disabled for this window until you restart Sublime Text.".format(config.name)
             if sublime.ok_cancel_dialog(msg, "Restart {}".format(config.name)):
-                view = self._window.active_view()
-                if view:
-                    self.start_async(config, view)
+                for listener in self._listeners:
+                    self.register_listener_async(listener)
             else:
                 self._configs.disable_temporarily(config.name)
 

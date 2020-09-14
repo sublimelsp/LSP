@@ -18,7 +18,7 @@ class LanguageHandler(metaclass=abc.ABCMeta):
 
     @classmethod
     def additional_variables(cls) -> Optional[Dict[str, str]]:
-        return {}
+        return None
 
     @classmethod
     def instantiate_all(cls) -> 'List[LanguageHandler]':

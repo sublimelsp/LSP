@@ -75,12 +75,15 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.is_first_selection = False
 
     def run(self, edit: sublime.Edit) -> None:
+        self.view.settings().set('lsp_supress_input', True)
         session = self.best_session(self.capability)
         if session:
             session.send_request(
-                Request.documentSymbols({"textDocument": text_document_identifier(self.view)}), self.handle_response)
+                Request.documentSymbols({"textDocument": text_document_identifier(self.view)}),
+                self.handle_response, self.handle_response_error)
 
     def handle_response(self, response: Any) -> None:
+        self.view.settings().erase('lsp_supress_input')
         window = self.view.window()
         if window and isinstance(response, list) and len(response) > 0:
             self.old_regions = [sublime.Region(r.a, r.b) for r in self.view.sel()]
@@ -92,6 +95,9 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                 0,
                 self.on_highlighted)
             self.view.run_command("lsp_selection_clear")
+
+    def handle_response_error(self, response: Any) -> None:
+        self.view.settings().erase('lsp_supress_input')
 
     def region(self, index: int) -> sublime.Region:
         return self.regions[index][0]

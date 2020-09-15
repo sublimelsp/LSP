@@ -335,4 +335,16 @@
     //         }
     //     ]
     // },
+    // Internal key-binding
+    {
+        "keys": [
+            "<character>"
+        ],
+        "command": "noop",
+        "context": [
+            {
+                "key": "setting.lsp_suppress_input",
+            }
+        ]
+    },
 ]

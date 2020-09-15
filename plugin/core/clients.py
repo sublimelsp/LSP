@@ -2,14 +2,15 @@ from .protocol import WorkspaceFolder
 from .sessions import create_session, Session
 from .settings import ClientConfig, settings
 from .typing import List, Dict, Tuple, Callable, Optional
+from .views import extract_variables
 import os
 import sublime
 
 
 def get_window_env(window: sublime.Window, config: ClientConfig) -> Tuple[List[str], Dict[str, str]]:
-
     # Create a dictionary of Sublime Text variables
-    variables = window.extract_variables()
+    variables = extract_variables(window)
+    variables.update(config.additional_variables)
 
     # Expand language server command line environment variables
     expanded_args = list(

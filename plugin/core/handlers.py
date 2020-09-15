@@ -1,6 +1,6 @@
 from .logging import debug
 from .types import ClientConfig
-from .typing import List, Callable, Optional, Type
+from .typing import Dict, List, Callable, Optional, Type
 import abc
 
 
@@ -15,6 +15,10 @@ class LanguageHandler(metaclass=abc.ABCMeta):
     @abc.abstractproperty
     def config(self) -> ClientConfig:
         raise NotImplementedError
+
+    @classmethod
+    def additional_variables(cls) -> Optional[Dict[str, str]]:
+        return None
 
     @classmethod
     def instantiate_all(cls) -> 'List[LanguageHandler]':

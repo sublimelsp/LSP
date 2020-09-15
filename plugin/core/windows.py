@@ -72,7 +72,7 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def update_diagnostic_in_status_bar_async(self) -> None:
+    def on_diagnostics_updated_async(self) -> None:
         raise NotImplementedError()
 
     @abstractmethod

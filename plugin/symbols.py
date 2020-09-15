@@ -84,8 +84,8 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         if session:
             session.send_request(
                 Request.documentSymbols({"textDocument": text_document_identifier(self.view)}),
-                lambda response: sublime.set_timeout(self.handle_response(response)),
-                lambda error: sublime.set_timeout(self.handle_response_error(error)))
+                lambda response: sublime.set_timeout(lambda: self.handle_response(response)),
+                lambda error: sublime.set_timeout(lambda: self.handle_response_error(error)))
 
     def handle_response(self, response: Any) -> None:
         self.view.settings().erase(SUPPRESS_INPUT_SETTING_KEY)

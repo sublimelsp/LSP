@@ -130,7 +130,7 @@ class SessionView:
                 self.view.erase_regions(key)
         listener = self.listener()
         if listener:
-            listener.update_diagnostic_in_status_bar_async()
+            listener.on_diagnostics_updated_async()
 
     def get_diagnostics_async(self) -> List[Diagnostic]:
         return self.session_buffer.diagnostics

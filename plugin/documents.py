@@ -224,7 +224,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             result[sv.session.config.name] = sv.get_diagnostics_async()
         return result
 
-    def update_diagnostic_in_status_bar_async(self) -> None:
+    def on_diagnostics_updated_async(self) -> None:
+        self._clear_code_actions_annotation()
+        self._do_code_actions()
+        self._update_diagnostic_in_status_bar_async()
+
+    def _update_diagnostic_in_status_bar_async(self) -> None:
         if userprefs().show_diagnostics_in_view_status:
             r = self._get_current_range_async()
             if r is not None:
@@ -292,7 +297,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._clear_code_actions_annotation()
             self._when_selection_remains_stable_async(self._do_code_actions, current_region,
                                                       after_ms=self.code_actions_debounce_time)
-            self.update_diagnostic_in_status_bar_async()
+            self._update_diagnostic_in_status_bar_async()
 
     def on_post_save_async(self) -> None:
         if self.view.is_primary():

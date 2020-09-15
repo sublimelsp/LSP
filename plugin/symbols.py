@@ -1,5 +1,6 @@
 from .core.protocol import Request, Range
 from .core.registry import LspTextCommand
+from .core.rpc import print_to_status_bar
 from .core.typing import Any, List, Optional, Tuple, Dict, Generator
 from .core.views import location_to_encoded_filename
 from .core.views import range_to_region
@@ -80,7 +81,8 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         if session:
             session.send_request(
                 Request.documentSymbols({"textDocument": text_document_identifier(self.view)}),
-                self.handle_response, self.handle_response_error)
+                lambda response: sublime.set_timeout(self.handle_response(response)),
+                lambda error: sublime.set_timeout(self.handle_response_error(error)))
 
     def handle_response(self, response: Any) -> None:
         self.view.settings().erase('lsp_supress_input')
@@ -96,8 +98,9 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                 self.on_highlighted)
             self.view.run_command("lsp_selection_clear")
 
-    def handle_response_error(self, response: Any) -> None:
+    def handle_response_error(self, error: Any) -> None:
         self.view.settings().erase('lsp_supress_input')
+        print_to_status_bar(error)
 
     def region(self, index: int) -> sublime.Region:
         return self.regions[index][0]

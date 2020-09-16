@@ -162,7 +162,7 @@ Add these settings to LSP settings, your Sublime settings, Syntax-specific setti
 ### Package settings (LSP)
 
 * `inhibit_word_completions` `true` *disable sublime word completion*
-* `inhibit_explicit_completions` `true` *disable sublime snippet completion*
+* `inhibit_snippet_completions` `false` *disable sublime snippet completion*
 * `show_code_actions` `annotation` *Show code actions: "annotation", "bulb"*
 * `code_action_on_save_timeout_ms` `2000` *the amount of time the code actions on save are allowed to run for*
 * `show_references_in_quick_panel` `false` *show symbol references in Sublime's quick panel instead of the bottom panel*

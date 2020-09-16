@@ -526,7 +526,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if any(trigger.get('server', None) == session.config.name for trigger in completion_triggers):
             return
         # This is to make ST match with labels that have a weird prefix like a space character.
-        settings.set('auto_complete_preserve_order', 'none')
+        # settings.set('auto_complete_preserve_order', 'none')
         trigger_chars = session.get_capability('completionProvider.triggerCharacters') or []
         if trigger_chars:
             completion_triggers.append({
@@ -545,11 +545,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         response_items = []  # type: List[Dict]
         flags = 0
         prefs = userprefs()
-        if prefs.inhibit_explicit_completions:
+        if prefs.inhibit_snippet_completions:
             flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
         if prefs.inhibit_word_completions:
             flags |= sublime.INHIBIT_WORD_COMPLETIONS
-            flags |= sublime.INHIBIT_REORDER
         if isinstance(response, dict):
             response_items = response["items"] or []
             if response.get("isIncomplete", False):
@@ -560,6 +559,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         LspResolveDocsCommand.completions = response_items
         items = [format_completion(response_item, index, can_resolve_completion_items)
                  for index, response_item in enumerate(response_items)]
+        if items:
+            flags |= sublime.INHIBIT_REORDER
         resolve(completion_list, items, flags)
 
     def _on_complete_error(self, error: dict, completion_list: sublime.CompletionList) -> None:

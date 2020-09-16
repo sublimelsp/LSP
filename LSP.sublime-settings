@@ -112,7 +112,7 @@
   "show_symbol_action_links": false,
 
   // Disable Sublime Text's snippet completions.
-  "inhibit_explicit_completions": false,
+  "inhibit_snippet_completions": false,
 
   // Disable Sublime Text's word completions. When set to `true`, this also disables Sublime Text's internal completion
   // sorting algorithm and instead uses the sorting defined by the relevant language server.

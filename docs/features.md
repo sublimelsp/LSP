@@ -161,8 +161,9 @@ Add these settings to LSP settings, your Sublime settings, Syntax-specific setti
 
 ### Package settings (LSP)
 
-* `only_show_lsp_completions` `false` *disable sublime word completion and snippets from autocomplete lists*
-* `show_code_actions` `annotation` *Show code actions: "annotation", "bulb" *
+* `inhibit_word_completions` `true` *disable sublime word completion*
+* `inhibit_snippet_completions` `false` *disable sublime snippet completion*
+* `show_code_actions` `annotation` *Show code actions: "annotation", "bulb"*
 * `code_action_on_save_timeout_ms` `2000` *the amount of time the code actions on save are allowed to run for*
 * `show_references_in_quick_panel` `false` *show symbol references in Sublime's quick panel instead of the bottom panel*
 * `show_view_status` `true` *show permanent language server status in the status bar*
@@ -177,7 +178,7 @@ Add these settings to LSP settings, your Sublime settings, Syntax-specific setti
 * `document_highlight_scopes`: *customize your sublime text scopes for document highlighting*
 * `diagnostics_gutter_marker` `"dot"` *gutter marker for code diagnostics: "dot", "circle", "bookmark", "sign" or ""*
 * `show_symbol_action_links` `false` *show links to symbol actions like go to, references and rename in the hover popup*
-* `disabled_capabilities`, `[]` *Turn off client capabilities (features): "hover", "completion", "documentHighlight", "colorProvider", "signatureHelp"
+* `disabled_capabilities`, `[]` *Turn off client capabilities (features): "hover", "completion", "documentHighlight", "colorProvider", "signatureHelp"*
 * `log_debug` `false` *show debug logging in the sublime console*
 * `log_server` `[]` *log communication from and to language servers*
 * `log_stderr` `false` *show language server stderr output in the console*

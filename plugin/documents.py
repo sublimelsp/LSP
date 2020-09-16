@@ -549,10 +549,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                             can_resolve_completion_items: bool) -> None:
         response_items = []  # type: List[Dict]
         flags = 0
-        if userprefs().only_show_lsp_completions:
-            flags |= sublime.INHIBIT_WORD_COMPLETIONS
+        prefs = userprefs()
+        if prefs.inhibit_snippet_completions:
             flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
-            flags |= sublime.INHIBIT_REORDER
+        if prefs.inhibit_word_completions:
+            flags |= sublime.INHIBIT_WORD_COMPLETIONS
         if isinstance(response, dict):
             response_items = response["items"] or []
             if response.get("isIncomplete", False):
@@ -563,6 +564,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         LspResolveDocsCommand.completions = response_items
         items = [format_completion(response_item, index, can_resolve_completion_items)
                  for index, response_item in enumerate(response_items)]
+        if items:
+            flags |= sublime.INHIBIT_REORDER
         resolve(completion_list, items, flags)
 
     def _on_complete_error(self, error: dict, completion_list: sublime.CompletionList) -> None:

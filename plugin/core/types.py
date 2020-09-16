@@ -131,6 +131,8 @@ class Settings:
     disabled_capabilities = None  # type: List[str]
     document_highlight_scopes = None  # type: Dict[str, str]
     document_highlight_style = None  # type: str
+    inhibit_snippet_completions = None  # type: bool
+    inhibit_word_completions = None  # type: bool
     log_debug = None  # type: bool
     log_max_size = None  # type: int
     log_server = None  # type: List[str]
@@ -198,6 +200,15 @@ class Settings:
             self.auto_show_diagnostics_panel = auto_show_diagnostics_panel
         else:
             self.auto_show_diagnostics_panel = "always"
+
+        # Backwards-compatible with "only_show_lsp_completions"
+        only_show_lsp_completions = s.get("only_show_lsp_completions")
+        if isinstance(only_show_lsp_completions, bool):
+            self.inhibit_snippet_completions = only_show_lsp_completions
+            self.inhibit_word_completions = only_show_lsp_completions
+        else:
+            r("inhibit_snippet_completions", False)
+            r("inhibit_word_completions", True)
 
     def show_diagnostics_panel_always(self) -> bool:
         return self.auto_show_diagnostics_panel == "always"

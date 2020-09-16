@@ -1,0 +1,417 @@
+{
+  "contributions": {
+    "settings": [
+      {
+        "schema": {
+          "$id": "sublime://settings/LSP",
+          "definitions": {
+            // User preferences that are shared with "Preferences.sublime-settings"
+            "lsp_format_on_save": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Run the server's formatProvider (if supported) on a document before saving. This option is also supported in syntax-specific settings and/or in the `\"settings\"` section of project files."
+            },
+            "ClientInitializationOptions": {
+              "type": "object",
+              "markdownDescription": "The initializationOptions that are passed to the language server process during the _initialize_ phase. This is a rather free-form dictionary of key-value pairs and is different per language server. Look up documentation of your specific langauge server to see what the possible key-value pairs can be."
+            },
+            "ClientSettings": {
+              "type": "object",
+              "markdownDescription": "The server settings. This is a rather free-form dictionary of key-value pairs and is different per language server. Look up documentation of your specific langauge server to see what the possible key-value pairs can be."
+            },
+            "ClientExperimentalCapabilities": {
+              "type": "object",
+              "markdownDescription": "Experimental capabilities that are passed to the language server process during the _initialize_ phase. This is different per language server, so you'll need to look up documentation for your particular language server."
+            },
+            "ClientEnv": {
+              "type": "object",
+              "markdownDescription": "Specify environment variables to pass to the language server process on startup.",
+              "additionalProperties": {
+                "type": "string",
+                "markdownDescription": "The value for this environment variable."
+              },
+            },
+            "ClientLanguages": {
+              "markdownDescription": "An array which defines to which views this language server should be attached.",
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/definitions/LanguageConfig"
+              },
+            },
+            "LanguageConfig": {
+              "type": "object",
+              "markdownDescription": "A language configuration defines which servers are attached to which views",
+              "properties": {
+                "languageId": {
+                  "type": "string",
+                  "default": "somelang",
+                  "markdownDescription": "The \"Language ID\". It is sent to the language server so that it knows with what kind of file it is dealing with."
+                },
+                "document_selector": {
+                  "type": "string",
+                  "default": "source.somelang",
+                  "markdownDescription": "**ST4 only**. The Sublime Text selector to attach the language server process to applicable views. If not specified, it defaults to \"source.${languageId}\". This is the connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. If the selector happens to be of the form \"source.{languageId}\" (which it is in many cases), then you can omit this `\"document_selector\"` key altogether, and LSP will assume the selector is \"source.{languageId}\".\n\nFor more information, refer to the [Sublime Text docs on selectors](https://www.sublimetext.com/docs/3/selectors.html)"
+                },
+                "feature_selector": {
+                  "type": "string",
+                  "default": "source.somelang",
+                  "markdownDescription": "**ST4 only**. The Sublime Text selector to use to give preference to this language server when multiple servers are attached to a view. For certain capabilities, like code completion, only one language server is chosen. The selector specified here decides which language server is chosen above others."
+                },
+                "syntaxes": {
+                  "type": "array",
+                  "markdownDescription": "The Sublime Text syntax paths that need to match current file for server to be started."
+                },
+                "scopes": {
+                  "type": "array",
+                  "markdownDescription": "The base scope of the Sublime Text syntax that must match for the server to be started."
+                }
+              },
+              "required": [
+                "languageId", "syntaxes", "scopes"
+              ],
+              "additionalProperties": false
+            },
+            // The ClientConfig class
+            "ClientConfig": {
+              "type": "object",
+              "additionalProperties": false,
+              "markdownDescription": "The configuration that informs LSP on how to start your language server and to which views it should attach the language server process",
+              "properties": {
+                "command": {
+                  "type": "array",
+                  "default": [
+                    "path/to/language-server-binary",
+                    "--some-option"
+                  ],
+                  "items": {
+                    "type": "string"
+                  },
+                  "markdownDescription": "The command to start the language server."
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "markdownDescription": "Whether this configuration is enabled or disabled."
+                },
+                "tcp_port": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 0,
+                  "markdownDescription": "When specified, the TCP port to use to connect to the language server process. If not specified, STDIO is used as the transport. When set to zero, a free TCP port is chosen. You can use that free TCP port number as a template variable, i.e. as `${tcp_port}` in the `\"command\"`."
+                },
+                "tcp_mode": {
+                  "type": "string",
+                  "default": "",
+                  "enum": [
+                    "",
+                    "host",
+                  ],
+                  "markdownDescription": "Set to `\"host\"` if the server connects to the editor. Otherwise, LSP will connect to the server."
+                },
+                "languages": {
+                  "$ref": "#/definitions/ClientLanguages"
+                },
+                "initializationOptions": {
+                  "$ref": "#/definitions/ClientInitializationOptions"
+                },
+                "settings": {
+                  "$ref": "#/definitions/ClientSettings"
+                },
+                "experimental_capabilities": {
+                  "$ref": "#/definitions/ClientExperimentalCapabilities",
+                },
+                "env": {
+                  "$ref": "#/definitions/ClientEnv"
+                },
+                "languageId": {
+                  "type": "string",
+                  "default": "somelang",
+                  "markdownDescription": "The \"Language ID\". It is sent to the language server so that it knows with what kind of file it is dealing with."
+                },
+                "document_selector": {
+                  "type": "string",
+                  "default": "source.somelang",
+                  "markdownDescription": "**ST4 only**. The Sublime Text selector to attach the language server process to applicable views. If not specified, it defaults to \"source.${languageId}\". This is the connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. If the selector happens to be of the form \"source.{languageId}\" (which it is in many cases), then you can omit this `\"document_selector\"` key altogether, and LSP will assume the selector is \"source.{languageId}\".\n\nFor more information, refer to the [Sublime Text docs on selectors](https://www.sublimetext.com/docs/3/selectors.html)"
+                },
+                "feature_selector": {
+                  "type": "string",
+                  "default": "source.somelang",
+                  "markdownDescription": "**ST4 only**. The Sublime Text selector to use to give preference to this language server when multiple servers are attached to a view. For certain capabilities, like code completion, only one language server is chosen. The selector specified here decides which language server is chosen above others."
+                },
+                "syntaxes": {
+                  "type": "array",
+                  "markdownDescription": "The Sublime Text syntax paths that need to match current file for server to be started."
+                },
+                "scopes": {
+                  "type": "array",
+                  "markdownDescription": "The base scope of the Sublime Text syntax that must match for the server to be started."
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "file_patterns": [
+          "/LSP.sublime-settings"
+        ],
+        "schema": {
+          "properties": {
+            "show_view_status": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Show permanent language server status in the status bar."
+            },
+            "auto_show_diagnostics_panel": {
+              "oneOf": [
+                {
+                  "enum": [
+                    "never",
+                    "always",
+                    "saved"
+                  ]
+                },
+                {
+                  "type": "boolean",
+                  "deprecationMessage": "Use an array instead."
+                }
+              ],
+              "default": "saved",
+              "markdownDescription": "Open and close the diagnostics panel automatically, depending on available diagnostics. For backward-compatibility, this can also be a boolean. In that case, if set to `false`, don't show the diagnostics panel, and when set to `true`, always show the diagnostics panel."
+            },
+            "auto_show_diagnostics_panel_level": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4,
+              "default": 2,
+              "markdownDescription": "Open the diagnostics panel automatically when diagnostics level is equal to or less than:\n\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`"
+            },
+            "complete_all_chars": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Request completions for all characters if set to `true`, or just after trigger characters only otherwise."
+            },
+            "completion_hint_type": {
+              "enum": [
+                "auto",
+                "detail",
+                "kind",
+                "none",
+              ],
+              "default": "auto",
+              "markdownDescription": "Controls which hints the completion panel displays:\n- `\"auto\"`: completion details if available or kind otherwise\n- `\"detail\"`: completion details if available\n- `\"kind\"`: completion kind if available\n- `\"none\"`: completion item label only"
+            },
+            "show_diagnostics_count_in_view_status": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Show errors and warnings count in the status bar."
+            },
+            "lsp_format_on_save": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save"
+            },
+            "show_diagnostics_in_view_status": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Show the diagnostics description of the code under the cursor in status bar if available."
+            },
+            "show_diagnostics_severity_level": {
+              "type": "integer",
+              "default": 4,
+              "minimum": 0,
+              "maximum": 4,
+              "markdownDescription": "Show highlights and gutter markers in the file views for diagnostics with level equal to or less than:\n\n- _none_: `0`,\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`"
+            },
+            "diagnostics_highlight_style": {
+              "enum": [
+                "box",
+                "underline",
+                ""
+              ],
+              "default": "underline",
+              "markdownDescription": "Highlighting style of code diagnostics. When set to the empty string (`\"\"`), no diagnostics are shown in-line."
+            },
+            "document_highlight_style": {
+              "enum": [
+                "fill",
+                "box",
+                "underline",
+                "stippled",
+                "squiggly",
+                ""
+              ],
+              "default": "underline",
+              "markdownDescription": "Highlighting style of `\"highlights\"`: accentuating nearby text entities that are related to the one under your cursor. When set to the empty string (`\"\"`), no diagnostics are shown in-line."
+            },
+            "document_highlight_scopes": {
+              "type": "object",
+              "properties": {
+                "unknown": {
+                  "type": "string",
+                  "default": "text",
+                  "markdownDescription": "What Sublime Text scope should receive the LSP `\"unknown\"` scope?"
+                },
+                "text": {
+                  "type": "string",
+                  "default": "text",
+                  "markdownDescription": "What Sublime Text scope should receive the LSP `\"text\"` scope?"
+                },
+                "read": {
+                  "type": "string",
+                  "default": "markup.inserted",
+                  "markdownDescription": "What Sublime Text scope should receive the LSP `\"read\"` scope?"
+                },
+                "write": {
+                  "type": "string",
+                  "default": "markup.changed",
+                  "markdownDescription": "What Sublime Text scope should receive the LSP `\"write\"` scope?"
+                },
+                "additionalProperties": false
+              },
+              "default": {
+                "unknown": "text",
+                "text": "text",
+                "read": "markup.inserted",
+                "write": "markup.changed"
+              },
+              "markdownDescription": "Map the LSP scopes `\"unknown\"`, `\"text\"`, `\"read\"` and `\"write\"` to the given Sublime Text scopes. You can use those scopes in your .sublime-color-scheme to color the document highlight scopes."
+            },
+            "diagnostics_gutter_marker": {
+              "enum": [
+                "dot",
+                "circle",
+                "bookmark",
+                "sign",
+                ""
+              ],
+              "default": "dot",
+              "markdownDescription": "Gutter marker for code diagnostics."
+            },
+            "show_code_actions_bulb": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Show bulb symbol in the gutter if code action is available on the line."
+            },
+            "show_symbol_action_links": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Show symbol action links in hover popup if available."
+            },
+            "only_show_lsp_completions": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Disable Sublime Text's explicit and word completion."
+            },
+            "show_references_in_quick_panel": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Show symbol references in Sublime's quick panel instead of the bottom panel."
+            },
+            "disabled_capabilities": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "hover",
+                  "completion",
+                  "colorProvider",
+                  "documentHighlight",
+                  "signatureHelp"
+                ]
+              },
+              "uniqueItems": true,
+              "minItems": 0,
+              "markdownDescription": "Disable language server capabilities."
+            },
+            "log_debug": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Show verbose debug messages in the sublime console."
+            },
+            "log_payloads": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Enable logging of payloads in server communication."
+            },
+            "log_server": {
+              "type": "boolean",
+              "markdownDescription": "Log communication from and to language servers."
+            },
+            "log_stderr": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Show language server stderr output in the Language Servers output panel. This output panel can be toggled from the command palette with the command \"LSP: Toggle Log Panel\"."
+            },
+            "clients": {
+              "additionalProperties": {
+                "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
+              },
+              "markdownDescription": "The dictionary of your configured language servers. The keys of this dictionary are free-form. They give a humany-friendly name to the server configuration. They are shown in the bottom-left corner in the status bar once attached to a view (unless you have `\"show_view_status\"` set to `false`)."
+            },
+            "default_clients": {
+              "additionalProperties": {
+                "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
+              },
+              "markdownDescription": "**DO NOT MODIFY THIS SETTING!** Use `\"clients\"` to override settings instead!",
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "file_patterns": [
+          "/Preferences.sublime-settings"
+        ],
+        "schema": {
+          "properties": {
+            "lsp_format_on_save": {
+              "$ref": "sublime://settings/LSP#/definitions/lsp_format_on_save",
+            },
+          }
+        }
+      },
+      {
+        "file_patterns": [
+          "/*.sublime-project"
+        ],
+        "schema": {
+          "properties": {
+            "settings": {
+              "properties": {
+                "LSP": {
+                  "type": "object",
+                  "markdownDescription": "The dictionary of your configured language servers or overrides for existing configurations. The keys of this dictionary are free-form. They give a humany-friendly name to the server configuration. They are shown in the bottom-left corner in the status bar once attached to a view (unless you have `\"show_view_status\"` set to `false`).",
+                  "additionalProperties": {
+                    "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
+                  },
+                },
+              }
+            }
+          }
+        }
+      },
+      {
+        "schema": {
+          "$id": "sublime://settings/LSP-plugin-base",
+          "properties": {
+            "languages": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientLanguages"
+            },
+            "initializationOptions": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientInitializationOptions"
+            },
+            "settings": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientSettings"
+            },
+            "experimental_capabilities": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientExperimentalCapabilities",
+            },
+            "env": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientEnv"
+            },
+          },
+        }
+      },
+    ]
+  }
+}

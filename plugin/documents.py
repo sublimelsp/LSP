@@ -526,7 +526,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if any(trigger.get('server', None) == session.config.name for trigger in completion_triggers):
             return
         # This is to make ST match with labels that have a weird prefix like a space character.
-        # settings.set('auto_complete_preserve_order', 'none')
+        settings.set('auto_complete_preserve_order', 'none')
         trigger_chars = session.get_capability('completionProvider.triggerCharacters') or []
         if trigger_chars:
             completion_triggers.append({

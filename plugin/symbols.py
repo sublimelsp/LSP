@@ -1,5 +1,6 @@
 from .core.protocol import Request, Range
 from .core.registry import LspTextCommand
+from .core.rpc import print_to_status_bar
 from .core.typing import Any, List, Optional, Tuple, Dict, Generator
 from .core.views import location_to_encoded_filename
 from .core.views import range_to_region
@@ -9,6 +10,9 @@ from contextlib import contextmanager
 import os
 import sublime
 import sublime_plugin
+
+
+SUPPRESS_INPUT_SETTING_KEY = 'lsp_suppress_input'
 
 
 def unpack_lsp_kind(kind: int) -> Tuple[int, str, str, str]:
@@ -75,12 +79,16 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.is_first_selection = False
 
     def run(self, edit: sublime.Edit) -> None:
+        self.view.settings().set(SUPPRESS_INPUT_SETTING_KEY, True)
         session = self.best_session(self.capability)
         if session:
             session.send_request(
-                Request.documentSymbols({"textDocument": text_document_identifier(self.view)}), self.handle_response)
+                Request.documentSymbols({"textDocument": text_document_identifier(self.view)}),
+                lambda response: sublime.set_timeout(lambda: self.handle_response(response)),
+                lambda error: sublime.set_timeout(lambda: self.handle_response_error(error)))
 
     def handle_response(self, response: Any) -> None:
+        self.view.settings().erase(SUPPRESS_INPUT_SETTING_KEY)
         window = self.view.window()
         if window and isinstance(response, list) and len(response) > 0:
             self.old_regions = [sublime.Region(r.a, r.b) for r in self.view.sel()]
@@ -92,6 +100,10 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                 0,
                 self.on_highlighted)
             self.view.run_command("lsp_selection_clear")
+
+    def handle_response_error(self, error: Any) -> None:
+        self.view.settings().erase(SUPPRESS_INPUT_SETTING_KEY)
+        print_to_status_bar(error)
 
     def region(self, index: int) -> sublime.Region:
         return self.regions[index][0]

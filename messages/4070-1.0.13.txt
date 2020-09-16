@@ -1,0 +1,21 @@
+=> 4070-1.0.13
+
+- More granular inhibit completion options (#1317) (Raoul Wols)
+  
+  "only_show_lsp_completions" has been replaced by:
+
+  - "inhibit_word_completions"
+  - "inhibit_snippet_completions"
+
+- Update code actions on diagnostics change (#1325) (Rafał Chłodnicki)
+- Fix: restart a language server after it crashed by doing the registration dance (#1322) (Raoul Wols)
+- Fix: TCP port number is zero in the error message (Raoul Wols)
+- Print a debug message instead of asserting when registering a plugin (Raoul Wols)
+- Update language ID map (Raoul Wols)
+- Attach sessions to views outside the workspaces (Raoul Wols)
+
+  Yes, it finally happened! Jump to definition anywhere!
+
+- Minor tweaks for showing the completion docs popup
+- Manipulating the selection without an edit object is undefined behavior (Raoul Wols)
+- Notify user about failed initialize (Rafał Chłodnicki)

@@ -1,0 +1,6 @@
+=> 3154-0.13.0
+
+Features:
+
+- Add "sublime-package.json" for validating LSP settings and other LSP-* packages (#1328) (Rafał Chłodnicki)
+  Install "LSP-json" to take advantage of it.

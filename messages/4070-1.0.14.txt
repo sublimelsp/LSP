@@ -1,0 +1,7 @@
+=> 4070-1.0.14
+
+- Remove old messages including invalid key "3154-11.1" (#1332) (Rafał Chłodnicki)
+- Account for source.*.react base scopes (Raoul Wols)
+- Better 'cannot start' message (Raoul Wols)
+- Update license year (Raoul Wols)
+- Prevent accidental view input after triggering document symbols (#1326) (Rafał Chłodnicki)

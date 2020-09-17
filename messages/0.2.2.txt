@@ -1,9 +1,0 @@
-=> 0.2.2
-
-Fixes around completion (list now correctly updates with LSP response)
-Support for ad-hoc editing without a project folder in the workspace
-Fix for initialized message unblocking Rust Language Server
-
-See https://github.com/tomv564/LSP/releases/tag/0.2.2 for full update details.
-
-Many thanks to those reporting issues and bugs, and a special thanks to the contributors of this release!

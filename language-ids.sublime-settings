@@ -17,7 +17,7 @@
     "csharp": "source.cs",
     "html": "embedding.php | text.html.basic | text.html.ngx", // https://github.com/princemaple/ngx-html-syntax
     "javascript": "source.js",
-    "javascriptreact": "source.jsx",
+    "javascriptreact": "source.jsx | source.js.react", // https://github.com/Thom1729/Sublime-JS-Custom
     "jsonc": "source.json",
     "latex": "text.tex.latex",
     "markdown": "text.html.markdown",
@@ -29,7 +29,7 @@
     "shaderlab": "source.unity_shader | source.shader", // https://github.com/petereichinger/Unity3D-Shader, https://github.com/waqiju/unity_shader_st3
     "shellscript": "source.shell.bash",
     "typescript": "source.ts",
-    "typescriptreact": "source.tsx",
+    "typescriptreact": "source.tsx | source.ts.react", // https://github.com/Thom1729/Sublime-JS-Custom
     "txt": "text.plain",
     "vue": "text.html.vue", // https://github.com/vuejs/vue-syntax-highlight
     "xml": "text.xml - text.xml.xsl",

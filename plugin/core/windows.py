@@ -250,8 +250,8 @@ class WindowManager(Manager):
                     self._window, initiating_view, workspace_folders, config)
                 if cannot_start_reason:
                     config.erase_view_status(initiating_view)
-                    self._window.status_message(cannot_start_reason)
-                    return
+                    message = "cannot start {}: {}".format(config.name, cannot_start_reason)
+                    return self._window.status_message(message)
             config.set_view_status(initiating_view, "starting...")
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
             cwd = workspace_folders[0].path if workspace_folders else None

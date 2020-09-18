@@ -600,7 +600,9 @@ def _is_completion_item_deprecated(item: dict) -> bool:
     return False
 
 
-def format_completion(item: dict, index: int, can_resolve_completion_items: bool) -> sublime.CompletionItem:
+def format_completion(
+    item: dict, index: int, can_resolve_completion_items: bool, session_name: str
+) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
     item_kind = item.get("kind")
     if isinstance(item_kind, int) and 1 <= item_kind <= len(COMPLETION_KINDS):
@@ -635,7 +637,7 @@ def format_completion(item: dict, index: int, can_resolve_completion_items: bool
         completion = sublime.CompletionItem.command_completion(
             trigger=st_trigger,
             command="lsp_complete_text_edit",
-            args=item,
+            args={"session_name": session_name, "item": item},
             annotation=st_annotation,
             kind=kind,
             details=st_details)
@@ -645,7 +647,7 @@ def format_completion(item: dict, index: int, can_resolve_completion_items: bool
         completion = sublime.CompletionItem.command_completion(
             trigger=st_trigger,
             command="lsp_complete_insert_text",
-            args=item,
+            args={"session_name": session_name, "item": item},
             annotation=st_annotation,
             kind=kind,
             details=st_details)

@@ -584,7 +584,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
             "kind": 2,  # Method
             "deprecated": True
         }
-        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False)
+        formatted_completion_item = format_completion(item_with_deprecated_flag, 0, False, "")
         self.assertEqual('⚠', formatted_completion_item.kind[1])
         self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
 
@@ -594,6 +594,6 @@ class QueryCompletionsTests(TextDocumentTestCase):
             "kind": 2,  # Method
             "tags": [CompletionItemTag.Deprecated]
         }
-        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False)
+        formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "")
         self.assertEqual('⚠', formatted_completion_item.kind[1])
         self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])

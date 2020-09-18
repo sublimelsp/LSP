@@ -90,7 +90,8 @@ class LspCompleteCommand(sublime_plugin.TextCommand):
         command = item.get("command")
         if command:
             debug('Running server command "{}" for view {}'.format(command, self.view.id()))
-            self.view.run_command("lsp_execute", {"command_name": command})
+            args = {"command_name": command["command"], "command_args": command.get("arguments")}
+            self.view.run_command("lsp_execute", args)
 
 
 class LspCompleteInsertTextCommand(LspCompleteCommand):

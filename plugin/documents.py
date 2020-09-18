@@ -520,9 +520,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._apply_view_settings(session)
         self.purge_changes_async()
         can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
+        config_name = session.config.name
         session.send_request(
             Request.complete(text_document_position_params(self.view, location)),
-            lambda res: self._on_complete_result(res, promise, can_resolve_completion_items, session.config.name),
+            lambda res: self._on_complete_result(res, promise, can_resolve_completion_items, config_name),
             lambda res: self._on_complete_error(res, promise))
 
     def _apply_view_settings(self, session: Session) -> None:

@@ -17,6 +17,7 @@ class LspExecuteCommand(LspTextCommand):
             event: Optional[dict] = None) -> None:
         # Handle VSCode-specific command for triggering suggestions popup.
         if command_name == "editor.action.triggerSuggest":
+            # Triggered for set_timeout as suggestions popup doesn't trigger otherwise.
             sublime.set_timeout(lambda: self.view.run_command("auto_complete"))
             return
         session = self.best_session(self.capability)

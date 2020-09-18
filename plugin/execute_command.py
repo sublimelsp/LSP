@@ -15,6 +15,9 @@ class LspExecuteCommand(LspTextCommand):
             command_name: Optional[str] = None,
             command_args: Optional[List[Any]] = None,
             event: Optional[dict] = None) -> None:
+        if command_name == "editor.action.triggerSuggest":
+            sublime.set_timeout(lambda: self.view.run_command("auto_complete"))
+            return
         session = self.best_session(self.capability)
         if session and command_name:
             window = self.view.window()

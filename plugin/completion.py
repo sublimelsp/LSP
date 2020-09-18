@@ -89,9 +89,6 @@ class LspCompleteCommand(sublime_plugin.TextCommand):
             self.view.run_command("lsp_apply_document_edit", {'changes': edits})
         command = item.get("command")
         if command:
-            if command['command'] == "editor.action.triggerSuggest":
-                sublime.set_timeout(lambda: self.view.run_command("auto_complete"))
-                return
             debug('Running server command "{}" for view {}'.format(command, self.view.id()))
             args = {"command_name": command["command"], "command_args": command.get("arguments")}
             self.view.run_command("lsp_execute", args)

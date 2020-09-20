@@ -9,7 +9,6 @@ from .protocol import Notification
 from .protocol import Point
 from .protocol import Range
 from .protocol import Request
-from .types import SessionId
 from .typing import Optional, Dict, Any, Iterable, List, Union, Callable
 from .url import filename_to_uri
 from .url import uri_to_filename
@@ -602,7 +601,7 @@ def _is_completion_item_deprecated(item: dict) -> bool:
 
 
 def format_completion(
-    item: dict, index: int, can_resolve_completion_items: bool, sid: SessionId
+    item: dict, index: int, can_resolve_completion_items: bool, session_name: str
 ) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
     item_kind = item.get("kind")
@@ -638,7 +637,7 @@ def format_completion(
         completion = sublime.CompletionItem.command_completion(
             trigger=st_trigger,
             command="lsp_complete_text_edit",
-            args={"sid": sid, "item": item},
+            args={"session_name": session_name, "item": item},
             annotation=st_annotation,
             kind=kind,
             details=st_details)
@@ -648,7 +647,7 @@ def format_completion(
         completion = sublime.CompletionItem.command_completion(
             trigger=st_trigger,
             command="lsp_complete_insert_text",
-            args={"sid": sid, "item": item},
+            args={"session_name": session_name, "item": item},
             annotation=st_annotation,
             kind=kind,
             details=st_details)

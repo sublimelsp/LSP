@@ -19,7 +19,6 @@ from .types import debounced
 from .types import diff
 from .types import DocumentSelector
 from .types import method_to_capability
-from .types import SessionId
 from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol
 from .url import uri_to_filename
 from .version import __version__
@@ -495,7 +494,6 @@ class _RegistrationData:
 
 
 class Session(Client):
-    last_sid = 0  # type: SessionId
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: List[WorkspaceFolder],
                  config: ClientConfig, plugin_class: Optional[Type[AbstractPlugin]]) -> None:
@@ -516,8 +514,6 @@ class Session(Client):
         self._progress = {}  # type: Dict[Any, Dict[str, str]]
         self._plugin_class = plugin_class
         self._plugin = None  # type: Optional[AbstractPlugin]
-        Session.last_sid += 1
-        self._sid = Session.last_sid
 
     def __del__(self) -> None:
         debug(self.config.command, "ended")
@@ -531,11 +527,6 @@ class Session(Client):
             if attr is not None:
                 return attr
         raise AttributeError(name)
-
-    @property
-    def sid(self) -> SessionId:
-        """Unique, serializable, identifier within the current ST session."""
-        return self._sid
 
     # TODO: Create an assurance that the API doesn't change here as it can be used by plugins.
     def get_workspace_folders(self) -> List[WorkspaceFolder]:

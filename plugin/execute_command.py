@@ -2,7 +2,6 @@ import sublime
 from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.sessions import Session
-from .core.types import SessionId
 from .core.typing import List, Optional, Dict, Any
 from .core.views import uri_from_view, offset_to_point, region_to_range
 
@@ -15,14 +14,14 @@ class LspExecuteCommand(LspTextCommand):
             edit: sublime.Edit,
             command_name: Optional[str] = None,
             command_args: Optional[List[Any]] = None,
-            sid: SessionId = None,
+            session_name: Optional[str] = None,
             event: Optional[dict] = None) -> None:
         # Handle VSCode-specific command for triggering suggestions popup.
         if command_name == "editor.action.triggerSuggest":
             # Triggered from set_timeout as suggestions popup doesn't trigger otherwise.
             sublime.set_timeout(lambda: self.view.run_command("auto_complete"))
             return
-        session = self.session_by_sid(sid) if sid else self.best_session(self.capability)
+        session = self.session_by_name(session_name) if session_name else self.best_session(self.capability)
         if session and command_name:
             window = self.view.window()
             if window:

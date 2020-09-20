@@ -1,7 +1,6 @@
 from .configurations import ConfigManager
 from .sessions import Session
 from .settings import client_configs
-from .types import SessionId
 from .typing import Optional, Any, Generator, Iterable
 from .windows import WindowRegistry
 import sublime
@@ -79,12 +78,6 @@ class LspTextCommand(sublime_plugin.TextCommand):
         target = name if name else self.session_name
         for session in self.sessions():
             if session.config.name == target:
-                return session
-        return None
-
-    def session_by_sid(self, sid: SessionId) -> Optional[Session]:
-        for session in self.sessions():
-            if session.sid == sid:
                 return session
         return None
 

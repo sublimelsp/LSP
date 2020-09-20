@@ -12,9 +12,6 @@ import sublime
 import time
 
 
-SessionId = int
-
-
 @contextlib.contextmanager
 def runtime(token: str) -> Generator[None, None, None]:
     t = time.time()

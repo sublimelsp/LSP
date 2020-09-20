@@ -600,7 +600,9 @@ def _is_completion_item_deprecated(item: dict) -> bool:
     return False
 
 
-def format_completion(item: dict, index: int, can_resolve_completion_items: bool) -> sublime.CompletionItem:
+def format_completion(
+    item: dict, index: int, can_resolve_completion_items: bool, session_name: str
+) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
     item_kind = item.get("kind")
     if isinstance(item_kind, int) and 1 <= item_kind <= len(COMPLETION_KINDS):
@@ -630,25 +632,21 @@ def format_completion(item: dict, index: int, can_resolve_completion_items: bool
     st_details += "<p>{}</p>".format(lsp_detail)
 
     # NOTE: Some servers return "textEdit": null. We have to check if it's truthy.
-    if item.get("textEdit"):
-        # text edits are complex and can do anything. Use a command completion.
+    if item.get("textEdit") or item.get("additionalTextEdits") or item.get("command"):
+        command = "lsp_complete_text_edit" if item.get("textEdit") else "lsp_complete_insert_text"
+        args = {"item": item}  # type: Dict[str, Any]
+        if item.get("command"):
+            # If there is a "command", we'll have to run the command on the same session so store the name.
+            args["session_name"] = session_name
         completion = sublime.CompletionItem.command_completion(
             trigger=st_trigger,
-            command="lsp_complete_text_edit",
-            args=item,
+            command=command,
+            args=args,
             annotation=st_annotation,
             kind=kind,
             details=st_details)
-        completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
-    elif item.get("additionalTextEdits") or item.get("command"):
-        # It's an insertText, but additionalEdits or a command requires us to use a command completion.
-        completion = sublime.CompletionItem.command_completion(
-            trigger=st_trigger,
-            command="lsp_complete_insert_text",
-            args=item,
-            annotation=st_annotation,
-            kind=kind,
-            details=st_details)
+        if item.get("textEdit"):
+            completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
     else:
         # A plain old completion suffices for insertText with no additionalTextEdits and no command.
         if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.PlainText:

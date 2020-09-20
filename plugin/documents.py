@@ -520,9 +520,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._apply_view_settings(session)
         self.purge_changes_async()
         can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
+        config_name = session.config.name
         session.send_request(
             Request.complete(text_document_position_params(self.view, location)),
-            lambda res: self._on_complete_result(res, promise, can_resolve_completion_items),
+            lambda res: self._on_complete_result(res, promise, can_resolve_completion_items, config_name),
             lambda res: self._on_complete_error(res, promise))
 
     def _apply_view_settings(self, session: Session) -> None:
@@ -546,7 +547,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             settings.set('auto_complete_triggers', completion_triggers)
 
     def _on_complete_result(self, response: Optional[Union[dict, List]], completion_list: sublime.CompletionList,
-                            can_resolve_completion_items: bool) -> None:
+                            can_resolve_completion_items: bool, session_name: str) -> None:
         response_items = []  # type: List[Dict]
         flags = 0
         prefs = userprefs()
@@ -562,7 +563,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             response_items = response
         response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
         LspResolveDocsCommand.completions = response_items
-        items = [format_completion(response_item, index, can_resolve_completion_items)
+        items = [format_completion(response_item, index, can_resolve_completion_items, session_name)
                  for index, response_item in enumerate(response_items)]
         if items:
             flags |= sublime.INHIBIT_REORDER

@@ -82,7 +82,7 @@ class LspResolveDocsCommand(LspTextCommand):
 
 class LspCompleteCommand(sublime_plugin.TextCommand):
 
-    def epilogue(self, item: Dict[str, Any]) -> None:
+    def epilogue(self, item: Dict[str, Any], session_name: Optional[str] = None) -> None:
         additional_edits = item.get('additionalTextEdits')
         if additional_edits:
             edits = [parse_text_edit(additional_edit) for additional_edit in additional_edits]
@@ -90,24 +90,28 @@ class LspCompleteCommand(sublime_plugin.TextCommand):
         command = item.get("command")
         if command:
             debug('Running server command "{}" for view {}'.format(command, self.view.id()))
-            args = {"command_name": command["command"], "command_args": command.get("arguments")}
+            args = {
+                "command_name": command["command"],
+                "command_args": command.get("arguments"),
+                "session_name": session_name
+            }
             self.view.run_command("lsp_execute", args)
 
 
 class LspCompleteInsertTextCommand(LspCompleteCommand):
 
-    def run(self, edit: sublime.Edit, **item: Any) -> None:
+    def run(self, edit: sublime.Edit, item: Any, session_name: Optional[str] = None) -> None:
         insert_text = item.get("insertText") or item["label"]
         if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
             self.view.run_command("insert_snippet", {"contents": insert_text})
         else:
             self.view.run_command("insert", {"characters": insert_text})
-        self.epilogue(item)
+        self.epilogue(item, session_name)
 
 
 class LspCompleteTextEditCommand(LspCompleteCommand):
 
-    def run(self, edit: sublime.Edit, **item: Any) -> None:
+    def run(self, edit: sublime.Edit, item: Any, session_name: Optional[str] = None) -> None:
         text_edit = item["textEdit"]
         new_text = text_edit['newText']
         edit_region = range_to_region(Range.from_lsp(text_edit['range']), self.view)
@@ -120,7 +124,7 @@ class LspCompleteTextEditCommand(LspCompleteCommand):
                 # NOTE: Cannot do .replace, because ST will select the replacement.
                 self.view.erase(edit, region)
                 self.view.insert(edit, region.a, new_text)
-        self.epilogue(item)
+        self.epilogue(item, session_name)
 
     def translated_regions(self, edit_region: sublime.Region) -> Generator[sublime.Region, None, None]:
         selection = self.view.sel()

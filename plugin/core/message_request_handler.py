@@ -1,13 +1,13 @@
 from .protocol import Response
-from .rpc import Client
+from .sessions import Session
 from .typing import Any, List, Callable
 import mdpopups
 import sublime
 
 
 class MessageRequestHandler():
-    def __init__(self, view: sublime.View, client: Client, request_id: Any, params: dict, source: str) -> None:
-        self.client = client
+    def __init__(self, view: sublime.View, session: Session, request_id: Any, params: dict, source: str) -> None:
+        self.session = session
         self.request_id = request_id
         self.request_sent = False
         self.view = view
@@ -27,7 +27,7 @@ class MessageRequestHandler():
             if index != -1:
                 param = {"title": self.titles[index]}
             response = Response(self.request_id, param)
-            self.client.send_response(response)
+            self.session.send_response(response)
 
     def show(self) -> None:
         show_notification(

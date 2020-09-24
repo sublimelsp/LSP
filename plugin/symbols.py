@@ -1,6 +1,6 @@
 from .core.protocol import Request, Range
 from .core.registry import LspTextCommand
-from .core.rpc import print_to_status_bar
+from .core.sessions import print_to_status_bar
 from .core.typing import Any, List, Optional, Tuple, Dict, Generator
 from .core.views import location_to_encoded_filename
 from .core.views import range_to_region

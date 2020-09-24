@@ -11,8 +11,8 @@ from .panels import update_server_panel
 from .protocol import Diagnostic
 from .protocol import Error
 from .protocol import Point
-from .rpc import Logger
 from .sessions import get_plugin
+from .sessions import Logger
 from .sessions import Manager
 from .sessions import Session
 from .sessions import SessionViewProtocol

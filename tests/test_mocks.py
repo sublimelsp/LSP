@@ -42,7 +42,7 @@ basic_responses = {
 }
 
 
-class MockClient(object):
+class MockSession(object):
     def __init__(self, async_response=None) -> None:
         self.responses = basic_responses
         self._notifications = []  # type: List[Notification]

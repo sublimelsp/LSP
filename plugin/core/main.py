@@ -10,8 +10,8 @@ from .panels import destroy_output_panels
 from .protocol import Response
 from .protocol import WorkspaceFolder
 from .registry import windows
-from .rpc import method2attr
 from .sessions import AbstractPlugin
+from .sessions import method2attr
 from .sessions import register_plugin
 from .sessions import Session
 from .settings import client_configs

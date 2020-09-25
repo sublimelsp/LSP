@@ -12,7 +12,7 @@
     {
         "command": "lsp_save",
         "keys": [
-            "ctrl+s"
+            "primary+s"
         ],
         "context": [
             {
@@ -40,7 +40,7 @@
     {
         "command": "lsp_show_diagnostics_panel",
         "keys": [
-            "ctrl+alt+m"
+            "primary+alt+m"
         ],
         "context": [
             {
@@ -64,7 +64,7 @@
     {
         "command": "noop",
         "keys": [
-            "ctrl+alt+space"
+            "primary+alt+space"
         ],
         "context": [
             {
@@ -283,7 +283,7 @@
     // {
     //     "command": "lsp_document_symbols",
     //     "keys": [
-    //         "ctrl+r"
+    //         "primary+r"
     //     ],
     //     "context": [
     //         {
@@ -297,7 +297,7 @@
     // {
     //     "command": "lsp_workspace_symbols",
     //     "keys": [
-    //         "ctrl+shift+r"
+    //         "primary+shift+r"
     //     ],
     //     "context": [
     //         {
@@ -325,7 +325,7 @@
     // {
     //     "command": "lsp_expand_selection",
     //     "keys": [
-    //         "ctrl+shift+a"
+    //         "primary+shift+a"
     //     ],
     //     "context": [
     //         {

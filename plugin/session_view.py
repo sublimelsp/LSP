@@ -1,6 +1,8 @@
 from .core.protocol import Diagnostic
+from .core.protocol import Request
 from .core.sessions import Session
 from .core.settings import userprefs
+from .core.types import debounced
 from .core.types import view2scope
 from .core.typing import Any, Iterable, List, Tuple, Optional, Dict
 from .core.views import DIAGNOSTIC_SEVERITY
@@ -8,6 +10,7 @@ from .core.windows import AbstractViewListener
 from .session_buffer import SessionBuffer
 from weakref import ref
 from weakref import WeakValueDictionary
+import operator
 import sublime
 
 
@@ -26,6 +29,7 @@ class SessionView:
     def __init__(self, listener: AbstractViewListener, session: Session) -> None:
         self.view = listener.view
         self.session = session
+        self.active_requests = {}  # type: Dict[int, Request]
         settings = self.view.settings()
         # TODO: Language ID must be UNIQUE!
         languages = settings.get(self.LANGUAGE_ID_KEY)
@@ -134,6 +138,22 @@ class SessionView:
 
     def get_diagnostics_async(self) -> List[Diagnostic]:
         return self.session_buffer.diagnostics
+
+    def on_request_started_async(self, request_id: int, request: Request) -> None:
+        self.active_requests[request_id] = request
+        debounced(
+            self._render_active_requests_async,
+            timeout_ms=100,
+            condition=lambda: self.view.is_valid() and request_id in self.active_requests,
+            async_thread=True)
+
+    def on_request_finished_async(self, request_id: int) -> None:
+        if self.active_requests.pop(request_id, None):
+            self._render_active_requests_async()
+
+    def _render_active_requests_async(self) -> None:
+        status = ", ".join(map(operator.attrgetter("method"), self.active_requests.values()))
+        self.session.config.set_view_status(self.view, status)
 
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
         self.session_buffer.on_text_changed_async(self.view, changes)

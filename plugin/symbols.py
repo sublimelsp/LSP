@@ -83,7 +83,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         session = self.best_session(self.capability)
         if session:
             session.send_request(
-                Request.documentSymbols({"textDocument": text_document_identifier(self.view)}),
+                Request.documentSymbols({"textDocument": text_document_identifier(self.view)}, self.view),
                 lambda response: sublime.set_timeout(lambda: self.handle_response(response)),
                 lambda error: sublime.set_timeout(lambda: self.handle_response_error(error)))
 
@@ -217,7 +217,6 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
         if symbol_query_input:
             session = self.best_session(self.capability)
             if session:
-                self.view.set_status("lsp_workspace_symbols", "Searching for '{}'...".format(symbol_query_input))
                 request = Request.workspaceSymbol({"query": symbol_query_input})
                 session.send_request(request, lambda r: self._handle_response(
                     symbol_query_input, r), self._handle_error)
@@ -236,7 +235,6 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
                 window.open_file(location_to_encoded_filename(symbol['location']), sublime.ENCODED_POSITION)
 
     def _handle_response(self, query: str, response: Optional[List[Dict[str, Any]]]) -> None:
-        self.view.erase_status("lsp_workspace_symbols")
         if response:
             matches = response
             window = self.view.window()
@@ -246,7 +244,6 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
             sublime.message_dialog("No matches found for query string: '{}'".format(query))
 
     def _handle_error(self, error: Dict[str, Any]) -> None:
-        self.view.erase_status("lsp_workspace_symbols")
         reason = error.get("message", "none provided by server :(")
         msg = "command 'workspace/symbol' failed. Reason: {}".format(reason)
         sublime.error_message(msg)

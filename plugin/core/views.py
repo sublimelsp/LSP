@@ -263,7 +263,7 @@ def will_save(file_name: str, reason: int) -> Notification:
 
 
 def will_save_wait_until(view: sublime.View, reason: int) -> Request:
-    return Request.willSaveWaitUntil(will_save_text_document_params(view, reason))
+    return Request.willSaveWaitUntil(will_save_text_document_params(view, reason), view)
 
 
 def did_save(view: sublime.View, include_text: bool, file_name: Optional[str] = None) -> Notification:
@@ -296,7 +296,7 @@ def text_document_formatting(view: sublime.View) -> Request:
     return Request.formatting({
         "textDocument": text_document_identifier(view),
         "options": formatting_options(view.settings())
-    })
+    }, view)
 
 
 def text_document_range_formatting(view: sublime.View, region: sublime.Region) -> Request:
@@ -304,7 +304,7 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
         "textDocument": text_document_identifier(view),
         "options": formatting_options(view.settings()),
         "range": region_to_range(view, region).to_lsp()
-    })
+    }, view)
 
 
 def did_change_configuration(d: DottedDict, variables: Dict[str, str]) -> Notification:

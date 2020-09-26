@@ -23,9 +23,6 @@ class LspExecuteCommand(LspTextCommand):
             return
         session = self.session_by_name(session_name) if session_name else self.best_session(self.capability)
         if session and command_name:
-            window = self.view.window()
-            if window:
-                window.status_message("Running command {}".format(command_name))
             if command_args:
                 self._expand_variables(command_args)
             self._send_command(session, command_name, command_args)

@@ -2,6 +2,7 @@ from .typing import Any, List, Dict, Optional, Union, Mapping, Iterable
 from .url import filename_to_uri
 from .url import uri_to_filename
 import os
+import sublime
 
 
 TextDocumentSyncKindNone = 0
@@ -34,59 +35,49 @@ class DocumentHighlightKind(object):
 
 class Request:
 
-    __slots__ = ('method', 'params')
+    __slots__ = ('method', 'params', 'view')
 
-    def __init__(self, method: str, params: Optional[Mapping[str, Any]] = None) -> None:
+    def __init__(self, method: str, params: Optional[Mapping[str, Any]] = None,
+                 view: Optional[sublime.View] = None) -> None:
         self.method = method
         self.params = params
+        self.view = view
 
     @classmethod
     def initialize(cls, params: dict) -> 'Request':
         return Request("initialize", params)
 
     @classmethod
-    def hover(cls, params: dict) -> 'Request':
-        return Request("textDocument/hover", params)
+    def hover(cls, params: dict, view: sublime.View) -> 'Request':
+        return Request("textDocument/hover", params, view)
 
     @classmethod
-    def complete(cls, params: dict) -> 'Request':
-        return Request("textDocument/completion", params)
+    def complete(cls, params: dict, view: sublime.View) -> 'Request':
+        return Request("textDocument/completion", params, view)
 
     @classmethod
-    def signatureHelp(cls, params: dict) -> 'Request':
-        return Request("textDocument/signatureHelp", params)
+    def signatureHelp(cls, params: dict, view: sublime.View) -> 'Request':
+        return Request("textDocument/signatureHelp", params, view)
 
     @classmethod
-    def references(cls, params: dict) -> 'Request':
-        return Request("textDocument/references", params)
+    def references(cls, params: dict, view: sublime.View) -> 'Request':
+        return Request("textDocument/references", params, view)
 
     @classmethod
-    def definition(cls, params: dict) -> 'Request':
-        return Request("textDocument/definition", params)
+    def prepareRename(cls, params: dict, view: sublime.View) -> 'Request':
+        return Request("textDocument/prepareRename", params, view)
 
     @classmethod
-    def typeDefinition(cls, params: dict) -> 'Request':
-        return Request("textDocument/typeDefinition", params)
+    def rename(cls, params: dict, view: sublime.View) -> 'Request':
+        return Request("textDocument/rename", params, view)
 
     @classmethod
-    def declaration(cls, params: dict) -> 'Request':
-        return Request("textDocument/declaration", params)
+    def codeAction(cls, params: dict, view: sublime.View) -> 'Request':
+        return Request("textDocument/codeAction", params, view)
 
     @classmethod
-    def implementation(cls, params: dict) -> 'Request':
-        return Request("textDocument/implementation", params)
-
-    @classmethod
-    def rename(cls, params: dict) -> 'Request':
-        return Request("textDocument/rename", params)
-
-    @classmethod
-    def codeAction(cls, params: dict) -> 'Request':
-        return Request("textDocument/codeAction", params)
-
-    @classmethod
-    def documentColor(cls, params: dict) -> 'Request':
-        return Request('textDocument/documentColor', params)
+    def documentColor(cls, params: dict, view: sublime.View) -> 'Request':
+        return Request('textDocument/documentColor', params, view)
 
     @classmethod
     def executeCommand(cls, params: Mapping[str, Any]) -> 'Request':
@@ -97,28 +88,28 @@ class Request:
         return Request("workspace/symbol", params)
 
     @classmethod
-    def formatting(cls, params: dict) -> 'Request':
-        return Request("textDocument/formatting", params)
+    def formatting(cls, params: dict, view: sublime.View) -> 'Request':
+        return Request("textDocument/formatting", params, view)
 
     @classmethod
-    def willSaveWaitUntil(cls, params: dict) -> 'Request':
-        return Request("textDocument/willSaveWaitUntil", params)
+    def willSaveWaitUntil(cls, params: dict, view: sublime.View) -> 'Request':
+        return Request("textDocument/willSaveWaitUntil", params, view)
 
     @classmethod
-    def rangeFormatting(cls, params: dict) -> 'Request':
-        return Request("textDocument/rangeFormatting", params)
+    def rangeFormatting(cls, params: dict, view: sublime.View) -> 'Request':
+        return Request("textDocument/rangeFormatting", params, view)
 
     @classmethod
-    def documentSymbols(cls, params: dict) -> 'Request':
-        return Request("textDocument/documentSymbol", params)
+    def documentSymbols(cls, params: dict, view: sublime.View) -> 'Request':
+        return Request("textDocument/documentSymbol", params, view)
 
     @classmethod
-    def documentHighlight(cls, params: dict) -> 'Request':
-        return Request("textDocument/documentHighlight", params)
+    def documentHighlight(cls, params: dict, view: sublime.View) -> 'Request':
+        return Request("textDocument/documentHighlight", params, view)
 
     @classmethod
-    def resolveCompletionItem(cls, params: dict) -> 'Request':
-        return Request("completionItem/resolve", params)
+    def resolveCompletionItem(cls, params: dict, view: sublime.View) -> 'Request':
+        return Request("completionItem/resolve", params, view)
 
     @classmethod
     def shutdown(cls) -> 'Request':

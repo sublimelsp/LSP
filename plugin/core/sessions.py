@@ -267,6 +267,12 @@ class SessionViewProtocol(Protocol):
     def present_diagnostics_async(self, flags: int) -> None:
         ...
 
+    def on_request_started_async(self, request_id: int, request: Request) -> None:
+        ...
+
+    def on_request_finished_async(self, request_id: int) -> None:
+        ...
+
 
 class SessionBufferProtocol(Protocol):
 
@@ -547,7 +553,7 @@ class Session(TransportCallbacks):
         self.transport = None  # type: Optional[Transport]
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
-        self._response_handlers = {}  # type: Dict[int, Tuple[Callable, Optional[Callable[[Any], None]]]]
+        self._response_handlers = {}  # type: Dict[int, Tuple[Request, Callable, Optional[Callable[[Any], None]]]]
         self._response_handlers_lock = Lock()
         self.config = config
         self.manager = weakref.ref(manager)
@@ -943,7 +949,17 @@ class Session(TransportCallbacks):
         with self._response_handlers_lock:
             self.request_id += 1
             request_id = self.request_id
-            self._response_handlers[request_id] = (handler, error_handler)
+            self._response_handlers[request_id] = (request, handler, error_handler)
+        if request.view:
+            # TODO: send_request MUST be sent only from the async thread, otherwise this can result in exceptions
+            # ("list mutated during iteration")
+            sv = self.session_view_for_view_async(request.view)
+            if sv:
+                sv.on_request_started_async(request_id, request)
+        else:
+            # This is a workspace or window request
+            for sv in self.session_views_async():
+                sv.on_request_started_async(request_id, request)
         self._logger.outgoing_request(request_id, request.method, request.params)
         self.send_payload(request.to_payload(request_id))
 
@@ -1024,10 +1040,17 @@ class Session(TransportCallbacks):
                 exception_log("Error handling {}".format(typestr), err)
 
     def response_handler(self, response_id: int, response: Dict[str, Any]) -> Tuple[Optional[Callable], Any, bool]:
-        handler, error_handler = self._response_handlers.pop(response_id, (None, None))
-        if not handler:
+        request, handler, error_handler = self._response_handlers.pop(response_id, (None, None, None))
+        if not request:
             error = {"code": ErrorCode.InvalidParams, "message": "unknown response ID {}".format(response_id)}
             return (print_to_status_bar, error, True)
+        if request.view:
+            sv = self.session_view_for_view_async(request.view)
+            if sv:
+                sv.on_request_finished_async(response_id)
+        else:
+            for sv in self.session_views_async():
+                sv.on_request_finished_async(response_id)
         if "result" in response and "error" not in response:
             return (handler, response["result"], False)
         if not error_handler:

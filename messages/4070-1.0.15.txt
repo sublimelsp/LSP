@@ -1,0 +1,6 @@
+=> 4070-1.0.15
+
+- Use `primary` instead of `ctrl` and `super` in the keybindings (Raoul Wols)
+- Merge Session and Client classes (Raoul Wols)
+- Trigger commands on server that matches one that returned completions (#1336) (Rafał Chłodnicki)
+- Trigger autocomplete popup on "editor.action.triggerSuggest" command (#1335) (Rafał Chłodnicki)

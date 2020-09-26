@@ -316,6 +316,13 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         yield from self.await_view_change(9)
         self.assertEqual(self.view.substr(sublime.Region(0, self.view.size())), "bar\nbar\nbar\n")
 
+    def test_run_command(self) -> 'Generator':
+        self.set_response("workspace/executeCommand", {"canReturnAnythingHere": "asdf"})
+        promise = self.session.run_command({"command": "foo", "arguments": ["hello", "there", "general", "kenobi"]})
+        yield from self.await_message("workspace/executeCommand")
+        self.assertTrue(promise.resolved)
+        self.assertEqual(promise.value, {"canReturnAnythingHere": "asdf"})
+
 
 class WillSaveWaitUntilTestCase(TextDocumentTestCase):
 

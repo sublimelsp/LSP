@@ -28,7 +28,10 @@ class LspExecuteCommand(LspTextCommand):
                 window.status_message("Running command {}".format(command_name))
             if command_args:
                 self._expand_variables(command_args)
-            self._send_command(session, command_name, command_args)
+            params = {"command": command_name}  # type: Dict[str, Any]
+            if command_args:
+                params["arguments"] = command_args
+            session.run_command(params).then(lambda response: self._handle_response(command_name, response))
 
     def _expand_variables(self, command_args: List[Any]) -> None:
         region = self.view.sel()[0]
@@ -57,12 +60,3 @@ class LspExecuteCommand(LspTextCommand):
         if window:
             window.status_message(msg)
 
-    def _handle_error(self, command: str, error: Dict[str, Any]) -> None:
-        msg = "command {} failed. Reason: {}".format(command, error.get("message", "none provided by server :("))
-        sublime.message_dialog(msg)
-
-    def _send_command(self, session: Session, command_name: str, command_args: Optional[List[Any]]) -> None:
-        request = {"command": command_name, "arguments": command_args} if command_args else {"command": command_name}
-        session.send_request(Request.executeCommand(request),
-                             lambda reponse: self._handle_response(command_name, reponse),
-                             lambda error: self._handle_error(command_name, error))

@@ -7,7 +7,6 @@ from .css import unload as unload_css
 from .handlers import LanguageHandler
 from .logging import set_debug_logging, set_exception_logging
 from .panels import destroy_output_panels
-from .promise import opening_files
 from .protocol import Response
 from .protocol import WorkspaceFolder
 from .registry import windows
@@ -22,6 +21,7 @@ from .settings import userprefs
 from .transports import kill_all_subprocesses
 from .types import ClientConfig
 from .typing import Optional, List, Type, Callable, Dict, Tuple
+from .windows import opening_files
 import os
 import weakref
 

@@ -1,7 +1,6 @@
 import sublime
-from .core.protocol import Request
+from .core.protocol import Error
 from .core.registry import LspTextCommand
-from .core.sessions import Session
 from .core.typing import List, Optional, Dict, Any
 from .core.views import uri_from_view, offset_to_point, region_to_range
 
@@ -28,7 +27,23 @@ class LspExecuteCommand(LspTextCommand):
                 window.status_message("Running command {}".format(command_name))
             if command_args:
                 self._expand_variables(command_args)
-            self._send_command(session, command_name, command_args)
+            params = {"command": command_name}  # type: Dict[str, Any]
+            if command_args:
+                params["arguments"] = command_args
+
+            def handle_response(response: Any) -> None:
+                assert command_name
+                if isinstance(response, Error):
+                    sublime.message_dialog("command {} failed. Reason: {}".format(command_name, str(response)))
+                    return
+                msg = "command {} completed".format(command_name)
+                if response:
+                    msg += "with response: {}".format(response)
+                window = self.view.window()
+                if window:
+                    window.status_message(msg)
+
+            session.run_command(params).then(handle_response)
 
     def _expand_variables(self, command_args: List[Any]) -> None:
         region = self.view.sel()[0]
@@ -47,22 +62,3 @@ class LspExecuteCommand(LspTextCommand):
                 command_args[i] = offset_to_point(self.view, region.b).to_lsp()
             elif arg in ["$range", "${range}"]:
                 command_args[i] = region_to_range(self.view, region).to_lsp()
-
-    def _handle_response(self, command: str, response: Optional[Any]) -> None:
-        msg = "command {} completed".format(command)
-        if response:
-            msg += "with response: {}".format(response)
-
-        window = self.view.window()
-        if window:
-            window.status_message(msg)
-
-    def _handle_error(self, command: str, error: Dict[str, Any]) -> None:
-        msg = "command {} failed. Reason: {}".format(command, error.get("message", "none provided by server :("))
-        sublime.message_dialog(msg)
-
-    def _send_command(self, session: Session, command_name: str, command_args: Optional[List[Any]]) -> None:
-        request = {"command": command_name, "arguments": command_args} if command_args else {"command": command_name}
-        session.send_request(Request.executeCommand(request),
-                             lambda reponse: self._handle_response(command_name, reponse),
-                             lambda error: self._handle_error(command_name, error))

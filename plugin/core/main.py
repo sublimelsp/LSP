@@ -163,4 +163,5 @@ class Listener(sublime_plugin.EventListener):
         for fn, tup in opening_files.items():
             if fn == file_name or os.path.samefile(fn, file_name):
                 opening_files.pop(fn)
-                return tup[1](view)
+                tup[1](view)
+                break

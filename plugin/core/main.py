@@ -7,6 +7,7 @@ from .css import unload as unload_css
 from .handlers import LanguageHandler
 from .logging import set_debug_logging, set_exception_logging
 from .panels import destroy_output_panels
+from .promise import opening_files
 from .protocol import Response
 from .protocol import WorkspaceFolder
 from .registry import windows
@@ -21,6 +22,7 @@ from .settings import userprefs
 from .transports import kill_all_subprocesses
 from .types import ClientConfig
 from .typing import Optional, List, Type, Callable, Dict, Tuple
+import os
 import weakref
 
 
@@ -153,3 +155,12 @@ class Listener(sublime_plugin.EventListener):
 
     def on_pre_close_window(self, w: sublime.Window) -> None:
         windows.discard(w)
+
+    def on_load(self, view: sublime.View) -> None:
+        file_name = view.file_name()
+        if not file_name:
+            return
+        for fn, tup in opening_files.items():
+            if fn == file_name or os.path.samefile(fn, file_name):
+                opening_files.pop(fn)
+                return tup[1](view)

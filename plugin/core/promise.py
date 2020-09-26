@@ -1,6 +1,8 @@
-from .typing import Any, Callable, List
+from .typing import Any, Callable, List, Dict, Tuple
 import functools
 import threading
+import sublime
+import os
 
 ResolveFunc = Callable[..., None]  # Optional argument not supported in Callable so using "..."
 FullfillFunc = Callable[[ResolveFunc], None]
@@ -184,3 +186,40 @@ class Promise:
     def _get_value(self) -> Any:
         with self.mutex:
             return self.value
+
+
+opening_files = {}  # type: Dict[str, Tuple[Promise, Callable[[sublime.View], None]]]
+
+
+def open_file(
+    window: sublime.Window,
+    file_path: str,
+    flags: int = 0,
+    group: int = -1
+) -> Promise:
+    """
+    Open a file asynchronously. It is only safe to call this function from the UI thread.
+    """
+
+    # Is the file already open?
+    view = window.find_open_file(file_path)
+    if view:
+        return Promise.resolve(view)
+
+    # Is the view opening right now? Then return the associated unresolved promise
+    for fn, value in opening_files.items():
+        if fn == file_path or os.path.samefile(fn, file_path):
+            return value[0]
+
+    # Prepare new promise
+    def fullfill(resolve: ResolveFunc) -> None:
+        global opening_files
+        opening_files[file_path] = (None, resolve)  # type: ignore
+
+    promise = Promise(fullfill)
+    tup = opening_files[file_path]
+    opening_files[file_path] = (promise, tup[1])
+
+    # Start opening the file
+    window.open_file(file_path, flags, group)
+    return promise

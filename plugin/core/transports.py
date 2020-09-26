@@ -220,7 +220,7 @@ def create_transport(config: ClientConfig, cwd: Optional[str], window: sublime.W
 
     if listener_socket:
         assert isinstance(tcp_port, int) and tcp_port > 0
-        process, reader, writer = _await_tcp_connection(config.name, tcp_port, listener_socket, start_subprocess)
+        process, sock, reader, writer = _await_tcp_connection(config.name, tcp_port, listener_socket, start_subprocess)
     else:
         process = start_subprocess()
         if tcp_port:
@@ -315,7 +315,7 @@ def _await_tcp_connection(
     tcp_port: int,
     listener_socket: socket.socket,
     subprocess_starter: Callable[[], subprocess.Popen]
-) -> Tuple[subprocess.Popen, IO[bytes], IO[bytes]]:
+) -> Tuple[subprocess.Popen, socket.socket, IO[bytes], IO[bytes]]:
 
     # After we have accepted one client connection, we can close the listener socket.
     with closing(listener_socket):
@@ -337,7 +337,7 @@ def _await_tcp_connection(
         reader = sock.makefile('rwb')  # type: IO[bytes]
         writer = reader
         assert data.process
-        return data.process, reader, writer
+        return data.process, sock, reader, writer
 
 
 def _connect_tcp(port: int) -> Optional[socket.socket]:

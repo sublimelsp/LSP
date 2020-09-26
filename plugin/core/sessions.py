@@ -1,6 +1,7 @@
 from .edit import parse_workspace_edit
 from .logging import debug
 from .logging import exception_log
+from .promise import Promise
 from .protocol import CompletionItemTag
 from .protocol import Error
 from .protocol import ErrorCode
@@ -18,7 +19,7 @@ from .types import debounced
 from .types import diff
 from .types import DocumentSelector
 from .types import method_to_capability
-from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol
+from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping
 from .url import uri_to_filename
 from .version import __version__
 from .views import COMPLETION_KINDS
@@ -426,7 +427,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         self.weaksession = weaksession
 
-    def on_workspace_configuration(cls, params: Dict, configuration: Any) -> None:
+    def on_workspace_configuration(self, params: Dict, configuration: Any) -> None:
         """
         Override to augment configuration returned for the workspace/configuration request.
 
@@ -434,6 +435,17 @@ class AbstractPlugin(metaclass=ABCMeta):
         :param      configuration:  The resolved configuration for given params.
         """
         pass
+
+    def on_pre_server_command(self, command: Mapping[str, Any]) -> Optional[Promise]:
+        """
+        Intercept a command that is about to be sent to the language server. Return a `Promise` to signal that you are
+        handling this command in your plugin. The command will then not be sent to the language server.
+
+        :param    command:  The payload containing a "command" and optionally "arguments".
+
+        :returns: An optional promise.
+        """
+        return None
 
 
 _plugins = {}  # type: Dict[str, Type[AbstractPlugin]]
@@ -770,6 +782,20 @@ class Session(TransportCallbacks):
             if extra_vars:
                 variables.update(extra_vars)
         return variables
+
+    def run_command(self, command: Mapping[str, Any]) -> Promise:
+        if self._plugin:
+            promise = self._plugin.on_pre_server_command(command)
+            if promise:
+                return promise
+        # TODO: Our Promise class should be able to handle errors/exceptions
+        return Promise(
+            lambda resolve: self.send_request(
+                request=Request.executeCommand(command),
+                handler=resolve,
+                error_handler=lambda err: resolve(Error(err["code"], err["message"], err.get("data")))
+            )
+        )
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

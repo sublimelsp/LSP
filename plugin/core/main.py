@@ -21,6 +21,8 @@ from .settings import userprefs
 from .transports import kill_all_subprocesses
 from .types import ClientConfig
 from .typing import Optional, List, Type, Callable, Dict, Tuple
+from .windows import opening_files
+import os
 import weakref
 
 
@@ -153,3 +155,25 @@ class Listener(sublime_plugin.EventListener):
 
     def on_pre_close_window(self, w: sublime.Window) -> None:
         windows.discard(w)
+
+    def on_load(self, view: sublime.View) -> None:
+        file_name = view.file_name()
+        if not file_name:
+            return
+        for fn in opening_files.keys():
+            if fn == file_name or os.path.samefile(fn, file_name):
+                # Remove it from the pending opening files, and resolve the promise.
+                opening_files.pop(fn)[1](view)
+                break
+
+    def on_pre_close(self, view: sublime.View) -> None:
+        file_name = view.file_name()
+        if not file_name:
+            return
+        for fn in opening_files.keys():
+            if fn == file_name or os.path.samefile(fn, file_name):
+                tup = opening_files.pop(fn, None)
+                if tup:
+                    # The view got closed before it finished loading. This can happen.
+                    tup[1](None)
+                    break

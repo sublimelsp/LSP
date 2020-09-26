@@ -1,7 +1,6 @@
 import sublime
-from .core.protocol import Request
+from .core.protocol import Error
 from .core.registry import LspTextCommand
-from .core.sessions import Session
 from .core.typing import List, Optional, Dict, Any
 from .core.views import uri_from_view, offset_to_point, region_to_range
 
@@ -31,7 +30,20 @@ class LspExecuteCommand(LspTextCommand):
             params = {"command": command_name}  # type: Dict[str, Any]
             if command_args:
                 params["arguments"] = command_args
-            session.run_command(params).then(lambda response: self._handle_response(command_name, response))
+
+            def handle_response(response: Any) -> None:
+                assert command_name
+                if isinstance(response, Error):
+                    sublime.message_dialog("command {} failed. Reason: {}".format(command_name, str(response)))
+                    return
+                msg = "command {} completed".format(command_name)
+                if response:
+                    msg += "with response: {}".format(response)
+                window = self.view.window()
+                if window:
+                    window.status_message(msg)
+
+            session.run_command(params).then(handle_response)
 
     def _expand_variables(self, command_args: List[Any]) -> None:
         region = self.view.sel()[0]
@@ -50,13 +62,3 @@ class LspExecuteCommand(LspTextCommand):
                 command_args[i] = offset_to_point(self.view, region.b).to_lsp()
             elif arg in ["$range", "${range}"]:
                 command_args[i] = region_to_range(self.view, region).to_lsp()
-
-    def _handle_response(self, command: str, response: Optional[Any]) -> None:
-        msg = "command {} completed".format(command)
-        if response:
-            msg += "with response: {}".format(response)
-
-        window = self.view.window()
-        if window:
-            window.status_message(msg)
-

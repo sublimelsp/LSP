@@ -782,7 +782,14 @@ class Session(TransportCallbacks):
             promise = self._plugin.on_pre_server_command(command)
             if promise:
                 return promise
-        return Promise(lambda resolve: self.send_request(Request.executeCommand(command), resolve, resolve))
+        # TODO: Our Promise class should be able to handle errors/exceptions
+        return Promise(
+            lambda resolve: self.send_request(
+                request=Request.executeCommand(command),
+                handler=resolve,
+                error_handler=lambda err: resolve(Error(err["code"], err["message"], err.get("data")))
+            )
+        )
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

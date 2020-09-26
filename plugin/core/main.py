@@ -160,8 +160,20 @@ class Listener(sublime_plugin.EventListener):
         file_name = view.file_name()
         if not file_name:
             return
-        for fn, tup in opening_files.items():
+        for fn in opening_files.keys():
             if fn == file_name or os.path.samefile(fn, file_name):
-                opening_files.pop(fn)
-                tup[1](view)
+                # Remove it from the pending opening files, and resolve the promise.
+                opening_files.pop(fn)[1](view)
                 break
+
+    def on_pre_close(self, view: sublime.View) -> None:
+        file_name = view.file_name()
+        if not file_name:
+            return
+        for fn in opening_files.keys():
+            if fn == file_name or os.path.samefile(fn, file_name):
+                tup = opening_files.pop(fn, None)
+                if tup:
+                    # The view got closed before it finished loading. This can happen.
+                    tup[1](None)
+                    break

@@ -1,4 +1,4 @@
-from .typing import Any, Callable, List, Dict, Tuple
+from .typing import Any, Callable, List, Dict, Tuple, Optional
 import functools
 import threading
 import sublime
@@ -188,38 +188,30 @@ class Promise:
             return self.value
 
 
-opening_files = {}  # type: Dict[str, Tuple[Promise, Callable[[sublime.View], None]]]
+opening_files = {}  # type: Dict[str, Tuple[Promise, Callable[[Optional[sublime.View]], None]]]
 
 
-def open_file(
-    window: sublime.Window,
-    file_path: str,
-    flags: int = 0,
-    group: int = -1
-) -> Promise:
-    """
-    Open a file asynchronously. It is only safe to call this function from the UI thread.
-    """
-
-    # Is the file already open?
-    view = window.find_open_file(file_path)
-    if view:
+def open_file(window: sublime.Window, file_path: str, flags: int = 0, group: int = -1) -> Promise:
+    """Open a file asynchronously. It is only safe to call this function from the UI thread."""
+    view = window.open_file(file_path, flags, group)
+    if not view.is_loading():
+        # It's already loaded. Possibly already open in a tab.
         return Promise.resolve(view)
 
     # Is the view opening right now? Then return the associated unresolved promise
     for fn, value in opening_files.items():
         if fn == file_path or os.path.samefile(fn, file_path):
+            # Return the unresolved promise. A future on_load event will resolve the promise.
             return value[0]
 
-    # Prepare new promise
+    # Prepare a new promise to be resolved by a future on_load event (see the event listener in main.py)
     def fullfill(resolve: ResolveFunc) -> None:
         global opening_files
+        # Save the promise in the first element of the tuple -- except we cannot yet do that here
         opening_files[file_path] = (None, resolve)  # type: ignore
 
     promise = Promise(fullfill)
     tup = opening_files[file_path]
+    # Save the promise in the first element of the tuple so that the for-loop above can return it
     opening_files[file_path] = (promise, tup[1])
-
-    # Start opening the file
-    window.open_file(file_path, flags, group)
     return promise

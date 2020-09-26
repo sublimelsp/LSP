@@ -26,6 +26,17 @@
               "type": "string",
               "deprecationMessage": "Use \"languages\" instead."
             },
+            "ClientCommand": {
+              "type": "array",
+              "default": [
+                "path/to/language-server-binary",
+                "--some-option"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "markdownDescription": "The command to start the language server."
+            },
             "ClientInitializationOptions": {
               "type": "object",
               "markdownDescription": "The initializationOptions that are passed to the language server process during the _initialize_ phase. This is a rather free-form dictionary of key-value pairs and is different per language server. Look up documentation of your specific langauge server to see what the possible key-value pairs can be."
@@ -94,15 +105,7 @@
               "markdownDescription": "The configuration that informs LSP on how to start your language server and to which views it should attach the language server process",
               "properties": {
                 "command": {
-                  "type": "array",
-                  "default": [
-                    "path/to/language-server-binary",
-                    "--some-option"
-                  ],
-                  "items": {
-                    "type": "string"
-                  },
-                  "markdownDescription": "The command to start the language server."
+                  "$ref": "sublime://settings/LSP#/definitions/ClientCommand"
                 },
                 "enabled": {
                   "type": "boolean",
@@ -443,6 +446,9 @@
         "schema": {
           "$id": "sublime://settings/LSP-plugin-base",
           "properties": {
+            "command": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientCommand"
+            },
             "languages": {
               "$ref": "sublime://settings/LSP#/definitions/ClientLanguages"
             },

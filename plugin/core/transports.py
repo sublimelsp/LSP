@@ -176,27 +176,6 @@ class JsonRpcTransport(Transport):
         self._send_queue.put_nowait(None)
 
 
-def _fixup_startup_args(args: List[str]) -> Any:
-    if sublime.platform() == "windows":
-        startupinfo = subprocess.STARTUPINFO()  # type: ignore
-        startupinfo.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW  # type: ignore
-        executable_arg = args[0]
-        fname, ext = os.path.splitext(executable_arg)
-        if len(ext) < 1:
-            path_to_executable = shutil.which(executable_arg)
-            # what extensions should we append so CreateProcess can find it?
-            # node has .cmd
-            # dart has .bat
-            # python has .exe wrappers - not needed
-            for extension in ['.cmd', '.bat']:
-                if path_to_executable and path_to_executable.lower().endswith(extension):
-                    args[0] = executable_arg + extension
-                    break
-    else:
-        startupinfo = None
-    return startupinfo
-
-
 def create_transport(config: ClientConfig, cwd: Optional[str], window: sublime.Window,
                      callback_object: TransportCallbacks, variables: Dict[str, str]) -> JsonRpcTransport:
     tcp_port = None  # type: Optional[int]
@@ -273,6 +252,27 @@ def kill_all_subprocesses() -> None:
             p.wait()
         except Exception:
             pass
+
+
+def _fixup_startup_args(args: List[str]) -> Any:
+    if sublime.platform() == "windows":
+        startupinfo = subprocess.STARTUPINFO()  # type: ignore
+        startupinfo.dwFlags |= subprocess.SW_HIDE | subprocess.STARTF_USESHOWWINDOW  # type: ignore
+        executable_arg = args[0]
+        fname, ext = os.path.splitext(executable_arg)
+        if len(ext) < 1:
+            path_to_executable = shutil.which(executable_arg)
+            # what extensions should we append so CreateProcess can find it?
+            # node has .cmd
+            # dart has .bat
+            # python has .exe wrappers - not needed
+            for extension in ['.cmd', '.bat']:
+                if path_to_executable and path_to_executable.lower().endswith(extension):
+                    args[0] = executable_arg + extension
+                    break
+    else:
+        startupinfo = None
+    return startupinfo
 
 
 def _start_subprocess(

@@ -71,7 +71,7 @@ class LspSymbolRenameCommand(LspTextCommand):
                 session = self.best_session("{}.prepareProvider".format(self.capability))
                 if session:
                     params = text_document_position_params(self.view, get_position(self.view, event))
-                    request = Request("textDocument/prepareRename", params)
+                    request = Request.prepareRename(params, self.view)
                     session.send_request(request, self.on_prepare_result, self.on_prepare_error)
                     self.event = event
                 else:
@@ -89,7 +89,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         if session:
             params = text_document_position_params(self.view, position)
             params["newName"] = new_name
-            session.send_request(Request.rename(params), self.on_rename_result)
+            session.send_request(Request.rename(params, self.view), self.on_rename_result)
 
     def on_rename_result(self, response: Any) -> None:
         window = self.view.window()

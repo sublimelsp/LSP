@@ -49,7 +49,7 @@ class LspGotoCommand(LspTextCommand):
         session = self.best_session(self.capability)
         if session:
             pos = get_position(self.view, event)
-            request = Request(self.method, text_document_position_params(self.view, pos))
+            request = Request(self.method, text_document_position_params(self.view, pos), self.view)
             session.send_request(request, lambda response: self.handle_response(response, side_by_side))
 
     def handle_response(self, response: Any, side_by_side: bool) -> None:

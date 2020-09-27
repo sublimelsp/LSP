@@ -4,6 +4,7 @@ from .typing import Dict, Any, Optional, IO, Protocol, List, Callable, Tuple
 from abc import ABCMeta, abstractmethod
 from contextlib import closing
 from queue import Queue
+import http
 import json
 import os
 import shutil
@@ -87,20 +88,7 @@ class JsonRpcTransport(Transport):
     def _read_loop(self) -> None:
         try:
             while self._reader:
-                line = self._reader.readline()
-                if not line:
-                    break
-                try:
-                    num_bytes = _content_length(line)
-                except ValueError:
-                    continue
-                if num_bytes is None:
-                    continue
-                while line and line.strip():
-                    line = self._reader.readline()
-                if not line:
-                    continue
-                body = self._reader.read(num_bytes)
+                body = self._reader.read(int(http.client.parse_headers(self._reader).get("Content-Length")))
                 callback_object = self._callback_object()
                 if callback_object:
                     try:
@@ -363,14 +351,3 @@ def _encode(d: Dict[str, Any]) -> bytes:
 
 def _decode(message: bytes) -> Dict[str, Any]:
     return json.loads(message.decode('utf-8'))
-
-
-def _content_length(line: bytes) -> Optional[int]:
-    if line.startswith(b'Content-Length: '):
-        _, value = line.split(b'Content-Length: ')
-        value = value.strip()
-        try:
-            return int(value)
-        except ValueError as ex:
-            raise ValueError("Invalid Content-Length header: {}".format(value.decode('ascii'))) from ex
-    return None

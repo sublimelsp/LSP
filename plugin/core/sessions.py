@@ -829,59 +829,47 @@ class Session(TransportCallbacks):
 
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""
-
-        def run() -> None:
-            uri = params["uri"]
-            sb = self.get_session_buffer_for_uri_async(uri)
-            if sb:
-                sb.on_diagnostics_async(params["diagnostics"], params.get("version"))
-
-        sublime.set_timeout_async(run)
+        uri = params["uri"]
+        sb = self.get_session_buffer_for_uri_async(uri)
+        if sb:
+            sb.on_diagnostics_async(params["diagnostics"], params.get("version"))
 
     def m_client_registerCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/registerCapability request"""
-
-        def run() -> None:
-            registrations = params["registrations"]
-            for registration in registrations:
-                registration_id = registration["id"]
-                capability_path, registration_path = method_to_capability(registration["method"])
-                debug("{}: registering capability:".format(self.config.name), capability_path)
-                options = registration.get("registerOptions")  # type: Optional[Dict[str, Any]]
-                if not isinstance(options, dict):
-                    options = {}
-                data = _RegistrationData(registration_id, capability_path, registration_path, options)
-                self._registrations[registration_id] = data
-                if data.selector:
-                    # The registration is applicable only to certain buffers, so let's check which buffers apply.
-                    for sb in self.session_buffers_async():
-                        data.check_applicable(sb)
-                else:
-                    # The registration applies globally to all buffers.
-                    self.capabilities.register(registration_id, capability_path, registration_path, options)
-            self.send_response(Response(request_id, None))
-
-        sublime.set_timeout_async(run)
+        registrations = params["registrations"]
+        for registration in registrations:
+            registration_id = registration["id"]
+            capability_path, registration_path = method_to_capability(registration["method"])
+            debug("{}: registering capability:".format(self.config.name), capability_path)
+            options = registration.get("registerOptions")  # type: Optional[Dict[str, Any]]
+            if not isinstance(options, dict):
+                options = {}
+            data = _RegistrationData(registration_id, capability_path, registration_path, options)
+            self._registrations[registration_id] = data
+            if data.selector:
+                # The registration is applicable only to certain buffers, so let's check which buffers apply.
+                for sb in self.session_buffers_async():
+                    data.check_applicable(sb)
+            else:
+                # The registration applies globally to all buffers.
+                self.capabilities.register(registration_id, capability_path, registration_path, options)
+        self.send_response(Response(request_id, None))
 
     def m_client_unregisterCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/unregisterCapability request"""
-
-        def run() -> None:
-            unregistrations = params["unregisterations"]  # typo in the official specification
-            for unregistration in unregistrations:
-                registration_id = unregistration["id"]
-                capability_path, registration_path = method_to_capability(unregistration["method"])
-                debug("{}: unregistering capability:".format(self.config.name), capability_path)
-                data = self._registrations.pop(registration_id, None)
-                if not data:
-                    message = "no registration data found for registration ID {}".format(registration_id)
-                    self.send_error_response(request_id, Error(ErrorCode.InvalidParams, message))
-                    return
-                elif not data.selector:
-                    self.capabilities.unregister(registration_id, capability_path, registration_path)
-            self.send_response(Response(request_id, None))
-
-        sublime.set_timeout_async(run)
+        unregistrations = params["unregisterations"]  # typo in the official specification
+        for unregistration in unregistrations:
+            registration_id = unregistration["id"]
+            capability_path, registration_path = method_to_capability(unregistration["method"])
+            debug("{}: unregistering capability:".format(self.config.name), capability_path)
+            data = self._registrations.pop(registration_id, None)
+            if not data:
+                message = "no registration data found for registration ID {}".format(registration_id)
+                self.send_error_response(request_id, Error(ErrorCode.InvalidParams, message))
+                return
+            elif not data.selector:
+                self.capabilities.unregister(registration_id, capability_path, registration_path)
+        self.send_response(Response(request_id, None))
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
         """handles the window/workDoneProgress/create request"""
@@ -947,16 +935,12 @@ class Session(TransportCallbacks):
         if self._initialize_error:
             # Override potential exit error with a saved one.
             exit_code, exception = self._initialize_error
-
-        def run_async() -> None:
-            mgr = self.manager()
-            if mgr:
-                if self._init_callback:
-                    self._init_callback(self, True)
-                    self._init_callback = None
-                mgr.on_post_exit_async(self, exit_code, exception)
-
-        sublime.set_timeout_async(run_async)
+        mgr = self.manager()
+        if mgr:
+            if self._init_callback:
+                self._init_callback(self, True)
+                self._init_callback = None
+            mgr.on_post_exit_async(self, exit_code, exception)
 
     # --- RPC message handling ----------------------------------------------------------------------------------------
 

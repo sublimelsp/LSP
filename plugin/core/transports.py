@@ -101,14 +101,18 @@ class JsonRpcTransport(Transport):
                 if not line:
                     continue
                 body = self._reader.read(num_bytes)
-                callback_object = self._callback_object()
-                if callback_object:
-                    try:
-                        callback_object.on_payload(_decode(body))
-                    except Exception as ex:
-                        exception_log("Error handling payload", ex)
-                else:
-                    break
+                try:
+                    payload = _decode(body)
+                except Exception as ex:
+                    exception_log("JSON decode error", ex)
+                    continue
+
+                def invoke() -> None:
+                    callback_object = self._callback_object()
+                    if callback_object:
+                        callback_object.on_payload(payload)
+
+                sublime.set_timeout_async(invoke)
         except (AttributeError, BrokenPipeError):
             pass
         except Exception as ex:
@@ -134,9 +138,13 @@ class JsonRpcTransport(Transport):
                 pass
             except Exception as ex:
                 exception = ex  # TODO: Old captured exception is overwritten
-        callback_object = self._callback_object()
-        if callback_object:
-            callback_object.on_transport_close(exit_code, exception)
+
+        def invoke() -> None:
+            callback_object = self._callback_object()
+            if callback_object:
+                callback_object.on_transport_close(exit_code, exception)
+
+        sublime.set_timeout_async(invoke)
         self.close()
 
     def _write_loop(self) -> None:

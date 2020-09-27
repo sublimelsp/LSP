@@ -97,7 +97,7 @@ class JsonRpcTransport(Transport):
                         exception_log("Error handling payload", ex)
                 else:
                     break
-        except (AttributeError, BrokenPipeError):
+        except (AttributeError, BrokenPipeError, TypeError):
             pass
         except Exception as ex:
             exception_log("Unexpected exception", ex)

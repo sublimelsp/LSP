@@ -88,7 +88,8 @@ class JsonRpcTransport(Transport):
     def _read_loop(self) -> None:
         try:
             while self._reader:
-                body = self._reader.read(int(http.client.parse_headers(self._reader).get("Content-Length")))
+                headers = http.client.parse_headers(self._reader)  # type: ignore
+                body = self._reader.read(int(headers.get("Content-Length")))
                 callback_object = self._callback_object()
                 if callback_object:
                     try:

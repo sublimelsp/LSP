@@ -1,4 +1,5 @@
 from .core.protocol import Diagnostic
+from .core.protocol import Request
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import view2scope
@@ -26,6 +27,7 @@ class SessionView:
     def __init__(self, listener: AbstractViewListener, session: Session) -> None:
         self.view = listener.view
         self.session = session
+        self.active_requests = {}  # type: Dict[int, Request]
         settings = self.view.settings()
         # TODO: Language ID must be UNIQUE!
         languages = settings.get(self.LANGUAGE_ID_KEY)
@@ -134,6 +136,12 @@ class SessionView:
 
     def get_diagnostics_async(self) -> List[Diagnostic]:
         return self.session_buffer.diagnostics
+
+    def on_request_started_async(self, request_id: int, request: Request) -> None:
+        self.active_requests[request_id] = request
+
+    def on_request_finished_async(self, request_id: int) -> None:
+        self.active_requests.pop(request_id, None)
 
     def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
         self.session_buffer.on_text_changed_async(self.view, changes)

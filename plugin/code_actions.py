@@ -149,7 +149,7 @@ class CodeActionsManager:
                         if matching_kinds:
                             params = text_document_code_action_params(
                                 view, file_name, request_range, [], matching_kinds)
-                            request = Request.codeAction(params)
+                            request = Request.codeAction(params, view)
                             session.send_request(
                                 request, *filtering_collector(session.config.name, matching_kinds, collector))
                     else:
@@ -158,7 +158,7 @@ class CodeActionsManager:
                         if only_with_diagnostics and not diagnostics:
                             continue
                         params = text_document_code_action_params(view, file_name, request_range, diagnostics)
-                        request = Request.codeAction(params)
+                        request = Request.codeAction(params, view)
                         session.send_request(request, collector.create_collector(config_name))
         if use_cache:
             self._response_cache = (location_cache_key, collector)

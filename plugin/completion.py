@@ -27,7 +27,7 @@ class LspResolveDocsCommand(LspTextCommand):
             # If those fields appear after the item is resolved we show them in the popup.
             session = self.best_session('completionProvider.resolveProvider')
             if session:
-                session.send_request(Request.resolveCompletionItem(item), self.handle_resolve_response)
+                session.send_request(Request.resolveCompletionItem(item, self.view), self.handle_resolve_response)
                 return
         minihtml_content = self.get_content(documentation, detail)
         self.show_popup(minihtml_content)

@@ -55,7 +55,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
 
             document_position = text_document_position_params(self.view, pos)
             document_position['context'] = {"includeDeclaration": False}
-            request = Request.references(document_position)
+            request = Request.references(document_position, self.view)
             session.send_request(request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response: Optional[List[ReferenceDict]], pos: int) -> None:

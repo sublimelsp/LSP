@@ -373,7 +373,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.purge_changes_async()
             params = text_document_position_params(self.view, pos)
             assert session
-            session.send_request(Request.signatureHelp(params), lambda resp: self._on_signature_help(resp, pos))
+            session.send_request(
+                Request.signatureHelp(params, self.view), lambda resp: self._on_signature_help(resp, pos))
         else:
             # TODO: Refactor popup usage to a common class. We now have sigHelp, completionDocs, hover, and diags
             # all using a popup. Most of these systems assume they have exclusive access to a popup, while in
@@ -461,7 +462,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _do_color_boxes_async(self) -> None:
         session = self.session("colorProvider")
         if session:
-            session.send_request(Request.documentColor(document_color_params(self.view)), self._on_color_boxes)
+            session.send_request(
+                Request.documentColor(document_color_params(self.view), self.view), self._on_color_boxes)
 
     def _on_color_boxes(self, response: Any) -> None:
         color_infos = response if response else []
@@ -488,7 +490,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         session = self.session("documentHighlightProvider", point)
         if session:
             params = text_document_position_params(self.view, point)
-            request = Request.documentHighlight(params)
+            request = Request.documentHighlight(params, self.view)
             session.send_request(request, self._on_highlights)
 
     def _on_highlights(self, response: Optional[List]) -> None:
@@ -522,7 +524,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
         config_name = session.config.name
         session.send_request(
-            Request.complete(text_document_position_params(self.view, location)),
+            Request.complete(text_document_position_params(self.view, location), self.view),
             lambda res: self._on_complete_result(res, promise, can_resolve_completion_items, config_name),
             lambda res: self._on_complete_error(res, promise))
 

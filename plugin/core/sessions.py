@@ -586,6 +586,11 @@ class Session(TransportCallbacks):
 
     def __del__(self) -> None:
         debug(self.config.command, "ended")
+        for token in self._progress.keys():
+            key = self._progress_status_key(token)
+            for sv in self.session_views_async():
+                if sv.view.is_valid():
+                    sv.view.erase_status(key)
 
     def __getattr__(self, name: str) -> Any:
         """

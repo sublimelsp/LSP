@@ -1,0 +1,5 @@
+=> 4070-1.0.16
+
+- Allow plugin packages to define "command" themselves (Rafał Chłodnicki)
+- Allow a plugin to intercept a server command (#1343) (Raoul Wols)
+- Act as a TCP server for langservers that want to connect to the client (#1341) (Raoul Wols)

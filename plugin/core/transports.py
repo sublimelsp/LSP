@@ -96,12 +96,16 @@ class JsonRpcTransport(Transport):
                     exception_log("JSON decode error", ex)
                     continue
 
-                def invoke() -> None:
-                    callback_object = self._callback_object()
-                    if callback_object:
-                        callback_object.on_payload(payload)
+                def invoker(p: Dict[str, Any]) -> Callable[[], None]:
 
-                sublime.set_timeout_async(invoke)
+                    def invoke() -> None:
+                        callback_object = self._callback_object()
+                        if callback_object:
+                            callback_object.on_payload(p)
+
+                    return invoke
+
+                sublime.set_timeout_async(invoker(payload))
         except (AttributeError, BrokenPipeError, TypeError):
             pass
         except Exception as ex:

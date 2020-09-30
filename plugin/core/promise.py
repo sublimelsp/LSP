@@ -1,5 +1,7 @@
-from .typing import Any, Callable, List
+from .typing import Any, Callable, List, Dict, Tuple, Optional
 import functools
+import os
+import sublime
 import threading
 
 ResolveFunc = Callable[..., None]  # Optional argument not supported in Callable so using "..."
@@ -66,6 +68,16 @@ class Promise:
             resolve_fn(resolve_value)
 
         return cls(fullfill_func)
+
+    @classmethod
+    def on_main_thread(cls, value: Any = None) -> 'Promise':
+        """Return a promise that resolves on the main thread."""
+        return Promise(lambda resolve: sublime.set_timeout(lambda: resolve(value)))
+
+    @classmethod
+    def on_async_thread(cls, value: Any = None) -> 'Promise':
+        """Return a promise that resolves on the worker thread."""
+        return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(value)))
 
     @classmethod
     def all(cls, promises: List['Promise']) -> 'Promise':
@@ -184,3 +196,32 @@ class Promise:
     def _get_value(self) -> Any:
         with self.mutex:
             return self.value
+
+
+opening_files = {}  # type: Dict[str, Tuple[Promise, Callable[[Optional[sublime.View]], None]]]
+
+
+def open_file(window: sublime.Window, file_path: str, flags: int = 0, group: int = -1) -> Promise:
+    """Open a file asynchronously. It is only safe to call this function from the UI thread."""
+    view = window.open_file(file_path, flags, group)
+    if not view.is_loading():
+        # It's already loaded. Possibly already open in a tab.
+        return Promise.resolve(view)
+
+    # Is the view opening right now? Then return the associated unresolved promise
+    for fn, value in opening_files.items():
+        if fn == file_path or os.path.samefile(fn, file_path):
+            # Return the unresolved promise. A future on_load event will resolve the promise.
+            return value[0]
+
+    # Prepare a new promise to be resolved by a future on_load event (see the event listener in main.py)
+    def fullfill(resolve: ResolveFunc) -> None:
+        global opening_files
+        # Save the promise in the first element of the tuple -- except we cannot yet do that here
+        opening_files[file_path] = (None, resolve)  # type: ignore
+
+    promise = Promise(fullfill)
+    tup = opening_files[file_path]
+    # Save the promise in the first element of the tuple so that the for-loop above can return it
+    opening_files[file_path] = (promise, tup[1])
+    return promise

@@ -10,8 +10,6 @@ from .message_request_handler import MessageRequestHandler
 from .panels import update_server_panel
 from .protocol import Diagnostic
 from .protocol import Error
-from .promise import Promise
-from .promise import ResolveFunc
 from .protocol import Point
 from .sessions import get_plugin
 from .sessions import Logger
@@ -21,7 +19,7 @@ from .sessions import SessionViewProtocol
 from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
-from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Mapping, Iterable, Callable
+from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Mapping, Iterable
 from .views import diagnostic_to_phantom
 from .views import extract_variables
 from .workspace import disable_in_project
@@ -508,35 +506,6 @@ class WindowRegistry(object):
 
     def discard(self, window: sublime.Window) -> None:
         self._windows.pop(window.id(), None)
-
-
-opening_files = {}  # type: Dict[str, Tuple[Promise, Callable[[Optional[sublime.View]], None]]]
-
-
-def open_file(window: sublime.Window, file_path: str, flags: int = 0, group: int = -1) -> Promise:
-    """Open a file asynchronously. It is only safe to call this function from the UI thread."""
-    view = window.open_file(file_path, flags, group)
-    if not view.is_loading():
-        # It's already loaded. Possibly already open in a tab.
-        return Promise.resolve(view)
-
-    # Is the view opening right now? Then return the associated unresolved promise
-    for fn, value in opening_files.items():
-        if fn == file_path or os.path.samefile(fn, file_path):
-            # Return the unresolved promise. A future on_load event will resolve the promise.
-            return value[0]
-
-    # Prepare a new promise to be resolved by a future on_load event (see the event listener in main.py)
-    def fullfill(resolve: ResolveFunc) -> None:
-        global opening_files
-        # Save the promise in the first element of the tuple -- except we cannot yet do that here
-        opening_files[file_path] = (None, resolve)  # type: ignore
-
-    promise = Promise(fullfill)
-    tup = opening_files[file_path]
-    # Save the promise in the first element of the tuple so that the for-loop above can return it
-    opening_files[file_path] = (promise, tup[1])
-    return promise
 
 
 class PanelLogger(Logger):

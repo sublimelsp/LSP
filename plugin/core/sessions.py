@@ -1,3 +1,4 @@
+from .edit import apply_workspace_edit
 from .edit import parse_workspace_edit
 from .logging import debug
 from .logging import exception_log
@@ -586,6 +587,11 @@ class Session(TransportCallbacks):
 
     def __del__(self) -> None:
         debug(self.config.command, "ended")
+        for token in self._progress.keys():
+            key = self._progress_status_key(token)
+            for sv in self.session_views_async():
+                if sv.view.is_valid():
+                    sv.view.erase_status(key)
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -807,11 +813,19 @@ class Session(TransportCallbacks):
             return self.run_command(command)
         edit = code_action.get("edit")
         if edit:
-            self.window.run_command('lsp_apply_workspace_edit', {'changes': parse_workspace_edit(edit)})
-            # TODO: We should ideally wait for all changes to have been applied. This is currently not "async".
-            return Promise.resolve()
+            return self._apply_workspace_edit_async(edit)
         debug("unrecognized code action structure:", code_action)
         return Promise.resolve()
+
+    def _apply_workspace_edit_async(self, edit: Any) -> Promise:
+        """
+        Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
+        applied.
+        """
+        changes = parse_workspace_edit(edit)
+        return Promise.on_main_thread() \
+            .then(lambda _: apply_workspace_edit(self.window, changes)) \
+            .then(Promise.on_async_thread)
 
     # --- server request handlers --------------------------------------------------------------------------------------
 
@@ -844,100 +858,98 @@ class Session(TransportCallbacks):
 
     def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:
         """handles the workspace/applyEdit request"""
-        edit = params.get('edit', {})
-        self.window.run_command('lsp_apply_workspace_edit', {'changes': parse_workspace_edit(edit)})
-        # TODO: We should ideally wait for all changes to have been applied. This is currently not "async".
-        self.send_response(Response(request_id, {"applied": True}))
+        self._apply_workspace_edit_async(params.get('edit', {})).then(
+            lambda _: self.send_response(Response(request_id, {"applied": True})))
 
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""
-
-        def run() -> None:
-            uri = params["uri"]
-            sb = self.get_session_buffer_for_uri_async(uri)
-            if sb:
-                sb.on_diagnostics_async(params["diagnostics"], params.get("version"))
-
-        sublime.set_timeout_async(run)
+        uri = params["uri"]
+        sb = self.get_session_buffer_for_uri_async(uri)
+        if sb:
+            sb.on_diagnostics_async(params["diagnostics"], params.get("version"))
 
     def m_client_registerCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/registerCapability request"""
-
-        def run() -> None:
-            registrations = params["registrations"]
-            for registration in registrations:
-                registration_id = registration["id"]
-                capability_path, registration_path = method_to_capability(registration["method"])
-                debug("{}: registering capability:".format(self.config.name), capability_path)
-                options = registration.get("registerOptions")  # type: Optional[Dict[str, Any]]
-                if not isinstance(options, dict):
-                    options = {}
-                data = _RegistrationData(registration_id, capability_path, registration_path, options)
-                self._registrations[registration_id] = data
-                if data.selector:
-                    # The registration is applicable only to certain buffers, so let's check which buffers apply.
-                    for sb in self.session_buffers_async():
-                        data.check_applicable(sb)
-                else:
-                    # The registration applies globally to all buffers.
-                    self.capabilities.register(registration_id, capability_path, registration_path, options)
-            self.send_response(Response(request_id, None))
-
-        sublime.set_timeout_async(run)
+        registrations = params["registrations"]
+        for registration in registrations:
+            registration_id = registration["id"]
+            capability_path, registration_path = method_to_capability(registration["method"])
+            debug("{}: registering capability:".format(self.config.name), capability_path)
+            options = registration.get("registerOptions")  # type: Optional[Dict[str, Any]]
+            if not isinstance(options, dict):
+                options = {}
+            data = _RegistrationData(registration_id, capability_path, registration_path, options)
+            self._registrations[registration_id] = data
+            if data.selector:
+                # The registration is applicable only to certain buffers, so let's check which buffers apply.
+                for sb in self.session_buffers_async():
+                    data.check_applicable(sb)
+            else:
+                # The registration applies globally to all buffers.
+                self.capabilities.register(registration_id, capability_path, registration_path, options)
+        self.send_response(Response(request_id, None))
 
     def m_client_unregisterCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/unregisterCapability request"""
-
-        def run() -> None:
-            unregistrations = params["unregisterations"]  # typo in the official specification
-            for unregistration in unregistrations:
-                registration_id = unregistration["id"]
-                capability_path, registration_path = method_to_capability(unregistration["method"])
-                debug("{}: unregistering capability:".format(self.config.name), capability_path)
-                data = self._registrations.pop(registration_id, None)
-                if not data:
-                    message = "no registration data found for registration ID {}".format(registration_id)
-                    self.send_error_response(request_id, Error(ErrorCode.InvalidParams, message))
-                    return
-                elif not data.selector:
-                    self.capabilities.unregister(registration_id, capability_path, registration_path)
-            self.send_response(Response(request_id, None))
-
-        sublime.set_timeout_async(run)
+        unregistrations = params["unregisterations"]  # typo in the official specification
+        for unregistration in unregistrations:
+            registration_id = unregistration["id"]
+            capability_path, registration_path = method_to_capability(unregistration["method"])
+            debug("{}: unregistering capability:".format(self.config.name), capability_path)
+            data = self._registrations.pop(registration_id, None)
+            if not data:
+                message = "no registration data found for registration ID {}".format(registration_id)
+                self.send_error_response(request_id, Error(ErrorCode.InvalidParams, message))
+                return
+            elif not data.selector:
+                self.capabilities.unregister(registration_id, capability_path, registration_path)
+        self.send_response(Response(request_id, None))
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
         """handles the window/workDoneProgress/create request"""
         self._progress[params['token']] = dict()
         self.send_response(Response(request_id, None))
 
+    def _progress_status_key(self, token: str) -> str:
+        return "lspprogress{}{}".format(self.config.name, token)
+
     def m___progress(self, params: Any) -> None:
         """handles the $/progress notification"""
         token = params['token']
-        if token not in self._progress:
+        data = self._progress.get(token)
+        if not isinstance(data, dict):
             debug('unknown $/progress token: {}'.format(token))
             return
         value = params['value']
-        if value['kind'] == 'begin':
-            self._progress[token]['title'] = value['title']  # mandatory
-            self._progress[token]['message'] = value.get('message')  # optional
-            self.window.status_message(self._progress_string(token, value))
-        elif value['kind'] == 'report':
-            self.window.status_message(self._progress_string(token, value))
-        elif value['kind'] == 'end':
-            if value.get('message'):
-                status_msg = self._progress[token]['title'] + ': ' + value['message']
-                self.window.status_message(status_msg)
+        kind = value['kind']
+        key = self._progress_status_key(token)
+        if kind == 'begin':
+            data['title'] = value['title']  # mandatory
+            data['message'] = value.get('message')  # optional
+            progress_string = self._progress_string(data, value)
+            for sv in self.session_views_async():
+                sv.view.set_status(key, progress_string)
+        elif kind == 'report':
+            progress_string = self._progress_string(data, value)
+            for sv in self.session_views_async():
+                sv.view.set_status(key, progress_string)
+        elif kind == 'end':
+            message = value.get('message')
+            if message:
+                self.window.status_message(data['title'] + ': ' + message)
+            for sv in self.session_views_async():
+                sv.view.erase_status(key)
             self._progress.pop(token, None)
 
-    def _progress_string(self, token: Any, value: Dict[str, Any]) -> str:
-        status_msg = self._progress[token]['title']
+    def _progress_string(self, data: Dict[str, Any], value: Dict[str, Any]) -> str:
+        status_msg = data['title']
         progress_message = value.get('message')  # optional
         progress_percentage = value.get('percentage')  # optional
         if progress_message:
-            self._progress[token]['message'] = progress_message
+            data['message'] = progress_message
             status_msg += ': ' + progress_message
-        elif self._progress[token]['message']:  # reuse last known message if not present
-            status_msg += ': ' + self._progress[token]['message']
+        elif data['message']:  # reuse last known message if not present
+            status_msg += ': ' + data['message']
         if progress_percentage:
             fmt = ' ({:.1f}%)' if isinstance(progress_percentage, float) else ' ({}%)'
             status_msg += fmt.format(progress_percentage)
@@ -969,16 +981,12 @@ class Session(TransportCallbacks):
         if self._initialize_error:
             # Override potential exit error with a saved one.
             exit_code, exception = self._initialize_error
-
-        def run_async() -> None:
-            mgr = self.manager()
-            if mgr:
-                if self._init_callback:
-                    self._init_callback(self, True)
-                    self._init_callback = None
-                mgr.on_post_exit_async(self, exit_code, exception)
-
-        sublime.set_timeout_async(run_async)
+        mgr = self.manager()
+        if mgr:
+            if self._init_callback:
+                self._init_callback(self, True)
+                self._init_callback = None
+            mgr.on_post_exit_async(self, exit_code, exception)
 
     # --- RPC message handling ----------------------------------------------------------------------------------------
 

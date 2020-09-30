@@ -93,16 +93,20 @@ class JsonRpcTransport(Transport):
                 body = self._reader.read(int(headers.get("Content-Length")))
                 try:
                     payload = _decode(body)
+
+                    def invoke(p: Dict[str, Any]) -> None:
+                        callback_object = self._callback_object()
+                        if callback_object:
+                            callback_object.on_payload(p)
+
+                    sublime.set_timeout_async(partial(invoke, payload))
                 except Exception as ex:
                     exception_log("JSON decode error", ex)
                     continue
-
-                def invoke(p: Dict[str, Any]) -> None:
-                    callback_object = self._callback_object()
-                    if callback_object:
-                        callback_object.on_payload(p)
-
-                sublime.set_timeout_async(partial(invoke, payload))
+                finally:
+                    # We don't need these anymore
+                    del body
+                    del headers
         except (AttributeError, BrokenPipeError, TypeError):
             pass
         except Exception as ex:

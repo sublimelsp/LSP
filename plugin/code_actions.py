@@ -259,7 +259,7 @@ class CodeActionOnSaveTask(SaveTask):
                     if session.config.name == config_name:
                         for code_action in code_actions:
                             tasks.append(session.run_code_action(code_action))
-                    break
+                        break
         if document_version != self._view.change_count():
             # Give on_text_changed_async a chance to trigger.
             Promise.all(tasks).then(lambda _: sublime.set_timeout_async(self._request_code_actions_async))

@@ -59,13 +59,10 @@ def sort_by_application_order(changes: Iterable[TextEdit]) -> List[TextEdit]:
 
 def apply_workspace_edit(window: sublime.Window, changes: Dict[str, List[TextEdit]]) -> Promise:
     """Apply workspace edits. This function must be called from the main thread!"""
-    promises = []  # type: List[Promise]
-    for fn, edits in changes.items():
+    return Promise.all([open_file(window, fn).then(partial(_apply_edits, edits)) for fn, edits in changes.items()])
 
-        def apply_edits(edits: List[TextEdit], view: Optional[sublime.View]) -> None:
-            if view and view.is_valid():
-                # Text commands run blocking. After this call has returned the changes are applied.
-                view.run_command("lsp_apply_document_edit", {"changes": edits})
 
-        promises.append(open_file(window, fn).then(partial(apply_edits, edits)))
-    return Promise.all(promises)
+def _apply_edits(edits: List[TextEdit], view: Optional[sublime.View]) -> None:
+    if view and view.is_valid():
+        # Text commands run blocking. After this call has returned the changes are applied.
+        view.run_command("lsp_apply_document_edit", {"changes": edits})

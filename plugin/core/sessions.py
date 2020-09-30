@@ -809,9 +809,9 @@ class Session(TransportCallbacks):
         applied.
         """
         changes = parse_workspace_edit(edit)
-        return Promise.from_main_thread().then(
+        return Promise.on_main_thread().then(
             lambda _: apply_workspace_edit(self.window, changes).then(
-                lambda _: Promise.from_async_thread()
+                lambda _: Promise.on_async_thread()
             )
         )
 

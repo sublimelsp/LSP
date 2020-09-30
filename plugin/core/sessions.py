@@ -803,6 +803,18 @@ class Session(TransportCallbacks):
             )
         )
 
+    def run_code_action(self, code_action: Mapping[str, Any]) -> Promise:
+        command = code_action.get("command")
+        if isinstance(command, str):
+            # This is actually a command.
+            return self.run_command(code_action)
+        # At this point it cannot be a command anymore, it has to be a proper code action.
+        # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
+        # must apply the edits before running the command.
+        edit = code_action.get("edit")
+        promise = self._apply_workspace_edit_async(edit) if edit else Promise.resolve()
+        return promise.then(lambda _: self.run_command(command) if isinstance(command, dict) else Promise.resolve())
+
     def _apply_workspace_edit_async(self, edit: Any) -> Promise:
         """
         Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been

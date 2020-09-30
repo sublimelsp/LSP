@@ -1,11 +1,10 @@
-from .core.edit import parse_workspace_edit
 from .core.promise import Promise
 from .core.protocol import Diagnostic
 from .core.protocol import Range, Request
 from .core.registry import LspTextCommand
 from .core.registry import sessions_for_view
 from .core.settings import userprefs
-from .core.typing import Any, List, Dict, Callable, Optional, Union, Tuple, Mapping, TypedDict
+from .core.typing import Any, List, Dict, Callable, Optional, Union, Tuple, TypedDict
 from .core.views import entire_content_range
 from .core.views import region_to_range
 from .core.views import text_document_code_action_params
@@ -253,11 +252,14 @@ class CodeActionOnSaveTask(SaveTask):
         if self._cancelled:
             return
         document_version = self._view.change_count()
-        tasks = []
+        tasks = []  # type: List[Promise]
         for config_name, code_actions in responses.items():
             if code_actions:
-                for code_action in code_actions:
-                    tasks.append(run_code_action_or_command(self._view, config_name, code_action))
+                for session in sessions_for_view(self._view, 'codeActionProvider'):
+                    if session.config.name == config_name:
+                        for code_action in code_actions:
+                            tasks.append(session.run_code_action(code_action))
+                        break
         if document_version != self._view.change_count():
             # Give on_text_changed_async a chance to trigger.
             Promise.all(tasks).then(lambda _: sublime.set_timeout_async(self._request_code_actions_async))
@@ -266,35 +268,6 @@ class CodeActionOnSaveTask(SaveTask):
 
 
 LspSaveCommand.register_task(CodeActionOnSaveTask)
-
-
-def is_command(command_or_code_action: CodeActionOrCommand) -> bool:
-    command_field = command_or_code_action.get('command')
-    return isinstance(command_field, str)
-
-
-def run_code_action_or_command(
-    view: sublime.View, config_name: str, command_or_code_action: CodeActionOrCommand
-) -> Promise:
-    if is_command(command_or_code_action):
-        return execute_server_command(view, config_name, command_or_code_action)
-    else:
-        # CodeAction can have an edit and/or command.
-        maybe_edit = command_or_code_action.get('edit')
-        if maybe_edit:
-            changes = parse_workspace_edit(maybe_edit)
-            window = view.window()
-            if changes and window:
-                window.run_command("lsp_apply_workspace_edit", {'changes': changes})
-        maybe_command = command_or_code_action.get('command')
-        if isinstance(maybe_command, dict):
-            return execute_server_command(view, config_name, maybe_command)
-    return Promise.resolve()
-
-
-def execute_server_command(view: sublime.View, config_name: str, command: Mapping[str, Any]) -> Promise:
-    session = next((session for session in sessions_for_view(view) if session.config.name == config_name), None)
-    return session.run_command(command) if session else Promise.resolve()
 
 
 class LspCodeActionsCommand(LspTextCommand):
@@ -334,4 +307,6 @@ class LspCodeActionsCommand(LspTextCommand):
     def handle_select(self, index: int) -> None:
         if index > -1:
             selected = self.commands[index]
-            run_code_action_or_command(self.view, selected[0], selected[2])
+            session = self.session_by_name(selected[0])
+            if session:
+                session.run_code_action(selected[2])

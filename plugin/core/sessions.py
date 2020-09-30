@@ -586,6 +586,11 @@ class Session(TransportCallbacks):
 
     def __del__(self) -> None:
         debug(self.config.command, "ended")
+        for token in self._progress.keys():
+            key = self._progress_status_key(token)
+            for sv in self.session_views_async():
+                if sv.view.is_valid():
+                    sv.view.erase_status(key)
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -882,34 +887,46 @@ class Session(TransportCallbacks):
         self._progress[params['token']] = dict()
         self.send_response(Response(request_id, None))
 
+    def _progress_status_key(self, token: str) -> str:
+        return "lspprogress{}{}".format(self.config.name, token)
+
     def m___progress(self, params: Any) -> None:
         """handles the $/progress notification"""
         token = params['token']
-        if token not in self._progress:
+        data = self._progress.get(token)
+        if not isinstance(data, dict):
             debug('unknown $/progress token: {}'.format(token))
             return
         value = params['value']
-        if value['kind'] == 'begin':
-            self._progress[token]['title'] = value['title']  # mandatory
-            self._progress[token]['message'] = value.get('message')  # optional
-            self.window.status_message(self._progress_string(token, value))
-        elif value['kind'] == 'report':
-            self.window.status_message(self._progress_string(token, value))
-        elif value['kind'] == 'end':
-            if value.get('message'):
-                status_msg = self._progress[token]['title'] + ': ' + value['message']
-                self.window.status_message(status_msg)
+        kind = value['kind']
+        key = self._progress_status_key(token)
+        if kind == 'begin':
+            data['title'] = value['title']  # mandatory
+            data['message'] = value.get('message')  # optional
+            progress_string = self._progress_string(data, value)
+            for sv in self.session_views_async():
+                sv.view.set_status(key, progress_string)
+        elif kind == 'report':
+            progress_string = self._progress_string(data, value)
+            for sv in self.session_views_async():
+                sv.view.set_status(key, progress_string)
+        elif kind == 'end':
+            message = value.get('message')
+            if message:
+                self.window.status_message(data['title'] + ': ' + message)
+            for sv in self.session_views_async():
+                sv.view.erase_status(key)
             self._progress.pop(token, None)
 
-    def _progress_string(self, token: Any, value: Dict[str, Any]) -> str:
-        status_msg = self._progress[token]['title']
+    def _progress_string(self, data: Dict[str, Any], value: Dict[str, Any]) -> str:
+        status_msg = data['title']
         progress_message = value.get('message')  # optional
         progress_percentage = value.get('percentage')  # optional
         if progress_message:
-            self._progress[token]['message'] = progress_message
+            data['message'] = progress_message
             status_msg += ': ' + progress_message
-        elif self._progress[token]['message']:  # reuse last known message if not present
-            status_msg += ': ' + self._progress[token]['message']
+        elif data['message']:  # reuse last known message if not present
+            status_msg += ': ' + data['message']
         if progress_percentage:
             fmt = ' ({:.1f}%)' if isinstance(progress_percentage, float) else ' ({}%)'
             status_msg += fmt.format(progress_percentage)

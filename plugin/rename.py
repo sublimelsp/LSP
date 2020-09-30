@@ -1,5 +1,6 @@
 import sublime
 import sublime_plugin
+from .core.edit import apply_workspace_edit
 from .core.edit import parse_workspace_edit
 from .core.protocol import Range
 from .core.protocol import Request
@@ -95,8 +96,7 @@ class LspSymbolRenameCommand(LspTextCommand):
         window = self.view.window()
         if window:
             if response:
-                changes = parse_workspace_edit(response)
-                window.run_command('lsp_apply_workspace_edit', {'changes': changes})
+                apply_workspace_edit(window, parse_workspace_edit(response))
             else:
                 window.status_message('No rename edits returned')
 

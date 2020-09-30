@@ -1,3 +1,4 @@
+from .edit import apply_workspace_edit
 from .edit import parse_workspace_edit
 from .logging import debug
 from .logging import exception_log
@@ -802,6 +803,16 @@ class Session(TransportCallbacks):
             )
         )
 
+    def _apply_workspace_edit_async(self, edit: Any) -> Promise:
+        """
+        Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
+        applied.
+        """
+        changes = parse_workspace_edit(edit)
+        return Promise.on_main_thread() \
+            .then(lambda _: apply_workspace_edit(self.window, changes)) \
+            .then(Promise.on_async_thread)
+
     # --- server request handlers --------------------------------------------------------------------------------------
 
     def m_window_showMessageRequest(self, params: Any, request_id: Any) -> None:
@@ -833,10 +844,8 @@ class Session(TransportCallbacks):
 
     def m_workspace_applyEdit(self, params: Any, request_id: Any) -> None:
         """handles the workspace/applyEdit request"""
-        edit = params.get('edit', {})
-        self.window.run_command('lsp_apply_workspace_edit', {'changes': parse_workspace_edit(edit)})
-        # TODO: We should ideally wait for all changes to have been applied. This is currently not "async".
-        self.send_response(Response(request_id, {"applied": True}))
+        self._apply_workspace_edit_async(params.get('edit', {})).then(
+            lambda _: self.send_response(Response(request_id, {"applied": True})))
 
     def m_textDocument_publishDiagnostics(self, params: Any) -> None:
         """handles the textDocument/publishDiagnostics notification"""

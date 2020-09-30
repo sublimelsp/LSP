@@ -6,6 +6,7 @@ from LSP.plugin.core.url import filename_to_uri
 from setup import TextDocumentTestCase
 import os
 import sublime
+import tempfile
 
 
 class ServerRequests(TextDocumentTestCase):
@@ -53,6 +54,57 @@ class ServerRequests(TextDocumentTestCase):
         yield from self.verify("workspace/applyEdit", params, {"applied": True})
         yield lambda: self.view.change_count() > old_change_count
         self.assertEqual(self.view.substr(sublime.Region(0, self.view.size())), "hello\nthere\n")
+
+    def test_m_workspace_applyEdit_with_nontrivial_promises(self) -> Generator:
+        with tempfile.TemporaryDirectory() as dirpath:
+            initial_text = ["a b", "c d"]
+            file_paths = []
+            for i in range(0, 2):
+                file_paths.append(os.path.join(dirpath, "file{}.txt".format(i)))
+                with open(file_paths[-1], "w") as fp:
+                    fp.write(initial_text[i])
+            yield from self.verify(
+                "workspace/applyEdit",
+                {
+                    "edit": {
+                        "changes": {
+                            filename_to_uri(file_paths[0]):
+                            [
+                                {
+                                    "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 1}},
+                                    "newText": "hello"
+                                },
+                                {
+                                    "range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 3}},
+                                    "newText": "there"
+                                }
+                            ],
+                            filename_to_uri(file_paths[1]):
+                            [
+                                {
+                                    "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 1}},
+                                    "newText": "general"
+                                },
+                                {
+                                    "range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 3}},
+                                    "newText": "kenobi"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {"applied": True}
+            )
+            # Changes should have been applied
+            expected = ["hello there", "general kenobi"]
+            for i in range(0, 2):
+                view = self.view.window().find_open_file(file_paths[i])
+                self.assertTrue(view)
+                view.set_scratch(True)
+                self.assertTrue(view.is_valid())
+                self.assertFalse(view.is_loading())
+                self.assertEqual(view.substr(sublime.Region(0, view.size())), expected[i])
+                view.close()
 
     def test_m_client_registerCapability(self) -> Generator:
         yield from self.verify(

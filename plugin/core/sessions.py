@@ -797,6 +797,22 @@ class Session(TransportCallbacks):
             )
         )
 
+    def run_code_action(self, code_action: Mapping[str, Any]) -> Promise:
+        command = code_action.get("command")
+        if isinstance(command, str):
+            # This is actually a command.
+            return self.run_command(code_action)
+        # At this point it cannot be a command anymore, it has to be a proper code action.
+        if isinstance(command, dict):
+            return self.run_command(command)
+        edit = code_action.get("edit")
+        if edit:
+            self.window.run_command('lsp_apply_workspace_edit', {'changes': parse_workspace_edit(edit)})
+            # TODO: We should ideally wait for all changes to have been applied. This is currently not "async".
+            return Promise.resolve()
+        debug("unrecognized code action structure:", code_action)
+        return Promise.resolve()
+
     # --- server request handlers --------------------------------------------------------------------------------------
 
     def m_window_showMessageRequest(self, params: Any, request_id: Any) -> None:

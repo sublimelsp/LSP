@@ -2,7 +2,6 @@ from copy import deepcopy
 from LSP.plugin.code_actions import actions_manager
 from LSP.plugin.code_actions import CodeActionsByConfigName
 from LSP.plugin.code_actions import get_matching_kinds
-from LSP.plugin.code_actions import run_code_action_or_command
 from LSP.plugin.core.protocol import Point, Range
 from LSP.plugin.core.typing import Any, Dict, Generator, List, Tuple
 from LSP.plugin.core.url import filename_to_uri
@@ -313,7 +312,7 @@ class CodeActionsTestCase(TextDocumentTestCase):
             ("c", Range(Point(0, 0), Point(0, 1))),
             ("d", Range(Point(1, 0), Point(1, 1))),
         ])
-        run_code_action_or_command(self.view, self.config.name, code_action)
+        yield from self.await_promise(self.session.run_code_action(code_action))
         self.assertEquals(entire_content(self.view), 'c\nd')
 
     def test_does_not_apply_with_nonmatching_document_version(self) -> Generator:
@@ -324,7 +323,7 @@ class CodeActionsTestCase(TextDocumentTestCase):
             ("c", Range(Point(0, 0), Point(0, 1))),
             ("d", Range(Point(1, 0), Point(1, 1))),
         ])
-        run_code_action_or_command(self.view, self.config.name, code_action)
+        yield from self.await_promise(self.session.run_code_action(code_action))
         self.assertEquals(entire_content(self.view), initial_content)
 
     # Keep this test last as it breaks pyls!
@@ -334,5 +333,5 @@ class CodeActionsTestCase(TextDocumentTestCase):
         code_action = create_test_code_action(self.view.change_count(), [
             ("bye", Range(Point(0, 3), Point(0, 5))),
         ])
-        run_code_action_or_command(self.view, self.config.name, code_action)
+        yield from self.await_promise(self.session.run_code_action(code_action))
         self.assertEquals(entire_content(self.view), '🕵️bye')

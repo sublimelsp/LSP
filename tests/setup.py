@@ -1,10 +1,11 @@
+from LSP.plugin.core.promise import Promise
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification, Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.types import ClientConfig, LanguageConfig, ClientStates
-from LSP.plugin.core.typing import Any, Generator, List, Optional, Tuple
+from LSP.plugin.core.typing import Any, Generator, List, Optional, Tuple, Union
 from LSP.plugin.documents import DocumentSyncListener
 from os import environ
 from os.path import join
@@ -191,8 +192,13 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.session.send_request(req, on_result, on_error)
         return promise
 
-    def await_promise(self, promise: YieldPromise) -> Generator:
-        yield {"condition": promise, "timeout": TIMEOUT_TIME}
+    def await_promise(self, promise: Union[YieldPromise, Promise]) -> Generator:
+        if isinstance(promise, YieldPromise):
+            yielder = promise
+        else:
+            yielder = YieldPromise()
+            promise.then(lambda result: yielder.fulfill(result))
+        yield {"condition": yielder, "timeout": TIMEOUT_TIME}
 
     def set_response(self, method: str, response: 'Any') -> None:
         self.assertIsNotNone(self.session)

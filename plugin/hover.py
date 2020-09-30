@@ -4,7 +4,6 @@ import sublime_plugin
 import webbrowser
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
-from .code_actions import run_code_action_or_command
 from .core.css import css
 from .core.logging import debug
 from .core.protocol import Request, Diagnostic
@@ -199,7 +198,15 @@ class LspHoverCommand(LspTextCommand):
     def handle_code_action_select(self, config_name: str, index: int) -> None:
         if index > -1:
             selected = self._actions_by_config[config_name][index]
-            run_code_action_or_command(self.view, config_name, selected)
+            session = self.session_by_name(config_name)
+            if session:
+
+                def print_to_status_bar(_: Any) -> None:
+                    window = self.view.window()
+                    if window:
+                        window.status_message('Applied "{}"'.format(selected["title"]))
+
+                session.run_code_action(selected).then(print_to_status_bar)
 
 
 class LspRunCommandFromPointCommand(sublime_plugin.TextCommand):

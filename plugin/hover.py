@@ -197,16 +197,9 @@ class LspHoverCommand(LspTextCommand):
 
     def handle_code_action_select(self, config_name: str, index: int) -> None:
         if index > -1:
-            selected = self._actions_by_config[config_name][index]
             session = self.session_by_name(config_name)
             if session:
-
-                def print_to_status_bar(_: Any) -> None:
-                    window = self.view.window()
-                    if window:
-                        window.status_message('Applied "{}"'.format(selected["title"]))
-
-                session.run_code_action(selected).then(print_to_status_bar)
+                session.run_code_action(self._actions_by_config[config_name][index])
 
 
 class LspRunCommandFromPointCommand(sublime_plugin.TextCommand):

@@ -309,10 +309,4 @@ class LspCodeActionsCommand(LspTextCommand):
             selected = self.commands[index]
             session = self.session_by_name(selected[0])
             if session:
-
-                def print_to_status_bar(_: Any) -> None:
-                    window = self.view.window()
-                    if window:
-                        window.status_message('Applied "{}"'.format(selected[1]))
-
-                session.run_code_action(selected[2]).then(print_to_status_bar)
+                session.run_code_action(selected[2])

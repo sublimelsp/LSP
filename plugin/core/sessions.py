@@ -809,13 +809,11 @@ class Session(TransportCallbacks):
             # This is actually a command.
             return self.run_command(code_action)
         # At this point it cannot be a command anymore, it has to be a proper code action.
-        if isinstance(command, dict):
-            return self.run_command(command)
+        # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
+        # must apply the edits before running the command.
         edit = code_action.get("edit")
-        if edit:
-            return self._apply_workspace_edit_async(edit)
-        debug("unrecognized code action structure:", code_action)
-        return Promise.resolve()
+        promise = self._apply_workspace_edit_async(edit) if edit else Promise.resolve()
+        return promise.then(lambda _: self.run_command(command) if isinstance(command, dict) else Promise.resolve())
 
     def _apply_workspace_edit_async(self, edit: Any) -> Promise:
         """

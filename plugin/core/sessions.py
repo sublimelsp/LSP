@@ -1059,9 +1059,7 @@ class Session(TransportCallbacks):
         return (None, None, None, None, None)
 
     def on_payload(self, payload: Dict[str, Any]) -> None:
-        with self._response_handlers_lock:
-            handler, result, req_id, typestr, method = self.deduce_payload(payload)
-
+        handler, result, req_id, typestr, method = self.deduce_payload(payload)
         if handler:
             try:
                 if req_id is None:
@@ -1080,7 +1078,8 @@ class Session(TransportCallbacks):
                 exception_log("Error handling {}".format(typestr), err)
 
     def response_handler(self, response_id: int, response: Dict[str, Any]) -> Tuple[Optional[Callable], Any, bool]:
-        request, handler, error_handler = self._response_handlers.pop(response_id, (None, None, None))
+        with self._response_handlers_lock:
+            request, handler, error_handler = self._response_handlers.pop(response_id, (None, None, None))
         if not request:
             error = {"code": ErrorCode.InvalidParams, "message": "unknown response ID {}".format(response_id)}
             return (print_to_status_bar, error, True)

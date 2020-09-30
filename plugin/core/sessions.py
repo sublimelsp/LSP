@@ -923,6 +923,9 @@ class Session(TransportCallbacks):
             for sv in self.session_views_async():
                 sv.view.set_status(key, progress_string)
         elif kind == 'end':
+            message = value.get('message')
+            if message:
+                self.window.status_message(data['title'] + ': ' + message)
             for sv in self.session_views_async():
                 sv.view.erase_status(key)
             self._progress.pop(token, None)

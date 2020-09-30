@@ -70,14 +70,14 @@ class Promise:
         return cls(fullfill_func)
 
     @classmethod
-    def on_main_thread(cls) -> 'Promise':
+    def on_main_thread(cls, value: Any = None) -> 'Promise':
         """Return a promise that resolves on the main thread."""
-        return Promise(lambda resolve: sublime.set_timeout(resolve))
+        return Promise(lambda resolve: sublime.set_timeout(lambda: resolve(value)))
 
     @classmethod
-    def on_async_thread(cls) -> 'Promise':
+    def on_async_thread(cls, value: Any = None) -> 'Promise':
         """Return a promise that resolves on the worker thread."""
-        return Promise(lambda resolve: sublime.set_timeout_async(resolve))
+        return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(value)))
 
     @classmethod
     def all(cls, promises: List['Promise']) -> 'Promise':

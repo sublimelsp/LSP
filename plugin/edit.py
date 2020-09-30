@@ -2,7 +2,7 @@ import sublime
 import sublime_plugin
 from .core.edit import sort_by_application_order, TextEdit
 from .core.logging import debug
-from .core.typing import List, Dict, Optional, Any, Generator
+from .core.typing import List, Optional, Any, Generator
 from contextlib import contextmanager
 
 

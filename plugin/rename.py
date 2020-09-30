@@ -90,7 +90,10 @@ class LspSymbolRenameCommand(LspTextCommand):
         if session:
             params = text_document_position_params(self.view, position)
             params["newName"] = new_name
-            session.send_request(Request.rename(params, self.view), self.on_rename_result)
+            session.send_request(
+                Request.rename(params, self.view),
+                # This has to run on the main thread due to calling apply_workspace_edit
+                lambda r: sublime.set_timeout(lambda: self.on_rename_result(r)))
 
     def on_rename_result(self, response: Any) -> None:
         window = self.view.window()

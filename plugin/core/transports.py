@@ -3,6 +3,7 @@ from .types import ClientConfig
 from .typing import Dict, Any, Optional, IO, Protocol, List, Callable, Tuple
 from abc import ABCMeta, abstractmethod
 from contextlib import closing
+from functools import partial
 from queue import Queue
 import http
 import json

@@ -3,6 +3,7 @@ from .types import ClientConfig
 from .typing import Dict, Any, Optional, IO, Protocol, List, Callable, Tuple
 from abc import ABCMeta, abstractmethod
 from contextlib import closing
+from functools import partial
 from queue import Queue
 import http
 import json
@@ -90,14 +91,22 @@ class JsonRpcTransport(Transport):
             while self._reader:
                 headers = http.client.parse_headers(self._reader)  # type: ignore
                 body = self._reader.read(int(headers.get("Content-Length")))
-                callback_object = self._callback_object()
-                if callback_object:
-                    try:
-                        callback_object.on_payload(_decode(body))
-                    except Exception as ex:
-                        exception_log("Error handling payload", ex)
-                else:
-                    break
+                try:
+                    payload = _decode(body)
+
+                    def invoke(p: Dict[str, Any]) -> None:
+                        callback_object = self._callback_object()
+                        if callback_object:
+                            callback_object.on_payload(p)
+
+                    sublime.set_timeout_async(partial(invoke, payload))
+                except Exception as ex:
+                    exception_log("JSON decode error", ex)
+                    continue
+                finally:
+                    # We don't need these anymore
+                    del body
+                    del headers
         except (AttributeError, BrokenPipeError, TypeError):
             pass
         except Exception as ex:
@@ -123,9 +132,13 @@ class JsonRpcTransport(Transport):
                 pass
             except Exception as ex:
                 exception = ex  # TODO: Old captured exception is overwritten
-        callback_object = self._callback_object()
-        if callback_object:
-            callback_object.on_transport_close(exit_code, exception)
+
+        def invoke() -> None:
+            callback_object = self._callback_object()
+            if callback_object:
+                callback_object.on_transport_close(exit_code, exception)
+
+        sublime.set_timeout_async(invoke)
         self.close()
 
     def _write_loop(self) -> None:

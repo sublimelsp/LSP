@@ -281,6 +281,7 @@ class SessionBufferProtocol(Protocol):
     session = None  # type: Session
     session_views = None  # type: WeakSet[SessionViewProtocol]
     file_name = None  # type: str
+    language_id = None  # type: str
 
     def register_capability_async(
         self,

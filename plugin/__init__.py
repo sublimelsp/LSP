@@ -22,7 +22,7 @@ __all__ = [
     'Request',
     'Response',
     'Session',
-    'SessionBufferProtocol'
+    'SessionBufferProtocol',
     'unregister_plugin',
     'WorkspaceFolder',
 ]

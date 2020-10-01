@@ -21,7 +21,6 @@ from .plugin.diagnostics import LspPreviousDiagnosticCommand
 from .plugin.documents import DocumentSyncListener
 from .plugin.documents import TextChangeListener
 from .plugin.edit import LspApplyDocumentEditCommand
-from .plugin.edit import LspApplyWorkspaceEditCommand
 from .plugin.execute_command import LspExecuteCommand
 from .plugin.formatting import LspFormatDocumentCommand
 from .plugin.formatting import LspFormatDocumentRangeCommand

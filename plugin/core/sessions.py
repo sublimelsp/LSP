@@ -449,6 +449,19 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         return None
 
+    def get_view_for_uri(self, uri: str) -> Optional[SessionBufferProtocol]:
+        """
+        Return the view for the requested URI.
+
+        :param    uri:  The URI to get view for
+
+        :returns: An optional view if found for URI.
+        """
+        session = self.weaksession()
+        if session:
+            return session.get_session_buffer_for_uri_async(uri)
+        return None
+
 
 _plugins = {}  # type: Dict[str, Type[AbstractPlugin]]
 
@@ -851,9 +864,6 @@ class Session(TransportCallbacks):
         for requested_item in requested_items:
             configuration = self.config.settings.copy(requested_item.get('section') or None)
             if self._plugin:
-                buffer_view = self.get_session_buffer_for_uri_async(requested_item['scopeUri'])
-                if buffer_view:
-                    requested_item['languageId'] = buffer_view.language_id
                 self._plugin.on_workspace_configuration(requested_item, configuration)
             items.append(configuration)
         self.send_response(Response(request_id, sublime.expand_variables(items, self._template_variables())))

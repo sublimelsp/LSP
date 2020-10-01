@@ -1,6 +1,6 @@
 import sys
 
-if sys.version_info >= (3, 5, 0):
+if sys.version_info >= (3, 8, 0):
 
     from mypy_extensions import TypedDict
     from typing import Any

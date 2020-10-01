@@ -5,6 +5,7 @@ from .core.protocol import WorkspaceFolder
 from .core.sessions import AbstractPlugin
 from .core.sessions import register_plugin
 from .core.sessions import Session
+from .core.sessions import SessionBufferProtocol
 from .core.sessions import unregister_plugin
 from .core.types import ClientConfig
 from .core.types import LanguageConfig
@@ -21,6 +22,7 @@ __all__ = [
     'Request',
     'Response',
     'Session',
+    'SessionBufferProtocol'
     'unregister_plugin',
     'WorkspaceFolder',
 ]

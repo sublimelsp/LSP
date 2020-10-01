@@ -65,9 +65,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
       - run: echo ::add-path::$HOME/.local/bin
       - run: sudo apt update
-      - run: sudo apt install --no-install-recommends -y x11-xserver-utils python3-pip
+      - run: sudo apt install --no-install-recommends -y x11-xserver-utils
       - run: pip3 install mypy==0.781 flake8==3.8.3 yapf==0.30.0 --user
       - run: mypy -p plugin
       - run: flake8 plugin tests

@@ -2,7 +2,7 @@ import sublime
 import sublime_plugin
 from .core.edit import sort_by_application_order, TextEdit
 from .core.logging import debug
-from .core.typing import List, Dict, Optional, Any, Generator
+from .core.typing import List, Optional, Any, Generator
 from contextlib import contextmanager
 
 
@@ -17,36 +17,6 @@ def temporary_setting(settings: sublime.Settings, key: str, val: Any) -> Generat
     settings.erase(key)
     if has_prev_val and settings.get(key) != prev_val:
         settings.set(key, prev_val)
-
-
-class LspApplyWorkspaceEditCommand(sublime_plugin.WindowCommand):
-    def run(self, changes: Optional[Dict[str, List[TextEdit]]] = None) -> None:
-        documents_changed = 0
-        if changes:
-            for path, document_changes in changes.items():
-                self.open_and_apply_edits(path, document_changes)
-                documents_changed += 1
-
-        if documents_changed > 0:
-            message = 'Applied changes to {} documents'.format(documents_changed)
-            self.window.status_message(message)
-        else:
-            self.window.status_message('No changes to apply to workspace')
-
-    def open_and_apply_edits(self, path: str, file_changes: List[TextEdit]) -> None:
-        view = self.window.open_file(path)
-        if view:
-            if view.is_loading():
-                # TODO: wait for event instead.
-                sublime.set_timeout_async(
-                    lambda: view.run_command('lsp_apply_document_edit', {'changes': file_changes}),
-                    500
-                )
-            else:
-                view.run_command('lsp_apply_document_edit',
-                                 {'changes': file_changes})
-        else:
-            debug('view not found to apply', path, file_changes)
 
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):

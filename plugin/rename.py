@@ -1,5 +1,6 @@
 import sublime
 import sublime_plugin
+from .core.edit import apply_workspace_edit
 from .core.edit import parse_workspace_edit
 from .core.protocol import Range
 from .core.protocol import Request
@@ -89,14 +90,16 @@ class LspSymbolRenameCommand(LspTextCommand):
         if session:
             params = text_document_position_params(self.view, position)
             params["newName"] = new_name
-            session.send_request(Request.rename(params, self.view), self.on_rename_result)
+            session.send_request(
+                Request.rename(params, self.view),
+                # This has to run on the main thread due to calling apply_workspace_edit
+                lambda r: sublime.set_timeout(lambda: self.on_rename_result(r)))
 
     def on_rename_result(self, response: Any) -> None:
         window = self.view.window()
         if window:
             if response:
-                changes = parse_workspace_edit(response)
-                window.run_command('lsp_apply_workspace_edit', {'changes': changes})
+                apply_workspace_edit(window, parse_workspace_edit(response))
             else:
                 window.status_message('No rename edits returned')
 

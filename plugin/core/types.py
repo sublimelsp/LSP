@@ -376,10 +376,7 @@ def normalize_text_sync(textsync: Union[None, int, Dict[str, Any]]) -> Dict[str,
     result = {}  # type: Dict[str, Any]
     if isinstance(textsync, int):
         change = {"syncKind": textsync}  # type: Optional[Dict[str, Any]]
-        if textsync > TextDocumentSyncKindNone:
-            result["textDocumentSync"] = {"didOpen": {}, "didClose": {}, "change": change}
-        else:
-            result["textDocumentSync"] = {"change": change}
+        result["textDocumentSync"] = {"didOpen": {}, "save": {}, "didClose": {}, "change": change}
     elif isinstance(textsync, dict):
         new = {}
         change = textsync.get("change")

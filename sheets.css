@@ -9,4 +9,9 @@
 .lsp_sheet h4,
 .lsp_sheet p {
     margin-top: 1rem;
+    font-family: system;
+
+}
+.lsp_sheet li {
+    font-family: system;
 }

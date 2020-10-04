@@ -1,4 +1,0 @@
-=> 4070-0.10.1
-
-- Support window/workDoneProgress and $/progress notifications (#1014) (jwortmann)
-- Handle case when registerOptions doesn't exist (Rafał Chłodnicki)

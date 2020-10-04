@@ -1,4 +1,0 @@
-=> 4070-1.0.9
-
-Bugfixes:
-- Fixes for API changes in build 4082 (#1257) (Raoul Wols)

@@ -185,15 +185,16 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindIncremental)
         self.assertTrue(session.should_notify_did_change())
         self.assertFalse(session.should_notify_will_save())  # old-style text sync will never send willSave
-        self.assertEqual(session.should_notify_did_save(), (False, False))
+        # old-style text sync will always send didSave
+        self.assertEqual(session.should_notify_did_save(), (True, False))
 
         session.capabilities.assign({'textDocumentSync': TextDocumentSyncKindNone})
-        self.assertFalse(session.should_notify_did_open())
-        self.assertFalse(session.should_notify_did_close())
+        self.assertTrue(session.should_notify_did_open())  # old-style text sync will always send didOpen
+        self.assertTrue(session.should_notify_did_close())  # old-style text sync will always send didClose
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindNone)
         self.assertFalse(session.should_notify_did_change())
         self.assertFalse(session.should_notify_will_save())
-        self.assertEqual(session.should_notify_did_save(), (False, False))
+        self.assertEqual(session.should_notify_did_save(), (True, False))
 
         session.capabilities.assign({
             'textDocumentSync': {

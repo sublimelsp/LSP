@@ -125,6 +125,9 @@ class WindowManager(Manager):
         self._workspace.update()
         self._configs.update()
 
+    def on_post_save_project_async(self) -> None:
+        self.on_load_project_async()
+
     def enable_config_async(self, config_name: str) -> None:
         enable_in_project(self._window, config_name)
         # TODO: Why doesn't enable_in_project cause on_load_project_async to be called?

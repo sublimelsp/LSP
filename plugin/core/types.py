@@ -1,5 +1,5 @@
 from .collections import DottedDict
-from .logging import debug
+from .logging import debug, set_debug_logging
 from .protocol import TextDocumentSyncKindNone
 from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, TypeVar, Tuple
 from threading import RLock
@@ -209,6 +209,8 @@ class Settings:
         else:
             r("inhibit_snippet_completions", False)
             r("inhibit_word_completions", True)
+
+        set_debug_logging(self.log_debug)
 
     def show_diagnostics_panel_always(self) -> bool:
         return self.auto_show_diagnostics_panel == "always"

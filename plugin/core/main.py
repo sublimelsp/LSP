@@ -17,7 +17,6 @@ from .sessions import Session
 from .settings import client_configs
 from .settings import load_settings
 from .settings import unload_settings
-from .settings import userprefs
 from .transports import kill_all_subprocesses
 from .types import ClientConfig
 from .typing import Optional, List, Type, Callable, Dict, Tuple

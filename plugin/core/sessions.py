@@ -438,16 +438,17 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-    def on_pre_server_command(self, command: Mapping[str, Any]) -> Optional[Promise]:
+    def on_pre_server_command(self, command: Mapping[str, Any], done_callback: Callable[[], None]) -> bool:
         """
-        Intercept a command that is about to be sent to the language server. Return a `Promise` to signal that you are
-        handling this command in your plugin. The command will then not be sent to the language server.
+        Intercept a command that is about to be sent to the language server.
 
-        :param    command:  The payload containing a "command" and optionally "arguments".
+        :param    command:        The payload containing a "command" and optionally "arguments".
+        :param    done_callback:  The callback that you promise to invoke when you return true.
 
-        :returns: An optional promise.
+        :returns: True if *YOU* will handle this command plugin-side, false otherwise. You must invoke the
+                  passed `done_callback` when you're done.
         """
-        return None
+        return False
 
 
 _plugins = {}  # type: Dict[str, Type[AbstractPlugin]]
@@ -792,8 +793,8 @@ class Session(TransportCallbacks):
 
     def run_command(self, command: Mapping[str, Any]) -> Promise:
         if self._plugin:
-            promise = self._plugin.on_pre_server_command(command)
-            if promise:
+            promise, callback = Promise.packaged_task()
+            if self._plugin.on_pre_server_command(command, callback):
                 return promise
         # TODO: Our Promise class should be able to handle errors/exceptions
         return Promise(

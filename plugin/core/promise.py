@@ -80,6 +80,24 @@ class Promise:
         return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(value)))
 
     @classmethod
+    def packaged_task(cls) -> "Tuple[Promise, Callable[[], None]]":
+
+        class Fullfill:
+
+            __slots__ = ("resolver",)
+
+            def __init__(self) -> None:
+                self.resolver = None  # type: Optional[Callable[[], None]]
+
+            def __call__(self, resolver: ResolveFunc) -> None:
+                self.resolver = resolver
+
+        fullfill = Fullfill()
+        promise = cls(fullfill)
+        assert callable(fullfill.resolver)
+        return promise, fullfill.resolver
+
+    @classmethod
     def all(cls, promises: List['Promise']) -> 'Promise':
         """
         Takes a list of promises and returns a Promise that gets resolved when all promises

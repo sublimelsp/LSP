@@ -5,7 +5,6 @@ from .collections import DottedDict
 from .css import load as load_css
 from .css import unload as unload_css
 from .handlers import LanguageHandler
-from .logging import set_debug_logging, set_exception_logging
 from .panels import destroy_output_panels
 from .promise import opening_files
 from .protocol import Response
@@ -18,7 +17,6 @@ from .sessions import Session
 from .settings import client_configs
 from .settings import load_settings
 from .settings import unload_settings
-from .settings import userprefs
 from .transports import kill_all_subprocesses
 from .types import ClientConfig
 from .typing import Optional, List, Type, Callable, Dict, Tuple
@@ -113,8 +111,6 @@ def _forcefully_register_plugins() -> None:
 def plugin_loaded() -> None:
     load_settings()
     load_css()
-    set_debug_logging(userprefs().log_debug)
-    set_exception_logging(True)
     _forcefully_register_plugins()  # Remove this function: https://github.com/sublimelsp/LSP/issues/899
     client_configs.update_configs()
 

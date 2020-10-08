@@ -18,19 +18,17 @@ The issues also allow you to gather some feedback and help from other contributo
 ## Coding
 
 Sublime Text 3 bundles a Python 3.3, please be sure to set up your environment to match.
-LSP uses two flake8 and mypy to provide some code quality assurances.
-I highly recommend enabling plugins for these in your Python coding environment.
-If you have these tools available on your machine, you can check your work with:
-
-```
-flake8 main.py
-mypy main.py
-```
+LSP uses flake8 and mypy to provide some code quality assurances.
+Run `tox` to check your work.
+Consider using LSP-pyright or pyls as a language server.
+To reload the plugin, save the file boot.py.
+Saving any other file does not reload the plugin.
 
 ## Testing
 
 Please consider testing your work with other language servers, even if you do not use them.
-The Javascript/Typescript language server is a good example, it has a fairly complete feature set.
+There is also a test suite in tests/. To run the tests, use the UnitTesting package from randy3k.
+The configuration file for the tests is in unittesting.json.
 
 ## Submitting
 
@@ -41,4 +39,4 @@ Before you submit your pull request, please review the following:
 * Is it a feature? Please attach screenshots / GIFs for visual changes.
 
 I will try to help you get the PR in mergeable shape within a reasonable time, but it may take a few days.
-It is best if you check your Github notifications in the meantime!
+It is best if you check your GitHub notifications in the meantime!

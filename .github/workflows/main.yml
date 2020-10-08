@@ -74,4 +74,3 @@ jobs:
       - run: pip3 install mypy==0.781 flake8==3.8.3 yapf==0.30.0 --user
       - run: mypy -p plugin
       - run: flake8 plugin tests
-      - run: yapf --diff plugin/core/main.py

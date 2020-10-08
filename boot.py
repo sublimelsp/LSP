@@ -181,6 +181,8 @@ def _register_all_plugins() -> None:
 def _unregister_all_plugins() -> None:
     from LSP.plugin.core.sessions import _plugins
     _plugins.clear()
+    client_configs.external.clear()
+    client_configs.all.clear()
 
 
 def plugin_loaded() -> None:
@@ -199,6 +201,7 @@ def plugin_unloaded() -> None:
             windows.discard(window)
         except Exception as ex:
             exception_log("failed to unload window", ex)
+    unload_settings()
     for module_name in reversed(_toposorted_modules):
         sys.modules.pop(module_name)
 

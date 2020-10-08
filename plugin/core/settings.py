@@ -125,7 +125,6 @@ def unload_settings() -> None:
     if _settings_obj is not None:
         _settings_obj.clear_on_change("LSP")
         _settings_obj = None
-        _settings = None
 
 
 def userprefs() -> Settings:

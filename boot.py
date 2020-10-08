@@ -40,6 +40,7 @@ try:
     from .plugin.core.collections import DottedDict
     from .plugin.core.css import load as load_css
     from .plugin.core.handlers import LanguageHandler
+    from .plugin.core.logging import exception_log
     from .plugin.core.panels import destroy_output_panels
     from .plugin.core.panels import LspClearPanelCommand
     from .plugin.core.panels import LspUpdatePanelCommand
@@ -108,10 +109,7 @@ def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:
             results.append(d)
 
 
-def _forcefully_register_plugins() -> None:
-    """
-    This function should be removed: https://github.com/sublimelsp/LSP/issues/899
-    """
+def _register_all_plugins() -> None:
     plugin_classes = []  # type: List[Type[AbstractPlugin]]
     _get_final_subclasses(AbstractPlugin.__subclasses__(), plugin_classes)
     for plugin_class in plugin_classes:
@@ -180,18 +178,27 @@ def _forcefully_register_plugins() -> None:
         register_plugin(LanguageHandlerTransition)
 
 
+def _unregister_all_plugins() -> None:
+    from LSP.plugin.core.sessions import _plugins
+    _plugins.clear()
+
+
 def plugin_loaded() -> None:
     load_settings()
     load_css()
-    _forcefully_register_plugins()  # Remove this function: https://github.com/sublimelsp/LSP/issues/899
+    _register_all_plugins()
     client_configs.update_configs()
 
 
 def plugin_unloaded() -> None:
-    # Also needs to handle package being disabled or removed
-    # https://github.com/sublimelsp/LSP/issues/375
+    _unregister_all_plugins()
     for window in sublime.windows():
         destroy_output_panels(window)  # references and diagnostics panels
+        try:
+            windows.lookup(window).plugin_unloaded()
+            windows.discard(window)
+        except Exception as ex:
+            exception_log("failed to unload window", ex)
     for module_name in reversed(_toposorted_modules):
         sys.modules.pop(module_name)
 

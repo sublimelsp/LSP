@@ -190,6 +190,8 @@ def plugin_loaded() -> None:
     load_css()
     _register_all_plugins()
     client_configs.update_configs()
+    for window in sublime.windows():
+        windows.lookup(window)
 
 
 def plugin_unloaded() -> None:
@@ -207,19 +209,6 @@ def plugin_unloaded() -> None:
 
 
 class Listener(sublime_plugin.EventListener):
-    def _register_windows(self) -> None:
-        for w in sublime.windows():
-            windows.lookup(w)
-
-    def __del__(self) -> None:
-        for w in sublime.windows():
-            windows.discard(w)
-
-    def on_init(self, views: List[sublime.View]) -> None:
-        for view in views:
-            window = view.window()
-            if window:
-                windows.lookup(window)
 
     def on_exit(self) -> None:
         kill_all_subprocesses()

@@ -365,6 +365,13 @@ class WindowManager(Manager):
             else:
                 self._configs.disable_temporarily(config.name)
 
+    def plugin_unloaded(self) -> None:
+        """
+        This is called **from the main thread** when the plugin unloads. In that case we must destroy all sessions
+        from the main thread. That could lead to some dict/list being mutated while iterated over, so be careful
+        """
+        self._end_sessions_async()
+
     def handle_server_message(self, server_name: str, message: str) -> None:
         sublime.set_timeout(lambda: update_server_panel(self._window, server_name, message))
 

@@ -18,14 +18,7 @@ _css = None  # type: Optional[CSS]
 
 def load() -> None:
     global _css
-    assert _css is None
     _css = CSS()
-
-
-def unload() -> None:
-    global _css
-    assert _css is not None
-    _css = None
 
 
 def css() -> CSS:

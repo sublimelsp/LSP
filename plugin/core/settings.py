@@ -1,6 +1,6 @@
 from .collections import DottedDict
 from .logging import debug
-from .types import ClientConfig
+from .types import ClientConfig, debounced
 from .types import read_dict_setting
 from .types import Settings
 from .types import syntax2scope
@@ -38,20 +38,32 @@ class ClientConfigs:
         self._supported_syntaxes_cache.clear()
         self._notify_listener()
 
-    def add_external_config(self, name: str, s: sublime.Settings, file: str) -> None:
+    def add_external_config(self, name: str, s: sublime.Settings, file: str, notify_listener: bool) -> bool:
         if name in self.external:
-            return debug(name, "is already registered")
+            return False
         config = ClientConfig.from_sublime_settings(name, s, file)
         self.external[name] = config
         self.all[name] = config
-        self._notify_listener()
+        if notify_listener:
+            size = len(self.external)
+            # A debounced call is necessary here because of the following problem.
+            # When Sublime Text starts, it loads plugins in alphabetical order.
+            # Each plugin is loaded 100 milliseconds after the previous plugin.
+            # Therefore, we get a sequence of calls to `register_plugin` from all LSP-* helper packages, separated
+            # in time intervals of 100 milliseconds.
+            # When calling self._notify_listener, we are calling ConfigManager.update.
+            # That object, in turn, calls WindowConfigManager.update for each window.
+            # In turn, each window starts iterating all of its attached views for language servers to attach.
+            # That causes many calls to WindowConfigManager.match_view, which is relatively speaking an expensive
+            # operation. To ensure that this dance is done only once, we delay notifying the ConfigManager until all
+            # plugins have done their `register_plugin` call.
+            debounced(self._notify_listener, 200, lambda: len(self.external) == size)
+        return True
 
     def remove_external_config(self, name: str) -> None:
         self.external.pop(name, None)
         if self.all.pop(name, None):
             self._notify_listener()
-        else:
-            debug(name, "was not registered")
 
     def update_configs(self) -> None:
         global _settings_obj

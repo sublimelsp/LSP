@@ -454,26 +454,77 @@ class AbstractPlugin(metaclass=ABCMeta):
 _plugins = {}  # type: Dict[str, Type[AbstractPlugin]]
 
 
-def register_plugin(plugin: Type[AbstractPlugin]) -> None:
+def _register_plugin_impl(plugin: Type[AbstractPlugin], notify_listener: bool) -> None:
     global _plugins
     name = plugin.name()
     try:
-        client_configs.add_external_config(name, *plugin.configuration())
-        _plugins[name] = plugin
+        settings, base_file = plugin.configuration()
+        if client_configs.add_external_config(name, settings, base_file, notify_listener):
+            _plugins[name] = plugin
     except Exception as ex:
         exception_log('Failed to register plugin "{}"'.format(name), ex)
 
 
+def register_plugin(plugin: Type[AbstractPlugin], notify_listener: bool = True) -> None:
+    """
+    Register an LSP plugin in LSP.
+
+    You should put a call to this function in your `plugin_loaded` callback. This way, when your package is disabled
+    by a user and then re-enabled again by a user, the changes in state are picked up by LSP, and your language server
+    will start for the relevant views.
+
+    While your helper package may still work without calling `register_plugin` in `plugin_loaded`, the user will have a
+    better experience when you do call this function.
+
+    Your implementation should look something like this:
+
+    ```python
+    from LSP.plugin import register_plugin
+    from LSP.plugin import unregister_plugin
+    from LSP.plugin import AbstractPlugin
+
+
+    class MyPlugin(AbstractPlugin):
+        ...
+
+
+    def plugin_loaded():
+        register_plugin(MyPlugin)
+
+    def plugin_unloaded():
+        unregister_plugin(MyPlugin)
+    ```
+
+    If you need to install supplementary files (e.g. javascript source code that implements the actual server), do so
+    in `AbstractPlugin.install_or_update` in a blocking manner, without the use of Python's `threading` module.
+    """
+    if notify_listener:
+        # There is a bug in Sublime Text's `plugin_loaded` callback. When the package is in the list of
+        # `"ignored_packages"` in Packages/User/Preferences.sublime-settings, and then removed from that list, the
+        # sublime.Settings object has missing keys/values. To circumvent this, we run the actual registration one tick
+        # later. At that point, the settings object is fully loaded. At least, it seems that way. For more context,
+        # see https://github.com/sublimehq/sublime_text/issues/3379
+        # and https://github.com/sublimehq/sublime_text/issues/2099
+        sublime.set_timeout(lambda: _register_plugin_impl(plugin, notify_listener))
+    else:
+        _register_plugin_impl(plugin, notify_listener)
+
+
 def unregister_plugin(plugin: Type[AbstractPlugin]) -> None:
+    """
+    Unregister an LSP plugin in LSP.
+
+    You should put a call to this function in your `plugin_unloaded` callback. this way, when your package is disabled
+    by a user, your language server is shut down for the views that it is attached to. This results in a good user
+    experience.
+    """
     global _plugins
     name = plugin.name()
     try:
-        client_configs.remove_external_config(name)
         _plugins.pop(name, None)
+        client_configs.remove_external_config(name)
     except Exception as ex:
         exception_log('Failed to unregister plugin "{}"'.format(name), ex)
-    finally:
-        client_configs.update_configs()
 
 
 def get_plugin(name: str) -> Optional[Type[AbstractPlugin]]:

@@ -65,13 +65,13 @@ class WindowConfigManager(object):
     def update(self) -> None:
         project_settings = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
         self.all.clear()
-        for name in self._global_configs.keys():
-            config = self._global_configs[name]
-            overrides = project_settings.get(config.name)
+        for name, config in self._global_configs.items():
+            overrides = project_settings.get(name)
             if isinstance(overrides, dict):
-                debug('applying .sublime-project override for', config.name)
-                config = config.update(overrides)
-            self.all[name] = config
+                debug("applying .sublime-project override for", name)
+            else:
+                overrides = {}
+            self.all[name] = config.update(overrides)
         for name in self._temp_disabled_configs:
             self.all[name].enabled = False
         self._window.run_command("lsp_recheck_sessions")

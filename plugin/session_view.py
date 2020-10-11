@@ -127,7 +127,15 @@ class SessionView:
                 self.view.erase_regions(key)
             elif ((severity <= userprefs().show_diagnostics_severity_level) and
                     (data.icon or flags != (sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE))):
-                self.view.add_regions(key, data.regions, data.scope, data.icon, flags)
+
+                def handle_same_regions(region: sublime.Region) -> sublime.Region:
+                    # this allows showing diagnostics with same begin and end in the view
+                    if region.a == region.b:
+                        return sublime.Region(region.a, region.a + 1)
+                    return region
+
+                underline_regions = list(map(handle_same_regions, data.regions))
+                self.view.add_regions(key, underline_regions, data.scope, data.icon, flags)
             else:
                 self.view.erase_regions(key)
         listener = self.listener()
@@ -143,8 +151,8 @@ class SessionView:
     def on_request_finished_async(self, request_id: int) -> None:
         self.active_requests.pop(request_id, None)
 
-    def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
-        self.session_buffer.on_text_changed_async(self.view, changes)
+    def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
+        self.session_buffer.on_text_changed_async(self.view, change_count, changes)
 
     def on_revert_async(self) -> None:
         self.session_buffer.on_revert_async(self.view)

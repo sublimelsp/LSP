@@ -136,9 +136,17 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         self.ids_to_listeners.pop(self.buffer.buffer_id, None)
         super().detach()
 
-    def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
-        for listener in list(self.view_listeners):
-            listener.on_text_changed_async(changes)
+    def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
+        view = self.buffer.primary_view()
+        if not view:
+            return
+        change_count = view.change_count()
+
+        def notify() -> None:
+            for listener in list(self.view_listeners):
+                listener.on_text_changed_async(change_count, changes)
+
+        sublime.set_timeout_async(notify)
 
     def on_reload_async(self) -> None:
         for listener in list(self.view_listeners):
@@ -249,11 +257,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         for sv in self.session_views_async():
             yield sv.session_buffer
 
-    def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
+    def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
         different, current_region = self._update_stored_region_async()
         if self.view.is_primary():
             for sv in self.session_views_async():
-                sv.on_text_changed_async(changes)
+                sv.on_text_changed_async(change_count, changes)
         if not different:
             return
         if "documentHighlight" not in userprefs().disabled_capabilities:

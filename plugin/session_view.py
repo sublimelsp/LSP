@@ -127,6 +127,7 @@ class SessionView:
                 self.view.erase_regions(key)
             elif ((severity <= userprefs().show_diagnostics_severity_level) and
                     (data.icon or flags != (sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE))):
+
                 def handle_same_regions(region: sublime.Region) -> sublime.Region:
                     # this allows showing diagnostics with same begin and end in the view
                     if region.a == region.b:

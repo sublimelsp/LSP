@@ -129,8 +129,8 @@ class SessionView:
                     (data.icon or flags != (sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE))):
                 def handle_same_regions(region: sublime.Region) -> sublime.Region:
                     # this allows showing diagnostics with same begin and end in the view
-                    if region.begin() == region.end():
-                        return sublime.Region(region.begin(), region.begin() + 1)
+                    if region.a == region.b:
+                        return sublime.Region(region.a, region.a + 1)
                     return region
 
                 underline_regions = list(map(handle_same_regions, data.regions))

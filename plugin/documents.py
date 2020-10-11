@@ -137,7 +137,10 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         super().detach()
 
     def on_text_changed(self, changes: Iterable[sublime.TextChange]) -> None:
-        change_count = self.buffer.primary_view().change_count()
+        view = self.buffer.primary_view()
+        if not view:
+            return
+        change_count = view.change_count()
 
         def notify() -> None:
             for listener in list(self.view_listeners):

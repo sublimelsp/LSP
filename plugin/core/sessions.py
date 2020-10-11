@@ -26,6 +26,7 @@ from .version import __version__
 from .views import COMPLETION_KINDS
 from .views import did_change_configuration
 from .views import extract_variables
+from .views import get_storage_path
 from .views import SYMBOL_KINDS
 from .workspace import is_subpath_of
 from abc import ABCMeta
@@ -362,6 +363,7 @@ class AbstractPlugin(metaclass=ABCMeta):
 
         These are just the values from window.extract_variables(). Additionally,
 
+        $storage_path The path to the package storage (see AbstractPlugin.storage_path)
         $cache_path   sublime.cache_path()
         $temp_dir     tempfile.gettempdir()
         $home         os.path.expanduser('~')
@@ -385,6 +387,31 @@ class AbstractPlugin(metaclass=ABCMeta):
         In addition to the above variables, add more variables here to be expanded.
         """
         return None
+
+    @classmethod
+    def storage_path(cls) -> str:
+        """
+        The storage path. Use this as your base directory to install server files. Its path is '$DATA/Package Storage'.
+        You should have an additional subdirectory preferrably the same name as your plugin. For instance:
+
+        ```python
+        from LSP.plugin import AbstractPlugin
+        import os
+
+
+        class MyPlugin(AbstractPlugin):
+
+            @classmethod
+            def name(cls) -> str:
+                return "my-plugin"
+
+            @classmethod
+            def basedir(cls) -> str:
+                # Do everything relative to this directory
+                return os.path.joim(cls.storage_path(), cls.name())
+        ```
+        """
+        return get_storage_path()
 
     @classmethod
     def needs_update_or_installation(cls) -> bool:

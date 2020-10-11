@@ -143,8 +143,8 @@ class SessionView:
     def on_request_finished_async(self, request_id: int) -> None:
         self.active_requests.pop(request_id, None)
 
-    def on_text_changed_async(self, changes: Iterable[sublime.TextChange]) -> None:
-        self.session_buffer.on_text_changed_async(self.view, changes)
+    def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
+        self.session_buffer.on_text_changed_async(self.view, change_count, changes)
 
     def on_revert_async(self) -> None:
         self.session_buffer.on_revert_async(self.view)

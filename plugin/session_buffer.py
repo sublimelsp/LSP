@@ -171,7 +171,8 @@ class SessionBuffer:
     def should_notify_did_close(self) -> bool:
         return self.capabilities.should_notify_did_close() or self.session.should_notify_did_close()
 
-    def on_text_changed_async(self, view: sublime.View, changes: Iterable[sublime.TextChange]) -> None:
+    def on_text_changed_async(self, view: sublime.View, change_count: int,
+                              changes: Iterable[sublime.TextChange]) -> None:
         self.last_text_change_time = time.time()
         last_change = list(changes)[-1]
         if last_change.a.pt == 0 and last_change.b.pt == 0 and last_change.str == '' and view.size() != 0:
@@ -180,13 +181,16 @@ class SessionBuffer:
             # one that removes all content and one that has 0,0,'' parameters.
             pass
         else:
-            change_count = view.change_count()
+            purge = False
             if self.pending_changes is None:
                 self.pending_changes = PendingChanges(change_count, changes)
-            else:
+                purge = True
+            elif self.pending_changes.version < change_count:
                 self.pending_changes.update(change_count, changes)
-            debounced(lambda: self.purge_changes_async(view), 500,
-                      lambda: view.is_valid() and change_count == view.change_count())
+                purge = True
+            if purge:
+                debounced(lambda: self.purge_changes_async(view), 500,
+                          lambda: view.is_valid() and change_count == view.change_count())
 
     def on_revert_async(self, view: sublime.View) -> None:
         self.pending_changes = None  # Don't bother with pending changes

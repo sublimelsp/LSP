@@ -132,6 +132,7 @@ class SessionView:
                     if region.begin() == region.end():
                         return sublime.Region(region.begin(), region.begin() + 1)
                     return region
+
                 underline_regions = list(map(handle_same_regions, data.regions))
                 self.view.add_regions(key, underline_regions, data.scope, data.icon, flags)
             else:

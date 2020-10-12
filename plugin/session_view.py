@@ -128,7 +128,7 @@ class SessionView:
             elif ((severity <= userprefs().show_diagnostics_severity_level) and
                     (data.icon or flags != (sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE))):
                 # allow showing diagnostics with same begin and end range in the view
-                flags |= sublime.DRAW_EMPTY_AS_OVERWRITE
+                flags |= sublime.DRAW_EMPTY
                 self.view.add_regions(key, data.regions, data.scope, data.icon, flags)
             else:
                 self.view.erase_regions(key)

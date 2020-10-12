@@ -113,7 +113,7 @@ def _register_all_plugins() -> None:
     plugin_classes = []  # type: List[Type[AbstractPlugin]]
     _get_final_subclasses(AbstractPlugin.__subclasses__(), plugin_classes)
     for plugin_class in plugin_classes:
-        register_plugin(plugin_class)
+        register_plugin(plugin_class, notify_listener=False)
     language_handler_classes = []  # type: List[Type[LanguageHandler]]
     _get_final_subclasses(LanguageHandler.__subclasses__(), language_handler_classes)
     for language_handler_class in language_handler_classes:
@@ -175,7 +175,7 @@ def _register_all_plugins() -> None:
                 if session:
                     session.send_response(response)
 
-        register_plugin(LanguageHandlerTransition)
+        register_plugin(LanguageHandlerTransition, notify_listener=False)
 
 
 def _unregister_all_plugins() -> None:

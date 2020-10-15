@@ -1,0 +1,5 @@
+=> 3154-0.13.1
+
+Maintenance:
+
+- Replace ST4 incompatibility dialog with a console message (#1376) (Rafał Chłodnicki)

@@ -408,7 +408,7 @@ class AbstractPlugin(metaclass=ABCMeta):
             @classmethod
             def basedir(cls) -> str:
                 # Do everything relative to this directory
-                return os.path.joim(cls.storage_path(), cls.name())
+                return os.path.join(cls.storage_path(), cls.name())
         ```
         """
         return get_storage_path()

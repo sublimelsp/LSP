@@ -1,0 +1,12 @@
+=> 4070-1.0.18
+
+- use DRAW_EMPTY for empty regions (#1375) (Предраг Николић / Predrag Nikolic)
+- Show diagnostics with same begin and end range in the view (#1371) (Предраг Николић / Predrag Nikolic)
+- Register and unregister plugins properly (Raoul Wols)
+- Record the change_count from the UI thread, and then dispatch to the worker thread (#1369) (Raoul Wols)
+- Create managers on plugin load (Raoul Wols)
+- Allow hot-reloading of the plugin (#1366) (Raoul Wols)
+- Improvements for debug logging (#1362) (Raoul Wols)
+- Also restart all servers when the project was saved (Raoul Wols)
+- Expose more stuff in api (#1360) (Raoul Wols)
+- Introduce the storage_path (#1372) (Raoul Wols)

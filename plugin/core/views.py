@@ -108,8 +108,21 @@ def get_line(window: Optional[sublime.Window], file_name: str, row: int) -> str:
         return linecache.getline(file_name, row + 1).strip()
 
 
+def get_storage_path() -> str:
+    """
+    The "Package Storage" is a way to store server data without influencing the behavior of Sublime Text's "catalog".
+    Its path is '$DATA/Package Storage', where $DATA means:
+
+    - on macOS: ~/Library/Application Support/Sublime Text
+    - on Windows: %AppData%/Sublime Text/Roaming
+    - on Linux: $XDG_CONFIG_DIR/sublime-text
+    """
+    return os.path.abspath(os.path.join(sublime.cache_path(), "..", "Package Storage"))
+
+
 def extract_variables(window: sublime.Window) -> Dict[str, str]:
     variables = window.extract_variables()
+    variables["storage_path"] = get_storage_path()
     variables["cache_path"] = sublime.cache_path()
     variables["temp_dir"] = tempfile.gettempdir()
     variables["home"] = os.path.expanduser('~')

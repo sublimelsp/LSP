@@ -3,51 +3,56 @@ import sublime_plugin
 
 from .core.protocol import Diagnostic, Point, Range
 from .core.registry import windows
-from .core.typing import List, Dict, Tuple
+from .core.sessions import SessionBufferProtocol
+from .core.typing import List, Dict, Tuple, Generator
 
 
-def view_diagnostics(view: sublime.View) -> Dict[str, List[Diagnostic]]:
+def view_diagnostics(
+    view: sublime.View
+) -> Generator[Tuple[SessionBufferProtocol, List[Diagnostic]], None, None]:
+    """XXX: Remove this function"""
     window = view.window()
     if window:
         manager = windows.lookup(window)
         listener = manager.listener_for_view(view)
         if listener:
-            return listener.diagnostics_async()
-    return {}
+            yield from listener.diagnostics_async()
 
 
 def filter_by_point(
-    file_diagnostics: Dict[str, List[Diagnostic]],
+    file_diagnostics: Generator[Tuple[SessionBufferProtocol, List[Diagnostic]], None, None],
     point: Point
 ) -> Tuple[Dict[str, List[Diagnostic]], Range]:
+    """XXX: Move this odd function to DocumentSyncListener"""
     diagnostics_by_config = {}
     extended_range = Range(point, point)
-    for config_name, diagnostics in file_diagnostics.items():
+    for sb, diagnostics in file_diagnostics:
         point_diagnostics = []
         for diagnostic in diagnostics:
             if diagnostic.range.contains(point):
                 point_diagnostics.append(diagnostic)
                 extended_range.extend(diagnostic.range)
         if point_diagnostics:
-            diagnostics_by_config[config_name] = point_diagnostics
-    return (diagnostics_by_config, extended_range)
+            diagnostics_by_config[sb.session.config.name] = point_diagnostics
+    return diagnostics_by_config, extended_range
 
 
 def filter_by_range(
-    file_diagnostics: Dict[str, List[Diagnostic]],
+    file_diagnostics: Generator[Tuple[SessionBufferProtocol, List[Diagnostic]], None, None],
     rge: Range
 ) -> Tuple[Dict[str, List[Diagnostic]], Range]:
+    """XXX: Move this odd function to DocumentSyncListener"""
     diagnostics_by_config = {}
     extended_range = Range(rge.start, rge.end)
-    for config_name, diagnostics in file_diagnostics.items():
+    for sb, diagnostics in file_diagnostics:
         intersecting_diagnostics = []
         for diagnostic in diagnostics:
             if diagnostic.range.intersects(rge):
                 intersecting_diagnostics.append(diagnostic)
                 extended_range.extend(diagnostic.range)
         if intersecting_diagnostics:
-            diagnostics_by_config[config_name] = intersecting_diagnostics
-    return (diagnostics_by_config, extended_range)
+            diagnostics_by_config[sb.session.config.name] = intersecting_diagnostics
+    return diagnostics_by_config, extended_range
 
 
 class LspNextDiagnosticCommand(sublime_plugin.WindowCommand):

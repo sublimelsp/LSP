@@ -30,7 +30,7 @@ class LspResolveDocsCommand(LspTextCommand):
                 session.send_request(Request.resolveCompletionItem(item, self.view), self.handle_resolve_response)
                 return
         minihtml_content = self.get_content(documentation, detail)
-        self.show_popup(minihtml_content)
+        self._make_popup(minihtml_content)
 
     def format_documentation(self, content: Union[str, Dict[str, str]]) -> str:
         return minihtml(self.view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
@@ -43,7 +43,7 @@ class LspResolveDocsCommand(LspTextCommand):
             content += "<div>{}</div>".format(documentation)
         return content
 
-    def show_popup(self, minihtml_content: str) -> None:
+    def _show_popup(self, minihtml_content: str) -> None:
         viewport_width = self.view.viewport_extent()[0]
         mdpopups.show_popup(
             self.view,
@@ -54,6 +54,25 @@ class LspResolveDocsCommand(LspTextCommand):
             max_width=viewport_width,
             on_navigate=self.on_navigate
         )
+
+    def _update_popup(self, minihtml_content: str) -> None:
+        mdpopups.update_popup(
+            self.view,
+            minihtml_content,
+            css=css().popups,
+            wrapper_class=css().popups_classname,
+        )
+
+    def _make_popup(self, minihtml_content: str) -> None:
+        # NOTE: Update/show popups from the main thread, or else the popup might make the AC widget disappear.
+
+        def on_main_thread() -> None:
+            if self.view.is_popup_visible():
+                self._show_popup(minihtml_content)
+            else:
+                self._update_popup(minihtml_content)
+
+        sublime.set_timeout(on_main_thread)
 
     def on_navigate(self, url: str) -> None:
         webbrowser.open(url)
@@ -67,17 +86,7 @@ class LspResolveDocsCommand(LspTextCommand):
         if not documentation:
             documentation = self.format_documentation({"kind": "markdown", "value": "*No documentation available.*"})
         minihtml_content = self.get_content(documentation, detail)
-        show = self.update_popup if self.view.is_popup_visible() else self.show_popup
-        # NOTE: Update/show popups from the main thread, or else the popup might make the AC widget disappear.
-        sublime.set_timeout(lambda: show(minihtml_content))
-
-    def update_popup(self, minihtml_content: str) -> None:
-        mdpopups.update_popup(
-            self.view,
-            minihtml_content,
-            css=css().popups,
-            wrapper_class=css().popups_classname,
-        )
+        self._make_popup(minihtml_content)
 
 
 class LspCompleteCommand(sublime_plugin.TextCommand):

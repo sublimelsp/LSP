@@ -26,14 +26,14 @@ def filter_by_point(
     """XXX: Move this odd function to DocumentSyncListener"""
     diagnostics_by_config = {}
     extended_range = Range(point, point)
-    for sb, diagnostics in file_diagnostics:
+    for session_buffer, diagnostics in file_diagnostics:
         point_diagnostics = []
         for diagnostic in diagnostics:
             if diagnostic.range.contains(point):
                 point_diagnostics.append(diagnostic)
                 extended_range.extend(diagnostic.range)
         if point_diagnostics:
-            diagnostics_by_config[sb.session.config.name] = point_diagnostics
+            diagnostics_by_config[session_buffer.session.config.name] = point_diagnostics
     return diagnostics_by_config, extended_range
 
 
@@ -44,14 +44,14 @@ def filter_by_range(
     """XXX: Move this odd function to DocumentSyncListener"""
     diagnostics_by_config = {}
     extended_range = Range(rge.start, rge.end)
-    for sb, diagnostics in file_diagnostics:
+    for session_buffer, diagnostics in file_diagnostics:
         intersecting_diagnostics = []
         for diagnostic in diagnostics:
             if diagnostic.range.intersects(rge):
                 intersecting_diagnostics.append(diagnostic)
                 extended_range.extend(diagnostic.range)
         if intersecting_diagnostics:
-            diagnostics_by_config[sb.session.config.name] = intersecting_diagnostics
+            diagnostics_by_config[session_buffer.session.config.name] = intersecting_diagnostics
     return diagnostics_by_config, extended_range
 
 

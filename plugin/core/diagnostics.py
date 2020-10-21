@@ -1,7 +1,8 @@
 from .panels import ensure_panel
 from .protocol import Diagnostic
 from .protocol import Point
-from .typing import List, Tuple, Callable, Optional, Iterable, Mapping
+from .sessions import SessionBufferProtocol
+from .typing import List, Tuple, Callable, Optional, Iterable
 import sublime
 
 
@@ -214,19 +215,17 @@ class DiagnosticsWalker(object):
     def __init__(self, subs: List[DiagnosticsUpdateWalk]) -> None:
         self._subscribers = subs
 
-    def walk(self, diagnostics_by_file: Iterable[Tuple[str, Mapping[str, Iterable[Diagnostic]]]]) -> None:
+    def walk(
+        self,
+        diagnostics_by_file: Iterable[Tuple[str, Iterable[Tuple[SessionBufferProtocol, List[Diagnostic]]]]]
+    ) -> None:
         self.invoke_each(lambda w: w.begin())
-
         for file_path, source_diagnostics in diagnostics_by_file:
-
             self.invoke_each(lambda w: w.begin_file(file_path))
-
-            for origin, diagnostics in source_diagnostics.items():
+            for _, diagnostics in source_diagnostics:
                 for diagnostic in diagnostics:
                     self.invoke_each(lambda w: w.diagnostic(diagnostic))
-
             self.invoke_each(lambda w: w.end_file(file_path))
-
         self.invoke_each(lambda w: w.end())
 
     def invoke_each(self, func: Callable[[DiagnosticsUpdateWalk], None]) -> None:

@@ -226,11 +226,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     result.extend(data.panel_contribution)
         return result
 
-    def diagnostics_async(self) -> Dict[str, List[Diagnostic]]:
-        result = {}  # type: Dict[str, List[Diagnostic]]
-        for sv in self.session_views_async():
-            result[sv.session.config.name] = sv.get_diagnostics_async()
-        return result
+    def diagnostics_async(self) -> Generator[Tuple[SessionBuffer, List[Diagnostic]], None, None]:
+        for sb in self.session_buffers_async():
+            yield sb, sb.diagnostics
 
     def on_diagnostics_updated_async(self) -> None:
         self._clear_code_actions_annotation()

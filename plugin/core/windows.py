@@ -11,7 +11,7 @@ from .panels import update_server_panel
 from .protocol import Diagnostic
 from .protocol import Error
 from .protocol import Point
-from .sessions import get_plugin
+from .sessions import SessionBufferProtocol, get_plugin
 from .sessions import Logger
 from .sessions import Manager
 from .sessions import Session
@@ -19,7 +19,7 @@ from .sessions import SessionViewProtocol
 from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
-from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Mapping, Iterable
+from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Iterable
 from .views import diagnostic_to_phantom
 from .views import extract_variables
 from .workspace import disable_in_project
@@ -60,7 +60,7 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def diagnostics_async(self) -> Dict[str, List[Diagnostic]]:
+    def diagnostics_async(self) -> Iterable[Tuple[SessionBufferProtocol, List[Diagnostic]]]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -437,7 +437,9 @@ class WindowManager(Manager):
     def unselect_diagnostic_async(self) -> None:
         self._set_diagnostic_phantom(None)
 
-    def _diagnostics_by_file_async(self) -> Generator[Tuple[str, Mapping[str, Iterable[Diagnostic]]], None, None]:
+    def _diagnostics_by_file_async(
+        self
+    ) -> Generator[Tuple[str, Iterable[Tuple[SessionBufferProtocol, List[Diagnostic]]]], None, None]:
         for listener in self._listeners:
             file_name = listener.view.file_name()
             if file_name:

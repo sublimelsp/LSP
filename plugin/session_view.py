@@ -21,6 +21,9 @@ class SessionView:
     SHOW_DEFINITIONS_KEY = "show_definitions"
     HOVER_PROVIDER_KEY = "hoverProvider"
     HOVER_PROVIDER_COUNT_KEY = "lsp_hover_provider_count"
+    AC_TRIGGERS_KEY = "auto_complete_triggers"
+    COMPLETION_PROVIDER_KEY = "completionProvider"
+    TRIGGER_CHARACTERS_KEY = "completionProvider.triggerCharacters"
 
     _session_buffers = WeakValueDictionary()  # type: WeakValueDictionary[Tuple[str, int], SessionBuffer]
 
@@ -54,8 +57,15 @@ class SessionView:
         session.config.set_view_status(self.view, "")
         if self.session.has_capability(self.HOVER_PROVIDER_KEY):
             self._increment_hover_count()
+        self._clear_auto_complete_triggers(settings)
+        self._setup_auto_complete_triggers(settings)
+        # This is to make ST match with labels that have a weird prefix like a space character.
+        # TODO: Maybe remove this?
+        settings.set('auto_complete_preserve_order', 'none')
 
     def __del__(self) -> None:
+        settings = self.view.settings()  # type: sublime.Settings
+        self._clear_auto_complete_triggers(settings)
         if self.session.has_capability(self.HOVER_PROVIDER_KEY):
             self._decrement_hover_count()
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
@@ -63,7 +73,6 @@ class SessionView:
         if not self.session.exiting:
             self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
-        settings = self.view.settings()  # type: sublime.Settings
         # TODO: Language ID must be UNIQUE!
         languages = settings.get(self.LANGUAGE_ID_KEY)
         if isinstance(languages, dict):
@@ -74,6 +83,63 @@ class SessionView:
                 settings.erase(self.LANGUAGE_ID_KEY)
         for severity in range(1, len(DIAGNOSTIC_SEVERITY) + 1):
             self.view.erase_regions(self.diagnostics_key(severity))
+
+    def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
+        '''Remove all of our modifications to the view's "auto_complete_triggers"'''
+        triggers = settings.get(self.AC_TRIGGERS_KEY)
+        if isinstance(triggers, list):
+            triggers = [t for t in triggers if self.session.config.name != t.get("server", "")]
+            settings.set(self.AC_TRIGGERS_KEY, triggers)
+
+    def _setup_auto_complete_triggers(self, settings: sublime.Settings) -> None:
+        """Register trigger characters from static capabilities of the server."""
+        trigger_chars = self.session.get_capability(self.TRIGGER_CHARACTERS_KEY)
+        if isinstance(trigger_chars, list):
+            self._apply_auto_complete_triggers(settings, trigger_chars)
+
+    def _register_auto_complete_triggers(self, registration_id: str, trigger_chars: List[str]) -> None:
+        """Register trigger characters from a dynamic server registration."""
+        self._apply_auto_complete_triggers(self.view.settings(), trigger_chars, registration_id)
+
+    def _unregister_auto_complete_triggers(self, registration_id: str) -> None:
+        """Remove trigger characters that were previously dynamically registered."""
+        settings = self.view.settings()
+        triggers = settings.get(self.AC_TRIGGERS_KEY)
+        if isinstance(triggers, list):
+            new_triggers = []  # type: List[Dict[str, str]]
+            for trigger in triggers:
+                if trigger.get("server", "") == self.session.config.name:
+                    if trigger.get("registration_id", "") == registration_id:
+                        continue
+                new_triggers.append(trigger)
+            settings.set(self.AC_TRIGGERS_KEY, triggers)
+
+    def _apply_auto_complete_triggers(
+        self,
+        settings: sublime.Settings,
+        trigger_chars: List[str],
+        registration_id: Optional[str] = None
+    ) -> None:
+        """This method actually modifies the auto_complete_triggers entries for the view."""
+        triggers = settings.get(self.AC_TRIGGERS_KEY) or []  # type: List[Dict[str, str]]
+        trigger = {
+            # The trigger characters from the server are always added to the "auto_complete_triggers" entries. To
+            # fine-tune the behavior the user must specify an "auto_complete_selector" in the server configuration.
+            "characters": "".join(trigger_chars),
+            # This key is not used by Sublime, but is used as a "breadcrumb" to figure out what needs to be removed
+            # from the auto_complete_triggers array once the session is stopped.
+            "server": self.session.config.name
+        }
+        selector = self.session.config.auto_complete_selector
+        if isinstance(selector, str) and selector:
+            # If a selector is present, both the selector must match, as well as at least one of the trigger characters
+            # advertised by the server.
+            trigger["selector"] = selector
+        if isinstance(registration_id, str):
+            # This key is not used by Sublime, but is used as a "breadcrumb" as well, for dynamic registrations.
+            trigger["registration_id"] = registration_id
+        triggers.append(trigger)
+        settings.set(self.AC_TRIGGERS_KEY, triggers)
 
     def _increment_hover_count(self) -> None:
         settings = self.view.settings()
@@ -99,13 +165,19 @@ class SessionView:
         value = self.session_buffer.get_capability(capability_path)
         return isinstance(value, dict) or bool(value)
 
-    def on_capability_added_async(self, capability_path: str, options: Dict[str, Any]) -> None:
+    def on_capability_added_async(self, registration_id: str, capability_path: str, options: Dict[str, Any]) -> None:
         if capability_path == self.HOVER_PROVIDER_KEY:
             self._increment_hover_count()
+        elif capability_path.startswith(self.COMPLETION_PROVIDER_KEY):
+            trigger_chars = options.get("triggerCharacters")
+            if isinstance(trigger_chars, list):
+                self._register_auto_complete_triggers(registration_id, trigger_chars)
 
-    def on_capability_removed_async(self, discarded: Dict[str, Any]) -> None:
+    def on_capability_removed_async(self, registration_id: str, discarded: Dict[str, Any]) -> None:
         if self.HOVER_PROVIDER_KEY in discarded:
             self._decrement_hover_count()
+        elif self.COMPLETION_PROVIDER_KEY in discarded:
+            self._unregister_auto_complete_triggers(registration_id)
 
     def has_capability_async(self, capability_path: str) -> bool:
         return self.session_buffer.has_capability(capability_path)

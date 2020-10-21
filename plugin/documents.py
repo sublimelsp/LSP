@@ -525,7 +525,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if not session:
             resolve(promise, [])
             return
-        self._apply_view_settings(session)
         self.purge_changes_async()
         can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
         config_name = session.config.name
@@ -533,26 +532,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             Request.complete(text_document_position_params(self.view, location), self.view),
             lambda res: self._on_complete_result(res, promise, can_resolve_completion_items, config_name),
             lambda res: self._on_complete_error(res, promise))
-
-    def _apply_view_settings(self, session: Session) -> None:
-        settings = self.view.settings()
-        completion_triggers = settings.get('auto_complete_triggers') or []  # type: List[Dict[str, str]]
-        if any(trigger.get('server', None) == session.config.name for trigger in completion_triggers):
-            return
-        # This is to make ST match with labels that have a weird prefix like a space character.
-        settings.set('auto_complete_preserve_order', 'none')
-        trigger_chars = session.get_capability('completionProvider.triggerCharacters') or []
-        if trigger_chars:
-            completion_triggers.append({
-                'characters': "".join(trigger_chars),
-                # Heuristics: Don't auto-complete in comments, and don't trigger auto-complete when we're at the
-                # end of a string. We *do* want to trigger auto-complete in strings because of languages like
-                # Bash and some language servers are allowing the user to auto-complete file-system files in
-                # things like import statements. We may want to move this to the LSP.sublime-settings.
-                'selector': "- comment - punctuation.definition.string.end",
-                'server': session.config.name
-            })
-            settings.set('auto_complete_triggers', completion_triggers)
 
     def _on_complete_result(self, response: Optional[Union[dict, List]], completion_list: sublime.CompletionList,
                             can_resolve_completion_items: bool, session_name: str) -> None:

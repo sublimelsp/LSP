@@ -118,6 +118,11 @@
                   "default": 0,
                   "markdownDescription": "When specified, the TCP port to use to connect to the language server process. If not specified, STDIO is used as the transport. When set to zero, a free TCP port is chosen. You can use that free TCP port number as a template variable, i.e. as `${tcp_port}` in the `\"command\"`."
                 },
+                "auto_complete_selector": {
+                  "type": "string",
+                  "default": "source - string - comment",
+                  "markdownDescription": "When specified, this [selector](https://www.sublimetext.com/docs/3/selectors.html) is used as the `\"selector\"` key in an entry of the `\"auto_complete_triggers\"` of the view applicable to this configuration. You don't have to necessarily provide this value. Because your language server registers so-called trigger characters in any case. However, this selector allows you to fine-tune the auto-complete behavior if the registered trigger characters of the language server result in an unpleasent auto-complete experience. Note that the behavior of this selector will depend on the .sublime-syntax in use.\n\nThis value is _not_ applied to the **global** `\"auto_complete_selector\"` setting of the view."
+                },
                 "languages": {
                   "$ref": "#/definitions/ClientLanguages"
                 },

@@ -21,7 +21,7 @@ Your client configuration requires two settings to match the document your are e
 
 Assuming that the server is actually installed, and that you can start it from your shell, this issue is likely due to Sublime Text's internal environment not picking up the same `PATH` environment variable as you've configured in your shell.
 
-You can confirm that the issue is due to `PATH` being different by starting Sublime Text from the command line so it inherits your shell's environment.
+You can confirm that the issue is due to `PATH` being different by starting Sublime Text from the command line so that it inherits your shell's environment.
 
 The solution is to make Sublime Text read the same `PATH` that is read by your shell (or OS in general, in case of Windows).
 

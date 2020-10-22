@@ -25,7 +25,7 @@ You can confirm that the issue is due to `PATH` being different by starting Subl
 
 The solution is to make Sublime Text read the same `PATH` that is read by your shell (or OS in general, in case of Windows).
 
-Adjusting `PATH` can differ based on the operating system and the default shell used. Refer to following table:
+Adjusting `PATH` can differ based on the operating system and the default shell used. Refer to the following table on where this can be adjusted:
 
 <table>
 <tr>

@@ -17,22 +17,40 @@ Your client configuration requires two settings to match the document your are e
 * Scope (eg. `source.php`): Verify this is correct by running "Show Scope Name" from the developer menu.
 * Syntax (eg. `Packages\PHP\PHP.sublime-syntax`): Verify by running `view.settings().get("syntax")` in the console.
 
-### 2. LSP cannot find my language server (`No such file or directory: 'foo'`)
+### 2. LSP cannot find my language server (`No such file or directory: 'xyz'`)
 
-Assuming that the server is actually installed, and that you can start it from your shell, this issue is likely due to Sublime Text's internal environment not picking up the same PATH as you've configured in your shell.
+Assuming that the server is actually installed, and that you can start it from your shell, this issue is likely due to Sublime Text's internal environment not picking up the same `PATH` environment variable as you've configured in your shell.
 
-You can confirm that the issue is due to PATH being different by starting Sublime Text from the command line so it inherits your shell's environment.
+You can confirm that the issue is due to `PATH` being different by starting Sublime Text from the command line so it inherits your shell's environment.
 
-This can be fixed by adjusting the PATH that is read by Sublime Text. Modify or create `~/.profile` and either extend the PATH with something like:
+The solution is to make Sublime Text read the same `PATH` that is read by your shell (or OS in general, in case of Windows).
+
+Adjusting `PATH` can differ based on the operating system and the default shell used. Refer to following table:
+
+<table>
+<tr>
+    <td>Windows</td>
+    <td>Open Start Menu, type "environment" and select "Edit environment variables for your account". Modify the "Path" variable so that it includes the directory path to the program of your choice.</td>
+</tr>
+<tr>
+    <td>macOS</td>
+    <td>Depending on your default shell, edit: <code>~/.profile</code> (bash), <code>~/.zprofile</code> (zsh) or <code>~/.config/fish/config.fish</code> (fish).</td>
+</tr>
+<tr>
+    <td>Linux</td>
+    <td>Edit <code>~/.profile</code>.</td>
+</tr>
+</table>
+
+The exact changes to make can differ depending on what program you want to expose to Sublime Text. The simplest way is to extend the path like so (replacing `/usr/local/bin` with the path of your choice):
 
 ```sh
 export PATH="/usr/local/bin:$PATH"
 ```
 
-or for example for `nvm` (Node Version Manager), add its initialization script.
+If, for example, you want to expose a `Node` binary to ST and you have it installed through a version manager like `nvm`, you need to insert its [initialization script](https://github.com/nvm-sh/nvm#install--update-script) in the location specified in the table above.
 
-> **Note**: Make sure to restart the system or re-login after changing the file for the changes to be picked up.
-
+> **Note**: It might be necessary to re-login your user account after changing the shell initialization script for the changes to be picked up.
 
 ## Known Issues
 

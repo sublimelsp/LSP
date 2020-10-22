@@ -17,15 +17,22 @@ Your client configuration requires two settings to match the document your are e
 * Scope (eg. `source.php`): Verify this is correct by running "Show Scope Name" from the developer menu.
 * Syntax (eg. `Packages\PHP\PHP.sublime-syntax`): Verify by running `view.settings().get("syntax")` in the console.
 
-### 2. LSP cannot find my language server
+### 2. LSP cannot find my language server (`No such file or directory: 'foo'`)
 
-Often caused by Sublime Text's internal environment not picking up the same PATH as you've configured in your shell.
+Assuming that the server is actually installed, and that you can start it from your shell, this issue is likely due to Sublime Text's internal environment not picking up the same PATH as you've configured in your shell.
 
-This issue can be solved in a few ways:
+You can confirm that the issue is due to PATH being different by starting Sublime Text from the command line so it inherits your shell's environment.
 
-* Always launch sublime from the command line (so it inherits your shell's environment)
-* On OS-X: Install the [SublimeFixMacPath](https://github.com/int3h/SublimeFixMacPath) package
-* On OS-X: Use `launchctl setenv` to set PATH for OS-X UI applications.
+This can be fixed by adjusting the PATH that is read by Sublime Text. Modify or create `~/.profile` and either extend the PATH with something like:
+
+```sh
+export PATH="/usr/local/bin:$PATH"
+```
+
+or for example for `nvm` (Node Version Manager), add its initialization script.
+
+> **Note**: Make sure to restart the system or re-login after changing the file for the changes to be picked up.
+
 
 ## Known Issues
 

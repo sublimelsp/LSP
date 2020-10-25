@@ -883,7 +883,7 @@ class Session(TransportCallbacks):
             )
         )
 
-    def run_code_action(self, code_action: Mapping[str, Any]) -> Promise:
+    def run_code_action_async(self, code_action: Mapping[str, Any]) -> Promise:
         command = code_action.get("command")
         if isinstance(command, str):
             # This is actually a command.

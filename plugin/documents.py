@@ -438,7 +438,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _do_code_actions(self) -> None:
         stored_range = region_to_range(self.view, self._stored_region)
         diagnostics_by_config, extended_range = filter_by_range(view_diagnostics(self.view), stored_range)
-        actions_manager.request_for_range(self.view, extended_range, diagnostics_by_config, self._on_code_actions)
+        actions_manager.request_for_range_async(self.view, extended_range, diagnostics_by_config, self._on_code_actions)
 
     def _on_code_actions(self, responses: CodeActionsByConfigName) -> None:
         action_count = sum(map(len, responses.values()))

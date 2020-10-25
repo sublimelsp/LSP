@@ -97,13 +97,24 @@ class LspFormatDocumentCommand(LspTextCommand):
         session = self.best_session(self.capability)
         if session:
             # Either use the documentFormattingProvider ...
-            session.send_request(text_document_formatting(self.view), self.on_result)
+            req = text_document_formatting(self.view)
+
+            def run_async() -> None:
+                assert session  # TODO: How to make mypy shut up about an Optional[Session]?
+                session.send_request(req, self.on_result)
+
+            sublime.set_timeout_async(run_async)
         else:
             session = self.best_session(LspFormatDocumentRangeCommand.capability)
             if session:
                 # ... or use the documentRangeFormattingProvider and format the entire range.
                 req = text_document_range_formatting(self.view, entire_content_region(self.view))
-                session.send_request(req, self.on_result)
+
+                def run_async() -> None:
+                    assert session  # TODO: How to make mypy shut up about an Optional[Session]?
+                    session.send_request(req, self.on_result)
+
+                sublime.set_timeout_async(run_async)
 
     def on_result(self, params: Any) -> None:
         apply_response_to_view(params, self.view)
@@ -122,8 +133,11 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
         return False
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
-        session = self.best_session(self.capability)
-        if session:
-            session.send_request(
-                text_document_range_formatting(self.view, self.view.sel()[0]),
-                lambda response: apply_response_to_view(response, self.view))
+        req = text_document_range_formatting(self.view, self.view.sel()[0])
+
+        def run_async() -> None:
+            session = self.best_session(self.capability)
+            if session:
+                session.send_request(req, lambda response: apply_response_to_view(response, self.view))
+
+        sublime.set_timeout_async(run_async)

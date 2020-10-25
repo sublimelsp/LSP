@@ -78,7 +78,7 @@ class CodeActionsManager:
     def __init__(self) -> None:
         self._response_cache = None  # type: Optional[Tuple[str, CodeActionsCollector]]
 
-    def request_with_diagnostics(
+    def request_with_diagnostics_async(
         self,
         view: sublime.View,
         request_range: Range,
@@ -89,9 +89,9 @@ class CodeActionsManager:
         Requests code actions *only* for provided diagnostics. If session has no diagnostics then
         it will be skipped.
         """
-        return self._request(view, request_range, diagnostics_by_config, True, actions_handler)
+        return self._request_async(view, request_range, diagnostics_by_config, True, actions_handler)
 
-    def request_for_range(
+    def request_for_range_async(
         self,
         view: sublime.View,
         request_range: Range,
@@ -102,7 +102,7 @@ class CodeActionsManager:
         Requests code actions with provided diagnostics and specified range. If there are
         no diagnostics for given session, the request will be made with empty diagnostics list.
         """
-        return self._request(view, request_range, diagnostics_by_config, False, actions_handler)
+        return self._request_async(view, request_range, diagnostics_by_config, False, actions_handler)
 
     def request_on_save(
         self,
@@ -114,9 +114,9 @@ class CodeActionsManager:
         Requests code actions on save.
         """
         request_range = entire_content_range(view)
-        return self._request(view, request_range, dict(), False, actions_handler, on_save_actions)
+        return self._request_async(view, request_range, dict(), False, actions_handler, on_save_actions)
 
-    def _request(
+    def _request_async(
         self,
         view: sublime.View,
         request_range: Range,
@@ -258,7 +258,7 @@ class CodeActionOnSaveTask(SaveTask):
                 for session in sessions_for_view(self._view, 'codeActionProvider'):
                     if session.config.name == config_name:
                         for code_action in code_actions:
-                            tasks.append(session.run_code_action(code_action))
+                            tasks.append(session.run_code_action_async(code_action))
                         break
         if document_version != self._view.change_count():
             # Give on_text_changed_async a chance to trigger.
@@ -284,7 +284,8 @@ class LspCodeActionsCommand(LspTextCommand):
             return
         selection_range = region_to_range(view, region)
         diagnostics_by_config, extended_range = filter_by_range(view_diagnostics(view), selection_range)
-        actions_manager.request_for_range(view, extended_range, diagnostics_by_config, self.handle_responses_async)
+        actions_manager.request_for_range_async(
+            view, extended_range, diagnostics_by_config, self.handle_responses_async)
 
     def combine_commands(self) -> 'List[Tuple[str, str, CodeActionOrCommand]]':
         results = []

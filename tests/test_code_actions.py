@@ -1,13 +1,10 @@
 from copy import deepcopy
-from LSP.plugin.code_actions import actions_manager
 from LSP.plugin.code_actions import CodeActionsByConfigName
 from LSP.plugin.code_actions import get_matching_kinds
 from LSP.plugin.core.protocol import Point, Range
 from LSP.plugin.core.typing import Any, Dict, Generator, List, Tuple
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
-from LSP.plugin.diagnostics import filter_by_point
-from LSP.plugin.diagnostics import view_diagnostics
 from LSP.plugin.documents import DocumentSyncListener
 from setup import TextDocumentTestCase
 from test_single_document import TEST_FILE_PATH
@@ -87,9 +84,15 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         self.assertEquals(self.view.is_dirty(), False)
 
     def test_applies_in_two_iterations(self) -> Generator:
-        yield from self._setup_document_with_missing_semicolon()
-        code_action_kind = 'source.fixAll'
+        self.insert_characters('const x = 1')
         initial_change_count = self.view.change_count()
+        yield from self.await_client_notification(
+            "textDocument/publishDiagnostics",
+            create_test_diagnostics([
+                ('Missing semicolon', Range(Point(0, 11), Point(0, 11))),
+            ])
+        )
+        code_action_kind = 'source.fixAll'
         yield from self.set_responses([
             (
                 'textDocument/codeAction',
@@ -113,11 +116,9 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
             ),
         ])
         self.view.run_command('lsp_save')
-        yield from self.await_message('textDocument/codeAction')
-        yield from self.await_message('textDocument/codeAction')
-        yield from self.await_message('textDocument/didSave')
+        # Wait for the view to be saved
+        yield lambda: not self.view.is_dirty()
         self.assertEquals(entire_content(self.view), 'const x = 1;\nAnd again!')
-        self.assertEquals(self.view.is_dirty(), False)
 
     def test_applies_immediately_after_text_change(self) -> Generator:
         self.insert_characters('const x = 1')
@@ -284,9 +285,7 @@ class CodeActionsTestCase(TextDocumentTestCase):
         capabilities['capabilities']['codeActionProvider'] = {}
         return capabilities
 
-    def test_requests_for_point(self) -> Generator:
-        def handle_response(actions_by_config: CodeActionsByConfigName) -> None:
-            pass
+    def test_requests_code_actions_on_newly_published_diagnostics(self) -> Generator:
         self.insert_characters('a\nb')
         yield from self.await_message("textDocument/didChange")
         yield from self.await_client_notification(
@@ -296,12 +295,10 @@ class CodeActionsTestCase(TextDocumentTestCase):
                 ('issue b', Range(Point(1, 0), Point(1, 1)))
             ])
         )
-        diagnostics, extended_range = filter_by_point(view_diagnostics(self.view), Point(0, 0))
-        actions_manager.request_with_diagnostics(self.view, extended_range, diagnostics, handle_response)
         params = yield from self.await_message('textDocument/codeAction')
-        self.assertEquals(params['range']['start']['line'], 0)
+        self.assertEquals(params['range']['start']['line'], 1)
         self.assertEquals(params['range']['start']['character'], 0)
-        self.assertEquals(params['range']['end']['line'], 0)
+        self.assertEquals(params['range']['end']['line'], 1)
         self.assertEquals(params['range']['end']['character'], 1)
         self.assertEquals(len(params['context']['diagnostics']), 1)
 
@@ -312,7 +309,7 @@ class CodeActionsTestCase(TextDocumentTestCase):
             ("c", Range(Point(0, 0), Point(0, 1))),
             ("d", Range(Point(1, 0), Point(1, 1))),
         ])
-        yield from self.await_promise(self.session.run_code_action(code_action))
+        yield from self.await_run_code_action(code_action)
         self.assertEquals(entire_content(self.view), 'c\nd')
 
     def test_does_not_apply_with_nonmatching_document_version(self) -> Generator:
@@ -323,7 +320,7 @@ class CodeActionsTestCase(TextDocumentTestCase):
             ("c", Range(Point(0, 0), Point(0, 1))),
             ("d", Range(Point(1, 0), Point(1, 1))),
         ])
-        yield from self.await_promise(self.session.run_code_action(code_action))
+        yield from self.await_run_code_action(code_action)
         self.assertEquals(entire_content(self.view), initial_content)
 
     # Keep this test last as it breaks pyls!
@@ -333,5 +330,5 @@ class CodeActionsTestCase(TextDocumentTestCase):
         code_action = create_test_code_action(self.view.change_count(), [
             ("bye", Range(Point(0, 3), Point(0, 5))),
         ])
-        yield from self.await_promise(self.session.run_code_action(code_action))
+        yield from self.await_run_code_action(code_action)
         self.assertEquals(entire_content(self.view), '🕵️bye')

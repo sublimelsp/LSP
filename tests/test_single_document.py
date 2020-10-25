@@ -318,10 +318,15 @@ class SingleDocumentTestCase(TextDocumentTestCase):
 
     def test_run_command(self) -> 'Generator':
         self.set_response("workspace/executeCommand", {"canReturnAnythingHere": "asdf"})
-        promise = self.session.run_command({"command": "foo", "arguments": ["hello", "there", "general", "kenobi"]})
+        promise = YieldPromise()
+        sublime.set_timeout_async(
+            lambda: self.session.run_command(
+                {"command": "foo", "arguments": ["hello", "there", "general", "kenobi"]}
+            ).then(promise.fulfill)
+        )
+        yield from self.await_promise(promise)
         yield from self.await_message("workspace/executeCommand")
-        self.assertTrue(promise.resolved)
-        self.assertEqual(promise.value, {"canReturnAnythingHere": "asdf"})
+        self.assertEqual(promise.result(), {"canReturnAnythingHere": "asdf"})
 
 
 class WillSaveWaitUntilTestCase(TextDocumentTestCase):

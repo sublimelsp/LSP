@@ -73,8 +73,13 @@ class LspSymbolRenameCommand(LspTextCommand):
                 if session:
                     params = text_document_position_params(self.view, get_position(self.view, event))
                     request = Request.prepareRename(params, self.view)
-                    session.send_request(request, self.on_prepare_result, self.on_prepare_error)
                     self.event = event
+
+                    def run_async() -> None:
+                        assert session  # TODO: How to make mypy shut up about an Optional[Session]?
+                        session.send_request(request, self.on_prepare_result, self.on_prepare_error)
+
+                    sublime.set_timeout_async(run_async)
                 else:
                     # trigger InputHandler manually
                     raise TypeError("required positional argument")
@@ -90,10 +95,16 @@ class LspSymbolRenameCommand(LspTextCommand):
         if session:
             params = text_document_position_params(self.view, position)
             params["newName"] = new_name
-            session.send_request(
-                Request.rename(params, self.view),
-                # This has to run on the main thread due to calling apply_workspace_edit
-                lambda r: sublime.set_timeout(lambda: self.on_rename_result(r)))
+
+            def run_async() -> None:
+                assert session  # TODO: How to make mypy shut up about an Optional[Session]?
+                session.send_request(
+                    Request.rename(params, self.view),
+                    # This has to run on the main thread due to calling apply_workspace_edit
+                    lambda r: sublime.set_timeout(lambda: self.on_rename_result(r))
+                )
+
+            sublime.set_timeout_async(run_async)
 
     def on_rename_result(self, response: Any) -> None:
         window = self.view.window()

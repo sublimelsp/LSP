@@ -74,12 +74,17 @@ class LspHoverCommand(LspTextCommand):
         # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
         # rather than just the hover point.
         request_point = offset_to_point(self.view, hover_point)
-        self._diagnostics_by_config, code_actions_range = filter_by_point(view_diagnostics(self.view), request_point)
-        if self._diagnostics_by_config:
-            actions_manager.request_with_diagnostics(
-                self.view, code_actions_range, self._diagnostics_by_config,
-                lambda response: self.handle_code_actions(response, hover_point))
-            self.show_hover(hover_point)
+
+        def run_async() -> None:
+            self._diagnostics_by_config, code_actions_range = filter_by_point(
+                view_diagnostics(self.view), request_point)
+            if self._diagnostics_by_config:
+                actions_manager.request_with_diagnostics_async(
+                    self.view, code_actions_range, self._diagnostics_by_config,
+                    lambda response: self.handle_code_actions(response, hover_point))
+                self.show_hover(hover_point)
+
+        sublime.set_timeout_async(run_async)
 
     def request_symbol_hover(self, point: int) -> None:
         session = self.best_session('hoverProvider', point)
@@ -197,9 +202,13 @@ class LspHoverCommand(LspTextCommand):
 
     def handle_code_action_select(self, config_name: str, index: int) -> None:
         if index > -1:
-            session = self.session_by_name(config_name)
-            if session:
-                session.run_code_action(self._actions_by_config[config_name][index])
+
+            def run_async() -> None:
+                session = self.session_by_name(config_name)
+                if session:
+                    session.run_code_action_async(self._actions_by_config[config_name][index])
+
+            sublime.set_timeout_async(run_async)
 
 
 class LspRunCommandFromPointCommand(sublime_plugin.TextCommand):

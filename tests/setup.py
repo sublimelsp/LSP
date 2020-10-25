@@ -5,7 +5,7 @@ from LSP.plugin.core.registry import windows
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.types import ClientConfig, LanguageConfig, ClientStates
-from LSP.plugin.core.typing import Any, Generator, List, Optional, Tuple, Union
+from LSP.plugin.core.typing import Any, Generator, List, Optional, Tuple, Union, Dict
 from LSP.plugin.documents import DocumentSyncListener
 from os import environ
 from os.path import join
@@ -175,7 +175,9 @@ class TextDocumentTestCase(DeferrableTestCase):
         def error_handler(params: 'Any') -> None:
             debug("Got error:", params, "awaiting timeout :(")
 
-        self.session.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
+        sublime.set_timeout_async(
+            lambda: self.session.send_request(Request("$test/getReceived", {"method": method}), handler, error_handler)
+        )
         yield from self.await_promise(promise)
         return promise.result()
 
@@ -189,7 +191,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             promise.fulfill(params)
 
         req = Request("$test/fakeRequest", {"method": method, "params": params})
-        self.session.send_request(req, on_result, on_error)
+        sublime.set_timeout_async(lambda: self.session.send_request(req, on_result, on_error))
         return promise
 
     def await_promise(self, promise: Union[YieldPromise, Promise]) -> Generator:
@@ -200,11 +202,19 @@ class TextDocumentTestCase(DeferrableTestCase):
             promise.then(lambda result: yielder.fulfill(result))
         yield {"condition": yielder, "timeout": TIMEOUT_TIME}
 
+    def await_run_code_action(self, code_action: Dict[str, Any]) -> Generator:
+        promise = YieldPromise()
+        sublime.set_timeout_async(lambda: self.session.run_code_action_async(code_action).then(promise.fulfill))
+        yield from self.await_promise(promise)
+
     def set_response(self, method: str, response: 'Any') -> None:
         self.assertIsNotNone(self.session)
         assert self.session  # mypy
-        self.session.send_notification(
-            Notification("$test/setResponse", {"method": method, "response": response}))
+        sublime.set_timeout_async(
+            lambda: self.session.send_notification(
+                Notification("$test/setResponse", {"method": method, "response": response})
+            )
+        )
 
     def set_responses(self, responses: List[Tuple[str, Any]]) -> Generator:
         self.assertIsNotNone(self.session)
@@ -218,7 +228,9 @@ class TextDocumentTestCase(DeferrableTestCase):
             debug("Got error:", params, "awaiting timeout :(")
 
         payload = [{"method": method, "response": responses} for method, responses in responses]
-        self.session.send_request(Request("$test/setResponses", payload), handler, error_handler)
+        sublime.set_timeout_async(
+            lambda: self.session.send_request(Request("$test/setResponses", payload), handler, error_handler)
+        )
         yield from self.await_promise(promise)
 
     def await_client_notification(self, method: str, params: Any = None) -> 'Generator':
@@ -232,8 +244,11 @@ class TextDocumentTestCase(DeferrableTestCase):
         def error_handler(params: Any) -> None:
             debug("Got error:", params, "awaiting timeout :(")
 
-        self.session.send_request(
-            Request("$test/sendNotification", {"method": method, "params": params}), handler, error_handler)
+        sublime.set_timeout_async(
+            lambda: self.session.send_request(
+                Request("$test/sendNotification", {"method": method, "params": params}), handler, error_handler
+            )
+        )
         yield from self.await_promise(promise)
 
     def await_boilerplate_begin(self) -> 'Generator':

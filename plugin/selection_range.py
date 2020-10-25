@@ -27,7 +27,12 @@ class LspExpandSelectionCommand(LspTextCommand):
             params = selection_range_params(self.view)
             self._regions.extend(self.view.sel())
             self._change_count = self.view.change_count()
-            session.send_request(Request(self.method, params), self.on_result, self.on_error)
+
+            def run_async() -> None:
+                assert session  # TODO: How to make mypy shut up about an Optional[Session]?
+                session.send_request(Request(self.method, params), self.on_result, self.on_error)
+
+            sublime.set_timeout_async(run_async)
         else:
             self._run_builtin_expand_selection("No {} found".format(self.capability))
 

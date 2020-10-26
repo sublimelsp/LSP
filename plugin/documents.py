@@ -264,7 +264,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         if "documentHighlight" not in userprefs().disabled_capabilities:
             self._clear_highlight_regions()
-            self._when_selection_remains_stable_async(self._do_highlights, current_region,
+            self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
                                                       after_ms=self.highlights_debounce_time)
         if "colorProvider" not in userprefs().disabled_capabilities:
             self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region,
@@ -298,7 +298,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if "documentHighlight" not in userprefs().disabled_capabilities:
                 if not self._is_in_higlighted_region(current_region.b):
                     self._clear_highlight_regions()
-                    self._when_selection_remains_stable_async(self._do_highlights, current_region,
+                    self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
                                                               after_ms=self.highlights_debounce_time)
             self._clear_code_actions_annotation()
             self._when_selection_remains_stable_async(self._do_code_actions, current_region,
@@ -379,7 +379,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.purge_changes_async()
             params = text_document_position_params(self.view, pos)
             assert session
-            session.send_request(
+            session.send_request_async(
                 Request.signatureHelp(params, self.view), lambda resp: self._on_signature_help(resp, pos))
         else:
             # TODO: Refactor popup usage to a common class. We now have sigHelp, completionDocs, hover, and diags
@@ -468,7 +468,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _do_color_boxes_async(self) -> None:
         session = self.session("colorProvider")
         if session:
-            session.send_request(
+            session.send_request_async(
                 Request.documentColor(document_color_params(self.view), self.view), self._on_color_boxes)
 
     def _on_color_boxes(self, response: Any) -> None:
@@ -489,7 +489,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     return True
         return False
 
-    def _do_highlights(self) -> None:
+    def _do_highlights_async(self) -> None:
         if not len(self.view.sel()):
             return
         point = self.view.sel()[0].b
@@ -497,7 +497,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if session:
             params = text_document_position_params(self.view, point)
             request = Request.documentHighlight(params, self.view)
-            session.send_request(request, self._on_highlights)
+            session.send_request_async(request, self._on_highlights)
 
     def _on_highlights(self, response: Optional[List]) -> None:
         if not response:
@@ -529,7 +529,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self.purge_changes_async()
         can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
         config_name = session.config.name
-        session.send_request(
+        session.send_request_async(
             Request.complete(text_document_position_params(self.view, location), self.view),
             lambda res: self._on_complete_result(res, promise, can_resolve_completion_items, config_name),
             lambda res: self._on_complete_error(res, promise))

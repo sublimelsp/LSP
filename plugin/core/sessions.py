@@ -31,8 +31,8 @@ from .views import SYMBOL_KINDS
 from .workspace import is_subpath_of
 from abc import ABCMeta
 from abc import abstractmethod
-from threading import Lock
 from weakref import WeakSet
+import functools
 import os
 import sublime
 import weakref
@@ -647,7 +647,6 @@ class Session(TransportCallbacks):
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
         self._response_handlers = {}  # type: Dict[int, Tuple[Request, Callable, Optional[Callable[[Any], None]]]]
-        self._response_handlers_lock = Lock()
         self.config = config
         self.manager = weakref.ref(manager)
         self.window = manager.window()
@@ -810,11 +809,12 @@ class Session(TransportCallbacks):
         if self._supports_workspace_folders():
             self._workspace_folders = folders
 
-    def initialize(self, variables: Dict[str, str], transport: Transport, init_callback: InitCallback) -> None:
+    def initialize_async(self, variables: Dict[str, str], transport: Transport, init_callback: InitCallback) -> None:
         self.transport = transport
         params = get_initialize_params(variables, self._workspace_folders, self.config)
         self._init_callback = init_callback
-        self.send_request(Request.initialize(params), self._handle_initialize_success, self._handle_initialize_error)
+        self.send_request_async(
+            Request.initialize(params), self._handle_initialize_success, self._handle_initialize_error)
 
     def _handle_initialize_success(self, result: Any) -> None:
         self.capabilities.assign(result.get('capabilities', dict()))
@@ -870,6 +870,7 @@ class Session(TransportCallbacks):
         return variables
 
     def run_command(self, command: Mapping[str, Any]) -> Promise:
+        """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
             promise, callback = Promise.packaged_task()
             if self._plugin.on_pre_server_command(command, callback):
@@ -877,9 +878,9 @@ class Session(TransportCallbacks):
         # TODO: Our Promise class should be able to handle errors/exceptions
         return Promise(
             lambda resolve: self.send_request(
-                request=Request.executeCommand(command),
-                handler=resolve,
-                error_handler=lambda err: resolve(Error(err["code"], err["message"], err.get("data")))
+                Request.executeCommand(command),
+                resolve,
+                lambda err: resolve(Error(err["code"], err["message"], err.get("data")))
             )
         )
 
@@ -1046,7 +1047,7 @@ class Session(TransportCallbacks):
         self.capabilities.clear()
         self._registrations.clear()
         self.state = ClientStates.STOPPING
-        self.send_request(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
+        self.send_request_async(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
 
     def _handle_shutdown_result(self, _: Any) -> None:
         self.exit()
@@ -1068,19 +1069,17 @@ class Session(TransportCallbacks):
 
     # --- RPC message handling ----------------------------------------------------------------------------------------
 
-    def send_request(
+    def send_request_async(
             self,
             request: Request,
-            handler: Callable[[Optional[Any]], None],
-            error_handler: Optional[Callable[[Any], None]] = None,
+            on_result: Callable[[Any], None],
+            on_error: Optional[Callable[[Any], None]] = None
     ) -> None:
-        with self._response_handlers_lock:
-            self.request_id += 1
-            request_id = self.request_id
-            self._response_handlers[request_id] = (request, handler, error_handler)
+        """You must call this method from Sublime's worker thread. Callbacks will run in Sublime's worker thread."""
+        self.request_id += 1
+        request_id = self.request_id
+        self._response_handlers[request_id] = (request, on_result, on_error)
         if request.view:
-            # TODO: send_request MUST be sent only from the async thread, otherwise this can result in exceptions
-            # ("list mutated during iteration")
             sv = self.session_view_for_view_async(request.view)
             if sv:
                 sv.on_request_started_async(request_id, request)
@@ -1090,6 +1089,15 @@ class Session(TransportCallbacks):
                 sv.on_request_started_async(request_id, request)
         self._logger.outgoing_request(request_id, request.method, request.params)
         self.send_payload(request.to_payload(request_id))
+
+    def send_request(
+            self,
+            request: Request,
+            on_result: Callable[[Any], None],
+            on_error: Optional[Callable[[Any], None]] = None,
+    ) -> None:
+        """You can call this method from any thread. Callbacks will run in Sublime's worker thread."""
+        sublime.set_timeout_async(functools.partial(self.send_request_async, request, on_result, on_error))
 
     def send_notification(self, notification: Notification) -> None:
         self._logger.outgoing_notification(notification.method, notification.params)
@@ -1166,8 +1174,7 @@ class Session(TransportCallbacks):
                 exception_log("Error handling {}".format(typestr), err)
 
     def response_handler(self, response_id: int, response: Dict[str, Any]) -> Tuple[Optional[Callable], Any, bool]:
-        with self._response_handlers_lock:
-            request, handler, error_handler = self._response_handlers.pop(response_id, (None, None, None))
+        request, handler, error_handler = self._response_handlers.pop(response_id, (None, None, None))
         if not request:
             error = {"code": ErrorCode.InvalidParams, "message": "unknown response ID {}".format(response_id)}
             return (print_to_status_bar, error, True)

@@ -51,10 +51,9 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         pass
 
     def test_did_close(self) -> 'Generator':
-        assert self.view
-        self.view.set_scratch(True)
+        self.assertTrue(self.view)
+        self.assertTrue(self.view.is_valid())
         self.view.close()
-        self.view = None
         yield from self.await_message("textDocument/didClose")
 
     def test_did_change(self) -> 'Generator':
@@ -331,7 +330,8 @@ class SingleDocumentTestCase(TextDocumentTestCase):
 
 class WillSaveWaitUntilTestCase(TextDocumentTestCase):
 
-    def get_test_server_capabilities(self) -> dict:
+    @classmethod
+    def get_test_server_capabilities(cls) -> dict:
         capabilities = deepcopy(super().get_test_server_capabilities())
         capabilities['capabilities']['textDocumentSync']['willSaveWaitUntil'] = True
         return capabilities

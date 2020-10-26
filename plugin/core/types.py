@@ -332,6 +332,17 @@ class LanguageConfig:
         return "{}(language_id={}, document_selector={}, feature_selector={})".format(
             self.__class__.__name__, repr(self.id), repr(self.document_selector), repr(self.feature_selector))
 
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, LanguageConfig):
+            return False
+        return self.id == other.id \
+            and self.document_selector == other.document_selector \
+            and self.feature_selector == other.feature_selector
+
+    def __hash__(self) -> int:
+        # needed for functools.lru_cache
+        return hash(id(self))
+
 
 # method -> (capability dotted path, optional registration dotted path)
 # these are the EXCEPTIONS. The general rule is: method foo/bar --> (barProvider, barProvider.id)
@@ -589,8 +600,16 @@ class ClientConfig:
         items = []  # type: List[str]
         for k, v in self.__dict__.items():
             if not k.startswith("_"):
-                items.append("{}={}".format(k, repr(getattr(self, k))))
+                items.append("{}={}".format(k, repr(v)))
         return "{}({})".format(self.__class__.__name__, ", ".join(items))
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, ClientConfig):
+            return False
+        for k, v in self.__dict__.items():
+            if not k.startswith("_") and v != getattr(other, k):
+                return False
+        return True
 
 
 def syntax2scope(syntax_path: str) -> Optional[str]:

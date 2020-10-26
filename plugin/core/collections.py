@@ -143,3 +143,8 @@ class DottedDict:
 
     def __repr__(self) -> str:
         return "{}({})".format(self.__class__.__name__, repr(self._d))
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, DottedDict):
+            return False
+        return self._d == other._d

@@ -480,6 +480,9 @@ class Capabilities(DottedDict):
     def should_notify_did_change(self) -> bool:
         return self.text_sync_kind() > TextDocumentSyncKindNone
 
+    def should_notify_did_change_workspace_folders(self) -> bool:
+        return "workspace.workspaceFolders.changeNotifications" in self
+
     def should_notify_will_save(self) -> bool:
         return "textDocumentSync.willSave" in self
 

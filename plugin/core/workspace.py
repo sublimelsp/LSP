@@ -1,5 +1,6 @@
 from .logging import debug
 from .protocol import WorkspaceFolder
+from .types import diff
 from .typing import List, Any, Union
 import sublime
 import os
@@ -20,9 +21,13 @@ class ProjectFolders(object):
         self._window = window
         self.folders = self._window.folders()  # type: List[str]
 
-    def update(self) -> List[WorkspaceFolder]:
-        self.folders = self._window.folders()
-        return get_workspace_folders(self.folders)
+    def update(self) -> bool:
+        new_folders = self._window.folders()
+        added, removed = diff(self.folders, new_folders)
+        if added or removed:
+            self.folders = new_folders
+            return True
+        return False
 
     def includes_path(self, file_path: str) -> bool:
         if self.folders:
@@ -34,9 +39,8 @@ class ProjectFolders(object):
         file_path = view_or_file_name.file_name() if isinstance(view_or_file_name, sublime.View) else view_or_file_name
         return self.includes_path(file_path) if file_path else False
 
-
-def get_workspace_folders(folders: List[str]) -> List[WorkspaceFolder]:
-    return [WorkspaceFolder.from_path(f) for f in folders]
+    def get_workspace_folders(self) -> List[WorkspaceFolder]:
+        return [WorkspaceFolder.from_path(f) for f in self.folders]
 
 
 def sorted_workspace_folders(folders: List[str], file_path: str) -> List[WorkspaceFolder]:

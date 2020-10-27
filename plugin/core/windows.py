@@ -144,6 +144,9 @@ class WindowManager(Manager):
     def register_listener_async(self, listener: AbstractViewListener) -> None:
         set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
         self._pending_listeners.appendleft(listener)
+        # Update workspace folders in case the user have changed those since window was created.
+        # There is no currently no notification in ST that would notify about folder changes.
+        self._workspace.update()
         if self._new_listener is None:
             self._dequeue_listener_async()
 
@@ -243,9 +246,6 @@ class WindowManager(Manager):
             # debug('Already starting on this window:', config.name)
             return
         try:
-            # Update folders in case those have been changed by the user. There is no currently
-            # no notification in ST that would notify about changed folder list.
-            self._workspace.update()
             workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
             plugin_class = get_plugin(config.name)
             if plugin_class is not None:

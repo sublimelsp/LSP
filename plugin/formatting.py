@@ -37,14 +37,14 @@ class WillSaveWaitTask(SaveTask):
         session = next(self._session_iterator, None) if self._session_iterator else None
         if session:
             self._purge_changes_async()
-            self._will_save_wait_until(session)
+            self._will_save_wait_until_async(session)
         else:
             self._on_complete()
 
-    def _will_save_wait_until(self, session: Session) -> None:
-        session.send_request(
+    def _will_save_wait_until_async(self, session: Session) -> None:
+        session.send_request_async(
             will_save_wait_until(self._view, reason=1),  # TextDocumentSaveReason.Manual
-            lambda response: self._on_response(response),
+            self._on_response,
             lambda error: self._on_response(None))
 
     def _on_response(self, response: Any) -> None:
@@ -65,14 +65,13 @@ class FormattingTask(SaveTask):
     def run_async(self) -> None:
         super().run_async()
         self._purge_changes_async()
-        self._format_on_save()
+        self._format_on_save_async()
 
-    def _format_on_save(self) -> None:
+    def _format_on_save_async(self) -> None:
         session = next(sessions_for_view(self._view, 'documentFormattingProvider'), None)
         if session:
-            session.send_request(text_document_formatting(self._view),
-                                 lambda response: self._on_response(response),
-                                 lambda error: self._on_response(None))
+            session.send_request_async(
+                text_document_formatting(self._view), self._on_response, lambda error: self._on_response(None))
         else:
             self._on_complete()
 
@@ -97,24 +96,13 @@ class LspFormatDocumentCommand(LspTextCommand):
         session = self.best_session(self.capability)
         if session:
             # Either use the documentFormattingProvider ...
-            req = text_document_formatting(self.view)
-
-            def run_async() -> None:
-                assert session  # TODO: How to make mypy shut up about an Optional[Session]?
-                session.send_request(req, self.on_result)
-
-            sublime.set_timeout_async(run_async)
+            session.send_request(text_document_formatting(self.view), self.on_result)
         else:
             session = self.best_session(LspFormatDocumentRangeCommand.capability)
             if session:
                 # ... or use the documentRangeFormattingProvider and format the entire range.
                 req = text_document_range_formatting(self.view, entire_content_region(self.view))
-
-                def run_async() -> None:
-                    assert session  # TODO: How to make mypy shut up about an Optional[Session]?
-                    session.send_request(req, self.on_result)
-
-                sublime.set_timeout_async(run_async)
+                session.send_request(req, self.on_result)
 
     def on_result(self, params: Any) -> None:
         apply_response_to_view(params, self.view)
@@ -133,11 +121,7 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
         return False
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
-        req = text_document_range_formatting(self.view, self.view.sel()[0])
-
-        def run_async() -> None:
-            session = self.best_session(self.capability)
-            if session:
-                session.send_request(req, lambda response: apply_response_to_view(response, self.view))
-
-        sublime.set_timeout_async(run_async)
+        session = self.best_session(self.capability)
+        if session:
+            req = text_document_range_formatting(self.view, self.view.sel()[0])
+            session.send_request(req, lambda response: apply_response_to_view(response, self.view))

@@ -265,7 +265,7 @@ class WindowManager(Manager):
                     variables.update(additional_variables)
             transport = create_transport(config, cwd, self._window, session, variables)
             config.set_view_status(initiating_view, "initialize")
-            session.initialize(
+            session.initialize_async(
                 variables, transport,
                 lambda session, is_error: self._on_post_session_initialize(initiating_view, session, is_error))
             self._new_session = session

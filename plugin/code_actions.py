@@ -149,7 +149,7 @@ class CodeActionsManager:
                             params = text_document_code_action_params(
                                 view, file_name, request_range, [], matching_kinds)
                             request = Request.codeAction(params, view)
-                            session.send_request(
+                            session.send_request_async(
                                 request, *filtering_collector(session.config.name, matching_kinds, collector))
                     else:
                         config_name = session.config.name
@@ -158,7 +158,7 @@ class CodeActionsManager:
                             continue
                         params = text_document_code_action_params(view, file_name, request_range, diagnostics)
                         request = Request.codeAction(params, view)
-                        session.send_request(request, collector.create_collector(config_name))
+                        session.send_request_async(request, collector.create_collector(config_name))
         if use_cache:
             self._response_cache = (location_cache_key, collector)
         return collector

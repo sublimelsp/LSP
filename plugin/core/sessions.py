@@ -769,6 +769,9 @@ class Session(TransportCallbacks):
     def should_notify_did_change(self) -> bool:
         return self.capabilities.should_notify_did_change()
 
+    def should_notify_did_change_workspace_folders(self) -> bool:
+        return self.capabilities.should_notify_did_change_workspace_folders()
+
     def should_notify_will_save(self) -> bool:
         return self.capabilities.should_notify_will_save()
 
@@ -798,16 +801,18 @@ class Session(TransportCallbacks):
     def update_folders(self, folders: List[WorkspaceFolder]) -> None:
         if self.should_notify_did_change_workspace_folders():
             added, removed = diff(self._workspace_folders, folders)
-            params = {
-                "event": {
-                    "added": [a.to_lsp() for a in added],
-                    "removed": [r.to_lsp() for r in removed]
+            if added or removed:
+                params = {
+                    "event": {
+                        "added": [a.to_lsp() for a in added],
+                        "removed": [r.to_lsp() for r in removed]
+                    }
                 }
-            }
-            notification = Notification.didChangeWorkspaceFolders(params)
-            self.send_notification(notification)
+                self.send_notification(Notification.didChangeWorkspaceFolders(params))
         if self._supports_workspace_folders():
             self._workspace_folders = folders
+        else:
+            self._workspace_folders = folders[:1]
 
     def initialize_async(self, variables: Dict[str, str], transport: Transport, init_callback: InitCallback) -> None:
         self.transport = transport

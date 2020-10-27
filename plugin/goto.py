@@ -45,11 +45,8 @@ class LspGotoCommand(LspTextCommand):
             params = text_document_position_params(self.view, get_position(self.view, event))
             session.send_request(
                 Request(self.method, params, self.view),
-                lambda response: sublime.set_timeout(
-                    lambda: self.handle_response(
-                        response, side_by_side
-                    )
-                )
+                # It's better to run this on the UI thread so we are guaranteed no AttributeErrors anywhere
+                lambda response: sublime.set_timeout(lambda: self.handle_response(response, side_by_side))
             )
 
     def handle_response(self, response: Any, side_by_side: bool) -> None:

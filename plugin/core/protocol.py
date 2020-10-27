@@ -383,6 +383,9 @@ class WorkspaceFolder:
     def from_path(cls, path: str) -> 'WorkspaceFolder':
         return cls(os.path.basename(path) or path, path)
 
+    def __hash__(self) -> int:
+        return hash((self.name, self.path))
+
     def __repr__(self) -> str:
         return "{}('{}', '{}')".format(self.__class__.__name__, self.name, self.path)
 

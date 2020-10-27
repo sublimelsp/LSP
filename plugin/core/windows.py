@@ -122,11 +122,17 @@ class WindowManager(Manager):
         return self._configs
 
     def on_load_project_async(self) -> None:
-        self._workspace.update()
+        self.update_workspace_folders_async()
         self._configs.update()
 
     def on_post_save_project_async(self) -> None:
         self.on_load_project_async()
+
+    def update_workspace_folders_async(self) -> None:
+        if self._workspace.update():
+            workspace_folders = self._workspace.get_workspace_folders()
+            for session in self._sessions:
+                session.update_folders(workspace_folders)
 
     def enable_config_async(self, config_name: str) -> None:
         enable_in_project(self._window, config_name)
@@ -143,6 +149,9 @@ class WindowManager(Manager):
 
     def register_listener_async(self, listener: AbstractViewListener) -> None:
         set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
+        # Update workspace folders in case the user have changed those since window was created.
+        # There is no currently no notification in ST that would notify about folder changes.
+        self.update_workspace_folders_async()
         self._pending_listeners.appendleft(listener)
         if self._new_listener is None:
             self._dequeue_listener_async()

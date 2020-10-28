@@ -27,10 +27,11 @@ additional_edits = {
 
 class QueryCompletionsTests(TextDocumentTestCase):
 
-    def init_view_settings(self) -> None:
+    @classmethod
+    def init_view_settings(cls) -> None:
         super().init_view_settings()
-        assert self.view
-        self.view.settings().set("auto_complete_selector", "text.plain")
+        assert cls.view
+        cls.view.settings().set("auto_complete_selector", "text.plain")
 
     def type(self, text: str) -> None:
         self.view.run_command('append', {'characters': text})

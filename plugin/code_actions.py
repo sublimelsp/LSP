@@ -307,7 +307,11 @@ class LspCodeActionsCommand(LspTextCommand):
 
     def handle_select(self, index: int) -> None:
         if index > -1:
-            selected = self.commands[index]
-            session = self.session_by_name(selected[0])
-            if session:
-                session.run_code_action(selected[2])
+
+            def run_async() -> None:
+                selected = self.commands[index]
+                session = self.session_by_name(selected[0])
+                if session:
+                    session.run_code_action_async(selected[2])
+
+            sublime.set_timeout_async(run_async)

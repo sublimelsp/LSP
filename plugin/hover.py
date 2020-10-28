@@ -1,6 +1,5 @@
 import mdpopups
 import sublime
-import sublime_plugin
 import webbrowser
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand

@@ -63,15 +63,16 @@ class LspSymbolRenameCommand(LspTextCommand):
         new_name: str = "",
         placeholder: str = "",
         position: Optional[int] = None,
-        event: Optional[dict] = None
+        event: Optional[dict] = None,
+        point: Optional[int] = None
     ) -> None:
         if position is None:
             if new_name:
-                return self._do_rename(get_position(self.view, event), new_name)
+                return self._do_rename(get_position(self.view, event, point), new_name)
             else:
                 session = self.best_session("{}.prepareProvider".format(self.capability))
                 if session:
-                    params = text_document_position_params(self.view, get_position(self.view, event))
+                    params = text_document_position_params(self.view, get_position(self.view, event, point))
                     request = Request.prepareRename(params, self.view)
                     self.event = event
                     session.send_request(request, self.on_prepare_result, self.on_prepare_error)

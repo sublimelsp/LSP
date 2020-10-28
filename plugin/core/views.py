@@ -483,7 +483,11 @@ def text2html(content: str) -> str:
 
 
 def make_link(href: str, text: str, class_name: Optional[str] = None) -> str:
-    return "<a href='{}' class='{}'>{}</a>".format(href, class_name, text.replace(' ', '&nbsp;'))
+    text = text.replace(' ', '&nbsp;')
+    if class_name:
+        return "<a href='{}' class='{}'>{}</a>".format(href, class_name, text)
+    else:
+        return "<a href='{}'>{}</a>".format(href, text)
 
 
 def make_command_link(command: str, text: str, command_args: Optional[dict] = None,

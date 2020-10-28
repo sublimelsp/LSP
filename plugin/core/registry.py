@@ -35,8 +35,10 @@ client_configs.set_listener(configs.update)
 windows = WindowRegistry(configs)
 
 
-def get_position(view: sublime.View, event: Optional[dict] = None) -> int:
-    if event:
+def get_position(view: sublime.View, event: Optional[dict] = None, point: Optional[int] = None) -> int:
+    if isinstance(point, int):
+        return point
+    elif event:
         return view.window_to_text((event["x"], event["y"]))
     else:
         return view.sel()[0].begin()

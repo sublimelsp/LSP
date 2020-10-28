@@ -107,25 +107,20 @@ class LspHoverCommand(LspTextCommand):
             actions = []
             for link_kind in link_kinds:
                 if self.best_session('{}Provider'.format(link_kind.lsp_name)):
-                    command = 'lsp_run_command_from_point'
-                    args = {
-                        'command_name': link_kind.subl_cmd_name,
-                        'point': point,
-                    }
-                    link = make_command_link(command, link_kind.label, args)
+                    link = make_command_link(link_kind.subl_cmd_name, link_kind.label, {'point': point})
                     if link_kind.supports_side_by_side:
-                        args['command_args'] = {'side_by_side': True}
-                        link += ' ' + make_command_link(command, '◨', args, 'icon')
+                        args = {'point': point, 'side_by_side': True}
+                        link += ' ' + make_command_link(link_kind.subl_cmd_name, '◨', args, 'icon')
                     actions.append(link)
             if actions:
-                return "<p class='actions'>" + " | ".join(actions) + "</p>"
+                return '<p class="actions">' + " | ".join(actions) + "</p>"
         return ""
 
     def diagnostics_content(self) -> str:
         formatted = []
         for config_name in self._diagnostics_by_config:
             by_severity = {}  # type: Dict[int, List[str]]
-            formatted.append("<div class='diagnostics'>")
+            formatted.append('<div class="diagnostics">')
             for diagnostic in self._diagnostics_by_config[config_name]:
                 by_severity.setdefault(diagnostic.severity, []).append(
                     format_diagnostic_for_html(diagnostic, self._base_dir))
@@ -140,7 +135,7 @@ class LspHoverCommand(LspTextCommand):
                 if action_count > 0:
                     href = "{}:{}".format('code-actions', config_name)
                     text = "{} ({})".format('Code Actions', action_count)
-                    formatted.append("<div class=\"actions\">{}</div>".format(make_link(href, text)))
+                    formatted.append('<div class="actions">{}</div>'.format(make_link(href, text)))
 
             formatted.append("</div>")
 
@@ -209,11 +204,3 @@ class LspHoverCommand(LspTextCommand):
                     session.run_code_action_async(self._actions_by_config[config_name][index])
 
             sublime.set_timeout_async(run_async)
-
-
-class LspRunCommandFromPointCommand(sublime_plugin.TextCommand):
-    def run(self, edit: sublime.Edit, point: int, command_name: str, command_args: Optional[dict] = None) -> None:
-        sel = self.view.sel()
-        sel.clear()
-        sel.add(sublime.Region(point, point))
-        self.view.run_command(command_name, command_args)

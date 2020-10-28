@@ -33,8 +33,8 @@ class LspSymbolReferencesCommand(LspTextCommand):
         self.word = ""
         self.base_dir = None  # type: Optional[str]
 
-    def is_enabled(self, event: Optional[dict] = None) -> bool:
-        return super().is_enabled(event) and is_at_word(self.view, event)
+    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+        return super().is_enabled(event) and is_at_word(self.view, event, point)
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None, point: Optional[int] = None) -> None:
         session = self.best_session(self.capability)

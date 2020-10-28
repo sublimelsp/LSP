@@ -59,10 +59,10 @@ class LspTextCommand(sublime_plugin.TextCommand):
     # to the view that has the given name. When both `capability` and `session_name` are defined, `capability` wins.
     session_name = ''
 
-    def is_enabled(self, event: Optional[dict] = None) -> bool:
+    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
         if self.capability:
             # At least one active session with the given capability must exist.
-            return bool(self.best_session(self.capability, get_position(self.view, event)))
+            return bool(self.best_session(self.capability, get_position(self.view, event, point)))
         elif self.session_name:
             # There must exist an active session with the given (config) name.
             return bool(self.session_by_name(self.session_name))

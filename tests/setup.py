@@ -2,11 +2,14 @@ from LSP.plugin.core.promise import Promise
 from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification, Request
 from LSP.plugin.core.registry import windows
+from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.settings import client_configs
 from LSP.plugin.core.types import ClientConfig, LanguageConfig, ClientStates
 from LSP.plugin.core.typing import Any, Generator, List, Optional, Tuple, Union, Dict
+from LSP.plugin.documents import DocumentSyncListener
 from os import environ
 from os.path import join
+from sublime_plugin import view_event_listeners
 from test_mocks import basic_responses
 from unittesting import DeferrableTestCase
 import sublime
@@ -95,6 +98,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         cls.wm = windows.lookup(window)
         cls.view = window.open_file(filename)
         yield {"condition": lambda: not cls.view.is_loading(), "timeout": TIMEOUT_TIME}
+        yield cls.ensure_document_listener_created
         yield {
             "condition": lambda: cls.wm.get_session(cls.config.name, cls.view.file_name()) is not None,
             "timeout": TIMEOUT_TIME}
@@ -112,6 +116,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
             self.assertTrue(self.wm._configs.match_view(self.view))
         self.init_view_settings()
+        yield self.ensure_document_listener_created
         yield from self.await_message("textDocument/didOpen")
 
     @classmethod
@@ -132,6 +137,19 @@ class TextDocumentTestCase(DeferrableTestCase):
         s("translate_tabs_to_spaces", False)
         s("word_wrap", False)
         s("lsp_format_on_save", False)
+
+    @classmethod
+    def ensure_document_listener_created(cls) -> bool:
+        assert cls.view
+        # Bug in ST3? Either that, or CI runs with ST window not in focus and that makes ST3 not trigger some
+        # events like on_load_async, on_activated, on_deactivated. That makes things not properly initialize on
+        # opening file (manager missing in DocumentSyncListener)
+        # Revisit this once we're on ST4.
+        for listener in view_event_listeners[cls.view.id()]:
+            if isinstance(listener, DocumentSyncListener):
+                sublime.set_timeout_async(listener.on_activated_async)
+                return True
+        return False
 
     @classmethod
     def await_message(cls, method: str, promise: Optional[YieldPromise] = None) -> 'Generator':

@@ -36,7 +36,7 @@ class LspGotoCommand(LspTextCommand):
 
     method = ''
 
-    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None, **args) -> bool:
+    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
         return super().is_enabled(event, point) and is_at_word(self.view, event, point)
 
     def run(

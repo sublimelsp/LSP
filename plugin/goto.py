@@ -36,13 +36,19 @@ class LspGotoCommand(LspTextCommand):
 
     method = ''
 
-    def is_enabled(self, event: Optional[dict] = None) -> bool:
-        return super().is_enabled(event) and is_at_word(self.view, event)
+    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+        return super().is_enabled(event, point) and is_at_word(self.view, event, point)
 
-    def run(self, _: sublime.Edit, event: Optional[dict] = None, side_by_side: bool = False) -> None:
+    def run(
+        self,
+        _: sublime.Edit,
+        event: Optional[dict] = None,
+        point: Optional[int] = None,
+        side_by_side: bool = False
+    ) -> None:
         session = self.best_session(self.capability)
         if session:
-            params = text_document_position_params(self.view, get_position(self.view, event))
+            params = text_document_position_params(self.view, get_position(self.view, event, point))
             session.send_request(
                 Request(self.method, params, self.view),
                 # It's better to run this on the UI thread so we are guaranteed no AttributeErrors anywhere

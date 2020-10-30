@@ -89,7 +89,7 @@ class LspFormatDocumentCommand(LspTextCommand):
 
     capability = 'documentFormattingProvider'
 
-    def is_enabled(self, event: Optional[dict] = None) -> bool:
+    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
         return super().is_enabled() or bool(self.best_session(LspFormatDocumentRangeCommand.capability))
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
@@ -112,8 +112,8 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
 
     capability = 'documentRangeFormattingProvider'
 
-    def is_enabled(self, event: Optional[dict] = None) -> bool:
-        if super().is_enabled(event):
+    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+        if super().is_enabled(event, point):
             if len(self.view.sel()) == 1:
                 region = self.view.sel()[0]
                 if region.begin() != region.end():

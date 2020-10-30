@@ -53,8 +53,8 @@ _kind2name = {
 }
 
 
-def is_at_word(view: sublime.View, event: Optional[dict]) -> bool:
-    pos = get_position(view, event)
+def is_at_word(view: sublime.View, event: Optional[dict], point: Optional[int]) -> bool:
+    pos = get_position(view, event, point)
     return position_is_word(view, pos)
 
 

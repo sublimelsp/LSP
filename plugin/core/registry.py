@@ -35,8 +35,10 @@ client_configs.set_listener(configs.update)
 windows = WindowRegistry(configs)
 
 
-def get_position(view: sublime.View, event: Optional[dict] = None) -> int:
-    if event:
+def get_position(view: sublime.View, event: Optional[dict] = None, point: Optional[int] = None) -> int:
+    if isinstance(point, int):
+        return point
+    elif event:
         return view.window_to_text((event["x"], event["y"]))
     else:
         return view.sel()[0].begin()
@@ -57,10 +59,10 @@ class LspTextCommand(sublime_plugin.TextCommand):
     # to the view that has the given name. When both `capability` and `session_name` are defined, `capability` wins.
     session_name = ''
 
-    def is_enabled(self, event: Optional[dict] = None) -> bool:
+    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
         if self.capability:
             # At least one active session with the given capability must exist.
-            return bool(self.best_session(self.capability, get_position(self.view, event)))
+            return bool(self.best_session(self.capability, get_position(self.view, event, point)))
         elif self.session_name:
             # There must exist an active session with the given (config) name.
             return bool(self.session_by_name(self.session_name))

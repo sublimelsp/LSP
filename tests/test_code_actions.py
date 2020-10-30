@@ -2,7 +2,7 @@ from copy import deepcopy
 from LSP.plugin.code_actions import CodeActionsByConfigName
 from LSP.plugin.code_actions import get_matching_kinds
 from LSP.plugin.core.protocol import Point, Range
-from LSP.plugin.core.typing import Any, Dict, Generator, List, Tuple
+from LSP.plugin.core.typing import Dict, Generator, List, Tuple
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
 from LSP.plugin.documents import DocumentSyncListener
@@ -53,20 +53,22 @@ def create_test_diagnostics(diagnostics: List[Tuple[str, Range]]) -> Dict:
 
 
 class CodeActionsOnSaveTestCase(TextDocumentTestCase):
-    def setUp(self) -> Generator:
-        yield from super().setUp()
+
+    @classmethod
+    def init_view_settings(cls) -> None:
+        super().init_view_settings()
         # "quickfix" is not supported but its here for testing purposes
-        self.view.settings().set('lsp_code_actions_on_save', {'source.fixAll': True, 'quickfix': True})
+        cls.view.settings().set('lsp_code_actions_on_save', {'source.fixAll': True, 'quickfix': True})
 
-    def tearDown(self) -> Generator:
-        yield from self.await_clear_view_and_save()
-        self.view.settings().set('lsp_code_actions_on_save', {})
-        yield from super().tearDown()
-
-    def get_test_server_capabilities(self) -> dict:
+    @classmethod
+    def get_test_server_capabilities(cls) -> dict:
         capabilities = deepcopy(super().get_test_server_capabilities())
         capabilities['capabilities']['codeActionProvider'] = {'codeActionKinds': ['quickfix', 'source.fixAll']}
         return capabilities
+
+    def doCleanups(self) -> Generator:
+        yield from self.await_clear_view_and_save()
+        yield from super().doCleanups()
 
     def test_applies_matching_kind(self) -> Generator:
         yield from self._setup_document_with_missing_semicolon()
@@ -190,19 +192,17 @@ class CodeActionMatchingTestCase(unittest.TestCase):
 
 
 class CodeActionsListenerTestCase(TextDocumentTestCase):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self.original_debounce_time = DocumentSyncListener.code_actions_debounce_time
-
     def setUp(self) -> Generator:
         yield from super().setUp()
+        self.original_debounce_time = DocumentSyncListener.code_actions_debounce_time
         DocumentSyncListener.code_actions_debounce_time = 0
 
     def tearDown(self) -> Generator:
         DocumentSyncListener.code_actions_debounce_time = self.original_debounce_time
-        yield from super().tearDown()
+        super().tearDown()
 
-    def get_test_server_capabilities(self) -> dict:
+    @classmethod
+    def get_test_server_capabilities(cls) -> dict:
         capabilities = deepcopy(super().get_test_server_capabilities())
         capabilities['capabilities']['codeActionProvider'] = {}
         return capabilities
@@ -280,7 +280,9 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
 
 
 class CodeActionsTestCase(TextDocumentTestCase):
-    def get_test_server_capabilities(self) -> dict:
+
+    @classmethod
+    def get_test_server_capabilities(cls) -> dict:
         capabilities = deepcopy(super().get_test_server_capabilities())
         capabilities['capabilities']['codeActionProvider'] = {}
         return capabilities

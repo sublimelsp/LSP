@@ -9,7 +9,6 @@ from .core.protocol import DocumentHighlightKind
 from .core.protocol import Range
 from .core.protocol import Request
 from .core.registry import best_session
-from .core.registry import get_position
 from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
@@ -51,14 +50,6 @@ _kind2name = {
     DocumentHighlightKind.Read: "read",
     DocumentHighlightKind.Write: "write"
 }
-
-
-def position_is_word(view: sublime.View, position: int) -> bool:
-    point_classification = view.classify(position)
-    if point_classification & SUBLIME_WORD_MASK:
-        return True
-    else:
-        return False
 
 
 def is_transient_view(view: sublime.View) -> bool:

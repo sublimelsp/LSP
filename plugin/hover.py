@@ -106,9 +106,10 @@ class LspHoverCommand(LspTextCommand):
             actions = []
             for link_kind in link_kinds:
                 if self.best_session('{}Provider'.format(link_kind.lsp_name)):
-                    link = make_command_link(link_kind.subl_cmd_name, link_kind.label, {'point': point})
+                    args = {'point': point}
+                    link = make_command_link(link_kind.subl_cmd_name, link_kind.label, args)
                     if link_kind.supports_side_by_side:
-                        args = {'point': point, 'side_by_side': True}
+                        args['side_by_side'] = True
                         link += ' ' + make_command_link(link_kind.subl_cmd_name, '◨', args, 'icon')
                     actions.append(link)
             if actions:
@@ -148,6 +149,8 @@ class LspHoverCommand(LspTextCommand):
         sublime.set_timeout(lambda: self._show_hover(point))
 
     def _show_hover(self, point: int) -> None:
+        if not self.view.is_valid():
+            return
         contents = self.diagnostics_content() + self.hover_content()
         if contents:
             contents += self.symbol_actions_content(point)
@@ -177,7 +180,11 @@ class LspHoverCommand(LspTextCommand):
 
     def _on_navigate(self, href: str, point: int) -> None:
         if href.startswith("subl:"):
-            pass
+            # The view must be in focus for text commands to run correctly.
+            # See: https://github.com/sublimehq/sublime_text/issues/3722
+            window = self.view.window()
+            if window:
+                window.focus_view(self.view)
         elif href.startswith('code-actions:'):
             _, config_name = href.split(":")
             titles = [command["title"] for command in self._actions_by_config[config_name]]

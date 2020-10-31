@@ -23,7 +23,7 @@
                 "caption": "Key Bindings",
                 "command": "edit_settings",
                 "args": {
-                  "base_file": "${packages}/LSP/Keymaps/Default (${platform}).sublime-keymap",
+                  "base_file": "${packages}/LSP/Default.sublime-keymap",
                   "user_file": "${packages}/User/Default (${platform}).sublime-keymap",
                   "default": "[\n\t$0\n]\n",
                 }

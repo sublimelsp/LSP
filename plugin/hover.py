@@ -177,7 +177,11 @@ class LspHoverCommand(LspTextCommand):
 
     def _on_navigate(self, href: str, point: int) -> None:
         if href.startswith("subl:"):
-            pass
+            # The view must be in focus for text commands to run correctly.
+            # See: https://github.com/sublimehq/sublime_text/issues/3722
+            window = self.view.window()
+            if window:
+                window.focus_view(self.view)
         elif href.startswith('code-actions:'):
             _, config_name = href.split(":")
             titles = [command["title"] for command in self._actions_by_config[config_name]]

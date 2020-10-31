@@ -12,6 +12,7 @@ from .core.settings import userprefs
 from .core.typing import List, Dict, Optional, Tuple, TypedDict
 from .core.url import uri_to_filename
 from .core.views import get_line, text_document_position_params
+from .documents import is_at_word
 
 ReferenceDict = TypedDict('ReferenceDict', {'uri': str, 'range': dict})
 
@@ -31,6 +32,9 @@ class LspSymbolReferencesCommand(LspTextCommand):
         self.word_region = None  # type: Optional[sublime.Region]
         self.word = ""
         self.base_dir = None  # type: Optional[str]
+
+    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+        return super().is_enabled(event, point) and is_at_word(self.view, event, point)
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None, point: Optional[int] = None) -> None:
         session = self.best_session(self.capability)

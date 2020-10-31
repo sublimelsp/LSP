@@ -9,6 +9,7 @@ from .core.registry import LspTextCommand
 from .core.typing import Any, Optional
 from .core.views import range_to_region
 from .core.views import text_document_position_params
+from .documents import is_at_word
 
 
 class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
@@ -43,14 +44,16 @@ class LspSymbolRenameCommand(LspTextCommand):
 
     capability = 'renameProvider'
 
+    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+        if self.best_session("renameProvider.prepareProvider"):
+            # The language server will tell us if the selection is on a valid token.
+            return True
+        # TODO: check what kind of scope we're in.
+        return super().is_enabled(event, point) and is_at_word(self.view, event, point)
+
     def input(self, args: dict) -> Optional[sublime_plugin.TextInputHandler]:
         if "new_name" not in args:
-            placeholder = args.get("placeholder", "")
-            if not placeholder:
-                point = args.get("point")
-                if isinstance(point, int):
-                    placeholder = self.view.substr(self.view.word(point))
-            return RenameSymbolInputHandler(self.view, placeholder)
+            return RenameSymbolInputHandler(self.view, args.get("placeholder", ""))
         else:
             return None
 
@@ -64,13 +67,12 @@ class LspSymbolRenameCommand(LspTextCommand):
         point: Optional[int] = None
     ) -> None:
         if position is None:
-            pos = get_position(self.view, event, point)
             if new_name:
-                return self._do_rename(pos, new_name)
+                return self._do_rename(get_position(self.view, event, point), new_name)
             else:
                 session = self.best_session("{}.prepareProvider".format(self.capability))
                 if session:
-                    params = text_document_position_params(self.view, pos)
+                    params = text_document_position_params(self.view, get_position(self.view, event, point))
                     request = Request.prepareRename(params, self.view)
                     self.event = event
                     session.send_request(request, self.on_prepare_result, self.on_prepare_error)
@@ -101,7 +103,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             if response:
                 apply_workspace_edit(window, parse_workspace_edit(response))
             else:
-                window.status_message('Nothing to rename')
+                window.status_message('No rename edits returned')
 
     def on_prepare_result(self, response: Any) -> None:
         if response is None:

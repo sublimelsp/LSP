@@ -503,7 +503,7 @@ def make_command_link(command: str, text: str, command_args: Optional[Dict[str, 
 
 
 class LspRunTextCommandHelperCommand(sublime_plugin.WindowCommand):
-    def run(self, view_id: int, command: str, args: Optional[Dict[str, Any]] = None):
+    def run(self, view_id: int, command: str, args: Optional[Dict[str, Any]] = None) -> None:
         view = sublime.View(view_id)
         if view.is_valid():
             view.run_command(command, args)

@@ -114,7 +114,7 @@ class LspHoverCommand(LspTextCommand):
 
     def symbol_actions_content(self, point: int) -> str:
         if userprefs().show_symbol_action_links:
-            actions = [l.link(point, self.view) for l in link_kinds if self.provider_exists(l)]
+            actions = [lk.link(point, self.view) for lk in link_kinds if self.provider_exists(lk)]
             if actions:
                 return '<p class="actions">' + " | ".join(actions) + "</p>"
         return ""

@@ -500,8 +500,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             session.send_request_async(request, self._on_highlights)
 
     def _on_highlights(self, response: Optional[List]) -> None:
+        self._clear_highlight_regions()
         if not response:
-            self._clear_highlight_regions()
             return
         kind2regions = {}  # type: Dict[str, List[sublime.Region]]
         for kind in range(0, 4):
@@ -511,7 +511,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             kind = highlight.get("kind", DocumentHighlightKind.Unknown)
             if kind is not None:
                 kind2regions[_kind2name[kind]].append(r)
-        self._clear_highlight_regions()
         flags = userprefs().document_highlight_style_to_add_regions_flags()
         for kind_str, regions in kind2regions.items():
             if regions:

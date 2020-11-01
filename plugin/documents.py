@@ -127,9 +127,10 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         if not view:
             return
         change_count = view.change_count()
+        frozen_listeners = WeakSet(self.view_listeners)
 
         def notify() -> None:
-            for listener in list(self.view_listeners):
+            for listener in list(frozen_listeners):
                 listener.on_text_changed_async(change_count, changes)
 
         sublime.set_timeout_async(notify)
@@ -186,6 +187,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         added = False
         if session.config.name not in self._session_views:
             self._session_views[session.config.name] = SessionView(self, session)
+            buf = self.view.buffer()
+            if buf:
+                text_change_listener = TextChangeListener.ids_to_listeners.get(buf.buffer_id)
+                if text_change_listener:
+                    text_change_listener.view_listeners.add(self)
             self.view.settings().set("lsp_active", True)
             added = True
         if added:
@@ -636,7 +642,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if not text_change_listener:
             debug("couldn't find a text change listener for", self)
             return
-        text_change_listener.view_listeners.add(self)
         self._text_change_listener_found = True
         self.manager.register_listener_async(self)
         views = buf.views()

@@ -298,7 +298,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if "documentHighlight" not in userprefs().disabled_capabilities:
                 if not self._is_in_higlighted_region(current_region.b):
                     self._clear_highlight_regions()
-                    self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
+                self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
                                                               after_ms=self.highlights_debounce_time)
             self._clear_code_actions_annotation()
             self._when_selection_remains_stable_async(self._do_code_actions, current_region,
@@ -501,6 +501,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _on_highlights(self, response: Optional[List]) -> None:
         if not response:
+            self._clear_highlight_regions()
             return
         kind2regions = {}  # type: Dict[str, List[sublime.Region]]
         for kind in range(0, 4):

@@ -35,6 +35,14 @@ class LinkKind:
         self.subl_cmd_name = subl_cmd_name
         self.supports_side_by_side = supports_side_by_side
 
+    def link(self, point: int, view: sublime.View) -> str:
+        args = {'point': point}
+        link = make_command_link(self.subl_cmd_name, self.label, args, None, view)
+        if self.supports_side_by_side:
+            args['side_by_side'] = True
+            link += ' ' + make_command_link(self.subl_cmd_name, '◨', args, 'icon', view)
+        return link
+
 
 link_kinds = [
     LinkKind("definition", "Definition", "lsp_symbol_definition", True),
@@ -101,16 +109,12 @@ class LspHoverCommand(LspTextCommand):
         self._hover = response
         self.show_hover(point)
 
+    def provider_exists(self, link: LinkKind) -> bool:
+        return bool(self.best_session('{}Provider'.format(link.lsp_name)))
+
     def symbol_actions_content(self, point: int) -> str:
         if userprefs().show_symbol_action_links:
-            actions = []
-            for link_kind in link_kinds:
-                if self.best_session('{}Provider'.format(link_kind.lsp_name)):
-                    link = make_command_link(link_kind.subl_cmd_name, link_kind.label, {'point': point})
-                    if link_kind.supports_side_by_side:
-                        args = {'point': point, 'side_by_side': True}
-                        link += ' ' + make_command_link(link_kind.subl_cmd_name, '◨', args, 'icon')
-                    actions.append(link)
+            actions = [lk.link(point, self.view) for lk in link_kinds if self.provider_exists(lk)]
             if actions:
                 return '<p class="actions">' + " | ".join(actions) + "</p>"
         return ""

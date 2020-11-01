@@ -35,6 +35,9 @@ class LspGotoCommand(LspTextCommand):
 
     method = ''
 
+    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None, side_by_side: bool = False) -> bool:
+        return super().is_enabled(event, point)
+
     def run(
         self,
         _: sublime.Edit,

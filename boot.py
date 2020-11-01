@@ -61,6 +61,7 @@ try:
     from .plugin.core.transports import kill_all_subprocesses
     from .plugin.core.types import ClientConfig
     from .plugin.core.typing import Optional, List, Type, Callable, Dict, Tuple
+    from .plugin.core.views import LspRunTextCommandHelperCommand
     from .plugin.diagnostics import LspHideDiagnosticCommand
     from .plugin.diagnostics import LspNextDiagnosticCommand
     from .plugin.diagnostics import LspPreviousDiagnosticCommand

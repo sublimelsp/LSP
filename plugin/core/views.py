@@ -18,6 +18,7 @@ import mdpopups
 import os
 import re
 import sublime
+import sublime_plugin
 import tempfile
 
 DIAGNOSTIC_SEVERITY = [
@@ -490,9 +491,22 @@ def make_link(href: str, text: str, class_name: Optional[str] = None) -> str:
         return "<a href='{}'>{}</a>".format(href, text)
 
 
-def make_command_link(command: str, text: str, command_args: Optional[dict] = None,
-                      class_name: Optional[str] = None) -> str:
-    return make_link(sublime.command_url(command, command_args), text, class_name)
+def make_command_link(command: str, text: str, command_args: Optional[Dict[str, Any]] = None,
+                      class_name: Optional[str] = None, view: Optional[sublime.View] = None) -> str:
+    if view:
+        cmd = "lsp_run_text_command_helper"
+        args = {"view_id": view.id(), "command": command, "args": command_args}  # type: Optional[Dict[str, Any]]
+    else:
+        cmd = command
+        args = command_args
+    return make_link(sublime.command_url(cmd, args), text, class_name)
+
+
+class LspRunTextCommandHelperCommand(sublime_plugin.WindowCommand):
+    def run(self, view_id: int, command: str, args: Optional[Dict[str, Any]] = None):
+        view = sublime.View(view_id)
+        if view.is_valid():
+            view.run_command(command, args)
 
 
 COLOR_BOX_HTML = """

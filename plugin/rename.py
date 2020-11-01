@@ -9,7 +9,6 @@ from .core.registry import LspTextCommand
 from .core.typing import Any, Optional
 from .core.views import range_to_region
 from .core.views import text_document_position_params
-from .documents import is_at_word
 
 
 class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
@@ -43,13 +42,6 @@ class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
 class LspSymbolRenameCommand(LspTextCommand):
 
     capability = 'renameProvider'
-
-    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
-        if self.best_session("renameProvider.prepareProvider"):
-            # The language server will tell us if the selection is on a valid token.
-            return True
-        # TODO: check what kind of scope we're in.
-        return super().is_enabled(event, point) and is_at_word(self.view, event, point)
 
     def input(self, args: dict) -> Optional[sublime_plugin.TextInputHandler]:
         if "new_name" not in args:

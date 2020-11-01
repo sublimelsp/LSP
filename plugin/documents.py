@@ -512,7 +512,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if kind is not None:
                 kind2regions[_kind2name[kind]].append(r)
 
-        def render_highlights_on_main_thread():
+        def render_highlights_on_main_thread() -> None:
             self._clear_highlight_regions()
             flags = userprefs().document_highlight_style_to_add_regions_flags()
             for kind_str, regions in kind2regions.items():

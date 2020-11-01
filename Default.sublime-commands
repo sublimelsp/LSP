@@ -7,7 +7,7 @@
           "default": "// Settings in here override those in \"LSP/LSP.sublime-settings\"\n{\n\t$0\n}\n"}
     },
     {
-        "caption": "Preferences: LSP Keybindings",
+        "caption": "Preferences: LSP Key Bindings",
         "command": "edit_settings",
         "args": {
             "base_file": "${packages}/LSP/Default.sublime-keymap",
@@ -28,49 +28,36 @@
         "command": "lsp_dump_window_configs"
     },
     {
-        "caption": "LSP: Setup Language Server",
-        "command": "lsp_setup_language_server",
-        "args": {}
-    },
-    {
         "caption": "LSP: Enable Language Server Globally",
         "command": "lsp_enable_language_server_globally",
-        "args": {}
     },
     {
         "caption": "LSP: Disable Language Server Globally",
         "command": "lsp_disable_language_server_globally",
-        "args": {}
     },
     {
         "caption": "LSP: Enable Language Server in Project",
         "command": "lsp_enable_language_server_in_project",
-        "args": {}
     },
     {
         "caption": "LSP: Disable Language Server in Project",
         "command": "lsp_disable_language_server_in_project",
-        "args": {}
     },
     {
-    	"caption": "LSP: Format Document",
+    	"caption": "LSP: Format View",
     	"command": "lsp_format_document",
-    	"args": {}
     },
     {
         "caption": "LSP: Format Selection",
         "command": "lsp_format_document_range",
-        "args": {}
     },
     {
         "caption": "LSP: Restart Servers",
         "command": "lsp_restart_client",
-        "args": {}
     },
     {
-        "caption": "LSP: Document Symbols",
+        "caption": "LSP: Goto Symbol",
         "command": "lsp_document_symbols",
-        "args": {}
     },
     {
         "caption": "LSP: Toggle Log Panel",
@@ -83,19 +70,17 @@
     {
         "caption": "LSP: Next Diagnostic",
         "command": "lsp_next_diagnostic",
-        "args": {}
     },
     {
         "caption": "LSP: Previous Diagnostic",
         "command": "lsp_previous_diagnostic",
-        "args": {}
     },
     {
-        "caption": "LSP: Workspace Symbol",
+        "caption": "LSP: Goto Symbol In Project",
         "command": "lsp_workspace_symbols"
     },
     {
-        "caption": "LSP: Rename Symbol",
+        "caption": "LSP: Rename",
         "command": "lsp_symbol_rename"
     }
 ]

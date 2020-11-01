@@ -53,7 +53,12 @@ class LspSymbolRenameCommand(LspTextCommand):
 
     def input(self, args: dict) -> Optional[sublime_plugin.TextInputHandler]:
         if "new_name" not in args:
-            return RenameSymbolInputHandler(self.view, args.get("placeholder", ""))
+            placeholder = args.get("placeholder", "")
+            if not placeholder:
+                point = args.get("point")
+                if isinstance(point, int):
+                    placeholder = self.view.substr(self.view.word(point))
+            return RenameSymbolInputHandler(self.view, placeholder)
         else:
             return None
 
@@ -67,12 +72,13 @@ class LspSymbolRenameCommand(LspTextCommand):
         point: Optional[int] = None
     ) -> None:
         if position is None:
+            pos = get_position(self.view, event, point)
             if new_name:
-                return self._do_rename(get_position(self.view, event, point), new_name)
+                return self._do_rename(pos, new_name)
             else:
                 session = self.best_session("{}.prepareProvider".format(self.capability))
                 if session:
-                    params = text_document_position_params(self.view, get_position(self.view, event, point))
+                    params = text_document_position_params(self.view, pos)
                     request = Request.prepareRename(params, self.view)
                     self.event = event
                     session.send_request(request, self.on_prepare_result, self.on_prepare_error)
@@ -103,7 +109,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             if response:
                 apply_workspace_edit(window, parse_workspace_edit(response))
             else:
-                window.status_message('No rename edits returned')
+                window.status_message('Nothing to rename')
 
     def on_prepare_result(self, response: Any) -> None:
         if response is None:

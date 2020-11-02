@@ -6,7 +6,6 @@ from .core.sessions import method_to_capability
 from .core.typing import List, Optional, Any
 from .core.views import location_to_encoded_filename
 from .core.views import text_document_position_params
-from .documents import is_at_word
 
 
 def open_location(window: sublime.Window, location: str, side_by_side: bool = True) -> None:
@@ -37,7 +36,7 @@ class LspGotoCommand(LspTextCommand):
     method = ''
 
     def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None, side_by_side: bool = False) -> bool:
-        return super().is_enabled(event, point) and is_at_word(self.view, event, point)
+        return super().is_enabled(event, point)
 
     def run(
         self,

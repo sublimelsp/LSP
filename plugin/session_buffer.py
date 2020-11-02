@@ -190,11 +190,11 @@ class SessionBuffer:
                 purge = True
             if purge:
                 debounced(lambda: self.purge_changes_async(view), 500,
-                          lambda: view.is_valid() and change_count == view.change_count())
+                          lambda: view.is_valid() and change_count == view.change_count(), async_thread=True)
 
     def on_revert_async(self, view: sublime.View) -> None:
         self.pending_changes = None  # Don't bother with pending changes
-        self.session.send_notification(did_change(view, None))
+        self.session.send_notification(did_change(view, view.change_count(), None))
 
     on_reload_async = on_revert_async
 
@@ -203,8 +203,13 @@ class SessionBuffer:
             sync_kind = self.text_sync_kind()
             if sync_kind == TextDocumentSyncKindNone:
                 return
-            c = None if sync_kind == TextDocumentSyncKindFull else self.pending_changes.changes
-            notification = did_change(view, c)
+            if sync_kind == TextDocumentSyncKindFull:
+                changes = None
+                version = view.change_count()
+            else:
+                changes = self.pending_changes.changes
+                version = self.pending_changes.version
+            notification = did_change(view, version, changes)
             self.session.send_notification(notification)
             self.pending_changes = None
 

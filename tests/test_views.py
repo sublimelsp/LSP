@@ -58,10 +58,11 @@ class ViewsTest(DeferrableTestCase):
         })
 
     def test_did_change_full(self) -> None:
-        self.assertEqual(did_change(self.view).params, {
+        version = self.view.change_count()
+        self.assertEqual(did_change(self.view, version).params, {
             "textDocument": {
                 "uri": filename_to_uri(self.mock_file_name),
-                "version": self.view.change_count()
+                "version": version
             },
             "contentChanges": [{"text": "hello world\nfoo bar baz"}]
         })

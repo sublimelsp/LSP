@@ -107,10 +107,10 @@ class SessionView:
         triggers = settings.get(self.AC_TRIGGERS_KEY)
         if isinstance(triggers, list):
             new_triggers = []  # type: List[Dict[str, str]]
+            name = self.session.config.name
             for trigger in triggers:
-                if trigger.get("server", "") == self.session.config.name:
-                    if trigger.get("registration_id", "") == registration_id:
-                        continue
+                if trigger.get("server", "") == name and trigger.get("registration_id", "") == registration_id:
+                    continue
                 new_triggers.append(trigger)
             settings.set(self.AC_TRIGGERS_KEY, triggers)
 
@@ -121,20 +121,22 @@ class SessionView:
         registration_id: Optional[str] = None
     ) -> None:
         """This method actually modifies the auto_complete_triggers entries for the view."""
+        selector = self.session.config.auto_complete_selector
+        if not selector:
+            # If the user did not set up an auto_complete_selector for this server configuration, fallback to the
+            # "global" auto_complete_selector of the view.
+            selector = str(settings.get("auto_complete_selector"))
         triggers = settings.get(self.AC_TRIGGERS_KEY) or []  # type: List[Dict[str, str]]
         trigger = {
             # The trigger characters from the server are always added to the "auto_complete_triggers" entries. To
             # fine-tune the behavior the user must specify an "auto_complete_selector" in the server configuration.
             "characters": "".join(trigger_chars),
+            # both the selector must match, as well as at least one of the trigger characters advertised by the server.
+            "selector": selector,
             # This key is not used by Sublime, but is used as a "breadcrumb" to figure out what needs to be removed
             # from the auto_complete_triggers array once the session is stopped.
             "server": self.session.config.name
         }
-        selector = self.session.config.auto_complete_selector
-        if isinstance(selector, str) and selector:
-            # If a selector is present, both the selector must match, as well as at least one of the trigger characters
-            # advertised by the server.
-            trigger["selector"] = selector
         if isinstance(registration_id, str):
             # This key is not used by Sublime, but is used as a "breadcrumb" as well, for dynamic registrations.
             trigger["registration_id"] = registration_id

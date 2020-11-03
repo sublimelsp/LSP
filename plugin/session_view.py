@@ -126,20 +126,18 @@ class SessionView:
             # If the user did not set up an auto_complete_selector for this server configuration, fallback to the
             # "global" auto_complete_selector of the view.
             selector = str(settings.get("auto_complete_selector"))
-        triggers = settings.get(self.AC_TRIGGERS_KEY) or []  # type: List[Dict[str, str]]
         trigger = {
-            # The trigger characters from the server are always added to the "auto_complete_triggers" entries. To
-            # fine-tune the behavior the user must specify an "auto_complete_selector" in the server configuration.
-            "characters": "".join(trigger_chars),
-            # both the selector must match, as well as at least one of the trigger characters advertised by the server.
             "selector": selector,
             # This key is not used by Sublime, but is used as a "breadcrumb" to figure out what needs to be removed
             # from the auto_complete_triggers array once the session is stopped.
             "server": self.session.config.name
         }
+        if self.session.config.allow_completion_triggers_from_server:
+            trigger["characters"] = "".join(trigger_chars)
         if isinstance(registration_id, str):
             # This key is not used by Sublime, but is used as a "breadcrumb" as well, for dynamic registrations.
             trigger["registration_id"] = registration_id
+        triggers = settings.get(self.AC_TRIGGERS_KEY) or []  # type: List[Dict[str, str]]
         triggers.append(trigger)
         settings.set(self.AC_TRIGGERS_KEY, triggers)
 

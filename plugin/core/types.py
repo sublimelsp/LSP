@@ -579,7 +579,7 @@ class ClientConfig:
             tcp_port=override.get("tcp_port", self.tcp_port),
             auto_complete_selector=override.get("auto_complete_selector", self.auto_complete_selector),
             allow_completion_triggers_from_server=bool(override.get("allow_completion_triggers_from_server",
-                self.allow_completion_triggers_from_server)),
+                                                                    self.allow_completion_triggers_from_server)),
             enabled=override.get("enabled", self.enabled),
             init_options=DottedDict.from_base_and_override(self.init_options, override.get("initializationOptions")),
             settings=DottedDict.from_base_and_override(self.settings, override.get("settings")),

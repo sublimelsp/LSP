@@ -11,8 +11,8 @@ class MessageRequestHandler():
         self.request_id = request_id
         self.request_sent = False
         self.view = view
-        actions = params.get("actions", [])
-        self.titles = list(action.get("title") for action in actions)
+        self.actions = params.get("actions", [])
+        self.titles = list(action.get("title") for action in self.actions)
         self.message = params.get('message', '')
         self.message_type = params.get('type', 4)
         self.source = source
@@ -25,7 +25,7 @@ class MessageRequestHandler():
             param = None
             index = int(href)
             if index != -1:
-                param = {"title": self.titles[index]}
+                param = self.actions[index]
             response = Response(self.request_id, param)
             self.client.send_response(response)
 

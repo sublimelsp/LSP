@@ -37,6 +37,16 @@
               },
               "markdownDescription": "The command to start the language server."
             },
+            "ClientAutoCompleteSelector": {
+              "type": "string",
+              "default": "source - string - comment",
+              "markdownDescription": "When specified, this [selector](https://www.sublimetext.com/docs/3/selectors.html) is used as the `\"selector\"` key in an entry of the `\"auto_complete_triggers\"` of the view applicable to this configuration. You don't have to necessarily provide this value. Because your language server registers so-called trigger characters in any case. However, this selector allows you to fine-tune the auto-complete behavior if the registered trigger characters of the language server result in an unpleasent auto-complete experience. Note that the behavior of this selector will depend on the .sublime-syntax in use.\n\nThis value is _not_ applied to the **global** `\"auto_complete_selector\"` setting of the view."
+            },
+            "ClientIgnoreServerTriggers": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "A language server may register a list of characters that, when typed, trigger the auto-complete. These days, there are Sublime syntaxes that are so good that it is possible to detect via a selector when the auto-complete should be triggered. This can result in a much better editor experience. When this is the case for your syntax, choose an appropriate selector for the `\"auto_complete_selector\"` and set this setting to `\"false\"`.\n\n**Hint.** You may look at `view.settings().get(\"auto_complete_triggers\")` in the Console to verify your settings."
+            },
             "ClientInitializationOptions": {
               "type": "object",
               "markdownDescription": "The initializationOptions that are passed to the language server process during the _initialize_ phase. This is a rather free-form dictionary of key-value pairs and is different per language server. Look up documentation of your specific langauge server to see what the possible key-value pairs can be."
@@ -65,39 +75,6 @@
                 "$ref": "#/definitions/LanguageConfig"
               },
             },
-            "LanguageConfig": {
-              "type": "object",
-              "markdownDescription": "A language configuration defines which servers are attached to which views",
-              "properties": {
-                "languageId": {
-                  "type": "string",
-                  "default": "somelang",
-                  "markdownDescription": "The \"Language ID\". This value serves two purposes:\n\n1. It is sent to the language server so that it knows with what kind of file it is dealing with.\n2. When `\"document_selector\"` is not provided, this is the connection between your files and language servers.\n\nFor more information, refer to the [textDocumentItem of the LSP specification](https://microsoft.github.io/language-server-protocol/specification#textDocumentItem)."
-                },
-                "document_selector": {
-                  "type": "string",
-                  "default": "source.somelang",
-                  "markdownDescription": "The Sublime Text selector to attach the language server process to applicable views. If not specified, it defaults to \"source.${languageId}\". This is the connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. If the selector happens to be of the form \"source.{languageId}\" (which it is in many cases), then you can omit this `\"document_selector\"` key altogether, and LSP will assume the selector is \"source.{languageId}\".\n\nFor more information, refer to the [Sublime Text docs on selectors](https://www.sublimetext.com/docs/3/selectors.html)"
-                },
-                "feature_selector": {
-                  "type": "string",
-                  "default": "source.somelang",
-                  "markdownDescription": "The Sublime Text selector to use to give preference to this language server when multiple servers are attached to a view. For certain capabilities, like code completion, only one language server is chosen. The selector specified here decides which language server is chosen above others."
-                },
-                "syntaxes": {
-                  "type": "array",
-                  "deprecationMessage": "Use \"document_selector\" instead."
-                },
-                "scopes": {
-                  "type": "array",
-                  "deprecationMessage": "Use \"feature_selector\" instead."
-                }
-              },
-              "required": [
-                "languageId"
-              ],
-              "additionalProperties": false
-            },
             // The ClientConfig class
             "ClientConfig": {
               "type": "object",
@@ -119,14 +96,10 @@
                   "markdownDescription": "When specified, the TCP port to use to connect to the language server process. If not specified, STDIO is used as the transport. When set to zero, a free TCP port is chosen. You can use that free TCP port number as a template variable, i.e. as `${tcp_port}` in the `\"command\"`."
                 },
                 "auto_complete_selector": {
-                  "type": "string",
-                  "default": "source - string - comment",
-                  "markdownDescription": "When specified, this [selector](https://www.sublimetext.com/docs/3/selectors.html) is used as the `\"selector\"` key in an entry of the `\"auto_complete_triggers\"` of the view applicable to this configuration. You don't have to necessarily provide this value. Because your language server registers so-called trigger characters in any case. However, this selector allows you to fine-tune the auto-complete behavior if the registered trigger characters of the language server result in an unpleasent auto-complete experience. Note that the behavior of this selector will depend on the .sublime-syntax in use.\n\nThis value is _not_ applied to the **global** `\"auto_complete_selector\"` setting of the view."
+                  "$ref": "#/definitions/ClientAutoCompleteSelector"
                 },
-                "allow_completion_triggers_from_server": {
-                  "type": "boolean",
-                  "default": true,
-                  "markdownDescription": "A language server may register a list of characters that, when typed, trigger the auto-complete. These days, there are Sublime syntaxes that are so good that it is possible to detect via a selector when the auto-complete should be triggered. This can result in a much better editor experience. When this is the case for your syntax, choose an appropriate selector for the `\"auto_complete_selector\"` and set this setting to `\"false\"`.\n\n**Hint.** You may look at `view.settings().get(\"auto_complete_triggers\")` in the Console to verify your settings."
+                "ignore_server_triggers": {
+                  "$ref": "#/definitions/ClientIgnoreServerTriggers"
                 },
                 "languages": {
                   "$ref": "#/definitions/ClientLanguages"
@@ -138,7 +111,7 @@
                   "$ref": "#/definitions/ClientSettings"
                 },
                 "experimental_capabilities": {
-                  "$ref": "#/definitions/ClientExperimentalCapabilities",
+                  "$ref": "#/definitions/ClientExperimentalCapabilities"
                 },
                 "env": {
                   "$ref": "#/definitions/ClientEnv"
@@ -445,8 +418,8 @@
                   "markdownDescription": "The dictionary of your configured language servers or overrides for existing configurations. The keys of this dictionary are free-form. They give a humany-friendly name to the server configuration. They are shown in the bottom-left corner in the status bar once attached to a view (unless you have `\"show_view_status\"` set to `false`).",
                   "additionalProperties": {
                     "$ref": "sublime://settings/LSP#/definitions/ClientConfig"
-                  },
-                },
+                  }
+                }
               }
             }
           }
@@ -469,14 +442,20 @@
               "$ref": "sublime://settings/LSP#/definitions/ClientSettings"
             },
             "experimental_capabilities": {
-              "$ref": "sublime://settings/LSP#/definitions/ClientExperimentalCapabilities",
+              "$ref": "sublime://settings/LSP#/definitions/ClientExperimentalCapabilities"
             },
             "env": {
               "$ref": "sublime://settings/LSP#/definitions/ClientEnv"
             },
-          },
+            "auto_complete_selector": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientAutoCompleteSelector"
+            },
+            "ignore_server_triggers": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientIgnoreServerTriggers"
+            }
+          }
         }
-      },
+      }
     ]
   }
 }

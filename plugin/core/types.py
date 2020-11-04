@@ -507,7 +507,7 @@ class ClientConfig:
                  binary_args: Optional[List[str]] = None,  # DEPRECATED
                  tcp_port: Optional[int] = None,
                  auto_complete_selector: Optional[str] = None,
-                 ignore_server_triggers: bool = False,
+                 ignore_server_trigger_chars: bool = False,
                  enabled: bool = True,
                  init_options: DottedDict = DottedDict(),
                  settings: DottedDict = DottedDict(),
@@ -522,7 +522,7 @@ class ClientConfig:
         self.languages = languages
         self.tcp_port = tcp_port
         self.auto_complete_selector = auto_complete_selector
-        self.ignore_server_triggers = ignore_server_triggers
+        self.ignore_server_trigger_chars = ignore_server_trigger_chars
         self.enabled = enabled
         self.init_options = init_options
         self.settings = settings
@@ -543,7 +543,7 @@ class ClientConfig:
             languages=_read_language_configs(s),
             tcp_port=s.get("tcp_port"),
             auto_complete_selector=s.get("auto_complete_selector"),
-            ignore_server_triggers=bool(s.get("ignore_server_triggers", False)),
+            ignore_server_trigger_chars=bool(s.get("ignore_server_trigger_chars", False)),
             # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
             init_options=init_options,
@@ -560,7 +560,7 @@ class ClientConfig:
             languages=_read_language_configs(d),
             tcp_port=d.get("tcp_port"),
             auto_complete_selector=d.get("auto_complete_selector"),
-            ignore_server_triggers=bool(d.get("ignore_server_triggers", False)),
+            ignore_server_trigger_chars=bool(d.get("ignore_server_trigger_chars", False)),
             enabled=d.get("enabled", False),
             init_options=DottedDict(d.get("initializationOptions")),
             settings=DottedDict(d.get("settings")),
@@ -578,7 +578,8 @@ class ClientConfig:
             languages=languages,
             tcp_port=override.get("tcp_port", self.tcp_port),
             auto_complete_selector=override.get("auto_complete_selector", self.auto_complete_selector),
-            ignore_server_triggers=bool(override.get("ignore_server_triggers", self.ignore_server_triggers)),
+            ignore_server_trigger_chars=bool(
+                override.get("ignore_server_trigger_chars", self.ignore_server_trigger_chars)),
             enabled=override.get("enabled", self.enabled),
             init_options=DottedDict.from_base_and_override(self.init_options, override.get("initializationOptions")),
             settings=DottedDict.from_base_and_override(self.settings, override.get("settings")),

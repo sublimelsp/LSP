@@ -132,7 +132,7 @@ class SessionView:
             # from the auto_complete_triggers array once the session is stopped.
             "server": self.session.config.name
         }
-        if not self.session.config.ignore_server_triggers:
+        if not self.session.config.ignore_server_trigger_chars:
             trigger["characters"] = "".join(trigger_chars)
         if isinstance(registration_id, str):
             # This key is not used by Sublime, but is used as a "breadcrumb" as well, for dynamic registrations.

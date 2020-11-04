@@ -20,23 +20,13 @@ class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
         return "new_name"
 
     def placeholder(self) -> str:
-        if self._placeholder:
-            return self._placeholder
-        return self.get_current_symbol_name()
+        return self._placeholder
 
     def initial_text(self) -> str:
         return self.placeholder()
 
     def validate(self, name: str) -> bool:
         return len(name) > 0
-
-    def get_current_symbol_name(self) -> str:
-        pos = get_position(self.view)
-        current_name = self.view.substr(self.view.word(pos))
-        # Is this check necessary?
-        if not current_name:
-            current_name = ""
-        return current_name
 
 
 class LspSymbolRenameCommand(LspTextCommand):
@@ -87,7 +77,7 @@ class LspSymbolRenameCommand(LspTextCommand):
                     params = text_document_position_params(self.view, pos)
                     request = Request.prepareRename(params, self.view)
                     self.event = event
-                    session.send_request(request, self.on_prepare_result, self.on_prepare_error)
+                    session.send_request(request, lambda r: self.on_prepare_result(r, pos), self.on_prepare_error)
                 else:
                     # trigger InputHandler manually
                     raise TypeError("required positional argument")
@@ -117,7 +107,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             else:
                 window.status_message('Nothing to rename')
 
-    def on_prepare_result(self, response: Any) -> None:
+    def on_prepare_result(self, response: Any, pos: int) -> None:
         if response is None:
             sublime.error_message("The current selection cannot be renamed")
             return
@@ -126,7 +116,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             placeholder = response["placeholder"]
             r = response["range"]
         else:
-            placeholder = ""
+            placeholder = self.view.substr(self.view.word(pos))
             r = response
         region = range_to_region(Range.from_lsp(r), self.view)
         args = {"placeholder": placeholder, "position": region.a, "event": self.event}

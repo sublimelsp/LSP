@@ -9,7 +9,6 @@ from .core.protocol import DocumentHighlightKind
 from .core.protocol import Range
 from .core.protocol import Request
 from .core.registry import best_session
-from .core.registry import get_position
 from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
@@ -51,19 +50,6 @@ _kind2name = {
     DocumentHighlightKind.Read: "read",
     DocumentHighlightKind.Write: "write"
 }
-
-
-def is_at_word(view: sublime.View, event: Optional[dict], point: Optional[int]) -> bool:
-    pos = get_position(view, event, point)
-    return position_is_word(view, pos)
-
-
-def position_is_word(view: sublime.View, position: int) -> bool:
-    point_classification = view.classify(position)
-    if point_classification & SUBLIME_WORD_MASK:
-        return True
-    else:
-        return False
 
 
 def is_transient_view(view: sublime.View) -> bool:
@@ -141,9 +127,10 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
         if not view:
             return
         change_count = view.change_count()
+        frozen_listeners = WeakSet(self.view_listeners)
 
         def notify() -> None:
-            for listener in list(self.view_listeners):
+            for listener in list(frozen_listeners):
                 listener.on_text_changed_async(change_count, changes)
 
         sublime.set_timeout_async(notify)
@@ -180,7 +167,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
         self._sighelp = None  # type: Optional[SignatureHelp]
         self._sighelp_renderer = ColorSchemeScopeRenderer(self.view)
-        self._text_change_listener_found = False
+        self._registered = False
 
     def __del__(self) -> None:
         settings = self.view.settings()
@@ -200,6 +187,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         added = False
         if session.config.name not in self._session_views:
             self._session_views[session.config.name] = SessionView(self, session)
+            buf = self.view.buffer()
+            if buf:
+                text_change_listener = TextChangeListener.ids_to_listeners.get(buf.buffer_id)
+                if text_change_listener:
+                    text_change_listener.view_listeners.add(self)
             self.view.settings().set("lsp_active", True)
             added = True
         if added:
@@ -211,7 +203,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if removed_session:
             if not self._session_views:
                 self.view.settings().erase("lsp_active")
-                self._text_change_listener_found = False
+                self._registered = False
         else:
             # SessionView was likely not created for this config so remove status here.
             session.config.erase_view_status(self.view)
@@ -285,11 +277,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
 
     def on_load_async(self) -> None:
-        if not self._text_change_listener_found and is_regular_view(self.view):
+        if not self._registered and is_regular_view(self.view):
             self._register_async()
 
     def on_activated_async(self) -> None:
-        if not self._text_change_listener_found and not self.view.is_loading() and is_regular_view(self.view):
+        if not self._registered and not self.view.is_loading() and is_regular_view(self.view):
             self._register_async()
 
     def on_selection_modified_async(self) -> None:
@@ -650,8 +642,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if not text_change_listener:
             debug("couldn't find a text change listener for", self)
             return
-        text_change_listener.view_listeners.add(self)
-        self._text_change_listener_found = True
+        self._registered = True
         self.manager.register_listener_async(self)
         views = buf.views()
         if not isinstance(views, list):

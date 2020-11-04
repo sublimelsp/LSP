@@ -9,7 +9,6 @@ from .core.registry import LspTextCommand
 from .core.typing import Any, Optional
 from .core.views import range_to_region
 from .core.views import text_document_position_params
-from .documents import is_at_word
 
 
 class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
@@ -21,9 +20,7 @@ class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
         return "new_name"
 
     def placeholder(self) -> str:
-        if self._placeholder:
-            return self._placeholder
-        return self.get_current_symbol_name()
+        return self._placeholder
 
     def initial_text(self) -> str:
         return self.placeholder()
@@ -31,25 +28,24 @@ class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
     def validate(self, name: str) -> bool:
         return len(name) > 0
 
-    def get_current_symbol_name(self) -> str:
-        pos = get_position(self.view)
-        current_name = self.view.substr(self.view.word(pos))
-        # Is this check necessary?
-        if not current_name:
-            current_name = ""
-        return current_name
-
 
 class LspSymbolRenameCommand(LspTextCommand):
 
     capability = 'renameProvider'
 
-    def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
+    # mypy: Signature of "is_enabled" incompatible with supertype "LspTextCommand"
+    def is_enabled(  # type: ignore
+        self,
+        new_name: str = "",
+        placeholder: str = "",
+        position: Optional[int] = None,
+        event: Optional[dict] = None,
+        point: Optional[int] = None
+    ) -> bool:
         if self.best_session("renameProvider.prepareProvider"):
             # The language server will tell us if the selection is on a valid token.
             return True
-        # TODO: check what kind of scope we're in.
-        return super().is_enabled(event, point) and is_at_word(self.view, event, point)
+        return super().is_enabled(event, point)
 
     def input(self, args: dict) -> Optional[sublime_plugin.TextInputHandler]:
         if "new_name" not in args:
@@ -81,7 +77,7 @@ class LspSymbolRenameCommand(LspTextCommand):
                     params = text_document_position_params(self.view, pos)
                     request = Request.prepareRename(params, self.view)
                     self.event = event
-                    session.send_request(request, self.on_prepare_result, self.on_prepare_error)
+                    session.send_request(request, lambda r: self.on_prepare_result(r, pos), self.on_prepare_error)
                 else:
                     # trigger InputHandler manually
                     raise TypeError("required positional argument")
@@ -111,7 +107,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             else:
                 window.status_message('Nothing to rename')
 
-    def on_prepare_result(self, response: Any) -> None:
+    def on_prepare_result(self, response: Any, pos: int) -> None:
         if response is None:
             sublime.error_message("The current selection cannot be renamed")
             return
@@ -120,7 +116,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             placeholder = response["placeholder"]
             r = response["range"]
         else:
-            placeholder = ""
+            placeholder = self.view.substr(self.view.word(pos))
             r = response
         region = range_to_region(Range.from_lsp(r), self.view)
         args = {"placeholder": placeholder, "position": region.a, "event": self.event}

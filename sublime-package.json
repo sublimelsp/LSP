@@ -42,7 +42,7 @@
               "default": "source - string - comment",
               "markdownDescription": "When specified, this [selector](https://www.sublimetext.com/docs/3/selectors.html) is used as the `\"selector\"` key in an entry of the `\"auto_complete_triggers\"` of the view applicable to this configuration. You don't have to necessarily provide this value. Because your language server registers so-called trigger characters in any case. However, this selector allows you to fine-tune the auto-complete behavior if the registered trigger characters of the language server result in an unpleasent auto-complete experience. Note that the behavior of this selector will depend on the .sublime-syntax in use.\n\nThis value is _not_ applied to the **global** `\"auto_complete_selector\"` setting of the view."
             },
-            "ClientIgnoreServerTriggers": {
+            "ClientIgnoreServerTriggerChars": {
               "type": "boolean",
               "default": false,
               "markdownDescription": "A language server may register a list of characters that, when typed, trigger the auto-complete. These days, there are Sublime syntaxes that are so good that it is possible to detect via a selector when the auto-complete should be triggered. This can result in a much better editor experience. When this is the case for your syntax, choose an appropriate selector for the `\"auto_complete_selector\"` and set this setting to `\"false\"`.\n\n**Hint.** You may look at `view.settings().get(\"auto_complete_triggers\")` in the Console to verify your settings."
@@ -131,8 +131,8 @@
                 "auto_complete_selector": {
                   "$ref": "#/definitions/ClientAutoCompleteSelector"
                 },
-                "ignore_server_triggers": {
-                  "$ref": "#/definitions/ClientIgnoreServerTriggers"
+                "ignore_server_trigger_chars": {
+                  "$ref": "#/definitions/ClientIgnoreServerTriggerChars"
                 },
                 "languages": {
                   "$ref": "#/definitions/ClientLanguages"
@@ -483,8 +483,8 @@
             "auto_complete_selector": {
               "$ref": "sublime://settings/LSP#/definitions/ClientAutoCompleteSelector"
             },
-            "ignore_server_triggers": {
-              "$ref": "sublime://settings/LSP#/definitions/ClientIgnoreServerTriggers"
+            "ignore_server_trigger_chars": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientIgnoreServerTriggerChars"
             }
           }
         }

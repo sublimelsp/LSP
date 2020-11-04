@@ -1,0 +1,17 @@
+=> 4070-1.0.19
+
+- Send back whole action object on choosing action in showMessageRequest (Rafał Chłodnicki)
+- Make the right placeholder even for servers with prepare rename support (Raoul Wols)
+- Fix document state getting out-of-sync when changing view after open (Rafał Chłodnicki)
+- Fix issues with document state getting out of sync when changing and saving (Rafał Chłodnicki)
+- Remove is_at_word function (#1404) (Raoul Wols)
+- Render the result of textDocument/documentHighlight on the UI thread (#1409) (Предраг Николић / Predrag Nikolic)
+- Request textDocument/documentHighlight when the caret stops moving (#1407) (Предраг Николић / Predrag Nikolic)
+- Rename tweaks (Raoul Wols)
+- Run the text command from the correct view for "subl:" links (#1401) (Raoul Wols)
+- Call the action commands directly, instead of going through LspRunCommandFromPoint (#1399) (Raoul Wols)
+- Re-read workspace folders on starting a server (#1395) (Rafał Chłodnicki)
+- Remove the responses lock in Session (#1392) (Raoul Wols)
+- Ensure more requests are ran from the async thread (Raoul Wols)
+- Update troubleshooting instructions related to PATH (#1383) (Rafał Chłodnicki)
+- Ensure send_request runs in the async thread for the goto variants (Raoul Wols)

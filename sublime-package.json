@@ -75,6 +75,39 @@
                 "$ref": "#/definitions/LanguageConfig"
               },
             },
+            "LanguageConfig": {
+              "type": "object",
+              "markdownDescription": "A language configuration defines which servers are attached to which views",
+              "properties": {
+                "languageId": {
+                  "type": "string",
+                  "default": "somelang",
+                  "markdownDescription": "The \"Language ID\". This value serves two purposes:\n\n1. It is sent to the language server so that it knows with what kind of file it is dealing with.\n2. When `\"document_selector\"` is not provided, this is the connection between your files and language servers.\n\nFor more information, refer to the [textDocumentItem of the LSP specification](https://microsoft.github.io/language-server-protocol/specification#textDocumentItem)."
+                },
+                "document_selector": {
+                  "type": "string",
+                  "default": "source.somelang",
+                  "markdownDescription": "The Sublime Text selector to attach the language server process to applicable views. If not specified, it defaults to \"source.${languageId}\". This is the connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. If the selector happens to be of the form \"source.{languageId}\" (which it is in many cases), then you can omit this `\"document_selector\"` key altogether, and LSP will assume the selector is \"source.{languageId}\".\n\nFor more information, refer to the [Sublime Text docs on selectors](https://www.sublimetext.com/docs/3/selectors.html)"
+                },
+                "feature_selector": {
+                  "type": "string",
+                  "default": "source.somelang",
+                  "markdownDescription": "The Sublime Text selector to use to give preference to this language server when multiple servers are attached to a view. For certain capabilities, like code completion, only one language server is chosen. The selector specified here decides which language server is chosen above others."
+                },
+                "syntaxes": {
+                  "type": "array",
+                  "deprecationMessage": "Use \"document_selector\" instead."
+                },
+                "scopes": {
+                  "type": "array",
+                  "deprecationMessage": "Use \"feature_selector\" instead."
+                }
+              },
+              "required": [
+                "languageId"
+              ],
+              "additionalProperties": false
+            },
             // The ClientConfig class
             "ClientConfig": {
               "type": "object",

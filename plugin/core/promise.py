@@ -80,14 +80,14 @@ class Promise:
         return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(value)))
 
     @classmethod
-    def packaged_task(cls) -> "Tuple[Promise, Callable[[], None]]":
+    def packaged_task(cls) -> "Tuple[Promise, Callable[..., None]]":
 
         class Fullfill:
 
             __slots__ = ("resolver",)
 
             def __init__(self) -> None:
-                self.resolver = None  # type: Optional[Callable[[], None]]
+                self.resolver = None  # type: Optional[Callable[..., None]]
 
             def __call__(self, resolver: ResolveFunc) -> None:
                 self.resolver = resolver

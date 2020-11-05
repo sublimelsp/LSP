@@ -20,7 +20,7 @@ from .types import debounced
 from .types import diff
 from .types import DocumentSelector
 from .types import method_to_capability
-from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping
+from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
 from .url import uri_to_filename
 from .version import __version__
 from .views import COMPLETION_KINDS
@@ -193,6 +193,13 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                             "source.organizeImports"
                         ]
                     }
+                },
+                "dataSupport": True,
+                "resolveSupport": {
+                    "properties": [
+                        "edit",
+                        "command"
+                    ]
                 }
             },
             "rename": {
@@ -897,6 +904,20 @@ class Session(TransportCallbacks):
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
+        if self.has_capability("codeActionProvider.resolveSupport"):
+            # TODO: Should we accept a SessionBuffer? What if this capability is registered with a documentSelector?
+            # We must first resolve the command and edit properties, because they can potentially be absent.
+            promise = self.request_promise_async(Request("codeAction/resolve", code_action))
+        else:
+            promise = Promise.resolve()
+        return promise.then(self._apply_code_action_async)
+
+    def _apply_code_action_async(self, code_action: Union[Error, Mapping[str, Any]]) -> Promise:
+        if isinstance(code_action, Error):
+            # TODO: our promise must be able to handle exceptions (or, wait until we can use coroutines)
+            self.window.status_message("Failed to apply code action: {}".format(code_action))
+            return Promise.resolve()
+        command = code_action.get("command")
         edit = code_action.get("edit")
         promise = self._apply_workspace_edit_async(edit) if edit else Promise.resolve()
         return promise.then(lambda _: self.run_command(command) if isinstance(command, dict) else Promise.resolve())
@@ -1103,6 +1124,11 @@ class Session(TransportCallbacks):
     ) -> None:
         """You can call this method from any thread. Callbacks will run in Sublime's worker thread."""
         sublime.set_timeout_async(functools.partial(self.send_request_async, request, on_result, on_error))
+
+    def request_promise_async(self, request: Request) -> Promise:
+        promise, resolver = Promise.packaged_task()
+        self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
+        return promise
 
     def send_notification(self, notification: Notification) -> None:
         self._logger.outgoing_notification(notification.method, notification.params)

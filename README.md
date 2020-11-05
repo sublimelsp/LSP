@@ -147,3 +147,4 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
 - ✅ workDoneProgress
   - ✅ create
   - ❌ cancel
+- ✅ showMessage request additionalPropertiesSupport

@@ -11,7 +11,7 @@
         "command": "lsp_symbol_rename"
       },
       {
-        "caption": "LSP: Format View",
+        "caption": "LSP: Format File",
         "command": "lsp_format_document"
       },
       {
@@ -61,7 +61,7 @@
         "command": "lsp_symbol_implementation"
       },
       {
-        "caption": "LSP: Goto Reference…",
+        "caption": "LSP: Find References",
         "command": "lsp_symbol_references"
       }
     ]

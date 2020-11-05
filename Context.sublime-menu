@@ -5,7 +5,7 @@
         [
             {
                 "command": "lsp_symbol_references",
-                "caption": "Goto Reference…"
+                "caption": "Find References"
             },
             {
                 "command": "lsp_symbol_definition",
@@ -29,11 +29,11 @@
             },
             {
                 "command": "lsp_code_actions",
-                "caption": "Code Actions…"
+                "caption": "Apply Code Action…"
             },
             {
                 "command": "lsp_format_document",
-                "caption": "Format View"
+                "caption": "Format File"
             },
             {
                 "command": "lsp_format_document_range",

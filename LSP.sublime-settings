@@ -299,15 +299,17 @@
         }
       ],
     },
-    "haskell-ide-engine": {
+    "haskell-language-server": {
       "command": [
-        "hie",
+        "haskell-language-server-wrapper",
         "--lsp"
       ],
-      "languages": [
-        {
-          "languageId": "haskell"
-        }
+      "languageId": "haskell",
+      "scopes": [
+        "source.haskell"
+      ],
+      "syntaxes": [
+        "Packages/Haskell/Haskell.sublime-syntax"
       ],
     },
     "ocaml": {

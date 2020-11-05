@@ -506,6 +506,8 @@ class ClientConfig:
                  command: Optional[List[str]] = None,
                  binary_args: Optional[List[str]] = None,  # DEPRECATED
                  tcp_port: Optional[int] = None,
+                 auto_complete_selector: Optional[str] = None,
+                 ignore_server_trigger_chars: bool = False,
                  enabled: bool = True,
                  init_options: DottedDict = DottedDict(),
                  settings: DottedDict = DottedDict(),
@@ -519,6 +521,8 @@ class ClientConfig:
             self.command = binary_args
         self.languages = languages
         self.tcp_port = tcp_port
+        self.auto_complete_selector = auto_complete_selector
+        self.ignore_server_trigger_chars = ignore_server_trigger_chars
         self.enabled = enabled
         self.init_options = init_options
         self.settings = settings
@@ -538,6 +542,8 @@ class ClientConfig:
             command=read_list_setting(s, "command", []),
             languages=_read_language_configs(s),
             tcp_port=s.get("tcp_port"),
+            auto_complete_selector=s.get("auto_complete_selector"),
+            ignore_server_trigger_chars=bool(s.get("ignore_server_trigger_chars", False)),
             # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
             init_options=init_options,
@@ -553,6 +559,8 @@ class ClientConfig:
             command=d.get("command", []),
             languages=_read_language_configs(d),
             tcp_port=d.get("tcp_port"),
+            auto_complete_selector=d.get("auto_complete_selector"),
+            ignore_server_trigger_chars=bool(d.get("ignore_server_trigger_chars", False)),
             enabled=d.get("enabled", False),
             init_options=DottedDict(d.get("initializationOptions")),
             settings=DottedDict(d.get("settings")),
@@ -569,6 +577,9 @@ class ClientConfig:
             command=override.get("command", self.command),
             languages=languages,
             tcp_port=override.get("tcp_port", self.tcp_port),
+            auto_complete_selector=override.get("auto_complete_selector", self.auto_complete_selector),
+            ignore_server_trigger_chars=bool(
+                override.get("ignore_server_trigger_chars", self.ignore_server_trigger_chars)),
             enabled=override.get("enabled", self.enabled),
             init_options=DottedDict.from_base_and_override(self.init_options, override.get("initializationOptions")),
             settings=DottedDict.from_base_and_override(self.settings, override.get("settings")),

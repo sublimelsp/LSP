@@ -250,7 +250,8 @@
           "document_selector": "source.objc++",
           "languageId": "objective-cpp"
         },
-      ]
+      ],
+      "auto_complete_selector": "punctuation.accessor | (meta.preprocessor.include string - punctuation.definition.string.end)",
     },
     "dart": {
       "command": [

@@ -124,7 +124,7 @@ class SessionBuffer:
         self.capabilities.register(registration_id, capability_path, registration_path, options)
         view = None  # type: Optional[sublime.View]
         for sv in self.session_views:
-            sv.on_capability_added_async(capability_path, options)
+            sv.on_capability_added_async(registration_id, capability_path, options)
             if view is None:
                 view = sv.view
         if view is not None:
@@ -141,7 +141,7 @@ class SessionBuffer:
         if discarded is None:
             return
         for sv in self.session_views:
-            sv.on_capability_removed_async(discarded)
+            sv.on_capability_removed_async(registration_id, discarded)
 
     def get_capability(self, capability_path: str) -> Optional[Any]:
         value = self.capabilities.get(capability_path)

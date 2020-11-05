@@ -121,6 +121,10 @@ class ServerRequests(TextDocumentTestCase):
                     {"method": "textDocument/didChange", "id": "adsf",
                      "registerOptions": {"syncKind": TextDocumentSyncKindFull, "documentSelector": [
                        {"language": "txt"}
+                     ]}},
+                    {"method": "textDocument/completion", "id": "myCompletionRegistrationId",
+                     "registerOptions": {"triggerCharacters": ["!", "@", "#"], "documentSelector": [
+                       {"language": "txt"}
                      ]}}
                 ]
             },
@@ -137,6 +141,20 @@ class ServerRequests(TextDocumentTestCase):
         self.assertEqual(sb.capabilities.text_sync_kind(), TextDocumentSyncKindFull)
         self.assertEqual(sb.capabilities.get("textDocumentSync.willSaveWaitUntil"), {"id": "2"})
         self.assertEqual(self.session.capabilities.text_sync_kind(), TextDocumentSyncKindIncremental)
+
+        # Check that textDocument/completion was registered onto the SessionBuffer, and check that the trigger
+        # characters for each view were updated
+        self.assertEqual(sb.capabilities.get("completionProvider.id"), "myCompletionRegistrationId")
+        self.assertEqual(sb.capabilities.get("completionProvider.triggerCharacters"), ["!", "@", "#"])
+        self.assertTrue(len(sb.session_views) > 0)
+        for sv in sb.session_views:
+            found = False
+            triggers = sv.view.settings().get("auto_complete_triggers")
+            for trigger in triggers:
+                if "server" in trigger and "registration_id" in trigger:
+                    self.assertEqual(trigger.get("characters"), "!@#")
+                    found = True
+            self.assertTrue(found)
 
     def test_m_client_unregisterCapability(self) -> Generator:
         yield from self.verify(

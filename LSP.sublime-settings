@@ -323,11 +323,11 @@
       "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
       "languageId": "javascript"
     },
-    "haskell-ide-engine":
+    "haskell-language-server":
     {
       "command":
       [
-        "hie",
+        "haskell-language-server-wrapper",
         "--lsp"
       ],
       "languageId": "haskell",

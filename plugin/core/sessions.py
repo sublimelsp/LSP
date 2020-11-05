@@ -119,6 +119,11 @@ def get_initialize_params(workspace_folders: List[WorkspaceFolder], config: Clie
             "configuration": True
         },
         "window": {
+            "showMessage": {
+                "messageActionItem": {
+                    "additionalPropertiesSupport": True
+                }
+            },
             "workDoneProgress": True
         }
     }

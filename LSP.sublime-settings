@@ -323,6 +323,7 @@
       "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"],
       "languageId": "javascript"
     },
+    // deprecated: please use haskell-language-server, see lsp.readthedocs.io
     "haskell-ide-engine":
     {
       "command":

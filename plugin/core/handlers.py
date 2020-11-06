@@ -1,6 +1,7 @@
 from .logging import debug
 from .types import ClientConfig
 from .typing import Dict, List, Callable, Optional, Type
+from .views import get_storage_path
 import abc
 
 
@@ -19,6 +20,14 @@ class LanguageHandler(metaclass=abc.ABCMeta):
     @classmethod
     def additional_variables(cls) -> Optional[Dict[str, str]]:
         return None
+
+    @classmethod
+    def storage_path(cls) -> str:
+        """
+        The storage path. Use this as your base directory to install server files. Its path is '$DATA/Package Storage'.
+        You should have an additional subdirectory preferrably the same name as your handler.
+        """
+        return get_storage_path()
 
     @classmethod
     def instantiate_all(cls) -> 'List[LanguageHandler]':

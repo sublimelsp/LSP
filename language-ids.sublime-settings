@@ -1,37 +1,41 @@
-// Language ID -> SublimeText base scope selector
-// These are the "exceptional" language IDs. If a language ID is not in this
-// map, then the rule is that we prepend the ID with "source." and assume
-// that's the base scope selector. For instance, the language ID "julia"
-// would become "source.julia", and the language ID "rust" would become
-// "source.rust".
+//
+// SublimeText base scope -> Language ID
+// -------------------------------------
+//
+// These are the "exceptional" base scopes. If a base scope is not in this
+// map, then the rule is that we split the base scopes on the ".", and take
+// the last element. The resuling string is assumed to be the language ID.
+//
+// Examples of this rule:
+//
+//    source.julia -> julia
+//    source.rust -> rust
+//    text.text.latex -> latex
+//    text.html.vue -> vue
 //
 // The official list is maintained at
 // https://microsoft.github.io/language-server-protocol/specification#textDocumentItem
 //
-// If you believe an entry in this dictionary is missing, please submit a pull
-// request at github.com/sublimelsp/LSP.
+// By virtue of this being a .sublime-settings file, you can make overrides to
+// to this file in your Packages/User/ directory. Consider to submit a pull
+// request at github.com/sublimelsp/LSP if you believe an entry is missing.
 {
-    "bat": "source.dosbatch",
-    "bibtex": "text.bibtex",
-    "cpp": "source.c++",
-    "csharp": "source.cs",
-    "html": "embedding.php | text.html.basic | text.html.ngx", // https://github.com/princemaple/ngx-html-syntax
-    "javascript": "source.js",
-    "javascriptreact": "source.jsx | source.js.react", // https://github.com/Thom1729/Sublime-JS-Custom
-    "jsonc": "source.json",
-    "latex": "text.tex.latex",
-    "markdown": "text.html.markdown",
-    "objective-c": "source.objc",
-    "objective-cpp": "source.objc++",
-    "php": "source.php | embedding.php",
-    "r": "source.r | text.html.markdown.rmarkdown", // https://github.com/REditorSupport/sublime-ide-r
-    "ruby": "text.html.ruby | source.ruby",
-    "shaderlab": "source.unity_shader | source.shader", // https://github.com/petereichinger/Unity3D-Shader, https://github.com/waqiju/unity_shader_st3
-    "shellscript": "source.shell.bash",
-    "typescript": "source.ts",
-    "typescriptreact": "source.tsx | source.ts.react", // https://github.com/Thom1729/Sublime-JS-Custom
-    "txt": "text.plain",
-    "vue": "text.html.vue", // https://github.com/vuejs/vue-syntax-highlight
-    "xml": "text.xml - text.xml.xsl",
-    "xsl": "text.xml.xsl", // https://github.com/packagecontrol/XSL
+    "source.c++": "cpp",
+    "source.cs": "csharp",
+    "source.dosbatch": "bat",
+    "source.js": "javascript",
+    "source.js.react": "javascriptreact", // https://github.com/Thom1729/Sublime-JS-Custom
+    "source.jsx": "javascriptreact",
+    "source.objc": "objective-c",
+    "source.objc++": "objective-cpp",
+    "source.shader": "shaderlab", // https://github.com/waqiju/unity_shader_st3
+    "source.shell.bash": "shellscript",
+    "source.ts": "typescript",
+    "source.ts.react": "typescriptreact", // https://github.com/Thom1729/Sublime-JS-Custom
+    "source.tsx": "typescriptreact",
+    "source.unity.unity_shader": "shaderlab", // https://github.com/petereichinger/Unity3D-Shader
+    "text.html.basic": "html",
+    "text.html.markdown.rmarkdown": "r", // https://github.com/REditorSupport/sublime-ide-r
+    "text.html.ngx": "html", // https://github.com/princemaple/ngx-html-syntax
+    "text.plain": "txt",
 }

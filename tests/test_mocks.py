@@ -3,13 +3,11 @@ from LSP.plugin.core.protocol import Notification
 from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.protocol import Response
 from LSP.plugin.core.types import ClientConfig
-from LSP.plugin.core.types import LanguageConfig
 from LSP.plugin.core.typing import List, Any, Callable
 
 
-TEST_LANGUAGE = LanguageConfig("test", "text.plain")
-TEST_CONFIG = ClientConfig(name="test", command=[], languages=[TEST_LANGUAGE], tcp_port=None)
-DISABLED_CONFIG = ClientConfig("test", command=[], languages=[TEST_LANGUAGE], tcp_port=None, enabled=False)
+TEST_CONFIG = ClientConfig(name="test", command=[], selector="text.plain", tcp_port=None)
+DISABLED_CONFIG = ClientConfig("test", command=[], selector="text.plain", tcp_port=None, enabled=False)
 
 basic_responses = {
     'initialize': {

@@ -2,7 +2,6 @@ from .core.protocol import Diagnostic
 from .core.protocol import Request
 from .core.sessions import Session
 from .core.settings import userprefs
-from .core.types import view2scope
 from .core.typing import Any, Iterable, List, Tuple, Optional, Dict
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.windows import AbstractViewListener
@@ -17,7 +16,6 @@ class SessionView:
     Holds state per session per view.
     """
 
-    LANGUAGE_ID_KEY = "lsp_language"
     SHOW_DEFINITIONS_KEY = "show_definitions"
     HOVER_PROVIDER_KEY = "hoverProvider"
     HOVER_PROVIDER_COUNT_KEY = "lsp_hover_provider_count"
@@ -32,22 +30,11 @@ class SessionView:
         self.session = session
         self.active_requests = {}  # type: Dict[int, Request]
         settings = self.view.settings()
-        # TODO: Language ID must be UNIQUE!
-        languages = settings.get(self.LANGUAGE_ID_KEY)
-        self._language_id = ''
-        if not isinstance(languages, dict):
-            languages = {}
-        for language in session.config.languages:
-            if language.match_scope(view2scope(self.view)):
-                languages[session.config.name] = language.id
-                self._language_id = language.id
-                break
-        settings.set(self.LANGUAGE_ID_KEY, languages)
         buffer_id = self.view.buffer_id()
         key = (session.config.name, buffer_id)
         session_buffer = self._session_buffers.get(key)
         if session_buffer is None:
-            session_buffer = SessionBuffer(self, buffer_id, self._language_id)
+            session_buffer = SessionBuffer(self, buffer_id, listener.get_language_id())
             self._session_buffers[key] = session_buffer
         else:
             session_buffer.add_session_view(self)
@@ -73,16 +60,6 @@ class SessionView:
         if not self.session.exiting:
             self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
-        # TODO: Language ID must be UNIQUE!
-        languages = settings.get(self.LANGUAGE_ID_KEY)
-        if isinstance(languages, dict):
-            languages.pop(self.session.config.name, None)
-            if languages:
-                settings.set(self.LANGUAGE_ID_KEY, languages)
-            else:
-                settings.erase(self.LANGUAGE_ID_KEY)
-        for severity in range(1, len(DIAGNOSTIC_SEVERITY) + 1):
-            self.view.erase_regions(self.diagnostics_key(severity))
 
     def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
         '''Remove all of our modifications to the view's "auto_complete_triggers"'''

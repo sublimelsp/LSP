@@ -7,9 +7,15 @@ from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
 import contextlib
-import functools
 import sublime
 import time
+
+
+def basescope2languageid(base_scope: str) -> str:
+    # This the connection between Language IDs and ST selectors.
+    base_scope_map = sublime.load_settings("language-ids.sublime-settings")
+    result = base_scope_map.get(base_scope, base_scope.split(".")[-1])
+    return result if isinstance(result, str) else ""
 
 
 @contextlib.contextmanager
@@ -244,30 +250,23 @@ class DocumentFilter:
     IDs to selectors. Sublime Text also has no support for patterns. We use the wcmatch library for this.
     """
 
-    __slots__ = ("language", "scheme", "pattern", "selector", "feature_selector")
+    __slots__ = ("language", "scheme", "pattern")
 
     def __init__(
         self,
         language: Optional[str] = None,
         scheme: Optional[str] = None,
-        pattern: Optional[str] = None,
-        feature_selector: str = ""
+        pattern: Optional[str] = None
     ) -> None:
-        self.language = language
         self.scheme = scheme
         self.pattern = pattern
-        self.feature_selector = feature_selector
-        if language:
-            # This the connection between Language IDs and ST selectors.
-            lang_id_map = sublime.load_settings("language-ids.sublime-settings")
-            self.selector = lang_id_map.get(language, "source.{}".format(language))  # type: Optional[str]
-        else:
-            self.selector = None
+        self.language = language
 
-    def matches(self, view: sublime.View) -> bool:
+    def __call__(self, view: sublime.View) -> bool:
         """Does this filter match the view? An empty filter matches any view."""
-        if self.selector:
-            if not view.match_selector(0, self.selector):
+        if self.language:
+            syntax = view.syntax()
+            if not syntax or basescope2languageid(syntax.scope) != self.language:
                 return False
         if self.scheme:
             # Can be "file" or "untitled"?
@@ -276,9 +275,6 @@ class DocumentFilter:
             if not globmatch(view.file_name() or "", self.pattern, flags=GLOBSTAR | BRACE):
                 return False
         return True
-
-    def score_feature(self, view: sublime.View, pt: int) -> int:
-        return view.score_selector(pt, self.feature_selector)
 
 
 class DocumentSelector:
@@ -297,51 +293,7 @@ class DocumentSelector:
 
     def matches(self, view: sublime.View) -> bool:
         """Does this selector match the view? A selector with no filters matches all views."""
-        return any(f.matches(view) for f in self.filters) if self.filters else True
-
-
-class LanguageConfig:
-
-    __slots__ = ('id', 'document_selector', 'feature_selector')
-
-    def __init__(
-        self,
-        language_id: str,
-        document_selector: Optional[str] = None,
-        feature_selector: Optional[str] = None
-    ) -> None:
-        self.id = language_id
-        self.document_selector = document_selector if document_selector else "source.{}".format(self.id)
-        self.feature_selector = feature_selector if feature_selector else self.document_selector
-
-    @functools.lru_cache(None)
-    def score_document(self, scope: str) -> int:
-        return sublime.score_selector(scope, self.document_selector)
-
-    def score_feature(self, scope: str) -> int:
-        return sublime.score_selector(scope, self.feature_selector)
-
-    def match_scope(self, scope: str) -> bool:
-        # Every part of a x.y.z scope seems to contribute 8.
-        # An empty selector result in a score of 1.
-        # A non-matching non-empty selector results in a score of 0.
-        # We want to match at least one part of an x.y.z, and we don't want to match on empty selectors.
-        return self.score_document(scope) >= 8
-
-    def __repr__(self) -> str:
-        return "{}(language_id={}, document_selector={}, feature_selector={})".format(
-            self.__class__.__name__, repr(self.id), repr(self.document_selector), repr(self.feature_selector))
-
-    def __eq__(self, other: Any) -> bool:
-        if not isinstance(other, LanguageConfig):
-            return False
-        return self.id == other.id \
-            and self.document_selector == other.document_selector \
-            and self.feature_selector == other.feature_selector
-
-    def __hash__(self) -> int:
-        # needed for functools.lru_cache
-        return hash(id(self))
+        return any(f(view) for f in self.filters) if self.filters else True
 
 
 # method -> (capability dotted path, optional registration dotted path)
@@ -502,7 +454,8 @@ class Capabilities(DottedDict):
 class ClientConfig:
     def __init__(self,
                  name: str,
-                 languages: List[LanguageConfig],  # replace with DocumentSelector?
+                 selector: str,
+                 priority_selector: Optional[str] = None,
                  command: Optional[List[str]] = None,
                  binary_args: Optional[List[str]] = None,  # DEPRECATED
                  tcp_port: Optional[int] = None,
@@ -514,12 +467,13 @@ class ClientConfig:
                  env: Dict[str, str] = {},
                  experimental_capabilities: Optional[Dict[str, Any]] = None) -> None:
         self.name = name
+        self.selector = selector
+        self.priority_selector = priority_selector if priority_selector else self.selector
         if isinstance(command, list):
             self.command = command
         else:
             assert isinstance(binary_args, list)
             self.command = binary_args
-        self.languages = languages
         self.tcp_port = tcp_port
         self.auto_complete_selector = auto_complete_selector
         self.ignore_server_trigger_chars = ignore_server_trigger_chars
@@ -539,8 +493,9 @@ class ClientConfig:
         init_options.update(read_dict_setting(s, "initializationOptions", {}))
         return ClientConfig(
             name=name,
+            selector=_read_selector(s),
+            priority_selector=_read_priority_selector(s),
             command=read_list_setting(s, "command", []),
-            languages=_read_language_configs(s),
             tcp_port=s.get("tcp_port"),
             auto_complete_selector=s.get("auto_complete_selector"),
             ignore_server_trigger_chars=bool(s.get("ignore_server_trigger_chars", False)),
@@ -556,8 +511,9 @@ class ClientConfig:
     def from_dict(cls, name: str, d: Dict[str, Any]) -> "ClientConfig":
         return ClientConfig(
             name=name,
+            selector=_read_selector(d),
+            priority_selector=_read_priority_selector(d),
             command=d.get("command", []),
-            languages=_read_language_configs(d),
             tcp_port=d.get("tcp_port"),
             auto_complete_selector=d.get("auto_complete_selector"),
             ignore_server_trigger_chars=bool(d.get("ignore_server_trigger_chars", False)),
@@ -569,13 +525,11 @@ class ClientConfig:
         )
 
     def update(self, override: Dict[str, Any]) -> "ClientConfig":
-        languages = _read_language_configs(override)
-        if not languages:
-            languages = self.languages
         return ClientConfig(
             name=self.name,
+            selector=_read_selector(override) or self.selector,
+            priority_selector=_read_priority_selector(override) or self.priority_selector,
             command=override.get("command", self.command),
-            languages=languages,
             tcp_port=override.get("tcp_port", self.tcp_port),
             auto_complete_selector=override.get("auto_complete_selector", self.auto_complete_selector),
             ignore_server_trigger_chars=bool(
@@ -596,19 +550,15 @@ class ClientConfig:
     def erase_view_status(self, view: sublime.View) -> None:
         view.erase_status(self.status_key)
 
-    def match_scope(self, scope: str) -> bool:
-        return any(language.match_scope(scope) for language in self.languages)
-
     def match_view(self, view: sublime.View) -> bool:
-        return self.match_scope(view2scope(view))
-
-    def score_feature(self, scope: str) -> int:
-        highest_score = 0
-        for language in self.languages:
-            score = language.score_feature(scope)
-            if score > highest_score:
-                highest_score = score
-        return highest_score
+        syntax = view.syntax()
+        if syntax:
+            # Every part of a x.y.z scope seems to contribute 8.
+            # An empty selector result in a score of 1.
+            # A non-matching non-empty selector results in a score of 0.
+            # We want to match at least one part of an x.y.z, and we don't want to match on empty selectors.
+            return sublime.score_selector(syntax.scope, self.selector) >= 8
+        return False
 
     def __repr__(self) -> str:
         items = []  # type: List[str]
@@ -638,52 +588,89 @@ def view2scope(view: sublime.View) -> str:
         return ''
 
 
-def _convert_syntaxes_to_selector(d: Union[sublime.Settings, Dict[str, Any]]) -> Optional[str]:
-    syntaxes = d.get("syntaxes")
-    if isinstance(syntaxes, list) and syntaxes:
-        scopes = set()
-        for syntax in syntaxes:
-            scope = syntax2scope(syntax)
-            if scope:
-                scopes.add(scope)
-        if scopes:
-            selector = "|".join(scopes)
-            debug('"syntaxes" is deprecated, use "document_selector" instead. The document_selector for', syntaxes,
-                  'was deduced to "{}"'.format(selector))
-            return selector
-    return None
-
-
-def _has(d: Union[sublime.Settings, Dict[str, Any]], key: str) -> bool:
-    if isinstance(d, sublime.Settings):
-        return d.has(key)
-    else:
-        return key in d
-
-
-def _read_language_config(config: Union[sublime.Settings, Dict[str, Any]]) -> LanguageConfig:
-    lang_id = config.get("languageId")
-    if lang_id is None:
-        # "languageId" must exist, just raise a KeyError if it doesn't exist.
-        raise KeyError("languageId")
-    document_selector = None  # type: Optional[str]
-    feature_selector = None  # type: Optional[str]
-    if _has(config, "syntaxes"):
-        document_selector = _convert_syntaxes_to_selector(config)
-        feature_selector = document_selector
-    if _has(config, "document_selector"):
-        # Overwrites potential old assignment to document_selector, which is OK.
-        document_selector = config.get("document_selector")
-    if _has(config, "feature_selector"):
-        # Overwrites potential old assignment to feature_selector, which is OK.
-        feature_selector = config.get("feature_selector")
-    return LanguageConfig(language_id=lang_id, document_selector=document_selector, feature_selector=feature_selector)
-
-
-def _read_language_configs(client_config: Union[sublime.Settings, Dict[str, Any]]) -> List[LanguageConfig]:
-    languages = client_config.get("languages")
+def _read_selector(config: Union[sublime.Settings, Dict[str, Any]]) -> str:
+    # Best base scenario,
+    selector = config.get("selector")
+    if isinstance(selector, str):
+        return selector
+    # Otherwise, look for "languages": [...]
+    languages = config.get("languages")
     if isinstance(languages, list):
-        return list(map(_read_language_config, languages))
-    if _has(client_config, "languageId"):
-        return [_read_language_config(client_config)]
-    return []
+        selectors = []
+        for language in languages:
+            # First priority is document_selector,
+            document_selector = language.get("document_selector")
+            if isinstance(document_selector, str):
+                selectors.append(document_selector)
+                continue
+            # After that syntaxes has priority,
+            syntaxes = language.get("syntaxes")
+            if isinstance(syntaxes, list):
+                for path in syntaxes:
+                    syntax = sublime.syntax_from_path(path)
+                    if syntax:
+                        selectors.append(syntax.scope)
+                continue
+            # No syntaxes and no document_selector... then there must exist a languageId.
+            language_id = config.get("languageId")
+            if isinstance(language_id, str):
+                selectors.append("source.{}".format(language_id))
+        return "|".join(map("({})".format, selectors))
+    # Otherwise, look for "document_selector"
+    document_selector = config.get("document_selector")
+    if isinstance(document_selector, str):
+        return document_selector
+    # Otherwise, look for "syntaxes": [...]
+    syntaxes = config.get("syntaxes")
+    if isinstance(syntaxes, list):
+        selectors = []
+        for path in syntaxes:
+            syntax = sublime.syntax_from_path(path)
+            if syntax:
+                selectors.append(syntax.scope)
+        return "|".join(selectors)
+    # No syntaxes and no document_selector... then there must exist a languageId.
+    language_id = config.get("languageId")
+    if language_id:
+        return "source.{}".format(language_id)
+    return ""
+
+
+def _read_priority_selector(config: Union[sublime.Settings, Dict[str, Any]]) -> str:
+    # Best case scenario
+    selector = config.get("priority_selector")
+    if isinstance(selector, str):
+        return selector
+    # Otherwise, look for "languages": [...]
+    languages = config.get("languages")
+    if isinstance(languages, list):
+        selectors = []
+        for language in languages:
+            # First priority is feature_selector.
+            feature_selector = language.get("feature_selector")
+            if isinstance(feature_selector, str):
+                selectors.append(feature_selector)
+                continue
+            # After that scopes has priority.
+            scopes = language.get("scopes")
+            if isinstance(scopes, list):
+                selectors.extend(scopes)
+                continue
+            # No scopes and no feature_selector. So there must be a languageId
+            language_id = language.get("languageId")
+            if isinstance(language_id, str):
+                selectors.append("source.{}".format(language_id))
+        return "|".join(map("({})".format, selectors))
+    # Otherwise, look for "feature_selector"
+    feature_selector = config.get("feature_selector")
+    if isinstance(feature_selector, str):
+        return feature_selector
+    # Otherwise, look for "scopes": [...]
+    scopes = config.get("scopes")
+    if isinstance(scopes, list):
+        return "|".join(map("({})".format, scopes))
+    # No scopes and no feature_selector... then there must exist a languageId
+    language_id = config.get("languageId")
+    if language_id:
+        return "source.{}".format(language_id)
+    return ""

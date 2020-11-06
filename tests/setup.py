@@ -3,7 +3,7 @@ from LSP.plugin.core.logging import debug
 from LSP.plugin.core.protocol import Notification, Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.settings import client_configs
-from LSP.plugin.core.types import ClientConfig, LanguageConfig, ClientStates
+from LSP.plugin.core.types import ClientConfig, ClientStates
 from LSP.plugin.core.typing import Any, Generator, List, Optional, Tuple, Union, Dict
 from LSP.plugin.documents import DocumentSyncListener
 from os import environ
@@ -17,12 +17,11 @@ import sublime
 CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
 
 TIMEOUT_TIME = 10000 if CI else 2000
-text_language = LanguageConfig(language_id="text", document_selector="text.plain")
 text_config = ClientConfig(
     name="textls",
+    selector="text.plain",
     command=[],
-    tcp_port=None,
-    languages=[text_language])
+    tcp_port=None)
 
 
 class YieldPromise:
@@ -48,8 +47,7 @@ def make_stdio_test_config() -> ClientConfig:
     return ClientConfig(
         name="TEST",
         command=["python3", join("$packages", "LSP", "tests", "server.py")],
-        tcp_port=None,
-        languages=[LanguageConfig(language_id="txt", document_selector="text.plain")],
+        selector="text.plain",
         enabled=True)
 
 
@@ -57,8 +55,8 @@ def make_tcp_test_config() -> ClientConfig:
     return ClientConfig(
         name="TEST",
         command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port"],
+        selector="text.plain",
         tcp_port=0,  # select a free one for me
-        languages=[LanguageConfig(language_id="txt", document_selector="text.plain")],
         enabled=True)
 
 

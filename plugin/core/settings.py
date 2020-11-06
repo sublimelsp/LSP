@@ -3,13 +3,8 @@ from .logging import debug
 from .types import ClientConfig, debounced
 from .types import read_dict_setting
 from .types import Settings
-from .types import syntax2scope
 from .typing import Any, Optional, Dict, Callable
 import sublime
-
-# only used for LSP-* packages out in the wild that now import from "private" modules
-# TODO: Announce removal and remove this import
-from .types import LanguageConfig  # noqa
 
 
 PLUGIN_NAME = 'LSP'
@@ -21,7 +16,6 @@ class ClientConfigs:
         self.all = {}  # type: Dict[str, ClientConfig]
         self.external = {}  # type: Dict[str, ClientConfig]
         self._listener = None  # type: Optional[Callable[[], None]]
-        self._supported_syntaxes_cache = {}  # type: Dict[str, bool]
 
     def _notify_listener(self) -> None:
         if callable(self._listener):
@@ -30,12 +24,10 @@ class ClientConfigs:
     def add_for_testing(self, config: ClientConfig) -> None:
         assert config.name not in self.all
         self.all[config.name] = config
-        self._supported_syntaxes_cache.clear()
         self._notify_listener()
 
     def remove_for_testing(self, config: ClientConfig) -> None:
         self.all.pop(config.name)
-        self._supported_syntaxes_cache.clear()
         self._notify_listener()
 
     def add_external_config(self, name: str, s: sublime.Settings, file: str, notify_listener: bool) -> bool:
@@ -71,7 +63,6 @@ class ClientConfigs:
             return
         clients = DottedDict(read_dict_setting(_settings_obj, "default_clients", {}))
         clients.update(read_dict_setting(_settings_obj, "clients", {}))
-        self._supported_syntaxes_cache.clear()
         self.all.clear()
         self.all.update({name: ClientConfig.from_dict(name, d) for name, d in clients.get().items()})
         self.all.update(self.external)
@@ -96,14 +87,6 @@ class ClientConfigs:
 
     def set_listener(self, recipient: Callable[[], None]) -> None:
         self._listener = recipient
-
-    def is_syntax_supported(self, syntax: str) -> bool:
-        if syntax in self._supported_syntaxes_cache:
-            return self._supported_syntaxes_cache[syntax]
-        scope = syntax2scope(syntax)
-        supported = bool(scope and any(config.match_scope(scope) for config in self.all.values()))
-        self._supported_syntaxes_cache[syntax] = supported
-        return supported
 
 
 _settings_obj = None  # type: Optional[sublime.Settings]

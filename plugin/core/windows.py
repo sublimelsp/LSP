@@ -79,6 +79,10 @@ class AbstractViewListener(metaclass=ABCMeta):
     def session_views_async(self) -> Iterable[SessionViewProtocol]:
         raise NotImplementedError()
 
+    @abstractmethod
+    def get_language_id(self) -> str:
+        raise NotImplementedError()
+
 
 def extract_message(params: Any) -> str:
     return params.get("message", "???") if isinstance(params, dict) else "???"

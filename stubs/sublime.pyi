@@ -652,6 +652,9 @@ class View:
     def __bool__(self) -> bool:
         ...
 
+    def syntax(self) -> Any:
+        ...
+
     def element(self) -> Optional[str]:
         ...
 

@@ -10,24 +10,32 @@ class ConfigParsingTests(DeferrableTestCase):
     def test_can_parse_old_client_settings(self):
         settings = {
             "command": ["pyls"],
-            "scopes": ["source.python"],
-            "syntaxes": ["Packages/Python/Python.sublime-syntax"],
-            "languageId": "python"
+            "scopes": ["text.html.vue"],
+            "syntaxes": ["Packages/Python/Python.sublime-syntax"],  # it should use this one
+            "languageId": "java"
         }
         config = read_client_config("pyls", settings)
-        self.assertEqual(len(config.languages), 1)
-        self.assertEqual(config.languages[0].document_selector, "source.python")
+        self.assertEqual(config.selector, "source.python")
+        self.assertEqual(config.priority_selector, "(text.html.vue)")
 
     def test_can_parse_client_settings_with_languages(self):
         settings = {
             "command": ["pyls"],
-            # Check that "document_selector" will be "source.python"
+            # Check that "selector" will be "source.python"
             "languages": [{"languageId": "python"}]
         }
         config = read_client_config("pyls", settings)
-        self.assertEqual(len(config.languages), 1)
-        self.assertEqual(config.languages[0].document_selector, "source.python")
-        self.assertEqual(config.languages[0].feature_selector, "source.python")
+        self.assertEqual(config.selector, "source.python")
+        self.assertEqual(config.priority_selector, "(source.python)")
+
+    def test_can_parse_settings_with_selector(self):
+        settings = {
+            "command": ["pyls"],
+            "selector": "source.python"
+        }
+        config = read_client_config("pyls", settings)
+        self.assertEqual(config.selector, "source.python")
+        self.assertEqual(config.priority_selector, "source.python")
 
     def test_can_update_config(self):
         settings = {

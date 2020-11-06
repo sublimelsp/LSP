@@ -152,39 +152,24 @@
   // the panel instead. If you don't want a limit, set this to zero.
   "log_max_size": 8192,
 
-  // User clients configuration can be used to
-  // - override single settings of "default_clients"
-  // - create add new user specified clients
+  // User server configurations can be used to:
+  // - partially override a configuration in the "default_clients", or
+  // - create new configurations.
   //
   // "clients":
   // {
-  //   // Each new client must have the following structure.
-  //   "client_name":
+  //   // Each new server configuration must have the following structure.
+  //   "CLIENT_NAME": // some human-friendly name
   //   {
-  //     # Must-have settings (for new clients):
+  //     # Must-have settings (for new configurations):
   //
   //     // The command line required to run the server.
   //     "command": ["pyls"],
   //
-  //     // Use: "Show Scope Name" from Sublime's Developer menu
-  //     // This is _the_ connection between your files and language servers. It's a selector that is matched
-  //     // against the current view's base scope. If the selector matches with the base scope of the
-  //     // the file, the associated language server is started.
-  //     // If the selector happens to be of the form "source.{languageId}" (which it is in many cases), then you can
-  //     // omit this "selector" key altogether, and LSP will assume the selector is "source.{languageId}".
-  //     // For more information, see https://www.sublimetext.com/docs/3/selectors.html
-  //     "document_selector": "source.python",
-  //
-  //     // See: https://microsoft.github.io/language-server-protocol/specification#textDocumentItem
-  //     //
-  //     // This key serves two purposes:
-  //     // 1. It is sent to the language server so that it knows with what kind of file it is dealing with.
-  //     // 2. When "selector" is not provided (see above), this is _the_ connection between your files and language
-  //     //    servers.
-  //     //
-  //     // In this particular example, we don't have to supply a "selector" key, because the selector for a Python file
-  //     // is "source.python" (see above).
-  //     "languageId": "python",
+  //     // This selector filters which views apply to this configuration, in the same way that a selector for a build
+  //     // system filters which build system applies to which view. To determine the base scope of your view, click
+  //     // on Tools > Developer > Show Scope Name. The first line in the popup is the base scope.
+  //     "selector": "source.pyls",
   //
   //     // When you want to connect to the language server via TCP (on localhost), specify the port here.
   //     // If you put a value of 0 here, then LSP will select a free port number on localhost. In that case, you can
@@ -214,43 +199,19 @@
       "command": [
         "pyls"
       ],
-      "languages": [
-        {
-          "languageId": "python"
-        }
-      ],
+      "selector": "source.python",
     },
     "rust-analyzer": {
       "command": [
         "rust-analyzer"
       ],
-      "languages": [
-        {
-          "languageId": "rust"
-        }
-      ],
+      "selector": "source.rust",
     },
     "clangd": {
       "command": [
         "clangd"
       ],
-      "languages": [
-        {
-          "languageId": "c" // will match source.c
-        },
-        {
-          "document_selector": "source.c++",
-          "languageId": "cpp"
-        },
-        {
-          "document_selector": "source.objc",
-          "languageId": "objective-c"
-        },
-        {
-          "document_selector": "source.objc++",
-          "languageId": "objective-cpp"
-        },
-      ],
+      "selector": "source.c | source.c++ | source.objc | source.objc++",
       "auto_complete_selector": "punctuation.accessor | (meta.preprocessor.include string - punctuation.definition.string.end)",
     },
     "dart": {
@@ -258,22 +219,14 @@
         // Specify a dart command like the below in your LSP User settings.
         // "dart", "/usr/local/opt/dart/libexec/bin/snapshots/analysis_server.dart.snapshot", "--lsp"
       ],
-      "languages": [
-        {
-          "languageId": "dart"
-        }
-      ],
+      "selector": "source.dart",
     },
     "elixir-ls": {
       "command": [
         // Specify path to language_server.sh from https://github.com/elixir-lsp/elixir-ls here
         // "/home/someUser/somePlace/elixir-ls/release/language_server.sh"
       ],
-      "languages": [
-        {
-          "languageId": "elixir"
-        }
-      ],
+      "selector": "source.elixir",
       "settings": {}
     },
     "erlang-ls": {
@@ -282,58 +235,34 @@
         "--transport",
         "stdio"
       ],
-      "languages": [
-        {
-          "languageId": "erlang"
-        }
-      ],
+      "selector": "source.erlang",
     },
     "flow": {
       "command": [
         "flow",
         "lsp"
       ],
-      "languages": [
-        {
-          "languageId": "javascript",
-          "document_selector": "source.js"
-        }
-      ],
+      "selector": "source.js", // TODO: should this be source.js.flow ?
     },
     "haskell-ide-engine": {
       "command": [
         "hie",
         "--lsp"
       ],
-      "languages": [
-        {
-          "languageId": "haskell"
-        }
-      ],
+      "selector": "source.haskell",
     },
     "ocaml": {
       "command": [
         "ocaml-language-server",
         "--stdio"
       ],
-      "languages": [
-        {
-          "languageId": "reason"
-        },
-        {
-          "languageId": "ocaml"
-        }
-      ],
+      "selector": "source.reason | source.ocaml",
     },
     "gopls": {
       "command": [
         "gopls"
       ],
-      "languages": [
-        {
-          "languageId": "go"
-        }
-      ],
+      "selector": "source.go",
     },
     "jdtls": {
       "command": [
@@ -343,32 +272,13 @@
         "-configuration",
         "PATH_TO_CONFIG_DIR"
       ],
-      "languages": [
-        {
-          "languageId": "java"
-        }
-      ],
+      "selector": "source.java",
     },
     "polymer-ide": {
       "command": [
         "polymer-editor-service"
       ],
-      "languages": [
-        {
-          "document_selector": "text.html.basic | source.html",
-          "languageId": "html"
-        },
-        {
-          "document_selector": "source.js",
-          "languageId": "javascript"
-        },
-        {
-          "languageId": "css" // will match source.css
-        },
-        {
-          "languageId": "json" // will match source.json
-        }
-      ],
+      "selector": "text.html.basic | source.html | source.js | source.css | source.json",
       "settings": {
         "polymer-ide.analyzeWholePackage": false,
         "polymer-ide.fixOnSave": false
@@ -379,12 +289,7 @@
         "solargraph",
         "stdio"
       ],
-      "languages": [
-        {
-          "languageId": "ruby",
-          "document_selector": "source.ruby | text.html.ruby"
-        }
-      ],
+      "selector": "source.ruby | text.html.ruby",
       "initializationOptions": {
         "diagnostics": false
       },
@@ -399,12 +304,7 @@
         "--lsp",
         "--disable-watchman"
       ],
-      "languages": [
-        {
-          "languageId": "ruby",
-          "document_selector": "source.ruby | text.html.ruby"
-        }
-      ],
+      "selector": "source.ruby | text.html.ruby",
     },
     "rlang": {
       "command": [
@@ -413,22 +313,14 @@
         "-e",
         "languageserver::run()"
       ],
-      "languages": [
-        {
-          "languageId": "r"
-        }
-      ],
+      "selector": "source.r | text.html.markdown.rmarkdown",
     },
     "sourcekit-lsp": {
       "command": [
         "xcrun",
         "sourcekit-lsp"
       ],
-      "languages": [
-        {
-          "languageId": "swift"
-        }
-      ],
+      "selector": "source.swift",
     },
   }
 }

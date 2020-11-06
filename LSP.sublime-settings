@@ -300,6 +300,7 @@
         }
       ],
     },
+    // deprecated: please use haskell-language-server, see lsp.readthedocs.io
     "haskell-ide-engine": {
       "command": [
         "hie",

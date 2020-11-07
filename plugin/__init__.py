@@ -1,3 +1,4 @@
+from .core.handlers import LanguageHandler
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import Response
@@ -15,6 +16,7 @@ __all__ = [
     'ClientConfig',
     'filename_to_uri',
     'LanguageConfig',
+    'LanguageHandler',
     'Notification',
     'Request',
     'Response',

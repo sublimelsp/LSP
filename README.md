@@ -105,8 +105,10 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
   - ❌ prefix filter textEdit
   - ✅ documentation (both static and from completionItem/resolve)
   - ✅ Run command after inserting completion
+  - ❌ insertReplaceEdit variant
 - ✅ hover
 - ✅ signatureHelp
+  - ❌ context
 - ✅ declaration
   - ✅ link support
 - ✅ definition
@@ -130,6 +132,7 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
 - ✅ publishDiagnostics
 - ❌ foldingRange
 - ✅ selectionRange
+- ❌ semanticHighlighting
 
 ### Workspace Capabilities
 
@@ -149,3 +152,7 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
   - ✅ create
   - ❌ cancel
 - ✅ showMessage request additionalPropertiesSupport
+
+### Dynamic Registration
+
+✅ Fully implemented

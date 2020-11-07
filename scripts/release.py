@@ -129,7 +129,7 @@ def publish_release(args: argparse.Namespace) -> None:
     # get message from /messages/<version>.txt
     text = get_message(os.path.join(MESSAGE_PATH, version + '.txt'))
     # strip message header (version)
-    text = text[text.find('\n') + 1:]
+    text = text[text.find('\n') + 1:].strip()
     # built the JSON request body
     data = json.dumps({
         "tag_name": version,

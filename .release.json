@@ -1,5 +1,6 @@
 {
     "push_branch": "master",
     "publish_repo": "sublimelsp/LSP",
+    "publish_version_prefix": "3154",
     "python_version_path": "plugin/core/version.py"
 }

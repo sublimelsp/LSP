@@ -1,0 +1,11 @@
+=> 3154-0.14.0
+
+Features:
+
+- Export public API for plugins to use (#1424) (Rafał Chłodnicki)
+- Introduce the ${storage_path} and storage_path() method for plugins (#1372) (Rafał Chłodnicki)
+- Send back whole action object on choosing action in showMessageRequest (#1411) (Rafał Chłodnicki)
+
+Maintenance:
+
+- Add deprecation note for haskell-ide-engine (#1422) (Nikos Baxevanis)

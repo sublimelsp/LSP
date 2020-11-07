@@ -119,6 +119,7 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
 - ✅ documentHighlight
 - ✅ documentSymbol
 - ✅ codeAction
+  - ✅ resolve
 - ❌ codeLens
 - ❌ documentLink
 - ✅ colorProvider

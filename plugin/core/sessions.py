@@ -236,6 +236,11 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "configuration": True
         },
         "window": {
+            "showMessage": {
+                "messageActionItem": {
+                    "additionalPropertiesSupport": True
+                }
+            },
             "workDoneProgress": True
         }
     }
@@ -262,10 +267,10 @@ class SessionViewProtocol(Protocol):
     listener = None  # type: Any
     session_buffer = None  # type: Any
 
-    def on_capability_added_async(self, capability_path: str, options: Dict[str, Any]) -> None:
+    def on_capability_added_async(self, registration_id: str, capability_path: str, options: Dict[str, Any]) -> None:
         ...
 
-    def on_capability_removed_async(self, discarded_capabilities: Dict[str, Any]) -> None:
+    def on_capability_removed_async(self, registration_id: str, discarded_capabilities: Dict[str, Any]) -> None:
         ...
 
     def has_capability_async(self, capability_path: str) -> bool:
@@ -992,6 +997,10 @@ class Session(TransportCallbacks):
             else:
                 # The registration applies globally to all buffers.
                 self.capabilities.register(registration_id, capability_path, registration_path, options)
+                # We must inform our SessionViews of the new capabilities, in case it's for instance a hoverProvider
+                # or a completionProvider for trigger characters.
+                for sv in self.session_views_async():
+                    sv.on_capability_added_async(registration_id, capability_path, options)
         self.send_response(Response(request_id, None))
 
     def m_client_unregisterCapability(self, params: Any, request_id: Any) -> None:
@@ -1007,7 +1016,12 @@ class Session(TransportCallbacks):
                 self.send_error_response(request_id, Error(ErrorCode.InvalidParams, message))
                 return
             elif not data.selector:
-                self.capabilities.unregister(registration_id, capability_path, registration_path)
+                discarded = self.capabilities.unregister(registration_id, capability_path, registration_path)
+                # We must inform our SessionViews of the removed capabilities, in case it's for instance a hoverProvider
+                # or a completionProvider for trigger characters.
+                if isinstance(discarded, dict):
+                    for sv in self.session_views_async():
+                        sv.on_capability_removed_async(registration_id, discarded)
         self.send_response(Response(request_id, None))
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:

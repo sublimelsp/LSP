@@ -722,6 +722,14 @@ class Session(TransportCallbacks):
                 return sv
         return None
 
+    def set_window_status_async(self, key: str, message: str) -> None:
+        for sv in self.session_views_async():
+            sv.view.set_status(key, message)
+
+    def erase_window_status_async(self, key: str) -> None:
+        for sv in self.session_views_async():
+            sv.view.erase_status(key)
+
     # --- session buffer management ------------------------------------------------------------------------------------
 
     def register_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
@@ -1046,18 +1054,15 @@ class Session(TransportCallbacks):
             data['title'] = value['title']  # mandatory
             data['message'] = value.get('message')  # optional
             progress_string = self._progress_string(data, value)
-            for sv in self.session_views_async():
-                sv.view.set_status(key, progress_string)
+            self.set_window_status_async(key, progress_string)
         elif kind == 'report':
             progress_string = self._progress_string(data, value)
-            for sv in self.session_views_async():
-                sv.view.set_status(key, progress_string)
+            self.set_window_status_async(key, progress_string)
         elif kind == 'end':
             message = value.get('message')
             if message:
                 self.window.status_message(data['title'] + ': ' + message)
-            for sv in self.session_views_async():
-                sv.view.erase_status(key)
+            self.erase_window_status_async(key)
             self._progress.pop(token, None)
 
     def _progress_string(self, data: Dict[str, Any], value: Dict[str, Any]) -> str:

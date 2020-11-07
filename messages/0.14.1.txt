@@ -1,0 +1,5 @@
+=> 0.14.1
+
+Features:
+
+- Export LanguageHandler in public plugin API (Rafał Chłodnicki)

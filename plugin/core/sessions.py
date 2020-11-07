@@ -914,7 +914,7 @@ class Session(TransportCallbacks):
             # We must first resolve the command and edit properties, because they can potentially be absent.
             promise = self.request_promise_async(Request("codeAction/resolve", code_action))
         else:
-            promise = Promise.resolve()
+            promise = Promise.resolve(code_action)
         return promise.then(self._apply_code_action_async)
 
     def _apply_code_action_async(self, code_action: Union[Error, Mapping[str, Any]]) -> Promise:

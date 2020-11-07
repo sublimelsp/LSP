@@ -130,9 +130,9 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
 - ❌ onTypeFormatting
 - ✅ rename
 - ✅ publishDiagnostics
-- ❌ foldingRange
+- ❌ foldingRange [sublimehq/sublime_text#3389](https://github.com/sublimehq/sublime_text/issues/3389)
 - ✅ selectionRange
-- ❌ semanticHighlighting
+- ❌ semanticHighlighting [#887](https://github.com/sublimelsp/LSP/issues/887), [sublimehq/sublime_text#817](https://github.com/sublimehq/sublime_text/issues/817),
 - ❌ callHierarchy
 
 ### Workspace Capabilities
@@ -143,7 +143,7 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
   - ❌ resourceOperations
   - ❌ failureHandling
 - ✅ didChangeConfiguration
-- ❌ didChangeWatchedFiles
+- ❌ didChangeWatchedFiles [#892](https://github.com/sublimelsp/LSP/issues/892), [sublimehq/sublime_text#2669](https://github.com/sublimehq/sublime_text/issues/2669)
 - ✅ symbol
 - ✅ executeCommand
 

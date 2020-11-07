@@ -22,6 +22,8 @@ with open(os.path.join(PACKAGE_PATH, '.release.json'), 'r') as f:
 RELEASE_BRANCH = CONFIGURATION['push_branch']
 # The name of the GitHub repository in <owner>/<repo> format
 GITHUB_REPO = CONFIGURATION['publish_repo']
+# The prefix to use for release version number. For example with prefix "4000" the version will be "4000-x.y.z".
+RELEASE_VERSION_PREFIX = CONFIGURATION['publish_version_prefix'] or ''
 # The name of the settings file to get the release token from ("github_token" setting)
 SETTINGS = '{}.sublime-settings'.format(__package__)
 PYTHON_VERSION_PATH = CONFIGURATION.get('python_version_path', None)
@@ -69,6 +71,11 @@ def parse_version(version: str) -> Tuple[int, int, int]:
     else:
         return 0, 0, 0
 
+def get_version_with_prefix(version: str) -> str:
+    if RELEASE_VERSION_PREFIX:
+        return '{}-{}'.format(RELEASE_VERSION_PREFIX, version)
+    return version
+
 
 def git(*args: str) -> Optional[str]:
     """Run git command within current package path."""
@@ -89,7 +96,7 @@ def commit_release(version: str) -> None:
     commit_message = 'Cut %s' % version
     git('add', '.')
     git('commit', '-m', commit_message)
-    git('tag', '-a', '-m', commit_message, version)
+    git('tag', '-a', '-m', commit_message, get_version_with_prefix(version))
 
 
 def build_release(args: argparse.Namespace) -> None:
@@ -112,12 +119,13 @@ def publish_release(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     version = get_message(os.path.join(PACKAGE_PATH, 'VERSION'))
+    version_with_prefix = get_version_with_prefix(version)
 
     repo_url = 'git@github.com:{}'.format(GITHUB_REPO)
     # push release branch to server
     git('push', repo_url, RELEASE_BRANCH)
     # push tags to server
-    git('push', repo_url, 'tag', version)
+    git('push', repo_url, 'tag', version_with_prefix)
 
     # publish the release
     post_url = '/repos/{}/releases'.format(GITHUB_REPO)
@@ -132,9 +140,9 @@ def publish_release(args: argparse.Namespace) -> None:
     text = text[text.find('\n') + 1:].strip()
     # built the JSON request body
     data = json.dumps({
-        "tag_name": version,
+        "tag_name": version_with_prefix,
         "target_commitish": RELEASE_BRANCH,
-        "name": version,
+        "name": version_with_prefix,
         "body": text,
         "draft": False,
         "prerelease": False
@@ -144,9 +152,9 @@ def publish_release(args: argparse.Namespace) -> None:
         client = http.client.HTTPSConnection('api.github.com')
         client.request('POST', post_url, body=data, headers=headers)
         response = client.getresponse()
-        print("Release %s published!" % version
+        print("Release %s published!" % version_with_prefix
               if response.status == 201 else
-              "Release %s failed!" % version)
+              "Release %s failed!" % version_with_prefix)
     finally:
         client.close()
 

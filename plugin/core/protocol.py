@@ -151,6 +151,10 @@ class Error(Exception):
         self.code = code
         self.data = data
 
+    @classmethod
+    def from_lsp(cls, params: Any) -> "Error":
+        return Error(params["code"], params["message"], params.get("data"))
+
     def to_lsp(self) -> Dict[str, Any]:
         result = {"code": self.code, "message": super().__str__()}
         if self.data:

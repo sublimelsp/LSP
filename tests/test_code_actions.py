@@ -2,37 +2,46 @@ from copy import deepcopy
 from LSP.plugin.code_actions import CodeActionsByConfigName
 from LSP.plugin.code_actions import get_matching_kinds
 from LSP.plugin.core.protocol import Point, Range
-from LSP.plugin.core.typing import Dict, Generator, List, Tuple
+from LSP.plugin.core.typing import Any, Dict, Generator, List, Tuple, Optional
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import entire_content
 from LSP.plugin.documents import DocumentSyncListener
+from LSP.plugin.core.views import versioned_text_document_identifier
 from setup import TextDocumentTestCase
 from test_single_document import TEST_FILE_PATH
 import unittest
+import sublime
 
 TEST_FILE_URI = filename_to_uri(TEST_FILE_PATH)
 
 
-def create_test_code_action(document_version: int, edits: List[Tuple[str, Range]], kind: str = None) -> Dict:
-    def edit_to_lsp(edit: Tuple[str, Range]) -> Dict:
-        new_text, range = edit
-        return {
-            "newText": new_text,
-            "range": range.to_lsp()
-        }
+def edit_to_lsp(edit: Tuple[str, Range]) -> Dict[str, Any]:
+    return {"newText": edit[0], "range": edit[1].to_lsp()}
+
+
+def create_code_action_edit(view: sublime.View, version: int, edits: List[Tuple[str, Range]]) -> Dict[str, Any]:
+    return {
+        "documentChanges": [
+            {
+                "textDocument": versioned_text_document_identifier(view, version),
+                "edits": list(map(edit_to_lsp, edits))
+            }
+        ]
+    }
+
+
+def create_code_action_command(command_name: str, command_args: Optional[List[Any]] = None) -> Dict[str, Any]:
+    result = {"command": command_name}  # type: Dict[str, Any]
+    if command_args is not None:
+        result["arguments"] = command_args
+    return result
+
+
+def create_test_code_action(view: sublime.View, version: int, edits: List[Tuple[str, Range]],
+                            kind: str = None) -> Dict[str, Any]:
     action = {
         "title": "Fix errors",
-        "edit": {
-            "documentChanges": [
-                {
-                    "textDocument": {
-                        "uri": TEST_FILE_URI,
-                        "version": document_version
-                    },
-                    "edits": list(map(edit_to_lsp, edits))
-                }
-            ]
-        }
+        "edit": create_code_action_edit(view, version, edits)
     }
     if kind:
         action['kind'] = kind
@@ -74,6 +83,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         yield from self._setup_document_with_missing_semicolon()
         code_action_kind = 'source.fixAll'
         code_action = create_test_code_action(
+            self.view,
             self.view.change_count(),
             [(';', Range(Point(0, 11), Point(0, 11)))],
             code_action_kind
@@ -100,6 +110,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
                 'textDocument/codeAction',
                 [
                     create_test_code_action(
+                        self.view,
                         initial_change_count,
                         [(';', Range(Point(0, 11), Point(0, 11)))],
                         code_action_kind
@@ -110,6 +121,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
                 'textDocument/codeAction',
                 [
                     create_test_code_action(
+                        self.view,
                         initial_change_count + 1,
                         [('\nAnd again!', Range(Point(0, 12), Point(0, 12)))],
                         code_action_kind
@@ -126,6 +138,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         self.insert_characters('const x = 1')
         code_action_kind = 'source.fixAll'
         code_action = create_test_code_action(
+            self.view,
             self.view.change_count(),
             [(';', Range(Point(0, 11), Point(0, 11)))],
             code_action_kind
@@ -149,6 +162,7 @@ class CodeActionsOnSaveTestCase(TextDocumentTestCase):
         yield from self._setup_document_with_missing_semicolon()
         code_action_kind = 'quickfix'
         code_action = create_test_code_action(
+            self.view,
             self.view.change_count(),
             [(';', Range(Point(0, 11), Point(0, 11)))],
             code_action_kind
@@ -218,8 +232,8 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
             "textDocument/publishDiagnostics",
             create_test_diagnostics([('issue a', range_a), ('issue b', range_b), ('issue c', range_c)])
         )
-        code_action_a = create_test_code_action(self.view.change_count(), [("A", range_a)])
-        code_action_b = create_test_code_action(self.view.change_count(), [("B", range_b)])
+        code_action_a = create_test_code_action(self.view, self.view.change_count(), [("A", range_a)])
+        code_action_b = create_test_code_action(self.view, self.view.change_count(), [("B", range_b)])
         self.set_response('textDocument/codeAction', [code_action_a, code_action_b])
         self.view.run_command('lsp_selection_set', {"regions": [(0, 3)]})  # Select a and b.
         yield 100
@@ -240,8 +254,8 @@ class CodeActionsListenerTestCase(TextDocumentTestCase):
         yield from self.await_message("textDocument/didChange")
         range_a = Range(Point(0, 0), Point(0, 1))
         range_b = Range(Point(1, 0), Point(1, 1))
-        code_action1 = create_test_code_action(0, [("A", range_a)])
-        code_action2 = create_test_code_action(0, [("B", range_b)])
+        code_action1 = create_test_code_action(self.view, 0, [("A", range_a)])
+        code_action2 = create_test_code_action(self.view, 0, [("B", range_b)])
         self.set_response('textDocument/codeAction', [code_action1, code_action2])
         self.view.run_command('lsp_selection_set', {"regions": [(0, 3)]})  # Select a and b.
         yield 100
@@ -284,7 +298,7 @@ class CodeActionsTestCase(TextDocumentTestCase):
     @classmethod
     def get_test_server_capabilities(cls) -> dict:
         capabilities = deepcopy(super().get_test_server_capabilities())
-        capabilities['capabilities']['codeActionProvider'] = {}
+        capabilities['capabilities']['codeActionProvider'] = {"resolveSupport": True}
         return capabilities
 
     def test_requests_code_actions_on_newly_published_diagnostics(self) -> Generator:
@@ -304,33 +318,57 @@ class CodeActionsTestCase(TextDocumentTestCase):
         self.assertEquals(params['range']['end']['character'], 1)
         self.assertEquals(len(params['context']['diagnostics']), 1)
 
-    def test_applies_code_actions(self) -> Generator:
-        self.insert_characters('a\nb')
-        yield from self.await_message("textDocument/didChange")
-        code_action = create_test_code_action(self.view.change_count(), [
+    def test_applies_code_action_with_matching_document_version(self) -> Generator:
+        code_action = create_test_code_action(self.view, 3, [
             ("c", Range(Point(0, 0), Point(0, 1))),
             ("d", Range(Point(1, 0), Point(1, 1))),
         ])
+        self.set_response('codeAction/resolve', code_action)
+        self.insert_characters('a\nb')
+        yield from self.await_message("textDocument/didChange")
+        self.assertEqual(self.view.change_count(), 3)
         yield from self.await_run_code_action(code_action)
+        yield from self.await_message('codeAction/resolve')
         self.assertEquals(entire_content(self.view), 'c\nd')
 
     def test_does_not_apply_with_nonmatching_document_version(self) -> Generator:
         initial_content = 'a\nb'
-        self.insert_characters(initial_content)
-        yield from self.await_message("textDocument/didChange")
-        code_action = create_test_code_action(0, [
+        code_action = create_test_code_action(self.view, 0, [
             ("c", Range(Point(0, 0), Point(0, 1))),
             ("d", Range(Point(1, 0), Point(1, 1))),
         ])
+        self.set_response('codeAction/resolve', code_action)
+        self.insert_characters(initial_content)
+        yield from self.await_message("textDocument/didChange")
         yield from self.await_run_code_action(code_action)
         self.assertEquals(entire_content(self.view), initial_content)
+
+    def test_runs_command_in_resolved_code_action(self) -> Generator:
+        code_action = create_test_code_action(self.view, 3, [
+            ("c", Range(Point(0, 0), Point(0, 1))),
+            ("d", Range(Point(1, 0), Point(1, 1))),
+        ])
+        resolved_code_action = deepcopy(code_action)
+        resolved_code_action["command"] = create_code_action_command(
+            "dosomethinguseful", ["1", 0, {"hello": "there"}])
+        self.set_response('codeAction/resolve', resolved_code_action)
+        self.set_response('workspace/executeCommand', {"reply": "OK done"})
+        self.insert_characters('a\nb')
+        yield from self.await_message("textDocument/didChange")
+        self.assertEqual(self.view.change_count(), 3)
+        yield from self.await_run_code_action(code_action)
+        yield from self.await_message('codeAction/resolve')
+        params = yield from self.await_message('workspace/executeCommand')
+        self.assertEqual(params, {"command": "dosomethinguseful", "arguments": ["1", 0, {"hello": "there"}]})
+        self.assertEquals(entire_content(self.view), 'c\nd')
 
     # Keep this test last as it breaks pyls!
     def test_applies_correctly_after_emoji(self) -> Generator:
         self.insert_characters('🕵️hi')
         yield from self.await_message("textDocument/didChange")
-        code_action = create_test_code_action(self.view.change_count(), [
+        code_action = create_test_code_action(self.view, self.view.change_count(), [
             ("bye", Range(Point(0, 3), Point(0, 5))),
         ])
+        self.set_response('codeAction/resolve', code_action)
         yield from self.await_run_code_action(code_action)
         self.assertEquals(entire_content(self.view), '🕵️bye')

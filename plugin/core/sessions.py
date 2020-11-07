@@ -20,7 +20,7 @@ from .types import debounced
 from .types import diff
 from .types import DocumentSelector
 from .types import method_to_capability
-from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping
+from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
 from .url import uri_to_filename
 from .version import __version__
 from .views import COMPLETION_KINDS
@@ -193,6 +193,13 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                             "source.organizeImports"
                         ]
                     }
+                },
+                "dataSupport": True,
+                "resolveSupport": {
+                    "properties": [
+                        "edit",
+                        "command"
+                    ]
                 }
             },
             "rename": {
@@ -260,10 +267,10 @@ class SessionViewProtocol(Protocol):
     listener = None  # type: Any
     session_buffer = None  # type: Any
 
-    def on_capability_added_async(self, capability_path: str, options: Dict[str, Any]) -> None:
+    def on_capability_added_async(self, registration_id: str, capability_path: str, options: Dict[str, Any]) -> None:
         ...
 
-    def on_capability_removed_async(self, discarded_capabilities: Dict[str, Any]) -> None:
+    def on_capability_removed_async(self, registration_id: str, discarded_capabilities: Dict[str, Any]) -> None:
         ...
 
     def has_capability_async(self, capability_path: str) -> bool:
@@ -715,6 +722,14 @@ class Session(TransportCallbacks):
                 return sv
         return None
 
+    def set_window_status_async(self, key: str, message: str) -> None:
+        for sv in self.session_views_async():
+            sv.view.set_status(key, message)
+
+    def erase_window_status_async(self, key: str) -> None:
+        for sv in self.session_views_async():
+            sv.view.erase_status(key)
+
     # --- session buffer management ------------------------------------------------------------------------------------
 
     def register_session_buffer_async(self, sb: SessionBufferProtocol) -> None:
@@ -902,6 +917,20 @@ class Session(TransportCallbacks):
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
+        if self.has_capability("codeActionProvider.resolveSupport"):
+            # TODO: Should we accept a SessionBuffer? What if this capability is registered with a documentSelector?
+            # We must first resolve the command and edit properties, because they can potentially be absent.
+            promise = self.send_request_task(Request("codeAction/resolve", code_action))
+        else:
+            promise = Promise.resolve(code_action)
+        return promise.then(self._apply_code_action_async)
+
+    def _apply_code_action_async(self, code_action: Union[Error, Mapping[str, Any]]) -> Promise:
+        if isinstance(code_action, Error):
+            # TODO: our promise must be able to handle exceptions (or, wait until we can use coroutines)
+            self.window.status_message("Failed to apply code action: {}".format(code_action))
+            return Promise.resolve()
+        command = code_action.get("command")
         edit = code_action.get("edit")
         promise = self._apply_workspace_edit_async(edit) if edit else Promise.resolve()
         return promise.then(lambda _: self.run_command(command) if isinstance(command, dict) else Promise.resolve())
@@ -976,6 +1005,10 @@ class Session(TransportCallbacks):
             else:
                 # The registration applies globally to all buffers.
                 self.capabilities.register(registration_id, capability_path, registration_path, options)
+                # We must inform our SessionViews of the new capabilities, in case it's for instance a hoverProvider
+                # or a completionProvider for trigger characters.
+                for sv in self.session_views_async():
+                    sv.on_capability_added_async(registration_id, capability_path, options)
         self.send_response(Response(request_id, None))
 
     def m_client_unregisterCapability(self, params: Any, request_id: Any) -> None:
@@ -991,7 +1024,12 @@ class Session(TransportCallbacks):
                 self.send_error_response(request_id, Error(ErrorCode.InvalidParams, message))
                 return
             elif not data.selector:
-                self.capabilities.unregister(registration_id, capability_path, registration_path)
+                discarded = self.capabilities.unregister(registration_id, capability_path, registration_path)
+                # We must inform our SessionViews of the removed capabilities, in case it's for instance a hoverProvider
+                # or a completionProvider for trigger characters.
+                if isinstance(discarded, dict):
+                    for sv in self.session_views_async():
+                        sv.on_capability_removed_async(registration_id, discarded)
         self.send_response(Response(request_id, None))
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
@@ -1016,18 +1054,15 @@ class Session(TransportCallbacks):
             data['title'] = value['title']  # mandatory
             data['message'] = value.get('message')  # optional
             progress_string = self._progress_string(data, value)
-            for sv in self.session_views_async():
-                sv.view.set_status(key, progress_string)
+            self.set_window_status_async(key, progress_string)
         elif kind == 'report':
             progress_string = self._progress_string(data, value)
-            for sv in self.session_views_async():
-                sv.view.set_status(key, progress_string)
+            self.set_window_status_async(key, progress_string)
         elif kind == 'end':
             message = value.get('message')
             if message:
                 self.window.status_message(data['title'] + ': ' + message)
-            for sv in self.session_views_async():
-                sv.view.erase_status(key)
+            self.erase_window_status_async(key)
             self._progress.pop(token, None)
 
     def _progress_string(self, data: Dict[str, Any], value: Dict[str, Any]) -> str:
@@ -1108,6 +1143,11 @@ class Session(TransportCallbacks):
     ) -> None:
         """You can call this method from any thread. Callbacks will run in Sublime's worker thread."""
         sublime.set_timeout_async(functools.partial(self.send_request_async, request, on_result, on_error))
+
+    def send_request_task(self, request: Request) -> Promise:
+        promise, resolver = Promise.packaged_task()
+        self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
+        return promise
 
     def send_notification(self, notification: Notification) -> None:
         self._logger.outgoing_notification(notification.method, notification.params)

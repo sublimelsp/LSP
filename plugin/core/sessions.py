@@ -912,7 +912,7 @@ class Session(TransportCallbacks):
         if self.has_capability("codeActionProvider.resolveSupport"):
             # TODO: Should we accept a SessionBuffer? What if this capability is registered with a documentSelector?
             # We must first resolve the command and edit properties, because they can potentially be absent.
-            promise = self.request_promise_async(Request("codeAction/resolve", code_action))
+            promise = self.send_request_task(Request("codeAction/resolve", code_action))
         else:
             promise = Promise.resolve(code_action)
         return promise.then(self._apply_code_action_async)
@@ -1139,7 +1139,7 @@ class Session(TransportCallbacks):
         """You can call this method from any thread. Callbacks will run in Sublime's worker thread."""
         sublime.set_timeout_async(functools.partial(self.send_request_async, request, on_result, on_error))
 
-    def request_promise_async(self, request: Request) -> Promise:
+    def send_request_task(self, request: Request) -> Promise:
         promise, resolver = Promise.packaged_task()
         self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return promise

@@ -2,7 +2,6 @@ import sys
 
 if sys.version_info >= (3, 8, 0):
 
-    from mypy_extensions import TypedDict
     from typing import Any
     from typing import Callable
     from typing import Deque
@@ -15,12 +14,13 @@ if sys.version_info >= (3, 8, 0):
     from typing import Literal
     from typing import Mapping
     from typing import Optional
+    from typing import Protocol
     from typing import Set
     from typing import Tuple
     from typing import Type
+    from typing import TypedDict
     from typing import TypeVar
     from typing import Union
-    from typing_extensions import Protocol
 
 else:
 

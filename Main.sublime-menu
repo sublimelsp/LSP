@@ -1,5 +1,72 @@
 [
   {
+    "id": "edit",
+    "children": [
+      {
+        "id": "lsp",
+        "caption": "-"
+      },
+      {
+        "caption": "LSP: Rename…",
+        "command": "lsp_symbol_rename"
+      },
+      {
+        "caption": "LSP: Format File",
+        "command": "lsp_format_document"
+      },
+      {
+        "caption": "LSP: Format Selection",
+        "command": "lsp_format_document_range"
+      }
+    ]
+  },
+  {
+    "id": "selection",
+    "children": [
+      {
+        "id": "lsp",
+        "caption": "-"
+      },
+      {
+        "caption": "LSP: Expand Selection",
+        "command": "lsp_expand_selection"
+      }
+    ]
+  },
+  {
+    "id": "goto",
+    "children": [
+      {
+        "id": "lsp",
+        "caption": "-"
+      },
+      {
+        "caption": "LSP: Goto Symbol…",
+        "command": "lsp_document_symbols"
+      },
+      {
+        "caption": "LSP: Goto Definition…",
+        "command": "lsp_symbol_definition"
+      },
+      {
+        "caption": "LSP: Goto Type Definition…",
+        "command": "lsp_symbol_type_definition"
+      },
+      {
+        "caption": "LSP: Goto Declaration…",
+        "command": "lsp_symbol_declaration"
+      },
+      {
+        "caption": "LSP: Goto Implementation…",
+        "command": "lsp_symbol_implementation"
+      },
+      {
+        "caption": "LSP: Find References",
+        "command": "lsp_symbol_references"
+      }
+    ]
+  },
+  {
     "id": "tools",
     "children": [
       {

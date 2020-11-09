@@ -59,9 +59,6 @@ class SessionView:
             self._increment_hover_count()
         self._clear_auto_complete_triggers(settings)
         self._setup_auto_complete_triggers(settings)
-        # This is to make ST match with labels that have a weird prefix like a space character.
-        # TODO: Maybe remove this?
-        settings.set('auto_complete_preserve_order', 'none')
 
     def __del__(self) -> None:
         settings = self.view.settings()  # type: sublime.Settings

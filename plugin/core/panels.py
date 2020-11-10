@@ -14,7 +14,8 @@ SERVER_PANEL_DEBOUNCE_TIME_MS = 80
 OUTPUT_PANEL_SETTINGS = {
     "auto_indent": False,
     "draw_indent_guides": False,
-    "draw_white_space": "None",
+    "draw_unicode_white_space": "none",
+    "draw_white_space": "none",
     "fold_buttons": True,
     "gutter": True,
     "is_widget": True,

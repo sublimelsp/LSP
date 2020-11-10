@@ -1,4 +1,5 @@
 from .core.protocol import Diagnostic
+from .core.protocol import Notification
 from .core.protocol import Request
 from .core.sessions import Session
 from .core.settings import userprefs
@@ -68,6 +69,9 @@ class SessionView:
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
         # in unregistering ourselves from the session.
         if not self.session.exiting:
+            for request_id, request in self.active_requests.items():
+                if request.view and request.view.id() == self.view.id():
+                    self.session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
             self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
         # TODO: Language ID must be UNIQUE!

@@ -2,7 +2,7 @@ from .edit import apply_workspace_edit
 from .edit import parse_workspace_edit
 from .logging import debug
 from .logging import exception_log
-from .promise import Promise
+from .promise import Promise, open_file
 from .protocol import CompletionItemTag
 from .protocol import Error
 from .protocol import ErrorCode
@@ -27,6 +27,7 @@ from .views import COMPLETION_KINDS
 from .views import did_change_configuration
 from .views import extract_variables
 from .views import get_storage_path
+from .views import range_to_region
 from .views import SYMBOL_KINDS
 from .workspace import is_subpath_of
 from abc import ABCMeta
@@ -35,7 +36,9 @@ from weakref import WeakSet
 import functools
 import os
 import sublime
+import subprocess
 import weakref
+import webbrowser
 
 
 InitCallback = Callable[['Session', bool], None]
@@ -236,12 +239,16 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "configuration": True
         },
         "window": {
+            "showDocument": {
+                "support": True
+            },
             "showMessage": {
                 "messageActionItem": {
                     "additionalPropertiesSupport": True
                 }
             },
             "workDoneProgress": True
+
         }
     }
     if config.experimental_capabilities is not None:
@@ -1031,6 +1038,49 @@ class Session(TransportCallbacks):
                     for sv in self.session_views_async():
                         sv.on_capability_removed_async(registration_id, discarded)
         self.send_response(Response(request_id, None))
+
+    def m_window_showDocument(self, params: Any, request_id: Any) -> None:
+        """handles the window/showDocument request"""
+        uri = params.get("uri")
+        external = params.get("external")
+        take_focus = bool(params.get("takeFocus"))
+        r = params.get("selection")
+
+        def success(b: bool) -> None:
+            self.send_response(Response(request_id, {"success": b}))
+
+        if external:
+            if uri.startswith("http:") or uri.startswith("https:"):
+                if webbrowser.open(uri, autoraise=take_focus):
+                    return success(True)
+            file = uri_to_filename(uri)
+            try:
+                # TODO: handle take_focus
+                if sublime.platform() == "windows":
+                    # os.startfile only exists on windows, but pyright does not understand sublime.platform().
+                    # TODO: How to make pyright understand platform-specific code with sublime.platform()?
+                    os.startfile(file)  # type: ignore
+                elif sublime.platform() == "osx":
+                    subprocess.check_call(("/usr/bin/open", file))
+                else:  # linux
+                    subprocess.check_call(("xdg-open", file))
+                return success(True)
+            except Exception as ex:
+                exception_log("Failed to open {}".format(uri), ex)
+                return success(False)
+        else:
+            file = uri_to_filename(uri)
+
+            def center_selection(v: Optional[sublime.View]) -> None:
+                if not v:
+                    return success(False)
+                selection = range_to_region(r, v)
+                v.show_at_center(selection.a)
+                v.run_command("lsp_selection_set", {"regions": [(selection.a, selection.b)]})
+                success(True)
+
+            # TODO: ST API does not allow us to say "do not focus this new view"
+            open_file(self.window, file).then(center_selection)
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
         """handles the window/workDoneProgress/create request"""

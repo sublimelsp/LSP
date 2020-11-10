@@ -65,7 +65,11 @@ class LspHoverCommand(LspTextCommand):
         window = self.view.window()
         if not window:
             return
-        self._base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
+        wm = windows.lookup(window)
+        listener = wm.listener_for_view(self.view)
+        if not listener:
+            return
+        self._base_dir = wm.get_project_path(self.view.file_name() or "")
         self._hover = None  # type: Optional[Any]
         self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
         self._diagnostics_by_config = {}  # type: Dict[str, List[Diagnostic]]

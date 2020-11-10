@@ -44,8 +44,8 @@
         "command": "lsp_disable_language_server_in_project",
     },
     {
-    	"caption": "LSP: Format View",
-    	"command": "lsp_format_document",
+        "caption": "LSP: Format File",
+        "command": "lsp_format_document",
     },
     {
         "caption": "LSP: Format Selection",

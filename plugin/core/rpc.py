@@ -309,7 +309,7 @@ class Client(object):
             payload = json.loads(message)
             # limit = min(len(message), 200)
             # debug("got json: ", message[0:limit], "...")
-        except IOError as err:
+        except (IOError, ValueError) as err:
             exception_log("got a non-JSON payload: " + message, err)
             return
 

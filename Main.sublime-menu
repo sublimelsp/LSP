@@ -1,5 +1,127 @@
 [
   {
+    "id": "edit",
+    "children": [
+      {
+        "id": "lsp",
+        "caption": "-"
+      },
+      {
+        "caption": "LSP: Rename…",
+        "command": "lsp_symbol_rename"
+      },
+      {
+        "caption": "LSP: Format File",
+        "command": "lsp_format_document"
+      },
+      {
+        "caption": "LSP: Format Selection",
+        "command": "lsp_format_document_range"
+      }
+    ]
+  },
+  {
+    "id": "selection",
+    "children": [
+      {
+        "id": "lsp",
+        "caption": "-"
+      },
+      {
+        "caption": "LSP: Expand Selection",
+        "command": "lsp_expand_selection"
+      }
+    ]
+  },
+  {
+    "id": "goto",
+    "children": [
+      {
+        "id": "lsp",
+        "caption": "-"
+      },
+      {
+        "caption": "LSP: Goto Symbol…",
+        "command": "lsp_document_symbols"
+      },
+      {
+        "caption": "LSP: Goto Definition…",
+        "command": "lsp_symbol_definition"
+      },
+      {
+        "caption": "LSP: Goto Type Definition…",
+        "command": "lsp_symbol_type_definition"
+      },
+      {
+        "caption": "LSP: Goto Declaration…",
+        "command": "lsp_symbol_declaration"
+      },
+      {
+        "caption": "LSP: Goto Implementation…",
+        "command": "lsp_symbol_implementation"
+      },
+      {
+        "caption": "LSP: Find References",
+        "command": "lsp_symbol_references"
+      }
+    ]
+  },
+  {
+    "id": "tools",
+    "children": [
+      {
+        "id": "lsp",
+        "caption": "LSP",
+        "children": [
+          {
+            "id": "lsp-restart",
+            "caption": "-"
+          },
+          {
+            "caption": "Restart Servers",
+            "command": "lsp_restart_client"
+          },
+          {
+            "id": "lsp-panels",
+            "caption": "-"
+          },
+          {
+            "caption": "Toggle Log Panel",
+            "command": "lsp_toggle_server_panel"
+          },
+          {
+            "caption": "Toggle Diagnostics Panel",
+            "command": "lsp_show_diagnostics_panel"
+          },
+          {
+            "id": "lsp-server-configurations",
+            "caption": "-"
+          },
+          {
+              "caption": "Enable Language Server Globally…",
+              "command": "lsp_enable_language_server_globally",
+          },
+          {
+              "caption": "Disable Language Server Globally…",
+              "command": "lsp_disable_language_server_globally",
+          },
+          {
+              "caption": "Enable Language Server in Project…",
+              "command": "lsp_enable_language_server_in_project",
+          },
+          {
+              "caption": "Disable Language Server in Project…",
+              "command": "lsp_disable_language_server_in_project",
+          },
+          {
+            "caption": "Troubleshoot Server Configuration…",
+            "command": "lsp_troubleshoot_server"
+          }
+        ]
+      }
+    ]
+  },
+  {
     "id": "preferences",
     "children": [
       {

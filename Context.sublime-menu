@@ -5,35 +5,35 @@
         [
             {
                 "command": "lsp_symbol_references",
-                "caption": "Find Symbol References"
+                "caption": "Find References"
             },
             {
                 "command": "lsp_symbol_definition",
-                "caption": "Go To Symbol Definition"
+                "caption": "Goto Definition…"
             },
             {
                 "command": "lsp_symbol_type_definition",
-                "caption": "Go To Symbol Type Definition"
+                "caption": "Goto Type Definition…"
             },
             {
                 "command": "lsp_symbol_declaration",
-                "caption": "Go To Symbol Declaration"
+                "caption": "Goto Declaration…"
             },
             {
                 "command": "lsp_symbol_implementation",
-                "caption": "Go To Symbol Implementation"
+                "caption": "Goto Implementation…"
             },
             {
                 "command": "lsp_symbol_rename",
-                "caption": "Rename Symbol"
+                "caption": "Rename…"
             },
             {
                 "command": "lsp_code_actions",
-                "caption": "Code Actions"
+                "caption": "Apply Code Action…"
             },
             {
                 "command": "lsp_format_document",
-                "caption": "Format Document"
+                "caption": "Format File"
             },
             {
                 "command": "lsp_format_document_range",

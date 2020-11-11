@@ -52,6 +52,10 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
+    def session(self, capability_path: str, point: Optional[int] = None) -> Optional[Session]:
+        raise NotImplementedError()
+
+    @abstractmethod
     def on_session_initialized_async(self, session: Session) -> None:
         raise NotImplementedError()
 
@@ -521,13 +525,20 @@ class WindowRegistry(object):
         self._configs = configs
 
     def lookup(self, window: sublime.Window) -> WindowManager:
-        if window.id() in self._windows:
-            return self._windows[window.id()]
+        wm = self._windows.get(window.id())
+        if wm:
+            return wm
         workspace = ProjectFolders(window)
         window_configs = self._configs.for_window(window)
         state = WindowManager(window=window, workspace=workspace, configs=window_configs)
         self._windows[window.id()] = state
         return state
+
+    def listener_for_view(self, view: sublime.View) -> Optional[AbstractViewListener]:
+        w = view.window()
+        if not w:
+            return None
+        return self.lookup(w).listener_for_view(view)
 
     def discard(self, window: sublime.Window) -> None:
         self._windows.pop(window.id(), None)

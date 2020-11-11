@@ -60,24 +60,16 @@ class LspHoverCommand(LspTextCommand):
         super().__init__(view)
         self._base_dir = None   # type: Optional[str]
 
-    def is_likely_at_symbol(self, point: int) -> bool:
-        word_at_sel = self.view.classify(point)
-        return bool(word_at_sel & SUBLIME_WORD_MASK)
-
     def run(self, edit: sublime.Edit, point: Optional[int] = None, event: Optional[dict] = None) -> None:
         hover_point = point or self.view.sel()[0].begin()
         window = self.view.window()
         if not window:
             return
         self._base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
-
         self._hover = None  # type: Optional[Any]
         self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
         self._diagnostics_by_config = {}  # type: Dict[str, List[Diagnostic]]
-
-        if self.is_likely_at_symbol(hover_point):
-            self.request_symbol_hover(hover_point)
-
+        self.request_symbol_hover(hover_point)
         # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
         # rather than just the hover point.
         request_point = offset_to_point(self.view, hover_point)

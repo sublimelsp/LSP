@@ -34,7 +34,7 @@ Documentation is available at [LSP.readthedocs.io](https://LSP.readthedocs.io).
 ## Available Languages<a name="available_languages"></a>
 
 * [Bash](https://lsp.readthedocs.io/en/latest/#bash)
-* [C/C++](https://lsp.readthedocs.io/en/latest/cplusplus/)
+* [C/C++](https://lsp.readthedocs.io/en/latest/#cc)
 * [C#](https://lsp.readthedocs.io/en/latest/#csharp)
 * [CSS/LESS/SASS (SCSS only)](https://lsp.readthedocs.io/en/latest/#css)
 * [D](https://lsp.readthedocs.io/en/latest/#d)

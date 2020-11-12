@@ -113,6 +113,11 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     completion_tag_value_set = [v for k, v in CompletionItemTag.__dict__.items() if not k.startswith('_')]
     first_folder = workspace_folders[0] if workspace_folders else None
     capabilities = {
+        "general": {
+            "regularExpressions": {
+                "engine": "ECMAScript"
+            }
+        },
         "textDocument": {
             "synchronization": {
                 "dynamicRegistration": True,  # exceptional

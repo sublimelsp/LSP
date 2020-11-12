@@ -70,6 +70,17 @@ def _settings_style_to_add_regions_flag(style: str) -> int:
     return flags
 
 
+class SettingsRegistration:
+    __slots__ = ("_settings",)
+
+    def __init__(self, settings: sublime.Settings, on_change: Callable[[], None]) -> None:
+        self._settings = settings
+        settings.add_on_change("LSP", on_change)
+
+    def __del__(self) -> None:
+        self._settings.clear_on_change("LSP")
+
+
 class Debouncer:
 
     def __init__(self) -> None:

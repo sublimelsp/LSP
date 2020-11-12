@@ -448,6 +448,8 @@ def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allo
                 }
             ]
         }
+        # Workaround CommonMark deficiency: two spaces followed by a newline should result in a new paragraph.
+        result = re.sub('(\\S)  \n', '\\1\n\n', result)
         return mdpopups.md2html(view, mdpopups.format_frontmatter(frontmatter) + result)
 
 

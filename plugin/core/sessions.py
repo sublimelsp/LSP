@@ -115,7 +115,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "regularExpressions": {
                 "engine": "ECMAScript"
             }
-        }
+        },
         "textDocument": {
             "synchronization": {
                 "dynamicRegistration": True,  # exceptional

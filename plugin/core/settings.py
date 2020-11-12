@@ -3,6 +3,7 @@ from .logging import debug
 from .types import ClientConfig, debounced
 from .types import read_dict_setting
 from .types import Settings
+from .types import SettingsRegistration
 from .typing import Any, Optional, Dict, Callable
 import sublime
 
@@ -91,6 +92,7 @@ class ClientConfigs:
 
 _settings_obj = None  # type: Optional[sublime.Settings]
 _settings = None  # type: Optional[Settings]
+_settings_registration = None  # type: Optional[SettingsRegistration]
 client_configs = ClientConfigs()
 
 
@@ -107,18 +109,18 @@ def _on_sublime_settings_changed() -> None:
 def load_settings() -> None:
     global _settings_obj
     global _settings
-    global client_configs
+    global _settings_registration
     if _settings_obj is None:
         _settings_obj = sublime.load_settings("LSP.sublime-settings")
         _settings = Settings(_settings_obj)
-        _settings_obj.add_on_change("LSP", _on_sublime_settings_changed)
+        _settings_registration = SettingsRegistration(_settings_obj, _on_sublime_settings_changed)
 
 
 def unload_settings() -> None:
     global _settings_obj
-    global _settings
+    global _settings_registration
     if _settings_obj is not None:
-        _settings_obj.clear_on_change("LSP")
+        _settings_registration = None
         _settings_obj = None
 
 

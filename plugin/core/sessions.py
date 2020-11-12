@@ -2,6 +2,8 @@ from .edit import apply_workspace_edit
 from .edit import parse_workspace_edit
 from .logging import debug
 from .logging import exception_log
+from .open import open_externally
+from .open import open_file_and_center_async
 from .promise import Promise
 from .protocol import CompletionItemTag
 from .protocol import Error
@@ -111,6 +113,11 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     completion_tag_value_set = [v for k, v in CompletionItemTag.__dict__.items() if not k.startswith('_')]
     first_folder = workspace_folders[0] if workspace_folders else None
     capabilities = {
+        "general": {
+            "regularExpressions": {
+                "engine": "ECMAScript"
+            }
+        },
         "textDocument": {
             "synchronization": {
                 "dynamicRegistration": True,  # exceptional
@@ -236,6 +243,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "configuration": True
         },
         "window": {
+            "showDocument": {
+                "support": True
+            },
             "showMessage": {
                 "messageActionItem": {
                     "additionalPropertiesSupport": True
@@ -1031,6 +1041,21 @@ class Session(TransportCallbacks):
                     for sv in self.session_views_async():
                         sv.on_capability_removed_async(registration_id, discarded)
         self.send_response(Response(request_id, None))
+
+    def m_window_showDocument(self, params: Any, request_id: Any) -> None:
+        """handles the window/showDocument request"""
+        uri = params.get("uri")
+
+        def success(b: bool) -> None:
+            self.send_response(Response(request_id, {"success": b}))
+
+        if params.get("external"):
+            success(open_externally(uri, bool(params.get("takeFocus"))))
+        else:
+            # TODO: ST API does not allow us to say "do not focus this new view"
+            filename = uri_to_filename(uri)
+            selection = params.get("selection")
+            open_file_and_center_async(self.window, filename, selection).then(lambda _: success(True))
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
         """handles the window/workDoneProgress/create request"""

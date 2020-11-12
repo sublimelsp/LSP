@@ -41,11 +41,11 @@ try:
     from .plugin.core.css import load as load_css
     from .plugin.core.handlers import LanguageHandler
     from .plugin.core.logging import exception_log
+    from .plugin.core.open import opening_files
     from .plugin.core.panels import destroy_output_panels
     from .plugin.core.panels import LspClearPanelCommand
     from .plugin.core.panels import LspUpdatePanelCommand
     from .plugin.core.panels import LspUpdateServerPanelCommand
-    from .plugin.core.promise import opening_files
     from .plugin.core.protocol import Response
     from .plugin.core.protocol import WorkspaceFolder
     from .plugin.core.registry import LspRecheckSessionsCommand

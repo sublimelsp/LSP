@@ -1049,7 +1049,9 @@ class Session(TransportCallbacks):
             success(open_externally(uri, bool(params.get("takeFocus"))))
         else:
             # TODO: ST API does not allow us to say "do not focus this new view"
-            open_file_and_center_async(self.window, uri_to_filename(uri), params.get("selection")).then(success)
+            filename = uri_to_filename(uri)
+            selection = params.get("selection")
+            open_file_and_center_async(self.window, filename, selection).then(lambda _: success(True))
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
         """handles the window/workDoneProgress/create request"""

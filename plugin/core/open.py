@@ -40,14 +40,14 @@ def open_file(window: sublime.Window, file_path: str, flags: int = 0, group: int
     return promise
 
 
-def open_file_and_center(window: sublime.Window, file_path: str, range: Dict[str, Any], flag: int = 0,
+def open_file_and_center(window: sublime.Window, file_path: str, r: Optional[Dict[str, Any]], flag: int = 0,
                          group: int = -1) -> Promise:
     """Open a file asynchronously and center the range. It is only safe to call this function from the UI thread."""
 
     def center_selection(v: Optional[sublime.View]) -> None:
-        if not v or not v.is_valid():
+        if not v or not v.is_valid() or not r:
             return
-        selection = range_to_region(Range.from_lsp(range), v)
+        selection = range_to_region(Range.from_lsp(r), v)
         v.show_at_center(selection.a)
         v.run_command("lsp_selection_set", {"regions": [(selection.a, selection.b)]})
 
@@ -55,11 +55,11 @@ def open_file_and_center(window: sublime.Window, file_path: str, range: Dict[str
     return open_file(window, file_path).then(center_selection)
 
 
-def open_file_and_center_async(window: sublime.Window, file_path: str, range: Dict[str, Any], flag: int = 0,
+def open_file_and_center_async(window: sublime.Window, file_path: str, r: Optional[Dict[str, Any]], flag: int = 0,
                                group: int = -1) -> Promise:
     """Open a file asynchronously and center the range, worker thread version."""
     return Promise.on_main_thread() \
-        .then(lambda _: open_file_and_center(window, file_path, range, flag, group)) \
+        .then(lambda _: open_file_and_center(window, file_path, r, flag, group)) \
         .then(Promise.on_async_thread)
 
 

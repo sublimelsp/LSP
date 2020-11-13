@@ -98,9 +98,6 @@ finally:
 
 
 def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:
-    """
-    This function should be removed: https://github.com/sublimelsp/LSP/issues/899
-    """
     for d in derived:
         d_subclasses = d.__subclasses__()
         if len(d_subclasses) > 0:
@@ -114,6 +111,7 @@ def _register_all_plugins() -> None:
     _get_final_subclasses(AbstractPlugin.__subclasses__(), plugin_classes)
     for plugin_class in plugin_classes:
         register_plugin(plugin_class, notify_listener=False)
+    # TODO: Anything below here should be removed about a month after ST4 is released.
     language_handler_classes = []  # type: List[Type[LanguageHandler]]
     _get_final_subclasses(LanguageHandler.__subclasses__(), language_handler_classes)
     for language_handler_class in language_handler_classes:

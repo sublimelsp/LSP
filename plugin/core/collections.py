@@ -1,9 +1,9 @@
 """
 Module with additional collections.
 """
-import sublime
 from .typing import Optional, Dict, Any
 from copy import deepcopy
+import sublime
 
 
 class DottedDict:
@@ -132,7 +132,7 @@ class DottedDict:
             else:
                 self.set(key, value)
 
-    def resolve(self, variables: Dict[str, str]) -> "DottedDict":
+    def create_resolved(self, variables: Dict[str, str]) -> "DottedDict":
         """
         Resolve a DottedDict that may potentially contain template variables like $folder
 

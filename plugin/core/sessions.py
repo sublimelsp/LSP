@@ -475,14 +475,14 @@ class AbstractPlugin(metaclass=ABCMeta):
                      workspace_folders: List[WorkspaceFolder], resolved: ResolvedStartupConfig) -> Optional[str]:
         """
         Callback invoked just before the language server subprocess is started. This is the place to do last-minute
-        adjustments to your "command" or "initializationOptions" in the passed-in "resolved" argument. You can also
-        choose to return a custom working directory, but consider that a language server shouldn't care about the
-        working directory.
+        adjustments to your "command" or "initializationOptions" in the passed-in "resolved" argument, or change the
+        order of the workspace folders. You can also choose to return a custom working directory, but consider that a
+        language server should not care about the working directory.
 
         :param      window:             The window
         :param      initiating_view:    The initiating view
-        :param      workspace_folders:  The workspace folders
-        :param      resolved:           The resolved configuration
+        :param      workspace_folders:  The workspace folders, you can modify these
+        :param      resolved:           The resolved configuration, you can modify these
 
         :returns:   A desired working directory, or None if you don't care
         """
@@ -499,7 +499,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         :param      workspace_folders:  The workspace folders
         :param      resolved:           The resolved configuration
         """
-        return None
+        pass
 
     def __init__(self, weaksession: 'weakref.ref[Session]') -> None:
         """
@@ -510,13 +510,13 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         self.weaksession = weaksession
 
-    def on_pre_window_settings(self, settings: DottedDict) -> None:
+    def on_pre_workspace_configuration(self, settings: DottedDict) -> None:
         """
-        Override to alter the server settings for the workspace/didChangeConfiguration notification.
+        Override this method to alter the server settings for the workspace/didChangeConfiguration notification.
 
-        :param      settings:      The settings about to be sent to the language server
+        :param      settings:      The settings that are about to be sent to the language server
         """
-        return None
+        pass
 
     def on_workspace_configuration(self, params: Dict, configuration: Any) -> None:
         """
@@ -525,7 +525,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         :param      params:         A ConfigurationItem for which configuration is requested.
         :param      configuration:  The resolved configuration for given params.
         """
-        return None
+        pass
 
     def on_pre_server_command(self, command: Mapping[str, Any], done_callback: Callable[[], None]) -> bool:
         """
@@ -935,9 +935,9 @@ class Session(TransportCallbacks):
     def _maybe_send_did_change_configuration(self) -> None:
         if self.config.settings:
             variables = self._template_variables()
-            resolved = self.config.settings.resolve(variables)
+            resolved = self.config.settings.create_resolved(variables)
             if self._plugin:
-                self._plugin.on_pre_window_settings(resolved)
+                self._plugin.on_pre_workspace_configuration(resolved)
             self.send_notification(Notification("workspace/didChangeConfiguration", {"settings": resolved.get()}))
 
     def _template_variables(self) -> Dict[str, str]:

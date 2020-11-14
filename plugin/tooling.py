@@ -285,7 +285,8 @@ class ServerTestRunner(TransportCallbacks):
         try:
             cwd = window.folders()[0] if window.folders() else None
             variables = extract_variables(window)
-            self._transport = create_transport(config, cwd, window, self, variables)
+            resolved = config.resolve(variables)
+            self._transport = create_transport(config.name, resolved, cwd, self)
             sublime.set_timeout_async(self.force_close_transport, self.CLOSE_TIMEOUT_SEC * 1000)
         except Exception as ex:
             self.on_transport_close(-1, ex)

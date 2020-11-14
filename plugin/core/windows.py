@@ -262,25 +262,32 @@ class WindowManager(Manager):
         try:
             workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
             plugin_class = get_plugin(config.name)
+            variables = extract_variables(self._window)
+            cwd = None  # type: Optional[str]
             if plugin_class is not None:
                 if plugin_class.needs_update_or_installation():
                     config.set_view_status(initiating_view, "installing...")
                     plugin_class.install_or_update()
+                additional_variables = plugin_class.additional_variables()
+                if isinstance(additional_variables, dict):
+                    variables.update(additional_variables)
                 cannot_start_reason = plugin_class.can_start(
                     self._window, initiating_view, workspace_folders, config)
                 if cannot_start_reason:
                     config.erase_view_status(initiating_view)
                     message = "cannot start {}: {}".format(config.name, cannot_start_reason)
                     return self._window.status_message(message)
+                resolved = config.resolve(variables)
+                cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, resolved)
+            else:
+                resolved = config.resolve(variables)
             config.set_view_status(initiating_view, "starting...")
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
-            cwd = workspace_folders[0].path if workspace_folders else None
-            variables = extract_variables(self._window)
-            if plugin_class is not None:
-                additional_variables = plugin_class.additional_variables()
-                if isinstance(additional_variables, dict):
-                    variables.update(additional_variables)
-            transport = create_transport(config, cwd, self._window, session, variables)
+            if not cwd:
+                cwd = workspace_folders[0].path if workspace_folders else None
+            transport = create_transport(config.name, resolved, cwd, session)
+            if plugin_class:
+                plugin_class.on_post_start(self._window, initiating_view, workspace_folders, resolved)
             config.set_view_status(initiating_view, "initialize")
             session.initialize_async(
                 variables, transport,

@@ -1,3 +1,4 @@
+from .collections import DottedDict
 from .edit import apply_workspace_edit
 from .edit import parse_workspace_edit
 from .logging import debug
@@ -22,11 +23,11 @@ from .types import debounced
 from .types import diff
 from .types import DocumentSelector
 from .types import method_to_capability
+from .types import ResolvedStartupConfig
 from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
 from .url import uri_to_filename
 from .version import __version__
 from .views import COMPLETION_KINDS
-from .views import did_change_configuration
 from .views import extract_variables
 from .views import get_storage_path
 from .views import SYMBOL_KINDS
@@ -469,14 +470,53 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         return None
 
+    @classmethod
+    def on_pre_start(cls, window: sublime.Window, initiating_view: sublime.View,
+                     workspace_folders: List[WorkspaceFolder], resolved: ResolvedStartupConfig) -> Optional[str]:
+        """
+        Callback invoked just before the language server subprocess is started. This is the place to do last-minute
+        adjustments to your "command" or "initializationOptions" in the passed-in "resolved" argument. You can also
+        choose to return a custom working directory, but consider that a language server shouldn't care about the
+        working directory.
+
+        :param      window:             The window
+        :param      initiating_view:    The initiating view
+        :param      workspace_folders:  The workspace folders
+        :param      resolved:           The resolved configuration
+
+        :returns:   A desired working directory, or None if you don't care
+        """
+        return None
+
+    @classmethod
+    def on_post_start(cls, window: sublime.Window, initiating_view: sublime.View,
+                      workspace_folders: List[WorkspaceFolder], resolved: ResolvedStartupConfig) -> None:
+        """
+        Callback invoked when the subprocess was just started.
+
+        :param      window:             The window
+        :param      initiating_view:    The initiating view
+        :param      workspace_folders:  The workspace folders
+        :param      resolved:           The resolved configuration
+        """
+        return None
+
     def __init__(self, weaksession: 'weakref.ref[Session]') -> None:
         """
-        Constructs a new instance.
+        Constructs a new instance. Your instance is constructed after a response to the initialize request.
 
         :param      weaksession:  A weak reference to the Session. You can grab a strong reference through
                                   self.weaksession(), but don't hold on to that reference.
         """
         self.weaksession = weaksession
+
+    def on_pre_window_settings(self, settings: DottedDict) -> None:
+        """
+        Override to alter the server settings for the workspace/didChangeConfiguration notification.
+
+        :param      settings:      The settings about to be sent to the language server
+        """
+        return None
 
     def on_workspace_configuration(self, params: Dict, configuration: Any) -> None:
         """
@@ -485,7 +525,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         :param      params:         A ConfigurationItem for which configuration is requested.
         :param      configuration:  The resolved configuration for given params.
         """
-        pass
+        return None
 
     def on_pre_server_command(self, command: Mapping[str, Any], done_callback: Callable[[], None]) -> bool:
         """
@@ -894,7 +934,11 @@ class Session(TransportCallbacks):
 
     def _maybe_send_did_change_configuration(self) -> None:
         if self.config.settings:
-            self.send_notification(did_change_configuration(self.config.settings, self._template_variables()))
+            variables = self._template_variables()
+            resolved = self.config.settings.resolve(variables)
+            if self._plugin:
+                self._plugin.on_pre_window_settings(resolved)
+            self.send_notification(Notification("workspace/didChangeConfiguration", {"settings": resolved.get()}))
 
     def _template_variables(self) -> Dict[str, str]:
         variables = extract_variables(self.window)

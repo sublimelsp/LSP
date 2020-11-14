@@ -58,6 +58,12 @@ class ClientConfigs:
         if self.all.pop(name, None):
             self._notify_listener()
 
+    def update_external_config(self, name: str, s: sublime.Settings, file: str) -> None:
+        config = ClientConfig.from_sublime_settings(name, s, file)
+        self.external[name] = config
+        self.all[name] = config
+        self._notify_listener()
+
     def update_configs(self) -> None:
         global _settings_obj
         if _settings_obj is None:

@@ -1,20 +1,12 @@
 import sublime
 import sublime_plugin
 from .core.registry import windows
-from .core.settings import ClientConfig, client_configs
-from .core.typing import List
-
-
-def create_config_items(configs: List[ClientConfig]) -> List[List[str]]:
-    return [[
-        config.name, ", ".join(language.id
-                               for language in config.languages)
-    ] for config in configs]
+from .core.settings import client_configs
 
 
 class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:
-        self._items = create_config_items([config for config in client_configs.all.values() if not config.enabled])
+        self._items = [config.name for config in client_configs.all.values() if not config.enabled]
         if len(self._items) > 0:
             self.window.show_quick_panel(self._items, self._on_done)
         else:
@@ -22,14 +14,14 @@ class LspEnableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
 
     def _on_done(self, index: int) -> None:
         if index > -1:
-            config_name = self._items[index][0]
+            config_name = self._items[index]
             client_configs.enable(config_name)
 
 
 class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:
         wm = windows.lookup(self.window)
-        self._items = create_config_items([config for config in wm._configs.all.values() if not config.enabled])
+        self._items = [config.name for config in wm._configs.all.values() if not config.enabled]
         if len(self._items) > 0:
             self.window.show_quick_panel(self._items, self._on_done)
         else:
@@ -37,14 +29,14 @@ class LspEnableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
 
     def _on_done(self, index: int) -> None:
         if index > -1:
-            config_name = self._items[index][0]
+            config_name = self._items[index]
             wm = windows.lookup(self.window)
             sublime.set_timeout_async(lambda: wm.enable_config_async(config_name))
 
 
 class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:
-        self._items = create_config_items([config for config in client_configs.all.values() if config.enabled])
+        self._items = [config.name for config in client_configs.all.values() if config.enabled]
         if len(self._items) > 0:
             self.window.show_quick_panel(self._items, self._on_done)
         else:
@@ -52,7 +44,7 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
 
     def _on_done(self, index: int) -> None:
         if index > -1:
-            config_name = self._items[index][0]
+            config_name = self._items[index]
             client_configs.disable(config_name)
             wm = windows.lookup(self.window)
             sublime.set_timeout_async(lambda: wm.end_config_sessions_async(config_name))
@@ -61,7 +53,7 @@ class LspDisableLanguageServerGloballyCommand(sublime_plugin.WindowCommand):
 class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
     def run(self) -> None:
         wm = windows.lookup(self.window)
-        self._items = create_config_items([config for config in wm._configs.all.values() if config.enabled])
+        self._items = [config.name for config in wm._configs.all.values() if config.enabled]
         if len(self._items) > 0:
             self.window.show_quick_panel(self._items, self._on_done)
         else:
@@ -69,6 +61,6 @@ class LspDisableLanguageServerInProjectCommand(sublime_plugin.WindowCommand):
 
     def _on_done(self, index: int) -> None:
         if index > -1:
-            config_name = self._items[index][0]
+            config_name = self._items[index]
             wm = windows.lookup(self.window)
             sublime.set_timeout_async(lambda: wm.disable_config_async(config_name))

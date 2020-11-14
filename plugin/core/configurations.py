@@ -1,5 +1,5 @@
 from .logging import debug
-from .types import ClientConfig, view2scope
+from .types import ClientConfig
 from .typing import Any, Generator, List, Dict, Set
 from .workspace import enable_in_project, disable_in_project
 import sublime
@@ -34,25 +34,16 @@ class WindowConfigManager(object):
     def get_configs(self) -> List[ClientConfig]:
         return sorted(self.all.values(), key=lambda config: config.name)
 
-    def match_scope(self, scope: str) -> Generator[ClientConfig, None, None]:
-        """
-        Yields configurations which match one of their document selectors to the given scope.
-        """
-        for config in self.all.values():
-            if config.match_scope(scope):
-                yield config
-
     def match_view(self, view: sublime.View, include_disabled: bool = False) -> Generator[ClientConfig, None, None]:
         """
         Yields configurations matching with the language's document_selector
         """
         try:
-            configs = self.match_scope(view2scope(view))
-            if include_disabled:
-                yield from configs
-            else:
-                for config in configs:
+            for config in self.all.values():
+                if config.match_view(view):
                     if config.enabled:
+                        yield config
+                    elif include_disabled:
                         yield config
         except IndexError:
             # We're in the worker thread, and the view is already closed. This means view.scope_name(0) returns an

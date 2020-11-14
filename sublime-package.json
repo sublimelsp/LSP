@@ -22,9 +22,9 @@
               "markdownDescription": "A dictionary of code action identifiers that should be triggered on save.\n\nCode action identifiers are not officially standardized so refer to specific server's documentation on what is supported but `source.fixAll` is commonly used to apply fix-on-save code actions.\n\nThis option is also supported in syntax-specific settings and/or in the `\"settings\"` section of project files. Settings from all those places will be merged and more specific (syntax and project) settings will override less specific (from LSP or Sublime settings).\n\nOnly \"source.*\" actions are supported."
             },
             // Deprecated syntaxes and scopes
-            "useLanguagesInstead": {
+            "useSelectorInstead": {
               "type": "string",
-              "deprecationMessage": "Use \"languages\" instead."
+              "deprecationMessage": "Use the \"selector\" key instead."
             },
             "ClientCommand": {
               "type": "array",
@@ -66,46 +66,13 @@
                 "markdownDescription": "The value for this environment variable."
               },
             },
-            "ClientLanguages": {
-              "markdownDescription": "An array which defines to which views this language server should be attached.",
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "$ref": "#/definitions/LanguageConfig"
-              },
+            "ClientSelector": {
+              // \u00A0 is used as a workaround for https://github.com/sublimehq/sublime_text/issues/3373
+              "markdownDescription": "A [selector](https://www.sublimetext.com/docs/3/selectors.html) that defines to which views this language server should be attached, in the same way that a selector for a [Build\u00A0System](https://www.sublimetext.com/docs/3/build_systems.html) is used to filter the Build System to particular views. The selector is matched against the base scope of the syntax of the view. If the selector matches with the base scope of the the file, the associated language server is started. To determine the base scope of your view, click on Tools > Developer > Show Scope Name. The first line in the popup is the base scope.",
+              "type": "string",
             },
-            "LanguageConfig": {
-              "type": "object",
-              "markdownDescription": "A language configuration defines which servers are attached to which views",
-              "properties": {
-                "languageId": {
-                  "type": "string",
-                  "default": "somelang",
-                  "markdownDescription": "The \"Language ID\". This value serves two purposes:\n\n1. It is sent to the language server so that it knows with what kind of file it is dealing with.\n2. When `\"document_selector\"` is not provided, this is the connection between your files and language servers.\n\nFor more information, refer to the [textDocumentItem of the LSP specification](https://microsoft.github.io/language-server-protocol/specification#textDocumentItem)."
-                },
-                "document_selector": {
-                  "type": "string",
-                  "default": "source.somelang",
-                  "markdownDescription": "The Sublime Text selector to attach the language server process to applicable views. If not specified, it defaults to \"source.${languageId}\". This is the connection between your files and language servers. It's a selector that is matched against the current view's base scope. If the selector matches with the base scope of the the file, the associated language server is started. If the selector happens to be of the form \"source.{languageId}\" (which it is in many cases), then you can omit this `\"document_selector\"` key altogether, and LSP will assume the selector is \"source.{languageId}\".\n\nFor more information, refer to the [Sublime Text docs on selectors](https://www.sublimetext.com/docs/3/selectors.html)"
-                },
-                "feature_selector": {
-                  "type": "string",
-                  "default": "source.somelang",
-                  "markdownDescription": "The Sublime Text selector to use to give preference to this language server when multiple servers are attached to a view. For certain capabilities, like code completion, only one language server is chosen. The selector specified here decides which language server is chosen above others."
-                },
-                "syntaxes": {
-                  "type": "array",
-                  "deprecationMessage": "Use \"document_selector\" instead."
-                },
-                "scopes": {
-                  "type": "array",
-                  "deprecationMessage": "Use \"feature_selector\" instead."
-                }
-              },
-              "required": [
-                "languageId"
-              ],
-              "additionalProperties": false
+            "ClientPrioritySelector": {
+              "markdownDescription": "While the `\"selector\"` is used to determine which views belong to which language server configuration, the `\"priority_selector\"` is used to determine which language server wins at the caret position in case there are multiple language servers attached to a view. For instance, there can only be one signature help popup visible at any given time. This selector is use to decide which one to use for such capabilities. This setting is optional and you won't need to set it if you're planning on using a single language server for a particular type of view."
             },
             // The ClientConfig class
             "ClientConfig": {
@@ -133,8 +100,11 @@
                 "ignore_server_trigger_chars": {
                   "$ref": "#/definitions/ClientIgnoreServerTriggerChars"
                 },
-                "languages": {
-                  "$ref": "#/definitions/ClientLanguages"
+                "selector": {
+                  "$ref": "#/definitions/ClientSelector"
+                },
+                "priority_selector": {
+                  "$ref": "#/definitions/ClientPrioritySelector",
                 },
                 "initializationOptions": {
                   "$ref": "#/definitions/ClientInitializationOptions"
@@ -149,21 +119,25 @@
                   "$ref": "#/definitions/ClientEnv"
                 },
                 "languageId": {
-                  "$ref": "#/definitions/useLanguagesInstead"
+                  "$ref": "#/definitions/useSelectorInstead"
                 },
                 "document_selector": {
-                  "$ref": "#/definitions/useLanguagesInstead"
+                  "$ref": "#/definitions/useSelectorInstead"
                 },
                 "feature_selector": {
-                  "$ref": "#/definitions/useLanguagesInstead"
+                  "$ref": "#/definitions/useSelectorInstead"
                 },
                 "syntaxes": {
                   "type": "array",
-                  "$ref": "#/definitions/useLanguagesInstead"
+                  "$ref": "#/definitions/useSelectorInstead"
                 },
                 "scopes": {
                   "type": "array",
-                  "$ref": "#/definitions/useLanguagesInstead"
+                  "$ref": "#/definitions/useSelectorInstead"
+                },
+                "languages": {
+                  "type": "array",
+                  "$ref": "#/definitions/useSelectorInstead"
                 }
               }
             }
@@ -464,8 +438,11 @@
             "command": {
               "$ref": "sublime://settings/LSP#/definitions/ClientCommand"
             },
-            "languages": {
-              "$ref": "sublime://settings/LSP#/definitions/ClientLanguages"
+            "selector": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientSelector"
+            },
+            "priority_selector": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientPrioritySelector"
             },
             "initializationOptions": {
               "$ref": "sublime://settings/LSP#/definitions/ClientInitializationOptions"

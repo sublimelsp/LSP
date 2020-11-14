@@ -1,10 +1,7 @@
 from LSP.plugin.core.configurations import ConfigManager
 from LSP.plugin.core.configurations import WindowConfigManager
-from LSP.plugin.core.settings import client_configs
-from setup import add_config, remove_config
 from test_mocks import DISABLED_CONFIG
 from test_mocks import TEST_CONFIG
-from test_mocks import TEST_LANGUAGE
 from unittest.mock import MagicMock
 import sublime
 import unittest
@@ -89,21 +86,3 @@ class WindowConfigManagerTests(unittest.TestCase):
         # view is activated after popup, we try to start a session again...
         manager.update()
         self.assertFalse(any(manager.match_view(view)))
-
-
-class IsSupportedSyntaxTests(unittest.TestCase):
-
-    def test_has_no_matching_config(self) -> None:
-        self.assertFalse(client_configs.is_syntax_supported('asdf'))
-
-    def test_has_matching_config(self) -> None:
-        add_config(TEST_CONFIG)
-        self.assertEqual(TEST_LANGUAGE.feature_selector, TEST_CONFIG.languages[0].feature_selector)
-        self.assertTrue(client_configs.is_syntax_supported("Packages/Text/Plain text.tmLanguage"))
-        remove_config(TEST_CONFIG)
-
-    def test_does_not_match_after_removing_config(self) -> None:
-        add_config(TEST_CONFIG)
-        self.assertTrue(client_configs.is_syntax_supported("Packages/Text/Plain text.tmLanguage"))
-        remove_config(TEST_CONFIG)
-        self.assertFalse(client_configs.is_syntax_supported("Packages/Text/Plain text.tmLanguage"))

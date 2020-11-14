@@ -36,6 +36,25 @@
     //         }
     //     ]
     // },
+    // Show Source Actions
+    // {
+    //     "command": "lsp_code_actions",
+    //     "args": {
+    //         "only_kinds": [
+    //             "source"
+    //         ]
+    //     },
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp.session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "codeActionProvider.codeActionKinds"
+    //         }
+    //     ]
+    // },
     // Show/Hide Diagnostics Panel
     {
         "command": "lsp_show_diagnostics_panel",

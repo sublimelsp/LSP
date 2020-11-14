@@ -29,7 +29,12 @@
             },
             {
                 "command": "lsp_code_actions",
-                "caption": "Apply Code Action…"
+                "caption": "Code Action…"
+            },
+            {
+                "command": "lsp_code_actions",
+                "args": {"only_kinds": ["source"]},
+                "caption": "Source Action…"
             },
             {
                 "command": "lsp_format_document",

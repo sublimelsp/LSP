@@ -29,7 +29,6 @@ from .workspace import sorted_workspace_folders
 from abc import ABCMeta
 from abc import abstractmethod
 from collections import deque
-from copy import deepcopy
 from subprocess import CalledProcessError
 from time import time
 from weakref import ref
@@ -731,22 +730,11 @@ class RemoteLogger(Logger):
         })
 
     def outgoing_notification(self, method: str, params: Any) -> None:
-        trimmed_params = deepcopy(params)
-        if method.endswith("didOpen"):
-            if isinstance(params, dict) and "textDocument" in params:
-                trimmed_params['textDocument']['text'] = '[trimmed]'
-        elif method.endswith("didChange"):
-            content_changes = params.get("contentChanges")
-            if content_changes and "range" not in content_changes[0]:
-                pass
-        elif method.endswith("didSave"):
-            if isinstance(params, dict) and "text" in params:
-                trimmed_params['text'] = '[trimmed]'
         self._broadcast_json({
             'server': self._server_name,
             'time': round(time() * 1000),
             'method': method,
-            'params': trimmed_params,
+            'params': params,
             'direction': self.DIRECTION_OUTGOING,
         })
 

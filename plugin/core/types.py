@@ -7,7 +7,6 @@ from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
 import contextlib
-import functools
 import os
 import socket
 import sublime

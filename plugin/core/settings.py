@@ -59,7 +59,12 @@ class ClientConfigs:
             self._notify_listener()
 
     def update_external_config(self, name: str, s: sublime.Settings, file: str) -> None:
-        config = ClientConfig.from_sublime_settings(name, s, file)
+        try:
+            config = ClientConfig.from_sublime_settings(name, s, file)
+        except IOError:
+            # The plugin is about to be disabled (for example by Package Control for an upgrade), let unregister_plugin
+            # handle this
+            return
         self.external[name] = config
         self.all[name] = config
         self._notify_listener()

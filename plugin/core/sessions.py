@@ -24,6 +24,7 @@ from .types import diff
 from .types import DocumentSelector
 from .types import method_to_capability
 from .types import ResolvedStartupConfig
+from .types import SettingsRegistration
 from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
 from .url import uri_to_filename
 from .version import __version__
@@ -540,7 +541,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         return False
 
 
-_plugins = {}  # type: Dict[str, Type[AbstractPlugin]]
+_plugins = {}  # type: Dict[str, Tuple[Type[AbstractPlugin], SettingsRegistration]]
 
 
 def _register_plugin_impl(plugin: Type[AbstractPlugin], notify_listener: bool) -> None:
@@ -549,7 +550,8 @@ def _register_plugin_impl(plugin: Type[AbstractPlugin], notify_listener: bool) -
     try:
         settings, base_file = plugin.configuration()
         if client_configs.add_external_config(name, settings, base_file, notify_listener):
-            _plugins[name] = plugin
+            on_change = functools.partial(client_configs.update_external_config, name, settings, base_file)
+            _plugins[name] = (plugin, SettingsRegistration(settings, on_change))
     except Exception as ex:
         exception_log('Failed to register plugin "{}"'.format(name), ex)
 
@@ -618,7 +620,8 @@ def unregister_plugin(plugin: Type[AbstractPlugin]) -> None:
 
 def get_plugin(name: str) -> Optional[Type[AbstractPlugin]]:
     global _plugins
-    return _plugins.get(name, None)
+    tup = _plugins.get(name, None)
+    return tup[0] if tup else None
 
 
 class Logger(metaclass=ABCMeta):

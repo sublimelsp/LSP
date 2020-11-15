@@ -96,13 +96,14 @@ class CodeActionsManager:
         view: sublime.View,
         request_range: Range,
         diagnostics_by_config: Dict[str, List[Diagnostic]],
-        actions_handler: Callable[[CodeActionsByConfigName], None]
+        actions_handler: Callable[[CodeActionsByConfigName], None],
+        only_kinds: Optional[Dict[str, bool]] = None
     ) -> CodeActionsCollector:
         """
         Requests code actions with provided diagnostics and specified range. If there are
         no diagnostics for given session, the request will be made with empty diagnostics list.
         """
-        return self._request_async(view, request_range, diagnostics_by_config, False, actions_handler)
+        return self._request_async(view, request_range, diagnostics_by_config, False, actions_handler, only_kinds)
 
     def request_on_save(
         self,
@@ -274,7 +275,7 @@ class LspCodeActionsCommand(LspTextCommand):
 
     capability = 'codeActionProvider'
 
-    def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
+    def run(self, edit: sublime.Edit, event: Optional[dict] = None, only_kinds: Optional[List[str]] = None) -> None:
         self.commands = []  # type: List[Tuple[str, str, CodeActionOrCommand]]
         self.commands_by_config = {}  # type: CodeActionsByConfigName
         view = self.view
@@ -284,8 +285,14 @@ class LspCodeActionsCommand(LspTextCommand):
             return
         selection_range = region_to_range(view, region)
         diagnostics_by_config, extended_range = filter_by_range(view_diagnostics(view), selection_range)
+        dict_kinds = {kind: True for kind in only_kinds} if only_kinds else None
         actions_manager.request_for_range_async(
-            view, extended_range, diagnostics_by_config, self.handle_responses_async)
+            view, extended_range, diagnostics_by_config, self.handle_responses_async, dict_kinds)
+
+    def handle_responses_async(self, responses: CodeActionsByConfigName) -> None:
+        self.commands_by_config = responses
+        self.commands = self.combine_commands()
+        self.show_popup_menu()
 
     def combine_commands(self) -> 'List[Tuple[str, str, CodeActionOrCommand]]':
         results = []
@@ -293,11 +300,6 @@ class LspCodeActionsCommand(LspTextCommand):
             for command in commands:
                 results.append((config, command['title'], command))
         return results
-
-    def handle_responses_async(self, responses: CodeActionsByConfigName) -> None:
-        self.commands_by_config = responses
-        self.commands = self.combine_commands()
-        self.show_popup_menu()
 
     def show_popup_menu(self) -> None:
         if len(self.commands) > 0:

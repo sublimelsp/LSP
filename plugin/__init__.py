@@ -1,3 +1,4 @@
+from .core.collections import DottedDict
 from .core.css import css
 from .core.protocol import Notification
 from .core.protocol import Request
@@ -9,6 +10,7 @@ from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.sessions import unregister_plugin
 from .core.types import ClientConfig
+from .core.types import ResolvedStartupConfig
 from .core.url import filename_to_uri
 from .core.url import uri_to_filename
 from .core.version import __version__
@@ -19,10 +21,12 @@ __all__ = [
     'AbstractPlugin',
     'ClientConfig',
     'css',
+    'DottedDict',
     'filename_to_uri',
     'Notification',
     'register_plugin',
     'Request',
+    'ResolvedStartupConfig',
     'Response',
     'Session',
     'SessionBufferProtocol',

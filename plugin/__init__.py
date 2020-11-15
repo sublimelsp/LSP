@@ -1,4 +1,5 @@
 from .core.handlers import LanguageHandler
+from .core.collections import DottedDict
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.protocol import Response
@@ -14,6 +15,7 @@ from .core.version import __version__
 __all__ = [
     '__version__',
     'ClientConfig',
+    'DottedDict',
     'filename_to_uri',
     'LanguageConfig',
     'LanguageHandler',

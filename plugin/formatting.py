@@ -2,7 +2,6 @@ from .core.edit import parse_text_edit
 from .core.registry import LspTextCommand
 from .core.registry import sessions_for_view
 from .core.sessions import Session
-from .core.settings import client_configs
 from .core.settings import userprefs
 from .core.typing import Any, Callable, List, Optional, Iterator
 from .core.views import entire_content_region
@@ -21,8 +20,7 @@ def apply_response_to_view(response: Optional[List[dict]], view: sublime.View) -
 class WillSaveWaitTask(SaveTask):
     @classmethod
     def is_applicable(cls, view: sublime.View) -> bool:
-        settings = view.settings()
-        return bool(view.file_name()) and client_configs.is_syntax_supported(str(settings.get('syntax')))
+        return bool(view.file_name())
 
     def __init__(self, view: sublime.View, on_complete: Callable[[], None]) -> None:
         super().__init__(view, on_complete)
@@ -59,8 +57,7 @@ class FormattingTask(SaveTask):
         settings = view.settings()
         view_format_on_save = settings.get('lsp_format_on_save', None)
         enabled = view_format_on_save if isinstance(view_format_on_save, bool) else userprefs().lsp_format_on_save
-        return enabled and bool(view.window()) and bool(view.file_name()) \
-            and client_configs.is_syntax_supported(str(settings.get('syntax')))
+        return enabled and bool(view.window()) and bool(view.file_name())
 
     def run_async(self) -> None:
         super().run_async()

@@ -9,7 +9,6 @@ from .core.sessions import Session
 from .core.sessions import SessionBufferProtocol
 from .core.sessions import unregister_plugin
 from .core.types import ClientConfig
-from .core.types import LanguageConfig
 from .core.url import filename_to_uri
 from .core.url import uri_to_filename
 from .core.version import __version__
@@ -21,7 +20,6 @@ __all__ = [
     'ClientConfig',
     'css',
     'filename_to_uri',
-    'LanguageConfig',
     'Notification',
     'register_plugin',
     'Request',

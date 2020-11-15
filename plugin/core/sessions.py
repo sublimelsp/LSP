@@ -1,7 +1,10 @@
+from .collections import DottedDict
 from .edit import apply_workspace_edit
 from .edit import parse_workspace_edit
 from .logging import debug
 from .logging import exception_log
+from .open import open_externally
+from .open import open_file_and_center_async
 from .promise import Promise
 from .protocol import CompletionItemTag
 from .protocol import Error
@@ -20,11 +23,12 @@ from .types import debounced
 from .types import diff
 from .types import DocumentSelector
 from .types import method_to_capability
+from .types import ResolvedStartupConfig
+from .types import SettingsRegistration
 from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
 from .url import uri_to_filename
 from .version import __version__
 from .views import COMPLETION_KINDS
-from .views import did_change_configuration
 from .views import extract_variables
 from .views import get_storage_path
 from .views import SYMBOL_KINDS
@@ -111,6 +115,11 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     completion_tag_value_set = [v for k, v in CompletionItemTag.__dict__.items() if not k.startswith('_')]
     first_folder = workspace_folders[0] if workspace_folders else None
     capabilities = {
+        "general": {
+            "regularExpressions": {
+                "engine": "ECMAScript"
+            }
+        },
         "textDocument": {
             "synchronization": {
                 "dynamicRegistration": True,  # exceptional
@@ -236,6 +245,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "configuration": True
         },
         "window": {
+            "showDocument": {
+                "support": True
+            },
             "showMessage": {
                 "messageActionItem": {
                     "additionalPropertiesSupport": True
@@ -459,14 +471,53 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         return None
 
+    @classmethod
+    def on_pre_start(cls, window: sublime.Window, initiating_view: sublime.View,
+                     workspace_folders: List[WorkspaceFolder], resolved: ResolvedStartupConfig) -> Optional[str]:
+        """
+        Callback invoked just before the language server subprocess is started. This is the place to do last-minute
+        adjustments to your "command" or "initializationOptions" in the passed-in "resolved" argument, or change the
+        order of the workspace folders. You can also choose to return a custom working directory, but consider that a
+        language server should not care about the working directory.
+
+        :param      window:             The window
+        :param      initiating_view:    The initiating view
+        :param      workspace_folders:  The workspace folders, you can modify these
+        :param      resolved:           The resolved configuration, you can modify these
+
+        :returns:   A desired working directory, or None if you don't care
+        """
+        return None
+
+    @classmethod
+    def on_post_start(cls, window: sublime.Window, initiating_view: sublime.View,
+                      workspace_folders: List[WorkspaceFolder], resolved: ResolvedStartupConfig) -> None:
+        """
+        Callback invoked when the subprocess was just started.
+
+        :param      window:             The window
+        :param      initiating_view:    The initiating view
+        :param      workspace_folders:  The workspace folders
+        :param      resolved:           The resolved configuration
+        """
+        pass
+
     def __init__(self, weaksession: 'weakref.ref[Session]') -> None:
         """
-        Constructs a new instance.
+        Constructs a new instance. Your instance is constructed after a response to the initialize request.
 
         :param      weaksession:  A weak reference to the Session. You can grab a strong reference through
                                   self.weaksession(), but don't hold on to that reference.
         """
         self.weaksession = weaksession
+
+    def on_pre_workspace_configuration(self, settings: DottedDict) -> None:
+        """
+        Override this method to alter the server settings for the workspace/didChangeConfiguration notification.
+
+        :param      settings:      The settings that are about to be sent to the language server
+        """
+        pass
 
     def on_workspace_configuration(self, params: Dict, configuration: Any) -> None:
         """
@@ -490,7 +541,7 @@ class AbstractPlugin(metaclass=ABCMeta):
         return False
 
 
-_plugins = {}  # type: Dict[str, Type[AbstractPlugin]]
+_plugins = {}  # type: Dict[str, Tuple[Type[AbstractPlugin], SettingsRegistration]]
 
 
 def _register_plugin_impl(plugin: Type[AbstractPlugin], notify_listener: bool) -> None:
@@ -499,7 +550,8 @@ def _register_plugin_impl(plugin: Type[AbstractPlugin], notify_listener: bool) -
     try:
         settings, base_file = plugin.configuration()
         if client_configs.add_external_config(name, settings, base_file, notify_listener):
-            _plugins[name] = plugin
+            on_change = functools.partial(client_configs.update_external_config, name, settings, base_file)
+            _plugins[name] = (plugin, SettingsRegistration(settings, on_change))
     except Exception as ex:
         exception_log('Failed to register plugin "{}"'.format(name), ex)
 
@@ -568,7 +620,8 @@ def unregister_plugin(plugin: Type[AbstractPlugin]) -> None:
 
 def get_plugin(name: str) -> Optional[Type[AbstractPlugin]]:
     global _plugins
-    return _plugins.get(name, None)
+    tup = _plugins.get(name, None)
+    return tup[0] if tup else None
 
 
 class Logger(metaclass=ABCMeta):
@@ -884,7 +937,11 @@ class Session(TransportCallbacks):
 
     def _maybe_send_did_change_configuration(self) -> None:
         if self.config.settings:
-            self.send_notification(did_change_configuration(self.config.settings, self._template_variables()))
+            variables = self._template_variables()
+            resolved = self.config.settings.create_resolved(variables)
+            if self._plugin:
+                self._plugin.on_pre_workspace_configuration(resolved)
+            self.send_notification(Notification("workspace/didChangeConfiguration", {"settings": resolved.get()}))
 
     def _template_variables(self) -> Dict[str, str]:
         variables = extract_variables(self.window)
@@ -1031,6 +1088,21 @@ class Session(TransportCallbacks):
                     for sv in self.session_views_async():
                         sv.on_capability_removed_async(registration_id, discarded)
         self.send_response(Response(request_id, None))
+
+    def m_window_showDocument(self, params: Any, request_id: Any) -> None:
+        """handles the window/showDocument request"""
+        uri = params.get("uri")
+
+        def success(b: bool) -> None:
+            self.send_response(Response(request_id, {"success": b}))
+
+        if params.get("external"):
+            success(open_externally(uri, bool(params.get("takeFocus"))))
+        else:
+            # TODO: ST API does not allow us to say "do not focus this new view"
+            filename = uri_to_filename(uri)
+            selection = params.get("selection")
+            open_file_and_center_async(self.window, filename, selection).then(lambda _: success(True))
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
         """handles the window/workDoneProgress/create request"""

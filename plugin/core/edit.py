@@ -1,11 +1,11 @@
 from .logging import debug
-from .promise import open_file
+from .open import open_file
 from .promise import Promise
 from .typing import List, Dict, Any, Iterable, Optional, Tuple
 from .url import uri_to_filename
+from functools import partial
 import operator
 import sublime
-from functools import partial
 
 
 # tuple of start, end, newText, version

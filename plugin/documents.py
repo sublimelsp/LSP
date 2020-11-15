@@ -14,6 +14,7 @@ from .core.sessions import Session
 from .core.settings import userprefs
 from .core.signature_help import create_signature_help
 from .core.signature_help import SignatureHelp
+from .core.types import basescope2languageid
 from .core.types import debounced
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
 from .core.views import DIAGNOSTIC_SEVERITY
@@ -167,6 +168,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
         self._sighelp = None  # type: Optional[SignatureHelp]
         self._sighelp_renderer = ColorSchemeScopeRenderer(self.view)
+        self._language_id = ""
         self._registered = False
 
     def __del__(self) -> None:
@@ -273,6 +275,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_reload_async()
+
+    def get_language_id(self) -> str:
+        return self._language_id
 
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
 
@@ -613,6 +618,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         debounced(f, after_ms, lambda: self._stored_region == r, async_thread=True)
 
     def _register_async(self) -> None:
+        syntax = self.view.syntax()
+        if not syntax:
+            debug("view", self.view.id(), "has no syntax")
+            return
+        self._language_id = basescope2languageid(syntax.scope)
         buf = self.view.buffer()
         if not buf:
             debug("not tracking bufferless view", self.view.id())

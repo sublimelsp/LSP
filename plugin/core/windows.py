@@ -29,7 +29,6 @@ from .workspace import sorted_workspace_folders
 from abc import ABCMeta
 from abc import abstractmethod
 from collections import deque
-from copy import deepcopy
 from subprocess import CalledProcessError
 from time import time
 from weakref import ref
@@ -81,6 +80,10 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def session_views_async(self) -> Iterable[SessionViewProtocol]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_language_id(self) -> str:
         raise NotImplementedError()
 
 
@@ -258,25 +261,32 @@ class WindowManager(Manager):
         try:
             workspace_folders = sorted_workspace_folders(self._workspace.folders, file_path)
             plugin_class = get_plugin(config.name)
+            variables = extract_variables(self._window)
+            cwd = None  # type: Optional[str]
             if plugin_class is not None:
                 if plugin_class.needs_update_or_installation():
                     config.set_view_status(initiating_view, "installing...")
                     plugin_class.install_or_update()
+                additional_variables = plugin_class.additional_variables()
+                if isinstance(additional_variables, dict):
+                    variables.update(additional_variables)
                 cannot_start_reason = plugin_class.can_start(
                     self._window, initiating_view, workspace_folders, config)
                 if cannot_start_reason:
                     config.erase_view_status(initiating_view)
                     message = "cannot start {}: {}".format(config.name, cannot_start_reason)
                     return self._window.status_message(message)
+                resolved = config.resolve(variables)
+                cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, resolved)
+            else:
+                resolved = config.resolve(variables)
             config.set_view_status(initiating_view, "starting...")
             session = Session(self, self._create_logger(config.name), workspace_folders, config, plugin_class)
-            cwd = workspace_folders[0].path if workspace_folders else None
-            variables = extract_variables(self._window)
-            if plugin_class is not None:
-                additional_variables = plugin_class.additional_variables()
-                if isinstance(additional_variables, dict):
-                    variables.update(additional_variables)
-            transport = create_transport(config, cwd, self._window, session, variables)
+            if not cwd:
+                cwd = workspace_folders[0].path if workspace_folders else None
+            transport = create_transport(config.name, resolved, cwd, session)
+            if plugin_class:
+                plugin_class.on_post_start(self._window, initiating_view, workspace_folders, resolved)
             config.set_view_status(initiating_view, "initialize")
             session.initialize_async(
                 variables, transport,
@@ -727,22 +737,11 @@ class RemoteLogger(Logger):
         })
 
     def outgoing_notification(self, method: str, params: Any) -> None:
-        trimmed_params = deepcopy(params)
-        if method.endswith("didOpen"):
-            if isinstance(params, dict) and "textDocument" in params:
-                trimmed_params['textDocument']['text'] = '[trimmed]'
-        elif method.endswith("didChange"):
-            content_changes = params.get("contentChanges")
-            if content_changes and "range" not in content_changes[0]:
-                pass
-        elif method.endswith("didSave"):
-            if isinstance(params, dict) and "text" in params:
-                trimmed_params['text'] = '[trimmed]'
         self._broadcast_json({
             'server': self._server_name,
             'time': round(time() * 1000),
             'method': method,
-            'params': trimmed_params,
+            'params': params,
             'direction': self.DIRECTION_OUTGOING,
         })
 

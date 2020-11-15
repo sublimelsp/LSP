@@ -7,8 +7,13 @@ from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
 import contextlib
+import os
+import socket
 import sublime
 import time
+
+
+TCP_CONNECT_TIMEOUT = 5
 
 
 def basescope2languageid(base_scope: str) -> str:
@@ -462,6 +467,24 @@ class Capabilities(DottedDict):
         return "textDocumentSync.didClose" in self
 
 
+class ResolvedStartupConfig:
+    __slots__ = ("command", "tcp_port", "init_options", "env", "listener_socket")
+
+    def __init__(
+        self,
+        command: List[str],
+        tcp_port: Optional[int],
+        init_options: DottedDict,
+        env: Dict[str, str],
+        listener_socket: Optional[socket.socket]
+    ) -> None:
+        self.command = command
+        self.tcp_port = tcp_port
+        self.init_options = init_options
+        self.env = env
+        self.listener_socket = listener_socket
+
+
 class ClientConfig:
     def __init__(self,
                  name: str,
@@ -552,6 +575,33 @@ class ClientConfig:
             experimental_capabilities=override.get(
                 "experimental_capabilities", self.experimental_capabilities)
         )
+
+    def resolve(self, variables: Dict[str, str]) -> ResolvedStartupConfig:
+        tcp_port = None  # type: Optional[int]
+        listener_socket = None  # type: Optional[socket.socket]
+        if self.tcp_port is not None:
+            # < 0 means we're hosting a TCP server
+            if self.tcp_port < 0:
+                # -1 means pick any free port
+                if self.tcp_port < -1:
+                    tcp_port = -self.tcp_port
+                # Create a listener socket for incoming connections
+                listener_socket = _start_tcp_listener(tcp_port)
+                tcp_port = int(listener_socket.getsockname()[1])
+            else:
+                tcp_port = _find_free_port() if self.tcp_port == 0 else self.tcp_port
+        if tcp_port is not None:
+            variables["port"] = str(tcp_port)
+        command = sublime.expand_variables(self.command, variables)
+        command = [os.path.expanduser(arg) for arg in command]
+        if tcp_port is not None:
+            # DEPRECATED -- replace {port} with $port or ${port} in your client config
+            command = [a.replace('{port}', str(tcp_port)) for a in command]
+        env = os.environ.copy()
+        for var, value in self.env.items():
+            env[var] = sublime.expand_variables(value, variables)
+        init_options = DottedDict(sublime.expand_variables(self.init_options.get(), variables))
+        return ResolvedStartupConfig(command, tcp_port, init_options, env, listener_socket)
 
     def set_view_status(self, view: sublime.View, message: str) -> None:
         if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
@@ -685,3 +735,18 @@ def _read_priority_selector(config: Union[sublime.Settings, Dict[str, Any]]) -> 
     if language_id:
         return "source.{}".format(language_id)
     return ""
+
+
+def _find_free_port() -> int:
+    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(('', 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
+
+
+def _start_tcp_listener(tcp_port: Optional[int]) -> socket.socket:
+    sock = socket.socket()
+    sock.bind(('localhost', tcp_port or 0))
+    sock.settimeout(TCP_CONNECT_TIMEOUT)
+    sock.listen(1)
+    return sock

@@ -1,4 +1,3 @@
-from .collections import DottedDict
 from .css import css
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
@@ -320,12 +319,6 @@ def text_document_range_formatting(view: sublime.View, region: sublime.Region) -
         "options": formatting_options(view.settings()),
         "range": region_to_range(view, region).to_lsp()
     }, view)
-
-
-def did_change_configuration(d: DottedDict, variables: Dict[str, str]) -> Notification:
-    settings = d.get()
-    settings = sublime.expand_variables(settings, variables)
-    return Notification.didChangeConfiguration({"settings": settings})
 
 
 def selection_range_params(view: sublime.View) -> Dict[str, Any]:

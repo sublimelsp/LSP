@@ -1,5 +1,6 @@
 from .logging import exception_log, debug
-from .types import ClientConfig
+from .types import ResolvedStartupConfig
+from .types import TCP_CONNECT_TIMEOUT
 from .typing import Dict, Any, Optional, IO, Protocol, List, Callable, Tuple
 from abc import ABCMeta, abstractmethod
 from contextlib import closing
@@ -15,9 +16,6 @@ import subprocess
 import threading
 import time
 import weakref
-
-
-TCP_CONNECT_TIMEOUT = 5
 
 
 class Transport(metaclass=ABCMeta):
@@ -178,32 +176,9 @@ class JsonRpcTransport(Transport):
         self._send_queue.put_nowait(None)
 
 
-def create_transport(config: ClientConfig, cwd: Optional[str], window: sublime.Window,
-                     callback_object: TransportCallbacks, variables: Dict[str, str]) -> JsonRpcTransport:
-    tcp_port = None  # type: Optional[int]
-    listener_socket = None  # type: Optional[socket.socket]
+def create_transport(name: str, config: ResolvedStartupConfig, cwd: Optional[str],
+                     callback_object: TransportCallbacks) -> JsonRpcTransport:
     if config.tcp_port is not None:
-        # < 0 means we're hosting a TCP server
-        if config.tcp_port < 0:
-            # -1 means pick any free port
-            if config.tcp_port < -1:
-                tcp_port = -config.tcp_port
-            # Create a listener socket for incoming connections
-            listener_socket = _start_tcp_listener(tcp_port)
-            tcp_port = int(listener_socket.getsockname()[1])
-        else:
-            tcp_port = _find_free_port() if config.tcp_port == 0 else config.tcp_port
-    if tcp_port is not None:
-        variables["port"] = str(tcp_port)
-    args = sublime.expand_variables(config.command, variables)
-    args = [os.path.expanduser(arg) for arg in args]
-    if tcp_port is not None:
-        # DEPRECATED -- replace {port} with $port or ${port} in your client config
-        args = [a.replace('{port}', str(tcp_port)) for a in args]
-    env = os.environ.copy()
-    for var, value in config.env.items():
-        env[var] = sublime.expand_variables(value, variables)
-    if tcp_port is not None:
         assert config.tcp_port is not None
         if config.tcp_port < 0:
             stdout = subprocess.PIPE
@@ -213,29 +188,34 @@ def create_transport(config: ClientConfig, cwd: Optional[str], window: sublime.W
     else:
         stdout = subprocess.PIPE
         stdin = subprocess.PIPE
-    startupinfo = _fixup_startup_args(args)
+    startupinfo = _fixup_startup_args(config.command)
     sock = None  # type: Optional[socket.socket]
     process = None  # type: Optional[subprocess.Popen]
 
     def start_subprocess() -> subprocess.Popen:
-        return _start_subprocess(args, stdin, stdout, subprocess.PIPE, startupinfo, env, cwd)
+        return _start_subprocess(config.command, stdin, stdout, subprocess.PIPE, startupinfo, config.env, cwd)
 
-    if listener_socket:
-        assert isinstance(tcp_port, int) and tcp_port > 0
-        process, sock, reader, writer = _await_tcp_connection(config.name, tcp_port, listener_socket, start_subprocess)
+    if config.listener_socket:
+        assert isinstance(config.tcp_port, int) and config.tcp_port > 0
+        process, sock, reader, writer = _await_tcp_connection(
+            name,
+            config.tcp_port,
+            config.listener_socket,
+            start_subprocess
+        )
     else:
         process = start_subprocess()
-        if tcp_port:
-            sock = _connect_tcp(tcp_port)
+        if config.tcp_port:
+            sock = _connect_tcp(config.tcp_port)
             if sock is None:
-                raise RuntimeError("Failed to connect on port {}".format(tcp_port))
+                raise RuntimeError("Failed to connect on port {}".format(config.tcp_port))
             reader = sock.makefile('rwb')  # type: ignore
             writer = reader
         else:
             reader = process.stdout  # type: ignore
             writer = process.stdin  # type: ignore
     assert writer
-    return JsonRpcTransport(config.name, process, sock, reader, writer, process.stderr, callback_object)
+    return JsonRpcTransport(name, process, sock, reader, writer, process.stderr, callback_object)
 
 
 _subprocesses = weakref.WeakSet()  # type: weakref.WeakSet[subprocess.Popen]
@@ -299,14 +279,6 @@ def _start_subprocess(
     return process
 
 
-def _start_tcp_listener(tcp_port: Optional[int]) -> socket.socket:
-    sock = socket.socket()
-    sock.bind(('localhost', tcp_port or 0))
-    sock.settimeout(TCP_CONNECT_TIMEOUT)
-    sock.listen(1)
-    return sock
-
-
 class _SubprocessData:
     def __init__(self) -> None:
         self.process = None  # type: Optional[subprocess.Popen]
@@ -350,13 +322,6 @@ def _connect_tcp(port: int) -> Optional[socket.socket]:
         except ConnectionRefusedError:
             pass
     return None
-
-
-def _find_free_port() -> int:
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(('', 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return s.getsockname()[1]
 
 
 def _encode(d: Dict[str, Any]) -> bytes:

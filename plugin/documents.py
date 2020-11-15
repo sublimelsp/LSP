@@ -53,19 +53,10 @@ _kind2name = {
 }
 
 
-def is_transient_view(view: sublime.View) -> bool:
-    window = view.window()
-    if not window:
-        return True
-    if window.get_view_index(view)[1] == -1:
-        return True  # Quick panel transient views
-    return view == window.transient_view_in_group(window.active_group())
-
-
 def is_regular_view(v: sublime.View) -> bool:
     # Not from the quick panel (CTRL+P), must have a filename on-disk, and not a special view like a console,
     # output panel or find-in-files panels.
-    return not is_transient_view(v) and bool(v.file_name()) and v.element() is None
+    return not v.sheet().is_transient() and bool(v.file_name()) and v.element() is None
 
 
 def previous_non_whitespace_char(view: sublime.View, pt: int) -> str:
@@ -108,8 +99,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
     @classmethod
     def is_applicable(cls, buffer: sublime.Buffer) -> bool:
         v = buffer.primary_view()
-        # FIXME: Cannot check if the view is transient
-        return v is not None and bool(v.file_name()) and v.element() is None
+        return v is not None and is_regular_view(v)
 
     def __init__(self) -> None:
         super().__init__()

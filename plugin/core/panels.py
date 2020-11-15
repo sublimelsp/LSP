@@ -25,6 +25,7 @@ OUTPUT_PANEL_SETTINGS = {
     "match_brackets": False,
     "rulers": [],
     "scroll_past_end": False,
+    "show_definitions": False,
     "tab_size": 4,
     "translate_tabs_to_spaces": False,
     "word_wrap": False

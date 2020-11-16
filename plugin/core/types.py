@@ -1,7 +1,7 @@
 from .collections import DottedDict
 from .logging import debug, set_debug_logging
 from .protocol import TextDocumentSyncKindNone
-from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, TypeVar, Tuple
+from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypedDict, TypeVar
 from threading import RLock
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
@@ -14,6 +14,13 @@ import time
 
 
 TCP_CONNECT_TIMEOUT = 5
+
+CodeAction = TypedDict('CodeAction', {
+    'title': str,
+    'kind': Optional[str],
+    'edit': Optional[dict],
+    'command': Optional[Union[dict, str]],
+}, total=False)
 
 
 def basescope2languageid(base_scope: str) -> str:

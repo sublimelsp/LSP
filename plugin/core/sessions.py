@@ -19,6 +19,7 @@ from .transports import TransportCallbacks
 from .types import Capabilities
 from .types import ClientConfig
 from .types import ClientStates
+from .types import CodeAction
 from .types import debounced
 from .types import diff
 from .types import DocumentSelector
@@ -966,7 +967,7 @@ class Session(TransportCallbacks):
             )
         )
 
-    def run_code_action_async(self, code_action: Mapping[str, Any]) -> Promise:
+    def run_code_action_async(self, code_action: CodeAction) -> Promise[CodeAction]:
         command = code_action.get("command")
         if isinstance(command, str):
             # This is actually a command.
@@ -977,12 +978,13 @@ class Session(TransportCallbacks):
         if self.has_capability("codeActionProvider.resolveSupport"):
             # TODO: Should we accept a SessionBuffer? What if this capability is registered with a documentSelector?
             # We must first resolve the command and edit properties, because they can potentially be absent.
-            promise = self.send_request_task(Request("codeAction/resolve", code_action))
+            request = Request("codeAction/resolve", code_action)
+            promise = self.send_request_task(request)  # type: Promise[Union[Error, CodeAction]]
         else:
             promise = Promise.resolve(code_action)
         return promise.then(self._apply_code_action_async)
 
-    def _apply_code_action_async(self, code_action: Union[Error, Mapping[str, Any]]) -> Promise:
+    def _apply_code_action_async(self, code_action: Union[Error, CodeAction]) -> Promise:
         if isinstance(code_action, Error):
             # TODO: our promise must be able to handle exceptions (or, wait until we can use coroutines)
             self.window.status_message("Failed to apply code action: {}".format(code_action))

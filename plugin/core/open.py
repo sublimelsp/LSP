@@ -11,10 +11,12 @@ import subprocess
 import webbrowser
 
 
-opening_files = {}  # type: Dict[str, Tuple[Promise, Callable[[Optional[sublime.View]], None]]]
+opening_files = {}  # type: Dict[str, Tuple[Promise[Optional[sublime.View]], ResolveFunc[sublime.View]]]
 
 
-def open_file(window: sublime.Window, file_path: str, flags: int = 0, group: int = -1) -> Promise:
+def open_file(
+    window: sublime.Window, file_path: str, flags: int = 0, group: int = -1
+) -> Promise[Optional[sublime.View]]:
     """Open a file asynchronously. It is only safe to call this function from the UI thread."""
     view = window.open_file(file_path, flags, group)
     if not view.is_loading():
@@ -28,7 +30,7 @@ def open_file(window: sublime.Window, file_path: str, flags: int = 0, group: int
             return value[0]
 
     # Prepare a new promise to be resolved by a future on_load event (see the event listener in main.py)
-    def fullfill(resolve: ResolveFunc) -> None:
+    def fullfill(resolve: ResolveFunc[sublime.View]) -> None:
         global opening_files
         # Save the promise in the first element of the tuple -- except we cannot yet do that here
         opening_files[file_path] = (None, resolve)  # type: ignore

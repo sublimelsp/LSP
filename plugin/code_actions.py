@@ -5,6 +5,7 @@ from .core.registry import LspTextCommand
 from .core.registry import sessions_for_view
 from .core.settings import userprefs
 from .core.typing import Any, List, Dict, Callable, Optional, Union, Tuple, TypedDict
+from .core.types import CodeAction
 from .core.views import entire_content_range
 from .core.views import region_to_range
 from .core.views import text_document_code_action_params
@@ -13,15 +14,8 @@ from .diagnostics import view_diagnostics
 from .save_command import LspSaveCommand, SaveTask
 import sublime
 
-
-CodeActionOrCommand = TypedDict('CodeActionOrCommand', {
-    'title': str,
-    'command': Union[dict, str],
-    'edit': dict,
-    'kind': Optional[str]
-}, total=False)
-CodeActionsResponse = Optional[List[CodeActionOrCommand]]
-CodeActionsByConfigName = Dict[str, List[CodeActionOrCommand]]
+CodeActionsResponse = Optional[List[CodeAction]]
+CodeActionsByConfigName = Dict[str, List[CodeAction]]
 
 
 class CodeActionsCollector:
@@ -177,7 +171,7 @@ def filtering_collector(
     actions that need to be filtered.
     """
 
-    def actions_filter(actions: CodeActionsResponse) -> List[CodeActionOrCommand]:
+    def actions_filter(actions: CodeActionsResponse) -> List[CodeAction]:
         return [a for a in (actions or []) if a.get('kind') in kinds]
 
     collector = actions_collector.create_collector(config_name)
@@ -253,7 +247,7 @@ class CodeActionOnSaveTask(SaveTask):
         if self._cancelled:
             return
         document_version = self._view.change_count()
-        tasks = []  # type: List[Promise]
+        tasks = []  # type: List[Promise[CodeAction]]
         for config_name, code_actions in responses.items():
             if code_actions:
                 for session in sessions_for_view(self._view, 'codeActionProvider'):
@@ -276,7 +270,7 @@ class LspCodeActionsCommand(LspTextCommand):
     capability = 'codeActionProvider'
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None, only_kinds: Optional[List[str]] = None) -> None:
-        self.commands = []  # type: List[Tuple[str, str, CodeActionOrCommand]]
+        self.commands = []  # type: List[Tuple[str, str, CodeAction]]
         self.commands_by_config = {}  # type: CodeActionsByConfigName
         view = self.view
         try:
@@ -294,7 +288,7 @@ class LspCodeActionsCommand(LspTextCommand):
         self.commands = self.combine_commands()
         self.show_popup_menu()
 
-    def combine_commands(self) -> 'List[Tuple[str, str, CodeActionOrCommand]]':
+    def combine_commands(self) -> 'List[Tuple[str, str, CodeAction]]':
         results = []
         for config, commands in self.commands_by_config.items():
             for command in commands:

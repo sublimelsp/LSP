@@ -2,7 +2,7 @@ import mdpopups
 import sublime
 import webbrowser
 from .code_actions import actions_manager
-from .code_actions import CodeActionOrCommand
+from .code_actions import CodeAction
 from .core.css import css
 from .core.logging import debug
 from .core.protocol import Request, Diagnostic
@@ -67,7 +67,7 @@ class LspHoverCommand(LspTextCommand):
             return
         self._base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
         self._hover = None  # type: Optional[Any]
-        self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
+        self._actions_by_config = {}  # type: Dict[str, List[CodeAction]]
         self._diagnostics_by_config = {}  # type: Dict[str, List[Diagnostic]]
         self.request_symbol_hover(hover_point)
         # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
@@ -93,7 +93,7 @@ class LspHoverCommand(LspTextCommand):
                 Request.hover(document_position, self.view),
                 lambda response: self.handle_response(response, point))
 
-    def handle_code_actions(self, responses: Dict[str, List[CodeActionOrCommand]], point: int) -> None:
+    def handle_code_actions(self, responses: Dict[str, List[CodeAction]], point: int) -> None:
         self._actions_by_config = responses
         self.show_hover(point)
 

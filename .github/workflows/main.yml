@@ -21,9 +21,9 @@ jobs:
     runs-on: macos-latest
     if: github.ref == 'refs/heads/master' || github.base_ref == 'master'
     steps:
-      - run: echo ::add-path::$HOME/.local/bin
-      - run: echo ::add-path::$HOME/Library/Python/3.7/bin
       - uses: actions/checkout@v1
+      - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - run: echo "$HOME/Library/Python/3.7/bin" >> $GITHUB_PATH
       - run: python3 tests/server.py --version
       - run: python3 tests/adjust_unittesting_config_for_ci.py && cat unittesting.json
       - run: curl --silent https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/ci.sh --output ci.sh
@@ -44,11 +44,11 @@ jobs:
     container: sublimetext/unittesting
     steps:
       - uses: actions/checkout@v1
-      - run: echo ::add-path::$HOME/.local/bin
       - run: sudo apt update
       - run: sudo apt install --no-install-recommends -y x11-xserver-utils python3-pip
       - run: sh -e /etc/init.d/xvfb start
       - run: curl -OL https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/github.sh
+      - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
       - run: python3 tests/server.py --version
       - run: python3 tests/adjust_unittesting_config_for_ci.py && cat unittesting.json
       - run: |
@@ -68,9 +68,9 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: '3.8'
-      - run: echo ::add-path::$HOME/.local/bin
       - run: sudo apt update
       - run: sudo apt install --no-install-recommends -y x11-xserver-utils
       - run: pip3 install mypy==0.790 flake8==3.8.3 yapf==0.30.0 --user
+      - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
       - run: mypy -p plugin
       - run: flake8 plugin tests

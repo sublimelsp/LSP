@@ -496,6 +496,8 @@ class WindowManager(Manager):
                 phantom_set.update([phantom])
                 self._window.focus_view(view)
                 view.show_at_center(phantom.region)
+                # Must be a tuple. Passing a `sublime.Region` causes a Sublime error.
+                view.run_command("lsp_selection_set", {"regions": [phantom.region.to_tuple()]})
                 self._diagnostic_phantom_set = phantom_set
                 has_phantom = view.settings().get(self.DIAGNOSTIC_PHANTOM_KEY)
                 if not has_phantom:

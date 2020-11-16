@@ -971,7 +971,7 @@ class Session(TransportCallbacks):
     def run_code_action_async(self, code_action: Union[Command, CodeAction]) -> Promise:
         if isinstance(code_action.get("command"), str):
             # This is actually a command.
-            return self.run_command(code_action)
+            return self.run_command(code_action)  # type: ignore
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
@@ -981,7 +981,7 @@ class Session(TransportCallbacks):
             request = Request("codeAction/resolve", code_action)
             promise = self.send_request_task(request)  # type: Promise[Union[Error, CodeAction]]
         else:
-            promise = Promise.resolve(code_action)
+            promise = Promise.resolve(code_action)  # type: ignore
         return promise.then(self._apply_code_action_async)
 
     def _apply_code_action_async(self, code_action: Union[Error, CodeAction]) -> Promise:

@@ -553,6 +553,9 @@ class Region:
     def intersects(self, rhs: 'Region') -> bool:
         ...
 
+    def to_tuple(self) -> Tuple[int, int]:
+        ...
+
 
 class Selection(Reversible):
     view_id = ...  # type: Any

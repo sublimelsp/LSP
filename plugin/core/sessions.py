@@ -967,7 +967,7 @@ class Session(TransportCallbacks):
             )
         )
 
-    def run_code_action_async(self, code_action: CodeAction) -> Promise[CodeAction]:
+    def run_code_action_async(self, code_action: CodeAction) -> Promise:
         command = code_action.get("command")
         if isinstance(command, str):
             # This is actually a command.

@@ -2,10 +2,11 @@ import mdpopups
 import sublime
 import webbrowser
 from .code_actions import actions_manager
-from .code_actions import CodeAction
 from .core.css import css
 from .core.logging import debug
-from .core.protocol import Request, Diagnostic
+from .core.protocol import CodeAction
+from .core.protocol import Diagnostic
+from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.settings import userprefs

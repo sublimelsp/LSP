@@ -6,6 +6,8 @@ from .logging import exception_log
 from .open import open_externally
 from .open import open_file_and_center_async
 from .promise import Promise
+from .protocol import CodeAction
+from .protocol import Command
 from .protocol import CompletionItemTag
 from .protocol import Error
 from .protocol import ErrorCode
@@ -19,8 +21,6 @@ from .transports import TransportCallbacks
 from .types import Capabilities
 from .types import ClientConfig
 from .types import ClientStates
-from .types import CodeAction
-from .types import Command
 from .types import debounced
 from .types import diff
 from .types import DocumentSelector

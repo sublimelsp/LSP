@@ -15,21 +15,6 @@ import time
 
 TCP_CONNECT_TIMEOUT = 5
 
-Command = TypedDict('Command', {
-    'title': str,
-    'command': str,
-    'arguments': Optional[List[Any]],
-})
-
-CodeAction = TypedDict('CodeAction', {
-    'title': str,
-    'kind': Optional[str],
-    'diagnostics': Optional[List[Any]],
-    'isPreferred': Optional[bool],
-    'edit': Optional[dict],
-    'command': Optional[Command],
-})
-
 
 def basescope2languageid(base_scope: str) -> str:
     # This the connection between Language IDs and ST selectors.

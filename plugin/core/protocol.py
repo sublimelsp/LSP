@@ -1,4 +1,4 @@
-from .typing import Any, List, Dict, Optional, Union, Mapping, Iterable
+from .typing import Any, Dict, Iterable, List, Mapping, Optional, TypedDict, Union
 from .url import filename_to_uri
 from .url import uri_to_filename
 import os
@@ -31,6 +31,23 @@ class DocumentHighlightKind(object):
     Text = 1
     Read = 2
     Write = 3
+
+
+Command = TypedDict('Command', {
+    'title': str,
+    'command': str,
+    'arguments': Optional[List[Any]],
+})
+
+
+CodeAction = TypedDict('CodeAction', {
+    'title': str,
+    'kind': Optional[str],
+    'diagnostics': Optional[List[Any]],
+    'isPreferred': Optional[bool],
+    'edit': Optional[dict],
+    'command': Optional[Command],
+})
 
 
 class Request:

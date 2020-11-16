@@ -20,6 +20,7 @@ from .types import Capabilities
 from .types import ClientConfig
 from .types import ClientStates
 from .types import CodeAction
+from .types import Command
 from .types import debounced
 from .types import diff
 from .types import DocumentSelector
@@ -952,7 +953,7 @@ class Session(TransportCallbacks):
                 variables.update(extra_vars)
         return variables
 
-    def run_command(self, command: Mapping[str, Any]) -> Promise:
+    def run_command(self, command: Command) -> Promise:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
             promise, callback = Promise.packaged_task()
@@ -967,9 +968,8 @@ class Session(TransportCallbacks):
             )
         )
 
-    def run_code_action_async(self, code_action: CodeAction) -> Promise:
-        command = code_action.get("command")
-        if isinstance(command, str):
+    def run_code_action_async(self, code_action: Union[Command, CodeAction]) -> Promise:
+        if isinstance(code_action.get("command"), str):
             # This is actually a command.
             return self.run_command(code_action)
         # At this point it cannot be a command anymore, it has to be a proper code action.

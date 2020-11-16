@@ -11,7 +11,7 @@ import subprocess
 import webbrowser
 
 
-opening_files = {}  # type: Dict[str, Tuple[Promise[Optional[sublime.View]], ResolveFunc[sublime.View]]]
+opening_files = {}  # type: Dict[str, Tuple[Promise[Optional[sublime.View]], ResolveFunc[Optional[sublime.View]]]]
 
 
 def open_file(
@@ -30,7 +30,7 @@ def open_file(
             return value[0]
 
     # Prepare a new promise to be resolved by a future on_load event (see the event listener in main.py)
-    def fullfill(resolve: ResolveFunc[sublime.View]) -> None:
+    def fullfill(resolve: ResolveFunc[Optional[sublime.View]]) -> None:
         global opening_files
         # Save the promise in the first element of the tuple -- except we cannot yet do that here
         opening_files[file_path] = (None, resolve)  # type: ignore

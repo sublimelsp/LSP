@@ -164,8 +164,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             text += '◌ {}:\n'.format(self._get_relative_path(file))
             for edit in file_changes:
                 start = edit[0]
-                end = edit[1]
-                text += '\t{:>8}:{:<4} - {}:{}\n'.format(start[0] + 1, start[1] + 1, end[0] + 1, end[1] + 1)
+                text += '\t{:>8}:{}\n'.format(start[0] + 1, start[1] + 1)
             # append a new line after each file name
             text += '\n'
         base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
@@ -182,4 +181,4 @@ class LspSymbolRenameCommand(LspTextCommand):
 
 def ensure_rename_panel(window: sublime.Window) -> Optional[sublime.View]:
     return ensure_panel(window, "rename", r"^\s*\S\s+(\S.*):$", r"^\s+([0-9]+):?([0-9]+).*$",
-                        "Packages/LSP/Syntaxes/References.sublime-syntax")
+                        "Packages/LSP/Syntaxes/Rename.sublime-syntax")

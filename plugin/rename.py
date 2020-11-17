@@ -2,6 +2,7 @@ from .core.edit import apply_workspace_edit
 from .core.edit import parse_workspace_edit
 from .core.edit import TextEdit
 from .core.panels import ensure_panel
+from .core.panels import PanelName
 from .core.protocol import Range
 from .core.protocol import Request
 from .core.registry import get_position
@@ -180,5 +181,10 @@ class LspSymbolRenameCommand(LspTextCommand):
 
 
 def ensure_rename_panel(window: sublime.Window) -> Optional[sublime.View]:
-    return ensure_panel(window, "rename", r"^\s*\S\s+(\S.*):$", r"^\s+([0-9]+):?([0-9]+).*$",
-                        "Packages/LSP/Syntaxes/Rename.sublime-syntax")
+    return ensure_panel(
+        window=window,
+        name=PanelName.Rename,
+        result_file_regex=r"^\s*\S\s+(\S.*):$",
+        result_line_regex=r"^\s*([0-9]+):([0-9]+)\s*$",
+        syntax="Packages/LSP/Syntaxes/Rename.sublime-syntax"
+    )

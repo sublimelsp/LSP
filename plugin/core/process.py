@@ -53,7 +53,7 @@ def start_server(
         startupinfo=si)
 
     if on_stderr_log is not None:
-        attach_logger(process, process.stderr, on_stderr_log)
+        attach_logger(process, process.stderr, on_stderr_log)  # type: ignore
 
     return process
 

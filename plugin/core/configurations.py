@@ -40,7 +40,7 @@ def get_scope_client_configs(view: sublime.View, configs: List[ClientConfig],
                             # debug('scope {} score {}'.format(scope, score))
 
     return (config_score[0] for config_score in sorted(
-        scope_configs, key=lambda config_score: config_score[1], reverse=True))
+        scope_configs, key=lambda config_score: config_score[1], reverse=True))  # type: ignore
 
 
 def get_global_client_config(view: sublime.View, global_configs: List[ClientConfig]) -> Optional[ClientConfig]:

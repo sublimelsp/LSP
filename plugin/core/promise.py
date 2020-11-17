@@ -7,9 +7,11 @@ T = TypeVar('T')
 T_contra = TypeVar('T_contra', contravariant=True)
 TResult = TypeVar('TResult')
 
+
 class ResolveFunc(Protocol[T_contra]):
     def __call__(self, value: Union[T_contra, 'Promise[T_contra]'] = None) -> None:
         ...
+
 
 FullfillFunc = Callable[[T], Union[TResult, 'Promise[TResult]', None]]
 ExecutorFunc = Callable[[ResolveFunc[T]], None]
@@ -222,18 +224,3 @@ class Promise(Generic[T]):
     def _get_value(self) -> Optional[T]:
         with self.mutex:
             return self.value
-
-
-def handle_then(value: Optional[str]) -> str:
-    return 'str'
-
-
-p = Promise(lambda resolve: resolve('str'))  # type: Promise[str]
-p2 = Promise(lambda resolve: resolve())  # type: Promise[str]
-p2.then(lambda value: 'str')
-p2.then(handle_then)
-r = p.then(lambda value: 1)  # Promise[Literal[1]]
-pa2 = Promise.all([Promise.resolve(1), Promise.resolve(2)])
-
-# resolve_fn = lambda value: None  # type: ResolveFunc[int]
-# task = (Promise(lambda resolve: resolve(1)), resolve_fn)  # type: PackagedTask[int]

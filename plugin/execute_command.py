@@ -1,9 +1,8 @@
 import sublime
-from .core.protocol import Command
 from .core.protocol import Error
 from .core.protocol import ExecuteCommandParams
 from .core.registry import LspTextCommand
-from .core.typing import List, Optional, Dict, Any
+from .core.typing import List, Optional, Any
 from .core.views import uri_from_view, offset_to_point, region_to_range
 
 

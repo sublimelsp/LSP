@@ -1,7 +1,7 @@
 from .collections import DottedDict
 from .logging import debug, set_debug_logging
 from .protocol import TextDocumentSyncKindNone
-from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypedDict, TypeVar
+from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypeVar
 from threading import RLock
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch

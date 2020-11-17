@@ -2,7 +2,7 @@ from .logging import exception_log
 from .promise import Promise
 from .promise import ResolveFunc
 from .protocol import Range
-from .typing import Any, Dict, Tuple, Callable, Optional
+from .typing import Any, Dict, Tuple, Optional
 from .url import uri_to_filename
 from .views import range_to_region
 import os

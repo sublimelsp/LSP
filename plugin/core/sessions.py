@@ -958,7 +958,7 @@ class Session(TransportCallbacks):
     def execute_command(self, command: ExecuteCommandParams) -> Promise:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
-            task = Promise.packaged_task()  # type: PackagedTask[int]
+            task = Promise.packaged_task()  # type: PackagedTask[None]
             promise, resolve = task
             if self._plugin.on_pre_server_command(command, resolve):
                 return promise

@@ -26,6 +26,8 @@
     "source.js": "javascript",
     "source.js.react": "javascriptreact", // https://github.com/Thom1729/Sublime-JS-Custom
     "source.jsx": "javascriptreact",
+    "source.fixedform-fortran": "fortran", // https://packagecontrol.io/packages/Fortran
+    "source.modern-fortran": "fortran", // https://packagecontrol.io/packages/Fortran
     "source.objc": "objective-c",
     "source.objc++": "objective-cpp",
     "source.shader": "shaderlab", // https://github.com/waqiju/unity_shader_st3

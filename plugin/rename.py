@@ -121,7 +121,7 @@ class LspSymbolRenameCommand(LspTextCommand):
                     elif choice == sublime.DIALOG_NO:
                         self._render_rename_panel(changes, total_changes, file_count)
                 else:
-                    window.run_command('lsp_apply_workspace_edit', {'changes': changes})
+                    apply_workspace_edit(window, changes)
             else:
                 window.status_message('Nothing to rename')
 

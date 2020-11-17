@@ -33,6 +33,12 @@ class DocumentHighlightKind(object):
     Write = 3
 
 
+ExecuteCommandParams = TypedDict('ExecuteCommandParams', {
+    'command': str,
+    'arguments': Optional[List[Any]],
+}, total=False)
+
+
 Command = TypedDict('Command', {
     'title': str,
     'command': str,

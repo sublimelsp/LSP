@@ -1,11 +1,11 @@
 from .core.promise import Promise
+from .core.protocol import CodeAction
 from .core.protocol import Diagnostic
 from .core.protocol import Range, Request
 from .core.registry import LspTextCommand
 from .core.registry import sessions_for_view
 from .core.settings import userprefs
 from .core.typing import Any, List, Dict, Callable, Optional, Union, Tuple, TypedDict
-from .core.types import CodeAction
 from .core.views import entire_content_range
 from .core.views import region_to_range
 from .core.views import text_document_code_action_params

@@ -4,15 +4,16 @@ import sublime
 import threading
 
 T = TypeVar('T')
+T_contra = TypeVar('T_contra', contravariant=True)
 TResult = TypeVar('TResult')
 
-# Protocol class can only be generic from 3.8.
-class ResolveFunc(Protocol[T]):
-    def __call__(self, value: Union[T, 'Promise[T]'] = None) -> None:
+class ResolveFunc(Protocol[T_contra]):
+    def __call__(self, value: Union[T_contra, 'Promise[T_contra]'] = None) -> None:
         ...
 
 FullfillFunc = Callable[[T], Union[TResult, 'Promise[TResult]', None]]
 ExecutorFunc = Callable[[ResolveFunc[T]], None]
+PackagedTask = Tuple['Promise[T]', ResolveFunc[T]]
 
 
 class Promise(Generic[T]):
@@ -86,9 +87,9 @@ class Promise(Generic[T]):
         return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(value)))
 
     @classmethod
-    def packaged_task(cls) -> "Tuple[Promise[T], ResolveFunc[T]]":
+    def packaged_task(cls) -> PackagedTask[T]:
 
-        class Fullfill:
+        class Executor:
 
             __slots__ = ("resolver",)
 
@@ -98,13 +99,13 @@ class Promise(Generic[T]):
             def __call__(self, resolver: ResolveFunc[T]) -> None:
                 self.resolver = resolver
 
-        fullfill = Fullfill()
-        promise = cls(fullfill)
-        assert callable(fullfill.resolver)
-        return promise, fullfill.resolver
+        executor = Executor()
+        promise = cls(executor)
+        assert callable(executor.resolver)
+        return promise, executor.resolver
 
-    @classmethod
     # Could also support passing plain T.
+    @classmethod
     def all(cls, promises: List['Promise[T]']) -> 'Promise[List[T]]':
         """
         Takes a list of promises and returns a Promise that gets resolved when all promises
@@ -115,24 +116,25 @@ class Promise(Generic[T]):
         :returns:   A promise that gets resolved when all passed promises gets resolved.
                     Gets passed a list with all resolved values.
         """
-        def handler(resolve: Callable[[List[T]], None]) -> None:
+        def executor(resolve: ResolveFunc[List[T]]) -> None:
             was_resolved = False
 
-            def recheck_resolve_status(_: T) -> None:
+            def recheck_resolve_status(_: Optional[T]) -> None:
                 nonlocal was_resolved
                 # We're being called from a Promise that is holding a lock so don't try to use
                 # any methods that would try to acquire it.
                 if not was_resolved and all(p.resolved for p in promises):
                     was_resolved = True
-                    resolve([p.value for p in promises])
+                    values = [p.value for p in promises]
+                    resolve(values)  # type: ignore
 
             for p in promises:
                 assert isinstance(p, Promise)
                 p.then(recheck_resolve_status)
 
         if promises:
-            return Promise(handler)
-        return Promise.resolve()
+            return Promise(executor)
+        return Promise.resolve([])
 
     def __init__(self, executor_func: ExecutorFunc[T]) -> None:
         """Initialize Promise object.
@@ -142,7 +144,7 @@ class Promise(Generic[T]):
             It gets passed a "resolve" function. The "resolve" function, when
             called, resolves the Promise with the value passed to it.
         """
-        self.value = None  # type: T
+        self.value = None  # type: Optional[T]
         self.resolved = False
         self.mutex = threading.Lock()
         self.callbacks = []  # type: List[ResolveFunc[T]]
@@ -153,7 +155,7 @@ class Promise(Generic[T]):
             return 'Promise({})'.format(self.value)
         return 'Promise(<pending>)'
 
-    def then(self, onfullfilled: FullfillFunc[T, TResult]) -> 'Promise[TResult]':
+    def then(self, onfullfilled: FullfillFunc[Optional[T], TResult]) -> 'Promise[TResult]':
         """Create a new promise and chain it with this promise.
 
         When this promise gets resolved, the callback will be called with the
@@ -164,36 +166,36 @@ class Promise(Generic[T]):
         Arguments:
             onfullfilled: The callback to call when this promise gets resolved.
         """
-        def callback_wrapper(fullfill_fn: FullfillFunc[T], resolve_value: T) -> None:
+        def callback_wrapper(resolve_fn: ResolveFunc[TResult], resolve_value: Optional[T]) -> None:
             """A wrapper called when this promise resolves.
 
             Arguments:
-                fullfill_fn: A resolve function of newly created promise.
+                resolve_fn: A resolve function of newly created promise.
                 resolve_value: The value with which this promise resolved.
             """
             result = onfullfilled(resolve_value)
             # If returned value is a promise then this promise needs to be
             # resolved with the value of returned promise.
             if isinstance(result, Promise):
-                result.then(fullfill_fn)
+                result.then(resolve_fn)
             else:
-                fullfill_fn(result)
+                resolve_fn(result)
 
-        def sync_wrapper(fullfill_fn: FullfillFunc[T]) -> None:
-            """Call fullfill_fn immediately with the resolved value.
+        def sync_wrapper(resolve_fn: ResolveFunc[TResult]) -> None:
+            """Call resolve_fn immediately with the resolved value.
 
-            A wrapper function that will immediately resolve fullfill_fn with the
+            A wrapper function that will immediately resolve resolve_fn with the
             resolved value of this promise.
             """
-            callback_wrapper(fullfill_fn, self._get_value())
+            callback_wrapper(resolve_fn, self._get_value())
 
-        def async_wrapper(fullfill_fn: FullfillFunc[T]) -> None:
-            """Queue fullfill_fn to be called after this promise resolves later.
+        def async_wrapper(resolve_fn: ResolveFunc[TResult]) -> None:
+            """Queue resolve_fn to be called after this promise resolves later.
 
-            A wrapper function that will resolve received fullfill_fn when this promise
+            A wrapper function that will resolve received resolve_fn when this promise
             resolves later.
             """
-            self._add_callback(functools.partial(callback_wrapper, fullfill_fn))
+            self._add_callback(functools.partial(callback_wrapper, resolve_fn))
 
         if self._is_resolved():
             return Promise(sync_wrapper)
@@ -217,6 +219,21 @@ class Promise(Generic[T]):
         with self.mutex:
             return self.resolved
 
-    def _get_value(self) -> T:
+    def _get_value(self) -> Optional[T]:
         with self.mutex:
             return self.value
+
+
+def handle_then(value: Optional[str]) -> str:
+    return 'str'
+
+
+p = Promise(lambda resolve: resolve('str'))  # type: Promise[str]
+p2 = Promise(lambda resolve: resolve())  # type: Promise[str]
+p2.then(lambda value: 'str')
+p2.then(handle_then)
+r = p.then(lambda value: 1)  # Promise[Literal[1]]
+pa2 = Promise.all([Promise.resolve(1), Promise.resolve(2)])
+
+# resolve_fn = lambda value: None  # type: ResolveFunc[int]
+# task = (Promise(lambda resolve: resolve(1)), resolve_fn)  # type: PackagedTask[int]

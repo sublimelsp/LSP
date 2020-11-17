@@ -1,5 +1,7 @@
 import sublime
+from .core.protocol import Command
 from .core.protocol import Error
+from .core.protocol import ExecuteCommandParams
 from .core.registry import LspTextCommand
 from .core.typing import List, Optional, Dict, Any
 from .core.views import uri_from_view, offset_to_point, region_to_range
@@ -19,7 +21,7 @@ class LspExecuteCommand(LspTextCommand):
         if session and command_name:
             if command_args:
                 self._expand_variables(command_args)
-            params = {"command": command_name}  # type: Dict[str, Any]
+            params = {"command": command_name}  # type: ExecuteCommandParams
             if command_args:
                 params["arguments"] = command_args
 
@@ -35,7 +37,7 @@ class LspExecuteCommand(LspTextCommand):
                 if window:
                     window.status_message(msg)
 
-            session.run_command(params).then(handle_response)
+            session.execute_command(params).then(handle_response)
 
     def _expand_variables(self, command_args: List[Any]) -> None:
         region = self.view.sel()[0]

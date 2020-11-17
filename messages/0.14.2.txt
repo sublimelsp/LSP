@@ -1,0 +1,5 @@
+=> 0.14.2
+
+Maintenance:
+
+- Expose a couple more types in plugin API for forward-compatiblity (Rafał Chłodnicki)

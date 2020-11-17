@@ -11,6 +11,7 @@ try:
     from typing import Iterable
     from typing import Iterator
     from typing import List
+    from typing import Literal
     from typing import Mapping
     from typing import Optional
     from typing import Set
@@ -69,6 +70,9 @@ except ImportError:
         pass
 
     class List(Type):  # type: ignore
+        pass
+
+    class Literal(Type):  # type: ignore
         pass
 
     class Mapping(Type):  # type: ignore

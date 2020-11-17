@@ -353,8 +353,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         pos = self._stored_region.a
         if pos == -1:
             return
-        if not self.view.match_selector(pos, self.view.settings().get("auto_complete_selector") or ""):  # ???
-            return
         session = self.session("signatureHelpProvider")
         if not session:
             return

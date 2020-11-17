@@ -138,15 +138,11 @@ def _register_all_plugins() -> None:
                     init_options = cfg.init_options.get()
                 elif isinstance(cfg.init_options, dict):
                     init_options = cfg.init_options
+                else:
+                    init_options = {}
                 settings.set("initializationOptions", init_options)
-                langs = []  # type: List[Dict[str, str]]
-                for language in cfg.languages:
-                    langs.append({
-                        "languageId": language.id,
-                        "document_selector": language.document_selector,
-                        "feature_selector": language.feature_selector
-                    })
-                settings.set("languages", langs)
+                settings.set("selector", cfg.selector)
+                settings.set("priority_selector", cfg.priority_selector)
                 return settings, "Packages/{0}/{0}.sublime-settings".format(file_base_name)
 
             @classmethod

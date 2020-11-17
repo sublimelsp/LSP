@@ -56,8 +56,10 @@ class LspSymbolRenameCommand(LspTextCommand):
             placeholder = args.get("placeholder", "")
             if not placeholder:
                 point = args.get("point")
-                if isinstance(point, int):
-                    placeholder = self.view.substr(self.view.word(point))
+                # guess the symbol name
+                if not isinstance(point, int):
+                    point = self.view.sel()[0].b
+                placeholder = self.view.substr(self.view.word(point))
             return RenameSymbolInputHandler(self.view, placeholder)
         else:
             return None

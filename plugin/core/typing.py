@@ -1,11 +1,13 @@
-try:
+import sys
 
-    # ST builds >= 4000
+if sys.version_info >= (3, 8, 0):
 
-    from mypy_extensions import TypedDict
     from typing import Any
     from typing import Callable
+    from typing import cast
+    from typing import Deque
     from typing import Dict
+    from typing import Generic
     from typing import Generator
     from typing import IO
     from typing import Iterable
@@ -14,15 +16,18 @@ try:
     from typing import Literal
     from typing import Mapping
     from typing import Optional
+    from typing import Protocol
     from typing import Set
     from typing import Tuple
     from typing import Type
+    from typing import TypedDict
+    from typing import TypeVar
     from typing import Union
-    from typing_extensions import Protocol
 
-except ImportError:
+else:
 
-    # ST builds < 4000
+    def cast(typ, val):  # type: ignore
+        return val
 
     def _make_type(name: str) -> '_TypeMeta':
         return _TypeMeta(name, (Type,), {})  # type: ignore
@@ -54,7 +59,13 @@ except ImportError:
     class Callable(Type):  # type: ignore
         pass
 
+    class Deque(Type):  # type: ignore
+        pass
+
     class Dict(Type):  # type: ignore
+        pass
+
+    class Generic(Type):  # type: ignore
         pass
 
     class Generator(Type):  # type: ignore
@@ -90,4 +101,8 @@ except ImportError:
     class Union(Type):  # type: ignore
         pass
 
-    Protocol = object  # type: ignore
+    class Protocol(Type):  # type: ignore
+        pass
+
+    def TypeVar(*args, **kwargs) -> Any:  # type: ignore
+        return object

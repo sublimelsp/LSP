@@ -1,14 +1,24 @@
-from .typing import Any, Callable, List, Tuple, Optional
+from .typing import Callable, Generic, List, Optional, Protocol, Tuple, TypeVar, Union
 import functools
 import sublime
 import threading
 
-ResolveFunc = Callable[..., None]  # Optional argument not supported in Callable so using "..."
-FullfillFunc = Callable[[ResolveFunc], None]
-ThenFunc = Callable[[Any], Any]
+T = TypeVar('T')
+T_contra = TypeVar('T_contra', contravariant=True)
+TResult = TypeVar('TResult')
 
 
-class Promise:
+class ResolveFunc(Protocol[T_contra]):
+    def __call__(self, value: Union[T_contra, 'Promise[T_contra]'] = None) -> None:
+        ...
+
+
+FullfillFunc = Callable[[T], Union[TResult, 'Promise[TResult]', None]]
+ExecutorFunc = Callable[[ResolveFunc[T]], None]
+PackagedTask = Tuple['Promise[T]', ResolveFunc[T]]
+
+
+class Promise(Generic[T]):
     """A simple implementation of the Promise specification.
 
     See: https://promisesaplus.com
@@ -54,7 +64,7 @@ class Promise:
     """
 
     @classmethod
-    def resolve(cls, resolve_value: Any = None) -> 'Promise':
+    def resolve(cls, resolve_value: T = None) -> 'Promise[T]':
         """Immediately resolves a Promise.
 
         Convenience function for creating a Promise that gets immediately
@@ -63,41 +73,42 @@ class Promise:
         Arguments:
             resolve_value: The value to resolve the promise with.
         """
-        def fullfill_func(resolve_fn: ResolveFunc) -> None:
+        def executor_func(resolve_fn: ResolveFunc[T]) -> None:
             resolve_fn(resolve_value)
 
-        return cls(fullfill_func)
+        return cls(executor_func)
 
     @classmethod
-    def on_main_thread(cls, value: Any = None) -> 'Promise':
+    def on_main_thread(cls, value: T = None) -> 'Promise[T]':
         """Return a promise that resolves on the main thread."""
         return Promise(lambda resolve: sublime.set_timeout(lambda: resolve(value)))
 
     @classmethod
-    def on_async_thread(cls, value: Any = None) -> 'Promise':
+    def on_async_thread(cls, value: T = None) -> 'Promise[T]':
         """Return a promise that resolves on the worker thread."""
         return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(value)))
 
     @classmethod
-    def packaged_task(cls) -> "Tuple[Promise, Callable[..., None]]":
+    def packaged_task(cls) -> PackagedTask[T]:
 
-        class Fullfill:
+        class Executor:
 
             __slots__ = ("resolver",)
 
             def __init__(self) -> None:
-                self.resolver = None  # type: Optional[Callable[..., None]]
+                self.resolver = None  # type: Optional[ResolveFunc[T]]
 
-            def __call__(self, resolver: ResolveFunc) -> None:
+            def __call__(self, resolver: ResolveFunc[T]) -> None:
                 self.resolver = resolver
 
-        fullfill = Fullfill()
-        promise = cls(fullfill)
-        assert callable(fullfill.resolver)
-        return promise, fullfill.resolver
+        executor = Executor()
+        promise = cls(executor)
+        assert callable(executor.resolver)
+        return promise, executor.resolver
 
+    # Could also support passing plain T.
     @classmethod
-    def all(cls, promises: List['Promise']) -> 'Promise':
+    def all(cls, promises: List['Promise[T]']) -> 'Promise[List[T]]':
         """
         Takes a list of promises and returns a Promise that gets resolved when all promises
         gets resolved.
@@ -107,45 +118,46 @@ class Promise:
         :returns:   A promise that gets resolved when all passed promises gets resolved.
                     Gets passed a list with all resolved values.
         """
-        def handler(resolve: ResolveFunc) -> None:
+        def executor(resolve: ResolveFunc[List[T]]) -> None:
             was_resolved = False
 
-            def recheck_resolve_status(_: Any) -> None:
+            def recheck_resolve_status(_: Optional[T]) -> None:
                 nonlocal was_resolved
                 # We're being called from a Promise that is holding a lock so don't try to use
                 # any methods that would try to acquire it.
                 if not was_resolved and all(p.resolved for p in promises):
                     was_resolved = True
-                    resolve([p.value for p in promises])
+                    values = [p.value for p in promises]
+                    resolve(values)  # type: ignore
 
             for p in promises:
                 assert isinstance(p, Promise)
                 p.then(recheck_resolve_status)
 
         if promises:
-            return Promise(handler)
-        return Promise.resolve()
+            return Promise(executor)
+        return Promise.resolve([])
 
-    def __init__(self, fullfill_func: FullfillFunc) -> None:
+    def __init__(self, executor_func: ExecutorFunc[T]) -> None:
         """Initialize Promise object.
 
         Arguments:
-            fullfill_func: A function that is executed immediately by this Promise.
+            executor_func: A function that is executed immediately by this Promise.
             It gets passed a "resolve" function. The "resolve" function, when
             called, resolves the Promise with the value passed to it.
         """
-        self.value = None  # type: Any
+        self.value = None  # type: Optional[T]
         self.resolved = False
         self.mutex = threading.Lock()
-        self.callbacks = []  # type: List[ResolveFunc]
-        fullfill_func(lambda value=None: self._do_resolve(value))
+        self.callbacks = []  # type: List[ResolveFunc[T]]
+        executor_func(lambda value=None: self._do_resolve(value))
 
     def __repr__(self) -> str:
         if self.resolved:
             return 'Promise({})'.format(self.value)
         return 'Promise(<pending>)'
 
-    def then(self, callback: ThenFunc) -> 'Promise':
+    def then(self, onfullfilled: FullfillFunc[Optional[T], TResult]) -> 'Promise[TResult]':
         """Create a new promise and chain it with this promise.
 
         When this promise gets resolved, the callback will be called with the
@@ -154,16 +166,16 @@ class Promise:
         Returns a new promise that can be used to do further chaining.
 
         Arguments:
-            callback: The callback to call when this promise gets resolved.
+            onfullfilled: The callback to call when this promise gets resolved.
         """
-        def callback_wrapper(resolve_fn: ThenFunc, resolve_value: Any) -> None:
+        def callback_wrapper(resolve_fn: ResolveFunc[TResult], resolve_value: Optional[T]) -> None:
             """A wrapper called when this promise resolves.
 
             Arguments:
                 resolve_fn: A resolve function of newly created promise.
                 resolve_value: The value with which this promise resolved.
             """
-            result = callback(resolve_value)
+            result = onfullfilled(resolve_value)
             # If returned value is a promise then this promise needs to be
             # resolved with the value of returned promise.
             if isinstance(result, Promise):
@@ -171,7 +183,7 @@ class Promise:
             else:
                 resolve_fn(result)
 
-        def sync_wrapper(resolve_fn: ThenFunc) -> None:
+        def sync_wrapper(resolve_fn: ResolveFunc[TResult]) -> None:
             """Call resolve_fn immediately with the resolved value.
 
             A wrapper function that will immediately resolve resolve_fn with the
@@ -179,7 +191,7 @@ class Promise:
             """
             callback_wrapper(resolve_fn, self._get_value())
 
-        def async_wrapper(resolve_fn: ThenFunc) -> None:
+        def async_wrapper(resolve_fn: ResolveFunc[TResult]) -> None:
             """Queue resolve_fn to be called after this promise resolves later.
 
             A wrapper function that will resolve received resolve_fn when this promise
@@ -191,7 +203,7 @@ class Promise:
             return Promise(sync_wrapper)
         return Promise(async_wrapper)
 
-    def _do_resolve(self, new_value: Any) -> None:
+    def _do_resolve(self, new_value: T) -> None:
         # No need to block as we can't change from resolved to unresolved.
         if self.resolved:
             raise RuntimeError("cannot set the value of an already resolved promise")
@@ -201,7 +213,7 @@ class Promise:
             for callback in self.callbacks:
                 callback(new_value)
 
-    def _add_callback(self, callback: ResolveFunc) -> None:
+    def _add_callback(self, callback: ResolveFunc[T]) -> None:
         with self.mutex:
             self.callbacks.append(callback)
 
@@ -209,6 +221,6 @@ class Promise:
         with self.mutex:
             return self.resolved
 
-    def _get_value(self) -> Any:
+    def _get_value(self) -> Optional[T]:
         with self.mutex:
             return self.value

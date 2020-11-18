@@ -1,10 +1,12 @@
 from .core.promise import Promise
+from .core.protocol import CodeAction
+from .core.protocol import Command
 from .core.protocol import Diagnostic
 from .core.protocol import Range, Request
 from .core.registry import LspTextCommand
 from .core.registry import sessions_for_view
 from .core.settings import userprefs
-from .core.typing import Any, List, Dict, Callable, Optional, Union, Tuple, TypedDict
+from .core.typing import Any, List, Dict, Callable, Optional, Tuple, Union
 from .core.views import entire_content_range
 from .core.views import region_to_range
 from .core.views import text_document_code_action_params
@@ -13,13 +15,7 @@ from .diagnostics import view_diagnostics
 from .save_command import LspSaveCommand, SaveTask
 import sublime
 
-
-CodeActionOrCommand = TypedDict('CodeActionOrCommand', {
-    'title': str,
-    'command': Union[dict, str],
-    'edit': dict,
-    'kind': Optional[str]
-}, total=False)
+CodeActionOrCommand = Union[CodeAction, Command]
 CodeActionsResponse = Optional[List[CodeActionOrCommand]]
 CodeActionsByConfigName = Dict[str, List[CodeActionOrCommand]]
 
@@ -178,7 +174,7 @@ def filtering_collector(
     """
 
     def actions_filter(actions: CodeActionsResponse) -> List[CodeActionOrCommand]:
-        return [a for a in (actions or []) if a.get('kind') in kinds]
+        return [a for a in (actions or []) if a.get('kind') in kinds]  # type: ignore
 
     collector = actions_collector.create_collector(config_name)
     return (

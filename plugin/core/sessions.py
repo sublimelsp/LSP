@@ -5,10 +5,14 @@ from .logging import debug
 from .logging import exception_log
 from .open import open_externally
 from .open import open_file_and_center_async
+from .promise import PackagedTask
 from .promise import Promise
+from .protocol import CodeAction
+from .protocol import Command
 from .protocol import CompletionItemTag
 from .protocol import Error
 from .protocol import ErrorCode
+from .protocol import ExecuteCommandParams
 from .protocol import Notification
 from .protocol import Request
 from .protocol import Response
@@ -25,7 +29,7 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import ResolvedStartupConfig
 from .types import SettingsRegistration
-from .typing import Callable, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
+from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
 from .url import uri_to_filename
 from .version import __version__
 from .views import COMPLETION_KINDS
@@ -953,11 +957,12 @@ class Session(TransportCallbacks):
                 variables.update(extra_vars)
         return variables
 
-    def run_command(self, command: Mapping[str, Any]) -> Promise:
+    def execute_command(self, command: ExecuteCommandParams) -> Promise:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
-            promise, callback = Promise.packaged_task()
-            if self._plugin.on_pre_server_command(command, callback):
+            task = Promise.packaged_task()  # type: PackagedTask[None]
+            promise, resolve = task
+            if self._plugin.on_pre_server_command(command, resolve):
                 return promise
         # TODO: Our Promise class should be able to handle errors/exceptions
         return Promise(
@@ -968,31 +973,47 @@ class Session(TransportCallbacks):
             )
         )
 
-    def run_code_action_async(self, code_action: Mapping[str, Any]) -> Promise:
+    def run_code_action_async(self, code_action: Union[Command, CodeAction]) -> Promise:
         command = code_action.get("command")
         if isinstance(command, str):
+            code_action = cast(Command, code_action)
             # This is actually a command.
-            return self.run_command(code_action)
+            command_params = {'command': command}  # type: ExecuteCommandParams
+            arguments = code_action.get('arguments', None)
+            if isinstance(arguments, list):
+                command_params['arguments'] = arguments
+            return self.execute_command(command_params)
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
+        code_action = cast(CodeAction, code_action)
+        return self._maybe_resolve_code_action(code_action).then(self._apply_code_action_async)
+
+    def _maybe_resolve_code_action(self, code_action: CodeAction) -> Promise[Union[CodeAction, Error]]:
         if self.has_capability("codeActionProvider.resolveSupport"):
             # TODO: Should we accept a SessionBuffer? What if this capability is registered with a documentSelector?
             # We must first resolve the command and edit properties, because they can potentially be absent.
-            promise = self.send_request_task(Request("codeAction/resolve", code_action))
-        else:
-            promise = Promise.resolve(code_action)
-        return promise.then(self._apply_code_action_async)
+            request = Request("codeAction/resolve", code_action)
+            return self.send_request_task(request)
+        return Promise.resolve(code_action)
 
-    def _apply_code_action_async(self, code_action: Union[Error, Mapping[str, Any]]) -> Promise:
+    def _apply_code_action_async(self, code_action: Union[CodeAction, Error, None]) -> Promise:
+        if not code_action:
+            return Promise.resolve()
         if isinstance(code_action, Error):
             # TODO: our promise must be able to handle exceptions (or, wait until we can use coroutines)
             self.window.status_message("Failed to apply code action: {}".format(code_action))
             return Promise.resolve()
-        command = code_action.get("command")
         edit = code_action.get("edit")
         promise = self._apply_workspace_edit_async(edit) if edit else Promise.resolve()
-        return promise.then(lambda _: self.run_command(command) if isinstance(command, dict) else Promise.resolve())
+        command = code_action.get("command")
+        if isinstance(command, dict):
+            execute_command = {
+                "command": command["command"],
+                "arguments": command.get("arguments"),
+            }  # type: ExecuteCommandParams
+            return promise.then(lambda _: self.execute_command(execute_command))
+        return promise
 
     def _apply_workspace_edit_async(self, edit: Any) -> Promise:
         """
@@ -1219,7 +1240,8 @@ class Session(TransportCallbacks):
         sublime.set_timeout_async(functools.partial(self.send_request_async, request, on_result, on_error))
 
     def send_request_task(self, request: Request) -> Promise:
-        promise, resolver = Promise.packaged_task()
+        task = Promise.packaged_task()  # type: PackagedTask[Any]
+        promise, resolver = task
         self.send_request_async(request, resolver, lambda x: resolver(Error.from_lsp(x)))
         return promise
 

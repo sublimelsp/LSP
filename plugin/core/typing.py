@@ -4,8 +4,10 @@ if sys.version_info >= (3, 8, 0):
 
     from typing import Any
     from typing import Callable
+    from typing import cast
     from typing import Deque
     from typing import Dict
+    from typing import Generic
     from typing import Generator
     from typing import IO
     from typing import Iterable
@@ -23,6 +25,9 @@ if sys.version_info >= (3, 8, 0):
     from typing import Union
 
 else:
+
+    def cast(typ, val):  # type: ignore
+        return val
 
     def _make_type(name: str) -> '_TypeMeta':
         return _TypeMeta(name, (Type,), {})  # type: ignore
@@ -60,6 +65,9 @@ else:
     class Dict(Type):  # type: ignore
         pass
 
+    class Generic(Type):  # type: ignore
+        pass
+
     class Generator(Type):  # type: ignore
         pass
 
@@ -93,7 +101,8 @@ else:
     class Union(Type):  # type: ignore
         pass
 
-    Protocol = object  # type: ignore
+    class Protocol(Type):  # type: ignore
+        pass
 
-    def TypeVar(ignore: str) -> Any:  # type: ignore
+    def TypeVar(*args, **kwargs) -> Any:  # type: ignore
         return object

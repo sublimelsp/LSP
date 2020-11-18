@@ -191,7 +191,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         return promise
 
     @classmethod
-    def await_promise(self, promise: Union[YieldPromise, Promise]) -> Generator:
+    def await_promise(cls, promise: Union[YieldPromise, Promise]) -> Generator:
         if isinstance(promise, YieldPromise):
             yielder = promise
         else:

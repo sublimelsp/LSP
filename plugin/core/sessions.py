@@ -547,6 +547,8 @@ _plugins = {}  # type: Dict[str, Tuple[Type[AbstractPlugin], SettingsRegistratio
 def _register_plugin_impl(plugin: Type[AbstractPlugin], notify_listener: bool) -> None:
     global _plugins
     name = plugin.name()
+    if name in _plugins:
+        return
     try:
         settings, base_file = plugin.configuration()
         if client_configs.add_external_config(name, settings, base_file, notify_listener):

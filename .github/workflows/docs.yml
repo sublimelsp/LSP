@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - st4000-exploration
+    paths:
+      - "docs/**"
 jobs:
   deploy:
     runs-on: ubuntu-latest

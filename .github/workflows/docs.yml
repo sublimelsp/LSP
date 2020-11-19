@@ -4,6 +4,7 @@ on:
     branches:
       - st4000-exploration
     paths:
+      - ".github/workflows/docs.yml"
       - "docs/**"
 jobs:
   deploy:

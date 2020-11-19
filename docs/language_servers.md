@@ -1,4 +1,4 @@
-# Language servers
+# Language Servers
 
 The following list can help you to install and configure language servers for use with LSP.
 Please remember to put the configurations in a `"clients"` dictionary in your `LSP.sublime-settings` file, as shown in the example above.

@@ -2,6 +2,12 @@
 
 Install MkDocs - https://www.mkdocs.org/#installing-mkdocs
 
+Install Material Theme - https://squidfunk.github.io/mkdocs-material/getting-started/#installation
+
+```
+pip install mkdocs mkdocs-material
+```
+
 For full documentation visit [mkdocs.org](https://www.mkdocs.org).
 
 ## Commands

@@ -5,9 +5,9 @@ edit_uri: edit/st4000-exploration/docs/
 theme:
   name: material
   palette:
-      scheme: slate
-      accent: orange
-      primary: orange
+    scheme: slate
+    accent: orange
+    primary: orange
 
   icon:
     logo: fontawesome/solid/book-open

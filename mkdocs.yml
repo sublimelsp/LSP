@@ -32,7 +32,10 @@ markdown_extensions:
       permalink: '#'
 
 nav:
-    - Home: 'index.md'
-    - C/C++: 'cplusplus.md'
+    - Getting Started: 'index.md'
+    - Language Servers: 'language_servers.md'
     - Features: 'features.md'
+    - Guides:
+      - Server Configuration: 'guides/server_configuration.md'
+      - Setup C/C++: 'guides/cplusplus.md'
     - Troubleshooting: 'troubleshooting.md'

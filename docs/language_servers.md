@@ -7,8 +7,7 @@ If you use or would like to use language servers that are not in this list, plea
 !!! tip
     We recommend installing [LSP-json](https://packagecontrol.io/packages/LSP-json), as it suggest smart settings completions and report errors when inside the `LSP.sublime-settings` file.
 
-### Bash<a name="bash"></a>
-
+### Bash
 1. Make sure you have `node` installed.
 2. Download the [LSP-bash](https://packagecontrol.io/packages/LSP-bash) helper package.
 
@@ -16,7 +15,7 @@ If you use or would like to use language servers that are not in this list, plea
 
 See the dedicated <a href="/guides/cplusplus"/>C/C++ guide</a> for using ccls or clangd.
 
-### C&#35;<a name="csharp"></a>
+### C\#
 
 1. [Download](https://github.com/OmniSharp/omnisharp-roslyn/releases) or build [OmniSharp](https://github.com/OmniSharp/omnisharp-roslyn).
 2. Add to LSP settings' clients:
@@ -33,7 +32,7 @@ See the dedicated <a href="/guides/cplusplus"/>C/C++ guide</a> for using ccls or
 }
 ```
 
-### Clojure<a name="clojure"></a>
+### Clojure
 
 1. Download [clojure-lsp](https://github.com/snoe/clojure-lsp).
 2. Add to LSP settings' clients:
@@ -49,7 +48,7 @@ See the dedicated <a href="/guides/cplusplus"/>C/C++ guide</a> for using ccls or
 
 clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/clojure-lsp#initializationoptions).
 
-### CSS<a name="css"></a>
+### CSS
 
 1. Install the CSS language server from VS Code:
 
@@ -57,7 +56,7 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 
 2. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `vscode-css`.
 
-### D<a name="d"></a>
+### D
 
 1. Install the [D Language Server](https://github.com/d-language-server/dls):
 
@@ -74,7 +73,7 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 }
 ```
 
-### Dart<a name="dart"></a>
+### Dart
 
 1. Install the [Dartlight](https://packagecontrol.io/packages/Dartlight) package from Package Control for syntax highlighting.
 2. Install the [Dart SDK](https://dart.dev/get-dart) and locate path to `analysis_server.dart.snapshot` in the "snapshots/bin" directory.
@@ -90,7 +89,7 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 
 > **Note**: The older [natebosch/dart_language_server](https://github.com/natebosch/dart_language_server) is now deprecated.
 
-### Dockerfile<a name="dockerfile"></a>
+### Dockerfile
 
 1. Install the [Dockerfile Syntax Highlighting](https://packagecontrol.io/packages/Dockerfile%20Syntax%20Highlighting) package from Package Control for syntax highlighting.
 2. Install the [Dockerfile Language Server](https://github.com/rcjsuen/dockerfile-language-server-nodejs):
@@ -118,7 +117,7 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 }
 ```
 
-### Elixir<a name="elixir"></a>
+### Elixir
 
 1. Install the [Elixir](https://packagecontrol.io/packages/Elixir) package from Package Control for syntax highlighting.
 2. Download the prebuilt binaries or compile [elixir-ls](https://github.com/elixir-lsp/elixir-ls).
@@ -133,7 +132,7 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 }
 ```
 
-### Elm<a name="elm"></a>
+### Elm
 
 1. Install the [Elm Syntax Highlighting](https://packagecontrol.io/packages/Elm%20Syntax%20Highlighting) package from Package Control for syntax highlighting.
 2. See instructions for installing the [elm-language-server](https://github.com/elm-tooling/elm-language-server).
@@ -150,7 +149,7 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 }
 ```
 
-### Erlang<a name="erlang"></a>
+### Erlang
 
 1. See instructions for installing the [Erlang Language Server](https://github.com/erlang-ls/erlang_ls).
 2. Add to LSP settings' clients:
@@ -163,7 +162,7 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 }
 ```
 
-### Flow (JavaScript)<a name="flow"></a>
+### Flow (JavaScript)
 
 Official part of [flow-bin](https://github.com/facebook/flow):
 
@@ -177,7 +176,7 @@ Older [flow-language-server](https://github.com/flowtype/flow-language-server):
 npm install -g flow-language-server
 ```
 
-### Fortran<a name="fortran"></a>
+### Fortran
 
 1. Install the [Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.
 2. Install the [Fortran Language Server](https://github.com/hansec/fortran-language-server) (requires Python):
@@ -199,7 +198,7 @@ npm install -g flow-language-server
   documentation for a detailed description of available configuration options, for example
   `"command": ["fortls", "--lowercase_intrinsics"]` to use lowercase for autocomplete suggestions.
 
-### Go<a name="go"></a>
+### Go
 
 #### Gopls
 
@@ -243,7 +242,7 @@ npm install -g flow-language-server
 }
 ```
 
-### Java<a name="java"></a>
+### Java
 
 #### Eclipse JDT Language Server
 
@@ -292,19 +291,19 @@ Requires IntelliJ to be running.
 }
 ```
 
-### ESLint<a name="eslint"></a>
+### ESLint
 
 1. Make sure you have `node` installed.
 2. Install the [LSP-eslint](https://packagecontrol.io/packages/LSP-eslint) helper package. It will install the
    server for you in $DATA/Cache.
 
-### JavaScript/TypeScript<a name="typescript"></a>
+### JavaScript/TypeScript
 
 1. Make sure you have `node` installed.
 2. Install the [LSP-typescript](https://packagecontrol.io/packages/LSP-typescript) helper package. It will install the
    server for you in $DATA/Cache.
 
-### Julia<a name="julia"></a>
+### Julia
 
 1. Install the [Julia](https://packagecontrol.io/packages/Julia) package from Package Control for syntax highlighting.
 2. Install the `LanguageServer` and `SymbolServer` packages from the Julia REPL:
@@ -350,7 +349,7 @@ Requires IntelliJ to be running.
 <!-- Alternatively, install the [LSP-julia](https://github.com/randy3k/LSP-julia) package for Sublime Text. -->
 <!-- (Currently doesn't work with newest release of Julia's LanguageServer) -->
 
-### Kotlin<a name="kotlin"></a>
+### Kotlin
 
 1. Install the [Kotlin](https://packagecontrol.io/packages/Kotlin) package from Package Control for syntax highlighting.
 2. Install the [Kotlin Language Server](https://github.com/fwcd/KotlinLanguageServer) (requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUILDING.md) first).
@@ -369,7 +368,7 @@ Requires IntelliJ to be running.
 }
 ```
 
-### LaTeX<a name="latex"></a>
+### LaTeX
 
 1. Download a [precompiled binary](https://github.com/latex-lsp/texlab/releases) (Windows/Linux/macOS) of the [TexLab](https://texlab.netlify.com/) language server.
 2. Add to LSP settings' clients:
@@ -392,7 +391,7 @@ Requires IntelliJ to be running.
   (for BibTeX files) included in the `auto_complete_selector` setting in your `Preferences.sublime-settings` file.
   For further requirements see the [TexLab Docs](https://texlab.netlify.com/docs#requirements).
 
-### Lisp<a name="lisp"></a>
+### Lisp
 
 1. Install [cc-lsp](https://github.com/cxxxr/cl-lsp) using Roswell.
 2. Add to LSP settings' clients:
@@ -405,7 +404,7 @@ Requires IntelliJ to be running.
 }
 ```
 
-### Lua<a name="lua"></a>
+### Lua
 
 1. Download the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=sumneko.lua).
 2. Add to LSP settings' clients:
@@ -423,7 +422,7 @@ Requires IntelliJ to be running.
 
 Alternatively you can use the less maintained [lua-lsp](https://github.com/Alloyed/lua-lsp).
 
-### OCaml/Reason<a name="reason"></a>
+### OCaml/Reason
 
 1. Install the [Reason](https://packagecontrol.io/packages/Reason) package from Package Control for syntax highlighting.
 2. Install the [Reason Language Server](https://github.com/jaredly/reason-language-server#sublime-text).
@@ -438,7 +437,7 @@ Alternatively you can use the less maintained [lua-lsp](https://github.com/Alloy
 }
 ```
 
-### PHP<a name="php"></a>
+### PHP
 
 #### Intelephense
 
@@ -446,7 +445,7 @@ Alternatively you can use the less maintained [lua-lsp](https://github.com/Alloy
 2. Install the [LSP-intelephense](https://packagecontrol.io/packages/LSP-intelephense) helper package. It installs
    and updates the server for you in $DATA/Cache.
 
-### Polymer<a name="polymer"></a>
+### Polymer
 
 ```sh
 npm install -g polymer-editor-service
@@ -463,7 +462,7 @@ Features:
 
 More info: [Polymer/polymer-editor-service](https://github.com/Polymer/polymer-editor-service)
 
-### PowerShell<a name="powershell"></a>
+### PowerShell
 
 1. Install the [PowerShell](https://packagecontrol.io/packages/PowerShell) package from Package Control for syntax highlighting.
 2. Download and extract the [latest release](https://github.com/PowerShell/PowerShellEditorServices/releases) PowerShellEditorServices.
@@ -497,7 +496,7 @@ More info: [Polymer/polymer-editor-service](https://github.com/Polymer/polymer-e
 
 > **Note**: For more details see this [issue](https://github.com/PowerShell/PowerShellEditorServices/issues/1057).
 
-### Python<a name="python"></a>
+### Python
 
 There are at least two language servers, use either one.
 
@@ -662,7 +661,7 @@ Here is an example of settings:
   }
 ```
 
-### R<a name="r"></a>
+### R
 
 1. Install the `languageserver` package from CRAN (see the [CRAN mirrored package on GitHub](https://github.com/cran/languageserver) for more information and up-to-date installation instructions):
 
@@ -670,7 +669,7 @@ Here is an example of settings:
 
 2. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `rlang`.
 
-### Ruby/Ruby on Rails<a name="ruby"></a>
+### Ruby/Ruby on Rails
 
 Different servers are available for Ruby:
 
@@ -695,13 +694,13 @@ Sorbet:
 
 2. Run "LSP:Enable Language Server Globally" from the Command Palette and choose `sorbet`.
 
-### Rust<a name="rust"></a>
+### Rust
 
 Goes well with the [Rust Enhanced package](https://github.com/rust-lang/rust-enhanced) which uses the RLS server: [github:rust-lang-nursery/rls](https://github.com/rust-lang-nursery/rls) for up-to-date installation instructions.
 
 Alternatively, a newer [rust-analyzer](https://github.com/rust-analyzer/rust-analyzer) server is under development, also supported by LSP.
 
-### Scala<a name="scala"></a>
+### Scala
 
 * **[Metals](https://scalameta.org/metals/)**: Most complete LSP server for Scala, see [LSP-metals](https://packagecontrol.io/packages/LSP-metals) for installation.
 * **[SBT](https://www.scala-sbt.org/)**: Version 1.x supports limited and *unmaintained* language server functionalities, setup is described [here](http://eed3si9n.com/sbt-server-with-sublime-text3).
@@ -713,12 +712,12 @@ At this point LSP should complain in the logs
 Then run `sbt configureIDE` to create the `.dotty-ide.json` file
 Then the LSP plugin should launch as configured in `LSP.sublime-settings` using coursier.
 
-### Swift<a name="swift"></a>
+### Swift
 
 1. Install the [Swift](https://packagecontrol.io/packages/Swift) package from Package Control for syntax highlighting.
 2. Install Xcode 11.4 or later and ensure that `xcrun -find sourcekit-lsp` returns the path to sourcekit-lsp.
 
-### Terraform<a name="terraform"></a>
+### Terraform
 
 1. Download [terraform-lsp](https://github.com/juliosueiras/terraform-lsp/releases) binary and make it available in your PATH.
 2. Add to LSP settings' clients:
@@ -731,13 +730,13 @@ Then the LSP plugin should launch as configured in `LSP.sublime-settings` using 
 }
 ```
 
-### Vue (Javascript)<a name="vue"></a>
+### Vue
 
 See: [LSP-vue](https://packagecontrol.io/packages/LSP-vue)
 
 Be sure to install [Vue Syntax Highlight](https://packagecontrol.io/packages/Vue%20Syntax%20Highlight) from Package Control.
 
-### XML<a name="xml"></a>
+### XML
 
 1. Download jar from [angelozerr/lsp4xml](https://github.com/angelozerr/lsp4xml/releases).
 2. Add to LSP settings' clients:

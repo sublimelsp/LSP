@@ -4,6 +4,9 @@ The following list can help you to install and configure language servers for us
 Please remember to put the configurations in a `"clients"` dictionary in your `LSP.sublime-settings` file, as shown in the example above.
 If you use or would like to use language servers that are not in this list, please create issues or pull requests, so we can add support for more languages.
 
+!!! tip
+    We recommend installing [LSP-json](https://packagecontrol.io/packages/LSP-json), as it suggest smart settings completions and report errors when inside the `LSP.sublime-settings` file.
+
 ### Bash<a name="bash"></a>
 
 1. Make sure you have `node` installed.

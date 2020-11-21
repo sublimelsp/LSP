@@ -155,16 +155,6 @@ Follow installation instructions on [LSP-flow](https://github.com/sublimelsp/LSP
 
 > **Note**: See the [User guide](https://github.com/golang/tools/blob/master/gopls/doc/user.md#user-guide) for detailed installation instructions and configurations.
 
-### Sourcegraph's go-langserver
-
-1. Install Sourcegraph's [Go Language Server](https://github.com/sourcegraph/go-langserver):
-
-        go get github.com/sourcegraph/go-langserver
-
-2. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `golsp`.
-
-> **Note**: Work on this language server has been deprioritized in favor of the gopls language server mentioned above.
-
 ## GraphQL
 
 Follow installation instructions on [LSP-graphql](https://github.com/sublimelsp/LSP-graphql).

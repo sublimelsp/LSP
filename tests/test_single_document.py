@@ -319,7 +319,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.set_response("workspace/executeCommand", {"canReturnAnythingHere": "asdf"})
         promise = YieldPromise()
         sublime.set_timeout_async(
-            lambda: self.session.run_command(
+            lambda: self.session.execute_command(
                 {"command": "foo", "arguments": ["hello", "there", "general", "kenobi"]}
             ).then(promise.fulfill)
         )

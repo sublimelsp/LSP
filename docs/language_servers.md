@@ -229,18 +229,6 @@ Follow installation instructions on [LSP-html](https://github.com/sublimelsp/LSP
 }
 ```
 
-### IntelliJ
-
-Requires IntelliJ to be running.
-
-```js
-"intellij": {
-  "command": [],
-  "languageId": "java", // will match source.java
-  "tcp_port": 8080 // default port
-}
-```
-
 ## JSON
 
 Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP-json).

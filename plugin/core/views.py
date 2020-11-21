@@ -1,4 +1,5 @@
 from .css import css
+from .protocol import CodeLens
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
@@ -689,3 +690,14 @@ def format_completion(
             details=st_details)
 
     return completion
+
+
+def code_lens_to_phantom(view: sublime.View, code_lens: CodeLens) -> sublime.Phantom:
+    region = range_to_region(Range.from_lsp(code_lens["range"]), view)
+    command = code_lens.get("command")
+    assert isinstance(command, dict)
+    return sublime.Phantom(region, command["title"], sublime.LAYOUT_BELOW)
+
+
+def code_lenses_to_phantoms(view: sublime.View, code_lenses: List[CodeLens]) -> List[sublime.Phantom]:
+    return [code_lens_to_phantom(view, code_lens) for code_lens in code_lenses]

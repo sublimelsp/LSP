@@ -43,7 +43,7 @@ Command = TypedDict('Command', {
     'title': str,
     'command': str,
     'arguments': Optional[List[Any]],
-})
+}, total=True)
 
 
 CodeAction = TypedDict('CodeAction', {
@@ -53,7 +53,14 @@ CodeAction = TypedDict('CodeAction', {
     'isPreferred': Optional[bool],
     'edit': Optional[dict],
     'command': Optional[Command],
-})
+}, total=True)
+
+
+CodeLens = TypedDict('CodeLens', {
+    'range': Dict[str, Any],
+    'command': Optional[Command],
+    'data': Any
+}, total=True)
 
 
 class Request:

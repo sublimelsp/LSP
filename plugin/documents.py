@@ -572,13 +572,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def get_capability_async(self, session: Session, capability_path: str) -> Optional[Any]:
         for sv in self.session_views_async():
             if sv.session == session:
-                return sv.get_capability(capability_path)
+                return sv.get_capability_async(capability_path)
         return None
 
     def has_capability_async(self, session: Session, capability_path: str) -> bool:
         for sv in self.session_views_async():
             if sv.session == session:
-                return sv.has_capability(capability_path)
+                return sv.has_capability_async(capability_path)
         return False
 
     def purge_changes_async(self) -> None:

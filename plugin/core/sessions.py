@@ -227,6 +227,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             },
             "selectionRange": {
                 "dynamicRegistration": True
+            },
+            "codeLens": {
+                "dynamicRegistration": True
             }
         },
         "workspace": {

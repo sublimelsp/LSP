@@ -1,10 +1,14 @@
+from .core.promise import Promise
+from .core.protocol import CodeLens
 from .core.protocol import Diagnostic
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.typing import Any, Iterable, List, Tuple, Optional, Dict
+from .core.views import code_lenses_to_phantoms
 from .core.views import DIAGNOSTIC_SEVERITY
+from .core.views import text_document_identifier
 from .core.windows import AbstractViewListener
 from .session_buffer import SessionBuffer
 from weakref import ref
@@ -47,6 +51,9 @@ class SessionView:
             self._increment_hover_count()
         self._clear_auto_complete_triggers(settings)
         self._setup_auto_complete_triggers(settings)
+        self.code_lens_phantoms = sublime.PhantomSet(self.view, "lsp{}cl".format(self.session.config.name))
+        self.resolved_code_lenses = []  # type: List[CodeLens]
+        self._do_code_lens_async()
 
     def __del__(self) -> None:
         settings = self.view.settings()  # type: sublime.Settings
@@ -119,6 +126,38 @@ class SessionView:
         triggers.append(trigger)
         settings.set(self.AC_TRIGGERS_KEY, triggers)
 
+    def _do_code_lens_async(self) -> None:
+        if "codeLensProvider" in userprefs().disabled_capabilities:
+            return
+        if not self.has_capability_async("codeLensProvider"):
+            return
+        params = {"textDocument": text_document_identifier(self.view)}
+        self.session.send_request_async(Request("textDocument/codeLens", params, self.view), self._on_code_lens)
+
+    def _on_code_lens(self, response: Optional[List[CodeLens]]) -> None:
+        self.resolved_code_lenses = []
+        if not isinstance(response, list):
+            return
+        promises = []  # type: List[Promise[CodeLens]]
+        for code_lens in response:
+            if code_lens.get("command"):
+                self.resolved_code_lenses.append(code_lens)
+            else:
+                promises.append(self.session.send_request_task(Request("codeAction/resolve", code_lens, self.view)))
+        if promises:
+            Promise.all(promises).then(self._on_all_code_lenses_resolved)
+        else:
+            self._on_all_code_lenses_resolved(None)
+
+    def _on_all_code_lenses_resolved(self, code_lenses: Optional[List[CodeLens]]) -> None:
+        if isinstance(code_lenses, list):
+            self.resolved_code_lenses.extend(code_lenses)
+        sublime.set_timeout(lambda: self._render_code_lenses(self.resolved_code_lenses))
+
+    def _render_code_lenses(self, code_lenses: List[CodeLens]) -> None:
+        if self.view.is_valid():
+            self.code_lens_phantoms.update(code_lenses_to_phantoms(self.view, code_lenses))
+
     def _increment_hover_count(self) -> None:
         settings = self.view.settings()
         count = settings.get(self.HOVER_PROVIDER_COUNT_KEY, 0)
@@ -136,12 +175,8 @@ class SessionView:
                 settings.erase(self.HOVER_PROVIDER_COUNT_KEY)
                 settings.set(self.SHOW_DEFINITIONS_KEY, True)
 
-    def get_capability(self, capability_path: str) -> Optional[Any]:
+    def get_capability_async(self, capability_path: str) -> Optional[Any]:
         return self.session_buffer.get_capability(capability_path)
-
-    def has_capability(self, capability_path: str) -> bool:
-        value = self.session_buffer.get_capability(capability_path)
-        return isinstance(value, dict) or bool(value)
 
     def on_capability_added_async(self, registration_id: str, capability_path: str, options: Dict[str, Any]) -> None:
         if capability_path == self.HOVER_PROVIDER_KEY:
@@ -150,6 +185,8 @@ class SessionView:
             trigger_chars = options.get("triggerCharacters")
             if isinstance(trigger_chars, list):
                 self._register_auto_complete_triggers(registration_id, trigger_chars)
+        elif capability_path.startswith("codeLensProvider"):
+            self._do_code_lens_async()
 
     def on_capability_removed_async(self, registration_id: str, discarded: Dict[str, Any]) -> None:
         if self.HOVER_PROVIDER_KEY in discarded:

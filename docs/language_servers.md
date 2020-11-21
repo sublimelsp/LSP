@@ -35,19 +35,25 @@ Follow installation instructions on [LSP-cmake](https://github.com/sublimelsp/LS
 
 ## Clojure
 
-1. Download [clojure-lsp](https://github.com/snoe/clojure-lsp).
-2. Add to LSP settings' clients:
+1. Download [clojure-lsp](https://github.com/snoe/clojure-lsp#installation).
+2. Add the `"clojure-lsp"` client configuration to the `LSP.sublime-settings` file:
 
-```js
-"clojure-lsp": {
-  "command": ["java", "-jar", "/PATH/TO/clojure-lsp"],
-  "enabled": true,
-  "initializationOptions": {},
-  "languageId": "clojure" // will match source.clojure
+
+```json
+{
+    "clients": {
+        "clojure-lsp": {
+            "enabled": true,
+            "command": ["java", "-jar", "/PATH/TO/clojure-lsp"],
+            "selector": "source.clojure",
+            "initializationOptions": {}
+        }
+    }
 }
 ```
+3. Update the `/PATH/TO/clojure-lsp`.
 
-clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/clojure-lsp#initializationoptions).
+!!! info "See available [initializationOptions](https://github.com/snoe/clojure-lsp#initializationoptions)."
 
 ## CSS
 
@@ -55,20 +61,21 @@ Follow installation instructions on [LSP-css](https://github.com/sublimelsp/LSP-
 
 ## D
 
-1. Install the [D Language Server](https://github.com/d-language-server/dls):
+1. Install the [D Language Server](https://github.com/d-language-server/dls#installation).
+2. Add the `"dls"` client configuration to the `LSP.sublime-settings` file:
 
-        dub fetch dls
-        dub run dls:bootstrap
-
-2. Add to LSP settings' clients:
-
-```js
-"dls": {
-  "command": ["<PATH TO DLS EXECUTABLE>"],
-  "enabled": true,
-  "languageId": "d" // will match source.d
+```json
+{
+    "clients": {
+        "dls": {
+            "enabled": true,
+            "command": ["/PATH/TO/DLS_EXECUTABLE"],
+            "selector": "source.d"
+        }
+    }
 }
 ```
+3. Update the `/PATH/TO/DLS_EXECUTABLE`.
 
 ## Dart
 
@@ -88,16 +95,21 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
 
 ## Erlang
 
-1. See instructions for installing the [Erlang Language Server](https://github.com/erlang-ls/erlang_ls).
-2. Add to LSP settings' clients:
+1. Install the [Erlang Language Server](https://github.com/erlang-ls/erlang_ls).
+2. Add the `"erlang-ls"` client configuration to the `LSP.sublime-settings` file:
 
 ```json
-"erlang-ls": {
-  "command"   : [ "/path/to/my/erlang_ls", "--transport", "stdio" ],
-  "enabled"   : true,
-  "languageId": "erlang" // will match source.erlang
+{
+    "clients": {
+        "erlang-ls": {
+            "enabled": true,
+            "command": [ "/PATH/TO/erlang_ls", "--transport", "stdio" ],
+            "selector": "source.erlang"
+        }
+    }
 }
 ```
+3. Update the `/PATH/TO/erlang_ls`.
 
 ## ESLint
 
@@ -112,25 +124,24 @@ Follow installation instructions on [LSP-flow](https://github.com/sublimelsp/LSP
 
 ## Fortran
 
-1. Install the [Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.
-2. Install the [Fortran Language Server](https://github.com/hansec/fortran-language-server) (requires Python):
-
-        pip install fortran-language-server
-
-3. Add to LSP settings' clients:
+1. Install the [ Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.
+2. Install the [Fortran Language Server](https://github.com/hansec/fortran-language-server#installation).
+3. Add the `"fortls"` client configuration to the `LSP.sublime-settings` file:
 
 ```json
-"fortls": {
-  "command": ["fortls"],
-  "enabled": true,
-  "languageId": "fortran",
-  "document_selector": "source.modern-fortran | source.fixedform-fortran"
+{
+    "clients": {
+        "fortls": {
+            "enabled": true,
+            "command": ["fortls"],
+            "selector": "source.modern-fortran | source.fixedform-fortran"
+        }
+    }
 }
 ```
 
-> **Note**: See the [Language server settings](https://github.com/hansec/fortran-language-server#language-server-settings)
-  documentation for a detailed description of available configuration options, for example
-  `"command": ["fortls", "--lowercase_intrinsics"]` to use lowercase for autocomplete suggestions.
+!!! info "See available [configuration options](https://github.com/hansec/fortran-language-server#language-server-settings)."
+    For example set `"command": ["fortls", "--lowercase_intrinsics"]` to use lowercase for autocomplete suggestions.
 
 ## Go
 

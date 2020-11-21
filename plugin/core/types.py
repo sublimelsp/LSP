@@ -746,7 +746,7 @@ def _read_selector(config: Union[sublime.Settings, Dict[str, Any]]) -> str:
                         selectors.append(syntax.scope)
                 continue
             # No syntaxes and no document_selector... then there must exist a languageId.
-            language_id = config.get("languageId")
+            language_id = language.get("languageId")
             if isinstance(language_id, str):
                 selectors.append("source.{}".format(language_id))
         return "|".join(map("({})".format, selectors))

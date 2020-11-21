@@ -39,13 +39,19 @@ class WindowConfigManagerTests(unittest.TestCase):
         window = sublime.active_window()
         view = window.active_view()
         manager = WindowConfigManager(window, {TEST_CONFIG.name: TEST_CONFIG})
-        view.scope_name = MagicMock(return_value='text.plain ')
+        view.syntax = MagicMock(return_value=sublime.Syntax(
+            path="Packages/Text/Plain text.tmLanguage",
+            name="Plain Text",
+            scope="text.plain",
+            hidden=False
+        ))
         self.assertTrue(manager.is_supported(view))
         self.assertEqual(list(manager.match_view(view)), [TEST_CONFIG])
 
     def test_applies_project_settings(self):
         window = sublime.active_window()
         view = window.active_view()
+        assert view
         window.project_data = MagicMock(return_value={
             "settings": {
                 "LSP": {
@@ -57,7 +63,12 @@ class WindowConfigManagerTests(unittest.TestCase):
         })
         manager = WindowConfigManager(window, {DISABLED_CONFIG.name: DISABLED_CONFIG})
         manager.update()
-        view.scope_name = MagicMock(return_value='text.plain ')
+        view.syntax = MagicMock(return_value=sublime.Syntax(
+            path="Packages/Text/Plain text.tmLanguage",
+            name="Plain Text",
+            scope="text.plain",
+            hidden=False
+        ))
         configs = list(manager.match_view(view))
         self.assertEqual(len(configs), 1)
         config = configs[0]

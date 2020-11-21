@@ -25,7 +25,7 @@ class ConfigParsingTests(DeferrableTestCase):
             "languages": [{"languageId": "python"}]
         }
         config = read_client_config("pyls", settings)
-        self.assertEqual(config.selector, "source.python")
+        self.assertEqual(config.selector, "(source.python)")
         self.assertEqual(config.priority_selector, "(source.python)")
 
     def test_can_parse_settings_with_selector(self):

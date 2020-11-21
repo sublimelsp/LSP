@@ -2,6 +2,8 @@ from .collections import DottedDict
 from .logging import debug, set_debug_logging
 from .protocol import TextDocumentSyncKindNone
 from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, TypeVar, Tuple
+from .url import filename_to_uri
+from .url import uri_to_filename
 from threading import RLock
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
@@ -11,9 +13,6 @@ import os
 import socket
 import sublime
 import time
-import urllib.parse
-import urllib.request
-
 
 TCP_CONNECT_TIMEOUT = 5
 
@@ -684,14 +683,10 @@ class ClientConfig:
                 path, mapped = path_map.map_from_local_to_remote(path)
                 if mapped:
                     break
-        return urllib.parse.urljoin('file:', urllib.request.pathname2url(path))
+        return filename_to_uri(path)
 
     def map_server_uri_to_client_path(self, uri: str) -> str:
-        if os.name == 'nt':
-            # url2pathname does not understand %3A (VS Code's encoding forced on all servers :/)
-            path = urllib.request.url2pathname(urllib.parse.urlparse(uri).path).strip('\\')
-        else:
-            path = urllib.request.url2pathname(urllib.parse.urlparse(uri).path)
+        path = uri_to_filename(uri)
         if self.path_maps:
             for path_map in self.path_maps:
                 path, mapped = path_map.map_from_remote_to_local(path)

@@ -7,6 +7,10 @@ If you use or would like to use language servers that are not in this list, plea
 !!! tip
     We recommend installing [LSP-json](https://packagecontrol.io/packages/LSP-json), as it suggest smart settings completions and report errors when inside the `LSP.sublime-settings` file.
 
+## Angular
+
+Follow installation instructions on [LSP-angular](https://github.com/sublimelsp/LSP-angular).
+
 ## Bash
 1. Make sure you have `node` installed.
 2. Download the [LSP-bash](https://packagecontrol.io/packages/LSP-bash) helper package.
@@ -31,6 +35,10 @@ See the dedicated <a href="/guides/cplusplus"/>C/C++ guide</a> for using ccls or
   "document_selector": "source.cs"
 }
 ```
+
+## CMake
+
+Follow installation instructions on [LSP-cmake](https://github.com/sublimelsp/LSP-cmake). (not available on Package Control)
 
 ## Clojure
 
@@ -162,6 +170,11 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 }
 ```
 
+## ESLint
+
+1. Make sure you have `node` installed.
+2. Install the [LSP-eslint](https://packagecontrol.io/packages/LSP-eslint) helper package. It will install the server for you in $DATA/Cache.
+
 ## Flow (JavaScript)
 
 Official part of [flow-bin](https://github.com/facebook/flow):
@@ -210,7 +223,7 @@ npm install -g flow-language-server
 
 > **Note**: See the [User guide](https://github.com/golang/tools/blob/master/gopls/doc/user.md#user-guide) for detailed installation instructions and configurations.
 
-#### Sourcegraph's go-langserver
+### Sourcegraph's go-langserver
 
 1. Install Sourcegraph's [Go Language Server](https://github.com/sourcegraph/go-langserver):
 
@@ -220,7 +233,11 @@ npm install -g flow-language-server
 
 > **Note**: Work on this language server has been deprioritized in favor of the gopls language server mentioned above.
 
-### Haskell
+## GraphQL
+
+Follow installation instructions on [LSP-graphql](https://github.com/sublimelsp/LSP-graphql).
+
+## Haskell
 
 1. Install [haskell-language-server](https://github.com/haskell/haskell-language-server).
 2. Add to LSP settings' clients:
@@ -241,6 +258,10 @@ npm install -g flow-language-server
   ],
 }
 ```
+
+## HTML
+
+Follow installation instructions on [LSP-html](https://github.com/sublimelsp/LSP-html).
 
 ## Java
 
@@ -291,17 +312,15 @@ Requires IntelliJ to be running.
 }
 ```
 
-## ESLint
-
-1. Make sure you have `node` installed.
-2. Install the [LSP-eslint](https://packagecontrol.io/packages/LSP-eslint) helper package. It will install the
-   server for you in $DATA/Cache.
-
 ## JavaScript/TypeScript
 
 1. Make sure you have `node` installed.
 2. Install the [LSP-typescript](https://packagecontrol.io/packages/LSP-typescript) helper package. It will install the
    server for you in $DATA/Cache.
+
+## JSON
+
+Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP-json).
 
 ## Julia
 
@@ -437,6 +456,10 @@ Alternatively you can use the less maintained [lua-lsp](https://github.com/Alloy
 }
 ```
 
+## PromQL
+
+Follow installation instructions on [LSP-promql](https://github.com/prometheus-community/sublimelsp-promql).
+
 ## PHP
 
 ### Intelephense
@@ -462,7 +485,7 @@ Features:
 
 More info: [Polymer/polymer-editor-service](https://github.com/Polymer/polymer-editor-service)
 
-### PowerShell
+## PowerShell
 
 1. Install the [PowerShell](https://packagecontrol.io/packages/PowerShell) package from Package Control for syntax highlighting.
 2. Download and extract the [latest release](https://github.com/PowerShell/PowerShellEditorServices/releases) PowerShellEditorServices.
@@ -712,10 +735,30 @@ At this point LSP should complain in the logs
 Then run `sbt configureIDE` to create the `.dotty-ide.json` file
 Then the LSP plugin should launch as configured in `LSP.sublime-settings` using coursier.
 
+## SonarLint
+
+Follow installation instructions on [LSP-SonarLint](https://github.com/sublimelsp/LSP-SonarLint). (not available on Package Control)
+
+## SourceKit
+
+Follow installation instructions on [LSP-SourceKit](https://github.com/sublimelsp/LSP-SourceKit). (not available on Package Control)
+
+## Stylelint
+
+Follow installation instructions on [LSP-stylelint](https://github.com/sublimelsp/LSP-stylelint).
+
+## Svelte
+
+Follow installation instructions on [LSP-svelte](https://github.com/sublimelsp/LSP-svelte).
+
 ## Swift
 
 1. Install the [Swift](https://packagecontrol.io/packages/Swift) package from Package Control for syntax highlighting.
 2. Install Xcode 11.4 or later and ensure that `xcrun -find sourcekit-lsp` returns the path to sourcekit-lsp.
+
+## TAGML
+
+Follow installation instructions on [LSP-tagml](https://github.com/HuygensING/LSP-tagml).
 
 ## Terraform
 
@@ -761,3 +804,7 @@ Be sure to install [Vue Syntax Highlight](https://packagecontrol.io/packages/Vue
 ```
 
 > **Note**: Discussed in [this issue](https://github.com/sublimelsp/LSP/issues/578).
+
+## YAML
+
+Follow installation instructions on [LSP-yaml](https://github.com/sublimelsp/LSP-yaml).

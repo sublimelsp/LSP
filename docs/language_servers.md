@@ -5,15 +5,15 @@ Please remember to put the configurations in a `"clients"` dictionary in your `L
 If you use or would like to use language servers that are not in this list, please create issues or pull requests, so we can add support for more languages.
 
 !!! tip
-    We recommend installing [LSP-json](https://packagecontrol.io/packages/LSP-json), as it suggest smart settings completions and report errors when inside the `LSP.sublime-settings` file.
+    We recommend installing [LSP-json](https://packagecontrol.io/packages/LSP-json), as it can give settings completions and report errors when inside the `LSP.sublime-settings` file.
 
 ## Angular
 
 Follow installation instructions on [LSP-angular](https://github.com/sublimelsp/LSP-angular).
 
 ## Bash
-1. Make sure you have `node` installed.
-2. Download the [LSP-bash](https://packagecontrol.io/packages/LSP-bash) helper package.
+
+Follow installation instructions on [LSP-bash](https://github.com/sublimelsp/LSP-bash).
 
 ## C/C++
 
@@ -21,24 +21,17 @@ See the dedicated <a href="/guides/cplusplus"/>C/C++ guide</a> for using ccls or
 
 ## C\#
 
-1. [Download](https://github.com/OmniSharp/omnisharp-roslyn/releases) or build [OmniSharp](https://github.com/OmniSharp/omnisharp-roslyn).
-2. Add to LSP settings' clients:
+!!! warning  "Not published on Package Control"
+    Follow the steps for [installing not published `LSP-*` plugins]()
 
-```js
-"omnisharp": {
-  "command": [
-    "/home/tb/prebuilt/omnisharp/OmniSharp.exe", // or eg. /usr/local/opt/omnisharp/run
-    "-lsp"
-  ],
-  "enabled": true,
-  "languageId": "csharp",
-  "document_selector": "source.cs"
-}
-```
+Follow installation instructions on [LSP-OmniSharp](https://github.com/sublimelsp/LSP-OmniSharp).
 
 ## CMake
 
-Follow installation instructions on [LSP-cmake](https://github.com/sublimelsp/LSP-cmake). (not available on Package Control)
+!!! warning  "Not published on Package Control"
+    Follow the steps for [installing not published `LSP-*` plugins]()
+
+Follow installation instructions on [LSP-cmake](https://github.com/sublimelsp/LSP-cmake).
 
 ## Clojure
 
@@ -58,11 +51,7 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 
 ## CSS
 
-1. Install the CSS language server from VS Code:
-
-        npm install -g vscode-css-languageserver-bin
-
-2. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `vscode-css`.
+Follow installation instructions on [LSP-css](https://github.com/sublimelsp/LSP-css).
 
 ## D
 
@@ -83,79 +72,19 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 
 ## Dart
 
-1. Install the [Dartlight](https://packagecontrol.io/packages/Dartlight) package from Package Control for syntax highlighting.
-2. Install the [Dart SDK](https://dart.dev/get-dart) and locate path to `analysis_server.dart.snapshot` in the "snapshots/bin" directory.
-3. Add to LSP settings' clients (adjust the path if necessary):
-
-```js
-"dart": {
-  "command": ["dart", "/usr/local/opt/dart/libexec/bin/snapshots/analysis_server.dart.snapshot", "--lsp"],
-  "enabled": true,
-  "languageId": "dart" // will match source.dart
-}
-```
-
-> **Note**: The older [natebosch/dart_language_server](https://github.com/natebosch/dart_language_server) is now deprecated.
+Follow installation instructions on [LSP-Dart](https://github.com/sublimelsp/LSP-Dart).
 
 ## Dockerfile
 
-1. Install the [Dockerfile Syntax Highlighting](https://packagecontrol.io/packages/Dockerfile%20Syntax%20Highlighting) package from Package Control for syntax highlighting.
-2. Install the [Dockerfile Language Server](https://github.com/rcjsuen/dockerfile-language-server-nodejs):
-
-        npm install -g dockerfile-language-server-nodejs
-
-3. Add to LSP settings' clients:
-
-```js
-"docker-langserver": {
-  "command": ["docker-langserver", "--stdio"],
-  "enabled": true,
-  "languageId": "dockerfile", // will match source.dockerfile
-  "settings": {
-    // string values must be equal to "ignore", "warning", or "error"
-    "docker.languageserver.diagnostics.deprecatedMaintainer": "warning",
-    "docker.languageserver.diagnostics.directiveCasing": "warning",
-    "docker.languageserver.diagnostics.emptyContinuationLine": "warning",
-    "docker.languageserver.diagnostics.instructionCasing": "warning",
-    "docker.languageserver.diagnostics.instructionCmdMultiple": "warning",
-    "docker.languageserver.diagnostics.instructionEntrypointMultiple": "warning",
-    "docker.languageserver.diagnostics.instructionHealthcheckMultiple": "warning",
-    "docker.languageserver.diagnostics.instructionJSONInSingleQuotes": "warning"
-  },
-}
-```
+Follow installation instructions on [LSP-dockerfile](https://github.com/sublimelsp/LSP-dockerfile).
 
 ## Elixir
 
-1. Install the [Elixir](https://packagecontrol.io/packages/Elixir) package from Package Control for syntax highlighting.
-2. Download the prebuilt binaries or compile [elixir-ls](https://github.com/elixir-lsp/elixir-ls).
-   This will get you a folder containing `language_server.sh` among other things.
-3. Add to LSP settings' clients (adjust the path if necessary):
-
-```js
-"elixir-ls": {
-  "command": ["/home/someUser/somePlace/elixir-ls/release/language_server.sh"],
-  "enabled": true,
-  "languageId": "elixir" // will match source.elixir
-}
-```
+Follow installation instructions on [LSP-elixir](https://github.com/sublimelsp/LSP-elixir).
 
 ## Elm
 
-1. Install the [Elm Syntax Highlighting](https://packagecontrol.io/packages/Elm%20Syntax%20Highlighting) package from Package Control for syntax highlighting.
-2. See instructions for installing the [elm-language-server](https://github.com/elm-tooling/elm-language-server).
-3. Add to LSP settings' clients:
-
-```js
-"elm": {
-  "command": ["elm-language-server", "--stdio"],
-  "enabled": true,
-  "initializationOptions": {
-    "elmAnalyseTrigger": "change"
-  },
-  "languageId": "elm" // will match source.elm
-}
-```
+Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-elm).
 
 ## Erlang
 
@@ -172,22 +101,14 @@ clojure-lsp has a [rich set of initializationOptions](https://github.com/snoe/cl
 
 ## ESLint
 
-1. Make sure you have `node` installed.
-2. Install the [LSP-eslint](https://packagecontrol.io/packages/LSP-eslint) helper package. It will install the server for you in $DATA/Cache.
+Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/LSP-eslint).
 
-## Flow (JavaScript)
+## Flow
 
-Official part of [flow-bin](https://github.com/facebook/flow):
+!!! warning  "Not published on Package Control"
+    Follow the steps for [installing not published `LSP-*` plugins]()
 
-```sh
-npm install -g flow-bin
-```
-
-Older [flow-language-server](https://github.com/flowtype/flow-language-server):
-
-```sh
-npm install -g flow-language-server
-```
+Follow installation instructions on [LSP-flow](https://github.com/sublimelsp/LSP-flow).
 
 ## Fortran
 
@@ -312,61 +233,16 @@ Requires IntelliJ to be running.
 }
 ```
 
-## JavaScript/TypeScript
-
-1. Make sure you have `node` installed.
-2. Install the [LSP-typescript](https://packagecontrol.io/packages/LSP-typescript) helper package. It will install the
-   server for you in $DATA/Cache.
-
 ## JSON
 
 Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP-json).
 
 ## Julia
 
-1. Install the [Julia](https://packagecontrol.io/packages/Julia) package from Package Control for syntax highlighting.
-2. Install the `LanguageServer` and `SymbolServer` packages from the Julia REPL:
+!!! warning  "Not published on Package Control"
+    Follow the steps for [installing not published `LSP-*` plugins]()
 
-        import Pkg;
-        Pkg.add("LanguageServer")
-        Pkg.add("SymbolServer")
-
-3. Add to LSP settings' clients:
-
-```js
-"julials": {
-  "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
-  // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using Pkg; using LanguageServer; using LanguageServer.SymbolServer; env_path=dirname(Pkg.Types.Context().env.project_file); server=LanguageServer.LanguageServerInstance(stdin,stdout,false,env_path); run(server)"], // on Windows
-  "languageId": "julia",
-  "settings": {
-    // Default values from VS Code:
-    "julia.format.calls": true,      // Format function calls
-    "julia.format.comments": true,   // Format comments
-    "julia.format.curly": true,      // Format braces
-    "julia.format.docs": true,       // Format inline documentation
-    "julia.format.indent": 4,        // Indent size for formatting
-    "julia.format.indents": true,    // Format file indents
-    "julia.format.iterOps": true,    // Format loop iterators
-    "julia.format.kw": true,         // Remove spaces around = in function keywords
-    "julia.format.lineends": false,  // [undocumented]
-    "julia.format.ops": true,        // Format whitespace around operators
-    "julia.format.tuples": true,     // Format tuples
-    "julia.lint.call": false,        // Check calls against existing methods (experimental)
-    "julia.lint.constif": true,      // Check for constant conditionals of if statements
-    "julia.lint.datadecl": false,    // [undocumented]
-    "julia.lint.iter": true,         // Check iterator syntax of loops
-    "julia.lint.lazy": true,         // Check for deterministic lazy boolean operators
-    "julia.lint.modname": true,      // Check for invalid submodule names
-    "julia.lint.nothingcomp": false, // [undocumented]
-    "julia.lint.pirates": true,      // Check for type piracy
-    "julia.lint.run": true,          // run the linter on active files
-    "julia.lint.typeparam": true     // Check for unused DataType parameters
-  }
-}
-```
-
-<!-- Alternatively, install the [LSP-julia](https://github.com/randy3k/LSP-julia) package for Sublime Text. -->
-<!-- (Currently doesn't work with newest release of Julia's LanguageServer) -->
+Follow installation instructions on [LSP-julia](https://github.com/sublimelsp/LSP-julia).
 
 ## Kotlin
 
@@ -389,26 +265,7 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
 
 ## LaTeX
 
-1. Download a [precompiled binary](https://github.com/latex-lsp/texlab/releases) (Windows/Linux/macOS) of the [TexLab](https://texlab.netlify.com/) language server.
-2. Add to LSP settings' clients:
-
-```json
-"texlab": {
-  "command": ["PATH/TO/texlab"],
-  "enabled": true,
-  "languages": [{
-    "languageId": "latex",
-    "document_selector": "text.tex.latex"
-  }, {
-    "languageId": "bibtex",
-    "document_selector": "text.bibtex"
-  }]
-}
-```
-
-> **Note**: To enable code completions while typing, ensure to have `text.tex.latex` (for LaTeX files) and/or `text.bibtex`
-  (for BibTeX files) included in the `auto_complete_selector` setting in your `Preferences.sublime-settings` file.
-  For further requirements see the [TexLab Docs](https://texlab.netlify.com/docs#requirements).
+Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/LSP-TexLab).
 
 ## Lisp
 
@@ -425,21 +282,10 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
 
 ## Lua
 
-1. Download the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=sumneko.lua).
-2. Add to LSP settings' clients:
+!!! warning  "Not published on Package Control"
+    Follow the steps for [installing not published `LSP-*` plugins]()
 
-```js
-"lua-ls": {
-  "command": [
-    "PATH/TO/sumneko.lua-#.#.#/extension/server/bin/lua-language-server",
-    "-E", "PATH/TO/sumneko.lua-#.#.#/extension/server/main.lua"
-  ],
-  "enabled": true,
-  "languageId": "lua" // will match source.lua
-}
-```
-
-Alternatively you can use the less maintained [lua-lsp](https://github.com/Alloyed/lua-lsp).
+Follow installation instructions on [LSP-lua](https://github.com/sublimelsp/LSP-lua).
 
 ## OCaml/Reason
 
@@ -464,9 +310,11 @@ Follow installation instructions on [LSP-promql](https://github.com/prometheus-c
 
 ### Intelephense
 
-1. Make sure you have `node` installed.
-2. Install the [LSP-intelephense](https://packagecontrol.io/packages/LSP-intelephense) helper package. It installs
-   and updates the server for you in $DATA/Cache.
+Follow installation instructions on [LSP-intelephense](https://github.com/sublimelsp/LSP-intelephense).
+
+### Serenata
+
+Follow installation instructions on [LSP-serenata](https://github.com/Cloudstek/LSP-serenata).
 
 ## Polymer
 
@@ -487,202 +335,27 @@ More info: [Polymer/polymer-editor-service](https://github.com/Polymer/polymer-e
 
 ## PowerShell
 
-1. Install the [PowerShell](https://packagecontrol.io/packages/PowerShell) package from Package Control for syntax highlighting.
-2. Download and extract the [latest release](https://github.com/PowerShell/PowerShellEditorServices/releases) PowerShellEditorServices.
-3. Make sure PowerShell help files are up to date by running `Update-Help` in the PowerShell console (the one you're using in the command below).
-4. Add to LSP settings' clients:
+!!! warning  "Not published on Package Control"
+    Follow the steps for [installing not published `LSP-*` plugins]()
 
-```js
-"powershell-ls": {
-  "command": [
-    "powershell", // or pwsh for PowerShell Core
-    "-NoLogo",
-    "-NoProfile",
-    "-NonInteractive",
-    "-ExecutionPolicy", "Bypass", // Windows only
-    "-Command", "PATH/TO/PowerShellEditorServices/PowerShellEditorServices/Start-EditorServices.ps1",
-    "-LogPath", "PATH/TO/pses.log", // specify a path where a logfile should be stored
-    "-LogLevel", "Normal",
-    "-SessionDetailsPath", "PATH/TO/session.json", // specify a path where a file for session details should be stored
-    "-FeatureFlags", "@()",
-    "-HostName", "'Sublime Text'",
-    "-HostProfileId", "subl",
-    "-HostVersion", "1.0.0",
-    "-AdditionalModules", "@()",
-    "-BundledModulesPath", "PATH/TO/PowerShellEditorServices",
-    "-Stdio"
-  ],
-  "enabled": true,
-  "languageId": "powershell" // will match source.powershell
-}
-```
-
-> **Note**: For more details see this [issue](https://github.com/PowerShell/PowerShellEditorServices/issues/1057).
+Follow installation instructions on [LSP-PowerShellEditorServices](https://github.com/sublimelsp/LSP-PowerShellEditorServices).
 
 ## Python
 
-There are at least two language servers, use either one.
+### Pyls
 
-### Palantir's Python Language Server
+Follow installation instructions on [LSP-pyls](https://github.com/sublimelsp/LSP-pyls).
 
-```sh
-pip install 'python-language-server[all]'
-```
+### Pyright
 
-Make sure you can run `pyls` in your terminal. If you've installed it into a virtualenv, you might need to override the path to `pyls` in global LSP settings (Package Settings -> LSP -> Settings):
+Follow installation instructions on [LSP-pyright](https://github.com/sublimelsp/LSP-pyright).
 
-```js
-"pyls": {
-  "command": ["/Users/mike/.virtualenvs/pyls-virtual-env/bin/pyls"], // example path, adjust it for your use case
-  "enabled": true // if you want to enable Python Language Server globally
-}
-```
+### Anakin
 
-If you use a virtualenv for your current project, add a path to it in your [project configuration](https://www.sublimetext.com/docs/3/projects.html) (Project -> Edit Project):
+!!! warning  "Not published on Package Control"
+    Follow the steps for [installing not published `LSP-*` plugins]()
 
-```js
-{
-  "settings": {
-    "LSP": {
-      "pyls": {
-        "enabled": true, // if you want to enable Python Language Server for current project only
-        "env": {
-          // example path, adjust it for your use case
-          // it needs to be an absolute path, neither $HOME nor ~ work here
-          "PYTHONPATH": "/Users/mike/.virtualenvs/my-virtual-env/lib/python3.7/site-packages"
-        }
-      }
-    }
-  }
-}
-```
-
-A basic configuration below can be used for bootstrapping your own:
-
-```js
-  //...
-"pyls": {
-  "enabled": true,
-  "command": ["pyls"],
-  "languageId": "python",
-  "scopes": ["source.python"],
-  "syntaxes": [
-    "Packages/Python/Python.sublime-syntax",
-    "Packages/MagicPython/grammars/MagicPython.tmLanguage",
-    "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage",
-  ],
-  "settings": {
-    "pyls.env": {
-      // Making Sublime's own libs available to the linters.
-      // "PYTHONPATH": "/Applications/Sublime Text.app/Contents/MacOS/Lib/python33",
-    },
-    // Configuration is computed first from user configuration (in home directory),
-    // overridden by configuration passed in by the language client,
-    // and then overridden by configuration discovered in the workspace.
-    "pyls.configurationSources": [
-      "pycodestyle", // discovered in ~/.config/pycodestyle, setup.cfg, tox.ini and pycodestyle.cfg
-      // "flake8",   // discovered in ~/.config/flake8, setup.cfg, tox.ini and flake8.cfg
-    ],
-    "pyls.plugins.jedi.extra_paths": [
-      // The directory where the pip installation package is located
-    ],
-    // Enable fuzzy matches when requesting autocomplete
-    "pyls.plugins.jedi.jedi_completion.fuzzy": true,
-    "pyls.plugins.jedi.pycodestyle.enabled": true,
-    "pyls.plugins.jedi.pycodestyle.exclude": [
-      // Exclude files or directories which match these patterns
-    ],
-    "pyls.plugins.jedi.pycodestyle.ignore": [
-      // Exclude files or directories which match these patterns
-    ],
-    // "pyls.plugins.jedi.pycodestyle.maxLineLength: 80" // set maximum allowed line length
-    "pyls.plugins.pydocstyle.enabled" false,
-    "pyls.plugins.pyflakes.enabled": true,
-    "pyls.plugins.pylint.enabled": false,
-    "pyls.plugins.yapf.enabled": true,
-    // pyls' 3rd Party Plugins, Mypy type checking for Python 3, Must be installed via pip before enabling
-    "pyls.plugins.pyls_mypy.enabled": false, // Install with: pip install pyls-mypy
-    "pyls.plugins.pyls_mypy.live_mode": true
-  }
-},
-```
-
-See pylint documentation: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
-
-Description of all built-in settings: https://github.com/palantir/python-language-server/blob/develop/vscode-client/package.json
-
-### Microsoft's Python Language Server
-
-Alternatively, use Microsoft Python Language Server (using .NET Core runtime).
-Here is a basic configuration to be added to your User/LSP.sublime-settings file:
-
-```js
-  //...
-"mspyls": {
-  "enabled": true,
-  "command": [ "dotnet", "exec", "PATH/TO/Microsoft.Python.LanguageServer.dll" ],
-  "languageId": "python",
-  "scopes": [ "source.python" ],
-  "syntaxes": [
-    "Packages/Python/Python.sublime-syntax",
-    "Packages/MagicPython/grammars/MagicPython.tmLanguage",
-    "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage"
-  ],
-  "initializationOptions":
-  {
-    "interpreter":
-    {
-      "properties":
-      {
-        "UseDefaultDatabase": true,
-        "Version": "3.7" // python version
-      }
-    }
-  },
-  "settings":
-  {
-    "python":
-    {
-      // At least an empty "python" object is (currently) required to initialise the language server.
-      // Other options can be defined as explained below.
-    }
-  }
-},
-```
-
-The language server has to be configured as per the Microsoft [documentation](https://github.com/microsoft/python-language-server/blob/master/README.md) and the Sublime Text [instructions](https://github.com/Microsoft/python-language-server/blob/master/Using_in_sublime_text.md).
-An exhaustive list of the configuration options can be found in the VSCode [documentation](https://code.visualstudio.com/docs/python/settings-reference#_python-language-server-settings).
-
-Here is an example of settings:
-
-```js
-  "settings":
-  {
-    "python":
-    {
-      // Solve the 'unresolved import' warning as documented in:
-      // https://github.com/microsoft/python-language-server/blob/master/TROUBLESHOOTING.md#unresolved-import-warnings
-      "autoComplete":
-      {
-          // add extra path for Sublime Text plugins
-          "extraPaths": [ "/opt/sublime_text" ]
-      }
-      // Configure the linting options as documented in:
-      // https://github.com/microsoft/python-language-server/#linting-options-diagnostics
-      "analysis":
-      {
-        "errors": [ "undefined-variable" ],
-        "warnings": [ "unknown-parameter-name" ],
-        "information": [ "unresolved-import" ],
-        "disabled": [ "too-many-function-arguments", "parameter-missing" ]
-      },
-      // "linting":
-      // {
-      //     "enabled": "false"
-      // }
-    }
-  }
-```
+Follow installation instructions on [LSP-anakin](https://github.com/sublimelsp/LSP-anakin).
 
 ## R
 
@@ -725,23 +398,21 @@ Alternatively, a newer [rust-analyzer](https://github.com/rust-analyzer/rust-ana
 
 ## Scala
 
-* **[Metals](https://scalameta.org/metals/)**: Most complete LSP server for Scala, see [LSP-metals](https://packagecontrol.io/packages/LSP-metals) for installation.
-* **[SBT](https://www.scala-sbt.org/)**: Version 1.x supports limited and *unmaintained* language server functionalities, setup is described [here](http://eed3si9n.com/sbt-server-with-sublime-text3).
-* **[Dotty](http://dotty.epfl.ch/)**: The future Scala compiler [contains LSP support](http://dotty.epfl.ch/docs/usage/ide-support.html).
-It is developed against VS Code, so ignore instructions related to VS Code.
-Get the project compiling with dotty first (see [instructions](https://github.com/lampepfl/dotty-example-project#using-dotty-in-an-existing-project)).
-At this point LSP should complain in the logs
-`java.util.concurrent.CompletionException: java.io.FileNotFoundException: /Users/tomv/Projects/tomv564/dottytest/finagle/doc/src/sphinx/code/quickstart/.dotty-ide.json`
-Then run `sbt configureIDE` to create the `.dotty-ide.json` file
-Then the LSP plugin should launch as configured in `LSP.sublime-settings` using coursier.
+Follow installation instructions on [LSP-metals](https://github.com/scalameta/metals-sublime).
 
 ## SonarLint
 
-Follow installation instructions on [LSP-SonarLint](https://github.com/sublimelsp/LSP-SonarLint). (not available on Package Control)
+!!! warning  "Not published on Package Control"
+    Follow the steps for [installing not published `LSP-*` plugins]()
+
+Follow installation instructions on [LSP-SonarLint](https://github.com/sublimelsp/LSP-SonarLint).
 
 ## SourceKit
 
-Follow installation instructions on [LSP-SourceKit](https://github.com/sublimelsp/LSP-SourceKit). (not available on Package Control)
+!!! warning  "Not published on Package Control"
+    Follow the steps for [installing not published `LSP-*` plugins]()
+
+Follow installation instructions on [LSP-SourceKit](https://github.com/sublimelsp/LSP-SourceKit).
 
 ## Stylelint
 
@@ -773,37 +444,17 @@ Follow installation instructions on [LSP-tagml](https://github.com/HuygensING/LS
 }
 ```
 
+## TypeScript / JavaScript
+
+Follow installation instructions on [LSP-typescript](https://github.com/HuygensING/LSP-typescript).
+
 ## Vue
 
-See: [LSP-vue](https://packagecontrol.io/packages/LSP-vue)
-
-Be sure to install [Vue Syntax Highlight](https://packagecontrol.io/packages/Vue%20Syntax%20Highlight) from Package Control.
+Follow installation instructions on [LSP-vue](https://github.com/sublimelsp/LSP-vue).
 
 ## XML
 
-1. Download jar from [angelozerr/lsp4xml](https://github.com/angelozerr/lsp4xml/releases).
-2. Add to LSP settings' clients:
-
-```js
-"lsp4xml": {
-  "command": [
-    "java",
-    "-DwatchParentProcess=false",  // false on windows, true on other operating systems
-    // JVM options (not necessary, but the vscode extension uses them by default)
-    "-noverify",                   // bypass class verification
-    "-Xmx64M",                     // set the maximum heap size
-    "-XX:+UseG1GC",                // use the G1 garbage collector
-    "-XX:+UseStringDeduplication", // enable string deduplication optimisation
-    "-jar",
-    "PATH/TO/org.eclipse.lsp4xml-uber.jar"
-  ],
-  "enabled": true,
-  "languageId": "xml",
-  "document_selector": "text.xml"
-}
-```
-
-> **Note**: Discussed in [this issue](https://github.com/sublimelsp/LSP/issues/578).
+Follow installation instructions on [LSP-lemminx](https://github.com/sublimelsp/LSP-lemminx).
 
 ## YAML
 

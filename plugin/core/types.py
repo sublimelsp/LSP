@@ -472,7 +472,7 @@ def _translate_path(path: str, source: str, destination: str) -> Tuple[str, bool
     # TODO: Case-insensitive file systems. Maybe this problem needs a much larger refactor. Even Sublime Text doesn't
     # handle case-insensitive file systems correctly. There are a few other places where case-sensitivity matters, for
     # example when looking up the correct view for diagnostics, and when finding a view for goto-def.
-    if path.startswith(source):
+    if path.startswith(source) and len(path) > len(source) and path[len(source)] in ("/", "\\"):
         return path.replace(source, destination, 1), True
     return path, False
 

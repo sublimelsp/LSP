@@ -328,23 +328,6 @@ Follow installation instructions on [LSP-intelephense](https://github.com/sublim
 
 Follow installation instructions on [LSP-serenata](https://github.com/Cloudstek/LSP-serenata).
 
-## Polymer
-
-```sh
-npm install -g polymer-editor-service
-```
-
-> **Note**: requires an up to date version of NodeJS. v6 is the minimum supported version as of 2017.
-
-Features:
-
-* typeahead completions for elements, attributes, and css custom properties
-* documentation on hover for elements and attributes
-* jump to definition for elements, attributes, and css custom properties
-* linting, configured through `polymer.json` at your workspace root
-
-More info: [Polymer/polymer-editor-service](https://github.com/Polymer/polymer-editor-service)
-
 ## PowerShell
 
 !!! warning  "Not published on Package Control"

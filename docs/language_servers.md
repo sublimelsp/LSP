@@ -145,15 +145,22 @@ Follow installation instructions on [LSP-flow](https://github.com/sublimelsp/LSP
 
 ## Go
 
-### Gopls
+1. Install [gopls](https://github.com/golang/tools/blob/master/gopls/doc/user.md#installation).
+2. Add the `"gopls"` client configuration to the `LSP.sublime-settings` file:
 
-1. Install [gopls](https://github.com/golang/tools/tree/master/gopls), the official language server for the Go language:
+```json
+{
+    "clients": {
+        "gopls": {
+            "enabled": true,
+            "command": ["gopls"],
+            "selector": "source.go"
+        }
+    }
+}
+```
 
-        go get golang.org/x/tools/gopls@latest
-
-2. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `gopls`.
-
-> **Note**: See the [User guide](https://github.com/golang/tools/blob/master/gopls/doc/user.md#user-guide) for detailed installation instructions and configurations.
+!!! info "Visit [gopls repo](https://github.com/golang/tools/tree/master/gopls) for more info."
 
 ## GraphQL
 
@@ -271,13 +278,17 @@ Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/L
 ## Lisp
 
 1. Install [cc-lsp](https://github.com/cxxxr/cl-lsp) using Roswell.
-2. Add to LSP settings' clients:
+2. Add the `"cc-lsp"` client configuration to the `LSP.sublime-settings` file:
 
-```js
-"cc-lsp": {
-  "command": ["cl-lsp", "stdio"],
-  "enabled": true,
-  "languageId": "lisp" // will match source.lisp
+```json
+{
+    "clients": {
+        "cc-lsp": {
+            "enabled": true,
+            "command": ["cl-lsp", "stdio"],
+            "selector": "source.lisp"
+        }
+    }
 }
 ```
 

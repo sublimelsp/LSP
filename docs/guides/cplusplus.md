@@ -1,4 +1,4 @@
-## C/C++ language servers
+# Setup C/C++
 
 The below was written for clangd, but much applies to cquery and ccls as well.
 

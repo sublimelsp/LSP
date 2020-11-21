@@ -553,6 +553,9 @@ class Region:
     def intersects(self, rhs: 'Region') -> bool:
         ...
 
+    def to_tuple(self) -> Tuple[int, int]:
+        ...
+
 
 class Selection(Reversible):
     view_id = ...  # type: Any
@@ -621,6 +624,9 @@ class Sheet:
     def view(self) -> 'Optional[View]':
         ...
 
+    def is_transient(self) -> bool:
+        ...
+
 
 class HtmlSheet:
     sheet_id = ...  # type: Any
@@ -650,6 +656,9 @@ class View:
         ...
 
     def __bool__(self) -> bool:
+        ...
+
+    def sheet(self) -> Sheet:
         ...
 
     def syntax(self) -> Any:

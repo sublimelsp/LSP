@@ -1,8 +1,41 @@
-site_name: Sublime Text Language Server Protocol Documentation
-theme: readthedocs
+site_name: LSP for Sublime Text
+repo_url: https://github.com/sublimelsp/LSP/
+edit_uri: edit/st4000-exploration/docs/
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    accent: orange
+    primary: orange
+
+  icon:
+    logo: fontawesome/solid/book-open
+
+# override css
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  # tabs for ST4 and ST3 content
+  - pymdownx.tabbed
+
+  # higlight code block
+  - pymdownx.highlight
+  - pymdownx.superfences
+
+  # add tip, warning info boxes
+  - admonition
+
+  # show # after each header
+  - toc:
+      permalink: '#'
 
 nav:
-    - Home: 'index.md'
-    - C/C++: 'cplusplus.md'
+    - Getting Started: 'index.md'
+    - Language Servers: 'language_servers.md'
     - Features: 'features.md'
+    - Guides:
+      - Server Configuration: 'guides/server_configuration.md'
+      - Setup C/C++: 'guides/cplusplus.md'
     - Troubleshooting: 'troubleshooting.md'

@@ -145,4 +145,4 @@ def read_client_config(name: str, d: Dict[str, Any]) -> ClientConfig:
 
 
 def update_client_config(external_config: ClientConfig, user_override_config: Dict[str, Any]) -> ClientConfig:
-    return external_config.update(user_override_config)
+    return ClientConfig.from_config(external_config, user_override_config)

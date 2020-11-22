@@ -612,24 +612,26 @@ class ClientConfig:
             path_maps=PathMap.parse(d.get("path_maps"))
         )
 
-    def update(self, override: Dict[str, Any]) -> "ClientConfig":
+    @classmethod
+    def from_config(cls, src_config: "ClientConfig", override: Dict[str, Any]) -> "ClientConfig":
         path_map_override = PathMap.parse(override.get("path_maps"))
         return ClientConfig(
-            name=self.name,
-            selector=_read_selector(override) or self.selector,
-            priority_selector=_read_priority_selector(override) or self.priority_selector,
-            command=override.get("command", self.command),
-            tcp_port=override.get("tcp_port", self.tcp_port),
-            auto_complete_selector=override.get("auto_complete_selector", self.auto_complete_selector),
+            name=src_config.name,
+            selector=_read_selector(override) or src_config.selector,
+            priority_selector=_read_priority_selector(override) or src_config.priority_selector,
+            command=override.get("command", src_config.command),
+            tcp_port=override.get("tcp_port", src_config.tcp_port),
+            auto_complete_selector=override.get("auto_complete_selector", src_config.auto_complete_selector),
             ignore_server_trigger_chars=bool(
-                override.get("ignore_server_trigger_chars", self.ignore_server_trigger_chars)),
-            enabled=override.get("enabled", self.enabled),
-            init_options=DottedDict.from_base_and_override(self.init_options, override.get("initializationOptions")),
-            settings=DottedDict.from_base_and_override(self.settings, override.get("settings")),
-            env=override.get("env", self.env),
+                override.get("ignore_server_trigger_chars", src_config.ignore_server_trigger_chars)),
+            enabled=override.get("enabled", src_config.enabled),
+            init_options=DottedDict.from_base_and_override(
+                src_config.init_options, override.get("initializationOptions")),
+            settings=DottedDict.from_base_and_override(src_config.settings, override.get("settings")),
+            env=override.get("env", src_config.env),
             experimental_capabilities=override.get(
-                "experimental_capabilities", self.experimental_capabilities),
-            path_maps=path_map_override if path_map_override else self.path_maps
+                "experimental_capabilities", src_config.experimental_capabilities),
+            path_maps=path_map_override if path_map_override else src_config.path_maps
         )
 
     def resolve(self, variables: Dict[str, str]) -> ResolvedStartupConfig:

@@ -62,7 +62,7 @@ class WindowConfigManager(object):
                 debug("applying .sublime-project override for", name)
             else:
                 overrides = {}
-            self.all[name] = config.update(overrides)
+            self.all[name] = ClientConfig.from_config(config, overrides)
         for name in self._temp_disabled_configs:
             self.all[name].enabled = False
         self._window.run_command("lsp_recheck_sessions")

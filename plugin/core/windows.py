@@ -254,6 +254,7 @@ class WindowManager(Manager):
         return None
 
     def start_async(self, config: ClientConfig, initiating_view: sublime.View) -> None:
+        config = ClientConfig.from_config(config, {})
         file_path = initiating_view.file_name() or ''
         if not self._can_start_config(config.name, file_path):
             # debug('Already starting on this window:', config.name)
@@ -270,8 +271,7 @@ class WindowManager(Manager):
                 additional_variables = plugin_class.additional_variables()
                 if isinstance(additional_variables, dict):
                     variables.update(additional_variables)
-                cannot_start_reason = plugin_class.can_start(
-                    self._window, initiating_view, workspace_folders, config)
+                cannot_start_reason = plugin_class.can_start(self._window, initiating_view, workspace_folders, config)
                 if cannot_start_reason:
                     config.erase_view_status(initiating_view)
                     message = "cannot start {}: {}".format(config.name, cannot_start_reason)

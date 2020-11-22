@@ -515,11 +515,12 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         self.weaksession = weaksession
 
-    def on_workspace_did_change_configuration(self, settings: DottedDict) -> None:
+    def on_settings_changed(self, settings: DottedDict) -> None:
         """
-        Override this method to alter the server settings for the workspace/didChangeConfiguration notification.
+        Override this method to alter the settings that are returned to the server for the
+        workspace/didChangeConfiguration notification and the workspace/configuration requests.
 
-        :param      settings:      The settings that are about to be sent to the language server
+        :param      settings:      The settings that the server should receive.
         """
         pass
 
@@ -943,10 +944,10 @@ class Session(TransportCallbacks):
 
     def _maybe_send_did_change_configuration(self) -> None:
         if self.config.settings:
+            if self._plugin:
+                self._plugin.on_settings_changed(self.config.settings)
             variables = self._template_variables()
             resolved = self.config.settings.create_resolved(variables)
-            if self._plugin:
-                self._plugin.on_workspace_did_change_configuration(resolved)
             self.send_notification(Notification("workspace/didChangeConfiguration", {"settings": resolved.get()}))
 
     def _template_variables(self) -> Dict[str, str]:

@@ -12,6 +12,7 @@ from .typing import Optional, Dict, Any, Iterable, List, Union, Callable
 from .url import filename_to_uri
 from .url import uri_to_filename
 import html
+import json
 import linecache
 import mdpopups
 import os
@@ -487,6 +488,21 @@ def make_link(href: str, text: str, class_name: Optional[str] = None) -> str:
         return "<a href='{}'>{}</a>".format(href, text)
 
 
+def _format_command(cmd: str, args: Optional[Dict[str, Any]] = None) -> str:
+    if args is None:
+        return cmd
+    else:
+        return '{} {}'.format(cmd, json.dumps(args, ensure_ascii=False, check_circular=False, separators=(',', ':')))
+
+
+def _html_format_command(cmd: str, args: Optional[Dict[str, Any]] = None) -> str:
+    return html.escape(_format_command(cmd, args), quote=True)
+
+
+def _command_url(cmd: str, args: Optional[Dict[str, Any]] = None) -> str:
+    return 'subl:' + _html_format_command(cmd, args)
+
+
 def make_command_link(command: str, text: str, command_args: Optional[Dict[str, Any]] = None,
                       class_name: Optional[str] = None, view: Optional[sublime.View] = None) -> str:
     if view:
@@ -495,7 +511,7 @@ def make_command_link(command: str, text: str, command_args: Optional[Dict[str, 
     else:
         cmd = command
         args = command_args
-    return make_link(sublime.command_url(cmd, args), text, class_name)
+    return make_link(_command_url(cmd, args), text, class_name)
 
 
 class LspRunTextCommandHelperCommand(sublime_plugin.WindowCommand):

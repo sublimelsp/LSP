@@ -9,6 +9,7 @@ from LSP.plugin.core.views import FORMAT_STRING, FORMAT_MARKED_STRING, FORMAT_MA
 from LSP.plugin.core.views import location_to_encoded_filename
 from LSP.plugin.core.views import lsp_color_to_html
 from LSP.plugin.core.views import lsp_color_to_phantom
+from LSP.plugin.core.views import make_command_link
 from LSP.plugin.core.views import MissingFilenameError
 from LSP.plugin.core.views import point_to_offset
 from LSP.plugin.core.views import range_to_region
@@ -313,3 +314,7 @@ class ViewsTest(DeferrableTestCase):
         self.assertEqual(
             document_color_params(self.view),
             {"textDocument": {"uri": filename_to_uri(self.view.file_name())}})
+
+    def test_make_command_link(self) -> None:
+        link = make_command_link("foo", "Run Foo", {"param1": "🦄"})
+        self.assertEqual(link, "<a href='subl:foo {&quot;param1&quot;:&quot;🦄&quot;}'>Run&nbsp;Foo</a>")

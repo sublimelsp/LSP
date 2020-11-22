@@ -93,6 +93,7 @@ KIND_VARIABLE = ...  # type: Tuple[int, str, str]
 KIND_SNIPPET = ...  # type: Tuple[int, str, str]
 COMPLETION_FORMAT_TEXT = ...  # type: int
 COMPLETION_FORMAT_SNIPPET = ...  # type: int
+COMPLETION_FORMAT_COMMAND = ...  # type: int
 
 
 class Settings:

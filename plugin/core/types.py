@@ -517,20 +517,20 @@ class PathMap:
         return _translate_path(uri, self._remote, self._local)
 
 
-class ResolvedStartupConfig:
-    __slots__ = ("command", "tcp_port", "init_options", "env", "listener_socket")
+class TransportConfig:
+    __slots__ = ("name", "command", "tcp_port", "env", "listener_socket")
 
     def __init__(
         self,
+        name: str,
         command: List[str],
         tcp_port: Optional[int],
-        init_options: DottedDict,
         env: Dict[str, str],
         listener_socket: Optional[socket.socket]
     ) -> None:
+        self.name = name
         self.command = command
         self.tcp_port = tcp_port
-        self.init_options = init_options
         self.env = env
         self.listener_socket = listener_socket
 
@@ -634,7 +634,7 @@ class ClientConfig:
             path_maps=path_map_override if path_map_override else src_config.path_maps
         )
 
-    def resolve(self, variables: Dict[str, str]) -> ResolvedStartupConfig:
+    def resolve_transport_config(self, variables: Dict[str, str]) -> TransportConfig:
         tcp_port = None  # type: Optional[int]
         listener_socket = None  # type: Optional[socket.socket]
         if self.tcp_port is not None:
@@ -658,8 +658,7 @@ class ClientConfig:
         env = os.environ.copy()
         for var, value in self.env.items():
             env[var] = sublime.expand_variables(value, variables)
-        init_options = DottedDict(sublime.expand_variables(self.init_options.get(), variables))
-        return ResolvedStartupConfig(command, tcp_port, init_options, env, listener_socket)
+        return TransportConfig(self.name, command, tcp_port, env, listener_socket)
 
     def set_view_status(self, view: sublime.View, message: str) -> None:
         if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):

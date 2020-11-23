@@ -132,15 +132,15 @@ class DottedDict:
             else:
                 self.set(key, value)
 
-    def create_resolved(self, variables: Dict[str, str]) -> "DottedDict":
+    def get_resolved(self, variables: Dict[str, str]) -> Dict[str, Any]:
         """
-        Resolve a DottedDict that may potentially contain template variables like $folder
+        Resolve a DottedDict that may potentially contain template variables like $folder.
 
         :param      variables:  The variables
 
-        :returns:   A copy of this DottedDict, but with the variables replaced
+        :returns:   A copy of the underlying dictionary, but with the variables replaced
         """
-        return DottedDict(sublime.expand_variables(self._d, variables))
+        return sublime.expand_variables(self._d, variables)
 
     def _update_recursive(self, current: Dict[str, Any], prefix: str) -> None:
         if not current:

@@ -1,6 +1,6 @@
 from .logging import exception_log, debug
-from .types import ResolvedStartupConfig
 from .types import TCP_CONNECT_TIMEOUT
+from .types import TransportConfig
 from .typing import Dict, Any, Optional, IO, Protocol, List, Callable, Tuple
 from abc import ABCMeta, abstractmethod
 from contextlib import closing
@@ -176,7 +176,7 @@ class JsonRpcTransport(Transport):
         self._send_queue.put_nowait(None)
 
 
-def create_transport(name: str, config: ResolvedStartupConfig, cwd: Optional[str],
+def create_transport(config: TransportConfig, cwd: Optional[str],
                      callback_object: TransportCallbacks) -> JsonRpcTransport:
     if config.tcp_port is not None:
         assert config.tcp_port is not None
@@ -198,7 +198,7 @@ def create_transport(name: str, config: ResolvedStartupConfig, cwd: Optional[str
     if config.listener_socket:
         assert isinstance(config.tcp_port, int) and config.tcp_port > 0
         process, sock, reader, writer = _await_tcp_connection(
-            name,
+            config.name,
             config.tcp_port,
             config.listener_socket,
             start_subprocess
@@ -215,7 +215,7 @@ def create_transport(name: str, config: ResolvedStartupConfig, cwd: Optional[str
             reader = process.stdout  # type: ignore
             writer = process.stdin  # type: ignore
     assert writer
-    return JsonRpcTransport(name, process, sock, reader, writer, process.stderr, callback_object)
+    return JsonRpcTransport(config.name, process, sock, reader, writer, process.stderr, callback_object)
 
 
 _subprocesses = weakref.WeakSet()  # type: weakref.WeakSet[subprocess.Popen]

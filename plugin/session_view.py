@@ -143,7 +143,7 @@ class SessionView:
             if code_lens.get("command"):
                 self.resolved_code_lenses.append(code_lens)
             else:
-                promises.append(self.session.send_request_task(Request("codeAction/resolve", code_lens, self.view)))
+                promises.append(self.session.send_request_task(Request("codeLens/resolve", code_lens, self.view)))
         if promises:
             Promise.all(promises).then(self._on_all_code_lenses_resolved)
         else:

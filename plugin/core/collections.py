@@ -140,7 +140,7 @@ class DottedDict:
 
         :returns:   A copy of underlying dictionary, but with the variables replaced
         """
-        return sublime.expand_variables(self.copy(), variables)
+        return sublime.expand_variables(self._d, variables)
 
     def _update_recursive(self, current: Dict[str, Any], prefix: str) -> None:
         if not current:

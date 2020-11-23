@@ -271,7 +271,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
         "capabilities": capabilities,
-        "initializationOptions": sublime.expand_variables(config.init_options.get(), variables)
+        "initializationOptions": config.init_options.create_resolved(variables)
     }
 
 

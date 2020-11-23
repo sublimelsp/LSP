@@ -138,7 +138,7 @@ class DottedDict:
 
         :param      variables:  The variables
 
-        :returns:   A copy of underlying dictionary, but with the variables replaced
+        :returns:   A copy of the underlying dictionary, but with the variables replaced
         """
         return sublime.expand_variables(self._d, variables)
 

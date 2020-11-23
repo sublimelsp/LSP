@@ -27,7 +27,6 @@ from .types import debounced
 from .types import diff
 from .types import DocumentSelector
 from .types import method_to_capability
-from .types import ResolvedStartupConfig
 from .types import SettingsRegistration
 from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
 from .url import uri_to_filename
@@ -275,7 +274,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
         "capabilities": capabilities,
-        "initializationOptions": sublime.expand_variables(config.init_options.get(), variables)
+        "initializationOptions": config.init_options.get_resolved(variables)
     }
 
 
@@ -480,17 +479,17 @@ class AbstractPlugin(metaclass=ABCMeta):
 
     @classmethod
     def on_pre_start(cls, window: sublime.Window, initiating_view: sublime.View,
-                     workspace_folders: List[WorkspaceFolder], resolved: ResolvedStartupConfig) -> Optional[str]:
+                     workspace_folders: List[WorkspaceFolder], configuration: ClientConfig) -> Optional[str]:
         """
         Callback invoked just before the language server subprocess is started. This is the place to do last-minute
-        adjustments to your "command" or "initializationOptions" in the passed-in "resolved" argument, or change the
+        adjustments to your "command" or "init_options" in the passed-in "configuration" argument, or change the
         order of the workspace folders. You can also choose to return a custom working directory, but consider that a
         language server should not care about the working directory.
 
         :param      window:             The window
         :param      initiating_view:    The initiating view
         :param      workspace_folders:  The workspace folders, you can modify these
-        :param      resolved:           The resolved configuration, you can modify these
+        :param      configuration:      The configuration, you can modify this one
 
         :returns:   A desired working directory, or None if you don't care
         """
@@ -498,14 +497,14 @@ class AbstractPlugin(metaclass=ABCMeta):
 
     @classmethod
     def on_post_start(cls, window: sublime.Window, initiating_view: sublime.View,
-                      workspace_folders: List[WorkspaceFolder], resolved: ResolvedStartupConfig) -> None:
+                      workspace_folders: List[WorkspaceFolder], configuration: ClientConfig) -> None:
         """
         Callback invoked when the subprocess was just started.
 
         :param      window:             The window
         :param      initiating_view:    The initiating view
         :param      workspace_folders:  The workspace folders
-        :param      resolved:           The resolved configuration
+        :param      configuration:      The configuration
         """
         pass
 
@@ -518,11 +517,12 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         self.weaksession = weaksession
 
-    def on_workspace_did_change_configuration(self, settings: DottedDict) -> None:
+    def on_settings_changed(self, settings: DottedDict) -> None:
         """
-        Override this method to alter the server settings for the workspace/didChangeConfiguration notification.
+        Override this method to alter the settings that are returned to the server for the
+        workspace/didChangeConfiguration notification and the workspace/configuration requests.
 
-        :param      settings:      The settings that are about to be sent to the language server
+        :param      settings:      The settings that the server should receive.
         """
         pass
 
@@ -946,11 +946,11 @@ class Session(TransportCallbacks):
 
     def _maybe_send_did_change_configuration(self) -> None:
         if self.config.settings:
-            variables = self._template_variables()
-            resolved = self.config.settings.create_resolved(variables)
             if self._plugin:
-                self._plugin.on_workspace_did_change_configuration(resolved)
-            self.send_notification(Notification("workspace/didChangeConfiguration", {"settings": resolved.get()}))
+                self._plugin.on_settings_changed(self.config.settings)
+            variables = self._template_variables()
+            resolved = self.config.settings.get_resolved(variables)
+            self.send_notification(Notification("workspace/didChangeConfiguration", {"settings": resolved}))
 
     def _template_variables(self) -> Dict[str, str]:
         variables = extract_variables(self.window)

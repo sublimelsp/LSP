@@ -2,9 +2,11 @@ from .collections import DottedDict
 from .logging import debug, set_debug_logging
 from .protocol import TextDocumentSyncKindNone
 from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypeVar
-from .url import filename_to_uri
-from .url import uri_to_filename
 from threading import RLock
+from urllib.parse import urljoin
+from urllib.parse import urlparse
+from urllib.request import pathname2url
+from urllib.request import url2pathname
 from wcmatch.glob import BRACE
 from wcmatch.glob import globmatch
 from wcmatch.glob import GLOBSTAR
@@ -517,20 +519,20 @@ class PathMap:
         return _translate_path(uri, self._remote, self._local)
 
 
-class ResolvedStartupConfig:
-    __slots__ = ("command", "tcp_port", "init_options", "env", "listener_socket")
+class TransportConfig:
+    __slots__ = ("name", "command", "tcp_port", "env", "listener_socket")
 
     def __init__(
         self,
+        name: str,
         command: List[str],
         tcp_port: Optional[int],
-        init_options: DottedDict,
         env: Dict[str, str],
         listener_socket: Optional[socket.socket]
     ) -> None:
+        self.name = name
         self.command = command
         self.tcp_port = tcp_port
-        self.init_options = init_options
         self.env = env
         self.listener_socket = listener_socket
 
@@ -612,27 +614,29 @@ class ClientConfig:
             path_maps=PathMap.parse(d.get("path_maps"))
         )
 
-    def update(self, override: Dict[str, Any]) -> "ClientConfig":
+    @classmethod
+    def from_config(cls, src_config: "ClientConfig", override: Dict[str, Any]) -> "ClientConfig":
         path_map_override = PathMap.parse(override.get("path_maps"))
         return ClientConfig(
-            name=self.name,
-            selector=_read_selector(override) or self.selector,
-            priority_selector=_read_priority_selector(override) or self.priority_selector,
-            command=override.get("command", self.command),
-            tcp_port=override.get("tcp_port", self.tcp_port),
-            auto_complete_selector=override.get("auto_complete_selector", self.auto_complete_selector),
+            name=src_config.name,
+            selector=_read_selector(override) or src_config.selector,
+            priority_selector=_read_priority_selector(override) or src_config.priority_selector,
+            command=override.get("command", src_config.command),
+            tcp_port=override.get("tcp_port", src_config.tcp_port),
+            auto_complete_selector=override.get("auto_complete_selector", src_config.auto_complete_selector),
             ignore_server_trigger_chars=bool(
-                override.get("ignore_server_trigger_chars", self.ignore_server_trigger_chars)),
-            enabled=override.get("enabled", self.enabled),
-            init_options=DottedDict.from_base_and_override(self.init_options, override.get("initializationOptions")),
-            settings=DottedDict.from_base_and_override(self.settings, override.get("settings")),
-            env=override.get("env", self.env),
+                override.get("ignore_server_trigger_chars", src_config.ignore_server_trigger_chars)),
+            enabled=override.get("enabled", src_config.enabled),
+            init_options=DottedDict.from_base_and_override(
+                src_config.init_options, override.get("initializationOptions")),
+            settings=DottedDict.from_base_and_override(src_config.settings, override.get("settings")),
+            env=override.get("env", src_config.env),
             experimental_capabilities=override.get(
-                "experimental_capabilities", self.experimental_capabilities),
-            path_maps=path_map_override if path_map_override else self.path_maps
+                "experimental_capabilities", src_config.experimental_capabilities),
+            path_maps=path_map_override if path_map_override else src_config.path_maps
         )
 
-    def resolve(self, variables: Dict[str, str]) -> ResolvedStartupConfig:
+    def resolve_transport_config(self, variables: Dict[str, str]) -> TransportConfig:
         tcp_port = None  # type: Optional[int]
         listener_socket = None  # type: Optional[socket.socket]
         if self.tcp_port is not None:
@@ -656,8 +660,7 @@ class ClientConfig:
         env = os.environ.copy()
         for var, value in self.env.items():
             env[var] = sublime.expand_variables(value, variables)
-        init_options = DottedDict(sublime.expand_variables(self.init_options.get(), variables))
-        return ResolvedStartupConfig(command, tcp_port, init_options, env, listener_socket)
+        return TransportConfig(self.name, command, tcp_port, env, listener_socket)
 
     def set_view_status(self, view: sublime.View, message: str) -> None:
         if sublime.load_settings("LSP.sublime-settings").get("show_view_status"):
@@ -683,10 +686,14 @@ class ClientConfig:
                 path, mapped = path_map.map_from_local_to_remote(path)
                 if mapped:
                     break
-        return filename_to_uri(path)
+        return urljoin('file:', pathname2url(path))
 
     def map_server_uri_to_client_path(self, uri: str) -> str:
-        path = uri_to_filename(uri)
+        if os.name == 'nt':
+            # url2pathname does not understand %3A (VS Code's encoding forced on all servers :/)
+            path = url2pathname(urlparse(uri).path).strip('\\')
+        else:
+            path = url2pathname(urlparse(uri).path)
         if self.path_maps:
             for path_map in self.path_maps:
                 path, mapped = path_map.map_from_remote_to_local(path)

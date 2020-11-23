@@ -1,4 +1,6 @@
-from LSP.plugin.core.url import (filename_to_uri, uri_to_filename)
+from LSP.plugin.core.settings import read_client_config
+from LSP.plugin.core.url import filename_to_uri
+from LSP.plugin.core.url import uri_to_filename
 import sys
 import unittest
 
@@ -28,3 +30,17 @@ class NixTests(unittest.TestCase):
     @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
     def test_converts_uri_to_path(self):
         self.assertEqual("/dir ectory/file.txt", uri_to_filename("file:///dir ectory/file.txt"))
+
+    @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
+    def test_using_config(self):
+        config = read_client_config("asdf", {
+            "selector": "source.asdf",
+            "command": ["hello", "there"],
+            "path_maps": [
+                {
+                    "local": "/foo/bar",
+                    "remote": "/workspace"
+                }
+            ]
+        })
+        self.assertEqual("file:///workspace/foo.txt", filename_to_uri("/foo/bar/foo.txt", config))

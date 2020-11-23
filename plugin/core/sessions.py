@@ -271,7 +271,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "rootPath": first_folder.path if first_folder else None,
         "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
         "capabilities": capabilities,
-        "initializationOptions": config.init_options.create_resolved(variables).get()
+        "initializationOptions": config.init_options.get_resolved(variables)
     }
 
 
@@ -946,8 +946,8 @@ class Session(TransportCallbacks):
             if self._plugin:
                 self._plugin.on_settings_changed(self.config.settings)
             variables = self._template_variables()
-            resolved = self.config.settings.create_resolved(variables)
-            self.send_notification(Notification("workspace/didChangeConfiguration", {"settings": resolved.get()}))
+            resolved = self.config.settings.get_resolved(variables)
+            self.send_notification(Notification("workspace/didChangeConfiguration", {"settings": resolved}))
 
     def _template_variables(self) -> Dict[str, str]:
         variables = extract_variables(self.window)

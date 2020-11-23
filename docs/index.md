@@ -487,12 +487,6 @@ My own [tomv564/lsp-tsserver](https://github.com/tomv564/lsp-tsserver):
 npm install -g lsp-tsserver
 ```
 
-Sourcegraph's [javascript-typescript-langserver](https://github.com/sourcegraph/javascript-typescript-langserver):
-
-```sh
-npm install -g javascript-typescript-langserver
-```
-
 ### Julia<a name="julia"></a>
 
 1. Install the [Julia](https://packagecontrol.io/packages/Julia) package from Package Control for syntax highlighting.

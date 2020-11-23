@@ -156,7 +156,7 @@ class SessionView:
 
     def _render_code_lenses(self, code_lenses: List[CodeLens]) -> None:
         if self.view.is_valid():
-            self.code_lens_phantoms.update(code_lenses_to_phantoms(self.view, code_lenses))
+            self.code_lens_phantoms.update(code_lenses_to_phantoms(self.view, self.session.config.name, code_lenses))
 
     def _increment_hover_count(self) -> None:
         settings = self.view.settings()

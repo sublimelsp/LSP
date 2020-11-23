@@ -692,12 +692,24 @@ def format_completion(
     return completion
 
 
-def code_lens_to_phantom(view: sublime.View, code_lens: CodeLens) -> sublime.Phantom:
+def code_lens_to_phantom(view: sublime.View, session_name: str, code_lens: CodeLens) -> sublime.Phantom:
     region = range_to_region(Range.from_lsp(code_lens["range"]), view)
     command = code_lens.get("command")
     assert isinstance(command, dict)
-    return sublime.Phantom(region, command["title"], sublime.LAYOUT_BELOW)
+    args = {
+        "command_name": command["command"],
+        "command_args": command.get("arguments"),
+        "session_name": session_name
+    }
+    href = sublime.command_url("lsp_execute", args)
+    fmt = '<small style="font-family: system"><a href="{}">{}</a> ({})</small>'
+    content = fmt.format(href, command["title"], session_name)
+    return sublime.Phantom(region, content, sublime.LAYOUT_BELOW)
 
 
-def code_lenses_to_phantoms(view: sublime.View, code_lenses: List[CodeLens]) -> List[sublime.Phantom]:
-    return [code_lens_to_phantom(view, code_lens) for code_lens in code_lenses]
+def code_lenses_to_phantoms(
+    view: sublime.View,
+    session_name: str,
+    code_lenses: List[CodeLens]
+) -> List[sublime.Phantom]:
+    return [code_lens_to_phantom(view, session_name, code_lens) for code_lens in code_lenses]

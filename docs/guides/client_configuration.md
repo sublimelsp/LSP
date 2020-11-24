@@ -1,4 +1,4 @@
-# Server Configuration
+# Client Configuration
 
 After you have installed a language server, the LSP settings need to be configured to enable communication between LSP and that server for suitable filetypes.
 LSP ships with default configurations for a few language servers, but these need to be enabled before they will start.

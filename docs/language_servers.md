@@ -25,7 +25,7 @@ See the dedicated [C/C++ guide](/guides/cplusplus) for using ccls or clangd.
 ## C\#
 
 1. Download [omnisharp](https://github.com/OmniSharp/omnisharp-roslyn/releases).
-2. Open `LSP.sublime-settings` and add `"omnisharp"` configuration to the `clients`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add `"omnisharp"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -64,7 +64,7 @@ See the dedicated [C/C++ guide](/guides/cplusplus) for using ccls or clangd.
 ## Clojure
 
 1. Download [clojure-lsp](https://github.com/snoe/clojure-lsp#installation).
-2. Open `LSP.sublime-settings` and add `"clojure-lsp"` configuration to the `clients`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add `"clojure-lsp"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -105,7 +105,7 @@ Follow installation instructions on [LSP-css](https://github.com/sublimelsp/LSP-
 ## D
 
 1. Install the [D Language Server](https://github.com/d-language-server/dls#installation).
-2. Open `LSP.sublime-settings` and add `"dls"` configuration to the `clients`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add `"dls"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -154,7 +154,7 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
 ## Erlang
 
 1. Install the [Erlang Language Server](https://github.com/erlang-ls/erlang_ls).
-2. Open `LSP.sublime-settings` and add `"erlang-ls"` configuration to the `clients`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add `"erlang-ls"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -191,7 +191,7 @@ Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/L
 ## Flow
 
 1. Install [flow](https://github.com/facebook/flow#using-flow).
-2. Open `LSP.sublime-settings` and add `"flow"` configuration to the `clients`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add `"flow"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -225,7 +225,7 @@ Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/L
 
 1. Install the [ Fortran](https://packagecontrol.io/packages/Fortran) package from Package Control for syntax highlighting.
 2. Install the [Fortran Language Server](https://github.com/hansec/fortran-language-server#installation).
-3. Open `LSP.sublime-settings` and add `"fortls"` configuration to the `clients`:
+3. Open `Preferences > Package Settings > LSP > Settings` and add `"fortls"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -264,7 +264,7 @@ Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/L
 ## Go
 
 1. Install [gopls](https://github.com/golang/tools/blob/master/gopls/doc/user.md#installation).
-2. Open `LSP.sublime-settings` and add `"gopls"` configuration to the `clients`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add `"gopls"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -306,7 +306,7 @@ Follow installation instructions on [LSP-graphql](https://github.com/sublimelsp/
 ## Haskell
 
 1. Install [haskell-language-server](https://github.com/haskell/haskell-language-server).
-2. Open `LSP.sublime-settings` and add `"haskell-language-server"` configuration to the `clients`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add `"haskell-language-server"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -343,7 +343,7 @@ Follow installation instructions on [LSP-html](https://github.com/sublimelsp/LSP
 ## Java
 
 1. Download and extract Eclipse's [jdt-ls](https://download.eclipse.org/jdtls/snapshots/jdt-language-server-latest.tar.gz).
-2. Open `LSP.sublime-settings` and add `"jdtls"` configuration to the `clients`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add `"jdtls"` configuration to the `clients`:
 
 
 === "Sublime Text 4"
@@ -431,7 +431,7 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
         Pkg.add("LanguageServer")
         Pkg.add("SymbolServer")
 
-3. Open `LSP.sublime-settings` and add `"julials"` configuration to the `clients`:
+3. Open `Preferences > Package Settings > LSP > Settings` and add `"julials"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -515,7 +515,7 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
 
 1. Install the [Kotlin](https://packagecontrol.io/packages/Kotlin) package from Package Control for syntax highlighting.
 2. Install the [Kotlin Language Server](https://github.com/fwcd/KotlinLanguageServer) (requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUILDING.md) first).
-3. Open `LSP.sublime-settings` and add `"kotlinls"` configuration to the `clients`:
+3. Open `Preferences > Package Settings > LSP > Settings` and add `"kotlinls"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -566,7 +566,7 @@ Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/L
 !!! Info "Instructions for Sublime Text 3."
 
 1. Download the [binary](https://github.com/latex-lsp/texlab/releases).
-2. Open `LSP.sublime-settings` and add `"texlab"` configuration to the `clients`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add `"texlab"` configuration to the `clients`:
 
 ```json
 {
@@ -591,7 +591,7 @@ Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/L
 ## Lisp
 
 1. Install [cc-lsp](https://github.com/cxxxr/cl-lsp) using Roswell.
-2. Open `LSP.sublime-settings` and add `"cc-lsp"` configuration to the `clients`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add `"cc-lsp"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -624,7 +624,7 @@ Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/L
 ## Lua
 
 1. Download the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=sumneko.lua).
-2. Open `LSP.sublime-settings` and add `"lua-ls"` configuration to the `clients`
+2. Open `Preferences > Package Settings > LSP > Settings` and add `"lua-ls"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -664,7 +664,7 @@ Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/L
 
 1. Install the [Reason](https://packagecontrol.io/packages/Reason) package from Package Control for syntax highlighting.
 2. Install the [Reason Language Server](https://github.com/jaredly/reason-language-server#sublime-text).
-3. Open `LSP.sublime-settings` and add `"reason"` configuration to the `clients`:
+3. Open `Preferences > Package Settings > LSP > Settings` and add `"reason"` configuration to the `clients`:
 
 
 === "Sublime Text 4"
@@ -720,7 +720,7 @@ Follow installation instructions on [LSP-serenata](https://github.com/Cloudstek/
 1. Install the [PowerShell](https://packagecontrol.io/packages/PowerShell) package from Package Control for syntax highlighting.
 2. Download and extract the [latest release](https://github.com/PowerShell/PowerShellEditorServices/releases) PowerShellEditorServices.
 3. Make sure PowerShell help files are up to date by running `Update-Help` in the PowerShell console (the one you're using in the command below).
-3. Open `LSP.sublime-settings` and add `"powershell-ls"` configuration to the `clients`:
+3. Open `Preferences > Package Settings > LSP > Settings` and add `"powershell-ls"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -909,7 +909,7 @@ There are multiple options:
 
 1. Install [solargraph](https://github.com/castwide/solargraph#installation).
 
-2. Open `LSP.sublime-settings` and add `"ruby"` configuration to the `clients`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add `"ruby"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -960,7 +960,7 @@ There are multiple options:
 
         bundle install
 
-2. Open `LSP.sublime-settings` and add `"sorbet"` configuration to the `clients`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add `"sorbet"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -1002,7 +1002,7 @@ There are multiple options:
 
 1. Install [rust-analyzer](https://github.com/rust-analyzer/rust-analyzer).
 
-2. Open `LSP.sublime-settings` and add `"rust-analyzer"` configuration to the `clients`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add `"rust-analyzer"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -1052,7 +1052,7 @@ Follow installation instructions on [LSP-svelte](https://github.com/sublimelsp/L
 
 1. Install the [Swift](https://packagecontrol.io/packages/Swift) package from Package Control for syntax highlighting.
 2. Install Xcode 11.4 or later and ensure that `xcrun -find sourcekit-lsp` returns the path to sourcekit-lsp.
-3. Open `LSP.sublime-settings` and add `"sourcekit-lsp"` configuration to the `clients`:
+3. Open `Preferences > Package Settings > LSP > Settings` and add `"sourcekit-lsp"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json
@@ -1089,7 +1089,7 @@ Follow installation instructions on [LSP-tagml](https://github.com/HuygensING/LS
 ## Terraform
 
 1. Download [terraform-lsp](https://github.com/juliosueiras/terraform-lsp/releases) binary and make it available in your PATH.
-2. Open `LSP.sublime-settings` and add `"terraform"` configuration to the `clients`:
+2. Open `Preferences > Package Settings > LSP > Settings` and add `"terraform"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json

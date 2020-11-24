@@ -1088,8 +1088,9 @@ Follow installation instructions on [LSP-tagml](https://github.com/HuygensING/LS
 
 ## Terraform
 
-1. Download [terraform-lsp](https://github.com/juliosueiras/terraform-lsp/releases) binary and make it available in your PATH.
-2. Open `Preferences > Package Settings > LSP > Settings` and add `"terraform"` configuration to the `clients`:
+1. Install the [Terraform](https://packagecontrol.io/packages/Terraform) package from Package Control for syntax highlighting.
+2. Download [terraform-lsp](https://github.com/juliosueiras/terraform-lsp/releases) binary and make it available in your PATH.
+3. Open `Preferences > Package Settings > LSP > Settings` and add `"terraform"` configuration to the `clients`:
 
 === "Sublime Text 4"
     ```json

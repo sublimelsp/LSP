@@ -557,7 +557,36 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
 
 ## LaTeX
 
+!!! Info "Instructions for Sublime Text 4."
+
 Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/LSP-TexLab).
+
+---
+
+!!! Info "Instructions for Sublime Text 3."
+
+1. Download the [binary](https://github.com/latex-lsp/texlab/releases).
+2. Open `LSP.sublime-settings` and add `"texlab"` configuration to the `clients`:
+
+```json
+{
+    "clients": {
+        "texlab": {
+            "enabled": true,
+            "command": ["PATH/TO/texlab"], // Update the PATH
+            "languages": [{
+                "languageId": "latex",
+                "document_selector": "text.tex.latex"
+            }, {
+                "languageId": "bibtex",
+                "document_selector": "text.bibtex"
+            }]
+        }
+    }
+}
+```
+
+!!! info "For further requirements see the [TexLab Docs](https://texlab.netlify.com/docs#requirements)."
 
 ## Lisp
 

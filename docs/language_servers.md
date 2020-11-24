@@ -2,12 +2,13 @@
 
 Follow the setup steps for a language server to get it up and running.
 
-If you encounter problems see the [common issues](/troubleshooting/#common-problems) page or search the [LSP/issues](https://github.com/sublimelsp/LSP/issues) before opening new ones.
+If you have problems see the [common issues](/troubleshooting/#common-problems) page or search the [LSP/issues](https://github.com/sublimelsp/LSP/issues) before opening new ones.
 
-If there are no setup steps for a language server on this page, but a [language server implementation](https://microsoft.github.io/language-server-protocol/implementors/servers/) exist, follow the guide for [creating a client configuration](/guides/client_configuration/). Pull requests for adding new client configuration are welcome.
+If there are no setup steps for a language server on this page, but a [language server implementation](https://microsoft.github.io/language-server-protocol/implementors/servers/) exist, follow the guide for [creating a client configuration](/guides/client_configuration/). Pull requests for adding a new client configuration are welcome.
 
-!!! tip
-    We recommend installing [LSP-json](https://packagecontrol.io/packages/LSP-json), as it can give settings completions and report errors when inside the `LSP.sublime-settings` file.
+!!! tip "We recommend installing [LSP-json](https://packagecontrol.io/packages/LSP-json)"
+    [LSP-json](https://packagecontrol.io/packages/LSP-json) gives settings completions and report errors when inside the `LSP.sublime-settings` file.
+
 
 ## Angular
 

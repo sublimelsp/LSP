@@ -2,7 +2,7 @@
 
 Follow the setup steps for a language server to get it up and running.
 
-If you encounter problems see the [common issues](/troubleshooting/) page or search the [LSP/issues](https://github.com/sublimelsp/LSP/issues) before opening new ones.
+If you encounter problems see the [common issues](/troubleshooting/#common-problems) page or search the [LSP/issues](https://github.com/sublimelsp/LSP/issues) before opening new ones.
 
 If there are no setup steps for a language server on this page, but a [language server implementation](https://microsoft.github.io/language-server-protocol/implementors/servers/) exist, follow the guide for [creating a client configuration](/guides/client_configuration/). Pull requests for adding new client configuration are welcome.
 
@@ -64,7 +64,6 @@ See the dedicated [C/C++ guide](/guides/cplusplus) for using ccls or clangd.
 
 1. Download [clojure-lsp](https://github.com/snoe/clojure-lsp#installation).
 2. Open `LSP.sublime-settings` and add `"clojure-lsp"` configuration to the `clients`:
-
 
 === "Sublime Text 4"
     ```json
@@ -418,7 +417,6 @@ Follow installation instructions on [LSP-html](https://github.com/sublimelsp/LSP
     }
     ```
 
-
 ## JSON
 
 Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP-json).
@@ -433,7 +431,6 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
         Pkg.add("SymbolServer")
 
 3. Open `LSP.sublime-settings` and add `"julials"` configuration to the `clients`:
-
 
 === "Sublime Text 4"
     ```json
@@ -472,7 +469,6 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
         }
     }
     ```
-
 
 === "Sublime Text 3"
     ```json
@@ -514,7 +510,6 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
     }
     ```
 
-
 ## Kotlin
 
 1. Install the [Kotlin](https://packagecontrol.io/packages/Kotlin) package from Package Control for syntax highlighting.
@@ -539,7 +534,6 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
     }
     ```
 
-
 === "Sublime Text 3"
     ```json
     {
@@ -559,7 +553,6 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
         }
     }
     ```
-
 
 ## LaTeX
 
@@ -618,7 +611,6 @@ Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/L
         }
     }
     ```
-
 
 === "Sublime Text 3"
     ```json
@@ -759,7 +751,6 @@ Follow installation instructions on [LSP-serenata](https://github.com/Cloudstek/
         }
     }
     ```
-
 
 !!! info "For more details see this [issue](https://github.com/PowerShell/PowerShellEditorServices/issues/1057)."
 

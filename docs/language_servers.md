@@ -2,7 +2,7 @@
 
 Follow the setup steps for a language server to get it up and running.
 
-If you have problems see the [common issues](/troubleshooting/#common-problems) page or search the [LSP/issues](https://github.com/sublimelsp/LSP/issues) before opening new ones.
+If you have problems see the [common issues](troubleshooting.md#common-problems) page or search the [LSP/issues](https://github.com/sublimelsp/LSP/issues) before opening new ones.
 
 If there are no setup steps for a language server on this page, but a [language server implementation](https://microsoft.github.io/language-server-protocol/implementors/servers/) exist, follow the guide for [creating a client configuration](/guides/client_configuration/). Pull requests for adding a new client configuration are welcome.
 
@@ -20,7 +20,7 @@ Follow installation instructions on [LSP-bash](https://github.com/sublimelsp/LSP
 
 ## C/C++
 
-See the dedicated [C/C++ guide](/guides/cplusplus) for using ccls or clangd.
+See the dedicated [C/C++ guide](guides/cplusplus.md) for using ccls or clangd.
 
 ## C\#
 

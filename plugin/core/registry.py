@@ -49,25 +49,27 @@ class LspTextCommand(sublime_plugin.TextCommand):
     keybinding.
     """
 
-    # When this is defined in a derived class, the command is enabled if and only if there exists a session attached
-    # to the view that has the given capability. When both `capability` and `session_name` are defined, `capability`
-    # wins.
+    # When this is defined in a derived class, the command is enabled only if there exists a session attached to the
+    # view that has the given capability.
     capability = ''
 
-    # When this is defined in a derived class, the command is enabled if and only if there exists a session attached
-    # to the view that has the given name. When both `capability` and `session_name` are defined, `capability` wins.
+    # When this is defined in a derived class, the command is enabled only if there exists a session attached to the
+    # view that has the given name.
     session_name = ''
 
     def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
         if self.capability:
             # At least one active session with the given capability must exist.
-            return bool(self.best_session(self.capability, get_position(self.view, event, point)))
-        elif self.session_name:
+            if not self.best_session(self.capability, get_position(self.view, event, point)):
+                return False
+        if self.session_name:
             # There must exist an active session with the given (config) name.
-            return bool(self.session_by_name(self.session_name))
-        else:
+            if not self.session_by_name(self.session_name):
+                return False
+        if not self.capability and not self.session_name:
             # Any session will do.
             return any(self.sessions())
+        return True
 
     def want_event(self) -> bool:
         return True

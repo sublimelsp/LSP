@@ -1092,7 +1092,7 @@ Follow installation instructions on [LSP-tagml](https://github.com/HuygensING/LS
 
 ## TypeScript / JavaScript
 
-Follow installation instructions on [LSP-typescript](https://github.com/HuygensING/LSP-typescript).
+Follow installation instructions on [LSP-typescript](https://github.com/sublimelsp/LSP-typescript).
 
 ## Vue
 

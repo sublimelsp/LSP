@@ -6,7 +6,7 @@ If you have problems see the [common issues](/troubleshooting/#common-problems) 
 
 If there are no setup steps for a language server on this page, but a [language server implementation](https://microsoft.github.io/language-server-protocol/implementors/servers/) exist, follow the guide for [creating a client configuration](/guides/client_configuration/). Pull requests for adding a new client configuration are welcome.
 
-!!! tip "We recommend installing [LSP-json](https://packagecontrol.io/packages/LSP-json)"
+!!! tip "We recommend installing [LSP-json](https://packagecontrol.io/packages/LSP-json)."
     [LSP-json](https://packagecontrol.io/packages/LSP-json) gives settings completions and report errors when inside the `LSP.sublime-settings` file.
 
 
@@ -864,9 +864,9 @@ A basic configuration below can be used for bootstrapping your own:
 }
 ```
 
-See pylint documentation: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
+See pylint documentation: [github:palantir/python-language-server](https://github.com/palantir/python-language-server).
 
-Description of all built-in settings: https://github.com/palantir/python-language-server/blob/develop/vscode-client/package.json
+!!! info "List of all built-in [settings](https://github.com/palantir/python-language-server/blob/develop/vscode-client/package.json)."
 
 ## R
 

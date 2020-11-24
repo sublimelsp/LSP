@@ -37,7 +37,7 @@ See the dedicated [C/C++ guide](/guides/cplusplus) for using ccls or clangd.
                     "/home/tb/prebuilt/omnisharp/OmniSharp.exe", // or eg. /usr/local/opt/omnisharp/run
                     "-lsp"
                 ],
-                "selector": "source.cs",
+                "selector": "source.cs"
             }
         }
     }
@@ -549,7 +549,7 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
                     "kotlin": {
                         // put your server settings here
                     }
-                },
+                }
             }
         }
     }

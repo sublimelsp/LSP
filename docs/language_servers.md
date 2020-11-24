@@ -24,20 +24,39 @@ See the dedicated [C/C++ guide](/guides/cplusplus) for using ccls or clangd.
 1. Download [omnisharp](https://github.com/OmniSharp/omnisharp-roslyn/releases).
 2. Open `LSP.sublime-settings` and add `"omnisharp"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "omnisharp": {
-            "enabled": true,
-            "command": [
-                "/home/tb/prebuilt/omnisharp/OmniSharp.exe", // or eg. /usr/local/opt/omnisharp/run
-                "-lsp"
-            ],
-            "selector": "source.cs",
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "omnisharp": {
+                "enabled": true,
+                "command": [
+                    "/home/tb/prebuilt/omnisharp/OmniSharp.exe", // or eg. /usr/local/opt/omnisharp/run
+                    "-lsp"
+                ],
+                "selector": "source.cs",
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "omnisharp": {
+                "enabled": true,
+                "command": [
+                    "/home/tb/prebuilt/omnisharp/OmniSharp.exe", // or eg. /usr/local/opt/omnisharp/run
+                    "-lsp"
+                ],
+                "languageId": "csharp",
+                "scopes": ["source.cs"],
+                "syntaxes": ["Packages/C#/C#.sublime-syntax"]
+            }
+        }
+    }
+    ```
 
 ## Clojure
 
@@ -45,18 +64,35 @@ See the dedicated [C/C++ guide](/guides/cplusplus) for using ccls or clangd.
 2. Open `LSP.sublime-settings` and add `"clojure-lsp"` configuration to the `clients`:
 
 
-```json
-{
-    "clients": {
-        "clojure-lsp": {
-            "enabled": true,
-            "command": ["java", "-jar", "/PATH/TO/clojure-lsp"], // Update the PATH
-            "selector": "source.clojure",
-            "initializationOptions": {}
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "clojure-lsp": {
+                "enabled": true,
+                "command": ["java", "-jar", "/PATH/TO/clojure-lsp"], // Update the PATH
+                "selector": "source.clojure",
+                "initializationOptions": {}
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "clojure-lsp": {
+                "enabled": true,
+                "command": ["java", "-jar", "/PATH/TO/clojure-lsp"], // Update the PATH
+                "initializationOptions": {},
+                "languageId": "clojure",
+                "scopes": ["source.clojure"],
+                "syntaxes": ["Packages/Clojure/Clojure.sublime-syntax"]
+            }
+        }
+    }
+    ```
 
 !!! info "See available [initializationOptions](https://github.com/snoe/clojure-lsp#initializationoptions)."
 
@@ -69,17 +105,33 @@ Follow installation instructions on [LSP-css](https://github.com/sublimelsp/LSP-
 1. Install the [D Language Server](https://github.com/d-language-server/dls#installation).
 2. Open `LSP.sublime-settings` and add `"dls"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "dls": {
-            "enabled": true,
-            "command": ["/PATH/TO/DLS_EXECUTABLE"], // Update the PATH
-            "selector": "source.d"
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "dls": {
+                "enabled": true,
+                "command": ["/PATH/TO/DLS_EXECUTABLE"], // Update the PATH
+                "selector": "source.d"
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "dls": {
+                "enabled": true,
+                "command": ["/PATH/TO/DLS_EXECUTABLE"], // Update the PATH
+                "languageId": "d",
+                "scopes": ["source.d"],
+                "syntaxes": ["Packages/D/D.sublime-syntax"]
+            }
+        }
+    }
+    ```
 
 ## Dart
 
@@ -102,17 +154,33 @@ Follow installation instructions on [LSP-elm](https://github.com/sublimelsp/LSP-
 1. Install the [Erlang Language Server](https://github.com/erlang-ls/erlang_ls).
 2. Open `LSP.sublime-settings` and add `"erlang-ls"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "erlang-ls": {
-            "enabled": true,
-            "command": [ "/PATH/TO/erlang_ls", "--transport", "stdio" ], // Update the PATH
-            "selector": "source.erlang"
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "erlang-ls": {
+                "enabled": true,
+                "command": [ "/PATH/TO/erlang_ls", "--transport", "stdio" ], // Update the PATH
+                "selector": "source.erlang"
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "erlang-ls": {
+                "enabled": true,
+                "command": [ "/path/to/my/erlang_ls", "--transport", "stdio" ],
+                "languageId": "erlang",
+                "scopes": [ "source.erlang" ],
+                "syntaxes": ["Packages/Erlang/Erlang.sublime-syntax"]
+            }
+        }
+    }
+    ```
 
 ## ESLint
 
@@ -123,17 +191,33 @@ Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/L
 1. Install [flow](https://github.com/facebook/flow#using-flow).
 2. Open `LSP.sublime-settings` and add `"flow"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "flow": {
-            "enabled": true,
-            "command": ["flow", "lsp"],
-            "selector": "source.js | source.js.react"
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "flow": {
+                "enabled": true,
+                "command": ["flow", "lsp"],
+                "selector": "source.js | source.js.react"
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "flow": {
+                "enabled": true,
+                "command": ["flow", "lsp"],
+                "languageId": "javascript",
+                "scopes": ["source.js"],
+                "syntaxes": ["Packages/Babel/JavaScript (Babel).sublime-syntax", "Packages/JavaScript/JavaScript.sublime-syntax"]
+            }
+        }
+    }
+    ```
 
 ## Fortran
 
@@ -141,17 +225,36 @@ Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/L
 2. Install the [Fortran Language Server](https://github.com/hansec/fortran-language-server#installation).
 3. Open `LSP.sublime-settings` and add `"fortls"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "fortls": {
-            "enabled": true,
-            "command": ["fortls"],
-            "selector": "source.modern-fortran | source.fixedform-fortran"
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "fortls": {
+                "enabled": true,
+                "command": ["fortls"],
+                "selector": "source.modern-fortran | source.fixedform-fortran"
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "fortls": {
+                "enabled": true,
+                "command": ["fortls"],
+                "languageId": "fortran",
+                "scopes": ["source.modern-fortran", "source.fixedform-fortran"],
+                "syntaxes": [
+                    "Packages/Fortran/grammars/FortranModern.sublime-syntax",
+                    "Packages/Fortran/grammars/FortranFixedForm.sublime-syntax"
+                ]
+            }
+        }
+    }
+    ```
 
 !!! info "See available [configuration options](https://github.com/hansec/fortran-language-server#language-server-settings)."
     For example set `"command": ["fortls", "--lowercase_intrinsics"]` to use lowercase for autocomplete suggestions.
@@ -161,17 +264,36 @@ Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/L
 1. Install [gopls](https://github.com/golang/tools/blob/master/gopls/doc/user.md#installation).
 2. Open `LSP.sublime-settings` and add `"gopls"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "gopls": {
-            "enabled": true,
-            "command": ["gopls"],
-            "selector": "source.go"
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "gopls": {
+                "enabled": true,
+                "command": ["gopls"],
+                "selector": "source.go"
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "gopls": {
+                "enabled": true,
+                "command": ["gopls"],
+                "languageId": "go",
+                "scopes": ["source.go"],
+                "syntaxes": [
+                    "Packages/Go/Go.sublime-syntax",
+                    "Packages/GoSublime/syntax/GoSublime-Go-Recommended.sublime-syntax"
+                ]
+            },
+        }
+    }
+    ```
 
 !!! info "Visit [gopls repo](https://github.com/golang/tools/tree/master/gopls) for more info."
 
@@ -184,17 +306,33 @@ Follow installation instructions on [LSP-graphql](https://github.com/sublimelsp/
 1. Install [haskell-language-server](https://github.com/haskell/haskell-language-server).
 2. Open `LSP.sublime-settings` and add `"haskell-language-server"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "haskell-language-server": {
-          "enabled": true,
-          "command": ["haskell-language-server-wrapper", "--lsp"],
-          "selector": "source.haskell"
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "haskell-language-server": {
+                "enabled": true,
+                "command": ["haskell-language-server-wrapper", "--lsp"],
+                "selector": "source.haskell"
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "haskell-language-server": {
+                "enabled": true,
+                "command": ["haskell-language-server-wrapper", "--lsp"],
+                "languageId": "haskell",
+                "scopes": ["source.haskell"],
+                "syntaxes": ["Packages/Haskell/Haskell.sublime-syntax"]
+            }
+        }
+    }
+    ```
 
 ## HTML
 
@@ -205,39 +343,78 @@ Follow installation instructions on [LSP-html](https://github.com/sublimelsp/LSP
 1. Download and extract Eclipse's [jdt-ls](https://download.eclipse.org/jdtls/snapshots/jdt-language-server-latest.tar.gz).
 2. Open `LSP.sublime-settings` and add `"jdtls"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "jdtls": {
-            "enabled": true,
-            "command": [
-                "java",
-                "--add-modules=ALL-SYSTEM",
-                "--add-opens",
-                "java.base/java.util=ALL-UNNAMED",
-                "--add-opens",
-                "java.base/java.lang=ALL-UNNAMED",
-                "-Declipse.application=org.eclipse.jdt.ls.core.id1",
-                "-Dosgi.bundles.defaultStartLevel=4",
-                "-Declipse.product=org.eclipse.jdt.ls.core.product",
-                "-Dfile.encoding=UTF-8",
-                "-DwatchParentProcess={true|false}",  // false on windows, true other OSs
-                "-noverify",
-                "-Xmx1G",
-                "-XX:+UseG1GC",
-                "-XX:+UseStringDeduplication",
-                "-jar",
-                "PATH/TO/jdt-language-server-latest/plugins/org.eclipse.equinox.launcher_*.jar" // 1. replace the PATH/TO with your own 2. replace * with the file version
-                "-configuration",
-                "PATH/TO/jdt-language-server-latest/config_{win|mac|linux}", // 1. replace the PATH/TO with your own 2. choose the config folder based on the OS
-                "-data",
-                "<TEMP_DIR>/${project_base_name}/jdt_ws" // replace <TEMP_DIR> with the temp folder in your system. macOS: echo $TMPDIR
-            ],
-            "selector": "source.java"
+
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "jdtls": {
+                "enabled": true,
+                "command": [
+                    "java",
+                    "--add-modules=ALL-SYSTEM",
+                    "--add-opens",
+                    "java.base/java.util=ALL-UNNAMED",
+                    "--add-opens",
+                    "java.base/java.lang=ALL-UNNAMED",
+                    "-Declipse.application=org.eclipse.jdt.ls.core.id1",
+                    "-Dosgi.bundles.defaultStartLevel=4",
+                    "-Declipse.product=org.eclipse.jdt.ls.core.product",
+                    "-Dfile.encoding=UTF-8",
+                    "-DwatchParentProcess={true|false}",  // false on windows, true other OSs
+                    "-noverify",
+                    "-Xmx1G",
+                    "-XX:+UseG1GC",
+                    "-XX:+UseStringDeduplication",
+                    "-jar",
+                    "PATH/TO/jdt-language-server-latest/plugins/org.eclipse.equinox.launcher_*.jar" // 1. replace the PATH/TO with your own 2. replace * with the file version
+                    "-configuration",
+                    "PATH/TO/jdt-language-server-latest/config_{win|mac|linux}", // 1. replace the PATH/TO with your own 2. choose the config folder based on the OS
+                    "-data",
+                    "<TEMP_DIR>/${project_base_name}/jdt_ws" // replace <TEMP_DIR> with the temp folder in your system. macOS: echo $TMPDIR
+                ],
+                "selector": "source.java"
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "jdtls": {
+                "enabled": true,
+                "command": [
+                    "java",
+                    "--add-modules=ALL-SYSTEM",
+                    "--add-opens",
+                    "java.base/java.util=ALL-UNNAMED",
+                    "--add-opens",
+                    "java.base/java.lang=ALL-UNNAMED",
+                    "-Declipse.application=org.eclipse.jdt.ls.core.id1",
+                    "-Dosgi.bundles.defaultStartLevel=4",
+                    "-Declipse.product=org.eclipse.jdt.ls.core.product",
+                    "-Dfile.encoding=UTF-8",
+                    "-DwatchParentProcess={true|false}",  // false on windows, true other OSs
+                    "-noverify",
+                    "-Xmx1G",
+                    "-XX:+UseG1GC",
+                    "-XX:+UseStringDeduplication",
+                    "-jar",
+                    "PATH/TO/jdt-language-server-latest/plugins/org.eclipse.equinox.launcher_*.jar" // 1. replace the PATH/TO with your own 2. replace * with the file version
+                    "-configuration",
+                    "PATH/TO/jdt-language-server-latest/config_{win|mac|linux}", // 1. replace the PATH/TO with your own 2. choose the config folder based on the OS
+                    "-data",
+                    "<TEMP_DIR>/${project_base_name}/jdt_ws" // replace <TEMP_DIR> with the temp folder in your system. macOS: echo $TMPDIR
+                ],
+                "languageId": "java",
+                "scopes": ["source.java"],
+                "syntaxes": ["Packages/Java/Java.sublime-syntax"]
+            }
+        }
+    }
+    ```
 
 
 ## JSON
@@ -255,42 +432,86 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
 
 3. Open `LSP.sublime-settings` and add `"julials"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "julials": {
-            "enabled": true,
-            "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
-          // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using Pkg; using LanguageServer; using LanguageServer.SymbolServer; env_path=dirname(Pkg.Types.Context().env.project_file); server=LanguageServer.LanguageServerInstance(stdin,stdout,false,env_path); run(server)"], // on Windows
-            "languageId": "julia",
-            "settings": {
-                // Default values from VS Code:
-                "julia.format.calls": true,      // Format function calls
-                "julia.format.comments": true,   // Format comments
-                "julia.format.curly": true,      // Format braces
-                "julia.format.docs": true,       // Format inline documentation
-                "julia.format.indent": 4,        // Indent size for formatting
-                "julia.format.indents": true,    // Format file indents
-                "julia.format.iterOps": true,    // Format loop iterators
-                "julia.format.kw": true,         // Remove spaces around = in function keywords
-                "julia.format.lineends": false,  // [undocumented]
-                "julia.format.ops": true,        // Format whitespace around operators
-                "julia.format.tuples": true,     // Format tuples
-                "julia.lint.call": false,        // Check calls against existing methods (experimental)
-                "julia.lint.constif": true,      // Check for constant conditionals of if statements
-                "julia.lint.datadecl": false,    // [undocumented]
-                "julia.lint.iter": true,         // Check iterator syntax of loops
-                "julia.lint.lazy": true,         // Check for deterministic lazy boolean operators
-                "julia.lint.modname": true,      // Check for invalid submodule names
-                "julia.lint.nothingcomp": false, // [undocumented]
-                "julia.lint.pirates": true,      // Check for type piracy
-                "julia.lint.run": true,          // run the linter on active files
-                "julia.lint.typeparam": true     // Check for unused DataType parameters
+
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "julials": {
+                "enabled": true,
+                "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
+              // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using Pkg; using LanguageServer; using LanguageServer.SymbolServer; env_path=dirname(Pkg.Types.Context().env.project_file); server=LanguageServer.LanguageServerInstance(stdin,stdout,false,env_path); run(server)"], // on Windows
+                "selector": "source.julia",
+                "settings": {
+                    // Default values from VS Code:
+                    "julia.format.calls": true,      // Format function calls
+                    "julia.format.comments": true,   // Format comments
+                    "julia.format.curly": true,      // Format braces
+                    "julia.format.docs": true,       // Format inline documentation
+                    "julia.format.indent": 4,        // Indent size for formatting
+                    "julia.format.indents": true,    // Format file indents
+                    "julia.format.iterOps": true,    // Format loop iterators
+                    "julia.format.kw": true,         // Remove spaces around = in function keywords
+                    "julia.format.lineends": false,  // [undocumented]
+                    "julia.format.ops": true,        // Format whitespace around operators
+                    "julia.format.tuples": true,     // Format tuples
+                    "julia.lint.call": false,        // Check calls against existing methods (experimental)
+                    "julia.lint.constif": true,      // Check for constant conditionals of if statements
+                    "julia.lint.datadecl": false,    // [undocumented]
+                    "julia.lint.iter": true,         // Check iterator syntax of loops
+                    "julia.lint.lazy": true,         // Check for deterministic lazy boolean operators
+                    "julia.lint.modname": true,      // Check for invalid submodule names
+                    "julia.lint.nothingcomp": false, // [undocumented]
+                    "julia.lint.pirates": true,      // Check for type piracy
+                    "julia.lint.run": true,          // run the linter on active files
+                    "julia.lint.typeparam": true     // Check for unused DataType parameters
+                }
             }
         }
     }
-}
-```
+    ```
+
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "julials": {
+                "enabled": true,
+                "command": ["bash", "PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh"], // on Linux/macOS
+              // "command": ["julia", "--startup-file=no", "--history-file=no", "-e", "using Pkg; using LanguageServer; using LanguageServer.SymbolServer; env_path=dirname(Pkg.Types.Context().env.project_file); server=LanguageServer.LanguageServerInstance(stdin,stdout,false,env_path); run(server)"], // on Windows
+                "languageId": "julia",
+                "scopes": ["source.julia"],
+                "syntaxes": ["Packages/Julia/Julia.sublime-syntax"],
+                "settings": {
+                    // Default values from VS Code:
+                    "julia.format.calls": true,      // Format function calls
+                    "julia.format.comments": true,   // Format comments
+                    "julia.format.curly": true,      // Format braces
+                    "julia.format.docs": true,       // Format inline documentation
+                    "julia.format.indent": 4,        // Indent size for formatting
+                    "julia.format.indents": true,    // Format file indents
+                    "julia.format.iterOps": true,    // Format loop iterators
+                    "julia.format.kw": true,         // Remove spaces around = in function keywords
+                    "julia.format.lineends": false,  // [undocumented]
+                    "julia.format.ops": true,        // Format whitespace around operators
+                    "julia.format.tuples": true,     // Format tuples
+                    "julia.lint.call": false,        // Check calls against existing methods (experimental)
+                    "julia.lint.constif": true,      // Check for constant conditionals of if statements
+                    "julia.lint.datadecl": false,    // [undocumented]
+                    "julia.lint.iter": true,         // Check iterator syntax of loops
+                    "julia.lint.lazy": true,         // Check for deterministic lazy boolean operators
+                    "julia.lint.modname": true,      // Check for invalid submodule names
+                    "julia.lint.nothingcomp": false, // [undocumented]
+                    "julia.lint.pirates": true,      // Check for type piracy
+                    "julia.lint.run": true,          // run the linter on active files
+                    "julia.lint.typeparam": true     // Check for unused DataType parameters
+                }
+            }
+        }
+    }
+    ```
+
 
 ## Kotlin
 
@@ -298,22 +519,45 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
 2. Install the [Kotlin Language Server](https://github.com/fwcd/KotlinLanguageServer) (requires [building](https://github.com/fwcd/KotlinLanguageServer/blob/master/BUILDING.md) first).
 3. Open `LSP.sublime-settings` and add `"kotlinls"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "kotlinls": {
-            "enabled": true,
-            "command": ["PATH/TO/KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat"], // Update the PATH
-            "selector": "source.kotlin",
-            "settings": {
-                "kotlin": {
-                    // put your server settings here
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "kotlinls": {
+                "enabled": true,
+                "command": ["PATH/TO/KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat"], // Update the PATH
+                "selector": "source.kotlin",
+                "settings": {
+                    "kotlin": {
+                        // put your server settings here
+                    }
                 }
             }
         }
     }
-}
-```
+    ```
+
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "kotlinls": {
+                "enabled": true,
+                "command": ["PATH/TO/KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat"], // Update the PATH
+                "languageId": "kotlin",
+                "scopes": ["source.Kotlin"],
+                "syntaxes": ["Packages/kotlin/Kotlin.tmLanguage"],
+                "settings": {
+                    "kotlin": {
+                        // put your server settings here
+                    }
+                },
+            }
+        }
+    }
+    ```
+
 
 ## LaTeX
 
@@ -324,56 +568,112 @@ Follow installation instructions on [LSP-TexLab](https://github.com/sublimelsp/L
 1. Install [cc-lsp](https://github.com/cxxxr/cl-lsp) using Roswell.
 2. Open `LSP.sublime-settings` and add `"cc-lsp"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "cc-lsp": {
-            "enabled": true,
-            "command": ["cl-lsp", "stdio"],
-            "selector": "source.lisp"
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "cc-lsp": {
+                "enabled": true,
+                "command": ["cl-lsp", "stdio"],
+                "selector": "source.lisp"
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "cc-lsp": {
+                "enabled": true,
+                "command": ["cl-lsp", "stdio"],
+                "languageId": "lisp",
+                "scopes": ["source.lisp"],
+                "syntaxes": ["Packages/Lisp/Lisp.sublime-syntax"]
+            }
+        }
+    }
+    ```
 
 ## Lua
 
 1. Download the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=sumneko.lua).
 2. Open `LSP.sublime-settings` and add `"lua-ls"` configuration to the `clients`
 
-```json
-{
-    "clients": {
-        "lua-ls": {
-            "enabled": true,
-            "command": [
-                "PATH/TO/sumneko.lua-#.#.#/extension/server/bin/lua-language-server", // Update the PATH
-                "-E", "PATH/TO/sumneko.lua-#.#.#/extension/server/main.lua"
-            ],
-            "selector": "source.lua"
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "lua-ls": {
+                "enabled": true,
+                "command": [
+                    "PATH/TO/sumneko.lua-#.#.#/extension/server/bin/lua-language-server", // Update the PATH
+                    "-E", "PATH/TO/sumneko.lua-#.#.#/extension/server/main.lua"
+                ],
+                "selector": "source.lua"
+            }
         }
     }
-}
-```
+    ```
+
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "lua-ls": {
+                "enabled": true,
+                "command": [
+                    "PATH/TO/sumneko.lua-#.#.#/extension/server/bin/lua-language-server", // Update the PATH
+                    "-E", "PATH/TO/sumneko.lua-#.#.#/extension/server/main.lua"
+                ],
+                "languageId": "lua",
+                "scopes": ["source.lua"],
+                "syntaxes": ["Packages/Lua/Lua.sublime-syntax"]
+            }
+        }
+    }
+    ```
 
 ## OCaml/Reason
 
 1. Install the [Reason](https://packagecontrol.io/packages/Reason) package from Package Control for syntax highlighting.
 2. Install the [Reason Language Server](https://github.com/jaredly/reason-language-server#sublime-text).
-3. Open `LSP.sublime-settings` and add `"cc-lsp"` configuration to the `clients`:
+3. Open `LSP.sublime-settings` and add `"reason"` configuration to the `clients`:
 
 
-```json
-{
-    "clients": {
-        "reason": {
-            "enabled": true,
-            "command": ["PATH/TO/reason-language-server.exe"], // Update the PATH
-            "selector": "source.ocaml | source.reason"
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "reason": {
+                "enabled": true,
+                "command": ["PATH/TO/reason-language-server.exe"], // Update the PATH
+                "selector": "source.ocaml | source.reason"
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "reason": {
+                "enabled": true,
+                "command": ["PATH/TO/reason-language-server.exe"], // Update the PATH
+                "languageId": "reason",
+                "scopes": ["source.ocaml", "source.reason"],
+                "syntaxes": [
+                    "Packages/Ocaml/OCaml.sublime-syntax",
+                    "Packages/Reason/Reason.tmLanguage",
+                    "Packages/sublime-reason/Reason.tmLanguage"
+                ]
+            }
+        }
+    }
+    ```
 
 ## PromQL
 
@@ -396,34 +696,68 @@ Follow installation instructions on [LSP-serenata](https://github.com/Cloudstek/
 3. Make sure PowerShell help files are up to date by running `Update-Help` in the PowerShell console (the one you're using in the command below).
 3. Open `LSP.sublime-settings` and add `"powershell-ls"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "powershell-ls": {
-            "enabled": true,
-            "command": [
-                "powershell", // or pwsh for PowerShell Core
-                "-NoLogo",
-                "-NoProfile",
-                "-NonInteractive",
-                "-ExecutionPolicy", "Bypass", // Windows only
-                "-Command", "PATH/TO/PowerShellEditorServices/PowerShellEditorServices/Start-EditorServices.ps1",
-                "-LogPath", "PATH/TO/pses.log", // specify a path where a logfile should be stored
-                "-LogLevel", "Normal",
-                "-SessionDetailsPath", "PATH/TO/session.json", // specify a path where a file for session details should be stored
-                "-FeatureFlags", "@()",
-                "-HostName", "'Sublime Text'",
-                "-HostProfileId", "subl",
-                "-HostVersion", "1.0.0",
-                "-AdditionalModules", "@()",
-                "-BundledModulesPath", "PATH/TO/PowerShellEditorServices",
-                "-Stdio"
-            ],
-            "selector": "source.powershell"
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "powershell-ls": {
+                "enabled": true,
+                "command": [
+                    "powershell", // or pwsh for PowerShell Core
+                    "-NoLogo",
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-ExecutionPolicy", "Bypass", // Windows only
+                    "-Command", "PATH/TO/PowerShellEditorServices/PowerShellEditorServices/Start-EditorServices.ps1",
+                    "-LogPath", "PATH/TO/pses.log", // specify a path where a logfile should be stored
+                    "-LogLevel", "Normal",
+                    "-SessionDetailsPath", "PATH/TO/session.json", // specify a path where a file for session details should be stored
+                    "-FeatureFlags", "@()",
+                    "-HostName", "'Sublime Text'",
+                    "-HostProfileId", "subl",
+                    "-HostVersion", "1.0.0",
+                    "-AdditionalModules", "@()",
+                    "-BundledModulesPath", "PATH/TO/PowerShellEditorServices",
+                    "-Stdio"
+                ],
+                "selector": "source.powershell"
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "powershell-ls": {
+                "enabled": true,
+                "command": [
+                    "powershell", // or pwsh for PowerShell Core
+                    "-NoLogo",
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-ExecutionPolicy", "Bypass", // Windows only
+                    "-Command", "PATH/TO/PowerShellEditorServices/PowerShellEditorServices/Start-EditorServices.ps1",
+                    "-LogPath", "PATH/TO/pses.log", // specify a path where a logfile should be stored
+                    "-LogLevel", "Normal",
+                    "-SessionDetailsPath", "PATH/TO/session.json", // specify a path where a file for session details should be stored
+                    "-FeatureFlags", "@()",
+                    "-HostName", "'Sublime Text'",
+                    "-HostProfileId", "subl",
+                    "-HostVersion", "1.0.0",
+                    "-AdditionalModules", "@()",
+                    "-BundledModulesPath", "PATH/TO/PowerShellEditorServices",
+                    "-Stdio"
+                ],
+                "languageId": "powershell",
+                "scopes": ["source.powershell"],
+                "syntaxes": ["Packages/PowerShell/Support/PowershellSyntax.tmLanguage"]
+            }
+        }
+    }
+    ```
+
 
 !!! info "For more details see this [issue](https://github.com/PowerShell/PowerShellEditorServices/issues/1057)."
 
@@ -441,18 +775,35 @@ pip install 'python-language-server[all]'
 
 Make sure you can run `pyls` in your terminal. If you've installed it into a virtualenv, you might need to override the path to `pyls` in global LSP settings (Package Settings -> LSP -> Settings):
 
-```js
-{
-    "clients": {
-        "pyls": {
-            "enabled": true,
-            "command": ["pyls"],
-            // "command": ["/Users/mike/.virtualenvs/pyls-virtual-env/bin/pyls"], // example path, adjust it for your use case
-            "selector": "source.python"
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "pyls": {
+                "enabled": true,
+                "command": ["pyls"],
+                // "command": ["/Users/mike/.virtualenvs/pyls-virtual-env/bin/pyls"], // example path, adjust it for your use case
+                "selector": "source.python"
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "pyls": {
+                "enabled": true,
+                "command": ["pyls"],
+                // "command": ["/Users/mike/.virtualenvs/pyls-virtual-env/bin/pyls"], // example path, adjust it for your use case
+                "languageId": "python",
+                "scopes": ["source.python"],
+                "syntaxes": ["Packages/Python/Python.sublime-syntax", "Packages/MagicPython/grammars/MagicPython.tmLanguage", "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage"]
+            }
+        }
+    }
+    ```
 
 If you use a virtualenv for your current project, add a path to it in your [project configuration](https://www.sublimetext.com/docs/3/projects.html) (Project -> Edit Project):
 
@@ -479,13 +830,6 @@ A basic configuration below can be used for bootstrapping your own:
 "pyls": {
     "enabled": true,
     "command": ["pyls"],
-    "languageId": "python",
-    "scopes": ["source.python"],
-    "syntaxes": [
-        "Packages/Python/Python.sublime-syntax",
-        "Packages/MagicPython/grammars/MagicPython.tmLanguage",
-        "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage",
-    ],
     "settings": {
         "pyls.env": {
           // Making Sublime's own libs available to the linters.
@@ -538,20 +882,43 @@ Follow installation instructions on [R-IDE](https://github.com/REditorSupport/su
 
 2. Open `LSP.sublime-settings` and add `"ruby"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "ruby": {
-            "enabled": true,
-            "command": ["solargraph", "stdio"],
-            "selector": "source.ruby | text.html.ruby",
-            "initializationOptions": {
-                "diagnostics": false
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "ruby": {
+                "enabled": true,
+                "command": ["solargraph", "stdio"],
+                "selector": "source.ruby | text.html.ruby",
+                "initializationOptions": {
+                    "diagnostics": false
+                }
             }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "ruby": {
+                "enabled": true,
+                "command": ["solargraph", "stdio"],
+                "languageId": "ruby",
+                "scopes": ["source.ruby", "source.ruby.rails", "text.html.ruby"],
+                "syntaxes": [
+                    "Packages/Ruby/Ruby.sublime-syntax",
+                    "Packages/Rails/Ruby on Rails.sublime-syntax",
+                    "Packages/Rails/HTML (Rails).sublime-syntax"
+                ],
+                "initializationOptions": {
+                    "diagnostics": false
+                }
+            }
+        }
+    }
+    ```
 
 ### Sorbet
 
@@ -566,17 +933,37 @@ Follow installation instructions on [R-IDE](https://github.com/REditorSupport/su
 
 2. Open `LSP.sublime-settings` and add `"sorbet"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "sorbet": {
-            "enabled": true,
-            "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman"],
-            "selector": "source.ruby | text.html.ruby",
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "sorbet": {
+                "enabled": true,
+                "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman"],
+                "selector": "source.ruby | text.html.ruby",
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "sorbet": {
+                "enabled": true,
+                "command": ["srb", "tc", "--typed", "true", "--enable-all-experimental-lsp-features", "--lsp", "--disable-watchman"],
+                "languageId": "ruby",
+                "scopes": ["source.ruby", "source.ruby.rails", "text.html.ruby"],
+                "syntaxes": [
+                    "Packages/Ruby/Ruby.sublime-syntax",
+                    "Packages/Rails/Ruby on Rails.sublime-syntax",
+                    "Packages/Rails/HTML (Rails).sublime-syntax"
+                ],
+            }
+        }
+    }
+    ```
 
 ## Rust
 
@@ -586,17 +973,33 @@ Follow installation instructions on [R-IDE](https://github.com/REditorSupport/su
 
 2. Open `LSP.sublime-settings` and add `"rust-analyzer"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "rust-analyzer": {
-            "enabled": true,
-            "command": ["rust-analyzer"],
-            "selector": "source.rust"
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "rust-analyzer": {
+                "enabled": true,
+                "command": ["rust-analyzer"],
+                "selector": "source.rust"
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "rust-analyzer": {
+                "enabled": true,
+                "command": ["rust-analyzer"],
+                "languageId": "rust",
+                "scopes": ["source.rust"],
+                "syntaxes": ["Packages/Rust/Rust.sublime-syntax", "Packages/Rust Enhanced/RustEnhanced.sublime-syntax"]
+            }
+        }
+    }
+    ```
 
 ### Rust Enhanced
 
@@ -620,17 +1023,33 @@ Follow installation instructions on [LSP-svelte](https://github.com/sublimelsp/L
 2. Install Xcode 11.4 or later and ensure that `xcrun -find sourcekit-lsp` returns the path to sourcekit-lsp.
 3. Open `LSP.sublime-settings` and add `"sourcekit-lsp"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "sourcekit-lsp": {
-            "enabled": true,
-            "command": ["xcrun", "sourcekit-lsp"],
-            "selector": "source.swift"
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "sourcekit-lsp": {
+                "enabled": true,
+                "command": ["xcrun", "sourcekit-lsp"],
+                "selector": "source.swift"
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "sourcekit-lsp": {
+                "enabled": true,
+                "command": ["xcrun", "sourcekit-lsp"],
+                "languageId": "swift",
+                "scopes": ["source.swift"],
+                "syntaxes": ["Packages/Swift/Syntaxes/Swift.tmLanguage"]
+            }
+        }
+    }
+    ```
 
 ## TAGML
 
@@ -641,17 +1060,33 @@ Follow installation instructions on [LSP-tagml](https://github.com/HuygensING/LS
 1. Download [terraform-lsp](https://github.com/juliosueiras/terraform-lsp/releases) binary and make it available in your PATH.
 2. Open `LSP.sublime-settings` and add `"terraform"` configuration to the `clients`:
 
-```json
-{
-    "clients": {
-        "terraform": {
-            "enabled": true,
-            "command": ["terraform-lsp"],
-            "selector": "source.terraform"
+=== "Sublime Text 4"
+    ```json
+    {
+        "clients": {
+            "terraform": {
+                "enabled": true,
+                "command": ["terraform-lsp"],
+                "selector": "source.terraform"
+            }
         }
     }
-}
-```
+    ```
+
+=== "Sublime Text 3"
+    ```json
+    {
+        "clients": {
+            "terraform": {
+                "enabled": true,
+                "command": ["terraform-lsp"],
+                "languageId": "terraform",
+                "scopes": ["source.terraform"],
+                "syntaxes":  ["Packages/Terraform/Terraform.sublime-syntax"]
+            }
+        }
+    }
+    ```
 
 ## TypeScript / JavaScript
 

@@ -676,6 +676,8 @@ Follow installation instructions on [LSP-promql](https://github.com/prometheus-c
 
 ## PHP
 
+There are multiple options:
+
 ### Intelephense
 
 Follow installation instructions on [LSP-intelephense](https://github.com/sublimelsp/LSP-intelephense).
@@ -756,6 +758,8 @@ Follow installation instructions on [LSP-serenata](https://github.com/Cloudstek/
 !!! info "For more details see this [issue](https://github.com/PowerShell/PowerShellEditorServices/issues/1057)."
 
 ## Python
+
+There are multiple options:
 
 ### Pyright
 
@@ -870,6 +874,8 @@ Follow installation instructions on [R-IDE](https://github.com/REditorSupport/su
 
 ## Ruby / Ruby on Rails
 
+There are multiple options:
+
 ### Solargraph
 
 1. Install [solargraph](https://github.com/castwide/solargraph#installation).
@@ -960,6 +966,8 @@ Follow installation instructions on [R-IDE](https://github.com/REditorSupport/su
     ```
 
 ## Rust
+
+There are multiple options:
 
 ### Rust Analyzer
 

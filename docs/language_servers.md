@@ -206,6 +206,17 @@ npm install -g flow-language-server
 
 2. Run "LSP: Enable Language Server Globally" from the Command Palette and choose `gopls`.
 
+> **Note**: If you have a repository with multiple go modules you will probably get `no object found for ident X` errors when you try to use features like Goto Definition. You can fix this by setting the experimental `experimentalWorkspaceModule` option introduced in gopls [v0.5.3](https://github.com/golang/tools/releases/tag/gopls%2Fv0.5.3).
+>
+> ```js
+> "gopls": {
+>   "enabled": true,
+>   "initializationOptions": {
+>     "experimentalWorkspaceModule": true
+>   }
+> }
+> ```
+
 > **Note**: See the [User guide](https://github.com/golang/tools/blob/master/gopls/doc/user.md#user-guide) for detailed installation instructions and configurations.
 
 #### Sourcegraph's go-langserver

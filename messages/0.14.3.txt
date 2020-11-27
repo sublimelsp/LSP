@@ -1,0 +1,5 @@
+=> 0.14.3
+
+Maintenance:
+
+- Sync public API types with LSP4 for compatiblity with lsp_utils (Rafał Chłodnicki)

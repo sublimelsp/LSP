@@ -834,7 +834,7 @@ Make sure you can run `pyls` in your terminal. If you've installed it into a vir
 
 If you use a virtualenv for your current project, add a path to it in your [project configuration](https://www.sublimetext.com/docs/3/projects.html) (Project -> Edit Project):
 
-```js
+```json
 {
     "settings": {
         "LSP": {

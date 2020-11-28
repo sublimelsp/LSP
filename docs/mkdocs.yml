@@ -2,6 +2,7 @@ site_name: LSP for Sublime Text
 site_url: https://sublimelsp.github.io/LSP/
 repo_url: https://github.com/sublimelsp/LSP/
 edit_uri: edit/st4000-exploration/docs/
+docs_dir: 'src'
 
 theme:
   name: material

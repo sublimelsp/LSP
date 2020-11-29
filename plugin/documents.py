@@ -19,7 +19,7 @@ from .core.signature_help import SignatureHelp
 from .core.types import basescope2languageid
 from .core.types import debounced
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
-from .core.views import DIAGNOSTIC_SEVERITY, text_document_item
+from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import document_color_params
 from .core.views import format_completion
 from .core.views import FORMAT_MARKUP_CONTENT
@@ -502,9 +502,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     for request_id, request in sv.active_requests.items():
                         if request.method == "codeAction/resolve":
                             session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
+            name = session.config.name
             session.send_request_async(
                 Request("textDocument/codeLens", params, self.view),
-                lambda r: self._on_code_lenses_async(session.config.name, r))
+                lambda r: self._on_code_lenses_async(name, r))
 
     def _on_code_lenses_async(self, name: str, response: Optional[List[CodeLens]]) -> None:
         for i in range(0, len(self._code_lenses)):

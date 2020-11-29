@@ -1,14 +1,10 @@
-from .core.promise import Promise
-from .core.protocol import CodeLens
 from .core.protocol import Diagnostic
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.typing import Any, Iterable, List, Tuple, Optional, Dict
-from .core.views import code_lenses_to_phantoms
 from .core.views import DIAGNOSTIC_SEVERITY
-from .core.views import text_document_identifier
 from .core.windows import AbstractViewListener
 from .session_buffer import SessionBuffer
 from weakref import ref

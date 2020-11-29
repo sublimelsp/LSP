@@ -488,7 +488,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             }
             annotation = make_command_link("lsp_execute", command["title"], args)
         else:
-            annotation = "code lens (unresolved)"
+            annotation = "..."
         annotation = '<div class="codelens">{}</div>'.format(annotation)
         accent = self.view.style_for_scope("region.greenish markup.codelens.accent")["foreground"]
         self.view.add_regions(self._code_lens_key(index), [region], "", "", 0, [annotation], accent)

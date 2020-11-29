@@ -1091,7 +1091,10 @@ class Session(TransportCallbacks):
                 # We must inform our SessionViews of the new capabilities, in case it's for instance a hoverProvider
                 # or a completionProvider for trigger characters.
                 for sv in self.session_views_async():
-                    sv.on_capability_added_async(registration_id, capability_path, options)
+                    inform = functools.partial(sv.on_capability_added_async, registration_id, capability_path, options)
+                    # Inform only after the response is sent, otherwise we might start doing requests for capabilities
+                    # which are technically not yet done registering.
+                    sublime.set_timeout_async(inform)
         self.send_response(Response(request_id, None))
 
     def m_client_unregisterCapability(self, params: Any, request_id: Any) -> None:

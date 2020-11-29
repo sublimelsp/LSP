@@ -4,6 +4,8 @@ from .completion import LspResolveDocsCommand
 from .completion import resolve
 from .core.css import css
 from .core.logging import debug
+from .core.protocol import CodeLens, Notification
+from .core.protocol import Command
 from .core.protocol import Diagnostic
 from .core.protocol import DocumentHighlightKind
 from .core.protocol import Range
@@ -17,7 +19,7 @@ from .core.signature_help import SignatureHelp
 from .core.types import basescope2languageid
 from .core.types import debounced
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
-from .core.views import DIAGNOSTIC_SEVERITY
+from .core.views import DIAGNOSTIC_SEVERITY, text_document_item
 from .core.views import document_color_params
 from .core.views import format_completion
 from .core.views import FORMAT_MARKUP_CONTENT
@@ -27,6 +29,7 @@ from .core.views import make_command_link
 from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import region_to_range
+from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.windows import AbstractViewListener
 from .core.windows import WindowManager
@@ -36,6 +39,7 @@ from .session_buffer import SessionBuffer
 from .session_view import SessionView
 from weakref import WeakSet
 from weakref import WeakValueDictionary
+import functools
 import html
 import mdpopups
 import sublime
@@ -141,6 +145,7 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
 class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListener):
 
     CODE_ACTIONS_KEY = "lsp_code_action"
+    CODE_LENS_KEY = "lsp_code_lens"
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
     code_actions_debounce_time = 800
     color_boxes_debounce_time = 500
@@ -156,6 +161,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._session_views = {}  # type: Dict[str, SessionView]
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
+        self._code_lenses = []  # type: List[Tuple[Optional[CodeLens], sublime.Region]]
         self._sighelp = None  # type: Optional[SignatureHelp]
         self._sighelp_renderer = ColorSchemeScopeRenderer(self.view)
         self._language_id = ""
@@ -189,6 +195,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if added:
             if "colorProvider" not in userprefs().disabled_capabilities:
                 self._do_color_boxes_async()
+            if "codeLensProvider" not in userprefs().disabled_capabilities:
+                self._do_code_lenses_async()
 
     def on_session_shutdown_async(self, session: Session) -> None:
         removed_session = self._session_views.pop(session.config.name, None)
@@ -291,11 +299,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._when_selection_remains_stable_async(self._do_code_actions, current_region,
                                                       after_ms=self.code_actions_debounce_time)
             self._update_diagnostic_in_status_bar_async()
+            self._resolve_visible_code_lenses_async()
 
     def on_post_save_async(self) -> None:
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_post_save_async()
+        if "codeLensProvider" not in userprefs().disabled_capabilities:
+            self._do_code_lenses_async()
 
     def on_close(self) -> None:
         self._clear_session_views_async()
@@ -459,6 +470,77 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def _on_color_boxes(self, response: Any) -> None:
         color_infos = response if response else []
         self._color_phantoms.update([lsp_color_to_phantom(self.view, color_info) for color_info in color_infos])
+
+    # --- textDocument/codeLens ----------------------------------------------------------------------------------------
+
+    def on_code_lens_capability_registered_async(self) -> None:
+        self._do_code_lenses_async()
+
+    def _code_lens_key(self, index: int) -> str:
+        return self.CODE_LENS_KEY + str(index)
+
+    def _render_code_lens(self, name: str, index: int, region: sublime.Region, command: Optional[Command]) -> None:
+        if command:
+            args = {
+                "session_name": name,
+                "command_name": command["command"],
+                "command_args": command["arguments"]
+            }
+            annotation = make_command_link("lsp_execute", command["title"], args)
+        else:
+            annotation = "code lens (unresolved)"
+        annotation = '<div class="codelens">{}</div>'.format(annotation)
+        accent = self.view.style_for_scope("region.greenish markup.codelens.accent")["foreground"]
+        self.view.add_regions(self._code_lens_key(index), [region], "", "", 0, [annotation], accent)
+
+    def _do_code_lenses_async(self) -> None:
+        session = self.session("codeLensProvider")
+        if session:
+            params = {"textDocument": text_document_identifier(self.view)}
+            for sv in self.session_views_async():
+                if sv.session == session:
+                    for request_id, request in sv.active_requests.items():
+                        if request.method == "codeAction/resolve":
+                            session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
+            session.send_request_async(
+                Request("textDocument/codeLens", params, self.view),
+                lambda r: self._on_code_lenses_async(session.config.name, r))
+
+    def _on_code_lenses_async(self, name: str, response: Optional[List[CodeLens]]) -> None:
+        for i in range(0, len(self._code_lenses)):
+            self.view.erase_regions(self._code_lens_key(i))
+        self._code_lenses.clear()
+        if isinstance(response, list):
+            self._code_lenses.clear()
+            for index, c in enumerate(response):
+                region = range_to_region(Range.from_lsp(c["range"]), self.view)
+                self._code_lenses.append((c, region))
+                self._render_code_lens(name, index, region, None)
+            self._code_lenses = list((c, range_to_region(Range.from_lsp(c["range"]), self.view)) for c in response)
+            self._resolve_visible_code_lenses_async()
+
+    def _resolve_visible_code_lenses_async(self) -> None:
+        session = self.session("codeLensProvider")
+        if session:
+            for index, code_lens, region in self._unresolved_code_lenses(self.view.visible_region()):
+                callback = functools.partial(self._on_resolved_code_lens_async, session.config.name, index, region)
+                session.send_request_async(Request("codeLens/resolve", code_lens, self.view), callback)
+
+    def _on_resolved_code_lens_async(self, name: str, index: int, region: sublime.Region, code_lens: CodeLens) -> None:
+        try:
+            self._code_lenses[index] = (None, region)
+        except IndexError:
+            return
+        self._render_code_lens(name, index, region, code_lens["command"])
+
+    def _unresolved_code_lenses(
+        self,
+        visible: sublime.Region
+    ) -> Generator[Tuple[int, CodeLens, sublime.Region], None, None]:
+        for index, tup in enumerate(self._code_lenses):
+            code_lens, region = tup
+            if isinstance(code_lens, dict) and visible.intersects(region):
+                yield index, code_lens, region
 
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 

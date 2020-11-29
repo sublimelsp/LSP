@@ -34,6 +34,7 @@ class SessionView:
         self.view = listener.view
         self.session = session
         self.active_requests = {}  # type: Dict[int, Request]
+        self.listener = ref(listener)
         settings = self.view.settings()
         buffer_id = self.view.buffer_id()
         key = (session.config.name, buffer_id)
@@ -44,16 +45,12 @@ class SessionView:
         else:
             session_buffer.add_session_view(self)
         self.session_buffer = session_buffer
-        self.listener = ref(listener)
         session.register_session_view_async(self)
         session.config.set_view_status(self.view, "")
         if self.session.has_capability(self.HOVER_PROVIDER_KEY):
             self._increment_hover_count()
         self._clear_auto_complete_triggers(settings)
         self._setup_auto_complete_triggers(settings)
-        self.code_lens_phantoms = sublime.PhantomSet(self.view, "lsp{}cl".format(self.session.config.name))
-        self.resolved_code_lenses = []  # type: List[CodeLens]
-        self._do_code_lens_async()
 
     def __del__(self) -> None:
         settings = self.view.settings()  # type: sublime.Settings
@@ -126,38 +123,6 @@ class SessionView:
         triggers.append(trigger)
         settings.set(self.AC_TRIGGERS_KEY, triggers)
 
-    def _do_code_lens_async(self) -> None:
-        if "codeLensProvider" in userprefs().disabled_capabilities:
-            return
-        if not self.has_capability_async("codeLensProvider"):
-            return
-        params = {"textDocument": text_document_identifier(self.view)}
-        self.session.send_request_async(Request("textDocument/codeLens", params, self.view), self._on_code_lens)
-
-    def _on_code_lens(self, response: Optional[List[CodeLens]]) -> None:
-        self.resolved_code_lenses = []
-        if not isinstance(response, list):
-            return
-        promises = []  # type: List[Promise[CodeLens]]
-        for code_lens in response:
-            if code_lens.get("command"):
-                self.resolved_code_lenses.append(code_lens)
-            else:
-                promises.append(self.session.send_request_task(Request("codeLens/resolve", code_lens, self.view)))
-        if promises:
-            Promise.all(promises).then(self._on_all_code_lenses_resolved)
-        else:
-            self._on_all_code_lenses_resolved(None)
-
-    def _on_all_code_lenses_resolved(self, code_lenses: Optional[List[CodeLens]]) -> None:
-        if isinstance(code_lenses, list):
-            self.resolved_code_lenses.extend(code_lenses)
-        sublime.set_timeout(lambda: self._render_code_lenses(self.resolved_code_lenses))
-
-    def _render_code_lenses(self, code_lenses: List[CodeLens]) -> None:
-        if self.view.is_valid():
-            self.code_lens_phantoms.update(code_lenses_to_phantoms(self.view, self.session.config.name, code_lenses))
-
     def _increment_hover_count(self) -> None:
         settings = self.view.settings()
         count = settings.get(self.HOVER_PROVIDER_COUNT_KEY, 0)
@@ -186,7 +151,9 @@ class SessionView:
             if isinstance(trigger_chars, list):
                 self._register_auto_complete_triggers(registration_id, trigger_chars)
         elif capability_path.startswith("codeLensProvider"):
-            self._do_code_lens_async()
+            listener = self.listener()
+            if listener:
+                listener.on_code_lens_capability_registered_async()
 
     def on_capability_removed_async(self, registration_id: str, discarded: Dict[str, Any]) -> None:
         if self.HOVER_PROVIDER_KEY in discarded:

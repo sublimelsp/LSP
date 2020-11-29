@@ -79,6 +79,10 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
+    def on_code_lens_capability_registered_async(self) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
     def session_views_async(self) -> Iterable[SessionViewProtocol]:
         raise NotImplementedError()
 

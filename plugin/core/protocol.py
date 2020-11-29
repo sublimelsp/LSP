@@ -59,7 +59,9 @@ CodeAction = TypedDict('CodeAction', {
 CodeLens = TypedDict('CodeLens', {
     'range': Dict[str, Any],
     'command': Optional[Command],
-    'data': Any
+    'data': Any,
+    # Custom property to bring along the name of the session
+    'session_name': Optional[str]
 }, total=True)
 
 

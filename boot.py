@@ -66,6 +66,7 @@ try:
     from .plugin.diagnostics import LspNextDiagnosticCommand
     from .plugin.diagnostics import LspPreviousDiagnosticCommand
     from .plugin.documents import DocumentSyncListener
+    from .plugin.documents import LspCodeLensCommand
     from .plugin.documents import TextChangeListener
     from .plugin.edit import LspApplyDocumentEditCommand
     from .plugin.execute_command import LspExecuteCommand

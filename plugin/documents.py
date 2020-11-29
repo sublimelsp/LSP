@@ -10,7 +10,7 @@ from .core.protocol import Diagnostic
 from .core.protocol import DocumentHighlightKind
 from .core.protocol import Range
 from .core.protocol import Request
-from .core.registry import best_session
+from .core.registry import LspTextCommand, best_session
 from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
@@ -161,7 +161,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._session_views = {}  # type: Dict[str, SessionView]
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
-        self._code_lenses = []  # type: List[Tuple[Optional[CodeLens], sublime.Region]]
+        self._code_lenses = []  # type: List[Tuple[CodeLens, sublime.Region]]
         self._sighelp = None  # type: Optional[SignatureHelp]
         self._sighelp_renderer = ColorSchemeScopeRenderer(self.view)
         self._language_id = ""
@@ -276,6 +276,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def get_language_id(self) -> str:
         return self._language_id
+
+    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
+        region = self.view.line(region)
+        for code_lens in self._code_lenses:
+            if "command" in code_lens[0] and code_lens[1].intersects(region):
+                yield code_lens[0]
 
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
 
@@ -528,8 +534,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 session.send_request_async(Request("codeLens/resolve", code_lens, self.view), callback)
 
     def _on_resolved_code_lens_async(self, name: str, index: int, region: sublime.Region, code_lens: CodeLens) -> None:
+        code_lens["session_name"] = name
         try:
-            self._code_lenses[index] = (None, region)
+            self._code_lenses[index] = (code_lens, region)
         except IndexError:
             return
         self._render_code_lens(name, index, region, code_lens["command"])
@@ -759,3 +766,42 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def __repr__(self) -> str:
         return "ViewListener({})".format(self.view.id())
+
+
+class LspCodeLensCommand(LspTextCommand):
+
+    def run(self, edit: sublime.Edit) -> None:
+        listener = windows.listener_for_view(self.view)
+        if not listener:
+            return
+        code_lenses = []  # type: List[CodeLens]
+        for region in self.view.sel():
+            code_lenses.extend(listener.get_resolved_code_lenses_for_region(region))
+        if not code_lenses:
+            return
+        elif len(code_lenses) == 1:
+            command = code_lenses[0]["command"]
+            args = {
+                "session_name": code_lenses[0]["session_name"],
+                "command_name": command["command"],
+                "command_args": command["arguments"]
+            }
+            self.view.run_command("lsp_execute", args)
+        else:
+            self.view.show_popup_menu(
+                [c["command"]["title"] for c in code_lenses],
+                lambda i: self.on_select(code_lenses, i)
+            )
+
+    def on_select(self, code_lenses: List[CodeLens], index: int) -> None:
+        try:
+            code_lens = code_lenses[index]
+        except IndexError:
+            return
+        command = code_lens["command"]
+        args = {
+            "session_name": code_lens["session_name"],
+            "command_name": command["command"],
+            "command_args": command["arguments"]
+        }
+        self.view.run_command("lsp_execute", args)

@@ -11,6 +11,11 @@
               "default": false,
               "markdownDescription": "Run the server's formatProvider (if supported) on a document before saving. This option is also supported in syntax-specific settings and/or in the `\"settings\"` section of project files."
             },
+            "ClientEnabled": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Whether this configuration is enabled or disabled."
+            },
             "ClientInitializationOptions": {
               "type": "object",
               "markdownDescription": "The initializationOptions that are passed to the language server process during the _initialize_ phase. This is a rather free-form dictionary of key-value pairs and is different per language server. Look up documentation of your specific langauge server to see what the possible key-value pairs can be."
@@ -92,9 +97,7 @@
                   "markdownDescription": "The command to start the language server."
                 },
                 "enabled": {
-                  "type": "boolean",
-                  "default": false,
-                  "markdownDescription": "Whether this configuration is enabled or disabled."
+                  "$ref": "#/definitions/ClientEnabled"
                 },
                 "tcp_port": {
                   "type": "integer",
@@ -398,6 +401,9 @@
         "schema": {
           "$id": "sublime://settings/LSP-plugin-base",
           "properties": {
+            "enabled": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientEnabled"
+            },
             "languages": {
               "$ref": "sublime://settings/LSP#/definitions/ClientLanguages"
             },

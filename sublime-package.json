@@ -37,6 +37,11 @@
               },
               "markdownDescription": "The command to start the language server."
             },
+            "ClientEnabled": {
+              "type": "boolean",
+              "default": false,
+              "markdownDescription": "Whether this configuration is enabled or disabled."
+            },
             "ClientAutoCompleteSelector": {
               "type": "string",
               "markdownDescription": "When specified, this [selector](https://www.sublimetext.com/docs/3/selectors.html) is used as the `\"selector\"` key in an entry of the `\"auto_complete_triggers\"` of the view applicable to this configuration. You don't have to necessarily provide this value. Because your language server registers so-called trigger characters in any case. However, this selector allows you to fine-tune the auto-complete behavior if the registered trigger characters of the language server result in an unpleasent auto-complete experience. Note that the behavior of this selector will depend on the .sublime-syntax in use.\n\nThis value is _not_ applied to the **global** `\"auto_complete_selector\"` setting of the view."
@@ -84,9 +89,7 @@
                   "$ref": "sublime://settings/LSP#/definitions/ClientCommand"
                 },
                 "enabled": {
-                  "type": "boolean",
-                  "default": false,
-                  "markdownDescription": "Whether this configuration is enabled or disabled."
+                  "$ref": "sublime://settings/LSP#/definitions/ClientEnabled"
                 },
                 "tcp_port": {
                   "type": "integer",
@@ -437,6 +440,9 @@
           "properties": {
             "command": {
               "$ref": "sublime://settings/LSP#/definitions/ClientCommand"
+            },
+            "enabled": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientEnabled"
             },
             "selector": {
               "$ref": "sublime://settings/LSP#/definitions/ClientSelector"

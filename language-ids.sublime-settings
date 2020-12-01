@@ -10,7 +10,7 @@
 //
 //    source.julia -> julia
 //    source.rust -> rust
-//    text.text.latex -> latex
+//    text.tex.latex -> latex
 //    text.html.vue -> vue
 //
 // The official list is maintained at
@@ -26,6 +26,19 @@
     "source.fixedform-fortran": "fortran", // https://packagecontrol.io/packages/Fortran
     "source.js": "javascript",
     "source.js.react": "javascriptreact", // https://github.com/Thom1729/Sublime-JS-Custom
+    "source.json-tmlanguage": "jsonc", // https://github.com/SublimeText/PackageDev
+    "source.json.sublime": "jsonc", // https://github.com/SublimeText/PackageDev
+    "source.json.sublime.build": "jsonc", // https://github.com/SublimeText/PackageDev
+    "source.json.sublime.color-scheme": "jsonc", // https://github.com/SublimeText/PackageDev
+    "source.json.sublime.commands": "jsonc", // https://github.com/SublimeText/PackageDev
+    "source.json.sublime.completions": "jsonc", // https://github.com/SublimeText/PackageDev
+    "source.json.sublime.keymap": "jsonc", // https://github.com/SublimeText/PackageDev
+    "source.json.sublime.macro": "jsonc", // https://github.com/SublimeText/PackageDev
+    "source.json.sublime.menu": "jsonc", // https://github.com/SublimeText/PackageDev
+    "source.json.sublime.mousemap": "jsonc", // https://github.com/SublimeText/PackageDev
+    "source.json.sublime.project": "jsonc", // https://github.com/SublimeText/PackageDev
+    "source.json.sublime.settings": "jsonc", // https://github.com/SublimeText/PackageDev
+    "source.json.sublime.theme": "jsonc", // https://github.com/SublimeText/PackageDev
     "source.jsx": "javascriptreact",
     "source.modern-fortran": "fortran", // https://packagecontrol.io/packages/Fortran
     "source.objc": "objective-c",
@@ -36,8 +49,13 @@
     "source.ts.react": "typescriptreact", // https://github.com/Thom1729/Sublime-JS-Custom
     "source.tsx": "typescriptreact",
     "source.unity.unity_shader": "shaderlab", // https://github.com/petereichinger/Unity3D-Shader
+    "source.yaml-tmlanguage": "yaml", // https://github.com/SublimeText/PackageDev
+    "source.yaml.sublime.syntax": "yaml", // https://github.com/SublimeText/PackageDev
     "text.html.basic": "html",
     "text.html.markdown.rmarkdown": "r", // https://github.com/REditorSupport/sublime-ide-r
     "text.html.ngx": "html", // https://github.com/princemaple/ngx-html-syntax
     "text.plain": "txt",
+    "text.xml.plist": "xml", // https://github.com/SublimeText/PackageDev
+    "text.xml.plist.textmate.preferences": "xml", // https://github.com/SublimeText/PackageDev
+    "text.xml.sublime.snippet": "xml", // https://github.com/SublimeText/PackageDev
 }

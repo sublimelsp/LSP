@@ -32,10 +32,12 @@ class SessionView:
         self.active_requests = {}  # type: Dict[int, Request]
         settings = self.view.settings()
         buffer_id = self.view.buffer_id()
-        key = (session.config.name, buffer_id)
+        config = session.config
+        key = (config.name, buffer_id)
         session_buffer = self._session_buffers.get(key)
         if session_buffer is None:
-            session_buffer = SessionBuffer(self, buffer_id, listener.get_language_id())
+            language_id = config.language_id_overrides.get(self.view.syntax().scope) or listener.get_language_id()
+            session_buffer = SessionBuffer(self, buffer_id, language_id)
             self._session_buffers[key] = session_buffer
         else:
             session_buffer.add_session_view(self)

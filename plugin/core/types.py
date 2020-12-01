@@ -540,6 +540,7 @@ class ClientConfig:
                  name: str,
                  selector: str,
                  priority_selector: Optional[str] = None,
+                 language_id_overrides: Optional[Dict[str, str]] = None,
                  command: Optional[List[str]] = None,
                  binary_args: Optional[List[str]] = None,  # DEPRECATED
                  tcp_port: Optional[int] = None,
@@ -554,6 +555,7 @@ class ClientConfig:
         self.name = name
         self.selector = selector
         self.priority_selector = priority_selector if priority_selector else self.selector
+        self.language_id_overrides = language_id_overrides
         if isinstance(command, list):
             self.command = command
         else:
@@ -581,6 +583,7 @@ class ClientConfig:
             name=name,
             selector=_read_selector(s),
             priority_selector=_read_priority_selector(s),
+            language_id_overrides=s.get('language_id_overrides', {}),
             command=read_list_setting(s, "command", []),
             tcp_port=s.get("tcp_port"),
             auto_complete_selector=s.get("auto_complete_selector"),
@@ -600,6 +603,7 @@ class ClientConfig:
             name=name,
             selector=_read_selector(d),
             priority_selector=_read_priority_selector(d),
+            language_id_overrides=d.get('language_id_overrides', dict()),
             command=d.get("command", []),
             tcp_port=d.get("tcp_port"),
             auto_complete_selector=d.get("auto_complete_selector"),
@@ -618,6 +622,7 @@ class ClientConfig:
         return ClientConfig(
             name=src_config.name,
             selector=_read_selector(override) or src_config.selector,
+            language_id_overrides=override.get('language_id_overrides', src_config.language_id_overrides),
             priority_selector=_read_priority_selector(override) or src_config.priority_selector,
             command=override.get("command", src_config.command),
             tcp_port=override.get("tcp_port", src_config.tcp_port),

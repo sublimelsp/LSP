@@ -547,6 +547,25 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         return False
 
+    def on_pre_send_request_async(self, request_id: int, request: Request) -> None:
+        """
+        Notifies about a request that is about to be sent to the language server.
+        This API is triggered on async thread.
+
+        :param    request_id:  The request ID.
+        :param    request:     The request object. The request params can be modified by the plugin.
+        """
+        pass
+
+    def on_pre_send_notification_async(self, notification: Notification) -> None:
+        """
+        Notifies about a notification that is about to be sent to the language server.
+        This API is triggered on async thread.
+
+        :param    notification:  The notification object. The notification params can be modified by the plugin.
+        """
+        pass
+
 
 _plugins = {}  # type: Dict[str, Tuple[Type[AbstractPlugin], SettingsRegistration]]
 
@@ -993,7 +1012,7 @@ class Session(TransportCallbacks):
         return self._maybe_resolve_code_action(code_action).then(self._apply_code_action_async)
 
     def _maybe_resolve_code_action(self, code_action: CodeAction) -> Promise[Union[CodeAction, Error]]:
-        if self.has_capability("codeActionProvider.resolveSupport"):
+        if self.has_capability("codeActionProvider.resolveProvider"):
             # TODO: Should we accept a SessionBuffer? What if this capability is registered with a documentSelector?
             # We must first resolve the command and edit properties, because they can potentially be absent.
             request = Request("codeAction/resolve", code_action)
@@ -1233,6 +1252,8 @@ class Session(TransportCallbacks):
             # This is a workspace or window request
             for sv in self.session_views_async():
                 sv.on_request_started_async(request_id, request)
+        if self._plugin:
+            self._plugin.on_pre_send_request_async(request_id, request)
         self._logger.outgoing_request(request_id, request.method, request.params)
         self.send_payload(request.to_payload(request_id))
 
@@ -1252,6 +1273,8 @@ class Session(TransportCallbacks):
         return promise
 
     def send_notification(self, notification: Notification) -> None:
+        if self._plugin:
+            self._plugin.on_pre_send_notification_async(notification)
         self._logger.outgoing_notification(notification.method, notification.params)
         self.send_payload(notification.to_payload())
 

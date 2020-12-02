@@ -1,0 +1,9 @@
+=> 1.2.1
+
+Features:
+- Add Plugin API for overriding requests and notifications (Rafał Chłodnicki)
+- Add all base scopes from PackageDev (Raoul Wols)
+
+Fixes:
+- Fix: server capability is codeAction.resolveProvider (Raoul Wols)
+- Allow "enabled" property in plugin schemas (#1502) (Rafał Chłodnicki)

@@ -144,7 +144,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
     code_actions_debounce_time = 800
     color_boxes_debounce_time = 500
-    highlights_debounce_time = 300
+    highlights_debounce_time = 500
 
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:

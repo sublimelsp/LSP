@@ -298,7 +298,7 @@ class CodeActionsTestCase(TextDocumentTestCase):
     @classmethod
     def get_test_server_capabilities(cls) -> dict:
         capabilities = deepcopy(super().get_test_server_capabilities())
-        capabilities['capabilities']['codeActionProvider'] = {"resolveSupport": True}
+        capabilities['capabilities']['codeActionProvider'] = {"resolveProvider": True}
         return capabilities
 
     def test_requests_code_actions_on_newly_published_diagnostics(self) -> Generator:

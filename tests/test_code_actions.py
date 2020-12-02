@@ -30,7 +30,7 @@ def create_code_action_edit(view: sublime.View, version: int, edits: List[Tuple[
     }
 
 
-def create_code_action_command(command_name: str, command_args: Optional[List[Any]] = None) -> Dict[str, Any]:
+def create_command(command_name: str, command_args: Optional[List[Any]] = None) -> Dict[str, Any]:
     result = {"command": command_name}  # type: Dict[str, Any]
     if command_args is not None:
         result["arguments"] = command_args
@@ -42,6 +42,17 @@ def create_test_code_action(view: sublime.View, version: int, edits: List[Tuple[
     action = {
         "title": "Fix errors",
         "edit": create_code_action_edit(view, version, edits)
+    }
+    if kind:
+        action['kind'] = kind
+    return action
+
+
+def create_test_code_action2(command_name: str, command_args: Optional[List[Any]] = None,
+                             kind: str = None) -> Dict[str, Any]:
+    action = {
+        "title": "Fix errors",
+        "command": create_command(command_name, command_args)
     }
     if kind:
         action['kind'] = kind
@@ -323,12 +334,11 @@ class CodeActionsTestCase(TextDocumentTestCase):
             ("c", Range(Point(0, 0), Point(0, 1))),
             ("d", Range(Point(1, 0), Point(1, 1))),
         ])
-        self.set_response('codeAction/resolve', code_action)
         self.insert_characters('a\nb')
         yield from self.await_message("textDocument/didChange")
         self.assertEqual(self.view.change_count(), 3)
         yield from self.await_run_code_action(code_action)
-        yield from self.await_message('codeAction/resolve')
+        # yield from self.await_message('codeAction/resolve')
         self.assertEquals(entire_content(self.view), 'c\nd')
 
     def test_does_not_apply_with_nonmatching_document_version(self) -> Generator:
@@ -337,20 +347,18 @@ class CodeActionsTestCase(TextDocumentTestCase):
             ("c", Range(Point(0, 0), Point(0, 1))),
             ("d", Range(Point(1, 0), Point(1, 1))),
         ])
-        self.set_response('codeAction/resolve', code_action)
         self.insert_characters(initial_content)
         yield from self.await_message("textDocument/didChange")
         yield from self.await_run_code_action(code_action)
         self.assertEquals(entire_content(self.view), initial_content)
 
     def test_runs_command_in_resolved_code_action(self) -> Generator:
-        code_action = create_test_code_action(self.view, 3, [
+        code_action = create_test_code_action2("dosomethinguseful", ["1", 0, {"hello": "there"}])
+        resolved_code_action = deepcopy(code_action)
+        resolved_code_action["edit"] = create_code_action_edit(self.view, 3, [
             ("c", Range(Point(0, 0), Point(0, 1))),
             ("d", Range(Point(1, 0), Point(1, 1))),
         ])
-        resolved_code_action = deepcopy(code_action)
-        resolved_code_action["command"] = create_code_action_command(
-            "dosomethinguseful", ["1", 0, {"hello": "there"}])
         self.set_response('codeAction/resolve', resolved_code_action)
         self.set_response('workspace/executeCommand', {"reply": "OK done"})
         self.insert_characters('a\nb')
@@ -369,6 +377,5 @@ class CodeActionsTestCase(TextDocumentTestCase):
         code_action = create_test_code_action(self.view, self.view.change_count(), [
             ("bye", Range(Point(0, 3), Point(0, 5))),
         ])
-        self.set_response('codeAction/resolve', code_action)
         yield from self.await_run_code_action(code_action)
         self.assertEquals(entire_content(self.view), '🕵️bye')

@@ -1009,7 +1009,7 @@ class Session(TransportCallbacks):
         return self._maybe_resolve_code_action(code_action).then(self._apply_code_action_async)
 
     def _maybe_resolve_code_action(self, code_action: CodeAction) -> Promise[Union[CodeAction, Error]]:
-        if self.has_capability("codeActionProvider.resolveSupport"):
+        if self.has_capability("codeActionProvider.resolveProvider"):
             # TODO: Should we accept a SessionBuffer? What if this capability is registered with a documentSelector?
             # We must first resolve the command and edit properties, because they can potentially be absent.
             request = Request("codeAction/resolve", code_action)

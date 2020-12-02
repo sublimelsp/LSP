@@ -209,8 +209,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "dataSupport": True,
                 "resolveSupport": {
                     "properties": [
-                        "edit",
-                        "command"
+                        "edit"
                     ]
                 }
             },
@@ -1009,7 +1008,7 @@ class Session(TransportCallbacks):
         return self._maybe_resolve_code_action(code_action).then(self._apply_code_action_async)
 
     def _maybe_resolve_code_action(self, code_action: CodeAction) -> Promise[Union[CodeAction, Error]]:
-        if self.has_capability("codeActionProvider.resolveProvider"):
+        if "edit" not in code_action and self.has_capability("codeActionProvider.resolveProvider"):
             # TODO: Should we accept a SessionBuffer? What if this capability is registered with a documentSelector?
             # We must first resolve the command and edit properties, because they can potentially be absent.
             request = Request("codeAction/resolve", code_action)

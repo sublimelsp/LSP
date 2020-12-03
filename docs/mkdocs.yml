@@ -1,6 +1,8 @@
 site_name: LSP for Sublime Text
+site_url: https://sublimelsp.github.io/LSP/
 repo_url: https://github.com/sublimelsp/LSP/
 edit_uri: edit/st4000-exploration/docs/
+docs_dir: 'src'
 
 theme:
   name: material
@@ -36,6 +38,11 @@ nav:
     - Language Servers: 'language_servers.md'
     - Features: 'features.md'
     - Guides:
-      - Server Configuration: 'guides/server_configuration.md'
+      - Client Configuration: 'guides/client_configuration.md'
       - Setup C/C++: 'guides/cplusplus.md'
     - Troubleshooting: 'troubleshooting.md'
+
+extra:
+  social:
+    - icon: fontawesome/brands/discord
+      link: https://discordapp.com/channels/280102180189634562/645268178397560865

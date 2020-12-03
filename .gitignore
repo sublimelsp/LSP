@@ -8,3 +8,4 @@ LSP.sublime-project
 .coverage
 mypycov
 htmlcov
+docs/site

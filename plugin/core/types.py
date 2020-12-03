@@ -14,7 +14,8 @@ import socket
 import sublime
 import time
 
-TCP_CONNECT_TIMEOUT = 5
+TCP_CONNECT_TIMEOUT = 5  # seconds
+FEATURES_TIMEOUT = 300  # milliseconds
 
 
 def basescope2languageid(base_scope: str) -> str:

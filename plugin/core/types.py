@@ -446,9 +446,6 @@ class Capabilities(DottedDict):
         value = self.get("textDocumentSync.change.syncKind")
         return value if isinstance(value, int) else TextDocumentSyncKindNone
 
-    def should_notify_did_change(self) -> bool:
-        return self.text_sync_kind() > TextDocumentSyncKindNone
-
     def should_notify_did_change_workspace_folders(self) -> bool:
         return "workspace.workspaceFolders.changeNotifications" in self
 

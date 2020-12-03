@@ -863,9 +863,6 @@ class Session(TransportCallbacks):
     def text_sync_kind(self) -> int:
         return self.capabilities.text_sync_kind()
 
-    def should_notify_did_change(self) -> bool:
-        return self.capabilities.should_notify_did_change()
-
     def should_notify_did_change_workspace_folders(self) -> bool:
         return self.capabilities.should_notify_did_change_workspace_folders()
 

@@ -158,9 +158,6 @@ class SessionBuffer:
     def should_notify_did_open(self) -> bool:
         return self.capabilities.should_notify_did_open() or self.session.should_notify_did_open()
 
-    def should_notify_did_change(self) -> bool:
-        return self.capabilities.should_notify_did_change() or self.session.should_notify_did_change()
-
     def should_notify_will_save(self) -> bool:
         return self.capabilities.should_notify_will_save() or self.session.should_notify_will_save()
 

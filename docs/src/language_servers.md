@@ -273,7 +273,10 @@ Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/L
             "gopls": {
                 "enabled": true,
                 "command": ["gopls"],
-                "selector": "source.go"
+                "selector": "source.go",
+                "initializationOptions": {
+                    "experimentalWorkspaceModule": false
+                }
             }
         }
     }
@@ -291,13 +294,18 @@ Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/L
                 "syntaxes": [
                     "Packages/Go/Go.sublime-syntax",
                     "Packages/GoSublime/syntax/GoSublime-Go-Recommended.sublime-syntax"
-                ]
+                ],
+                "initializationOptions": {
+                    "experimentalWorkspaceModule": false
+                }
             },
         }
     }
     ```
 
 !!! info "Visit [gopls repo](https://github.com/golang/tools/tree/master/gopls) for more info."
+    Enable multi-module workspace support by setting the `experimentalWorkspaceModule` to `true`. Most features will work across modules, but some, such as `goimports`, will not work as expected. Please note that this setting is still very experimental.
+
 
 ## GraphQL
 

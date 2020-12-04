@@ -27,7 +27,7 @@ def parse_workspace_edit(workspace_edit: Dict[str, Any]) -> Dict[str, List[TextE
             uri = document_change.get('textDocument').get('uri')
             version = document_change.get('textDocument').get('version')
             text_edit = list(parse_text_edit(change, version) for change in document_change.get('edits'))
-            changes[uri_to_filename(uri)] = text_edit
+            changes.setdefault(uri_to_filename(uri), []).extend(text_edit)
     return changes
 
 

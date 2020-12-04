@@ -30,6 +30,117 @@ LSP_EDIT_DOCUMENT_CHANGES_2 = {
     }]
 }
 
+# Check that processing document changes does not result in clobbering.
+LSP_EDIT_DOCUMENT_CHANGES_3 = {
+    "documentChanges": [
+        {
+            "edits": [
+                {
+                    "range": {
+                        "end": {
+                            "character": 9,
+                            "line": 14
+                        },
+                        "start": {
+                            "character": 5,
+                            "line": 14
+                        }
+                    },
+                    "newText": "Test"
+                }
+            ],
+            "textDocument": {
+                "uri": URI,
+                "version": 6
+            }
+        },
+        {
+            "edits": [
+                {
+                    "range": {
+                        "end": {
+                            "character": 25,
+                            "line": 11
+                        },
+                        "start": {
+                            "character": 21,
+                            "line": 11
+                        }
+                    },
+                    "newText": "Test"
+                }
+            ],
+            "textDocument": {
+                "uri": URI,
+                "version": 6
+            }
+        },
+        {
+            "edits": [
+                {
+                    "range": {
+                        "end": {
+                            "character": 32,
+                            "line": 26
+                        },
+                        "start": {
+                            "character": 28,
+                            "line": 26
+                        }
+                    },
+                    "newText": "Test"
+                }
+            ],
+            "textDocument": {
+                "uri": URI,
+                "version": 6
+            }
+        },
+        {
+            "edits": [
+                {
+                    "range": {
+                        "end": {
+                            "character": 32,
+                            "line": 27
+                        },
+                        "start": {
+                            "character": 28,
+                            "line": 27
+                        }
+                    },
+                    "newText": "Test"
+                }
+            ],
+            "textDocument": {
+                "uri": URI,
+                "version": 6
+            }
+        },
+        {
+            "edits": [
+                {
+                    "range": {
+                        "end": {
+                            "character": 30,
+                            "line": 39
+                        },
+                        "start": {
+                            "character": 26,
+                            "line": 39
+                        }
+                    },
+                    "newText": "Test"
+                }
+            ],
+            "textDocument": {
+                "uri": URI,
+                "version": 6
+            }
+        }
+    ]
+}
+
 
 class TextEditTests(unittest.TestCase):
 
@@ -68,6 +179,12 @@ class WorkspaceEditTests(unittest.TestCase):
         self.assertEqual(len(edit), 1)
         self.assertEqual(len(edit[FILENAME]), 1)
 
+    def test_no_clobbering_of_previous_edits(self):
+        edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_3)
+        self.assertIn(FILENAME, edit)
+        self.assertEqual(len(edit), 1)
+        self.assertEqual(len(edit[FILENAME]), 5)
+
 
 class SortByApplicationOrderTests(unittest.TestCase):
 
@@ -85,6 +202,14 @@ class SortByApplicationOrderTests(unittest.TestCase):
         self.assertEqual(sorted_edits[0][2], 'b')
         self.assertEqual(sorted_edits[1][2], 'a')
         self.assertEqual(sorted_edits[2][2], 'c')
+
+    def test_sorts_in_application_order2(self):
+        edits = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_3)
+        sorted_edits = list(reversed(sort_by_application_order(edits[FILENAME])))
+        self.assertEqual(sorted_edits[0][0], (39, 26))
+        self.assertEqual(sorted_edits[0][1], (39, 30))
+        self.assertEqual(sorted_edits[1][0], (27, 28))
+        self.assertEqual(sorted_edits[1][1], (27, 32))
 
 
 class TemporarySetting(unittest.TestCase):

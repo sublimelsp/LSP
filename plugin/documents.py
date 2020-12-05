@@ -786,6 +786,7 @@ class LspCodeLensCommand(LspTextCommand):
             return
         elif len(code_lenses) == 1:
             command = code_lenses[0]["command"]
+            assert command
             args = {
                 "session_name": code_lenses[0]["session_name"],
                 "command_name": command["command"],
@@ -794,7 +795,7 @@ class LspCodeLensCommand(LspTextCommand):
             self.view.run_command("lsp_execute", args)
         else:
             self.view.show_popup_menu(
-                [c["command"]["title"] for c in code_lenses],
+                [c["command"]["title"] for c in code_lenses],  # type: ignore
                 lambda i: self.on_select(code_lenses, i)
             )
 
@@ -804,6 +805,7 @@ class LspCodeLensCommand(LspTextCommand):
         except IndexError:
             return
         command = code_lens["command"]
+        assert command
         args = {
             "session_name": code_lens["session_name"],
             "command_name": command["command"],

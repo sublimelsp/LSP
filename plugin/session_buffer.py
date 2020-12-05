@@ -7,6 +7,7 @@ from .core.settings import userprefs
 from .core.types import Capabilities
 from .core.types import debounced
 from .core.types import Debouncer
+from .core.types import FEATURES_TIMEOUT
 from .core.typing import Any, Iterable, Optional, List, Dict, Tuple
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import did_change
@@ -158,9 +159,6 @@ class SessionBuffer:
     def should_notify_did_open(self) -> bool:
         return self.capabilities.should_notify_did_open() or self.session.should_notify_did_open()
 
-    def should_notify_did_change(self) -> bool:
-        return self.capabilities.should_notify_did_change() or self.session.should_notify_did_change()
-
     def should_notify_will_save(self) -> bool:
         return self.capabilities.should_notify_will_save() or self.session.should_notify_will_save()
 
@@ -189,7 +187,7 @@ class SessionBuffer:
                 self.pending_changes.update(change_count, changes)
                 purge = True
             if purge:
-                debounced(lambda: self.purge_changes_async(view), 500,
+                debounced(lambda: self.purge_changes_async(view), FEATURES_TIMEOUT,
                           lambda: view.is_valid() and change_count == view.change_count(), async_thread=True)
 
     def on_revert_async(self, view: sublime.View) -> None:

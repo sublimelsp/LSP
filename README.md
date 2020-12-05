@@ -9,7 +9,7 @@
 
 Language Server Protocol support for Sublime Text that gives you IDE [features](https://lsp.readthedocs.io/en/latest/features/).
 
-![diagnostics screen-shot](docs/images/showcase.gif "TypeScript Server Example")
+![diagnostics screen-shot](docs/src/images/showcase.gif "TypeScript Server Example")
 
 ## Installation
 

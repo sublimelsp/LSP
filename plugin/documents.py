@@ -18,6 +18,7 @@ from .core.signature_help import create_signature_help
 from .core.signature_help import SignatureHelp
 from .core.types import basescope2languageid
 from .core.types import debounced
+from .core.types import FEATURES_TIMEOUT
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import document_color_params
@@ -147,9 +148,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     CODE_ACTIONS_KEY = "lsp_code_action"
     CODE_LENS_KEY = "lsp_code_lens"
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
-    code_actions_debounce_time = 800
-    color_boxes_debounce_time = 500
-    highlights_debounce_time = 300
+    code_actions_debounce_time = FEATURES_TIMEOUT
+    color_boxes_debounce_time = FEATURES_TIMEOUT
+    highlights_debounce_time = FEATURES_TIMEOUT
 
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:

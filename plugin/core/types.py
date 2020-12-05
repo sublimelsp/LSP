@@ -14,7 +14,8 @@ import socket
 import sublime
 import time
 
-TCP_CONNECT_TIMEOUT = 5
+TCP_CONNECT_TIMEOUT = 5  # seconds
+FEATURES_TIMEOUT = 300  # milliseconds
 
 
 def basescope2languageid(base_scope: str) -> str:
@@ -445,9 +446,6 @@ class Capabilities(DottedDict):
     def text_sync_kind(self) -> int:
         value = self.get("textDocumentSync.change.syncKind")
         return value if isinstance(value, int) else TextDocumentSyncKindNone
-
-    def should_notify_did_change(self) -> bool:
-        return self.text_sync_kind() > TextDocumentSyncKindNone
 
     def should_notify_did_change_workspace_folders(self) -> bool:
         return "workspace.workspaceFolders.changeNotifications" in self

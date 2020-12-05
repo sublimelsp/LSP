@@ -517,14 +517,18 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         for i in range(0, len(self._code_lenses)):
             self.view.erase_regions(self._code_lens_key(i))
         self._code_lenses.clear()
-        if isinstance(response, list):
-            self._code_lenses.clear()
-            for index, c in enumerate(response):
-                region = range_to_region(Range.from_lsp(c["range"]), self.view)
-                self._code_lenses.append((c, region))
+        if not isinstance(response, list):
+            return
+        for index, c in enumerate(response):
+            region = range_to_region(Range.from_lsp(c["range"]), self.view)
+            self._code_lenses.append((c, region))
+            if c.get("command"):
+                # We consider a code lens that has a command to be already resolved.
+                self._on_resolved_code_lens_async(name, index, region, c)
+            else:
                 self._render_code_lens(name, index, region, None)
-            self._code_lenses = list((c, range_to_region(Range.from_lsp(c["range"]), self.view)) for c in response)
-            self._resolve_visible_code_lenses_async()
+        self._code_lenses = list((c, range_to_region(Range.from_lsp(c["range"]), self.view)) for c in response)
+        self._resolve_visible_code_lenses_async()
 
     def _resolve_visible_code_lenses_async(self) -> None:
         session = self.session("codeLensProvider")
@@ -547,7 +551,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     ) -> Generator[Tuple[int, CodeLens, sublime.Region], None, None]:
         for index, tup in enumerate(self._code_lenses):
             code_lens, region = tup
-            if isinstance(code_lens, dict) and visible.intersects(region):
+            if not code_lens.get("command") and visible.intersects(region):
                 yield index, code_lens, region
 
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------

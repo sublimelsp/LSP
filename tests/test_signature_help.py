@@ -14,11 +14,12 @@ class SignatureHelpTest(unittest.TestCase):
         self.assertIsNone(help)
 
     def test_empty_signature_list(self) -> None:
-        help = SigHelp.from_lsp({"signatures": [], "activeSignature": None, "activeParameter": None})
+        help = SigHelp.from_lsp({"signatures": []})
         self.assertIsNone(help)
 
     def assert_render(self, input: SignatureHelp, regex: str) -> None:
         help = SigHelp(input)
+        assert self.view
         self.assertRegex(help.render(self.view), regex.replace("\n", "").replace("            ", ""))
 
     def test_signature(self) -> None:
@@ -48,6 +49,7 @@ class SignatureHelpTest(unittest.TestCase):
             <span style="color: #\w{6}">\)</span>
             </pre></div>
             <p>must be in the frobnicate range</p>
+            <hr/>
             <div style="font-size: 0\.9rem"><p>f does interesting things</p></div>
             '''
         )
@@ -87,6 +89,7 @@ class SignatureHelpTest(unittest.TestCase):
             <span style="color: #\w{6}">\)</span>
             </pre></div>
             <p>must be in the <strong>frobnicate</strong> range</p>
+            <hr/>
             <div style="font-size: 0\.9rem"><p>f does <em>interesting</em> things</p></div>
             '''
         )

@@ -122,6 +122,8 @@ class SigHelp:
             formatted.append(docs)
         docs = _signature_documentation(view, signature)
         if docs:
+            if formatted:
+                formatted.append("<hr/>")
             formatted.append('<div style="font-size: 0.9rem">')
             formatted.append(docs)
             formatted.append('</div>')

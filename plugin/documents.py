@@ -10,12 +10,13 @@ from .core.protocol import Diagnostic
 from .core.protocol import DocumentHighlightKind
 from .core.protocol import Range
 from .core.protocol import Request
-from .core.registry import LspTextCommand, best_session
+from .core.protocol import SignatureHelp
+from .core.registry import best_session
+from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
-from .core.signature_help import create_signature_help
-from .core.signature_help import SignatureHelp
+from .core.signature_help import SigHelp
 from .core.types import basescope2languageid
 from .core.types import debounced
 from .core.types import FEATURES_TIMEOUT
@@ -23,11 +24,8 @@ from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, Lis
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import document_color_params
 from .core.views import format_completion
-from .core.views import FORMAT_MARKUP_CONTENT
-from .core.views import FORMAT_STRING
 from .core.views import lsp_color_to_phantom
 from .core.views import make_command_link
-from .core.views import minihtml
 from .core.views import range_to_region
 from .core.views import region_to_range
 from .core.views import text_document_identifier
@@ -41,7 +39,6 @@ from .session_view import SessionView
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import functools
-import html
 import mdpopups
 import sublime
 import sublime_plugin
@@ -69,32 +66,6 @@ def previous_non_whitespace_char(view: sublime.View, pt: int) -> str:
     if prev.isspace():
         return view.substr(view.find_by_class(pt, False, ~0) - 1)
     return prev
-
-
-class ColorSchemeScopeRenderer:
-    def __init__(self, view: sublime.View) -> None:
-        self._scope_styles = {}  # type: dict
-        self._view = view
-        for scope in ["entity.name.function", "variable.parameter", "punctuation"]:
-            self._scope_styles[scope] = mdpopups.scope2style(view, scope)
-
-    def function(self, content: str, escape: bool = True) -> str:
-        return self._wrap_with_scope_style(content, "entity.name.function", escape=escape)
-
-    def punctuation(self, content: str) -> str:
-        return self._wrap_with_scope_style(content, "punctuation")
-
-    def parameter(self, content: str, emphasize: bool = False) -> str:
-        return self._wrap_with_scope_style(content, "variable.parameter", emphasize)
-
-    def markup(self, content: Union[str, Dict[str, str]]) -> str:
-        return minihtml(self._view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
-
-    def _wrap_with_scope_style(self, content: str, scope: str, emphasize: bool = False, escape: bool = True) -> str:
-        color = self._scope_styles[scope]["color"]
-        additional_styles = 'font-weight: bold; text-decoration: underline;' if emphasize else ''
-        content = html.escape(content, quote=False) if escape else content
-        return '<span style="color: {};{}">{}</span>'.format(color, additional_styles, content)
 
 
 class TextChangeListener(sublime_plugin.TextChangeListener):
@@ -164,8 +135,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
         self._code_lenses = []  # type: List[Tuple[CodeLens, sublime.Region]]
-        self._sighelp = None  # type: Optional[SignatureHelp]
-        self._sighelp_renderer = ColorSchemeScopeRenderer(self.view)
+        self._sighelp = None  # type: Optional[SigHelp]
         self._language_id = ""
         self._registered = False
 
@@ -337,7 +307,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             elif self._sighelp and self._sighelp.has_multiple_signatures() and not self.view.is_auto_complete_visible():
                 # We use the "operand" for the number -1 or +1. See the keybindings.
                 self._sighelp.select_signature(operand)
-                self._update_sighelp_popup(self._sighelp.build_popup_content(self._sighelp_renderer))
+                self._update_sighelp_popup(self._sighelp.render(self.view))
                 return True  # We handled this keybinding.
         return False
 
@@ -393,10 +363,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.view.hide_popup()
             self._sighelp = None
 
-    def _on_signature_help(self, response: Optional[Dict], point: int) -> None:
-        self._sighelp = create_signature_help(response)
+    def _on_signature_help(self, response: Optional[SignatureHelp], point: int) -> None:
+        self._sighelp = SigHelp.from_lsp(response)
         if self._sighelp:
-            content = self._sighelp.build_popup_content(self._sighelp_renderer)
+            content = self._sighelp.render(self.view)
 
             def render_sighelp_on_main_thread() -> None:
                 if self.view.is_popup_visible():
@@ -416,7 +386,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         mdpopups.show_popup(self.view,
                             content,
                             css=css().popups,
-                            md=True,
+                            md=False,
                             flags=flags,
                             location=point,
                             wrapper_class=css().popups_classname,
@@ -429,7 +399,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         mdpopups.update_popup(self.view,
                               content,
                               css=css().popups,
-                              md=True,
+                              md=False,
                               wrapper_class=css().popups_classname)
 
     def _on_sighelp_hide(self) -> None:

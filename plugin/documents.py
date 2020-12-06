@@ -97,14 +97,6 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
 
         sublime.set_timeout_async(notify)
 
-    def on_reload_async(self) -> None:
-        for listener in list(self.view_listeners):
-            listener.on_reload_async()
-
-    def on_revert_async(self) -> None:
-        for listener in list(self.view_listeners):
-            listener.on_revert_async()
-
     def __repr__(self) -> str:
         return "TextChangeListener({})".format(self.buffer.buffer_id)
 

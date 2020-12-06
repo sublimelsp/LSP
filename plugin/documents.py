@@ -99,11 +99,11 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
 
     def on_reload_async(self) -> None:
         for listener in list(self.view_listeners):
-            listener.on_reload_async()
+            listener.reload_async()
 
     def on_revert_async(self) -> None:
         for listener in list(self.view_listeners):
-            listener.on_revert_async()
+            listener.revert_async()
 
     def __repr__(self) -> str:
         return "TextChangeListener({})".format(self.buffer.buffer_id)
@@ -225,16 +225,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                                                       after_ms=self.color_boxes_debounce_time)
         if "signatureHelp" not in userprefs().disabled_capabilities:
             self._do_signature_help(manual=False)
-
-    def on_revert_async(self) -> None:
-        if self.view.is_primary():
-            for sv in self.session_views_async():
-                sv.on_revert_async()
-
-    def on_reload_async(self) -> None:
-        if self.view.is_primary():
-            for sv in self.session_views_async():
-                sv.on_reload_async()
 
     def get_language_id(self) -> str:
         return self._language_id
@@ -569,6 +559,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             errors += sb.total_errors
             warnings += sb.total_warnings
         return errors, warnings
+
+    def revert_async(self) -> None:
+        if self.view.is_primary():
+            for sv in self.session_views_async():
+                sv.on_revert_async()
+
+    def reload_async(self) -> None:
+        if self.view.is_primary():
+            for sv in self.session_views_async():
+                sv.on_reload_async()
 
     # --- Private utility methods --------------------------------------------------------------------------------------
 

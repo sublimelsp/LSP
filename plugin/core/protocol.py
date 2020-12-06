@@ -10,7 +10,7 @@ TextDocumentSyncKindFull = 1
 TextDocumentSyncKindIncremental = 2
 
 
-class DiagnosticSeverity(object):
+class DiagnosticSeverity:
     Error = 1
     Warning = 2
     Information = 3
@@ -26,11 +26,17 @@ class InsertTextFormat:
     Snippet = 2
 
 
-class DocumentHighlightKind(object):
+class DocumentHighlightKind:
     Unknown = 0
     Text = 1
     Read = 2
     Write = 3
+
+
+class SignatureHelpTriggerKind:
+    Invoked = 1
+    TriggerCharacter = 2
+    ContentChange = 3
 
 
 ExecuteCommandParams = TypedDict('ExecuteCommandParams', {
@@ -54,6 +60,34 @@ CodeAction = TypedDict('CodeAction', {
     'edit': Optional[dict],
     'command': Optional[Command],
 })
+
+
+ParameterInformation = TypedDict('ParameterInformation', {
+    'label': Union[str, List[int]],
+    'documentation': Union[str, Dict[str, str]]
+}, total=False)
+
+
+SignatureInformation = TypedDict('SignatureInformation', {
+    'label': str,
+    'documentation': Union[str, Dict[str, str]],
+    'parameters': List[ParameterInformation]
+}, total=False)
+
+
+SignatureHelp = TypedDict('SignatureHelp', {
+    'signatures': List[SignatureInformation],
+    'activeSignature': int,
+    'activeParameter': int,
+}, total=False)
+
+
+SignatureHelpContext = TypedDict('SignatureHelpContext', {
+    'triggerKind': int,
+    'triggerCharacter': str,
+    'isRetrigger': bool,
+    'activeSignatureHelp': SignatureHelp
+}, total=False)
 
 
 class Request:

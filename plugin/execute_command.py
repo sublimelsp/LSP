@@ -3,7 +3,7 @@ from .core.protocol import Error
 from .core.protocol import ExecuteCommandParams
 from .core.registry import LspTextCommand
 from .core.typing import List, Optional, Any
-from .core.views import uri_from_view, offset_to_point, region_to_range
+from .core.views import uri_from_view, offset_to_point, region_to_range, text_document_identifier
 
 
 class LspExecuteCommand(LspTextCommand):
@@ -41,6 +41,8 @@ class LspExecuteCommand(LspTextCommand):
     def _expand_variables(self, command_args: List[Any]) -> None:
         region = self.view.sel()[0]
         for i, arg in enumerate(command_args):
+            if arg in ["$document_id", "${document_id}"]:
+                command_args[i] = text_document_identifier(self.view)
             if arg in ["$file_uri", "${file_uri}"]:
                 command_args[i] = uri_from_view(self.view)
             elif arg in ["$selection", "${selection}"]:

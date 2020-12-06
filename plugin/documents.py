@@ -4,10 +4,11 @@ from .completion import LspResolveDocsCommand
 from .completion import resolve
 from .core.css import css
 from .core.logging import debug
-from .core.protocol import CodeLens, Notification
+from .core.protocol import CodeLens
 from .core.protocol import Command
 from .core.protocol import Diagnostic
 from .core.protocol import DocumentHighlightKind
+from .core.protocol import Notification
 from .core.protocol import Range
 from .core.protocol import Request
 from .core.protocol import SignatureHelp

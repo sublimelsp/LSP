@@ -13,6 +13,10 @@ class SignatureHelpTest(unittest.TestCase):
         help = SigHelp.from_lsp(None)
         self.assertIsNone(help)
 
+    def test_empty_signature_list(self) -> None:
+        help = SigHelp.from_lsp({"signatures": [], "activeSignature": None, "activeParameter": None})
+        self.assertIsNone(help)
+
     def assert_render(self, input: SignatureHelp, regex: str) -> None:
         help = SigHelp(input)
         self.assertRegex(help.render(self.view), regex.replace("\n", "").replace("            ", ""))

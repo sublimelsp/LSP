@@ -25,7 +25,7 @@ class SigHelp:
     @classmethod
     def from_lsp(cls, sighelp: Optional[SignatureHelp]) -> "Optional[SigHelp]":
         """Create a SigHelp state object from a server's response to textDocument/signatureHelp."""
-        if sighelp is None:
+        if sighelp is None or not sighelp.get("signatures"):
             return None
         return cls(sighelp)
 

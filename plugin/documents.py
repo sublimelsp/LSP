@@ -151,6 +151,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     code_actions_debounce_time = FEATURES_TIMEOUT
     color_boxes_debounce_time = FEATURES_TIMEOUT
     highlights_debounce_time = FEATURES_TIMEOUT
+    code_lenses_debounce_time = FEATURES_TIMEOUT + 2000
 
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:
@@ -264,6 +265,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                                                       after_ms=self.color_boxes_debounce_time)
         if "signatureHelp" not in userprefs().disabled_capabilities:
             self._do_signature_help(manual=False)
+        if "codeLensProvider" not in userprefs().disabled_capabilities:
+            self._when_selection_remains_stable_async(self._do_code_lenses_async, current_region,
+                                                      after_ms=self.code_lenses_debounce_time)
 
     def on_revert_async(self) -> None:
         if self.view.is_primary():
@@ -312,8 +316,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if self.view.is_primary():
             for sv in self.session_views_async():
                 sv.on_post_save_async()
-        if "codeLensProvider" not in userprefs().disabled_capabilities:
-            self._do_code_lenses_async()
 
     def on_close(self) -> None:
         self._clear_session_views_async()

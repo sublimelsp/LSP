@@ -51,6 +51,7 @@ The following variables will be expanded, but only if they are top-level array i
 
 | Variable | Type | Description |
 | -------- | ---- | ----------- |
+| `"$document_id"` or `"${document_id}"` | object | Mapping `{ 'uri': string }` containing the file URI of the active view, see [Document Identifier](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentIdentifier) |
 | `"$file_uri"` or `"${file_uri}"` | string | File URI of the active view |
 | `"$selection"` or `"${selection}"` | string | Content of the (topmost) selection |
 | `"$offset"` or `"${offset}"` | int | Character offset of the (topmost) cursor position |

@@ -109,7 +109,7 @@ class LspHoverCommand(LspTextCommand):
         if userprefs().show_symbol_action_links:
             actions = [lk.link(point, self.view) for lk in link_kinds if self.provider_exists(lk)]
             if actions:
-                return '<p class="actions">' + " | ".join(actions) + "</p>"
+                return '<div class="actions">' + " | ".join(actions) + "</div>"
         return ""
 
     def diagnostics_content(self) -> str:
@@ -120,21 +120,15 @@ class LspHoverCommand(LspTextCommand):
             for diagnostic in self._diagnostics_by_config[config_name]:
                 by_severity.setdefault(diagnostic.severity, []).append(
                     format_diagnostic_for_html(diagnostic, self._base_dir))
-
-            for severity, items in by_severity.items():
-                formatted.append("<div>")
+            for items in by_severity.values():
                 formatted.extend(items)
-                formatted.append("</div>")
-
             if config_name in self._actions_by_config:
                 action_count = len(self._actions_by_config[config_name])
                 if action_count > 0:
                     href = "{}:{}".format('code-actions', config_name)
                     text = "choose code action ({} available)".format(action_count)
                     formatted.append('<div class="actions">{}</div>'.format(make_link(href, text)))
-
             formatted.append("</div>")
-
         return "".join(formatted)
 
     def hover_content(self) -> str:

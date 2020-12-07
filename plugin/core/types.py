@@ -169,6 +169,7 @@ class Settings:
     show_diagnostics_in_view_status = None  # type: bool
     show_diagnostics_severity_level = None  # type: int
     show_references_in_quick_panel = None  # type: bool
+    show_symbol_action_links = None  # type: bool
     show_view_status = None  # type: bool
 
     def __init__(self, s: sublime.Settings) -> None:
@@ -203,6 +204,7 @@ class Settings:
         r("show_diagnostics_in_view_status", True)
         r("show_diagnostics_severity_level", 2)
         r("show_references_in_quick_panel", False)
+        r("show_symbol_action_links", False)
         r("show_view_status", True)
 
         # Backwards-compatible with the bool setting

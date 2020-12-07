@@ -9,6 +9,7 @@ from .core.protocol import Diagnostic
 from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import windows
+from .core.settings import userprefs
 from .core.typing import List, Optional, Any, Dict
 from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
@@ -105,9 +106,10 @@ class LspHoverCommand(LspTextCommand):
         return bool(self.best_session('{}Provider'.format(link.lsp_name)))
 
     def symbol_actions_content(self, point: int) -> str:
-        actions = [lk.link(point, self.view) for lk in link_kinds if self.provider_exists(lk)]
-        if actions:
-            return '<div class="actions">' + " | ".join(actions) + "</div>"
+        if userprefs().show_symbol_action_links:
+            actions = [lk.link(point, self.view) for lk in link_kinds if self.provider_exists(lk)]
+            if actions:
+                return '<div class="actions">' + " | ".join(actions) + "</div>"
         return ""
 
     def diagnostics_content(self) -> str:

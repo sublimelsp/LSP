@@ -13,6 +13,12 @@
 .lsp_popup li {
     font-family: system;
 }
+.lsp_popup h1,
+.lsp_popup h2,
+.lsp_popup h3,
+.lsp_popup h4 {
+    font-family: system;
+}
 .lsp_popup .diagnostics {
     margin-bottom: 0.5rem;
 }

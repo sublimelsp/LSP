@@ -330,7 +330,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         last_char = previous_non_whitespace_char(self.view, pos)
         if manual or last_char in triggers:
             self.purge_changes_async()
-            params = text_document_position_params(self.view, pos)
+            params = text_document_position_params(self.view, pos, session.config)
             assert session
             session.send_request_async(
                 Request.signatureHelp(params, self.view), lambda resp: self._on_signature_help(resp, pos))
@@ -422,7 +422,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         session = self.session("colorProvider")
         if session:
             session.send_request_async(
-                Request.documentColor(document_color_params(self.view), self.view), self._on_color_boxes)
+                Request.documentColor(
+                    document_color_params(session.config, self.view), self.view), self._on_color_boxes)
 
     def _on_color_boxes(self, response: Any) -> None:
         color_infos = response if response else []
@@ -448,7 +449,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         point = self.view.sel()[0].b
         session = self.session("documentHighlightProvider", point)
         if session:
-            params = text_document_position_params(self.view, point)
+            params = text_document_position_params(self.view, point, session.config)
             request = Request.documentHighlight(params, self.view)
             session.send_request_async(request, self._on_highlights)
 
@@ -487,7 +488,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
         config_name = session.config.name
         session.send_request_async(
-            Request.complete(text_document_position_params(self.view, location), self.view),
+            Request.complete(text_document_position_params(self.view, location, session.config), self.view),
             lambda res: self._on_complete_result(res, resolve, can_resolve_completion_items, config_name),
             lambda res: self._on_complete_error(res, resolve))
 

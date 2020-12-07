@@ -41,7 +41,7 @@ class WillSaveWaitTask(SaveTask):
 
     def _will_save_wait_until_async(self, session: Session) -> None:
         session.send_request_async(
-            will_save_wait_until(self._view, reason=1),  # TextDocumentSaveReason.Manual
+            will_save_wait_until(session.config, self._view, reason=1),  # TextDocumentSaveReason.Manual
             self._on_response,
             lambda error: self._on_response(None))
 
@@ -68,7 +68,10 @@ class FormattingTask(SaveTask):
         session = next(sessions_for_view(self._view, 'documentFormattingProvider'), None)
         if session:
             session.send_request_async(
-                text_document_formatting(self._view), self._on_response, lambda error: self._on_response(None))
+                text_document_formatting(session.config, self._view),
+                self._on_response,
+                lambda error: self._on_response(None)
+            )
         else:
             self._on_complete()
 
@@ -93,12 +96,12 @@ class LspFormatDocumentCommand(LspTextCommand):
         session = self.best_session(self.capability)
         if session:
             # Either use the documentFormattingProvider ...
-            session.send_request(text_document_formatting(self.view), self.on_result)
+            session.send_request(text_document_formatting(session.config, self.view), self.on_result)
         else:
             session = self.best_session(LspFormatDocumentRangeCommand.capability)
             if session:
                 # ... or use the documentRangeFormattingProvider and format the entire range.
-                req = text_document_range_formatting(self.view, entire_content_region(self.view))
+                req = text_document_range_formatting(session.config, self.view, entire_content_region(self.view))
                 session.send_request(req, self.on_result)
 
     def on_result(self, params: Any) -> None:
@@ -120,5 +123,5 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
         session = self.best_session(self.capability)
         if session:
-            req = text_document_range_formatting(self.view, self.view.sel()[0])
+            req = text_document_range_formatting(session.config, self.view, self.view.sel()[0])
             session.send_request(req, lambda response: apply_response_to_view(response, self.view))

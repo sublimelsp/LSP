@@ -47,7 +47,6 @@ try:
     from .plugin.core.panels import LspUpdatePanelCommand
     from .plugin.core.panels import LspUpdateServerPanelCommand
     from .plugin.core.protocol import Response
-    from .plugin.core.protocol import WorkspaceFolder
     from .plugin.core.registry import LspRecheckSessionsCommand
     from .plugin.core.registry import LspRestartClientCommand
     from .plugin.core.registry import windows
@@ -60,6 +59,7 @@ try:
     from .plugin.core.settings import unload_settings
     from .plugin.core.transports import kill_all_subprocesses
     from .plugin.core.types import ClientConfig
+    from .plugin.core.types import WorkspaceFolder
     from .plugin.core.typing import Optional, List, Type, Callable, Dict, Tuple
     from .plugin.core.views import LspRunTextCommandHelperCommand
     from .plugin.diagnostics import LspHideDiagnosticCommand

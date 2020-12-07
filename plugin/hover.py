@@ -89,7 +89,7 @@ class LspHoverCommand(LspTextCommand):
     def request_symbol_hover(self, point: int) -> None:
         session = self.best_session('hoverProvider', point)
         if session:
-            document_position = text_document_position_params(self.view, point)
+            document_position = text_document_position_params(self.view, point, session.config)
             session.send_request(
                 Request.hover(document_position, self.view),
                 lambda response: self.handle_response(response, point))

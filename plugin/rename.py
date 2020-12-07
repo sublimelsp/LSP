@@ -8,6 +8,7 @@ from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
+from .core.types import ClientConfig
 from .core.typing import Any, Optional, Dict, List
 from .core.views import range_to_region
 from .core.views import text_document_position_params
@@ -81,7 +82,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             else:
                 session = self.best_session("{}.prepareProvider".format(self.capability))
                 if session:
-                    params = text_document_position_params(self.view, pos)
+                    params = text_document_position_params(self.view, pos, session.config)
                     request = Request.prepareRename(params, self.view)
                     self.event = event
                     session.send_request(request, lambda r: self.on_prepare_result(r, pos), self.on_prepare_error)
@@ -98,19 +99,20 @@ class LspSymbolRenameCommand(LspTextCommand):
     def _do_rename(self, position: int, new_name: str) -> None:
         session = self.best_session(self.capability)
         if session:
-            params = text_document_position_params(self.view, position)
+            params = text_document_position_params(self.view, position, session.config)
             params["newName"] = new_name
+            config = session.config
             session.send_request(
                 Request.rename(params, self.view),
                 # This has to run on the main thread due to calling apply_workspace_edit
-                lambda r: sublime.set_timeout(lambda: self.on_rename_result(r))
+                lambda r: sublime.set_timeout(lambda: self.on_rename_result(config, r))
             )
 
-    def on_rename_result(self, response: Any) -> None:
+    def on_rename_result(self, config: ClientConfig, response: Any) -> None:
         window = self.view.window()
         if window:
             if response:
-                changes = parse_workspace_edit(response)
+                changes = parse_workspace_edit(config, response)
                 file_count = len(changes.keys())
                 if file_count > 1:
                     total_changes = sum(map(len, changes.values()))

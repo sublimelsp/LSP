@@ -1,5 +1,6 @@
 from .collections import DottedDict
-from .logging import debug, set_debug_logging
+from .logging import debug
+from .logging import set_debug_logging
 from .protocol import TextDocumentSyncKindNone
 from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypeVar
 from .url import filename_to_uri
@@ -462,8 +463,13 @@ def _translate_path(path: str, source: str, destination: str) -> Tuple[str, bool
     # TODO: Case-insensitive file systems. Maybe this problem needs a much larger refactor. Even Sublime Text doesn't
     # handle case-insensitive file systems correctly. There are a few other places where case-sensitivity matters, for
     # example when looking up the correct view for diagnostics, and when finding a view for goto-def.
-    if path.startswith(source) and len(path) > len(source) and path[len(source)] in ("/", "\\"):
-        return path.replace(source, destination, 1), True
+    if path.startswith(source):
+        if len(path) > len(source):
+            if path[len(source)] in ("/", "\\"):
+                return path.replace(source, destination, 1), True
+        else:
+            # This means len(path) == len(source), hence path == source
+            return destination, True
     return path, False
 
 
@@ -482,15 +488,12 @@ class PathMap:
         result = []  # type: List[PathMap]
         for path_map in json:
             if not isinstance(path_map, dict):
-                debug('path map entry is not an object')
                 continue
             local = path_map.get("local")
             if not isinstance(local, str):
-                debug('missing "local" key for path map entry')
                 continue
             remote = path_map.get("remote")
             if not isinstance(remote, str):
-                debug('missing "remote" key for path map entry')
                 continue
             result.append(PathMap(local, remote))
         return result
@@ -505,6 +508,10 @@ class PathMap:
 
     def map_from_remote_to_local(self, uri: str) -> Tuple[str, bool]:
         return _translate_path(uri, self._remote, self._local)
+
+    def resolve(self, variables: Dict[str, str]) -> None:
+        self._local = sublime.expand_variables(self._local, variables)
+        self._remote = sublime.expand_variables(self._remote, variables)
 
 
 class TransportConfig:
@@ -648,6 +655,9 @@ class ClientConfig:
         env = os.environ.copy()
         for var, value in self.env.items():
             env[var] = sublime.expand_variables(value, variables)
+        if isinstance(self.path_maps, list):
+            for path_map in self.path_maps:
+                path_map.resolve(variables)
         return TransportConfig(self.name, command, tcp_port, env, listener_socket)
 
     def set_view_status(self, view: sublime.View, message: str) -> None:
@@ -699,6 +709,45 @@ class ClientConfig:
             if not k.startswith("_") and v != getattr(other, k):
                 return False
         return True
+
+
+class WorkspaceFolder:
+
+    __slots__ = ('name', 'path')
+
+    def __init__(self, name: str, path: str) -> None:
+        self.name = name
+        self.path = path
+
+    @classmethod
+    def from_path(cls, path: str) -> 'WorkspaceFolder':
+        return cls(os.path.basename(path) or path, path)
+
+    def __hash__(self) -> int:
+        return hash((self.name, self.path))
+
+    def __repr__(self) -> str:
+        return "{}('{}', '{}')".format(self.__class__.__name__, self.name, self.path)
+
+    def __str__(self) -> str:
+        return self.path
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, WorkspaceFolder):
+            return self.name == other.name and self.path == other.path
+        return False
+
+    def to_lsp(self, config: Optional[ClientConfig] = None) -> Dict[str, str]:
+        return {"name": self.name, "uri": self.uri(config)}
+
+    def uri(self, config: Optional[ClientConfig] = None) -> str:
+        if config:
+            return config.map_client_path_to_server_uri(self.path)
+        else:
+            return filename_to_uri(self.path)
+
+    def includes_uri(self, uri: str, config: Optional[ClientConfig] = None) -> bool:
+        return uri.startswith(self.uri(config))
 
 
 def syntax2scope(syntax_path: str) -> Optional[str]:

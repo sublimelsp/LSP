@@ -1,9 +1,9 @@
 from .logging import debug
-from .protocol import WorkspaceFolder
 from .types import diff
+from .types import WorkspaceFolder
 from .typing import List, Any, Union
-import sublime
 import os
+import sublime
 
 
 def is_subpath_of(file_path: str, potential_subpath: str) -> bool:

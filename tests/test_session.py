@@ -1,12 +1,12 @@
 from LSP.plugin.core.collections import DottedDict
 from LSP.plugin.core.protocol import Error
 from LSP.plugin.core.protocol import TextDocumentSyncKindFull, TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
-from LSP.plugin.core.protocol import WorkspaceFolder
-from LSP.plugin.core.sessions import Logger
 from LSP.plugin.core.sessions import get_initialize_params
+from LSP.plugin.core.sessions import Logger
 from LSP.plugin.core.sessions import Manager
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.types import ClientConfig
+from LSP.plugin.core.types import WorkspaceFolder
 from LSP.plugin.core.typing import Any, Optional, Generator
 from test_mocks import TEST_CONFIG
 import sublime

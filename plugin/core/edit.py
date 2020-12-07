@@ -1,8 +1,8 @@
 from .logging import debug
 from .open import open_file
 from .promise import Promise
+from .types import ClientConfig
 from .typing import List, Dict, Any, Iterable, Optional, Tuple
-from .url import uri_to_filename
 from functools import partial
 import operator
 import sublime
@@ -12,12 +12,13 @@ import sublime
 TextEdit = Tuple[Tuple[int, int], Tuple[int, int], str, Optional[int]]
 
 
-def parse_workspace_edit(workspace_edit: Dict[str, Any]) -> Dict[str, List[TextEdit]]:
+def parse_workspace_edit(config: ClientConfig, workspace_edit: Dict[str, Any]) -> Dict[str, List[TextEdit]]:
     changes = {}  # type: Dict[str, List[TextEdit]]
     raw_changes = workspace_edit.get('changes')
     if isinstance(raw_changes, dict):
         for uri, file_changes in raw_changes.items():
-            changes[uri_to_filename(uri)] = list(parse_text_edit(change) for change in file_changes)
+            path = config.map_server_uri_to_client_path(uri)
+            changes[path] = list(parse_text_edit(change) for change in file_changes)
     document_changes = workspace_edit.get('documentChanges')
     if isinstance(document_changes, list):
         for document_change in document_changes:
@@ -27,7 +28,8 @@ def parse_workspace_edit(workspace_edit: Dict[str, Any]) -> Dict[str, List[TextE
             uri = document_change.get('textDocument').get('uri')
             version = document_change.get('textDocument').get('version')
             text_edit = list(parse_text_edit(change, version) for change in document_change.get('edits'))
-            changes.setdefault(uri_to_filename(uri), []).extend(text_edit)
+            path = config.map_server_uri_to_client_path(uri)
+            changes.setdefault(path, []).extend(text_edit)
     return changes
 
 

@@ -2,6 +2,7 @@ from LSP.plugin.core.edit import sort_by_application_order, parse_workspace_edit
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.edit import temporary_setting
 from test_protocol import LSP_RANGE
+from test_mocks import TEST_CONFIG
 import sublime
 import unittest
 
@@ -157,30 +158,30 @@ class TextEditTests(unittest.TestCase):
 class WorkspaceEditTests(unittest.TestCase):
 
     def test_parse_no_changes_from_lsp(self):
-        edit = parse_workspace_edit(dict())
+        edit = parse_workspace_edit(TEST_CONFIG, dict())
         self.assertEqual(len(edit), 0)
 
     def test_parse_changes_from_lsp(self):
-        edit = parse_workspace_edit(LSP_EDIT_CHANGES)
+        edit = parse_workspace_edit(TEST_CONFIG, LSP_EDIT_CHANGES)
         self.assertIn(FILENAME, edit)
         self.assertEqual(len(edit), 1)
         self.assertEqual(len(edit[FILENAME]), 1)
 
     def test_parse_document_changes_from_lsp(self):
-        edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES)
+        edit = parse_workspace_edit(TEST_CONFIG, LSP_EDIT_DOCUMENT_CHANGES)
         self.assertIn(FILENAME, edit)
         self.assertEqual(len(edit), 1)
         self.assertEqual(len(edit[FILENAME]), 1)
 
     def test_protocol_violation(self):
         # This should ignore the None in 'changes'
-        edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_2)
+        edit = parse_workspace_edit(TEST_CONFIG, LSP_EDIT_DOCUMENT_CHANGES_2)
         self.assertIn(FILENAME, edit)
         self.assertEqual(len(edit), 1)
         self.assertEqual(len(edit[FILENAME]), 1)
 
     def test_no_clobbering_of_previous_edits(self):
-        edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_3)
+        edit = parse_workspace_edit(TEST_CONFIG, LSP_EDIT_DOCUMENT_CHANGES_3)
         self.assertIn(FILENAME, edit)
         self.assertEqual(len(edit), 1)
         self.assertEqual(len(edit[FILENAME]), 5)
@@ -204,7 +205,7 @@ class SortByApplicationOrderTests(unittest.TestCase):
         self.assertEqual(sorted_edits[2][2], 'c')
 
     def test_sorts_in_application_order2(self):
-        edits = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_3)
+        edits = parse_workspace_edit(TEST_CONFIG, LSP_EDIT_DOCUMENT_CHANGES_3)
         sorted_edits = list(reversed(sort_by_application_order(edits[FILENAME])))
         self.assertEqual(sorted_edits[0][0], (39, 26))
         self.assertEqual(sorted_edits[0][1], (39, 30))

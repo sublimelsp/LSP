@@ -8,10 +8,12 @@ from .protocol import Notification
 from .protocol import Point
 from .protocol import Range
 from .protocol import Request
+from .types import ClientConfig
 from .typing import Optional, Dict, Any, Iterable, List, Union, Callable, Tuple
 from .url import filename_to_uri
 from .url import uri_to_filename
 import html
+import itertools
 import linecache
 import mdpopups
 import os
@@ -19,7 +21,6 @@ import re
 import sublime
 import sublime_plugin
 import tempfile
-import itertools
 
 DIAGNOSTIC_SEVERITY = [
     # Kind       CSS class   Scope for color     Icon resource
@@ -155,7 +156,7 @@ def region_to_range(view: sublime.View, region: sublime.Region) -> Range:
     )
 
 
-def location_to_encoded_filename(location: Dict[str, Any]) -> str:
+def location_to_encoded_filename(location: Dict[str, Any], config: Optional[ClientConfig] = None) -> str:
     if "targetUri" in location:
         uri = location["targetUri"]
         position = location["targetSelectionRange"]["start"]
@@ -163,7 +164,11 @@ def location_to_encoded_filename(location: Dict[str, Any]) -> str:
         uri = location["uri"]
         position = location["range"]["start"]
     # WARNING: Cannot possibly do UTF-16 conversion :) Oh well.
-    return '{}:{}:{}'.format(uri_to_filename(uri), position['line'] + 1, position['character'] + 1)
+    return '{}:{}:{}'.format(
+        config.map_server_uri_to_client_path(uri) if config else uri_to_filename(uri),
+        position['line'] + 1,
+        position['character'] + 1
+    )
 
 
 class MissingFilenameError(Exception):
@@ -173,18 +178,27 @@ class MissingFilenameError(Exception):
         self.view_id = view_id
 
 
-def uri_from_view(view: sublime.View) -> str:
+def uri_from_view(view: sublime.View, config: Optional[ClientConfig] = None) -> str:
     file_name = view.file_name()
     if file_name:
-        return filename_to_uri(file_name)
+        if config:
+            return config.map_client_path_to_server_uri(file_name)
+        else:
+            # DEPRECATED
+            return filename_to_uri(file_name)
     raise MissingFilenameError(view.id())
 
 
-def text_document_identifier(view_or_file_name: Union[str, sublime.View]) -> Dict[str, Any]:
+def text_document_identifier(view_or_file_name: Union[str, sublime.View],
+                             config: Optional[ClientConfig] = None) -> Dict[str, Any]:
     if isinstance(view_or_file_name, str):
-        uri = filename_to_uri(view_or_file_name)
+        if config:
+            uri = config.map_client_path_to_server_uri(view_or_file_name)
+        else:
+            # DEPRECATED
+            uri = filename_to_uri(view_or_file_name)
     else:
-        uri = uri_from_view(view_or_file_name)
+        uri = uri_from_view(view_or_file_name, config)
     return {"uri": uri}
 
 
@@ -200,25 +214,29 @@ def entire_content_range(view: sublime.View) -> Range:
     return region_to_range(view, entire_content_region(view))
 
 
-def text_document_item(view: sublime.View, language_id: str) -> Dict[str, Any]:
+def text_document_item(config: ClientConfig, view: sublime.View, language_id: str) -> Dict[str, Any]:
     return {
-        "uri": uri_from_view(view),
+        "uri": uri_from_view(view, config),
         "languageId": language_id,
         "version": view.change_count(),
         "text": entire_content(view)
     }
 
 
-def versioned_text_document_identifier(view: sublime.View, version: int) -> Dict[str, Any]:
-    return {"uri": uri_from_view(view), "version": version}
+def versioned_text_document_identifier(config: ClientConfig, view: sublime.View, version: int) -> Dict[str, Any]:
+    return {"uri": uri_from_view(view, config), "version": version}
 
 
-def text_document_position_params(view: sublime.View, location: int) -> Dict[str, Any]:
-    return {"textDocument": text_document_identifier(view), "position": offset_to_point(view, location).to_lsp()}
+def text_document_position_params(view: sublime.View, location: int,
+                                  config: Optional[ClientConfig] = None) -> Dict[str, Any]:
+    return {
+        "textDocument": text_document_identifier(view, config),
+        "position": offset_to_point(view, location).to_lsp()
+    }
 
 
-def did_open_text_document_params(view: sublime.View, language_id: str) -> Dict[str, Any]:
-    return {"textDocument": text_document_item(view, language_id)}
+def did_open_text_document_params(config: ClientConfig, view: sublime.View, language_id: str) -> Dict[str, Any]:
+    return {"textDocument": text_document_item(config, view, language_id)}
 
 
 def render_text_change(change: sublime.TextChange) -> Dict[str, Any]:
@@ -232,10 +250,17 @@ def render_text_change(change: sublime.TextChange) -> Dict[str, Any]:
     }
 
 
-def did_change_text_document_params(view: sublime.View, version: int,
-                                    changes: Optional[Iterable[sublime.TextChange]] = None) -> Dict[str, Any]:
+def did_change_text_document_params(
+    config: ClientConfig,
+    view: sublime.View,
+    version: int,
+    changes: Optional[Iterable[sublime.TextChange]] = None
+) -> Dict[str, Any]:
     content_changes = []  # type: List[Dict[str, Any]]
-    result = {"textDocument": versioned_text_document_identifier(view, version), "contentChanges": content_changes}
+    result = {
+        "textDocument": versioned_text_document_identifier(config, view, version),
+        "contentChanges": content_changes
+    }
     if changes is None:
         # TextDocumentSyncKindFull
         content_changes.append({"text": entire_content(view)})
@@ -246,47 +271,52 @@ def did_change_text_document_params(view: sublime.View, version: int,
     return result
 
 
-def will_save_text_document_params(view_or_file_name: Union[str, sublime.View], reason: int) -> Dict[str, Any]:
-    return {"textDocument": text_document_identifier(view_or_file_name), "reason": reason}
+def will_save_text_document_params(
+    config: ClientConfig,
+    view_or_file_name: Union[str, sublime.View],
+    reason: int
+) -> Dict[str, Any]:
+    return {"textDocument": text_document_identifier(view_or_file_name, config), "reason": reason}
 
 
 def did_save_text_document_params(
-    view: sublime.View, include_text: bool, file_name: Optional[str] = None
+    config: ClientConfig, view: sublime.View, include_text: bool, file_name: Optional[str] = None
 ) -> Dict[str, Any]:
-    identifier = text_document_identifier(file_name if file_name is not None else view)
+    identifier = text_document_identifier(file_name if file_name is not None else view, config)
     result = {"textDocument": identifier}  # type: Dict[str, Any]
     if include_text:
         result["text"] = entire_content(view)
     return result
 
 
-def did_close_text_document_params(file_name: str) -> Dict[str, Any]:
-    return {"textDocument": text_document_identifier(file_name)}
+def did_close_text_document_params(config: ClientConfig, file_name: str) -> Dict[str, Any]:
+    return {"textDocument": text_document_identifier(file_name, config)}
 
 
-def did_open(view: sublime.View, language_id: str) -> Notification:
-    return Notification.didOpen(did_open_text_document_params(view, language_id))
+def did_open(config: ClientConfig, view: sublime.View, language_id: str) -> Notification:
+    return Notification.didOpen(did_open_text_document_params(config, view, language_id))
 
 
-def did_change(view: sublime.View, version: int,
+def did_change(config: ClientConfig, view: sublime.View, version: int,
                changes: Optional[Iterable[sublime.TextChange]] = None) -> Notification:
-    return Notification.didChange(did_change_text_document_params(view, version, changes))
+    return Notification.didChange(did_change_text_document_params(config, view, version, changes))
 
 
-def will_save(file_name: str, reason: int) -> Notification:
-    return Notification.willSave(will_save_text_document_params(file_name, reason))
+def will_save(config: ClientConfig, file_name: str, reason: int) -> Notification:
+    return Notification.willSave(will_save_text_document_params(config, file_name, reason))
 
 
-def will_save_wait_until(view: sublime.View, reason: int) -> Request:
-    return Request.willSaveWaitUntil(will_save_text_document_params(view, reason), view)
+def will_save_wait_until(config: ClientConfig, view: sublime.View, reason: int) -> Request:
+    return Request.willSaveWaitUntil(will_save_text_document_params(config, view, reason), view)
 
 
-def did_save(view: sublime.View, include_text: bool, file_name: Optional[str] = None) -> Notification:
-    return Notification.didSave(did_save_text_document_params(view, include_text, file_name))
+def did_save(config: ClientConfig, view: sublime.View, include_text: bool,
+             file_name: Optional[str] = None) -> Notification:
+    return Notification.didSave(did_save_text_document_params(config, view, include_text, file_name))
 
 
-def did_close(file_name: str) -> Notification:
-    return Notification.didClose(did_close_text_document_params(file_name))
+def did_close(config: ClientConfig, file_name: str) -> Notification:
+    return Notification.didClose(did_close_text_document_params(config, file_name))
 
 
 def formatting_options(settings: sublime.Settings) -> Dict[str, Any]:
@@ -307,29 +337,30 @@ def formatting_options(settings: sublime.Settings) -> Dict[str, Any]:
     }
 
 
-def text_document_formatting(view: sublime.View) -> Request:
+def text_document_formatting(config: ClientConfig, view: sublime.View) -> Request:
     return Request.formatting({
-        "textDocument": text_document_identifier(view),
+        "textDocument": text_document_identifier(view, config),
         "options": formatting_options(view.settings())
     }, view)
 
 
-def text_document_range_formatting(view: sublime.View, region: sublime.Region) -> Request:
+def text_document_range_formatting(config: ClientConfig, view: sublime.View, region: sublime.Region) -> Request:
     return Request.rangeFormatting({
-        "textDocument": text_document_identifier(view),
+        "textDocument": text_document_identifier(view, config),
         "options": formatting_options(view.settings()),
         "range": region_to_range(view, region).to_lsp()
     }, view)
 
 
-def selection_range_params(view: sublime.View) -> Dict[str, Any]:
+def selection_range_params(config: ClientConfig, view: sublime.View) -> Dict[str, Any]:
     return {
-        "textDocument": text_document_identifier(view),
+        "textDocument": text_document_identifier(view, config),
         "positions": [position(view, r.b) for r in view.sel()]
     }
 
 
 def text_document_code_action_params(
+    config: ClientConfig,
     view: sublime.View,
     file_name: str,
     range: Range,
@@ -337,9 +368,7 @@ def text_document_code_action_params(
     on_save_actions: Optional[List[str]] = None
 ) -> Dict:
     params = {
-        "textDocument": {
-            "uri": filename_to_uri(file_name)
-        },
+        "textDocument": text_document_identifier(view, config),
         "range": range.to_lsp(),
         "context": {
             "diagnostics": list(diagnostic.to_lsp() for diagnostic in diagnostics)
@@ -532,8 +561,8 @@ def lsp_color_to_phantom(view: sublime.View, color_info: Dict[str, Any]) -> subl
     return sublime.Phantom(region, lsp_color_to_html(color_info), sublime.LAYOUT_INLINE)
 
 
-def document_color_params(view: sublime.View) -> Dict[str, Any]:
-    return {"textDocument": text_document_identifier(view)}
+def document_color_params(config: ClientConfig, view: sublime.View) -> Dict[str, Any]:
+    return {"textDocument": text_document_identifier(view, config)}
 
 
 def format_severity(severity: int) -> str:

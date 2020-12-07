@@ -1,5 +1,4 @@
 from copy import deepcopy
-from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.hover import _test_contents
 from setup import TextDocumentTestCase
 from setup import TIMEOUT_TIME
@@ -14,10 +13,10 @@ except ImportError:
     pass
 
 SELFDIR = os.path.dirname(__file__)
-TEST_FILE_PATH = os.path.join(SELFDIR, 'testfile.txt')
+REMOTE_URI = "file:///workspace/testfile.txt"
 GOTO_RESPONSE = [
     {
-        'uri': filename_to_uri(TEST_FILE_PATH),
+        'uri': REMOTE_URI,
         'range':
         {
             'start':
@@ -77,7 +76,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
                 {'rangeLength': 0, 'range': {'start': {'line': 2, 'character': 0}, 'end': {'line': 2, 'character': 0}}, 'text': 'D'}],  # noqa
             'textDocument': {
                 'version': self.view.change_count(),
-                'uri': filename_to_uri(TEST_FILE_PATH)
+                'uri': 'file:///workspace/testfile.txt'
             }
         })
 
@@ -292,7 +291,7 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         self.insert_characters("foo\nfoo\nfoo\n")
         self.set_response("textDocument/rename", {
                 'changes': {
-                    filename_to_uri(TEST_FILE_PATH): [
+                    REMOTE_URI: [
                         {
                             'range': {'start': {'character': 0, 'line': 0}, 'end': {'character': 3, 'line': 0}},
                             'newText': 'bar'

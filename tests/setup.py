@@ -1,9 +1,12 @@
-from LSP.plugin.core.promise import Promise
 from LSP.plugin.core.logging import debug
-from LSP.plugin.core.protocol import Notification, Request
+from LSP.plugin.core.promise import Promise
+from LSP.plugin.core.protocol import Notification
+from LSP.plugin.core.protocol import Request
 from LSP.plugin.core.registry import windows
 from LSP.plugin.core.settings import client_configs
-from LSP.plugin.core.types import ClientConfig, ClientStates
+from LSP.plugin.core.types import ClientConfig
+from LSP.plugin.core.types import ClientStates
+from LSP.plugin.core.types import PathMap
 from LSP.plugin.core.typing import Any, Generator, List, Optional, Tuple, Union, Dict
 from LSP.plugin.documents import DocumentSyncListener
 from os import environ
@@ -44,20 +47,21 @@ class YieldPromise:
 
 
 def make_stdio_test_config() -> ClientConfig:
+    basepath = join(sublime.packages_path(), "LSP", "tests")
     return ClientConfig(
         name="TEST",
-        command=["python3", join("$packages", "LSP", "tests", "server.py")],
+        command=["python3", join(basepath, "server.py")],
         selector="text.plain",
-        enabled=True)
+        enabled=True,
+        path_maps=[PathMap(local=basepath, remote="/workspace")]
+    )
 
 
 def make_tcp_test_config() -> ClientConfig:
-    return ClientConfig(
-        name="TEST",
-        command=["python3", join("$packages", "LSP", "tests", "server.py"), "--tcp-port", "$port"],
-        selector="text.plain",
-        tcp_port=0,  # select a free one for me
-        enabled=True)
+    config = make_stdio_test_config()
+    config.command.extend(("--tcp-port", "$port"))
+    config.tcp_port = 0  # select a free one for me
+    return config
 
 
 def add_config(config):

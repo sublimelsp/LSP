@@ -1,6 +1,7 @@
 from .core.protocol import Request, Range
 from .core.registry import LspTextCommand
 from .core.sessions import print_to_status_bar
+from .core.types import ClientConfig
 from .core.typing import Any, List, Optional, Tuple, Dict, Generator
 from .core.views import location_to_encoded_filename
 from .core.views import range_to_region
@@ -82,8 +83,9 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.view.settings().set(SUPPRESS_INPUT_SETTING_KEY, True)
         session = self.best_session(self.capability)
         if session:
+            params = {"textDocument": text_document_identifier(self.view, session.config)}
             session.send_request(
-                Request.documentSymbols({"textDocument": text_document_identifier(self.view)}, self.view),
+                Request.documentSymbols(params, self.view),
                 lambda response: sublime.set_timeout(lambda: self.handle_response(response)),
                 lambda error: sublime.set_timeout(lambda: self.handle_response_error(error)))
 
@@ -218,8 +220,12 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
             session = self.best_session(self.capability)
             if session:
                 request = Request.workspaceSymbol({"query": symbol_query_input})
-                session.send_request(request, lambda r: self._handle_response(
-                    symbol_query_input, r), self._handle_error)
+                config = session.config
+                session.send_request(
+                    request,
+                    lambda r: self._handle_response(config, symbol_query_input, r),
+                    self._handle_error
+                )
 
     def _format(self, s: Dict[str, Any]) -> str:
         file_name = os.path.basename(s['location']['uri'])
@@ -227,19 +233,22 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
         name = "{} ({}) - {} -- {}".format(s['name'], symbol_kind, s.get('containerName', ""), file_name)
         return name
 
-    def _open_file(self, symbols: List[Dict[str, Any]], index: int) -> None:
+    def _open_file(self, config: ClientConfig, symbols: List[Dict[str, Any]], index: int) -> None:
         if index != -1:
             symbol = symbols[index]
             window = self.view.window()
             if window:
-                window.open_file(location_to_encoded_filename(symbol['location']), sublime.ENCODED_POSITION)
+                window.open_file(location_to_encoded_filename(symbol['location'], config), sublime.ENCODED_POSITION)
 
-    def _handle_response(self, query: str, response: Optional[List[Dict[str, Any]]]) -> None:
+    def _handle_response(self, config: ClientConfig, query: str, response: Optional[List[Dict[str, Any]]]) -> None:
         if response:
             matches = response
             window = self.view.window()
             if window:
-                window.show_quick_panel(list(map(self._format, matches)), lambda i: self._open_file(matches, i))
+                window.show_quick_panel(
+                    list(map(self._format, matches)),
+                    lambda i: self._open_file(config, matches, i)
+                )
         else:
             sublime.message_dialog("No matches found for query string: '{}'".format(query))
 

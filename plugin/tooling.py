@@ -99,7 +99,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
     def run(self) -> None:
         window = self.window
         active_view = window.active_view()
-        configs = [c for c in windows.lookup(window).get_config_manager().get_configs() if c.enabled]
+        configs = windows.lookup(window).get_config_manager().get_configs()
         config_names = [config.name for config in configs]
         if config_names:
             window.show_quick_panel(config_names, lambda index: self.on_selected(index, configs, active_view),
@@ -117,6 +117,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
 
     def test_run_server_async(self, config: ClientConfig, window: sublime.Window,
                               active_view: Optional[sublime.View], output_sheet: sublime.HtmlSheet) -> None:
+        config = ClientConfig.from_config(config, {})
         server = ServerTestRunner(
             config, window,
             lambda output, exit_code: self.update_sheet(config, active_view, output_sheet, output, exit_code))
@@ -140,7 +141,6 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
 
         def line(s: str) -> None:
             lines.append(s)
-
         line('# Troubleshooting: {}'.format(config.name))
 
         line('## Version')

@@ -88,6 +88,7 @@ class JsonRpcTransport(Transport):
         try:
             while self._reader:
                 headers = http.client.parse_headers(self._reader)  # type: ignore
+                # print("headers:", headers)
                 body = self._reader.read(int(headers.get("Content-Length")))
                 try:
                     payload = _decode(body)

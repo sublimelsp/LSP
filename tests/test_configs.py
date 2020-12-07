@@ -89,12 +89,16 @@ class ConfigParsingTests(DeferrableTestCase):
         self.assertEqual(uri, "file:///workspace3/bar.ts")
         uri = config.map_client_path_to_server_uri("/some/path/with/no/mapping.py")
         self.assertEqual(uri, "file:///some/path/with/no/mapping.py")
+        uri = config.map_client_path_to_server_uri("/home/user/projects/myproject")
+        self.assertEqual(uri, "file:///workspace")
         path = config.map_server_uri_to_client_path("file:///workspace/bar.html")
         self.assertEqual(path, "/home/user/projects/myproject/bar.html")
         path = config.map_server_uri_to_client_path("file:///workspace2/style.css")
         self.assertEqual(path, "/home/user/projects/another/style.css")
         path = config.map_server_uri_to_client_path("file:///workspace3/bar.ts")
         self.assertEqual(path, "C:/Documents/bar.ts")
+        path = config.map_server_uri_to_client_path("file:///workspace")
+        self.assertEqual(path, "/home/user/projects/myproject")
 
         # FIXME: What if the server is running on a Windows VM,
         # but locally we are running Linux?

@@ -16,7 +16,6 @@ from .protocol import ExecuteCommandParams
 from .protocol import Notification
 from .protocol import Request
 from .protocol import Response
-from .protocol import WorkspaceFolder
 from .settings import client_configs
 from .transports import Transport
 from .transports import TransportCallbacks
@@ -28,6 +27,7 @@ from .types import diff
 from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
+from .types import WorkspaceFolder
 from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
 from .url import uri_to_filename
 from .version import __version__
@@ -259,15 +259,17 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     }
     if config.experimental_capabilities is not None:
         capabilities['experimental'] = config.experimental_capabilities
+    root_uri = first_folder.uri(config) if first_folder else None
+    root_path = root_uri[len("file://"):] if root_uri else None
     return {
         "processId": os.getpid(),
         "clientInfo": {
             "name": "Sublime Text LSP",
             "version": ".".join(map(str, __version__))
         },
-        "rootUri": first_folder.uri() if first_folder else None,
-        "rootPath": first_folder.path if first_folder else None,
-        "workspaceFolders": [folder.to_lsp() for folder in workspace_folders] if workspace_folders else None,
+        "rootUri": root_uri,
+        "rootPath": root_path,
+        "workspaceFolders": [folder.to_lsp(config) for folder in workspace_folders] if workspace_folders else None,
         "capabilities": capabilities,
         "initializationOptions": config.init_options.get_resolved(variables)
     }
@@ -897,8 +899,8 @@ class Session(TransportCallbacks):
             if added or removed:
                 params = {
                     "event": {
-                        "added": [a.to_lsp() for a in added],
-                        "removed": [r.to_lsp() for r in removed]
+                        "added": [a.to_lsp(self.config) for a in added],
+                        "removed": [r.to_lsp(self.config) for r in removed]
                     }
                 }
                 self.send_notification(Notification.didChangeWorkspaceFolders(params))
@@ -1034,7 +1036,7 @@ class Session(TransportCallbacks):
         Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
         applied.
         """
-        changes = parse_workspace_edit(edit)
+        changes = parse_workspace_edit(self.config, edit)
         return Promise.on_main_thread() \
             .then(lambda _: apply_workspace_edit(self.window, changes)) \
             .then(Promise.on_async_thread)
@@ -1055,7 +1057,7 @@ class Session(TransportCallbacks):
 
     def m_workspace_workspaceFolders(self, _: Any, request_id: Any) -> None:
         """handles the workspace/workspaceFolders request"""
-        self.send_response(Response(request_id, [wf.to_lsp() for wf in self._workspace_folders]))
+        self.send_response(Response(request_id, [wf.to_lsp(self.config) for wf in self._workspace_folders]))
 
     def m_workspace_configuration(self, params: Dict[str, Any], request_id: Any) -> None:
         """handles the workspace/configuration request"""

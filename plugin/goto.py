@@ -1,11 +1,12 @@
-import sublime
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.sessions import method_to_capability
+from .core.types import ClientConfig
 from .core.typing import List, Optional, Any
 from .core.views import location_to_encoded_filename
 from .core.views import text_document_position_params
+import sublime
 
 
 def open_location(window: sublime.Window, location: str, side_by_side: bool = True) -> None:
@@ -47,14 +48,15 @@ class LspGotoCommand(LspTextCommand):
     ) -> None:
         session = self.best_session(self.capability)
         if session:
-            params = text_document_position_params(self.view, get_position(self.view, event, point))
+            config = session.config
+            params = text_document_position_params(self.view, get_position(self.view, event, point), config)
             session.send_request(
                 Request(self.method, params, self.view),
                 # It's better to run this on the UI thread so we are guaranteed no AttributeErrors anywhere
-                lambda response: sublime.set_timeout(lambda: self.handle_response(response, side_by_side))
+                lambda response: sublime.set_timeout(lambda: self.handle_response(config, response, side_by_side))
             )
 
-    def handle_response(self, response: Any, side_by_side: bool) -> None:
+    def handle_response(self, config: ClientConfig, response: Any, side_by_side: bool) -> None:
         if not self.view.is_valid():
             return
         window = self.view.window()
@@ -64,9 +66,9 @@ class LspGotoCommand(LspTextCommand):
             if len(self.view.sel()) > 0:
                 self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
             if isinstance(response, dict):
-                locations = [location_to_encoded_filename(response)]
+                locations = [location_to_encoded_filename(response, config)]
             else:
-                locations = [location_to_encoded_filename(x) for x in response]
+                locations = [location_to_encoded_filename(x, config) for x in response]
             if len(locations) == 1:
                 open_location(window, locations[0], side_by_side)
             elif len(locations) > 1:

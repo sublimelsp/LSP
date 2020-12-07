@@ -49,7 +49,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 if os.path.commonprefix([base_dir, file_path]):
                     self.base_dir = base_dir
 
-            document_position = text_document_position_params(self.view, pos)
+            document_position = text_document_position_params(self.view, pos, session.config)
             document_position['context'] = {"includeDeclaration": False}
             request = Request.references(document_position, self.view)
             session.send_request(request, lambda response: self.handle_response(response, pos))

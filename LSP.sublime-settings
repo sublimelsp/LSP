@@ -108,9 +108,6 @@
   // using a keyboard shortcut or the context menu.
   "show_code_actions": "annotation",
 
-  // Show symbol action links in hover popup if available
-  "show_symbol_action_links": false,
-
   // Disable Sublime Text's snippet completions.
   "inhibit_snippet_completions": false,
 

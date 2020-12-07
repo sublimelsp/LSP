@@ -1,12 +1,19 @@
-This package provides Sublime Text support for the Language Server Protocol.
+                  Thanks for trying out the LSP package!
+                  ======================================
 
-Run "LSP: Enable Language Server" in the command palette to enable a configured server.
-You can further add / configure your language servers in LSP's Package Settings.
-Run the command "Preferences: LSP Settings" from the command palette to get started.
 
-For improved functionality, adding keybindings is recommended.
-Run the command "Preferences: LSP Keybindings" from the command palette to get started.
+This package is a "client" implementation of the "language server protocol".
+This is a protocol that defines how (language) servers and clients (editors)
+should talk to each other. It enables high-quality code-complete,
+signature-help, goto-def, accurate find-references, and more.
 
-See https://lsp.readthedocs.io/ for documentation.
-For issues and development updates, see https://github.com/sublimelsp/LSP
-For an up-to-date list of language servers, see http://langserver.org/#implementations-server
+This package doesn't actually contain any language server by itself. It
+provides only the glue code to attach language servers to Sublime Text.
+
+Exactly which concepts from LSP should map to which concepts from Sublime
+Text and vice versa is an ongoing research problem. We're certainly still
+figuring things out!
+
+To get up and running for your favorite language, open the documentation at
+
+    https://sublimelsp.github.io/LSP

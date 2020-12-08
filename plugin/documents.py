@@ -1,7 +1,6 @@
 from .code_actions import actions_manager
 from .code_actions import CodeActionsByConfigName
 from .completion import LspResolveDocsCommand
-from .completion import resolve
 from .core.css import css
 from .core.logging import debug
 from .core.protocol import Diagnostic
@@ -32,6 +31,7 @@ from .diagnostics import filter_by_range
 from .diagnostics import view_diagnostics
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
+from functools import partial
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import mdpopups
@@ -48,6 +48,8 @@ _kind2name = {
     DocumentHighlightKind.Read: "read",
     DocumentHighlightKind.Write: "write"
 }
+
+ResolveCompletionsFn = Callable[[List[sublime.CompletionItem], int], None]
 
 
 def is_regular_view(v: sublime.View) -> bool:
@@ -301,9 +303,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[sublime.CompletionList]:
         if "completion" in userprefs().disabled_capabilities:
             return None
-        promise = sublime.CompletionList()
-        sublime.set_timeout_async(lambda: self._on_query_completions_async(promise, locations[0]))
-        return promise
+
+        def resolve(clist: sublime.CompletionList, items: List[sublime.CompletionItem], flags: int = 0) -> None:
+            # Resolve on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).
+            sublime.set_timeout(lambda: clist.set_completions(items, flags))
+
+        clist = sublime.CompletionList()
+        sublime.set_timeout_async(lambda: self._on_query_completions_async(partial(resolve, clist), locations[0]))
+        return clist
 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
 
@@ -470,20 +477,20 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 
-    def _on_query_completions_async(self, promise: sublime.CompletionList, location: int) -> None:
+    def _on_query_completions_async(self, resolve: ResolveCompletionsFn, location: int) -> None:
         session = self.session('completionProvider', location)
         if not session:
-            resolve(promise, [])
+            resolve([], 0)
             return
         self.purge_changes_async()
         can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
         config_name = session.config.name
         session.send_request_async(
             Request.complete(text_document_position_params(self.view, location), self.view),
-            lambda res: self._on_complete_result(res, promise, can_resolve_completion_items, config_name),
-            lambda res: self._on_complete_error(res, promise))
+            lambda res: self._on_complete_result(res, resolve, can_resolve_completion_items, config_name),
+            lambda res: self._on_complete_error(res, resolve))
 
-    def _on_complete_result(self, response: Optional[Union[dict, List]], completion_list: sublime.CompletionList,
+    def _on_complete_result(self, response: Optional[Union[dict, List]], resolve: ResolveCompletionsFn,
                             can_resolve_completion_items: bool, session_name: str) -> None:
         response_items = []  # type: List[Dict]
         flags = 0
@@ -504,10 +511,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                  for index, response_item in enumerate(response_items)]
         if items:
             flags |= sublime.INHIBIT_REORDER
-        resolve(completion_list, items, flags)
+        resolve(items, flags)
 
-    def _on_complete_error(self, error: dict, completion_list: sublime.CompletionList) -> None:
-        resolve(completion_list, [])
+    def _on_complete_error(self, error: dict, resolve: ResolveCompletionsFn) -> None:
+        resolve([], 0)
         LspResolveDocsCommand.completions = []
         sublime.status_message('Completion error: ' + str(error.get('message')))
 

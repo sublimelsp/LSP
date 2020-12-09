@@ -479,8 +479,9 @@ def text2html(content: str) -> str:
     return re.sub(REPLACEMENT_RE, _replace_match, content)
 
 
-def make_link(href: str, text: str, class_name: Optional[str] = None) -> str:
-    text = text.replace(' ', '&nbsp;')
+def make_link(href: str, text: Any, class_name: Optional[str] = None) -> str:
+    if isinstance(text, str):
+        text = text.replace(' ', '&nbsp;')
     if class_name:
         return "<a href='{}' class='{}'>{}</a>".format(href, class_name, text)
     else:
@@ -541,13 +542,21 @@ def format_severity(severity: int) -> str:
 
 
 def format_diagnostic_for_panel(diagnostic: Diagnostic) -> str:
-    location = "{:>8}:{:<4}".format(diagnostic.range.start.row + 1, diagnostic.range.start.col + 1)
-    lines = diagnostic.message.splitlines() or [""]
-    severity = format_severity(diagnostic.severity)
-    formatted = " {}\t{:<12}\t{:<10}\t{}".format(location, diagnostic.source, severity, lines[0])
-    for line in lines[1:]:
-        formatted = formatted + "\n {:<12}\t{:<12}\t{:<10}\t{}".format("", "", "", line)
-    return formatted
+    if diagnostic.code_description:
+        code = make_link(diagnostic.code_description["href"], diagnostic.code)  # type: Optional[str]
+    else:
+        code = str(diagnostic.code) if diagnostic.code else None
+    formatted = ["[", diagnostic.source if diagnostic.source else "unknown-source"]
+    if code:
+        formatted.extend((":", code))
+    formatted.append("]")
+    return "{:>4}:{:<4}{:<8}{} {}".format(
+        diagnostic.range.start.row + 1,
+        diagnostic.range.start.col + 1,
+        format_severity(diagnostic.severity),
+        "".join(formatted),
+        (diagnostic.message.splitlines() or [""])[0]
+    )
 
 
 def _format_diagnostic_related_info(info: DiagnosticRelatedInformation, base_dir: Optional[str] = None) -> str:
@@ -561,15 +570,34 @@ def _format_diagnostic_related_info(info: DiagnosticRelatedInformation, base_dir
     return '<a href="location:{}">{}</a>: {}'.format(encoded_filename, text2html(file_path), text2html(info.message))
 
 
-def format_diagnostic_for_html(diagnostic: Diagnostic, base_dir: Optional[str] = None) -> str:
-    diagnostic_message = text2html(diagnostic.message)
-    related_infos = [_format_diagnostic_related_info(info, base_dir) for info in diagnostic.related_info]
-    related_content = "<pre class='related_info'>" + "<br>".join(related_infos) + "</pre>" if related_infos else ""
-    if diagnostic.source:
-        content = "[{}] {}{}".format(diagnostic.source, diagnostic_message, related_content)
+def _with_scope_color(view: sublime.View, text: Any, scope: str) -> str:
+    return '<span style="color: {};">{}</span>'.format(view.style_for_scope(scope)["foreground"], text)
+
+
+def format_diagnostic_for_html(view: sublime.View, diagnostic: Diagnostic, base_dir: Optional[str] = None) -> str:
+    formatted = ['<pre class="', DIAGNOSTIC_SEVERITY[diagnostic.severity - 1][1], '">']  # type: List[Any]
+    if diagnostic.code_description:
+        code = make_link(diagnostic.code_description["href"], diagnostic.code)  # type: Optional[str]
     else:
-        content = "{}{}".format(diagnostic_message, related_content)
-    return '<pre class="{}">{}</pre>'.format(DIAGNOSTIC_SEVERITY[diagnostic.severity - 1][1], content)
+        code = _with_scope_color(view, diagnostic.code, "constant.numeric.code.lsp") if diagnostic.code else None
+    source = diagnostic.source if diagnostic.source else "unknown-source"
+    formatted.extend((
+        _with_scope_color(view, "[", "punctuation.section.brackets.begin.lsp"),
+        _with_scope_color(view, source, "comment.line.lsp")
+    ))
+    if code:
+        formatted.extend((_with_scope_color(view, ":", "punctuation.separator.lsp"), code))
+    formatted.extend((
+        _with_scope_color(view, "]", "punctuation.section.brackets.end.lsp"),
+        " ",
+        text2html(diagnostic.message)
+    ))
+    if diagnostic.related_info:
+        formatted.append('<pre class="related_info">')
+        formatted.extend(_format_diagnostic_related_info(info, base_dir) for info in diagnostic.related_info)
+        formatted.append("</pre>")
+    formatted.append("</pre>")
+    return "".join(formatted)
 
 
 def create_phantom_html(content: str, severity: str) -> str:

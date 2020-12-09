@@ -39,6 +39,11 @@ class SignatureHelpTriggerKind:
     ContentChange = 3
 
 
+CodeDescription = TypedDict('CodeDescription', {
+    'href': str
+}, total=True)
+
+
 ExecuteCommandParams = TypedDict('ExecuteCommandParams', {
     'command': str,
     'arguments': Optional[List[Any]],
@@ -383,7 +388,7 @@ class Location(object):
         )
 
 
-class DiagnosticRelatedInformation(object):
+class DiagnosticRelatedInformation:
 
     def __init__(self, location: Location, message: str) -> None:
         self.location = location
@@ -396,15 +401,27 @@ class DiagnosticRelatedInformation(object):
             lsp_related_information["message"])
 
 
-class Diagnostic(object):
-    def __init__(self, message: str, range: Range, severity: int, source: Optional[str], lsp_diagnostic: dict,
-                 related_info: List[DiagnosticRelatedInformation]) -> None:
+class Diagnostic:
+    def __init__(
+        self,
+        message: str,
+        range: Range,
+        severity: int,
+        code: Union[None, int, str],
+        code_description: Optional[CodeDescription],
+        source: Optional[str],
+        lsp_diagnostic: dict,
+        related_info: List[DiagnosticRelatedInformation]
+    ) -> None:
         self.message = message
         self.range = range
         self.severity = severity
+        self.code = code
+        self.code_description = code_description
         self.source = source
         self._lsp_diagnostic = lsp_diagnostic
         self.related_info = related_info
+        self.code
 
     @classmethod
     def from_lsp(cls, lsp_diagnostic: dict) -> 'Diagnostic':
@@ -414,6 +431,8 @@ class Diagnostic(object):
             Range.from_lsp(lsp_diagnostic['range']),
             # optional keys
             lsp_diagnostic.get('severity', DiagnosticSeverity.Error),
+            lsp_diagnostic.get('code'),
+            lsp_diagnostic.get('codeDescription'),
             lsp_diagnostic.get('source'),
             lsp_diagnostic,
             [DiagnosticRelatedInformation.from_lsp(info) for info in lsp_diagnostic.get('relatedInformation') or []]

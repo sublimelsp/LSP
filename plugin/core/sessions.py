@@ -221,7 +221,10 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "dynamicRegistration": True  # exceptional
             },
             "publishDiagnostics": {
-                "relatedInformation": True
+                "relatedInformation": True,
+                "versionSupport": True,
+                "codeDescriptionSupport": True,
+                "dataSupport": True
             },
             "selectionRange": {
                 "dynamicRegistration": True

@@ -546,16 +546,16 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> str:
         code = make_link(diagnostic.code_description["href"], diagnostic.code)  # type: Optional[str]
     else:
         code = str(diagnostic.code) if diagnostic.code else None
-    formatted = ["[", diagnostic.source if diagnostic.source else "unknown-source"]
+    formatted = [diagnostic.source if diagnostic.source else "unknown-source"]
     if code:
         formatted.extend((":", code))
-    formatted.append("]")
-    return "{:>4}:{:<4}{:<8}{} {}".format(
+    # \u200B is the zero-width space
+    return "{:>4}:{:<4}{:<8}{} \u200B{}".format(
         diagnostic.range.start.row + 1,
         diagnostic.range.start.col + 1,
         format_severity(diagnostic.severity),
-        "".join(formatted),
-        (diagnostic.message.splitlines() or [""])[0]
+        (diagnostic.message.splitlines() or [""])[0],
+        "".join(formatted)
     )
 
 
@@ -575,23 +575,18 @@ def _with_scope_color(view: sublime.View, text: Any, scope: str) -> str:
 
 
 def format_diagnostic_for_html(view: sublime.View, diagnostic: Diagnostic, base_dir: Optional[str] = None) -> str:
-    formatted = ['<pre class="', DIAGNOSTIC_SEVERITY[diagnostic.severity - 1][1], '">']  # type: List[Any]
+    formatted = ['<pre class="', DIAGNOSTIC_SEVERITY[diagnostic.severity - 1][1], '">', text2html(diagnostic.message)]
     if diagnostic.code_description:
         code = make_link(diagnostic.code_description["href"], diagnostic.code)  # type: Optional[str]
     else:
-        code = _with_scope_color(view, diagnostic.code, "constant.numeric.code.lsp") if diagnostic.code else None
+        code = _with_scope_color(view, diagnostic.code, "comment.line.code.lsp") if diagnostic.code else None
     source = diagnostic.source if diagnostic.source else "unknown-source"
     formatted.extend((
-        _with_scope_color(view, "[", "punctuation.section.brackets.begin.lsp"),
-        _with_scope_color(view, source, "comment.line.lsp")
+        " ",
+        _with_scope_color(view, source, "comment.line.source.lsp")
     ))
     if code:
         formatted.extend((_with_scope_color(view, ":", "punctuation.separator.lsp"), code))
-    formatted.extend((
-        _with_scope_color(view, "]", "punctuation.section.brackets.end.lsp"),
-        " ",
-        text2html(diagnostic.message)
-    ))
     if diagnostic.related_info:
         formatted.append('<pre class="related_info">')
         formatted.extend(_format_diagnostic_related_info(info, base_dir) for info in diagnostic.related_info)

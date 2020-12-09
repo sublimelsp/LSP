@@ -21,8 +21,8 @@ contexts:
     - match: ^\s+(?=\d)
       push:
         - ensure-diag-meta-scope
-        - expect-message
         - expect-source-and-code
+        - expect-message
         - expect-severity
         - expect-row-col
 
@@ -34,6 +34,8 @@ contexts:
   expect-message:
     # Various server-specific tokens may get special treatment here in the diag message.
     - include: pop-at-end
+    - match: \x{200b}  # Zero-width space
+      pop: true
 
   expect-severity:
     # Implements RFC1036: https://github.com/sublimehq/Packages/issues/1036
@@ -52,13 +54,11 @@ contexts:
 
   expect-source-and-code:
     - include: pop-at-end
-    - match: (\[)([^:\]]+)((:)(\S+))?(\])
+    - match: ([^:\]]+)((:)(\S+))?
       captures:
-        1: punctuation.section.brackets.begin.lsp
-        2: comment.line.lsp
-        4: punctuation.separator.lsp
-        5: constant.numeric.code.lsp
-        6: punctuation.section.brackets.end.lsp
+        1: comment.line.source.lsp
+        3: punctuation.separator.lsp
+        4: comment.line.code.lsp
       pop: true
 
   expect-row-col:

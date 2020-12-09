@@ -542,13 +542,9 @@ def format_severity(severity: int) -> str:
 
 
 def format_diagnostic_for_panel(diagnostic: Diagnostic) -> str:
-    if diagnostic.code_description:
-        code = make_link(diagnostic.code_description["href"], diagnostic.code)  # type: Optional[str]
-    else:
-        code = str(diagnostic.code) if diagnostic.code else None
     formatted = [diagnostic.source if diagnostic.source else "unknown-source"]
-    if code:
-        formatted.extend((":", code))
+    if diagnostic.code:
+        formatted.extend((":", str(diagnostic.code)))
     # \u200B is the zero-width space
     return "{:>4}:{:<4}{:<8}{} \u200B{}".format(
         diagnostic.range.start.row + 1,

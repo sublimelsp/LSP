@@ -5,44 +5,40 @@
 hidden: true
 scope: output.lsp.diagnostics
 
-variables:
-  start_of_diag_body: ^\s+(?=\d)
-  filename_and_colon: ^\s*(\S)\s+(.*)(:)$
-
 contexts:
   main:
-    - include: diagnostic-preamble
-    - include: diagnostic-body
+    - include: file
+    - include: line
 
-  diagnostic-preamble:
-    - match: '{{filename_and_colon}}'
+  file:
+    - match: ^(.*)(:)$
       captures:
         0: meta.diagnostic.preamble.lsp
-        1: punctuation.section.diagnostics.preample.lsp
-        2: string.unquoted.lsp
-        3: punctuation.separator.lsp
+        1: string.unquoted.lsp
+        2: punctuation.separator.lsp
 
-  diagnostic-body:
-    - match: '{{start_of_diag_body}}'
+  line:
+    - match: ^\s+(?=\d)
       push:
         - ensure-diag-meta-scope
-        - expect-diag-message
-        - expect-diag-type
-        - expect-linter-type
-        - expect-line-maybe-column
+        - expect-source-and-code
+        - expect-message
+        - expect-severity
+        - expect-row-col
 
   ensure-diag-meta-scope:
     - meta_scope: meta.diagnostic.body.lsp
     - match: ""  # match the empty string
       pop: true
 
-  expect-diag-message:
+  expect-message:
     # Various server-specific tokens may get special treatment here in the diag message.
     - include: pop-at-end
+    - match: \x{200b}  # Zero-width space
+      pop: true
 
-  expect-diag-type:
-    # See: https://github.com/sublimehq/Packages/issues/1036
-    # We use sublimelinter markup scopes too so that old color schemes can catch up.
+  expect-severity:
+    # Implements RFC1036: https://github.com/sublimehq/Packages/issues/1036
     - include: pop-at-end
     - match: \berror\b
       scope: markup.deleted.lsp sublimelinter.mark.error markup.error.lsp
@@ -53,16 +49,21 @@ contexts:
     - match: \binfo\b
       scope: markup.inserted.lsp sublimelinter.gutter-mark markup.info.lsp
       pop: true
+    - match: \bhint\b
+      scope: markup.inserted.lsp sublimelinter.gutter-mark markup.info.hint.lsp
 
-  expect-linter-type:
+  expect-source-and-code:
     - include: pop-at-end
-    - match: \S+
-      scope: comment.line.lsp
+    - match: ([^:\]]+)((:)(\S+))?
+      captures:
+        1: comment.line.source.lsp
+        3: punctuation.separator.lsp
+        4: comment.line.code.lsp
       pop: true
 
-  expect-line-maybe-column:
+  expect-row-col:
     - include: pop-at-end
-    - match: (\d+)(?:(:)(\d+))?
+    - match: (\d+)(:)(\d+)
       captures:
         1: constant.numeric.integer.decimal.lsp
         2: punctuation.separator.lsp

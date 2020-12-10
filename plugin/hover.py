@@ -119,7 +119,7 @@ class LspHoverCommand(LspTextCommand):
             formatted.append('<div class="diagnostics">')
             for diagnostic in self._diagnostics_by_config[config_name]:
                 by_severity.setdefault(diagnostic.severity, []).append(
-                    format_diagnostic_for_html(diagnostic, self._base_dir))
+                    format_diagnostic_for_html(self.view, diagnostic, self._base_dir))
             for items in by_severity.values():
                 formatted.extend(items)
             if config_name in self._actions_by_config:
@@ -127,7 +127,7 @@ class LspHoverCommand(LspTextCommand):
                 if action_count > 0:
                     href = "{}:{}".format('code-actions', config_name)
                     text = "choose code action ({} available)".format(action_count)
-                    formatted.append('<div class="actions">{}</div>'.format(make_link(href, text)))
+                    formatted.append('<div class="actions">[{}] {}</div>'.format(config_name, make_link(href, text)))
             formatted.append("</div>")
         return "".join(formatted)
 

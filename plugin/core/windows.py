@@ -425,7 +425,7 @@ class WindowManager(Manager):
             file_path = listener.view.file_name() or ""
             base_dir = self.get_project_path(file_path)  # What about different base dirs for multiple folders?
             file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
-            to_render.append(" ◌ {}:".format(file_path))
+            to_render.append("{}:".format(file_path))
             to_render.extend(contribution)
         if isinstance(base_dir, str):
             panel.settings().set("result_base_dir", base_dir)

@@ -11,7 +11,7 @@ contexts:
     - include: line
 
   file:
-    - match: ^(.*)(:)$
+    - match: ^(?!\s*\d+:\d+)(.*)(:)$
       captures:
         0: meta.diagnostic.preamble.lsp
         1: string.unquoted.lsp

@@ -430,11 +430,10 @@ class WindowManager(Manager):
             to_render.append("{}:".format(file_path))
             row += 1
             for content, offset, code, href in contribution:
-                row += 1
                 to_render.append(content)
                 if offset is not None and code is not None and href is not None:
                     prephantoms.append((row, offset, code, href))
-                row += content.count("\n")
+                row += content.count("\n") + 1
         for listener in listeners:
             set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
         characters = "\n".join(to_render)

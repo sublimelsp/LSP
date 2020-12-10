@@ -566,21 +566,24 @@ def _format_diagnostic_related_info(info: DiagnosticRelatedInformation, base_dir
     return '<a href="location:{}">{}</a>: {}'.format(encoded_filename, text2html(file_path), text2html(info.message))
 
 
+def _with_color(text: Any, hexcolor: str) -> str:
+    return '<span style="color: {};">{}</span>'.format(hexcolor, text)
+
+
 def _with_scope_color(view: sublime.View, text: Any, scope: str) -> str:
-    return '<span style="color: {};">{}</span>'.format(view.style_for_scope(scope)["foreground"], text)
+    return _with_color(text, view.style_for_scope(scope)["foreground"])
 
 
 def format_diagnostic_for_html(view: sublime.View, diagnostic: Diagnostic, base_dir: Optional[str] = None) -> str:
     formatted = ['<pre class="', DIAGNOSTIC_SEVERITY[diagnostic.severity - 1][1], '">', text2html(diagnostic.message)]
     if diagnostic.code_description:
         code = make_link(diagnostic.code_description["href"], diagnostic.code)  # type: Optional[str]
+    elif diagnostic.code:
+        code = _with_color(diagnostic.code, "color(var(--foreground) alpha(0.6))")
     else:
-        code = _with_scope_color(view, diagnostic.code, "comment.line.code.lsp") if diagnostic.code else None
+        code = None
     source = diagnostic.source if diagnostic.source else "unknown-source"
-    formatted.extend((
-        " ",
-        _with_scope_color(view, source, "comment.line.source.lsp")
-    ))
+    formatted.extend((" ", _with_color(source, "color(var(--foreground) alpha(0.6))")))
     if code:
         formatted.extend((_with_scope_color(view, ":", "punctuation.separator.lsp"), code))
     if diagnostic.related_info:

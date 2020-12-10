@@ -546,7 +546,7 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> str:
     formatted = [diagnostic.source if diagnostic.source else "unknown-source"]
     if diagnostic.code:
         formatted.extend((":", str(diagnostic.code)))
-    lines = (diagnostic.message.splitlines() or [""])
+    lines = diagnostic.message.splitlines() or [""]
     # \u200B is the zero-width space
     result = "{:>4}:{:<4}{:<8}{} \u200B{}".format(
         diagnostic.range.start.row + 1,

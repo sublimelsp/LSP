@@ -172,8 +172,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             # SessionView was likely not created for this config so remove status here.
             session.config.erase_view_status(self.view)
 
-    def diagnostics_panel_contribution_async(self) -> List[str]:
-        result = []  # type: List[str]
+    def diagnostics_panel_contribution_async(self) -> List[Tuple[str, Optional[int], Optional[str], Optional[str]]]:
+        result = []  # type: List[Tuple[str, Optional[int], Optional[str], Optional[str]]]
         # Sort by severity
         for severity in range(1, len(DIAGNOSTIC_SEVERITY) + 1):
             for sb in self.session_buffers_async():

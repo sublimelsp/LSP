@@ -180,7 +180,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 data = sb.data_per_severity.get(severity)
                 if data:
                     result.extend(data.panel_contribution)
-        return result
+        # sort the result by asc line number
+        return sorted(result)
 
     def diagnostics_async(self) -> Generator[Tuple[SessionBuffer, List[Diagnostic]], None, None]:
         for sb in self.session_buffers_async():

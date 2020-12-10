@@ -136,8 +136,3 @@ class LspCompleteTextEditCommand(LspCompleteCommand):
             translation = region.b - primary_cursor_position
             translated_edit_region = sublime.Region(edit_region.a + translation, edit_region.b + translation)
             yield translated_edit_region
-
-
-def resolve(completion_list: sublime.CompletionList, items: List[sublime.CompletionItem], flags: int = 0) -> None:
-    # Resolve the promise on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).
-    sublime.set_timeout(lambda: completion_list.set_completions(items, flags))

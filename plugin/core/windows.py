@@ -454,7 +454,8 @@ class WindowManager(Manager):
             self._window.run_command("show_panel", {"panel": "output.diagnostics"})
 
     def hide_diagnostics_panel_async(self) -> None:
-        if self._can_manipulate_diagnostics_panel():
+        # prevent flickering on-save
+        if self._can_manipulate_diagnostics_panel() and userprefs().auto_show_diagnostics_panel != "saved":
             self._window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
     def select_next_diagnostic_async(self) -> None:

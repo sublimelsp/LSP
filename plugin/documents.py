@@ -1,7 +1,6 @@
 from .code_actions import actions_manager
 from .code_actions import CodeActionsByConfigName
 from .completion import LspResolveDocsCommand
-from .completion import resolve
 from .core.css import css
 from .core.logging import debug
 from .core.protocol import CodeLens
@@ -37,6 +36,7 @@ from .diagnostics import filter_by_range
 from .diagnostics import view_diagnostics
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
+from functools import partial
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import functools
@@ -54,6 +54,8 @@ _kind2name = {
     DocumentHighlightKind.Read: "read",
     DocumentHighlightKind.Write: "write"
 }
+
+ResolveCompletionsFn = Callable[[List[sublime.CompletionItem], int], None]
 
 
 def is_regular_view(v: sublime.View) -> bool:
@@ -105,11 +107,11 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
 
     def on_reload_async(self) -> None:
         for listener in list(self.view_listeners):
-            listener.on_reload_async()
+            listener.reload_async()
 
     def on_revert_async(self) -> None:
         for listener in list(self.view_listeners):
-            listener.on_revert_async()
+            listener.revert_async()
 
     def __repr__(self) -> str:
         return "TextChangeListener({})".format(self.buffer.buffer_id)
@@ -240,16 +242,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._when_selection_remains_stable_async(self._do_code_lenses_async, current_region,
                                                       after_ms=self.code_lenses_debounce_time)
 
-    def on_revert_async(self) -> None:
-        if self.view.is_primary():
-            for sv in self.session_views_async():
-                sv.on_revert_async()
-
-    def on_reload_async(self) -> None:
-        if self.view.is_primary():
-            for sv in self.session_views_async():
-                sv.on_reload_async()
-
     def get_language_id(self) -> str:
         return self._language_id
 
@@ -332,9 +324,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[sublime.CompletionList]:
         if "completion" in userprefs().disabled_capabilities:
             return None
-        promise = sublime.CompletionList()
-        sublime.set_timeout_async(lambda: self._on_query_completions_async(promise, locations[0]))
-        return promise
+
+        def resolve(clist: sublime.CompletionList, items: List[sublime.CompletionItem], flags: int = 0) -> None:
+            # Resolve on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).
+            sublime.set_timeout(lambda: clist.set_completions(items, flags))
+
+        clist = sublime.CompletionList()
+        sublime.set_timeout_async(lambda: self._on_query_completions_async(partial(resolve, clist), locations[0]))
+        return clist
 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
 
@@ -578,20 +575,20 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 
-    def _on_query_completions_async(self, promise: sublime.CompletionList, location: int) -> None:
+    def _on_query_completions_async(self, resolve: ResolveCompletionsFn, location: int) -> None:
         session = self.session('completionProvider', location)
         if not session:
-            resolve(promise, [])
+            resolve([], 0)
             return
         self.purge_changes_async()
         can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
         config_name = session.config.name
         session.send_request_async(
             Request.complete(text_document_position_params(self.view, location), self.view),
-            lambda res: self._on_complete_result(res, promise, can_resolve_completion_items, config_name),
-            lambda res: self._on_complete_error(res, promise))
+            lambda res: self._on_complete_result(res, resolve, can_resolve_completion_items, config_name),
+            lambda res: self._on_complete_error(res, resolve))
 
-    def _on_complete_result(self, response: Optional[Union[dict, List]], completion_list: sublime.CompletionList,
+    def _on_complete_result(self, response: Optional[Union[dict, List]], resolve: ResolveCompletionsFn,
                             can_resolve_completion_items: bool, session_name: str) -> None:
         response_items = []  # type: List[Dict]
         flags = 0
@@ -612,10 +609,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                  for index, response_item in enumerate(response_items)]
         if items:
             flags |= sublime.INHIBIT_REORDER
-        resolve(completion_list, items, flags)
+        resolve(items, flags)
 
-    def _on_complete_error(self, error: dict, completion_list: sublime.CompletionList) -> None:
-        resolve(completion_list, [])
+    def _on_complete_error(self, error: dict, resolve: ResolveCompletionsFn) -> None:
+        resolve([], 0)
         LspResolveDocsCommand.completions = []
         sublime.status_message('Completion error: ' + str(error.get('message')))
 
@@ -667,6 +664,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             errors += sb.total_errors
             warnings += sb.total_warnings
         return errors, warnings
+
+    def revert_async(self) -> None:
+        if self.view.is_primary():
+            for sv in self.session_views_async():
+                sv.on_revert_async()
+
+    def reload_async(self) -> None:
+        if self.view.is_primary():
+            for sv in self.session_views_async():
+                sv.on_reload_async()
 
     # --- Private utility methods --------------------------------------------------------------------------------------
 

@@ -1,0 +1,16 @@
+=> 1.2.3
+
+- General improvements to popup CSS styling (#1515) (Raoul Wols)
+  This fixes a clangd rendering issue for hover popups.
+
+- General improvements to signature help (#1513) (Raoul Wols)
+  This fixes rendering of the signature help popup for various corner cases.
+
+- Add support for $document_id in keybindings for workspace/executeCommand (DeathAxe)
+
+- Fix: do not clobber older edits with newer edits (Raoul Wols)
+  This fixes a rust-analyzer issue where only the last rename item would be renamed.
+
+- language server pages (#1490) (Предраг Николић / Predrag Nikolic)
+  We're working on refreshing the documentation.
+  While it's a work-in-progress, you can take a look: sublimelsp.github.io/LSP

@@ -18,7 +18,7 @@ contexts:
         2: punctuation.separator.lsp
 
   line:
-    - match: ^\s+(?=\d)
+    - match: ^\s*(?=\d)
       push:
         - ensure-diag-meta-scope
         - expect-source-and-code

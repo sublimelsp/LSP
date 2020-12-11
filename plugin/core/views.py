@@ -8,7 +8,7 @@ from .protocol import Notification
 from .protocol import Point
 from .protocol import Range
 from .protocol import Request
-from .typing import Optional, Dict, Any, Iterable, List, Union, Callable
+from .typing import Optional, Dict, Any, Iterable, List, Union, Callable, Tuple
 from .url import filename_to_uri
 from .url import uri_to_filename
 import html
@@ -542,10 +542,26 @@ def format_severity(severity: int) -> str:
     return "???"
 
 
-def format_diagnostic_for_panel(diagnostic: Diagnostic) -> str:
+def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[int], Optional[str], Optional[str]]:
+    """
+    Turn an LSP diagnostic into a string suitable for an output panel.
+
+    :param      diagnostic:  The diagnostic
+    :returns:   Tuple of (content, optional offset, optional code, optional href)
+                When the last three elements are optional, don't show an inline phantom
+                When the last three elemenst are not optional, show an inline phantom
+                using the information given.
+    """
     formatted = [diagnostic.source if diagnostic.source else "unknown-source"]
-    if diagnostic.code:
-        formatted.extend((":", str(diagnostic.code)))
+    offset = None
+    href = None
+    code = str(diagnostic.code) if diagnostic.code else None
+    if code:
+        formatted.append(":")
+        if diagnostic.code_description:
+            href = diagnostic.code_description["href"]
+        else:
+            formatted.append(code)
     lines = diagnostic.message.splitlines() or [""]
     # \u200B is the zero-width space
     result = "{:>4}:{:<4}{:<8}{} \u200B{}".format(
@@ -555,9 +571,11 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> str:
         lines[0],
         "".join(formatted)
     )
+    if href:
+        offset = len(result)
     for line in itertools.islice(lines, 1, None):
         result += "\n" + 17 * " " + line
-    return result
+    return result, offset, code, href
 
 
 def _format_diagnostic_related_info(info: DiagnosticRelatedInformation, base_dir: Optional[str] = None) -> str:

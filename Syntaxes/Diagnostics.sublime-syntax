@@ -11,7 +11,7 @@ contexts:
     - include: line
 
   file:
-    - match: ^(.*)(:)$
+    - match: ^(?!\s*\d+:\d+)(.*)(:)$
       captures:
         0: meta.diagnostic.preamble.lsp
         1: string.unquoted.lsp
@@ -54,7 +54,7 @@ contexts:
 
   expect-source-and-code:
     - include: pop-at-end
-    - match: ([^:\]]+)((:)(\S+))?
+    - match: ([^:\]]+)((:)(\S+)?)?
       captures:
         1: comment.line.source.lsp
         3: punctuation.separator.lsp

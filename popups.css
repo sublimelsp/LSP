@@ -38,6 +38,7 @@
     padding: 0.5rem;
 }
 .actions {
+    margin-bottom: 0.5rem;
     font-family: system;
     border-width: 0;
     background-color: color(var(--foreground) alpha(0.1));

@@ -2,12 +2,13 @@ from .panels import ensure_panel
 from .protocol import Diagnostic
 from .protocol import Point
 from .sessions import SessionBufferProtocol
+from .types import PANEL_FILE_REGEX, PANEL_LINE_REGEX
 from .typing import List, Tuple, Callable, Optional, Iterable
 import sublime
 
 
 def ensure_diagnostics_panel(window: sublime.Window) -> Optional[sublime.View]:
-    return ensure_panel(window, "diagnostics", r"(?!\s+\d+:\d+)(.*)(:)$", r"^\s+(\d+):(\d+)",
+    return ensure_panel(window, "diagnostics", PANEL_FILE_REGEX, PANEL_LINE_REGEX,
                         "Packages/LSP/Syntaxes/Diagnostics.sublime-syntax")
 
 

@@ -9,6 +9,7 @@ from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.settings import PLUGIN_NAME
 from .core.settings import userprefs
+from .core.types import PANEL_FILE_REGEX, PANEL_LINE_REGEX
 from .core.typing import List, Dict, Optional, Tuple, TypedDict
 from .core.url import uri_to_filename
 from .core.views import get_line, text_document_position_params
@@ -17,7 +18,7 @@ ReferenceDict = TypedDict('ReferenceDict', {'uri': str, 'range': dict})
 
 
 def ensure_references_panel(window: sublime.Window) -> 'Optional[sublime.View]':
-    return ensure_panel(window, "references", r"^(?!\s+\d+:\d+)(.*)(:)$", r"^\s+(\d+):(\d+)",
+    return ensure_panel(window, "references", PANEL_FILE_REGEX, PANEL_LINE_REGEX,
                         "Packages/" + PLUGIN_NAME + "/Syntaxes/References.sublime-syntax")
 
 

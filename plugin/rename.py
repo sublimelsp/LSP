@@ -8,6 +8,7 @@ from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
+from .core.types import PANEL_FILE_REGEX, PANEL_LINE_REGEX
 from .core.typing import Any, Optional, Dict, List
 from .core.views import range_to_region, get_line
 from .core.views import text_document_position_params
@@ -185,7 +186,7 @@ def ensure_rename_panel(window: sublime.Window) -> Optional[sublime.View]:
     return ensure_panel(
         window=window,
         name=PanelName.Rename,
-        result_file_regex=r"^(?!\s+\d+:\d+)(.*)(:)$",
-        result_line_regex=r"^\s+(\d+):(\d+)",
+        result_file_regex=PANEL_FILE_REGEX,
+        result_line_regex=PANEL_LINE_REGEX,
         syntax="Packages/LSP/Syntaxes/References.sublime-syntax"
     )

@@ -173,7 +173,7 @@
                 }
               ],
               "default": "saved",
-              "markdownDescription": "Open and close the diagnostics panel automatically, depending on available diagnostics. For backward-compatibility, this can also be a boolean. In that case, if set to `false`, don't show the diagnostics panel, and when set to `true`, always show the diagnostics panel."
+              "deprecationMessage": "Use the \"auto_show_diagnostics_panel_level\" setting instead."
             },
             "code_action_on_save_timeout_ms": {
               "type": "integer",
@@ -182,10 +182,10 @@
             },
             "auto_show_diagnostics_panel_level": {
               "type": "integer",
-              "minimum": 1,
+              "minimum": 0,
               "maximum": 4,
               "default": 2,
-              "markdownDescription": "Open the diagnostics panel automatically when diagnostics level is equal to or less than:\n\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`"
+              "markdownDescription": "Open the diagnostics panel automatically **on save** when diagnostics level is equal to or less than:\n\n- _none_: `0` (this means never show the panel automatically),\n- _error_: `1`,\n- _warning_: `2`,\n- _info_: `3`,\n- _hint_: `4`\n\nThe panel is not shown when there is already another panel open. The panel is never _closed_ automatically. To close the panel, press the <kbd>Esc</kbd> key."
             },
             "show_diagnostics_count_in_view_status": {
               "type": "boolean",

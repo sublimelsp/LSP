@@ -1,3 +1,4 @@
+import functools
 from ...third_party import WebsocketServer  # type: ignore
 from .configurations import ConfigManager
 from .configurations import WindowConfigManager
@@ -39,6 +40,9 @@ import json
 import os
 import sublime
 import threading
+
+
+_NO_DIAGNOSTICS_PLACEHOLDER = "  No diagnostics. Well done!"
 
 
 class AbstractViewListener(metaclass=ABCMeta):
@@ -127,6 +131,7 @@ class WindowManager(Manager):
         self._panel_code_phantoms = None  # type: Optional[sublime.PhantomSet]
         self.total_error_count = 0
         self.total_warning_count = 0
+        sublime.set_timeout(functools.partial(self._update_panel_main_thread, None, _NO_DIAGNOSTICS_PLACEHOLDER, []))
 
     def get_config_manager(self) -> WindowConfigManager:
         return self._configs
@@ -437,41 +442,32 @@ class WindowManager(Manager):
         for listener in listeners:
             set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
         characters = "\n".join(to_render)
+        if not characters:
+            characters = _NO_DIAGNOSTICS_PLACEHOLDER
+        sublime.set_timeout(functools.partial(self._update_panel_main_thread, base_dir, characters, prephantoms))
 
-        def update() -> None:
-            panel = ensure_diagnostics_panel(self._window)
-            if not panel or not panel.is_valid():
-                return
-            if isinstance(base_dir, str):
-                panel.settings().set("result_base_dir", base_dir)
-            else:
-                panel.settings().erase("result_base_dir")
-            panel.run_command("lsp_update_panel", {"characters": characters})
-            if self._panel_code_phantoms is None:
-                self._panel_code_phantoms = sublime.PhantomSet(panel, "hrefs")
-            phantoms = []  # type: List[sublime.Phantom]
-            for row, col, code, href in prephantoms:
-                point = panel.text_point(row, col)
-                region = sublime.Region(point, point)
-                phantoms.append(sublime.Phantom(region, make_link(href, code), sublime.LAYOUT_INLINE))
-            self._panel_code_phantoms.update(phantoms)
-
-        sublime.set_timeout(update)
-
-    def _can_manipulate_diagnostics_panel(self) -> bool:
-        active_panel = self._window.active_panel()
-        if active_panel is not None:
-            return active_panel == "output.diagnostics"
-        return True
+    def _update_panel_main_thread(self, base_dir: Optional[str], characters: str,
+                                  prephantoms: List[Tuple[int, int, str, str]]) -> None:
+        panel = ensure_diagnostics_panel(self._window)
+        if not panel or not panel.is_valid():
+            return
+        if isinstance(base_dir, str):
+            panel.settings().set("result_base_dir", base_dir)
+        else:
+            panel.settings().erase("result_base_dir")
+        panel.run_command("lsp_update_panel", {"characters": characters})
+        if self._panel_code_phantoms is None:
+            self._panel_code_phantoms = sublime.PhantomSet(panel, "hrefs")
+        phantoms = []  # type: List[sublime.Phantom]
+        for row, col, code, href in prephantoms:
+            point = panel.text_point(row, col)
+            region = sublime.Region(point, point)
+            phantoms.append(sublime.Phantom(region, make_link(href, code), sublime.LAYOUT_INLINE))
+        self._panel_code_phantoms.update(phantoms)
 
     def show_diagnostics_panel_async(self) -> None:
-        if self._can_manipulate_diagnostics_panel():
+        if self._window.active_panel() is None:
             self._window.run_command("show_panel", {"panel": "output.diagnostics"})
-
-    def hide_diagnostics_panel_async(self) -> None:
-        # prevent flickering on-save
-        if self._can_manipulate_diagnostics_panel() and userprefs().auto_show_diagnostics_panel != "saved":
-            self._window.run_command("hide_panel", {"panel": "output.diagnostics"})
 
     def select_next_diagnostic_async(self) -> None:
         self._select_diagnostic_async(1)

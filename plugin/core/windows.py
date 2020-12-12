@@ -410,7 +410,7 @@ class WindowManager(Manager):
         sublime.status_message("{}: {}".format(session.config.name, extract_message(params)))
 
     def update_diagnostics_panel_async(self) -> None:
-        to_render = []  # type: List[str]
+        to_render = ""  # type: str
         base_dir = None
         self.total_error_count = 0
         self.total_warning_count = 0
@@ -427,16 +427,17 @@ class WindowManager(Manager):
             file_path = listener.view.file_name() or ""
             base_dir = self.get_project_path(file_path)  # What about different base dirs for multiple folders?
             file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
-            to_render.append("{}:".format(file_path))
+            to_render += "{}:\n".format(file_path)
             row += 1
             for content, offset, code, href in contribution:
-                to_render.append(content)
+                to_render += content
                 if offset is not None and code is not None and href is not None:
                     prephantoms.append((row, offset, code, href))
                 row += content.count("\n") + 1
+            # append a new line after each file name
+            to_render += '\n'
         for listener in listeners:
             set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
-        characters = "\n".join(to_render)
 
         def update() -> None:
             panel = ensure_diagnostics_panel(self._window)
@@ -446,7 +447,7 @@ class WindowManager(Manager):
                 panel.settings().set("result_base_dir", base_dir)
             else:
                 panel.settings().erase("result_base_dir")
-            panel.run_command("lsp_update_panel", {"characters": characters})
+            panel.run_command("lsp_update_panel", {"characters": to_render})
             if self._panel_code_phantoms is None:
                 self._panel_code_phantoms = sublime.PhantomSet(panel, "hrefs")
             phantoms = []  # type: List[sublime.Phantom]

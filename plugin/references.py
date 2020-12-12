@@ -2,18 +2,24 @@ import os
 import sublime
 import linecache
 
-from .core.panels import reference_panel
+from .core.panels import ensure_panel
 from .core.protocol import Request, Point
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.settings import PLUGIN_NAME
 from .core.settings import userprefs
+from .core.types import PANEL_FILE_REGEX, PANEL_LINE_REGEX
 from .core.typing import List, Dict, Optional, Tuple, TypedDict
 from .core.url import uri_to_filename
 from .core.views import get_line, text_document_position_params
 
 ReferenceDict = TypedDict('ReferenceDict', {'uri': str, 'range': dict})
+
+
+def ensure_references_panel(window: sublime.Window) -> 'Optional[sublime.View]':
+    return ensure_panel(window, "references", PANEL_FILE_REGEX, PANEL_LINE_REGEX,
+                        "Packages/" + PLUGIN_NAME + "/Syntaxes/References.sublime-syntax")
 
 
 class LspSymbolReferencesCommand(LspTextCommand):
@@ -111,11 +117,11 @@ class LspSymbolReferencesCommand(LspTextCommand):
     def show_references_panel(self, references_by_file: Dict[str, List[Tuple[Point, str]]]) -> None:
         window = self.view.window()
         if window:
-            panel_view = reference_panel.view(window)
-            if not panel_view.is_valid():
+            panel = ensure_references_panel(window)
+            if not panel:
                 return
 
-            text = ""
+            text = ''
             references_count = 0
             for file, references in references_by_file.items():
                 text += '{}:\n'.format(self.get_relative_path(file))
@@ -127,14 +133,19 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 text += '\n'
 
             base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
-            panel_view.settings().set("result_base_dir", base_dir)
+            panel.settings().set("result_base_dir", base_dir)
 
-            reference_panel.update(window, "{} references for '{}'\n\n{}".format(references_count, self.word, text))
-            reference_panel.open(window)
+            panel.run_command("lsp_clear_panel")
+            window.run_command("show_panel", {"panel": "output.references"})
+            panel.run_command('append', {
+                'characters': "{} references for '{}'\n\n{}".format(references_count, self.word, text),
+                'force': True,
+                'scroll_to_end': False
+            })
 
             # highlight all word occurrences
-            regions = panel_view.find_all(r"\b{}\b".format(self.word))
-            panel_view.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_OUTLINED)
+            regions = panel.find_all(r"\b{}\b".format(self.word))
+            panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_OUTLINED)
 
     def get_selected_file_path(self, index: int) -> str:
         return self.get_full_path(self.reflist[index][0])

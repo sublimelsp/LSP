@@ -1,6 +1,7 @@
+from LSP.plugin.core.panels import ensure_server_panel
 from LSP.plugin.core.panels import SERVER_PANEL_DEBOUNCE_TIME_MS
 from LSP.plugin.core.panels import SERVER_PANEL_MAX_LINES
-from LSP.plugin.core.panels import update_server_panel, language_servers_panel
+from LSP.plugin.core.panels import update_server_panel
 from unittesting import DeferrableTestCase
 import sublime
 
@@ -14,12 +15,12 @@ class LspServerPanelTests(DeferrableTestCase):
             self.skipTest("window is None!")
             return
         self.view = self.window.active_view()
-        panel_view = language_servers_panel.view(self.window)
-        if not panel_view.is_valid():
+        panel = ensure_server_panel(self.window)
+        if panel is None:
             self.skipTest("panel is None!")
             return
-        language_servers_panel.clear(self.window)
-        self.panel = panel_view
+        panel.run_command("lsp_clear_panel")
+        self.panel = panel
 
     def assert_total_lines_equal(self, expected_total_lines):
         actual_total_lines = len(self.panel.split_by_newlines(sublime.Region(0, self.panel.size())))

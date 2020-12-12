@@ -1,14 +1,12 @@
 from .core.edit import apply_workspace_edit
 from .core.edit import parse_workspace_edit
 from .core.edit import TextEdit
-from .core.panels import ensure_panel
-from .core.panels import PanelName
+from .core.panels import rename_panel
 from .core.protocol import Range
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
-from .core.types import PANEL_FILE_REGEX, PANEL_LINE_REGEX
 from .core.typing import Any, Optional, Dict, List
 from .core.views import range_to_region, get_line
 from .core.views import text_document_position_params
@@ -158,8 +156,8 @@ class LspSymbolRenameCommand(LspTextCommand):
         window = self.view.window()
         if not window:
             return
-        panel = ensure_rename_panel(window)
-        if not panel:
+        panel_view = rename_panel.view(window)
+        if not panel_view.is_valid():
             return
         text = ''
         for file, file_changes in changes.items():
@@ -171,22 +169,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             # append a new line after each file name
             text += '\n'
         base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
-        panel.settings().set("result_base_dir", base_dir)
-        panel.run_command("lsp_clear_panel")
-        window.run_command("show_panel", {"panel": "output.rename"})
+        panel_view.settings().set("result_base_dir", base_dir)
         fmt = "{} changes across {} files.\n\n{}"
-        panel.run_command('append', {
-            'characters': fmt.format(total_changes, file_count, text),
-            'force': True,
-            'scroll_to_end': False
-        })
-
-
-def ensure_rename_panel(window: sublime.Window) -> Optional[sublime.View]:
-    return ensure_panel(
-        window=window,
-        name=PanelName.Rename,
-        result_file_regex=PANEL_FILE_REGEX,
-        result_line_regex=PANEL_LINE_REGEX,
-        syntax="Packages/LSP/Syntaxes/References.sublime-syntax"
-    )
+        rename_panel.update(window, fmt.format(total_changes, file_count, text))
+        rename_panel.open(window)

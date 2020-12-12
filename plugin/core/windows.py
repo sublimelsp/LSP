@@ -3,11 +3,10 @@ from .configurations import ConfigManager
 from .configurations import WindowConfigManager
 from .diagnostics import DiagnosticsCursor
 from .diagnostics import DiagnosticsWalker
-from .diagnostics import ensure_diagnostics_panel
 from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
-from .panels import update_server_panel
+from .panels import update_server_panel, diagnostics_panel
 from .protocol import Diagnostic
 from .protocol import Error
 from .protocol import Point
@@ -440,19 +439,19 @@ class WindowManager(Manager):
             set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
 
         def update() -> None:
-            panel = ensure_diagnostics_panel(self._window)
-            if not panel or not panel.is_valid():
+            panel_view = diagnostics_panel.view(self._window)
+            if not panel_view.is_valid():
                 return
             if isinstance(base_dir, str):
-                panel.settings().set("result_base_dir", base_dir)
+                panel_view.settings().set("result_base_dir", base_dir)
             else:
-                panel.settings().erase("result_base_dir")
-            panel.run_command("lsp_update_panel", {"characters": to_render})
+                panel_view.settings().erase("result_base_dir")
+            diagnostics_panel.update(self._window, to_render)
             if self._panel_code_phantoms is None:
-                self._panel_code_phantoms = sublime.PhantomSet(panel, "hrefs")
+                self._panel_code_phantoms = sublime.PhantomSet(panel_view, "hrefs")
             phantoms = []  # type: List[sublime.Phantom]
             for row, col, code, href in prephantoms:
-                point = panel.text_point(row, col)
+                point = panel_view.text_point(row, col)
                 region = sublime.Region(point, point)
                 phantoms.append(sublime.Phantom(region, make_link(href, code), sublime.LAYOUT_INLINE))
             self._panel_code_phantoms.update(phantoms)

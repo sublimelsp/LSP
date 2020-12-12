@@ -1,9 +1,12 @@
+from re import sub
 from .typing import Dict, Optional, List, Generator, Tuple
 from .types import debounced
 from contextlib import contextmanager
 import sublime
 import sublime_plugin
 
+PANEL_FILE_REGEX = r"^(?!\s+\d+:\d+)(.*)(:)$"
+PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
 
 # about 80 chars per line implies maintaining a buffer of about 40kb per window
 SERVER_PANEL_MAX_LINES = 500
@@ -32,11 +35,99 @@ OUTPUT_PANEL_SETTINGS = {
 }
 
 
-class PanelName:
-    Diagnostics = "diagnostics"
-    References = "references"
-    Rename = "rename"
-    LanguageServers = "language servers"
+class Panel:
+    def __init__(self, name: str, syntax="", file_regex="", line_regex=""):
+        self.name = name
+        self._panel = None  # type: Optional[sublime.View]
+        self._syntax = syntax
+        self._file_regex = file_regex
+        self._line_regex = line_regex
+
+    def view(self, w: sublime.Window) -> sublime.View:
+        """ Returns the view contained within the panel. """
+        return self._ensure_panel(w)
+
+    def is_open(self, w: sublime.Window) -> bool:
+        return w.active_panel() == "output.{}".format(self.name)
+
+    def open(self, w: sublime.Window) -> None:
+        self._panel = self._ensure_panel(w)
+        w.run_command("show_panel", {"panel": "output.{}".format(self.name)})
+
+        # HACK: Focus the panel to make the next_result prev_result commands work,
+        # than focus back to the currently open view
+        current_view = w.active_view()
+        w.focus_view(self._panel)
+        w.focus_view(current_view)
+
+    def close(self, w: sublime.Window) -> None:
+        self._panel = self._ensure_panel(w)
+        w.run_command("hide_panel", {"panel": "output.{}".format(self.name)})
+
+    def toggle(self, w: sublime.Window) -> None:
+        if self.is_open(w):
+            self.close(w)
+        else:
+            self.open(w)
+
+    def update(self, w: sublime.Window, content: str) -> None:
+        self._panel = self._ensure_panel(w)
+        self._panel.run_command("lsp_update_panel", {"characters": content})
+
+    def clear(self, w: sublime.Window) -> None:
+        self._panel = self._ensure_panel(w)
+        self._panel.run_command("lsp_clear_panel")
+
+    def destroy(self, w: sublime.Window) -> None:
+        self._panel = self._ensure_panel(w)
+        self._panel.settings().set("syntax", "Packages/Text/Plain text.tmLanguage")
+        w.destroy_output_panel(self.name)
+
+    def _ensure_panel(self, w: sublime.Window) -> sublime.View:
+        panel = w.find_output_panel(self.name);
+        if panel:
+            return panel
+        panel = create_output_panel(w, self.name)
+
+        if self._file_regex:
+            panel.settings().set("result_file_regex", self._file_regex)
+        if self._line_regex:
+            panel.settings().set("result_line_regex", self._line_regex)
+        if self._syntax:
+            panel.assign_syntax(self._syntax)
+
+        # All our panels are read-only
+        panel.set_read_only(True)
+        return panel
+
+
+diagnostics_panel = Panel(
+    "diagnostics",
+    syntax="Packages/LSP/Syntaxes/Diagnostics.sublime-syntax",
+    file_regex=PANEL_FILE_REGEX,
+    line_regex=PANEL_LINE_REGEX
+)
+
+reference_panel = Panel(
+    "references",
+    syntax="Packages/LSP/Syntaxes/References.sublime-syntax",
+    file_regex=PANEL_FILE_REGEX,
+    line_regex=PANEL_LINE_REGEX
+)
+
+language_servers_panel = Panel(
+    "language servers",
+    syntax="Packages/LSP/Syntaxes/ServerLog.sublime-syntax",
+)
+
+rename_panel = Panel(
+    "rename",
+    syntax="Packages/LSP/Syntaxes/References.sublime-syntax",
+    file_regex=PANEL_FILE_REGEX,
+    line_regex=PANEL_LINE_REGEX
+)
+
+lsp_panels = [diagnostics_panel, reference_panel, language_servers_panel, rename_panel]
 
 
 @contextmanager
@@ -46,7 +137,7 @@ def mutable(view: sublime.View) -> Generator:
     view.set_read_only(True)
 
 
-def create_output_panel(window: sublime.Window, name: str) -> Optional[sublime.View]:
+def create_output_panel(window: sublime.Window, name: str) -> sublime.View:
     panel = window.create_output_panel(name)
     settings = panel.settings()
     for key, value in OUTPUT_PANEL_SETTINGS.items():
@@ -55,36 +146,8 @@ def create_output_panel(window: sublime.Window, name: str) -> Optional[sublime.V
 
 
 def destroy_output_panels(window: sublime.Window) -> None:
-    for field in filter(lambda a: not a.startswith('__'), PanelName.__dict__.keys()):
-        panel_name = getattr(PanelName, field)
-        panel = window.find_output_panel(panel_name)
-        if panel and panel.is_valid():
-            panel.settings().set("syntax", "Packages/Text/Plain text.tmLanguage")
-            window.destroy_output_panel(panel_name)
-
-
-def create_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
-                 syntax: str) -> Optional[sublime.View]:
-    panel = create_output_panel(window, name)
-    if not panel:
-        return None
-    if result_file_regex:
-        panel.settings().set("result_file_regex", result_file_regex)
-    if result_line_regex:
-        panel.settings().set("result_line_regex", result_line_regex)
-    panel.assign_syntax(syntax)
-    # Call create_output_panel a second time after assigning the above
-    # settings, so that it'll be picked up as a result buffer
-    # see: Packages/Default/exec.py#L228-L230
-    panel = window.create_output_panel(name)
-    # All our panels are read-only
-    panel.set_read_only(True)
-    return panel
-
-
-def ensure_panel(window: sublime.Window, name: str, result_file_regex: str, result_line_regex: str,
-                 syntax: str) -> Optional[sublime.View]:
-    return window.find_output_panel(name) or create_panel(window, name, result_file_regex, result_line_regex, syntax)
+    for panel in lsp_panels:
+        panel.destroy(window)
 
 
 class LspClearPanelCommand(sublime_plugin.TextCommand):
@@ -114,24 +177,20 @@ class LspUpdatePanelCommand(sublime_plugin.TextCommand):
         selection.clear()
 
 
-def ensure_server_panel(window: sublime.Window) -> Optional[sublime.View]:
-    return ensure_panel(window, PanelName.LanguageServers, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
-
-
 def update_server_panel(window: sublime.Window, prefix: str, message: str) -> None:
     if not window.is_valid():
         return
     window_id = window.id()
-    panel = ensure_server_panel(window)
-    if not panel:
+    panel_view = language_servers_panel.view(window)
+    if not panel_view.is_valid():
         return
     LspUpdateServerPanelCommand.to_be_processed.setdefault(window_id, []).append((prefix, message))
     previous_length = len(LspUpdateServerPanelCommand.to_be_processed[window_id])
 
     def condition() -> bool:
-        if not panel:
+        if not panel_view:
             return False
-        if not panel.is_valid():
+        if not panel_view.is_valid():
             return False
         to_process = LspUpdateServerPanelCommand.to_be_processed.get(window_id)
         if to_process is None:
@@ -144,7 +203,7 @@ def update_server_panel(window: sublime.Window, prefix: str, message: str) -> No
         return current_length == previous_length
 
     debounced(
-        lambda: panel.run_command("lsp_update_server_panel", {"window_id": window_id}) if panel else None,
+        lambda: panel_view.run_command("lsp_update_server_panel", {"window_id": window_id}) if panel_view else None,
         SERVER_PANEL_DEBOUNCE_TIME_MS,
         condition
     )

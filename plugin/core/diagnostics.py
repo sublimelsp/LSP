@@ -7,7 +7,7 @@ import sublime
 
 
 def ensure_diagnostics_panel(window: sublime.Window) -> Optional[sublime.View]:
-    return ensure_panel(window, "diagnostics", r"^(.*):$", r"^\s*(\d+):(\d+)",
+    return ensure_panel(window, "diagnostics", r"(?!\s+\d+:\d+)(.*)(:)$", r"^\s+(\d+):(\d+)",
                         "Packages/LSP/Syntaxes/Diagnostics.sublime-syntax")
 
 

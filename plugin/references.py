@@ -17,7 +17,7 @@ ReferenceDict = TypedDict('ReferenceDict', {'uri': str, 'range': dict})
 
 
 def ensure_references_panel(window: sublime.Window) -> 'Optional[sublime.View]':
-    return ensure_panel(window, "references", r"^(?!\s*\d+:\d+)(.*)(:)$", r"^\s*(\d+):(\d+)",
+    return ensure_panel(window, "references", r"^(?!\s+\d+:\d+)(.*)(:)$", r"^\s+(\d+):(\d+)",
                         "Packages/" + PLUGIN_NAME + "/Syntaxes/References.sublime-syntax")
 
 
@@ -127,7 +127,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 for reference in references:
                     references_count += 1
                     point, line = reference
-                    text += '{:>4}:{:<4} {}\n'.format(point.row + 1, point.col + 1, line)
+                    text += '\t{:>4}:{:<4} {}\n'.format(point.row + 1, point.col + 1, line)
                 # append a new line after each file name
                 text += '\n'
 

@@ -1,4 +1,3 @@
-import functools
 from ...third_party import WebsocketServer  # type: ignore
 from .configurations import ConfigManager
 from .configurations import WindowConfigManager
@@ -12,11 +11,11 @@ from .panels import update_server_panel
 from .protocol import Diagnostic
 from .protocol import Error
 from .protocol import Point
+from .sessions import get_plugin
 from .sessions import Logger
 from .sessions import Manager
 from .sessions import Session
 from .sessions import SessionBufferProtocol
-from .sessions import get_plugin
 from .sessions import SessionViewProtocol
 from .settings import userprefs
 from .transports import create_transport
@@ -36,6 +35,7 @@ from subprocess import CalledProcessError
 from time import time
 from weakref import ref
 from weakref import WeakSet
+import functools
 import json
 import os
 import sublime

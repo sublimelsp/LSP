@@ -20,6 +20,7 @@ FEATURES_TIMEOUT = 300  # milliseconds
 PANEL_FILE_REGEX = r"^(?!\s+\d+:\d+)(.*)(:)$"
 PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
 
+
 def basescope2languageid(base_scope: str) -> str:
     # This the connection between Language IDs and ST selectors.
     base_scope_map = sublime.load_settings("language-ids.sublime-settings")

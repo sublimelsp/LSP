@@ -42,7 +42,7 @@ class DiagnosticSeverityData:
     def __init__(self, severity: int) -> None:
         self.regions = []  # type: List[sublime.Region]
         self.annotations = []  # type: List[str]
-        self.panel_contribution = []  # type: List[str]
+        self.panel_contribution = []  # type: List[Tuple[str, Optional[int], Optional[str], Optional[str]]]
         _, __, self.scope, self.icon = DIAGNOSTIC_SEVERITY[severity - 1]
         if userprefs().diagnostics_gutter_marker != "sign":
             self.icon = userprefs().diagnostics_gutter_marker
@@ -229,11 +229,10 @@ class SessionBuffer:
                 self.purge_changes_async(view)
                 # mypy: expected sublime.View, got ViewLike
                 self.session.send_notification(did_save(view, include_text, self.file_name))
-        if userprefs().show_diagnostics_panel_on_save():
-            if self.should_show_diagnostics_panel:
-                mgr = self.session.manager()
-                if mgr:
-                    mgr.show_diagnostics_panel_async()
+        if self.should_show_diagnostics_panel:
+            mgr = self.session.manager()
+            if mgr:
+                mgr.show_diagnostics_panel_async()
 
     def some_view(self) -> Optional[sublime.View]:
         for sv in self.session_views:
@@ -346,10 +345,6 @@ class SessionBuffer:
         mgr = self.session.manager()
         if mgr:
             mgr.update_diagnostics_panel_async()
-            if not self.should_show_diagnostics_panel:
-                mgr.hide_diagnostics_panel_async()
-            elif userprefs().show_diagnostics_panel_always():
-                mgr.show_diagnostics_panel_async()
 
     def __str__(self) -> str:
         return '{}:{}:{}'.format(self.session.config.name, self.id, self.file_name)

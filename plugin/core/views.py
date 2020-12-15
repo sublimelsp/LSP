@@ -8,7 +8,7 @@ from .protocol import Notification
 from .protocol import Point
 from .protocol import Range
 from .protocol import Request
-from .typing import Optional, Dict, Any, Iterable, List, Union, Callable
+from .typing import Optional, Dict, Any, Iterable, List, Union, Callable, Tuple
 from .url import filename_to_uri
 from .url import uri_to_filename
 import html
@@ -19,6 +19,7 @@ import re
 import sublime
 import sublime_plugin
 import tempfile
+import itertools
 
 DIAGNOSTIC_SEVERITY = [
     # Kind       CSS class   Scope for color     Icon resource
@@ -479,8 +480,9 @@ def text2html(content: str) -> str:
     return re.sub(REPLACEMENT_RE, _replace_match, content)
 
 
-def make_link(href: str, text: str, class_name: Optional[str] = None) -> str:
-    text = text.replace(' ', '&nbsp;')
+def make_link(href: str, text: Any, class_name: Optional[str] = None) -> str:
+    if isinstance(text, str):
+        text = text.replace(' ', '&nbsp;')
     if class_name:
         return "<a href='{}' class='{}'>{}</a>".format(href, class_name, text)
     else:
@@ -540,14 +542,40 @@ def format_severity(severity: int) -> str:
     return "???"
 
 
-def format_diagnostic_for_panel(diagnostic: Diagnostic) -> str:
-    location = "{:>8}:{:<4}".format(diagnostic.range.start.row + 1, diagnostic.range.start.col + 1)
+def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[int], Optional[str], Optional[str]]:
+    """
+    Turn an LSP diagnostic into a string suitable for an output panel.
+
+    :param      diagnostic:  The diagnostic
+    :returns:   Tuple of (content, optional offset, optional code, optional href)
+                When the last three elements are optional, don't show an inline phantom
+                When the last three elemenst are not optional, show an inline phantom
+                using the information given.
+    """
+    formatted = [diagnostic.source if diagnostic.source else "unknown-source"]
+    offset = None
+    href = None
+    code = str(diagnostic.code) if diagnostic.code else None
+    if code:
+        formatted.append(":")
+        if diagnostic.code_description:
+            href = diagnostic.code_description["href"]
+        else:
+            formatted.append(code)
     lines = diagnostic.message.splitlines() or [""]
-    severity = format_severity(diagnostic.severity)
-    formatted = " {}\t{:<12}\t{:<10}\t{}".format(location, diagnostic.source, severity, lines[0])
-    for line in lines[1:]:
-        formatted = formatted + "\n {:<12}\t{:<12}\t{:<10}\t{}".format("", "", "", line)
-    return formatted
+    # \u200B is the zero-width space
+    result = "{:>4}:{:<4}{:<8}{} \u200B{}".format(
+        diagnostic.range.start.row + 1,
+        diagnostic.range.start.col + 1,
+        format_severity(diagnostic.severity),
+        lines[0],
+        "".join(formatted)
+    )
+    if href:
+        offset = len(result)
+    for line in itertools.islice(lines, 1, None):
+        result += "\n" + 17 * " " + line
+    return result, offset, code, href
 
 
 def _format_diagnostic_related_info(info: DiagnosticRelatedInformation, base_dir: Optional[str] = None) -> str:
@@ -561,15 +589,32 @@ def _format_diagnostic_related_info(info: DiagnosticRelatedInformation, base_dir
     return '<a href="location:{}">{}</a>: {}'.format(encoded_filename, text2html(file_path), text2html(info.message))
 
 
-def format_diagnostic_for_html(diagnostic: Diagnostic, base_dir: Optional[str] = None) -> str:
-    diagnostic_message = text2html(diagnostic.message)
-    related_infos = [_format_diagnostic_related_info(info, base_dir) for info in diagnostic.related_info]
-    related_content = "<pre class='related_info'>" + "<br>".join(related_infos) + "</pre>" if related_infos else ""
-    if diagnostic.source:
-        content = "[{}] {}{}".format(diagnostic.source, diagnostic_message, related_content)
+def _with_color(text: Any, hexcolor: str) -> str:
+    return '<span style="color: {};">{}</span>'.format(hexcolor, text)
+
+
+def _with_scope_color(view: sublime.View, text: Any, scope: str) -> str:
+    return _with_color(text, view.style_for_scope(scope)["foreground"])
+
+
+def format_diagnostic_for_html(view: sublime.View, diagnostic: Diagnostic, base_dir: Optional[str] = None) -> str:
+    formatted = ['<pre class="', DIAGNOSTIC_SEVERITY[diagnostic.severity - 1][1], '">', text2html(diagnostic.message)]
+    if diagnostic.code_description:
+        code = make_link(diagnostic.code_description["href"], diagnostic.code)  # type: Optional[str]
+    elif diagnostic.code:
+        code = _with_color(diagnostic.code, "color(var(--foreground) alpha(0.6))")
     else:
-        content = "{}{}".format(diagnostic_message, related_content)
-    return '<pre class="{}">{}</pre>'.format(DIAGNOSTIC_SEVERITY[diagnostic.severity - 1][1], content)
+        code = None
+    source = diagnostic.source if diagnostic.source else "unknown-source"
+    formatted.extend((" ", _with_color(source, "color(var(--foreground) alpha(0.6))")))
+    if code:
+        formatted.extend((_with_scope_color(view, ":", "punctuation.separator.lsp"), code))
+    if diagnostic.related_info:
+        formatted.append('<pre class="related_info">')
+        formatted.extend(_format_diagnostic_related_info(info, base_dir) for info in diagnostic.related_info)
+        formatted.append("</pre>")
+    formatted.append("</pre>")
+    return "".join(formatted)
 
 
 def create_phantom_html(content: str, severity: str) -> str:

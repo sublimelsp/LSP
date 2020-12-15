@@ -97,10 +97,6 @@ class Manager(metaclass=ABCMeta):
     def show_diagnostics_panel_async(self) -> None:
         pass
 
-    @abstractmethod
-    def hide_diagnostics_panel_async(self) -> None:
-        pass
-
     # Event callbacks
 
     @abstractmethod
@@ -221,7 +217,10 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "dynamicRegistration": True  # exceptional
             },
             "publishDiagnostics": {
-                "relatedInformation": True
+                "relatedInformation": True,
+                "versionSupport": True,
+                "codeDescriptionSupport": True,
+                "dataSupport": True
             },
             "selectionRange": {
                 "dynamicRegistration": True

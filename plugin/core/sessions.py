@@ -97,10 +97,6 @@ class Manager(metaclass=ABCMeta):
     def show_diagnostics_panel_async(self) -> None:
         pass
 
-    @abstractmethod
-    def hide_diagnostics_panel_async(self) -> None:
-        pass
-
     # Event callbacks
 
     @abstractmethod

@@ -7,6 +7,8 @@ scope: output.lsp.diagnostics
 
 contexts:
   main:
+    - match: ^  No diagnostics. Well done!$
+      scope: comment.line.placeholder.lsp
     - include: file
     - include: line
 

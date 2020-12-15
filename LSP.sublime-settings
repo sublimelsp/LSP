@@ -2,12 +2,7 @@
   // Show permanent language server status in the status bar.
   "show_view_status": true,
 
-  // Open and close the diagnostics panel automatically,
-  // depending on available diagnostics.
-  // Valid values are "never", "always" and "saved"
-  "auto_show_diagnostics_panel": "saved",
-
-  // Run the server's formatProvider (if supported) on a document before saving.
+  // Run the server's formatProvider (if supported) on a file before saving.
   // This option is also supported in syntax-specific settings and/or in the
   // "settings" section of project files.
   "lsp_format_on_save": false,
@@ -32,8 +27,9 @@
   // The amount of time the code actions on save are allowed to run for.
   "code_action_on_save_timeout_ms": 2000,
 
-  // Open the diagnostics panel automatically
-  // when diagnostics level is equal to or less than:
+  // Open the diagnostics panel automatically on save when diagnostics level is
+  // equal to or less than:
+  // none: 0 (never open the panel automatically)
   // error: 1
   // warning: 2
   // info: 3
@@ -49,7 +45,7 @@
 
   // Show highlights and gutter markers in the file views for diagnostics
   // with level equal to or less than:
-  // none: 0
+  // none: 0 (never show)
   // error: 1
   // warning: 2
   // info: 3

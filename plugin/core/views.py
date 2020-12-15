@@ -564,7 +564,7 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
             formatted.append(code)
     lines = diagnostic.message.splitlines() or [""]
     # \u200B is the zero-width space
-    result = "\t{:>4}:{:<4}{:<8}{} \u200B{}\n".format(
+    result = "{:>4}:{:<4}{:<8}{} \u200B{}".format(
         diagnostic.range.start.row + 1,
         diagnostic.range.start.col + 1,
         format_severity(diagnostic.severity),

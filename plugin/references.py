@@ -128,7 +128,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 for reference in references:
                     references_count += 1
                     point, line = reference
-                    to_render.append('{:>4}:{:<4} {}'.format(point.row + 1, point.col + 1, line))
+                    to_render.append('{:>5}:{:<4} {}'.format(point.row + 1, point.col + 1, line))
             characters = "\n".join(to_render)
             base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
             panel.settings().set("result_base_dir", base_dir)

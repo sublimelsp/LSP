@@ -167,7 +167,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             for edit in file_changes:
                 start = edit[0]
                 line_content = get_line(self.view.window(), file, start[0])
-                to_render.append('{:>4}:{:<4} {}'.format(start[0] + 1, start[1] + 1, line_content))
+                to_render.append('{:>5}:{:<4} {}'.format(start[0] + 1, start[1] + 1, line_content))
         characters = "\n".join(to_render)
         base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
         panel.settings().set("result_base_dir", base_dir)

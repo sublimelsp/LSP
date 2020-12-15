@@ -434,6 +434,7 @@ class WindowManager(Manager):
                 if offset is not None and code is not None and href is not None:
                     prephantoms.append((row, offset, code, href))
                 row += content.count("\n") + 1
+            to_render.append("")  # add spacing between filenames
         for listener in listeners:
             set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
         characters = "\n".join(to_render)

@@ -6,7 +6,7 @@ hidden: true
 scope: output.lsp.references
 
 variables:
-  start_of_reference_body: ^\s*(?=\d)
+  start_of_reference_body: ^\s*(?=\s*\d+:\d+)
   filename_and_colon: ^(?!\s*\d+:\d+)(.*)(:)$
 
 contexts:

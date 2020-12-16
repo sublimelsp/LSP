@@ -106,80 +106,54 @@ SignatureHelpContext = TypedDict('SignatureHelpContext', {
 
 class Request:
 
-    __slots__ = ('method', 'params', 'view')
+    __slots__ = ('method', 'params', 'view', 'progress')
 
-    def __init__(self, method: str, params: Optional[Mapping[str, Any]] = None,
-                 view: Optional[sublime.View] = None) -> None:
+    def __init__(
+        self,
+        method: str,
+        params: Optional[Mapping[str, Any]] = None,
+        view: Optional[sublime.View] = None,
+        progress: bool = False
+    ) -> None:
         self.method = method
         self.params = params
         self.view = view
+        self.progress = progress  # type: Union[bool, str]
 
     @classmethod
-    def initialize(cls, params: dict) -> 'Request':
+    def initialize(cls, params: Mapping[str, Any]) -> 'Request':
         return Request("initialize", params)
 
     @classmethod
-    def hover(cls, params: dict, view: sublime.View) -> 'Request':
-        return Request("textDocument/hover", params, view)
-
-    @classmethod
-    def complete(cls, params: dict, view: sublime.View) -> 'Request':
+    def complete(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
         return Request("textDocument/completion", params, view)
 
     @classmethod
-    def signatureHelp(cls, params: dict, view: sublime.View) -> 'Request':
+    def signatureHelp(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
         return Request("textDocument/signatureHelp", params, view)
 
     @classmethod
-    def references(cls, params: dict, view: sublime.View) -> 'Request':
-        return Request("textDocument/references", params, view)
-
-    @classmethod
-    def prepareRename(cls, params: dict, view: sublime.View) -> 'Request':
-        return Request("textDocument/prepareRename", params, view)
-
-    @classmethod
-    def rename(cls, params: dict, view: sublime.View) -> 'Request':
-        return Request("textDocument/rename", params, view)
-
-    @classmethod
-    def codeAction(cls, params: dict, view: sublime.View) -> 'Request':
+    def codeAction(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
         return Request("textDocument/codeAction", params, view)
 
     @classmethod
-    def documentColor(cls, params: dict, view: sublime.View) -> 'Request':
+    def documentColor(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
         return Request('textDocument/documentColor', params, view)
 
     @classmethod
-    def executeCommand(cls, params: Mapping[str, Any]) -> 'Request':
-        return Request("workspace/executeCommand", params)
-
-    @classmethod
-    def workspaceSymbol(cls, params: dict) -> 'Request':
-        return Request("workspace/symbol", params)
-
-    @classmethod
-    def formatting(cls, params: dict, view: sublime.View) -> 'Request':
-        return Request("textDocument/formatting", params, view)
-
-    @classmethod
-    def willSaveWaitUntil(cls, params: dict, view: sublime.View) -> 'Request':
+    def willSaveWaitUntil(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
         return Request("textDocument/willSaveWaitUntil", params, view)
 
     @classmethod
-    def rangeFormatting(cls, params: dict, view: sublime.View) -> 'Request':
-        return Request("textDocument/rangeFormatting", params, view)
-
-    @classmethod
-    def documentSymbols(cls, params: dict, view: sublime.View) -> 'Request':
+    def documentSymbols(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
         return Request("textDocument/documentSymbol", params, view)
 
     @classmethod
-    def documentHighlight(cls, params: dict, view: sublime.View) -> 'Request':
+    def documentHighlight(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
         return Request("textDocument/documentHighlight", params, view)
 
     @classmethod
-    def resolveCompletionItem(cls, params: dict, view: sublime.View) -> 'Request':
+    def resolveCompletionItem(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
         return Request("completionItem/resolve", params, view)
 
     @classmethod

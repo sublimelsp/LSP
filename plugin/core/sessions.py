@@ -5,6 +5,7 @@ from .logging import debug
 from .logging import exception_log
 from .open import open_externally
 from .open import open_file_and_center_async
+from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
 from .protocol import CodeAction
@@ -302,6 +303,9 @@ class SessionViewProtocol(Protocol):
         ...
 
     def on_request_finished_async(self, request_id: int) -> None:
+        ...
+
+    def on_request_progress(self, request_id: int, params: Dict[str, Any]) -> None:
         ...
 
 
@@ -730,6 +734,9 @@ class _RegistrationData:
                 return
 
 
+_WORK_DONE_PROGRESS_PREFIX = "wd"
+
+
 class Session(TransportCallbacks):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: List[WorkspaceFolder],
@@ -751,17 +758,9 @@ class Session(TransportCallbacks):
         self._workspace_folders = workspace_folders
         self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
         self._session_buffers = WeakSet()  # type: WeakSet[SessionBufferProtocol]
-        self._progress = {}  # type: Dict[Any, Dict[str, str]]
+        self._progress = {}  # type: Dict[str, Optional[WindowProgressReporter]]
         self._plugin_class = plugin_class
         self._plugin = None  # type: Optional[AbstractPlugin]
-
-    def __del__(self) -> None:
-        debug(self.config.command, "ended")
-        for token in self._progress.keys():
-            key = self._progress_status_key(token)
-            for sv in self.session_views_async():
-                if sv.view.is_valid():
-                    sv.view.erase_status(key)
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -977,7 +976,7 @@ class Session(TransportCallbacks):
                 variables.update(extra_vars)
         return variables
 
-    def execute_command(self, command: ExecuteCommandParams) -> Promise:
+    def execute_command(self, command: ExecuteCommandParams, progress: bool) -> Promise:
         """Run a command from any thread. Your .then() continuations will run in Sublime's worker thread."""
         if self._plugin:
             task = Promise.packaged_task()  # type: PackagedTask[None]
@@ -987,13 +986,13 @@ class Session(TransportCallbacks):
         # TODO: Our Promise class should be able to handle errors/exceptions
         return Promise(
             lambda resolve: self.send_request(
-                Request.executeCommand(command),
+                Request("workspace/executeCommand", command, None, progress),
                 resolve,
                 lambda err: resolve(Error(err["code"], err["message"], err.get("data")))
             )
         )
 
-    def run_code_action_async(self, code_action: Union[Command, CodeAction]) -> Promise:
+    def run_code_action_async(self, code_action: Union[Command, CodeAction], progress: bool) -> Promise:
         command = code_action.get("command")
         if isinstance(command, str):
             code_action = cast(Command, code_action)
@@ -1002,7 +1001,7 @@ class Session(TransportCallbacks):
             arguments = code_action.get('arguments', None)
             if isinstance(arguments, list):
                 command_params['arguments'] = arguments
-            return self.execute_command(command_params)
+            return self.execute_command(command_params, progress)
         # At this point it cannot be a command anymore, it has to be a proper code action.
         # A code action can have an edit and/or command. Note that it can have *both*. In case both are present, we
         # must apply the edits before running the command.
@@ -1032,7 +1031,7 @@ class Session(TransportCallbacks):
                 "command": command["command"],
                 "arguments": command.get("arguments"),
             }  # type: ExecuteCommandParams
-            return promise.then(lambda _: self.execute_command(execute_command))
+            return promise.then(lambda _: self.execute_command(execute_command, False))
         return promise
 
     def _apply_workspace_edit_async(self, edit: Any) -> Promise:
@@ -1152,50 +1151,52 @@ class Session(TransportCallbacks):
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
         """handles the window/workDoneProgress/create request"""
-        self._progress[params['token']] = dict()
+        self._progress[params['token']] = None
         self.send_response(Response(request_id, None))
 
-    def _progress_status_key(self, token: str) -> str:
-        return "lspprogress{}{}".format(self.config.name, token)
+    def _invoke_views(self, request: Request, method: str, *args: Any) -> None:
+        if request.view:
+            sv = self.session_view_for_view_async(request.view)
+            if sv:
+                getattr(sv, method)(*args)
+        else:
+            for sv in self.session_views_async():
+                getattr(sv, method)(*args)
 
     def m___progress(self, params: Any) -> None:
         """handles the $/progress notification"""
         token = params['token']
-        data = self._progress.get(token)
-        if not isinstance(data, dict):
+        if token not in self._progress:
+            try:
+                request_id = int(token[len(_WORK_DONE_PROGRESS_PREFIX):])
+                request = self._response_handlers[request_id][0]
+                self._invoke_views(request, "on_request_progress", request_id, params)
+                return
+            except (IndexError, ValueError, KeyError):
+                pass
             debug('unknown $/progress token: {}'.format(token))
             return
         value = params['value']
         kind = value['kind']
-        key = self._progress_status_key(token)
         if kind == 'begin':
-            data['title'] = value['title']  # mandatory
-            data['message'] = value.get('message')  # optional
-            progress_string = self._progress_string(data, value)
-            self.set_window_status_async(key, progress_string)
+            self._progress[token] = WindowProgressReporter(
+                window=self.window,
+                key="lspprogress{}{}".format(self.config.name, token),
+                title=value["title"],
+                message=value.get("message")
+            )
         elif kind == 'report':
-            progress_string = self._progress_string(data, value)
-            self.set_window_status_async(key, progress_string)
+            progress = self._progress[token]
+            assert isinstance(progress, WindowProgressReporter)
+            progress(value.get("message"), value.get("percentage"))
         elif kind == 'end':
+            progress = self._progress.pop(token)
+            assert isinstance(progress, WindowProgressReporter)
+            title = progress.title
+            progress = None
             message = value.get('message')
             if message:
-                self.window.status_message(data['title'] + ': ' + message)
-            self.erase_window_status_async(key)
-            self._progress.pop(token, None)
-
-    def _progress_string(self, data: Dict[str, Any], value: Dict[str, Any]) -> str:
-        status_msg = data['title']
-        progress_message = value.get('message')  # optional
-        progress_percentage = value.get('percentage')  # optional
-        if progress_message:
-            data['message'] = progress_message
-            status_msg += ': ' + progress_message
-        elif data['message']:  # reuse last known message if not present
-            status_msg += ': ' + data['message']
-        if progress_percentage:
-            fmt = ' ({:.1f}%)' if isinstance(progress_percentage, float) else ' ({}%)'
-            status_msg += fmt.format(progress_percentage)
-        return status_msg
+                self.window.status_message(title + ': ' + message)
 
     # --- shutdown dance -----------------------------------------------------------------------------------------------
 
@@ -1241,15 +1242,10 @@ class Session(TransportCallbacks):
         """You must call this method from Sublime's worker thread. Callbacks will run in Sublime's worker thread."""
         self.request_id += 1
         request_id = self.request_id
+        if request.progress and isinstance(request.params, dict):
+            request.params["workDoneToken"] = _WORK_DONE_PROGRESS_PREFIX + str(request_id)
         self._response_handlers[request_id] = (request, on_result, on_error)
-        if request.view:
-            sv = self.session_view_for_view_async(request.view)
-            if sv:
-                sv.on_request_started_async(request_id, request)
-        else:
-            # This is a workspace or window request
-            for sv in self.session_views_async():
-                sv.on_request_started_async(request_id, request)
+        self._invoke_views(request, "on_request_started_async", request_id, request)
         if self._plugin:
             self._plugin.on_pre_send_request_async(request_id, request)
         self._logger.outgoing_request(request_id, request.method, request.params)
@@ -1351,13 +1347,7 @@ class Session(TransportCallbacks):
         if not request:
             error = {"code": ErrorCode.InvalidParams, "message": "unknown response ID {}".format(response_id)}
             return (print_to_status_bar, error, True)
-        if request.view:
-            sv = self.session_view_for_view_async(request.view)
-            if sv:
-                sv.on_request_finished_async(response_id)
-        else:
-            for sv in self.session_views_async():
-                sv.on_request_finished_async(response_id)
+        self._invoke_views(request, "on_request_finished_async", response_id)
         if "result" in response and "error" not in response:
             return (handler, response["result"], False)
         if not error_handler:

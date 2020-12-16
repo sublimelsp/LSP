@@ -83,7 +83,7 @@ class LspSymbolRenameCommand(LspTextCommand):
                 session = self.best_session("{}.prepareProvider".format(self.capability))
                 if session:
                     params = text_document_position_params(self.view, pos)
-                    request = Request.prepareRename(params, self.view)
+                    request = Request("textDocument/prepareRename", params, self.view, progress=True)
                     self.event = event
                     session.send_request(request, lambda r: self.on_prepare_result(r, pos), self.on_prepare_error)
                 else:
@@ -102,7 +102,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             params = text_document_position_params(self.view, position)
             params["newName"] = new_name
             session.send_request(
-                Request.rename(params, self.view),
+                Request("textDocument/rename", params, self.view, progress=True),
                 # This has to run on the main thread due to calling apply_workspace_edit
                 lambda r: sublime.set_timeout(lambda: self.on_rename_result(r))
             )

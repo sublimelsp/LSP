@@ -255,7 +255,7 @@ class CodeActionOnSaveTask(SaveTask):
                 for session in sessions_for_view(self._view, 'codeActionProvider'):
                     if session.config.name == config_name:
                         for code_action in code_actions:
-                            tasks.append(session.run_code_action_async(code_action))
+                            tasks.append(session.run_code_action_async(code_action, progress=False))
                         break
         if document_version != self._view.change_count():
             # Give on_text_changed_async a chance to trigger.
@@ -310,6 +310,6 @@ class LspCodeActionsCommand(LspTextCommand):
                 selected = self.commands[index]
                 session = self.session_by_name(selected[0])
                 if session:
-                    session.run_code_action_async(selected[2])
+                    session.run_code_action_async(selected[2], progress=True)
 
             sublime.set_timeout_async(run_async)

@@ -1,3 +1,4 @@
+from .core.progress import ViewProgressReporter
 from .core.protocol import Diagnostic
 from .core.protocol import Notification
 from .core.protocol import Request
@@ -31,6 +32,7 @@ class SessionView:
         self.session = session
         self.active_requests = {}  # type: Dict[int, Request]
         self.listener = ref(listener)
+        self.progress = {}  # type: Dict[int, ViewProgressReporter]
         settings = self.view.settings()
         buffer_id = self.view.buffer_id()
         key = (session.config.name, buffer_id)
@@ -191,9 +193,26 @@ class SessionView:
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
         self.active_requests[request_id] = request
+        if request.progress:
+            self.progress[request_id] = ViewProgressReporter(
+                view=self.view,
+                key="lspprogressview{}{}".format(self.session.config.name, request_id),
+                title=request.method
+            )
 
     def on_request_finished_async(self, request_id: int) -> None:
         self.active_requests.pop(request_id, None)
+        self.progress.pop(request_id, None)
+
+    def on_request_progress(self, request_id: int, params: Dict[str, Any]) -> None:
+        value = params['value']
+        kind = value['kind']
+        if kind == 'begin':
+            progress = self.progress[request_id]
+            progress.title = value["title"]
+            progress(value.get("message"), value.get("percentage"))
+        elif kind == 'report':
+            self.progress[request_id](value.get("message"), value.get("percentage"))
 
     def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
         self.session_buffer.on_text_changed_async(self.view, change_count, changes)

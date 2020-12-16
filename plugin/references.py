@@ -50,9 +50,9 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 if os.path.commonprefix([base_dir, file_path]):
                     self.base_dir = base_dir
 
-            document_position = text_document_position_params(self.view, pos)
-            document_position['context'] = {"includeDeclaration": False}
-            request = Request.references(document_position, self.view)
+            params = text_document_position_params(self.view, pos)
+            params['context'] = {"includeDeclaration": False}
+            request = Request("textDocument/references", params, self.view, progress=True)
             session.send_request(request, lambda response: self.handle_response(response, pos))
 
     def handle_response(self, response: Optional[List[ReferenceDict]], pos: int) -> None:

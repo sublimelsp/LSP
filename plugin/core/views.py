@@ -308,18 +308,18 @@ def formatting_options(settings: sublime.Settings) -> Dict[str, Any]:
 
 
 def text_document_formatting(view: sublime.View) -> Request:
-    return Request.formatting({
+    return Request("textDocument/formatting", {
         "textDocument": text_document_identifier(view),
         "options": formatting_options(view.settings())
-    }, view)
+    }, view, progress=True)
 
 
 def text_document_range_formatting(view: sublime.View, region: sublime.Region) -> Request:
-    return Request.rangeFormatting({
+    return Request("textDocument/rangeFormatting", {
         "textDocument": text_document_identifier(view),
         "options": formatting_options(view.settings()),
         "range": region_to_range(view, region).to_lsp()
-    }, view)
+    }, view, progress=True)
 
 
 def selection_range_params(view: sublime.View) -> Dict[str, Any]:

@@ -1,4 +1,5 @@
 from copy import deepcopy
+from LSP.plugin import Request
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.hover import _test_contents
 from setup import TextDocumentTestCase
@@ -320,12 +321,21 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         promise = YieldPromise()
         sublime.set_timeout_async(
             lambda: self.session.execute_command(
-                {"command": "foo", "arguments": ["hello", "there", "general", "kenobi"]}
+                {"command": "foo", "arguments": ["hello", "there", "general", "kenobi"]},
+                progress=False
             ).then(promise.fulfill)
         )
         yield from self.await_promise(promise)
         yield from self.await_message("workspace/executeCommand")
         self.assertEqual(promise.result(), {"canReturnAnythingHere": "asdf"})
+
+    def test_progress(self) -> 'Generator':
+        request = Request("foobar", {"hello": "world"}, self.view, progress=True)
+        self.set_response("foobar", {"general": "kenobi"})
+        promise = self.session.send_request_task(request)
+        yield lambda: "workDoneToken" in request.params
+        result = yield from self.await_promise(promise)
+        self.assertEqual(result, {"general": "kenobi"})
 
 
 class WillSaveWaitUntilTestCase(TextDocumentTestCase):

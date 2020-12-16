@@ -108,7 +108,7 @@ class Manager(metaclass=ABCMeta):
 
 
 def get_initialize_params(variables: Dict[str, str], workspace_folders: List[WorkspaceFolder],
-                          config: ClientConfig) -> dict:
+                          config: ClientConfig) -> Dict[str, Any]:
     completion_kinds = list(range(1, len(COMPLETION_KINDS) + 1))
     symbol_kinds = list(range(1, len(SYMBOL_KINDS) + 1))
     completion_tag_value_set = [v for k, v in CompletionItemTag.__dict__.items() if not k.startswith('_')]
@@ -261,8 +261,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         capabilities['experimental'] = config.experimental_capabilities
     root_uri = first_folder.uri(config) if first_folder else None
     root_path = root_uri[len("file://"):] if root_uri else None
-    return {
-        "processId": os.getpid(),
+    result = {
         "clientInfo": {
             "name": "Sublime Text LSP",
             "version": ".".join(map(str, __version__))
@@ -272,7 +271,10 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "workspaceFolders": [folder.to_lsp(config) for folder in workspace_folders] if workspace_folders else None,
         "capabilities": capabilities,
         "initializationOptions": config.init_options.get_resolved(variables)
-    }
+    }  # type: Dict[str, Any]
+    if not config.path_maps:
+        result["processId"] = os.getpid()
+    return result
 
 
 class SessionViewProtocol(Protocol):

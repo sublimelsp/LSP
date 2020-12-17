@@ -827,7 +827,7 @@ class Session(TransportCallbacks):
         yield from self._session_buffers
 
     def get_session_buffer_for_uri_async(self, uri: str) -> Optional[SessionBufferProtocol]:
-        file_name = uri_to_filename(uri)
+        file_name = self.config.map_server_uri_to_client_path(uri)
         for sb in self.session_buffers_async():
             try:
                 if sb.file_name == file_name or os.path.samefile(file_name, sb.file_name):

@@ -8,8 +8,9 @@ from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
+from .core.types import PANEL_FILE_REGEX, PANEL_LINE_REGEX
 from .core.typing import Any, Optional, Dict, List
-from .core.views import range_to_region
+from .core.views import range_to_region, get_line
 from .core.views import text_document_position_params
 import os
 import sublime
@@ -160,21 +161,22 @@ class LspSymbolRenameCommand(LspTextCommand):
         panel = ensure_rename_panel(window)
         if not panel:
             return
-        text = ''
+        to_render = []  # type: List[str]
         for file, file_changes in changes.items():
-            text += '◌ {}:\n'.format(self._get_relative_path(file))
+            to_render.append('{}:'.format(self._get_relative_path(file)))
             for edit in file_changes:
                 start = edit[0]
-                text += '\t{:>8}:{}\n'.format(start[0] + 1, start[1] + 1)
-            # append a new line after each file name
-            text += '\n'
+                line_content = get_line(self.view.window(), file, start[0])
+                to_render.append('{:>5}:{:<4} {}'.format(start[0] + 1, start[1] + 1, line_content))
+            to_render.append("")  # this adds a spacing between filenames
+        characters = "\n".join(to_render)
         base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
         panel.settings().set("result_base_dir", base_dir)
         panel.run_command("lsp_clear_panel")
         window.run_command("show_panel", {"panel": "output.rename"})
-        fmt = "{} changes across {} files. Double-click on a row:col number to jump to that location.\n\n{}"
+        fmt = "{} changes across {} files.\n\n{}"
         panel.run_command('append', {
-            'characters': fmt.format(total_changes, file_count, text),
+            'characters': fmt.format(total_changes, file_count, characters),
             'force': True,
             'scroll_to_end': False
         })
@@ -184,7 +186,7 @@ def ensure_rename_panel(window: sublime.Window) -> Optional[sublime.View]:
     return ensure_panel(
         window=window,
         name=PanelName.Rename,
-        result_file_regex=r"^\s*\S\s+(\S.*):$",
-        result_line_regex=r"^\s*([0-9]+):([0-9]+)\s*$",
-        syntax="Packages/LSP/Syntaxes/Rename.sublime-syntax"
+        result_file_regex=PANEL_FILE_REGEX,
+        result_line_regex=PANEL_LINE_REGEX,
+        syntax="Packages/LSP/Syntaxes/References.sublime-syntax"
     )

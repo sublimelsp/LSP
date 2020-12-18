@@ -53,6 +53,7 @@ contexts:
       pop: true
     - match: \bhint\b
       scope: markup.inserted.lsp sublimelinter.gutter-mark markup.info.hint.lsp
+      pop: true
 
   expect-source-and-code:
     - include: pop-at-end

@@ -29,7 +29,6 @@ from .types import method_to_capability
 from .types import SettingsRegistration
 from .types import WorkspaceFolder
 from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
-from .url import uri_to_filename
 from .version import __version__
 from .views import COMPLETION_KINDS
 from .views import extract_variables

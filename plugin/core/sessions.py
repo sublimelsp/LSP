@@ -1141,7 +1141,7 @@ class Session(TransportCallbacks):
             success(open_externally(uri, bool(params.get("takeFocus"))))
         else:
             # TODO: ST API does not allow us to say "do not focus this new view"
-            filename = uri_to_filename(uri)
+            filename = self.config.map_server_uri_to_client_path(uri)
             selection = params.get("selection")
             open_file_and_center_async(self.window, filename, selection).then(lambda _: success(True))
 

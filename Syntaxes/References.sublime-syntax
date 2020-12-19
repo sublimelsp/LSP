@@ -6,8 +6,8 @@ hidden: true
 scope: output.lsp.references
 
 variables:
-  start_of_reference_body: ^\s+(?=\d)
-  filename_and_colon: ^\s*(\S)\s+(.*)(:)$
+  start_of_reference_body: ^\s*(?=\s*\d+:\d+)
+  filename_and_colon: ^(?!\s*\d+:\d+)(.*)(:)$
 
 contexts:
   main:
@@ -18,9 +18,8 @@ contexts:
     - match: '{{filename_and_colon}}'
       captures:
         0: meta.reference.preamble.lsp
-        1: punctuation.section.references.preample.lsp
-        2: string.unquoted.lsp entity.name.file.references.lsp
-        3: punctuation.separator.lsp
+        1: string.unquoted.lsp entity.name.file.references.lsp
+        2: punctuation.separator.lsp
 
   references-body:
     - match: '{{start_of_reference_body}}'

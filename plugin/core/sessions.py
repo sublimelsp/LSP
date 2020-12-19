@@ -1137,7 +1137,7 @@ class Session(TransportCallbacks):
             self.send_response(Response(request_id, {"success": b}))
 
         if params.get("external"):
-            success(open_externally(uri, bool(params.get("takeFocus"))))
+            success(open_externally(self.config, uri, bool(params.get("takeFocus"))))
         else:
             # TODO: ST API does not allow us to say "do not focus this new view"
             filename = self.config.map_server_uri_to_client_path(uri)

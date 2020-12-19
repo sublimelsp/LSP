@@ -2,8 +2,8 @@ from .logging import exception_log
 from .promise import Promise
 from .promise import ResolveFunc
 from .protocol import Range
+from .types import ClientConfig
 from .typing import Any, Dict, Tuple, Optional
-from .url import uri_to_filename
 from .views import range_to_region
 import os
 import sublime
@@ -65,13 +65,13 @@ def open_file_and_center_async(window: sublime.Window, file_path: str, r: Option
         .then(Promise.on_async_thread)
 
 
-def open_externally(uri: str, take_focus: bool) -> bool:
+def open_externally(config: ClientConfig, uri: str, take_focus: bool) -> bool:
     """
     A blocking function that invokes the OS's "open with default extension"
     """
     if uri.startswith("http:") or uri.startswith("https:"):
         return webbrowser.open(uri, autoraise=take_focus)
-    file = uri_to_filename(uri)
+    file = config.map_server_uri_to_client_path(uri)
     try:
         # TODO: handle take_focus
         if sublime.platform() == "windows":

@@ -18,6 +18,9 @@ import time
 TCP_CONNECT_TIMEOUT = 5  # seconds
 FEATURES_TIMEOUT = 300  # milliseconds
 
+PANEL_FILE_REGEX = r"^(?!\s+\d+:\d+)(.*)(:)$"
+PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
+
 
 def basescope2languageid(base_scope: str) -> str:
     # This the connection between Language IDs and ST selectors.

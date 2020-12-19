@@ -1,21 +1,22 @@
+import linecache
 import os
 import sublime
-import linecache
-from .core.types import ClientConfig
 from .core.panels import ensure_panel
-from .core.protocol import Request
 from .core.protocol import Point
+from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.settings import PLUGIN_NAME
 from .core.settings import userprefs
+from .core.types import ClientConfig
+from .core.types import PANEL_FILE_REGEX, PANEL_LINE_REGEX
 from .core.typing import Any, List, Dict, Optional, Tuple
 from .core.views import get_line, text_document_position_params
 
 
 def ensure_references_panel(window: sublime.Window) -> 'Optional[sublime.View]':
-    return ensure_panel(window, "references", r"^\s*\S\s+(\S.*):$", r"^\s+([0-9]+):?([0-9]+).*$",
+    return ensure_panel(window, "references", PANEL_FILE_REGEX, PANEL_LINE_REGEX,
                         "Packages/" + PLUGIN_NAME + "/Syntaxes/References.sublime-syntax")
 
 
@@ -119,24 +120,23 @@ class LspSymbolReferencesCommand(LspTextCommand):
             if not panel:
                 return
 
-            text = ''
+            to_render = []  # type: List[str]
             references_count = 0
             for file, references in references_by_file.items():
-                text += '◌ {}:\n'.format(self.get_relative_path(file))
+                to_render.append('{}:'.format(self.get_relative_path(file)))
                 for reference in references:
                     references_count += 1
                     point, line = reference
-                    text += '\t{:>8}:{:<4} {}\n'.format(point.row + 1, point.col + 1, line)
-                # append a new line after each file name
-                text += '\n'
-
+                    to_render.append('{:>5}:{:<4} {}'.format(point.row + 1, point.col + 1, line))
+                to_render.append("")  # add spacing between filenames
+            characters = "\n".join(to_render)
             base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
             panel.settings().set("result_base_dir", base_dir)
 
             panel.run_command("lsp_clear_panel")
             window.run_command("show_panel", {"panel": "output.references"})
             panel.run_command('append', {
-                'characters': "{} references for '{}'\n\n{}".format(references_count, self.word, text),
+                'characters': "{} references for '{}'\n\n{}".format(references_count, self.word, characters),
                 'force': True,
                 'scroll_to_end': False
             })

@@ -1,6 +1,5 @@
 from .typing import Any, Dict, Iterable, List, Mapping, Optional, TypedDict, Union
 from .url import filename_to_uri
-from .url import uri_to_filename
 import os
 import sublime
 
@@ -37,6 +36,9 @@ class SignatureHelpTriggerKind:
     Invoked = 1
     TriggerCharacter = 2
     ContentChange = 3
+
+
+DocumentUri = str
 
 
 CodeDescription = TypedDict('CodeDescription', {
@@ -92,6 +94,26 @@ SignatureHelpContext = TypedDict('SignatureHelpContext', {
     'triggerCharacter': str,
     'isRetrigger': bool,
     'activeSignatureHelp': SignatureHelp
+}, total=False)
+
+
+Location = TypedDict('Location', {
+    'uri': DocumentUri,
+    'range': Dict[str, Any]
+}, total=True)
+
+
+LocationLink = TypedDict('LocationLink', {
+    'originSelectionRange': Dict[str, Any],
+    'targetUri': DocumentUri,
+    'targetRange': Dict[str, Any],
+    'targetSelectionRange': Dict[str, Any]
+}, total=False)
+
+
+DiagnosticRelatedInformation = TypedDict('DiagnosticRelatedInformation', {
+    'location': Location,
+    'message': str
 }, total=False)
 
 
@@ -375,32 +397,6 @@ class Range(object):
         return self
 
 
-class Location(object):
-    def __init__(self, file_path: str, range: Range) -> None:
-        self.file_path = file_path
-        self.range = range
-
-    @classmethod
-    def from_lsp(cls, lsp_location: dict) -> 'Location':
-        return Location(
-            uri_to_filename(lsp_location["uri"]),
-            Range.from_lsp(lsp_location["range"])
-        )
-
-
-class DiagnosticRelatedInformation:
-
-    def __init__(self, location: Location, message: str) -> None:
-        self.location = location
-        self.message = message
-
-    @classmethod
-    def from_lsp(cls, lsp_related_information: dict) -> 'DiagnosticRelatedInformation':
-        return DiagnosticRelatedInformation(
-            Location.from_lsp(lsp_related_information["location"]),
-            lsp_related_information["message"])
-
-
 class Diagnostic:
     def __init__(
         self,
@@ -411,7 +407,7 @@ class Diagnostic:
         code_description: Optional[CodeDescription],
         source: Optional[str],
         lsp_diagnostic: dict,
-        related_info: List[DiagnosticRelatedInformation]
+        related_info: Optional[List[DiagnosticRelatedInformation]]
     ) -> None:
         self.message = message
         self.range = range
@@ -421,7 +417,6 @@ class Diagnostic:
         self.source = source
         self._lsp_diagnostic = lsp_diagnostic
         self.related_info = related_info
-        self.code
 
     @classmethod
     def from_lsp(cls, lsp_diagnostic: dict) -> 'Diagnostic':
@@ -435,7 +430,7 @@ class Diagnostic:
             lsp_diagnostic.get('codeDescription'),
             lsp_diagnostic.get('source'),
             lsp_diagnostic,
-            [DiagnosticRelatedInformation.from_lsp(info) for info in lsp_diagnostic.get('relatedInformation') or []]
+            lsp_diagnostic.get('relatedInformation')
         )
 
     def to_lsp(self) -> Dict[str, Any]:

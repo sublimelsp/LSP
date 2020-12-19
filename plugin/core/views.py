@@ -4,14 +4,17 @@ from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
 from .protocol import DiagnosticSeverity
 from .protocol import InsertTextFormat
+from .protocol import Location
+from .protocol import LocationLink
 from .protocol import Notification
 from .protocol import Point
 from .protocol import Range
 from .protocol import Request
-from .typing import Optional, Dict, Any, Iterable, List, Union, Callable, Tuple
+from .typing import Optional, Dict, Any, Iterable, List, Union, Callable, Tuple, cast
 from .url import filename_to_uri
 from .url import uri_to_filename
 import html
+import itertools
 import linecache
 import mdpopups
 import os
@@ -19,7 +22,6 @@ import re
 import sublime
 import sublime_plugin
 import tempfile
-import itertools
 
 DIAGNOSTIC_SEVERITY = [
     # Kind       CSS class   Scope for color     Icon resource
@@ -155,11 +157,13 @@ def region_to_range(view: sublime.View, region: sublime.Region) -> Range:
     )
 
 
-def location_to_encoded_filename(location: Dict[str, Any]) -> str:
+def location_to_encoded_filename(location: Union[Location, LocationLink]) -> str:
     if "targetUri" in location:
+        location = cast(LocationLink, location)
         uri = location["targetUri"]
         position = location["targetSelectionRange"]["start"]
     else:
+        location = cast(Location, location)
         uri = location["uri"]
         position = location["range"]["start"]
     # WARNING: Cannot possibly do UTF-16 conversion :) Oh well.
@@ -579,14 +583,15 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
 
 
 def _format_diagnostic_related_info(info: DiagnosticRelatedInformation, base_dir: Optional[str] = None) -> str:
-    file_path = info.location.file_path
+    location = info["location"]
+    file_path = uri_to_filename(location["uri"])
     if base_dir and file_path.startswith(base_dir):
         file_path = os.path.relpath(file_path, base_dir)
-    row = info.location.range.start.row + 1
-    col = info.location.range.start.col + 1
-    encoded_filename = "{}:{}:{}".format(info.location.file_path, row, col)
-    file_path = "{}:{}:{}".format(file_path, row, col)
-    return '<a href="location:{}">{}</a>: {}'.format(encoded_filename, text2html(file_path), text2html(info.message))
+    return '<a href="location:{}">{}</a>: {}'.format(
+        location_to_encoded_filename(location),
+        text2html(file_path),
+        text2html(info["message"])
+    )
 
 
 def _with_color(text: Any, hexcolor: str) -> str:
@@ -653,7 +658,11 @@ def diagnostic_to_phantom(
         message = "<p>[{}] {}</p>".format(diagnostic.source, message)
     else:
         message = "<p>{}</p>".format(message)
-    additional_infos = "<br>".join([_format_diagnostic_related_info(i, base_dir) for i in diagnostic.related_info])
+    if diagnostic.related_info:
+        additional_infos = "<br>".join(
+            _format_diagnostic_related_info(i, base_dir) for i in diagnostic.related_info)  # type: Optional[str]
+    else:
+        additional_infos = None
     severity = "error" if diagnostic.severity == DiagnosticSeverity.Error else "warning"
     content = message + "<p class='additional'>" + additional_infos + "</p>" if additional_infos else message
     return sublime.Phantom(

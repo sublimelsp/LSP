@@ -611,7 +611,8 @@ def format_diagnostic_for_html(view: sublime.View, diagnostic: Diagnostic, base_
         formatted.extend((_with_scope_color(view, ":", "punctuation.separator.lsp"), code))
     if diagnostic.related_info:
         formatted.append('<pre class="related_info">')
-        formatted.extend(_format_diagnostic_related_info(info, base_dir) for info in diagnostic.related_info)
+        formatted.append("<br>".join(_format_diagnostic_related_info(info, base_dir)
+                                     for info in diagnostic.related_info))
         formatted.append("</pre>")
     formatted.append("</pre>")
     return "".join(formatted)

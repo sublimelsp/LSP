@@ -91,6 +91,18 @@ export PATH=$PATH:~/.cabal/bin
 
 The complete procedure of updating the `PATH` used by Sublime Text depends on your platform and is explained [here](troubleshooting.md#updating-the-path-used-by-lsp-servers).
 
+
+### 4. Popup error `Language server <your_server_language_name> has crashed`
+Assuming that the server is actually installed, and that you can start it from your shell, this issue is likely due to Sublime Text's internal environment not picking up the same `PATH` environment variable as you've configured in your shell.
+
+Server languages depend on other binaries that should also be in your `PATH` in addtion to the server binary itself.
+
+For instance if you have installed the `haskell-language-server` using [ghcup-hs](https://gitlab.haskell.org/haskell/ghcup-hs) you should expose its specific installation folder `~/.ghcup/bin`. If the build process uses `stack` then it should also be in your `PATH`.
+
+The complete procedure of updating the `PATH` used by Sublime Text depends on your platform and is explained [here](troubleshooting.md#updating-the-path-used-by-lsp-servers).
+
+
+
 ## Known Issues
 
 ### Completions not shown after certain keywords

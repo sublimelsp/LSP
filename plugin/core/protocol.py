@@ -117,6 +117,18 @@ DiagnosticRelatedInformation = TypedDict('DiagnosticRelatedInformation', {
 }, total=False)
 
 
+Diagnostic = TypedDict('Diagnostic', {
+    'range': Dict[str, Any],
+    'severity': int,
+    'code': Union[int, str],
+    'codeDescription': CodeDescription,
+    'source': str,
+    'message': str,
+    'tags': List[int],
+    'relatedInformation': List[DiagnosticRelatedInformation]
+}, total=False)
+
+
 class Request:
 
     __slots__ = ('method', 'params', 'view')
@@ -395,55 +407,6 @@ class Range(object):
         if rge.contains(self.end):
             self.end = rge.end
         return self
-
-
-class Diagnostic:
-    def __init__(
-        self,
-        message: str,
-        range: Range,
-        severity: int,
-        code: Union[None, int, str],
-        code_description: Optional[CodeDescription],
-        source: Optional[str],
-        lsp_diagnostic: dict,
-        related_info: Optional[List[DiagnosticRelatedInformation]]
-    ) -> None:
-        self.message = message
-        self.range = range
-        self.severity = severity
-        self.code = code
-        self.code_description = code_description
-        self.source = source
-        self._lsp_diagnostic = lsp_diagnostic
-        self.related_info = related_info
-
-    @classmethod
-    def from_lsp(cls, lsp_diagnostic: dict) -> 'Diagnostic':
-        return Diagnostic(
-            # crucial keys
-            lsp_diagnostic['message'],
-            Range.from_lsp(lsp_diagnostic['range']),
-            # optional keys
-            lsp_diagnostic.get('severity', DiagnosticSeverity.Error),
-            lsp_diagnostic.get('code'),
-            lsp_diagnostic.get('codeDescription'),
-            lsp_diagnostic.get('source'),
-            lsp_diagnostic,
-            lsp_diagnostic.get('relatedInformation')
-        )
-
-    def to_lsp(self) -> Dict[str, Any]:
-        return self._lsp_diagnostic
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Diagnostic):
-            raise NotImplementedError()
-
-        return self.message == other.message and self.range == other.range
-
-    def __repr__(self) -> str:
-        return str(self.range) + ":" + self.message
 
 
 class WorkspaceFolder:

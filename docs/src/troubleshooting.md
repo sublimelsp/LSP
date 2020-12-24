@@ -77,7 +77,7 @@ The complete procedure of updating the `PATH` used by Sublime Text depends on yo
 
 This error could occurs when using `stack` or `cabal` (`Haskell` language building tools) with the `haskell-language-server` if a library or binary is missing in the language server `PATH`.
 
-Depending on how you installed your `Haskell` tools, you will need to add one or more of the following to your Sublime Text `PATH`.
+Depending on how you installed your `Haskell` tools, you will need to add one or more of the following lines to your login script for bash-like shells on a unix-like operating system.
 ```bash
 ### Home specific and default Stack binaries location
 export PATH=$PATH:~/.local/bin:~/bin
@@ -95,7 +95,7 @@ The complete procedure of updating the `PATH` used by Sublime Text depends on yo
 ### 4. Popup error `Language server <your_server_language_name> has crashed`
 Assuming that the server is actually installed, and that you can start it from your shell, this issue is likely due to Sublime Text's internal environment not picking up the same `PATH` environment variable as you've configured in your shell.
 
-Server languages depend on other binaries that should also be in your `PATH` in addtion to the server binary itself.
+Language servers may depend on other binaries that should also be in your `PATH` in addtion to the server binary itself.
 
 For instance if you have installed the `haskell-language-server` using [ghcup-hs](https://gitlab.haskell.org/haskell/ghcup-hs) you should expose its specific installation folder `~/.ghcup/bin`. If the build process uses `stack` then it should also be in your `PATH`.
 

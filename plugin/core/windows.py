@@ -1,8 +1,6 @@
 from ...third_party import WebsocketServer  # type: ignore
 from .configurations import ConfigManager
 from .configurations import WindowConfigManager
-from .diagnostics import DiagnosticsCursor
-from .diagnostics import DiagnosticsWalker
 from .diagnostics import ensure_diagnostics_panel
 from .logging import debug
 from .logging import exception_log
@@ -10,7 +8,6 @@ from .message_request_handler import MessageRequestHandler
 from .panels import update_server_panel
 from .protocol import CodeLens, Diagnostic
 from .protocol import Error
-from .protocol import Point
 from .sessions import get_plugin
 from .sessions import Logger
 from .sessions import Manager
@@ -20,8 +17,7 @@ from .sessions import SessionViewProtocol
 from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
-from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Iterable
-from .views import diagnostic_to_phantom
+from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Iterable, Sequence
 from .views import extract_variables
 from .views import make_link
 from .workspace import disable_in_project
@@ -69,11 +65,25 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def diagnostics_async(self) -> Iterable[Tuple[SessionBufferProtocol, List[Diagnostic]]]:
+    def diagnostics_async(self) -> Iterable[Tuple[SessionBufferProtocol, Sequence[Tuple[Diagnostic, sublime.Region]]]]:
         raise NotImplementedError()
 
     @abstractmethod
-    def diagnostics_panel_contribution_async(self) -> List[Tuple[str, Optional[int], Optional[str], Optional[str]]]:
+    def diagnostics_intersecting_region_async(
+        self,
+        region: sublime.Region
+    ) -> Tuple[Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]], sublime.Region]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def diagnostics_intersecting_point_async(
+        self,
+        pt: int
+    ) -> Tuple[Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]], sublime.Region]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def diagnostics_panel_contribution_async(self) -> Sequence[Tuple[str, Optional[int], Optional[str], Optional[str]]]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -134,7 +144,6 @@ class WindowManager(Manager):
         self._listeners = WeakSet()  # type: WeakSet[AbstractViewListener]
         self._new_listener = None  # type: Optional[AbstractViewListener]
         self._new_session = None  # type: Optional[Session]
-        self._cursor = DiagnosticsCursor(userprefs().show_diagnostics_severity_level)
         self._diagnostic_phantom_set = None  # type: Optional[sublime.PhantomSet]
         self._panel_code_phantoms = None  # type: Optional[sublime.PhantomSet]
         self.total_error_count = 0
@@ -478,81 +487,6 @@ class WindowManager(Manager):
     def show_diagnostics_panel_async(self) -> None:
         if self._window.active_panel() is None:
             self._window.run_command("show_panel", {"panel": "output.diagnostics"})
-
-    def select_next_diagnostic_async(self) -> None:
-        self._select_diagnostic_async(1)
-
-    def select_previous_diagnostic_async(self) -> None:
-        self._select_diagnostic_async(-1)
-
-    def unselect_diagnostic_async(self) -> None:
-        self._set_diagnostic_phantom(None)
-
-    def _diagnostics_by_file_async(
-        self
-    ) -> Generator[Tuple[str, Iterable[Tuple[SessionBufferProtocol, List[Diagnostic]]]], None, None]:
-        for listener in self._listeners:
-            file_name = listener.view.file_name()
-            if file_name:
-                yield file_name, listener.diagnostics_async()
-
-    def _select_diagnostic_async(self, direction: int) -> None:
-        file_path = None  # type: Optional[str]
-        point = None  # type: Optional[Point]
-        if not self._cursor.has_value:
-            active_view = self._window.active_view()
-            if active_view:
-                file_path = active_view.file_name()
-                point = Point(*active_view.rowcol(active_view.sel()[0].begin()))
-        walk = self._cursor.from_diagnostic(direction) if self._cursor.has_value else self._cursor.from_position(
-            direction, file_path, point)
-        walker = DiagnosticsWalker([walk])
-        walker.walk(self._diagnostics_by_file_async())
-        # The actual presentation of the phantom needs to happen on the UI thread, otherwise you'll see a phantom
-        # disappearing and then immediately after a phantom appearing. This is jarring. So run blocking.
-        sublime.set_timeout(lambda: self._set_diagnostic_phantom(self._cursor.value))
-
-    def _set_diagnostic_phantom(self, file_diagnostic: Optional[Tuple[str, Diagnostic]]) -> None:
-        self._clear_diagnostic_phantom()
-        if file_diagnostic:
-            file_path, diagnostic = file_diagnostic
-            view = self._window.find_open_file(file_path)
-            if view:
-                phantom_set = sublime.PhantomSet(view, self.DIAGNOSTIC_PHANTOM_KEY)
-                base_dir = self.get_project_path(file_path)
-                phantom = diagnostic_to_phantom(view, diagnostic, base_dir, self._navigate_diagnostic_phantom)
-                phantom_set.update([phantom])
-                self._window.focus_view(view)
-                view.show_at_center(phantom.region)
-                # Must be a tuple. Passing a `sublime.Region` causes a Sublime error.
-                view.run_command("lsp_selection_set", {"regions": [phantom.region.to_tuple()]})
-                self._diagnostic_phantom_set = phantom_set
-                has_phantom = view.settings().get(self.DIAGNOSTIC_PHANTOM_KEY)
-                if not has_phantom:
-                    view.settings().set(self.DIAGNOSTIC_PHANTOM_KEY, True)
-            else:
-                debug("no view for file", file_path)
-        else:
-            if self._diagnostic_phantom_set:
-                view = self._diagnostic_phantom_set.view
-                has_phantom = view.settings().get(self.DIAGNOSTIC_PHANTOM_KEY)
-                if not has_phantom:
-                    view.settings().set(self.DIAGNOSTIC_PHANTOM_KEY, False)
-
-    def _navigate_diagnostic_phantom(self, href: str) -> None:
-        if href == "hide":
-            self._clear_diagnostic_phantom()
-        elif href == "next":
-            self._window.run_command("lsp_next_diagnostic")
-        elif href == "previous":
-            self._window.run_command("lsp_previous_diagnostic")
-        elif href.startswith("location:"):
-            self._window.open_file(href[len("location:"):], sublime.ENCODED_POSITION)
-
-    def _clear_diagnostic_phantom(self) -> None:
-        if self._diagnostic_phantom_set:
-            self._diagnostic_phantom_set.view.settings().set(self.DIAGNOSTIC_PHANTOM_KEY, False)
-            self._diagnostic_phantom_set.update([])
 
 
 class WindowRegistry(object):

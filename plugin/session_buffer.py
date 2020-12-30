@@ -1,4 +1,4 @@
-from .core.protocol import Diagnostic
+from .core.protocol import Diagnostic, Range
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import TextDocumentSyncKindFull
 from .core.protocol import TextDocumentSyncKindNone
@@ -10,6 +10,7 @@ from .core.types import Debouncer
 from .core.types import FEATURES_TIMEOUT
 from .core.typing import Any, Iterable, Optional, List, Dict, Tuple
 from .core.views import DIAGNOSTIC_SEVERITY
+from .core.views import diagnostic_severity
 from .core.views import did_change
 from .core.views import did_close
 from .core.views import did_open
@@ -72,7 +73,7 @@ class SessionBuffer:
         self.language_id = language_id
         self.id = buffer_id
         self.pending_changes = None  # type: Optional[PendingChanges]
-        self.diagnostics = []  # type: List[Diagnostic]
+        self.diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
         self.data_per_severity = {}  # type: Dict[int, DiagnosticSeverityData]
         self.diagnostics_version = -1
         self.diagnostics_flags = 0
@@ -239,8 +240,7 @@ class SessionBuffer:
             return sv.view
         return None
 
-    def on_diagnostics_async(self, raw_diagnostics: List[Dict[str, Any]], version: Optional[int]) -> None:
-        diagnostics = []  # type: List[Diagnostic]
+    def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
         data_per_severity = {}  # type: Dict[int, DiagnosticSeverityData]
         total_errors = 0
         total_warnings = 0
@@ -253,20 +253,23 @@ class SessionBuffer:
             version = change_count
         if version == change_count:
             diagnostics_version = version
-            for index, diagnostic in enumerate(map(Diagnostic.from_lsp, raw_diagnostics)):
-                diagnostics.append(diagnostic)
-                data = data_per_severity.get(diagnostic.severity)
+            diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
+            for diagnostic in raw_diagnostics:
+                severity = diagnostic_severity(diagnostic)
+                data = data_per_severity.get(severity)
                 if data is None:
-                    data = DiagnosticSeverityData(diagnostic.severity)
-                    data_per_severity[diagnostic.severity] = data
-                data.regions.append(range_to_region(diagnostic.range, view))
-                if diagnostic.severity == DiagnosticSeverity.Error:
+                    data = DiagnosticSeverityData(severity)
+                    data_per_severity[severity] = data
+                region = range_to_region(Range.from_lsp(diagnostic["range"]), view)
+                data.regions.append(region)
+                diagnostics.append((diagnostic, region))
+                if severity == DiagnosticSeverity.Error:
                     total_errors += 1
-                elif diagnostic.severity == DiagnosticSeverity.Warning:
+                elif severity == DiagnosticSeverity.Warning:
                     total_warnings += 1
-                if diagnostic.severity <= userprefs().diagnostics_panel_include_severity_level:
+                if severity <= userprefs().diagnostics_panel_include_severity_level:
                     data.panel_contribution.append(format_diagnostic_for_panel(diagnostic))
-                if diagnostic.severity <= userprefs().auto_show_diagnostics_panel_level:
+                if severity <= userprefs().auto_show_diagnostics_panel_level:
                     should_show_diagnostics_panel = True
             self._publish_diagnostics_to_session_views(
                 diagnostics_version,
@@ -280,7 +283,7 @@ class SessionBuffer:
     def _publish_diagnostics_to_session_views(
         self,
         diagnostics_version: int,
-        diagnostics: List[Diagnostic],
+        diagnostics: List[Tuple[Diagnostic, sublime.Region]],
         data_per_severity: Dict[int, DiagnosticSeverityData],
         total_errors: int,
         total_warnings: int,
@@ -326,7 +329,7 @@ class SessionBuffer:
     def _present_diagnostics_async(
         self,
         diagnostics_version: int,
-        diagnostics: List[Diagnostic],
+        diagnostics: List[Tuple[Diagnostic, sublime.Region]],
         data_per_severity: Dict[int, DiagnosticSeverityData],
         total_errors: int,
         total_warnings: int,

@@ -7,8 +7,8 @@ if sys.version_info >= (3, 8, 0):
     from typing import cast
     from typing import Deque
     from typing import Dict
-    from typing import Generic
     from typing import Generator
+    from typing import Generic
     from typing import IO
     from typing import Iterable
     from typing import Iterator
@@ -17,6 +17,7 @@ if sys.version_info >= (3, 8, 0):
     from typing import Mapping
     from typing import Optional
     from typing import Protocol
+    from typing import Sequence
     from typing import Set
     from typing import Tuple
     from typing import Type
@@ -102,6 +103,9 @@ else:
         pass
 
     class Protocol(Type):  # type: ignore
+        pass
+
+    class Sequence(Type):  # type: ignore
         pass
 
     def TypeVar(*args, **kwargs) -> Any:  # type: ignore

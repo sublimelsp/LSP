@@ -148,40 +148,6 @@
             },
         ]
     },
-    // Next/Prevous diagnostics
-    {
-        "command": "lsp_next_diagnostic",
-        "keys": [
-            "f8"
-        ],
-        "context": [
-            {
-                "key": "setting.lsp_active"
-            }
-        ]
-    },
-    {
-        "command": "lsp_previous_diagnostic",
-        "keys": [
-            "shift+f8"
-        ],
-        "context": [
-            {
-                "key": "setting.lsp_active"
-            }
-        ]
-    },
-    {
-        "command": "lsp_hide_diagnostic",
-        "keys": [
-            "escape"
-        ],
-        "context": [
-            {
-                "key": "setting.lsp_diagnostic_phantom"
-            }
-        ]
-    },
     // Go To Definition
     // {
     //     "command": "lsp_symbol_definition",

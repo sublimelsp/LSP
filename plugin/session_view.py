@@ -60,6 +60,8 @@ class SessionView:
                     self.session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
             self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
+        for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
+            self.view.erase_regions(self.diagnostics_key(severity))
 
     def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
         '''Remove all of our modifications to the view's "auto_complete_triggers"'''

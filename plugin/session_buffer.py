@@ -269,7 +269,7 @@ class SessionBuffer:
                     total_warnings += 1
                 if severity <= userprefs().diagnostics_panel_include_severity_level:
                     data.panel_contribution.append(format_diagnostic_for_panel(diagnostic))
-                if severity <= userprefs().auto_show_diagnostics_panel_level:
+                if severity <= userprefs().show_diagnostics_panel_on_save:
                     should_show_diagnostics_panel = True
             self._publish_diagnostics_to_session_views(
                 diagnostics_version,

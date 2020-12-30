@@ -173,14 +173,14 @@
                 }
               ],
               "default": "saved",
-              "deprecationMessage": "Use the \"auto_show_diagnostics_panel_level\" setting instead."
+              "deprecationMessage": "Use the \"show_diagnostics_panel_on_save\" setting instead."
             },
             "code_action_on_save_timeout_ms": {
               "type": "integer",
               "default": 2000,
               "markdownDescription": "The amount of time the code actions on save are allowed to run for."
             },
-            "auto_show_diagnostics_panel_level": {
+            "show_diagnostics_panel_on_save": {
               "type": "integer",
               "minimum": 0,
               "maximum": 4,

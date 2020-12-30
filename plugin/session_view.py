@@ -1,5 +1,4 @@
 from .core.progress import ViewProgressReporter
-from .core.protocol import Diagnostic
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.sessions import Session
@@ -187,9 +186,6 @@ class SessionView:
         listener = self.listener()
         if listener:
             listener.on_diagnostics_updated_async()
-
-    def get_diagnostics_async(self) -> List[Diagnostic]:
-        return self.session_buffer.diagnostics
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
         self.active_requests[request_id] = request

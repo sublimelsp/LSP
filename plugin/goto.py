@@ -1,9 +1,11 @@
 import sublime
+from .core.protocol import Location
+from .core.protocol import LocationLink
 from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
 from .core.sessions import method_to_capability
-from .core.typing import List, Optional, Any
+from .core.typing import List, Optional, Union
 from .core.views import location_to_encoded_filename
 from .core.views import text_document_position_params
 
@@ -54,7 +56,11 @@ class LspGotoCommand(LspTextCommand):
                 lambda response: sublime.set_timeout(lambda: self.handle_response(response, side_by_side))
             )
 
-    def handle_response(self, response: Any, side_by_side: bool) -> None:
+    def handle_response(
+        self,
+        response: Union[None, Location, List[Location], List[LocationLink]],
+        side_by_side: bool
+    ) -> None:
         if not self.view.is_valid():
             return
         window = self.view.window()

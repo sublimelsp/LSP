@@ -1,6 +1,5 @@
 from .typing import Any, Dict, Iterable, List, Mapping, Optional, TypedDict, Union
 from .url import filename_to_uri
-from .url import uri_to_filename
 import os
 import sublime
 
@@ -37,6 +36,9 @@ class SignatureHelpTriggerKind:
     Invoked = 1
     TriggerCharacter = 2
     ContentChange = 3
+
+
+DocumentUri = str
 
 
 CodeDescription = TypedDict('CodeDescription', {
@@ -101,6 +103,38 @@ SignatureHelpContext = TypedDict('SignatureHelpContext', {
     'triggerCharacter': str,
     'isRetrigger': bool,
     'activeSignatureHelp': SignatureHelp
+}, total=False)
+
+
+Location = TypedDict('Location', {
+    'uri': DocumentUri,
+    'range': Dict[str, Any]
+}, total=True)
+
+
+LocationLink = TypedDict('LocationLink', {
+    'originSelectionRange': Dict[str, Any],
+    'targetUri': DocumentUri,
+    'targetRange': Dict[str, Any],
+    'targetSelectionRange': Dict[str, Any]
+}, total=False)
+
+
+DiagnosticRelatedInformation = TypedDict('DiagnosticRelatedInformation', {
+    'location': Location,
+    'message': str
+}, total=False)
+
+
+Diagnostic = TypedDict('Diagnostic', {
+    'range': Dict[str, Any],
+    'severity': int,
+    'code': Union[int, str],
+    'codeDescription': CodeDescription,
+    'source': str,
+    'message': str,
+    'tags': List[int],
+    'relatedInformation': List[DiagnosticRelatedInformation]
 }, total=False)
 
 
@@ -356,82 +390,6 @@ class Range(object):
         if rge.contains(self.end):
             self.end = rge.end
         return self
-
-
-class Location(object):
-    def __init__(self, file_path: str, range: Range) -> None:
-        self.file_path = file_path
-        self.range = range
-
-    @classmethod
-    def from_lsp(cls, lsp_location: dict) -> 'Location':
-        return Location(
-            uri_to_filename(lsp_location["uri"]),
-            Range.from_lsp(lsp_location["range"])
-        )
-
-
-class DiagnosticRelatedInformation:
-
-    def __init__(self, location: Location, message: str) -> None:
-        self.location = location
-        self.message = message
-
-    @classmethod
-    def from_lsp(cls, lsp_related_information: dict) -> 'DiagnosticRelatedInformation':
-        return DiagnosticRelatedInformation(
-            Location.from_lsp(lsp_related_information["location"]),
-            lsp_related_information["message"])
-
-
-class Diagnostic:
-    def __init__(
-        self,
-        message: str,
-        range: Range,
-        severity: int,
-        code: Union[None, int, str],
-        code_description: Optional[CodeDescription],
-        source: Optional[str],
-        lsp_diagnostic: dict,
-        related_info: List[DiagnosticRelatedInformation]
-    ) -> None:
-        self.message = message
-        self.range = range
-        self.severity = severity
-        self.code = code
-        self.code_description = code_description
-        self.source = source
-        self._lsp_diagnostic = lsp_diagnostic
-        self.related_info = related_info
-        self.code
-
-    @classmethod
-    def from_lsp(cls, lsp_diagnostic: dict) -> 'Diagnostic':
-        return Diagnostic(
-            # crucial keys
-            lsp_diagnostic['message'],
-            Range.from_lsp(lsp_diagnostic['range']),
-            # optional keys
-            lsp_diagnostic.get('severity', DiagnosticSeverity.Error),
-            lsp_diagnostic.get('code'),
-            lsp_diagnostic.get('codeDescription'),
-            lsp_diagnostic.get('source'),
-            lsp_diagnostic,
-            [DiagnosticRelatedInformation.from_lsp(info) for info in lsp_diagnostic.get('relatedInformation') or []]
-        )
-
-    def to_lsp(self) -> Dict[str, Any]:
-        return self._lsp_diagnostic
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Diagnostic):
-            raise NotImplementedError()
-
-        return self.message == other.message and self.range == other.range
-
-    def __repr__(self) -> str:
-        return str(self.range) + ":" + self.message
 
 
 class WorkspaceFolder:

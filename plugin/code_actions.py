@@ -2,16 +2,15 @@ from .core.promise import Promise
 from .core.protocol import CodeAction
 from .core.protocol import Command
 from .core.protocol import Diagnostic
-from .core.protocol import Range, Request
+from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import sessions_for_view
+from .core.registry import windows
+from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
-from .core.typing import Any, List, Dict, Callable, Optional, Tuple, Union
-from .core.views import entire_content_range
-from .core.views import region_to_range
+from .core.typing import Any, List, Dict, Callable, Optional, Tuple, Union, Sequence
+from .core.views import entire_content_region
 from .core.views import text_document_code_action_params
-from .diagnostics import filter_by_range
-from .diagnostics import view_diagnostics
 from .save_command import LspSaveCommand, SaveTask
 import sublime
 
@@ -77,29 +76,29 @@ class CodeActionsManager:
     def request_with_diagnostics_async(
         self,
         view: sublime.View,
-        request_range: Range,
-        diagnostics_by_config: Dict[str, List[Diagnostic]],
+        region: sublime.Region,
+        session_buffer_diagnostics: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]],
         actions_handler: Callable[[CodeActionsByConfigName], None]
     ) -> CodeActionsCollector:
         """
         Requests code actions *only* for provided diagnostics. If session has no diagnostics then
         it will be skipped.
         """
-        return self._request_async(view, request_range, diagnostics_by_config, True, actions_handler)
+        return self._request_async(view, region, session_buffer_diagnostics, True, actions_handler)
 
-    def request_for_range_async(
+    def request_for_region_async(
         self,
         view: sublime.View,
-        request_range: Range,
-        diagnostics_by_config: Dict[str, List[Diagnostic]],
+        region: sublime.Region,
+        session_buffer_diagnostics: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]],
         actions_handler: Callable[[CodeActionsByConfigName], None],
         only_kinds: Optional[Dict[str, bool]] = None
     ) -> CodeActionsCollector:
         """
-        Requests code actions with provided diagnostics and specified range. If there are
+        Requests code actions with provided diagnostics and specified region. If there are
         no diagnostics for given session, the request will be made with empty diagnostics list.
         """
-        return self._request_async(view, request_range, diagnostics_by_config, False, actions_handler, only_kinds)
+        return self._request_async(view, region, session_buffer_diagnostics, False, actions_handler, only_kinds)
 
     def request_on_save(
         self,
@@ -110,14 +109,13 @@ class CodeActionsManager:
         """
         Requests code actions on save.
         """
-        request_range = entire_content_range(view)
-        return self._request_async(view, request_range, dict(), False, actions_handler, on_save_actions)
+        return self._request_async(view, entire_content_region(view), [], False, actions_handler, on_save_actions)
 
     def _request_async(
         self,
         view: sublime.View,
-        request_range: Range,
-        diagnostics_by_config: Dict[str, List[Diagnostic]],
+        region: sublime.Region,
+        session_buffer_diagnostics: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]],
         only_with_diagnostics: bool,
         actions_handler: Callable[[CodeActionsByConfigName], None],
         on_save_actions: Optional[Dict[str, bool]] = None
@@ -125,7 +123,7 @@ class CodeActionsManager:
         use_cache = on_save_actions is None
         if use_cache:
             location_cache_key = "{}#{}:{}:{}".format(
-                view.buffer_id(), view.change_count(), request_range, only_with_diagnostics)
+                view.buffer_id(), view.change_count(), region, only_with_diagnostics)
             if self._response_cache:
                 cache_key, cache_collector = self._response_cache
                 if location_cache_key == cache_key:
@@ -144,18 +142,21 @@ class CodeActionsManager:
                         matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])
                         if matching_kinds:
                             params = text_document_code_action_params(
-                                view, file_name, request_range, [], matching_kinds)
+                                view, file_name, region, [], matching_kinds)
                             request = Request.codeAction(params, view)
                             session.send_request_async(
                                 request, *filtering_collector(session.config.name, matching_kinds, collector))
                     else:
-                        config_name = session.config.name
-                        diagnostics = diagnostics_by_config.get(config_name, [])
+                        diagnostics = []  # type: Sequence[Diagnostic]
+                        for sb, diags in session_buffer_diagnostics:
+                            if sb.session == session:
+                                diagnostics = diags
+                                break
                         if only_with_diagnostics and not diagnostics:
                             continue
-                        params = text_document_code_action_params(view, file_name, request_range, diagnostics)
+                        params = text_document_code_action_params(view, file_name, region, diagnostics)
                         request = Request.codeAction(params, view)
-                        session.send_request_async(request, collector.create_collector(config_name))
+                        session.send_request_async(request, collector.create_collector(session.config.name))
         if use_cache:
             self._response_cache = (location_cache_key, collector)
         return collector
@@ -279,11 +280,13 @@ class LspCodeActionsCommand(LspTextCommand):
             region = view.sel()[0]
         except IndexError:
             return
-        selection_range = region_to_range(view, region)
-        diagnostics_by_config, extended_range = filter_by_range(view_diagnostics(view), selection_range)
+        listener = windows.listener_for_view(view)
+        if not listener:
+            return
+        session_buffer_diagnostics, covering = listener.diagnostics_intersecting_region_async(region)
         dict_kinds = {kind: True for kind in only_kinds} if only_kinds else None
-        actions_manager.request_for_range_async(
-            view, extended_range, diagnostics_by_config, self.handle_responses_async, dict_kinds)
+        actions_manager.request_for_region_async(
+            view, covering, session_buffer_diagnostics, self.handle_responses_async, dict_kinds)
 
     def handle_responses_async(self, responses: CodeActionsByConfigName) -> None:
         self.commands_by_config = responses

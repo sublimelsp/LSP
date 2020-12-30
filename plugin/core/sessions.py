@@ -11,6 +11,7 @@ from .promise import Promise
 from .protocol import CodeAction
 from .protocol import Command
 from .protocol import CompletionItemTag
+from .protocol import Diagnostic
 from .protocol import Error
 from .protocol import ErrorCode
 from .protocol import ExecuteCommandParams
@@ -333,7 +334,7 @@ class SessionBufferProtocol(Protocol):
     ) -> None:
         ...
 
-    def on_diagnostics_async(self, diagnostics: List[Dict[str, Any]], version: Optional[int]) -> None:
+    def on_diagnostics_async(self, diagnostics: List[Diagnostic], version: Optional[int]) -> None:
         ...
 
 

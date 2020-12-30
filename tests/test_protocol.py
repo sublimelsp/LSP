@@ -1,5 +1,5 @@
 from LSP.plugin.core.protocol import (
-    Point, Range, Diagnostic, DiagnosticSeverity, Request, Notification
+    Point, Range, Request, Notification
 )
 import unittest
 
@@ -125,23 +125,6 @@ class RangeTests(unittest.TestCase):
         other_range = Range(Point(1, 1), Point(1, 2))
         base_range.extend(other_range)
         self.assertEqual(base_range, Range(Point(1, 0), Point(1, 5)))
-
-
-class DiagnosticTests(unittest.TestCase):
-
-    def test_lsp_conversion(self):
-        diag = Diagnostic.from_lsp(LSP_MINIMAL_DIAGNOSTIC)
-        self.assertEqual(diag.message, 'message')
-        self.assertEqual(diag.severity, DiagnosticSeverity.Error)
-        self.assertEqual(diag.source, None)
-        self.assertEqual(diag.to_lsp(), LSP_MINIMAL_DIAGNOSTIC)
-
-    def test_full_lsp_conversion(self):
-        diag = Diagnostic.from_lsp(LSP_FULL_DIAGNOSTIC)
-        self.assertEqual(diag.message, 'message')
-        self.assertEqual(diag.severity, DiagnosticSeverity.Warning)
-        self.assertEqual(diag.source, 'pyls')
-        self.assertEqual(diag.to_lsp(), LSP_FULL_DIAGNOSTIC)
 
 
 class RequestTests(unittest.TestCase):

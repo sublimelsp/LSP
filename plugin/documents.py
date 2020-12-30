@@ -27,13 +27,10 @@ from .core.views import format_completion
 from .core.views import lsp_color_to_phantom
 from .core.views import make_command_link
 from .core.views import range_to_region
-from .core.views import region_to_range
 from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.windows import AbstractViewListener
 from .core.windows import WindowManager
-from .diagnostics import filter_by_range
-from .diagnostics import view_diagnostics
 from .session_buffer import SessionBuffer
 from .session_view import SessionView
 from functools import partial
@@ -194,9 +191,46 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         # sort the result by asc line number
         return sorted(result)
 
-    def diagnostics_async(self) -> Generator[Tuple[SessionBuffer, List[Diagnostic]], None, None]:
+    def diagnostics_async(
+        self
+    ) -> Generator[Tuple[SessionBuffer, List[Tuple[Diagnostic, sublime.Region]]], None, None]:
+        change_count = self.view.change_count()
         for sb in self.session_buffers_async():
-            yield sb, sb.diagnostics
+            # do not provide stale diagnostics
+            if sb.diagnostics_version == change_count:
+                yield sb, sb.diagnostics
+
+    def diagnostics_intersecting_region_async(
+        self,
+        region: sublime.Region
+    ) -> Tuple[List[Tuple[SessionBuffer, List[Diagnostic]]], sublime.Region]:
+        covering = sublime.Region(region.a, region.b)
+        result = []  # type: List[Tuple[SessionBuffer, List[Diagnostic]]]
+        for sb, diagnostics in self.diagnostics_async():
+            intersections = []  # type: List[Diagnostic]
+            for diagnostic, candidate in diagnostics:
+                if region.intersects(candidate):
+                    covering = covering.cover(candidate)
+                    intersections.append(diagnostic)
+            if intersections:
+                result.append((sb, intersections))
+        return result, covering
+
+    def diagnostics_intersecting_point_async(
+        self,
+        pt: int
+    ) -> Tuple[List[Tuple[SessionBuffer, List[Diagnostic]]], sublime.Region]:
+        covering = sublime.Region(pt, pt)
+        result = []  # type: List[Tuple[SessionBuffer, List[Diagnostic]]]
+        for sb, diagnostics in self.diagnostics_async():
+            intersections = []  # type: List[Diagnostic]
+            for diagnostic, candidate in diagnostics:
+                if candidate.contains(pt):
+                    covering = covering.cover(candidate)
+                    intersections.append(diagnostic)
+            if intersections:
+                result.append((sb, intersections))
+        return result, covering
 
     def on_diagnostics_updated_async(self) -> None:
         self._clear_code_actions_annotation()
@@ -205,14 +239,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
         if userprefs().show_diagnostics_in_view_status:
-            r = self._get_current_range_async()
+            r = self._stored_region
             if r is not None:
-                diags_by_config_name, _ = self.diagnostics_intersecting_range_async(r)
-                if diags_by_config_name:
-                    for diags in diags_by_config_name.values():
-                        diag = next(iter(diags), None)
+                session_buffer_diagnostics, _ = self.diagnostics_intersecting_point_async(r.b)
+                if session_buffer_diagnostics:
+                    for _, diagnostics in session_buffer_diagnostics:
+                        diag = next(iter(diagnostics), None)
                         if diag:
-                            self.view.set_status(self.ACTIVE_DIAGNOSTIC, diag.message)
+                            self.view.set_status(self.ACTIVE_DIAGNOSTIC, diag["message"])
                             return
         self.view.erase_status(self.ACTIVE_DIAGNOSTIC)
 
@@ -410,9 +444,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/codeAction --------------------------------------------------------------------------------------
 
     def _do_code_actions(self) -> None:
-        stored_range = region_to_range(self.view, self._stored_region)
-        diagnostics_by_config, extended_range = filter_by_range(view_diagnostics(self.view), stored_range)
-        actions_manager.request_for_range_async(self.view, extended_range, diagnostics_by_config, self._on_code_actions)
+        if self._stored_region.empty():
+            diagnostics_by_config, covering = self.diagnostics_intersecting_point_async(self._stored_region.b)
+        else:
+            diagnostics_by_config, covering = self.diagnostics_intersecting_region_async(self._stored_region)
+        actions_manager.request_for_region_async(self.view, covering, diagnostics_by_config, self._on_code_actions)
 
     def _on_code_actions(self, responses: CodeActionsByConfigName) -> None:
         action_count = sum(map(len, responses.values()))
@@ -658,9 +694,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         for sv in self.session_views_async():
             sv.on_pre_save_async(self.view.file_name() or "")
 
-    def diagnostics_intersecting_range_async(self, r: Range) -> Tuple[Dict[str, List[Diagnostic]], Range]:
-        return filter_by_range(self.diagnostics_async(), r)
-
     def sum_total_errors_and_warnings_async(self) -> Tuple[int, int]:
         errors = 0
         warnings = 0
@@ -737,12 +770,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return self.view.sel()[0]
         except IndexError:
             return None
-
-    def _get_current_range_async(self) -> Optional[Range]:
-        region = self._get_current_region_async()
-        if region is None:
-            return None
-        return region_to_range(self.view, region)
 
     def _clear_session_views_async(self) -> None:
         session_views = self._session_views

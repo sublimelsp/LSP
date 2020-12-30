@@ -60,11 +60,8 @@ try:
     from .plugin.core.settings import unload_settings
     from .plugin.core.transports import kill_all_subprocesses
     from .plugin.core.types import ClientConfig
-    from .plugin.core.typing import Optional, List, Type, Callable, Dict, Tuple
+    from .plugin.core.typing import Any, Optional, List, Type, Callable, Dict, Tuple
     from .plugin.core.views import LspRunTextCommandHelperCommand
-    from .plugin.diagnostics import LspHideDiagnosticCommand
-    from .plugin.diagnostics import LspNextDiagnosticCommand
-    from .plugin.diagnostics import LspPreviousDiagnosticCommand
     from .plugin.documents import DocumentSyncListener
     from .plugin.documents import LspCodeLensCommand
     from .plugin.documents import TextChangeListener
@@ -241,3 +238,9 @@ class Listener(sublime_plugin.EventListener):
                     # The view got closed before it finished loading. This can happen.
                     tup[1](None)
                     break
+
+    def on_post_window_command(self, window: sublime.Window, command_name: str, args: Optional[Dict[str, Any]]) -> None:
+        if command_name in ("next_result", "prev_result"):
+            view = window.active_view()
+            if view:
+                 view.run_command("lsp_hover", {"only_diagnostics": True})

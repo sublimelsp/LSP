@@ -1,6 +1,3 @@
-import mdpopups
-import sublime
-import webbrowser
 from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .core.css import css
@@ -9,15 +6,18 @@ from .core.protocol import Diagnostic
 from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import windows
+from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
-from .core.typing import List, Optional, Any, Dict
+from .core.typing import List, Optional, Any, Dict, Tuple, Sequence
+from .core.views import diagnostic_severity
 from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .core.views import make_command_link
 from .core.views import make_link
-from .core.views import offset_to_point
 from .core.views import text_document_position_params
-from .diagnostics import filter_by_point, view_diagnostics
+import mdpopups
+import sublime
+import webbrowser
 
 
 SUBLIME_WORD_MASK = 515
@@ -61,28 +61,38 @@ class LspHoverCommand(LspTextCommand):
         super().__init__(view)
         self._base_dir = None   # type: Optional[str]
 
-    def run(self, edit: sublime.Edit, point: Optional[int] = None, event: Optional[dict] = None) -> None:
+    def run(
+        self,
+        edit: sublime.Edit,
+        only_diagnostics: bool = False,
+        point: Optional[int] = None,
+        event: Optional[dict] = None
+    ) -> None:
         hover_point = point or self.view.sel()[0].begin()
         window = self.view.window()
         if not window:
             return
-        self._base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
+        wm = windows.lookup(window)
+        self._base_dir = wm.get_project_path(self.view.file_name() or "")
         self._hover = None  # type: Optional[Any]
         self._actions_by_config = {}  # type: Dict[str, List[CodeActionOrCommand]]
-        self._diagnostics_by_config = {}  # type: Dict[str, List[Diagnostic]]
-        self.request_symbol_hover(hover_point)
+        self._diagnostics_by_config = []  # type: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]]
+        if not only_diagnostics:
+            self.request_symbol_hover(hover_point)
         # TODO: For code actions it makes more sense to use the whole selection under mouse (if available)
         # rather than just the hover point.
-        request_point = offset_to_point(self.view, hover_point)
 
         def run_async() -> None:
-            self._diagnostics_by_config, code_actions_range = filter_by_point(
-                view_diagnostics(self.view), request_point)
+            listener = wm.listener_for_view(self.view)
+            if not listener:
+                return
+            self._diagnostics_by_config, covering = listener.diagnostics_intersecting_point_async(hover_point)
             if self._diagnostics_by_config:
-                actions_manager.request_with_diagnostics_async(
-                    self.view, code_actions_range, self._diagnostics_by_config,
-                    lambda response: self.handle_code_actions(response, hover_point))
-                self.show_hover(hover_point)
+                if not only_diagnostics:
+                    actions_manager.request_with_diagnostics_async(
+                        self.view, covering, self._diagnostics_by_config,
+                        lambda response: self.handle_code_actions(response, hover_point))
+                self.show_hover(hover_point, only_diagnostics)
 
         sublime.set_timeout_async(run_async)
 
@@ -96,11 +106,11 @@ class LspHoverCommand(LspTextCommand):
 
     def handle_code_actions(self, responses: Dict[str, List[CodeActionOrCommand]], point: int) -> None:
         self._actions_by_config = responses
-        self.show_hover(point)
+        self.show_hover(point, only_diagnostics=False)
 
     def handle_response(self, response: Optional[Any], point: int) -> None:
         self._hover = response
-        self.show_hover(point)
+        self.show_hover(point, only_diagnostics=False)
 
     def provider_exists(self, link: LinkKind) -> bool:
         return bool(self.best_session('{}Provider'.format(link.lsp_name)))
@@ -114,14 +124,15 @@ class LspHoverCommand(LspTextCommand):
 
     def diagnostics_content(self) -> str:
         formatted = []
-        for config_name in self._diagnostics_by_config:
+        for sb, diagnostics in self._diagnostics_by_config:
             by_severity = {}  # type: Dict[int, List[str]]
             formatted.append('<div class="diagnostics">')
-            for diagnostic in self._diagnostics_by_config[config_name]:
-                by_severity.setdefault(diagnostic.severity, []).append(
+            for diagnostic in diagnostics:
+                by_severity.setdefault(diagnostic_severity(diagnostic), []).append(
                     format_diagnostic_for_html(self.view, diagnostic, self._base_dir))
             for items in by_severity.values():
                 formatted.extend(items)
+            config_name = sb.session.config.name
             if config_name in self._actions_by_config:
                 action_count = len(self._actions_by_config[config_name])
                 if action_count > 0:
@@ -135,12 +146,12 @@ class LspHoverCommand(LspTextCommand):
         content = (self._hover.get('contents') or '') if isinstance(self._hover, dict) else ''
         return minihtml(self.view, content, allowed_formats=FORMAT_MARKED_STRING | FORMAT_MARKUP_CONTENT)
 
-    def show_hover(self, point: int) -> None:
-        sublime.set_timeout(lambda: self._show_hover(point))
+    def show_hover(self, point: int, only_diagnostics: bool) -> None:
+        sublime.set_timeout(lambda: self._show_hover(point, only_diagnostics))
 
-    def _show_hover(self, point: int) -> None:
+    def _show_hover(self, point: int, only_diagnostics: bool) -> None:
         contents = self.diagnostics_content() + self.hover_content()
-        if contents:
+        if contents and not only_diagnostics:
             contents += self.symbol_actions_content(point)
 
         _test_contents.clear()

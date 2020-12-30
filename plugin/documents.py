@@ -458,13 +458,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return self.CODE_LENS_KEY + str(index)
 
     def _render_code_lens(self, name: str, index: int, region: sublime.Region, command: Optional[Command]) -> None:
-        if command:
-            args = {
-                "session_name": name,
-                "command_name": command["command"],
-                "command_args": command["arguments"]
-            }
-            annotation = make_command_link("lsp_execute", command["title"], args)
+        if command is not None:
+            command_name = command.get("command")
+            if command_name:
+                annotation = make_command_link("lsp_execute", command["title"], {
+                    "session_name": name,
+                    "command_name": command_name,
+                    "command_args": command.get("arguments")
+                })
+            else:
+                annotation = command["title"]
         else:
             annotation = "..."
         annotation = '<div class="codelens">{}</div>'.format(annotation)
@@ -473,7 +476,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _do_code_lenses_async(self) -> None:
         session = self.session("codeLensProvider")
-        if session:
+        if session and session.uses_plugin():
             params = {"textDocument": text_document_identifier(self.view)}
             for sv in self.session_views_async():
                 if sv.session == session:
@@ -494,7 +497,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         for index, c in enumerate(response):
             region = range_to_region(Range.from_lsp(c["range"]), self.view)
             self._code_lenses.append((c, region))
-            if c.get("command"):
+            if "command" in c:
                 # We consider a code lens that has a command to be already resolved.
                 self._on_resolved_code_lens_async(name, index, region, c)
             else:

@@ -777,6 +777,9 @@ class Session(TransportCallbacks):
     def get_workspace_folders(self) -> List[WorkspaceFolder]:
         return self._workspace_folders
 
+    def uses_plugin(self) -> bool:
+        return self._plugin is not None
+
     # --- session view management --------------------------------------------------------------------------------------
 
     def register_session_view_async(self, sv: SessionViewProtocol) -> None:

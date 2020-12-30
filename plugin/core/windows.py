@@ -8,7 +8,7 @@ from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
 from .panels import update_server_panel
-from .protocol import Diagnostic
+from .protocol import CodeLens, Diagnostic
 from .protocol import Error
 from .protocol import Point
 from .sessions import get_plugin
@@ -82,6 +82,14 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def on_diagnostics_updated_async(self) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def on_code_lens_capability_registered_async(self) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Iterable[CodeLens]:
         raise NotImplementedError()
 
     @abstractmethod

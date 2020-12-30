@@ -30,6 +30,7 @@ class SessionView:
         self.view = listener.view
         self.session = session
         self.active_requests = {}  # type: Dict[int, Request]
+        self.listener = ref(listener)
         settings = self.view.settings()
         buffer_id = self.view.buffer_id()
         key = (session.config.name, buffer_id)
@@ -40,7 +41,6 @@ class SessionView:
         else:
             session_buffer.add_session_view(self)
         self.session_buffer = session_buffer
-        self.listener = ref(listener)
         session.register_session_view_async(self)
         session.config.set_view_status(self.view, "")
         if self.session.has_capability(self.HOVER_PROVIDER_KEY):
@@ -136,12 +136,8 @@ class SessionView:
                 settings.erase(self.HOVER_PROVIDER_COUNT_KEY)
                 settings.set(self.SHOW_DEFINITIONS_KEY, True)
 
-    def get_capability(self, capability_path: str) -> Optional[Any]:
+    def get_capability_async(self, capability_path: str) -> Optional[Any]:
         return self.session_buffer.get_capability(capability_path)
-
-    def has_capability(self, capability_path: str) -> bool:
-        value = self.session_buffer.get_capability(capability_path)
-        return isinstance(value, dict) or bool(value)
 
     def on_capability_added_async(self, registration_id: str, capability_path: str, options: Dict[str, Any]) -> None:
         if capability_path == self.HOVER_PROVIDER_KEY:
@@ -150,6 +146,10 @@ class SessionView:
             trigger_chars = options.get("triggerCharacters")
             if isinstance(trigger_chars, list):
                 self._register_auto_complete_triggers(registration_id, trigger_chars)
+        elif capability_path.startswith("codeLensProvider"):
+            listener = self.listener()
+            if listener:
+                listener.on_code_lens_capability_registered_async()
 
     def on_capability_removed_async(self, registration_id: str, discarded: Dict[str, Any]) -> None:
         if self.HOVER_PROVIDER_KEY in discarded:

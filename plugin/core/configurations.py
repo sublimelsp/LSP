@@ -64,7 +64,11 @@ class WindowConfigManager(object):
                 overrides = {}
             self.all[name] = ClientConfig.from_config(config, overrides)
         for name in self._temp_disabled_configs:
-            self.all[name].enabled = False
+            try:
+                self.all[name].enabled = False
+            except KeyError:
+                # The plugin is updating
+                self._temp_disabled_configs.discard(name)
         self._window.run_command("lsp_recheck_sessions")
 
     def enable_config(self, config_name: str) -> None:

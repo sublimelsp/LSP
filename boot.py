@@ -63,6 +63,7 @@ try:
     from .plugin.core.typing import Any, Optional, List, Type, Callable, Dict, Tuple
     from .plugin.core.views import LspRunTextCommandHelperCommand
     from .plugin.documents import DocumentSyncListener
+    from .plugin.documents import LspCodeLensCommand
     from .plugin.documents import TextChangeListener
     from .plugin.edit import LspApplyDocumentEditCommand
     from .plugin.execute_command import LspExecuteCommand

@@ -8,8 +8,6 @@ from .core.views import uri_from_view, offset_to_point, region_to_range, text_do
 
 class LspExecuteCommand(LspTextCommand):
 
-    capability = 'executeCommandProvider'
-
     def run(self,
             edit: sublime.Edit,
             command_name: Optional[str] = None,

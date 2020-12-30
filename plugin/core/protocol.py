@@ -56,7 +56,7 @@ Command = TypedDict('Command', {
     'title': str,
     'command': str,
     'arguments': Optional[List[Any]],
-})
+}, total=True)
 
 
 CodeAction = TypedDict('CodeAction', {
@@ -66,7 +66,16 @@ CodeAction = TypedDict('CodeAction', {
     'isPreferred': Optional[bool],
     'edit': Optional[dict],
     'command': Optional[Command],
-})
+}, total=True)
+
+
+CodeLens = TypedDict('CodeLens', {
+    'range': Dict[str, Any],
+    'command': Optional[Command],
+    'data': Any,
+    # Custom property to bring along the name of the session
+    'session_name': Optional[str]
+}, total=True)
 
 
 ParameterInformation = TypedDict('ParameterInformation', {

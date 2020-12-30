@@ -55,6 +55,20 @@
     //         }
     //     ]
     // },
+    // Select Code Lens
+    // {
+    //     "command": "lsp_code_lens",
+    //     "keys": [
+    //         "UNBOUND"
+    //     ],
+    //     "context": [
+    //         {
+    //             "key": "lsp.session_with_capability",
+    //             "operator": "equal",
+    //             "operand": "codeLensProvider"
+    //         }
+    //     ]
+    // },
     // Show/Hide Diagnostics Panel
     {
         "command": "lsp_show_diagnostics_panel",

@@ -1,0 +1,45 @@
+The next patch version of LSP will remove the following commands:
+
+- lsp_next_diagnostic
+- lsp_previous_diagnostic
+- lsp_hide_diagnostic
+
+These were bound by default to f8 and shift+f8.
+
+As a replacement, LSP will rely on the following two built-in commands:
+
+- next_result
+- prev_result
+
+These are bound to f4 and shift+f4. LSP will listen for these commands and
+show a stripped-down version of the familiar "hover" popup that will only
+show diagnostics.
+
+Code Lenses
+-----------
+
+CodeLens is a popular feature in Visual Studio Code. The essence of
+the feature is "actionable contextual information interspersed" in your
+source code. That's quite a mouthful. Let me break it down for you.
+
+Code lenses are links in your code:
+
+- Actionable: You can click on the link and something happens.
+- Contextual: The links are close to the code they are representing.
+- Interspersed: The links located throughout your source code.
+
+LSP will now render code lenses as annotations to the right of your
+code. Some experimentation was done using phantoms rendered below the
+relevant region, but it turns out it's annoying to see your code jump
+around vertically.
+
+Because code lenses are highly dependent on client glue code, LSP will
+only request code lenses from the language server when the session is
+backed by a helper package. The helper package is expected to handle the
+custom commands from those code lenses.
+
+Miscellaneous Features & Fixes
+------------------------------
+
+- Temporarily disabled configs could be updating themselves (Raoul Wols)
+- Fix related diagnostics being smushed together (Raoul Wols)

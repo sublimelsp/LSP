@@ -147,7 +147,7 @@ def read_list_setting(settings_obj: sublime.Settings, key: str, default: list) -
 class Settings:
 
     # This is only for mypy
-    auto_show_diagnostics_panel_level = None  # type: int
+    show_diagnostics_panel_on_save = None  # type: int
     code_action_on_save_timeout_ms = None  # type: int
     diagnostics_additional_delay_auto_complete_ms = None  # type: int
     diagnostics_delay_ms = None  # type: int
@@ -183,7 +183,7 @@ class Settings:
             val = s.get(name)
             setattr(self, name, val if isinstance(val, default.__class__) else default)
 
-        r("auto_show_diagnostics_panel_level", 2)
+        r("show_diagnostics_panel_on_save", 2)
         r("code_action_on_save_timeout_ms", 2000)
         r("diagnostics_additional_delay_auto_complete_ms", 0)
         r("diagnostics_delay_ms", 0)
@@ -221,10 +221,10 @@ class Settings:
         auto_show_diagnostics_panel = s.get("auto_show_diagnostics_panel")
         if isinstance(auto_show_diagnostics_panel, bool):
             if not auto_show_diagnostics_panel:
-                self.auto_show_diagnostics_panel_level = 0
+                self.show_diagnostics_panel_on_save = 0
         elif isinstance(auto_show_diagnostics_panel, str):
             if auto_show_diagnostics_panel == "never":
-                self.auto_show_diagnostics_panel_level = 0
+                self.show_diagnostics_panel_on_save = 0
 
         # Backwards-compatible with "only_show_lsp_completions"
         only_show_lsp_completions = s.get("only_show_lsp_completions")

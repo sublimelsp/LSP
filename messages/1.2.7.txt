@@ -1,0 +1,11 @@
+=> 1.2.7
+
+Fixes & Features:
+- Add A File Icon alias scopes to language-ids (DeathAxe)
+- Erase diagnostics when the SessionView dies (Raoul Wols)
+- Rename auto_show_diagnostics_panel_level to show_diagnostics_panel_on_save (Raoul Wols)
+- Rethink the "next/prev diagnostic" (#1533) (Raoul Wols)
+  As was mentioned in release 1.2.6, the commands lsp_next_diagnostic (F8) and
+  lsp_previous_diagnostic (shift+F8) are now removed in favor of
+  the built-in next_result (F4) and prev_result (shift+F4).
+  Using F4, the hover popup will show diagnostics.

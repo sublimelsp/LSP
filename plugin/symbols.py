@@ -1,4 +1,4 @@
-from .core.protocol import Request, Range, DocumentSymbol, SymbolInformation
+from .core.protocol import Request, Range, DocumentSymbol, SymbolInformation, SymbolTag
 from .core.registry import LspTextCommand
 from .core.sessions import print_to_status_bar
 from .core.typing import Any, List, Optional, Tuple, Dict, Generator, Union, cast
@@ -31,6 +31,24 @@ def get_symbol_scope_from_lsp_kind(kind: int) -> str:
     if 1 <= kind <= len(SYMBOL_KINDS):
         return SYMBOL_KINDS[kind - 1][3]
     return 'comment'
+
+
+def symbol_information_to_quick_panel_item(item: SymbolInformation, show_file_name: bool = True) -> sublime.QuickPanelItem:
+    st_kind, st_icon, st_display_type, _ = unpack_lsp_kind(item['kind'])
+    if SymbolTag.Deprecated in item.get("tags", []):
+        st_display_type = "⚠ {} - Deprecated".format(st_display_type)
+    container = item.get("containerName") or ""
+    details = []  # List[str]
+    if container:
+        details.append(container)
+    if show_file_name:
+        file_name = os.path.basename(item['location']['uri'])
+        details.append(file_name)
+    return sublime.QuickPanelItem(
+            trigger=item["name"],
+            details=details,
+            annotation=st_display_type,
+            kind=(st_kind, st_icon, st_display_type))
 
 
 @contextmanager
@@ -175,8 +193,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                 st_details = "{} | {}".format(st_details, formatted_names)
             else:
                 st_details = formatted_names
-            tags = item.get("tags") or []
-            if 1 in tags:
+            if SymbolTag.Deprecated in item.get("tags", []):
                 st_display_type = "⚠ {} - Deprecated".format(st_display_type)
             quick_panel_items.append(
                 sublime.QuickPanelItem(
@@ -192,17 +209,10 @@ class LspDocumentSymbolsCommand(LspTextCommand):
     def process_symbol_informations(self, items: List[SymbolInformation]) -> List[sublime.QuickPanelItem]:
         quick_panel_items = []  # type: List[sublime.QuickPanelItem]
         for item in items:
-            lsp_kind = item['kind']
             self.regions.append((range_to_region(Range.from_lsp(item['location']['range']), self.view),
-                                 None, get_symbol_scope_from_lsp_kind(lsp_kind)))
-            container = item.get("containerName")
-            st_kind, st_icon, st_display_type, _ = unpack_lsp_kind(lsp_kind)
-            quick_panel_items.append(
-                sublime.QuickPanelItem(
-                    trigger=item["name"],
-                    details=container or "",
-                    annotation=st_display_type,
-                    kind=(st_kind, st_icon, st_display_type)))
+                                 None, get_symbol_scope_from_lsp_kind(item['kind'])))
+            quick_panel_item = symbol_information_to_quick_panel_item(item, show_file_name=False)
+            quick_panel_items.append(quick_panel_item)
         return quick_panel_items
 
 
@@ -230,12 +240,6 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
                 session.send_request(request, lambda r: self._handle_response(
                     symbol_query_input, r), self._handle_error)
 
-    def _format(self, s: SymbolInformation) -> str:
-        file_name = os.path.basename(s['location']['uri'])
-        symbol_kind = format_symbol_kind(s["kind"])
-        name = "{} ({}) - {} -- {}".format(s['name'], symbol_kind, s.get('containerName', ""), file_name)
-        return name
-
     def _open_file(self, symbols: List[SymbolInformation], index: int) -> None:
         if index != -1:
             symbol = symbols[index]
@@ -248,7 +252,7 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
             matches = response
             window = self.view.window()
             if window:
-                window.show_quick_panel(list(map(self._format, matches)), lambda i: self._open_file(matches, i))
+                window.show_quick_panel(list(map(symbol_information_to_quick_panel_item, matches)), lambda i: self._open_file(matches, i))
         else:
             sublime.message_dialog("No matches found for query string: '{}'".format(query))
 

@@ -20,6 +20,10 @@ class CompletionItemTag:
     Deprecated = 1
 
 
+class SymbolTag:
+    Deprecated = 1
+
+
 class InsertTextFormat:
     PlainText = 1
     Snippet = 2

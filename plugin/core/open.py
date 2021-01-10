@@ -1,7 +1,7 @@
 from .logging import exception_log
 from .promise import Promise
 from .promise import ResolveFunc
-from .protocol import Range, Range_T
+from .protocol import Range, RangeLsp
 from .typing import Dict, Tuple, Optional
 from .url import uri_to_filename
 from .views import range_to_region
@@ -42,7 +42,7 @@ def open_file(
     return promise
 
 
-def open_file_and_center(window: sublime.Window, file_path: str, r: Optional[Range_T], flag: int = 0,
+def open_file_and_center(window: sublime.Window, file_path: str, r: Optional[RangeLsp], flag: int = 0,
                          group: int = -1) -> Promise:
     """Open a file asynchronously and center the range. It is only safe to call this function from the UI thread."""
 
@@ -57,7 +57,7 @@ def open_file_and_center(window: sublime.Window, file_path: str, r: Optional[Ran
     return open_file(window, file_path).then(center_selection)
 
 
-def open_file_and_center_async(window: sublime.Window, file_path: str, r: Optional[Range_T], flag: int = 0,
+def open_file_and_center_async(window: sublime.Window, file_path: str, r: Optional[RangeLsp], flag: int = 0,
                                group: int = -1) -> Promise:
     """Open a file asynchronously and center the range, worker thread version."""
     return Promise.on_main_thread() \

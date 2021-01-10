@@ -49,7 +49,7 @@ Position = TypedDict('Position', {
     'character': int
 })
 
-Range_T = TypedDict('Range_T', {
+RangeLsp = TypedDict('RangeLsp', {
     'start': Position,
     'end': Position
 })
@@ -83,7 +83,7 @@ CodeAction = TypedDict('CodeAction', {
 
 
 CodeLens = TypedDict('CodeLens', {
-    'range': Range_T,
+    'range': RangeLsp,
     'command': Optional[Command],
     'data': Any,
     # Custom property to bring along the name of the session
@@ -121,7 +121,7 @@ SignatureHelpContext = TypedDict('SignatureHelpContext', {
 
 Location = TypedDict('Location', {
     'uri': DocumentUri,
-    'range': Range_T
+    'range': RangeLsp
 }, total=True)
 
 DocumentSymbol = TypedDict('DocumentSymbol', {
@@ -130,8 +130,8 @@ DocumentSymbol = TypedDict('DocumentSymbol', {
     'kind': int,
     'tags': Optional[List[int]],
     'deprecated': Optional[bool],
-    'range': Range_T,
-    'selectionRange': Range_T,
+    'range': RangeLsp,
+    'selectionRange': RangeLsp,
     'children': Optional[List[Any]]  # mypy doesn't support recurive types like Optional[List[DocumentSymbol]]
 }, total=True)
 
@@ -145,7 +145,7 @@ SymbolInformation = TypedDict('SymbolInformation', {
 }, total=True)
 
 LocationLink = TypedDict('LocationLink', {
-    'originSelectionRange': Optional[Range_T],
+    'originSelectionRange': Optional[RangeLsp],
     'targetUri': DocumentUri,
     'targetRange': Dict[str, Any],
     'targetSelectionRange': Dict[str, Any]
@@ -159,7 +159,7 @@ DiagnosticRelatedInformation = TypedDict('DiagnosticRelatedInformation', {
 
 
 Diagnostic = TypedDict('Diagnostic', {
-    'range': Range_T,
+    'range': RangeLsp,
     'severity': int,
     'code': Union[int, str],
     'codeDescription': CodeDescription,
@@ -417,7 +417,7 @@ class Range(object):
         return self.start == other.start and self.end == other.end
 
     @classmethod
-    def from_lsp(cls, range: Range_T) -> 'Range':
+    def from_lsp(cls, range: RangeLsp) -> 'Range':
         return Range(Point.from_lsp(range['start']), Point.from_lsp(range['end']))
 
     def to_lsp(self) -> Dict[str, Any]:

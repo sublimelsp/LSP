@@ -3,6 +3,7 @@ from LSP.plugin.core.typing import Generator
 from LSP.plugin.symbols import symbol_information_to_quick_panel_item
 from LSP.plugin.core.protocol import SymbolTag
 
+
 class QueryCompletionsTests(TextDocumentTestCase):
     def test_show_deprecated_flag_for_symbol_information(self) -> 'Generator':
         symbol_information = {

@@ -132,7 +132,7 @@ DocumentSymbol = TypedDict('DocumentSymbol', {
     'deprecated': Optional[bool],
     'range': Range_T,
     'selectionRange': Range_T,
-    'children': Optional[List[Any]]  # mypy doesn't support recurive types, Optional[List[DocumentSymbol]]
+    'children': Optional[List[Any]]  # mypy doesn't support recurive types like Optional[List[DocumentSymbol]]
 }, total=True)
 
 SymbolInformation = TypedDict('SymbolInformation', {

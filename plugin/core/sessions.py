@@ -165,6 +165,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "hierarchicalDocumentSymbolSupport": True,
                 "symbolKind": {
                     "valueSet": symbol_kinds
+                },
+                "tagSupport": {
+                    "valueSet": [1]
                 }
             },
             "formatting": {
@@ -221,7 +224,10 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "relatedInformation": True,
                 "versionSupport": True,
                 "codeDescriptionSupport": True,
-                "dataSupport": True
+                "dataSupport": True,
+                "tagSupport": {
+                    "valueSet": [1]
+                }
             },
             "selectionRange": {
                 "dynamicRegistration": True
@@ -245,6 +251,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "dynamicRegistration": True,  # exceptional
                 "symbolKind": {
                     "valueSet": symbol_kinds
+                },
+                "tagSupport": {
+                    "valueSet": [1]
                 }
             },
             "configuration": True

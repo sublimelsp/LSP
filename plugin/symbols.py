@@ -206,8 +206,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                     details=st_details,
                     annotation=st_display_type,
                     kind=(st_kind, st_icon, st_display_type)))
-            children = item.get('children') or []
-            children = cast(List[DocumentSymbol], children)
+            children = item.get('children') or []  # type: List[DocumentSymbol]
             for child in children:
                 self.process_document_symbol_recursive(quick_panel_items, child, names)
 

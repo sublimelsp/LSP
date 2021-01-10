@@ -33,9 +33,13 @@ def get_symbol_scope_from_lsp_kind(kind: int) -> str:
     return 'comment'
 
 
-def symbol_information_to_quick_panel_item(item: SymbolInformation, show_file_name: bool = True) -> sublime.QuickPanelItem:
+def symbol_information_to_quick_panel_item(
+    item: SymbolInformation,
+    show_file_name: bool = True
+) -> sublime.QuickPanelItem:
     st_kind, st_icon, st_display_type, _ = unpack_lsp_kind(item['kind'])
-    if SymbolTag.Deprecated in item.get("tags", []):
+    tags = item.get("tags") or []
+    if SymbolTag.Deprecated in tags:
         st_display_type = "⚠ {} - Deprecated".format(st_display_type)
     container = item.get("containerName") or ""
     details = []  # List[str]
@@ -193,7 +197,8 @@ class LspDocumentSymbolsCommand(LspTextCommand):
                 st_details = "{} | {}".format(st_details, formatted_names)
             else:
                 st_details = formatted_names
-            if SymbolTag.Deprecated in item.get("tags", []):
+            tags = item.get("tags") or []
+            if SymbolTag.Deprecated in tags:
                 st_display_type = "⚠ {} - Deprecated".format(st_display_type)
             quick_panel_items.append(
                 sublime.QuickPanelItem(
@@ -252,7 +257,9 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
             matches = response
             window = self.view.window()
             if window:
-                window.show_quick_panel(list(map(symbol_information_to_quick_panel_item, matches)), lambda i: self._open_file(matches, i))
+                window.show_quick_panel(
+                    list(map(symbol_information_to_quick_panel_item, matches)),
+                    lambda i: self._open_file(matches, i))
         else:
             sublime.message_dialog("No matches found for query string: '{}'".format(query))
 

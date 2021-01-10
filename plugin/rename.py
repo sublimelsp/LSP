@@ -163,13 +163,13 @@ class LspSymbolRenameCommand(LspTextCommand):
             return
         to_render = []  # type: List[str]
         for file, file_changes in changes.items():
-            to_render.append('{}:'.format(self._get_relative_path(file)))
+            to_render.append('{}:\n'.format(self._get_relative_path(file)))
             for edit in file_changes:
                 start = edit[0]
                 line_content = get_line(self.view.window(), file, start[0])
-                to_render.append('{:>5}:{:<4} {}'.format(start[0] + 1, start[1] + 1, line_content))
-            to_render.append("")  # this adds a spacing between filenames
-        characters = "\n".join(to_render)
+                to_render.append('{:>5}:{:<4} {}\n'.format(start[0] + 1, start[1] + 1, line_content))
+            to_render.append("\n")  # this adds a spacing between filenames
+        characters = "".join(to_render)
         base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
         panel.settings().set("result_base_dir", base_dir)
         panel.run_command("lsp_clear_panel")

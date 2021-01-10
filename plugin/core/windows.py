@@ -449,18 +449,18 @@ class WindowManager(Manager):
             file_path = listener.view.file_name() or ""
             base_dir = self.get_project_path(file_path)  # What about different base dirs for multiple folders?
             file_path = os.path.relpath(file_path, base_dir) if base_dir else file_path
-            to_render.append("{}:".format(file_path))
+            to_render.append("{}:\n".format(file_path))
             row += 1
             for content, offset, code, href in contribution:
-                to_render.append(content)
+                to_render.append(content + "\n")
                 if offset is not None and code is not None and href is not None:
                     prephantoms.append((row, offset, code, href))
                 row += content.count("\n") + 1
-            to_render.append("")  # add spacing between filenames
+            to_render.append("\n")  # add spacing between filenames
             row += 1
         for listener in listeners:
             set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
-        characters = "\n".join(to_render)
+        characters = "".join(to_render)
         if not characters:
             characters = _NO_DIAGNOSTICS_PLACEHOLDER
         sublime.set_timeout(functools.partial(self._update_panel_main_thread, base_dir, characters, prephantoms))

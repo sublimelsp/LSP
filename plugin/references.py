@@ -124,13 +124,13 @@ class LspSymbolReferencesCommand(LspTextCommand):
             to_render = []  # type: List[str]
             references_count = 0
             for file, references in references_by_file.items():
-                to_render.append('{}:'.format(self.get_relative_path(file)))
+                to_render.append('{}:\n'.format(self.get_relative_path(file)))
                 for reference in references:
                     references_count += 1
                     point, line = reference
-                    to_render.append('{:>5}:{:<4} {}'.format(point.row + 1, point.col + 1, line))
-                to_render.append("")  # add spacing between filenames
-            characters = "\n".join(to_render)
+                    to_render.append('{:>5}:{:<4} {}\n'.format(point.row + 1, point.col + 1, line))
+                to_render.append("\n")  # add spacing between filenames
+            characters = "".join(to_render)
             base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
             panel.settings().set("result_base_dir", base_dir)
 

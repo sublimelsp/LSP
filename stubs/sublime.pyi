@@ -1024,7 +1024,7 @@ class QuickPanelItem:
     def __init__(
         self,
         trigger: str,
-        details: str = "",
+        details: Union[str, List[str]] = "",
         annotation: str = "",
         kind: Tuple[int, str, str] = KIND_AMBIGUOUS
     ) -> None:

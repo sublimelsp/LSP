@@ -10,6 +10,7 @@ from .promise import Promise
 from .protocol import CodeAction
 from .protocol import Command
 from .protocol import CompletionItemTag
+from .protocol import SymbolTag
 from .protocol import Diagnostic
 from .protocol import Error
 from .protocol import ErrorCode
@@ -113,6 +114,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     completion_kinds = list(range(1, len(COMPLETION_KINDS) + 1))
     symbol_kinds = list(range(1, len(SYMBOL_KINDS) + 1))
     completion_tag_value_set = [v for k, v in CompletionItemTag.__dict__.items() if not k.startswith('_')]
+    symbol_tag_value_set = [v for k, v in SymbolTag.__dict__.items() if not k.startswith('_')]
     first_folder = workspace_folders[0] if workspace_folders else None
     capabilities = {
         "general": {
@@ -165,6 +167,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "hierarchicalDocumentSymbolSupport": True,
                 "symbolKind": {
                     "valueSet": symbol_kinds
+                },
+                "tagSupport": {
+                    "valueSet": symbol_tag_value_set
                 }
             },
             "formatting": {
@@ -245,6 +250,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "dynamicRegistration": True,  # exceptional
                 "symbolKind": {
                     "valueSet": symbol_kinds
+                },
+                "tagSupport": {
+                    "valueSet": symbol_tag_value_set
                 }
             },
             "configuration": True

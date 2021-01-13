@@ -20,6 +20,10 @@ class CompletionItemTag:
     Deprecated = 1
 
 
+class SymbolTag:
+    Deprecated = 1
+
+
 class InsertTextFormat:
     PlainText = 1
     Snippet = 2
@@ -40,6 +44,15 @@ class SignatureHelpTriggerKind:
 
 DocumentUri = str
 
+Position = TypedDict('Position', {
+    'line': int,
+    'character': int
+})
+
+RangeLsp = TypedDict('RangeLsp', {
+    'start': Position,
+    'end': Position
+})
 
 CodeDescription = TypedDict('CodeDescription', {
     'href': str
@@ -70,7 +83,7 @@ CodeAction = TypedDict('CodeAction', {
 
 
 CodeLens = TypedDict('CodeLens', {
-    'range': Dict[str, Any],
+    'range': RangeLsp,
     'command': Optional[Command],
     'data': Any,
     # Custom property to bring along the name of the session
@@ -108,12 +121,31 @@ SignatureHelpContext = TypedDict('SignatureHelpContext', {
 
 Location = TypedDict('Location', {
     'uri': DocumentUri,
-    'range': Dict[str, Any]
+    'range': RangeLsp
 }, total=True)
 
+DocumentSymbol = TypedDict('DocumentSymbol', {
+    'name': str,
+    'detail': Optional[str],
+    'kind': int,
+    'tags': Optional[List[int]],
+    'deprecated': Optional[bool],
+    'range': RangeLsp,
+    'selectionRange': RangeLsp,
+    'children': Optional[List[Any]]  # mypy doesn't support recurive types like Optional[List['DocumentSymbol']]
+}, total=True)
+
+SymbolInformation = TypedDict('SymbolInformation', {
+    'name': str,
+    'kind': int,
+    'tags': Optional[List[int]],
+    'deprecated': Optional[bool],
+    'location': Location,
+    'containerName': Optional[str]
+}, total=True)
 
 LocationLink = TypedDict('LocationLink', {
-    'originSelectionRange': Dict[str, Any],
+    'originSelectionRange': Optional[RangeLsp],
     'targetUri': DocumentUri,
     'targetRange': Dict[str, Any],
     'targetSelectionRange': Dict[str, Any]
@@ -127,7 +159,7 @@ DiagnosticRelatedInformation = TypedDict('DiagnosticRelatedInformation', {
 
 
 Diagnostic = TypedDict('Diagnostic', {
-    'range': Dict[str, Any],
+    'range': RangeLsp,
     'severity': int,
     'code': Union[int, str],
     'codeDescription': CodeDescription,
@@ -334,7 +366,7 @@ class Point(object):
         return self.row == other.row and self.col == other.col
 
     @classmethod
-    def from_lsp(cls, point: dict) -> 'Point':
+    def from_lsp(cls, point: Position) -> 'Point':
         return Point(point['line'], point['character'])
 
     def to_lsp(self) -> Dict[str, Any]:
@@ -359,7 +391,7 @@ class Range(object):
         return self.start == other.start and self.end == other.end
 
     @classmethod
-    def from_lsp(cls, range: dict) -> 'Range':
+    def from_lsp(cls, range: RangeLsp) -> 'Range':
         return Range(Point.from_lsp(range['start']), Point.from_lsp(range['end']))
 
     def to_lsp(self) -> Dict[str, Any]:

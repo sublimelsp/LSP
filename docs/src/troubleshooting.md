@@ -5,25 +5,13 @@ Enable server logging: set `log_server` to ["panel"] and `log_stderr` to `true`
 Run "LSP: Toggle Log Panel" from the command palette. No restart is needed.
 If you believe the issue is with this package, please include the output from the Sublime console in your issue report!
 
-## Common problems
+## Updating the PATH used by LSP servers
 
-### 1. LSP doesn't start my language server
+You can confirm that your issue is due to `PATH` being different by starting Sublime Text from the command line so that it inherits your shell's environment.
 
-* Make sure you have a folder added in your Sublime workspace.
-* Make sure the document you are opening lives under that folder.
+The solution is to make ST read the same `PATH` that is read by your shell (or OS in general, in case of Windows).
 
-Your client configuration requires two settings to match the document your are editing:
-
-* Scope (eg. `source.php`): Verify this is correct by running "Show Scope Name" from the developer menu.
-* Syntax (eg. `Packages\PHP\PHP.sublime-syntax`): Verify by running `view.settings().get("syntax")` in the console.
-
-### 2. LSP cannot find my language server (`No such file or directory: 'xyz'`)
-
-Assuming that the server is actually installed, and that you can start it from your shell, this issue is likely due to Sublime Text's internal environment not picking up the same `PATH` environment variable as you've configured in your shell.
-
-You can confirm that the issue is due to `PATH` being different by starting Sublime Text from the command line so that it inherits your shell's environment.
-
-The solution is to make Sublime Text read the same `PATH` that is read by your shell (or OS in general, in case of Windows).
+> **Note**: You can see what ST thinks your `PATH` is by opening the ST console by clicking on *View > Show Console*, and running `import os; os.environ["PATH"]` in that console.
 
 Adjusting `PATH` can differ based on the operating system and the default shell used. Refer to the following table on where this can be adjusted:
 
@@ -42,15 +30,60 @@ Adjusting `PATH` can differ based on the operating system and the default shell 
 </tr>
 </table>
 
-The exact changes to make can differ depending on what program you want to expose to Sublime Text. The simplest way is to extend the path like so (replacing `/usr/local/bin` with the path of your choice):
+> **Note**: It might be necessary to re-login your user account after changing the shell initialization script for the changes to be picked up.
 
+
+Another solution could be (at least on Linux) to update the server `PATH` using the `env`parameter in your **LSP** configuration file. The following template can be used where:
+  - `<your_language_server_name>` is the server name
+  - `<added_path>` is the directory needed for the server to behave correctly
+
+```json
+"<your_language_server_name>":
+{
+    // ...
+
+    "env":
+    {
+        "PATH": "<added_path>:/usr/local/bin"
+    }
+}
+```
+
+## Common problems
+
+### 1. LSP doesn't start my language server
+
+* Make sure you have a folder added in your Sublime workspace.
+* Make sure the document you are opening lives under that folder.
+
+Your client configuration requires two settings to match the document your are editing:
+
+* Scope (eg. `source.php`): Verify this is correct by running "Show Scope Name" from the developer menu.
+* Syntax (eg. `Packages\PHP\PHP.sublime-syntax`): Verify by running `view.settings().get("syntax")` in the console.
+
+### 2. LSP cannot find my language server (`No such file or directory: 'xyz'`)
+Assuming that the server is actually installed, and that you can start it from your shell, this issue is likely due to Sublime Text's internal environment not picking up the same `PATH` environment variable as you've configured in your shell.
+
+The exact changes to make can differ depending on what program you want to expose to Sublime Text. The simplest way is to extend the path like so (replacing `/usr/local/bin` with the path of your choice):
 ```sh
 export PATH="/usr/local/bin:$PATH"
 ```
 
-If, for example, you want to expose a `Node` binary to ST and you have it installed through a version manager like `nvm`, you need to insert its [initialization script](https://github.com/nvm-sh/nvm#install--update-script) in the location specified in the table above.
+If, for example, you want to expose a `Node` binary to ST and you have it installed through a version manager like `nvm`, you need to insert its [initialization script](https://github.com/nvm-sh/nvm#install--update-script) in the location specified in [this table](troubleshooting.md#updating-the-path-used-by-lsp-servers)
 
-> **Note**: It might be necessary to re-login your user account after changing the shell initialization script for the changes to be picked up.
+The complete procedure of updating the `PATH` used by Sublime Text depends on your platform and is explained [here](troubleshooting.md#updating-the-path-used-by-lsp-servers).
+
+
+### 3. Popup error `Language server <your_server_language_name> has crashed`
+Assuming that the server is actually installed, and that you can start it from your shell, this issue is likely due to Sublime Text's internal environment not picking up the same `PATH` environment variable as you've configured in your shell.
+
+> **Note** : Language servers may have dependencies that should also be in your `PATH` in addition to the server binary itself.
+
+For instance if you have installed the `haskell-language-server` using [ghcup-hs](https://gitlab.haskell.org/haskell/ghcup-hs) you should expose its specific installation folder `~/.ghcup/bin`. If the build process uses `stack` then it should also be in your `PATH`.
+
+The complete procedure of updating the `PATH` used by Sublime Text depends on your platform and is explained [here](troubleshooting.md#updating-the-path-used-by-lsp-servers).
+
+
 
 ## Known Issues
 

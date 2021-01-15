@@ -101,7 +101,7 @@ class LspHoverCommand(LspTextCommand):
         if session:
             document_position = text_document_position_params(self.view, point)
             session.send_request(
-                Request.hover(document_position, self.view),
+                Request("textDocument/hover", document_position, self.view),
                 lambda response: self.handle_response(response, point))
 
     def handle_code_actions(self, responses: Dict[str, List[CodeActionOrCommand]], point: int) -> None:
@@ -202,6 +202,6 @@ class LspHoverCommand(LspTextCommand):
             def run_async() -> None:
                 session = self.session_by_name(config_name)
                 if session:
-                    session.run_code_action_async(self._actions_by_config[config_name][index])
+                    session.run_code_action_async(self._actions_by_config[config_name][index], progress=True)
 
             sublime.set_timeout_async(run_async)

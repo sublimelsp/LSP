@@ -1,7 +1,9 @@
+from .core.progress import ViewProgressReporter
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.sessions import Session
 from .core.settings import userprefs
+from .core.types import debounced
 from .core.typing import Any, Iterable, List, Tuple, Optional, Dict
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.windows import AbstractViewListener
@@ -9,6 +11,7 @@ from .session_buffer import SessionBuffer
 from weakref import ref
 from weakref import WeakValueDictionary
 import sublime
+import functools
 
 
 class SessionView:
@@ -30,6 +33,7 @@ class SessionView:
         self.session = session
         self.active_requests = {}  # type: Dict[int, Request]
         self.listener = ref(listener)
+        self.progress = {}  # type: Dict[int, ViewProgressReporter]
         settings = self.view.settings()
         buffer_id = self.view.buffer_id()
         key = (session.config.name, buffer_id)
@@ -189,9 +193,30 @@ class SessionView:
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
         self.active_requests[request_id] = request
+        if request.progress:
+            debounced(
+                functools.partial(self._start_progress_reporter_async, request_id, request.method),
+                timeout_ms=200,
+                condition=lambda: request_id in self.active_requests and request_id not in self.progress,
+                async_thread=True
+            )
 
     def on_request_finished_async(self, request_id: int) -> None:
         self.active_requests.pop(request_id, None)
+        self.progress.pop(request_id, None)
+
+    def on_request_progress(self, request_id: int, params: Dict[str, Any]) -> None:
+        value = params['value']
+        kind = value['kind']
+        if kind == 'begin':
+            title = value["title"]
+            progress = self.progress.get(request_id)
+            if not progress:
+                progress = self._start_progress_reporter_async(request_id, title)
+            progress.title = title
+            progress(value.get("message"), value.get("percentage"))
+        elif kind == 'report':
+            self.progress[request_id](value.get("message"), value.get("percentage"))
 
     def on_text_changed_async(self, change_count: int, changes: Iterable[sublime.TextChange]) -> None:
         self.session_buffer.on_text_changed_async(self.view, change_count, changes)
@@ -210,6 +235,15 @@ class SessionView:
 
     def on_post_save_async(self) -> None:
         self.session_buffer.on_post_save_async(self.view)
+
+    def _start_progress_reporter_async(self, request_id: int, title: str) -> ViewProgressReporter:
+        progress = ViewProgressReporter(
+            view=self.view,
+            key="lspprogressview{}{}".format(self.session.config.name, request_id),
+            title=title
+        )
+        self.progress[request_id] = progress
+        return progress
 
     def __str__(self) -> str:
         return '{}:{}'.format(self.session.config.name, self.view.id())

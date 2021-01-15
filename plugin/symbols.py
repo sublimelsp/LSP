@@ -104,8 +104,9 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.view.settings().set(SUPPRESS_INPUT_SETTING_KEY, True)
         session = self.best_session(self.capability)
         if session:
+            params = {"textDocument": text_document_identifier(self.view)}
             session.send_request(
-                Request.documentSymbols({"textDocument": text_document_identifier(self.view)}, self.view),
+                Request("textDocument/documentSymbol", params, self.view, progress=True),
                 lambda response: sublime.set_timeout(lambda: self.handle_response(response)),
                 lambda error: sublime.set_timeout(lambda: self.handle_response_error(error)))
 
@@ -240,7 +241,8 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
         if symbol_query_input:
             session = self.best_session(self.capability)
             if session:
-                request = Request.workspaceSymbol({"query": symbol_query_input})
+                params = {"query": symbol_query_input}
+                request = Request("workspace/symbol", params, None, progress=True)
                 session.send_request(request, lambda r: self._handle_response(
                     symbol_query_input, r), self._handle_error)
 

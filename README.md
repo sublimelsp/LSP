@@ -125,6 +125,7 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
 - ✅ codeLens (*only when backed by a helper package*)
 - ❌ documentLink
 - ✅ colorProvider
+  - ❌ color picker [#1291](https://github.com/sublimelsp/LSP/issues/1291)
 - ✅ formatting
 - ✅ rangeFormatting
 - ❌ onTypeFormatting

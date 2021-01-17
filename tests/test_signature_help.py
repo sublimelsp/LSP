@@ -205,7 +205,7 @@ class SignatureHelpTest(unittest.TestCase):
             <b>2</b> of <b>2</b> overloads \(use ↑ ↓ to navigate, press Esc to hide\):
             </div>
             </p>
-            <div class="highlight"><pre><span style="color: #52fa7c">f\(</span>
+            <div class="highlight"><pre><span style="color: #\w{6}">f\(</span>
             <span style="color: #\w{6}; font-weight: bold; text-decoration: underline">x</span>
             <span style="color: #\w{6}">, </span>
             <span style="color: #\w{6}">a</span>

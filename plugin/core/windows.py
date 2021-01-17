@@ -110,6 +110,10 @@ class AbstractViewListener(metaclass=ABCMeta):
     def get_language_id(self) -> str:
         raise NotImplementedError()
 
+    @abstractmethod
+    def do_signature_help_async(self, manual: bool) -> None:
+        raise NotImplementedError()
+
 
 def extract_message(params: Any) -> str:
     return params.get("message", "???") if isinstance(params, dict) else "???"

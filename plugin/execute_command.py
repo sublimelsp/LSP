@@ -47,7 +47,7 @@ class LspExecuteCommand(LspTextCommand):
                 if window:
                     window.status_message(msg)
 
-            session.execute_command(params).then(handle_response)
+            session.execute_command(params, progress=True).then(handle_response)
 
     def _expand_variables(self, command_args: List[Any]) -> None:
         region = self.view.sel()[0]

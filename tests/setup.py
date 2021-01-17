@@ -198,10 +198,13 @@ class TextDocumentTestCase(DeferrableTestCase):
             yielder = YieldPromise()
             promise.then(lambda result: yielder.fulfill(result))
         yield {"condition": yielder, "timeout": TIMEOUT_TIME}
+        return yielder.result()
 
     def await_run_code_action(self, code_action: Dict[str, Any]) -> Generator:
         promise = YieldPromise()
-        sublime.set_timeout_async(lambda: self.session.run_code_action_async(code_action).then(promise.fulfill))
+        sublime.set_timeout_async(
+            lambda: self.session.run_code_action_async(code_action, progress=False).then(
+                promise.fulfill))
         yield from self.await_promise(promise)
 
     def set_response(self, method: str, response: Any) -> None:

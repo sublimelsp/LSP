@@ -49,12 +49,12 @@ def diff(old: Iterable[T], new: Iterable[T]) -> Tuple[Set[T], Set[T]]:
     return added, removed
 
 
-def debounced(f: Callable[[], None], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True,
+def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[], bool] = lambda: True,
               async_thread: bool = False) -> None:
     """
     Possibly run a function at a later point in time, either on the async thread or on the main thread.
 
-    :param      f:             The function to possibly run
+    :param      f:             The function to possibly run. Its return type is discarded.
     :param      timeout_ms:    The time in milliseconds after which to possibly to run the function
     :param      condition:     The condition that must evaluate to True in order to run the funtion
     :param      async_thread:  If true, run the function on the async worker thread, otherwise run the function on the

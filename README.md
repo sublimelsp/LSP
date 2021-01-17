@@ -122,7 +122,7 @@ If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/e
 - ✅ documentSymbol
 - ✅ codeAction
   - ✅ resolve
-- ❌ codeLens
+- ✅ codeLens (*only when backed by a helper package*)
 - ❌ documentLink
 - ✅ colorProvider
 - ✅ formatting

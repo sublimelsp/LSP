@@ -272,7 +272,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region,
                                                       after_ms=self.color_boxes_debounce_time)
         if "signatureHelp" not in userprefs().disabled_capabilities:
-            self._do_signature_help(manual=False)
+            self.do_signature_help_async(manual=False)
         if "codeLensProvider" not in userprefs().disabled_capabilities:
             self._when_selection_remains_stable_async(self._do_code_lenses_async, current_region,
                                                       after_ms=self.code_lenses_debounce_time)
@@ -330,7 +330,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         elif key == "lsp.signature_help":
             if not self.view.is_popup_visible():
                 if operand == 0:
-                    sublime.set_timeout_async(lambda: self._do_signature_help(manual=True))
+                    sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))
                     return True
             elif self._sighelp and self._sighelp.has_multiple_signatures() and not self.view.is_auto_complete_visible():
                 # We use the "operand" for the number -1 or +1. See the keybindings.
@@ -349,7 +349,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
         if command_name in ("next_field", "prev_field") and args is None:
             if "signatureHelp" not in userprefs().disabled_capabilities:
-                sublime.set_timeout_async(lambda: self._do_signature_help(manual=True))
+                sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))
         if not self.view.is_popup_visible():
             return
         if command_name in ["hide_auto_complete", "move", "commit_completion"] or 'delete' in command_name:
@@ -370,7 +370,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/signatureHelp -----------------------------------------------------------------------------------
 
-    def _do_signature_help(self, manual: bool) -> None:
+    def do_signature_help_async(self, manual: bool) -> None:
         # NOTE: We take the beginning of the region to check the previous char (see last_char variable). This is for
         # when a language server inserts a snippet completion.
         pos = self._stored_region.a

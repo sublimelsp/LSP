@@ -2,12 +2,12 @@
 
 Follow the setup steps for a language server to get it up and running.
 
-If you have problems see the [common issues](troubleshooting.md#common-problems) page or search the [LSP/issues](https://github.com/sublimelsp/LSP/issues) before opening new ones.
+If you encounter problems, consult the [common issues](troubleshooting.md#common-problems) page or search the [LSP issues](https://github.com/sublimelsp/LSP/issues) before opening new ones.
 
 If there are no setup steps for a language server on this page, but a [language server implementation](https://microsoft.github.io/language-server-protocol/implementors/servers/) exist, follow the guide for [creating a client configuration](./guides/client_configuration.md). Pull requests for adding a new client configuration are welcome.
 
 !!! tip "We recommend installing [LSP-json](https://packagecontrol.io/packages/LSP-json)."
-    [LSP-json](https://packagecontrol.io/packages/LSP-json) gives settings completions and report errors when inside the LSP settings file.
+    [LSP-json](https://packagecontrol.io/packages/LSP-json) provides completions and diagnostics when editing JSON files that adhere to a JSON schema.
 
 
 ## Angular
@@ -24,8 +24,10 @@ See the dedicated [C/C++ guide](guides/cplusplus.md) for using ccls or clangd.
 
 ## C\#
 
-1. Download [omnisharp](https://github.com/OmniSharp/omnisharp-roslyn/releases).
-2. Open `Preferences > Package Settings > LSP > Settings` and add the `"omnisharp"` client configuration to the `"clients"`:
+1. Download a .NET SDK. The ".NET Core" SDK is known to *not* work on macOS.
+2. If on macOS/Linux, download the Mono Runtime in order to be able to run .NET executables and DLLs.
+3. Download [omnisharp](https://github.com/OmniSharp/omnisharp-roslyn/releases).
+4. Open `Preferences > Package Settings > LSP > Settings` and add the `"omnisharp"` client configuration to the `"clients"`:
 
 === "Sublime Text 4"
     ```json
@@ -34,9 +36,14 @@ See the dedicated [C/C++ guide](guides/cplusplus.md) for using ccls or clangd.
             "omnisharp": {
                 "enabled": true,
                 "command": [
-                    "/home/tb/prebuilt/omnisharp/OmniSharp.exe", // or eg. /usr/local/opt/omnisharp/run
+                    "mono", // mono is only necessary for macOS/Linux
+                    "/home/tb/prebuilt/omnisharp/OmniSharp.exe",
                     "-lsp"
                 ],
+                "env": {
+                    // This may or may not be necessary, please report your findings!
+                    "FrameworkPathOverride": "/path/to/omnisharp/.msbuild/Current"
+                },
                 "selector": "source.cs"
             }
         }
@@ -50,9 +57,14 @@ See the dedicated [C/C++ guide](guides/cplusplus.md) for using ccls or clangd.
             "omnisharp": {
                 "enabled": true,
                 "command": [
-                    "/home/tb/prebuilt/omnisharp/OmniSharp.exe", // or eg. /usr/local/opt/omnisharp/run
+                    "mono", // mono is only necessary for macOS/Linux
+                    "/home/tb/prebuilt/omnisharp/OmniSharp.exe",
                     "-lsp"
                 ],
+                "env": {
+                    // This may or may not be necessary, please report your findings!
+                    "FrameworkPathOverride": "/path/to/omnisharp/.msbuild/Current"
+                },
                 "languageId": "csharp",
                 "scopes": ["source.cs"],
                 "syntaxes": ["Packages/C#/C#.sublime-syntax"]
@@ -890,7 +902,7 @@ A basic configuration below can be used for bootstrapping your own:
           // Exclude files or directories which match these patterns
         ],
         // "pyls.plugins.jedi.pycodestyle.maxLineLength: 80" // set maximum allowed line length
-        "pyls.plugins.pydocstyle.enabled" false,
+        "pyls.plugins.pydocstyle.enabled": false,
         "pyls.plugins.pyflakes.enabled": true,
         "pyls.plugins.pylint.enabled": false,
         "pyls.plugins.yapf.enabled": true,
@@ -1008,9 +1020,10 @@ There are multiple options:
 
 ### Rust Analyzer
 
-1. Install [rust-analyzer](https://github.com/rust-analyzer/rust-analyzer).
-
-2. Open `Preferences > Package Settings > LSP > Settings` and add the `"rust-analyzer"` client configuration to the `"clients"`:
+1. Download a binary from the release page of [rust-analyzer](https://github.com/rust-analyzer/rust-analyzer).
+2. Rename the binary to `rust-analyzer`.
+3. Make sure the binary is in your `$PATH`.
+4. Open `Preferences > Package Settings > LSP > Settings` and add the `"rust-analyzer"` client configuration to the `"clients"`:
 
 === "Sublime Text 4"
     ```json

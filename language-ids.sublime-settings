@@ -108,6 +108,7 @@
     "text.plain.ruby": "txt", // https://github.com/SublimeText/AFileIcon
     "text.plain.sketch": "txt", // https://github.com/SublimeText/AFileIcon
     "text.plain.visualstudio": "txt", // https://github.com/SublimeText/AFileIcon
+    "text.plist": "xml", // https://bitbucket.org/fschwehn/sublime_plist
     "text.xml.plist": "xml", // https://github.com/SublimeText/PackageDev
     "text.xml.plist.textmate.preferences": "xml", // https://github.com/SublimeText/PackageDev
     "text.xml.sublime.snippet": "xml", // https://github.com/SublimeText/PackageDev

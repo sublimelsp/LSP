@@ -76,7 +76,7 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def diagnostics_intersecting_point_async(
+    def diagnostics_touching_point_async(
         self,
         pt: int
     ) -> Tuple[Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]], sublime.Region]:

@@ -86,7 +86,7 @@ class LspHoverCommand(LspTextCommand):
             listener = wm.listener_for_view(self.view)
             if not listener:
                 return
-            self._diagnostics_by_config, covering = listener.diagnostics_intersecting_point_async(hover_point)
+            self._diagnostics_by_config, covering = listener.diagnostics_touching_point_async(hover_point)
             if self._diagnostics_by_config:
                 if not only_diagnostics:
                     actions_manager.request_with_diagnostics_async(

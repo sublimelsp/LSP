@@ -216,7 +216,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 result.append((sb, intersections))
         return result, covering
 
-    def diagnostics_intersecting_point_async(
+    def diagnostics_touching_point_async(
         self,
         pt: int
     ) -> Tuple[List[Tuple[SessionBuffer, List[Diagnostic]]], sublime.Region]:
@@ -241,7 +241,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().show_diagnostics_in_view_status:
             r = self._stored_region
             if r is not None:
-                session_buffer_diagnostics, _ = self.diagnostics_intersecting_point_async(r.b)
+                session_buffer_diagnostics, _ = self.diagnostics_touching_point_async(r.b)
                 if session_buffer_diagnostics:
                     for _, diagnostics in session_buffer_diagnostics:
                         diag = next(iter(diagnostics), None)
@@ -445,7 +445,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _do_code_actions(self) -> None:
         if self._stored_region.empty():
-            diagnostics_by_config, covering = self.diagnostics_intersecting_point_async(self._stored_region.b)
+            diagnostics_by_config, covering = self.diagnostics_touching_point_async(self._stored_region.b)
         else:
             diagnostics_by_config, covering = self.diagnostics_intersecting_region_async(self._stored_region)
         actions_manager.request_for_region_async(self.view, covering, diagnostics_by_config, self._on_code_actions)

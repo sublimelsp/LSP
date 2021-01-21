@@ -1,0 +1,11 @@
+=> 1.2.8
+
+Fixes & Features:
+
+- Fix #1548: when the region is empty, query touching points (Raoul Wols)
+- Add support for old plist package (DeathAxe)
+- Handle basic editor commands (#1545) (Raoul Wols)
+- Implement client-initiated progress reporting (#1535) (Raoul Wols)
+- Add more documentation for issues 1529 and 1530 (#1531) (JeremyBois)
+- Symbol Tag support, and use QuickPanelItem for workspace symbols (#1541) (Predrag Nikolic)
+- make hr less noticeable (Predrag Nikolic)

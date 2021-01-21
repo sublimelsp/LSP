@@ -444,10 +444,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/codeAction --------------------------------------------------------------------------------------
 
     def _do_code_actions(self) -> None:
-        if self._stored_region.empty():
-            diagnostics_by_config, covering = self.diagnostics_touching_point_async(self._stored_region.b)
-        else:
-            diagnostics_by_config, covering = self.diagnostics_intersecting_region_async(self._stored_region)
+        diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_region)
         actions_manager.request_for_region_async(self.view, covering, diagnostics_by_config, self._on_code_actions)
 
     def _on_code_actions(self, responses: CodeActionsByConfigName) -> None:

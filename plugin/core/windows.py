@@ -17,7 +17,7 @@ from .sessions import SessionViewProtocol
 from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
-from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Iterable, Sequence
+from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Iterable, Sequence, Union
 from .views import extract_variables
 from .views import make_link
 from .workspace import disable_in_project
@@ -81,6 +81,17 @@ class AbstractViewListener(metaclass=ABCMeta):
         pt: int
     ) -> Tuple[Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]], sublime.Region]:
         raise NotImplementedError()
+
+    def diagnostics_intersecting_async(
+        self,
+        region_or_point: Union[sublime.Region, int]
+    ) -> Tuple[Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]], sublime.Region]:
+        if isinstance(region_or_point, int):
+            return self.diagnostics_touching_point_async(region_or_point)
+        elif region_or_point.empty():
+            return self.diagnostics_touching_point_async(region_or_point.a)
+        else:
+            return self.diagnostics_intersecting_region_async(region_or_point)
 
     @abstractmethod
     def diagnostics_panel_contribution_async(self) -> Sequence[Tuple[str, Optional[int], Optional[str], Optional[str]]]:

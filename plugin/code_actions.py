@@ -283,10 +283,7 @@ class LspCodeActionsCommand(LspTextCommand):
         listener = windows.listener_for_view(view)
         if not listener:
             return
-        if region.a == region.b:
-            session_buffer_diagnostics, covering = listener.diagnostics_touching_point_async(region.b)
-        else:
-            session_buffer_diagnostics, covering = listener.diagnostics_intersecting_region_async(region)
+        session_buffer_diagnostics, covering = listener.diagnostics_intersecting_async(region)
         dict_kinds = {kind: True for kind in only_kinds} if only_kinds else None
         actions_manager.request_for_region_async(
             view, covering, session_buffer_diagnostics, self.handle_responses_async, dict_kinds)

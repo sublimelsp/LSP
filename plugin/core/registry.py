@@ -51,11 +51,11 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
     # When this is defined in a derived class, the command is enabled only if there exists a session attached to the
     # view that has the given capability.
-    capability = ''
+    capability = None  # type: Optional[str]
 
     # When this is defined in a derived class, the command is enabled only if there exists a session attached to the
     # view that has the given name.
-    session_name = ''
+    session_name = None  # type: Optional[str]
 
     def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
         if self.capability:

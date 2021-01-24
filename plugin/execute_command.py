@@ -27,7 +27,7 @@ class LspExecuteCommand(LspTextCommand):
                     listener.do_signature_help_async(manual=False)
 
             return sublime.set_timeout_async(run_async)
-        session = self.session_by_name(session_name) if session_name else self.best_session(self.capability)
+        session = self.session_by_name(session_name if session_name else self.session_name)
         if session and command_name:
             if command_args:
                 self._expand_variables(command_args)

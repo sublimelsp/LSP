@@ -339,7 +339,9 @@
                   "completion",
                   "colorProvider",
                   "documentHighlight",
-                  "signatureHelp"
+                  "signatureHelp",
+                  "codeLensProvider",
+                  "codeActionProvider"
                 ]
               },
               "uniqueItems": true,

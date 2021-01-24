@@ -179,7 +179,7 @@ Add these settings to LSP settings, your Sublime settings, Syntax-specific setti
 * `document_highlight_scopes`: *customize your sublime text scopes for document highlighting*
 * `diagnostics_gutter_marker` `"dot"` *gutter marker for code diagnostics: "dot", "circle", "bookmark", "sign" or ""*
 * `show_symbol_action_links` `false` *show links to symbol actions like go to, references and rename in the hover popup*
-* `disabled_capabilities`, `[]` *Turn off client capabilities (features): "hover", "completion", "documentHighlight", "colorProvider", "signatureHelp"*
+* `disabled_capabilities`, `[]` *Turn off client capabilities (features): "hover", "completion", "documentHighlight", "colorProvider", "signatureHelp", "codeLensProvider", "codeActionProvider"*
 * `log_debug` `false` *show debug logging in the sublime console*
 * `log_server` `[]` *log communication from and to language servers*
 * `log_stderr` `false` *show language server stderr output in the console*

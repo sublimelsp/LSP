@@ -79,7 +79,7 @@ class CodeActionsManager:
         region: sublime.Region,
         session_buffer_diagnostics: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]],
         actions_handler: Callable[[CodeActionsByConfigName], None]
-    ) -> CodeActionsCollector:
+    ) -> Optional[CodeActionsCollector]:
         """
         Requests code actions *only* for provided diagnostics. If session has no diagnostics then
         it will be skipped.
@@ -93,7 +93,7 @@ class CodeActionsManager:
         session_buffer_diagnostics: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]],
         actions_handler: Callable[[CodeActionsByConfigName], None],
         only_kinds: Optional[Dict[str, bool]] = None
-    ) -> CodeActionsCollector:
+    ) -> Optional[CodeActionsCollector]:
         """
         Requests code actions with provided diagnostics and specified region. If there are
         no diagnostics for given session, the request will be made with empty diagnostics list.
@@ -105,7 +105,7 @@ class CodeActionsManager:
         view: sublime.View,
         actions_handler: Callable[[CodeActionsByConfigName], None],
         on_save_actions: Dict[str, bool]
-    ) -> CodeActionsCollector:
+    ) -> Optional[CodeActionsCollector]:
         """
         Requests code actions on save.
         """
@@ -119,7 +119,10 @@ class CodeActionsManager:
         only_with_diagnostics: bool,
         actions_handler: Callable[[CodeActionsByConfigName], None],
         on_save_actions: Optional[Dict[str, bool]] = None
-    ) -> CodeActionsCollector:
+    ) -> Optional[CodeActionsCollector]:
+        if 'codeActionProvider' in userprefs().disabled_capabilities:
+            return
+
         use_cache = on_save_actions is None
         if use_cache:
             location_cache_key = "{}#{}:{}:{}".format(

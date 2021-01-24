@@ -340,6 +340,7 @@
                   "colorProvider",
                   "documentHighlight",
                   "signatureHelp",
+                  "codeLensProvider",
                   "codeActionProvider"
                 ]
               },

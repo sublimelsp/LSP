@@ -1,0 +1,866 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="canonical" href="https://sublimelsp.github.io/LSP/features/">
+      
+      <link rel="shortcut icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-6.2.5">
+    
+    
+      
+        <title>Features - LSP for Sublime Text</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.15aa0b43.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.75751829.min.css">
+        
+          
+          
+          <meta name="theme-color" content="#ffa724">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="orange" data-md-color-accent="orange">
+      
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#commands-and-shortcuts" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="https://sublimelsp.github.io/LSP/" title="LSP for Sublime Text" class="md-header-nav__button md-logo" aria-label="LSP for Sublime Text">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M542.22 32.05c-54.8 3.11-163.72 14.43-230.96 55.59-4.64 2.84-7.27 7.89-7.27 13.17v363.87c0 11.55 12.63 18.85 23.28 13.49 69.18-34.82 169.23-44.32 218.7-46.92 16.89-.89 30.02-14.43 30.02-30.66V62.75c.01-17.71-15.35-31.74-33.77-30.7zM264.73 87.64C197.5 46.48 88.58 35.17 33.78 32.05 15.36 31.01 0 45.04 0 62.75V400.6c0 16.24 13.13 29.78 30.02 30.66 49.49 2.6 149.59 12.11 218.77 46.95 10.62 5.35 23.21-1.94 23.21-13.46V100.63c0-5.29-2.62-10.14-7.27-12.99z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      <div class="md-header-nav__ellipsis">
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
+            LSP for Sublime Text
+          </span>
+        </div>
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
+            
+              Features
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/sublimelsp/LSP/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="https://sublimelsp.github.io/LSP/" title="LSP for Sublime Text" class="md-nav__button md-logo" aria-label="LSP for Sublime Text">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M542.22 32.05c-54.8 3.11-163.72 14.43-230.96 55.59-4.64 2.84-7.27 7.89-7.27 13.17v363.87c0 11.55 12.63 18.85 23.28 13.49 69.18-34.82 169.23-44.32 218.7-46.92 16.89-.89 30.02-14.43 30.02-30.66V62.75c.01-17.71-15.35-31.74-33.77-30.7zM264.73 87.64C197.5 46.48 88.58 35.17 33.78 32.05 15.36 31.01 0 45.04 0 62.75V400.6c0 16.24 13.13 29.78 30.02 30.66 49.49 2.6 149.59 12.11 218.77 46.95 10.62 5.35 23.21-1.94 23.21-13.46V100.63c0-5.29-2.62-10.14-7.27-12.99z"/></svg>
+
+    </a>
+    LSP for Sublime Text
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/sublimelsp/LSP/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../language_servers/" class="md-nav__link">
+        Language Servers
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Features
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Features
+      </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#commands-and-shortcuts" class="md-nav__link">
+    Commands and shortcuts
+  </a>
+  
+    <nav class="md-nav" aria-label="Commands and shortcuts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#plugin-commands" class="md-nav__link">
+    Plugin commands
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#document-actions" class="md-nav__link">
+    Document actions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workspace-actions" class="md-nav__link">
+    Workspace actions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#execute-server-commands" class="md-nav__link">
+    Execute server commands
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#overriding-keybindings" class="md-nav__link">
+    Overriding keybindings
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#show-autocomplete-documentation" class="md-nav__link">
+    Show autocomplete documentation
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mouse-map-configuration" class="md-nav__link">
+    Mouse map configuration
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuring" class="md-nav__link">
+    Configuring
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuring">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sublime-settings" class="md-nav__link">
+    Sublime settings
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#package-settings-lsp" class="md-nav__link">
+    Package settings (LSP)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+      
+
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-4" type="checkbox" id="nav-4" >
+      
+      <label class="md-nav__link" for="nav-4">
+        Guides
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Guides" data-md-level="1">
+        <label class="md-nav__title" for="nav-4">
+          <span class="md-nav__icon md-icon"></span>
+          Guides
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/client_configuration/" class="md-nav__link">
+        Client Configuration
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/cplusplus/" class="md-nav__link">
+        Setup C/C++
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        Troubleshooting
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#commands-and-shortcuts" class="md-nav__link">
+    Commands and shortcuts
+  </a>
+  
+    <nav class="md-nav" aria-label="Commands and shortcuts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#plugin-commands" class="md-nav__link">
+    Plugin commands
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#document-actions" class="md-nav__link">
+    Document actions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workspace-actions" class="md-nav__link">
+    Workspace actions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#execute-server-commands" class="md-nav__link">
+    Execute server commands
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#overriding-keybindings" class="md-nav__link">
+    Overriding keybindings
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#show-autocomplete-documentation" class="md-nav__link">
+    Show autocomplete documentation
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mouse-map-configuration" class="md-nav__link">
+    Mouse map configuration
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuring" class="md-nav__link">
+    Configuring
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuring">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sublime-settings" class="md-nav__link">
+    Sublime settings
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#package-settings-lsp" class="md-nav__link">
+    Package settings (LSP)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/sublimelsp/LSP/edit/st4000-exploration/docs/features.md" title="Edit this page" class="md-content__button md-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+                  </a>
+                
+                
+                  <h1>Features</h1>
+                
+                <h2 id="commands-and-shortcuts">Commands and shortcuts<a class="headerlink" href="#commands-and-shortcuts" title="Permanent link">#</a></h2>
+<h3 id="plugin-commands">Plugin commands<a class="headerlink" href="#plugin-commands" title="Permanent link">#</a></h3>
+<ul>
+<li>Restart Servers: kills all language servers belonging to the active window<ul>
+<li>This command only works when in a supported document.</li>
+<li>It may change in the future to be always available, or only kill the relevant language server.</li>
+</ul>
+</li>
+<li>LSP Settings: Opens package settings.</li>
+</ul>
+<h3 id="document-actions">Document actions<a class="headerlink" href="#document-actions" title="Permanent link">#</a></h3>
+<ul>
+<li>Show Code Actions: UNBOUND</li>
+<li>Symbol References: <code>shift+f12</code></li>
+<li>Rename Symbol: UNBOUND<ul>
+<li>Recommendation: Override <code>F2</code> (next bookmark)</li>
+</ul>
+</li>
+<li>Go to definition / type definition / declaration / implementation: UNBOUND<ul>
+<li>Recommendation: Override <code>f12</code> (built-in goto definition),</li>
+<li>LSP falls back to ST3's built-in goto definition command in case LSP fails.</li>
+</ul>
+</li>
+<li>Format Document: UNBOUND</li>
+<li>Format Selection: UNBOUND</li>
+<li>Document Symbols: UNBOUND</li>
+</ul>
+<h3 id="workspace-actions">Workspace actions<a class="headerlink" href="#workspace-actions" title="Permanent link">#</a></h3>
+<ul>
+<li>Show Diagnostics Panel: <code>super+shift+M</code> / <code>ctr+alt+M</code></li>
+<li>Next/Previous Diagnostic From panel: <code>F4</code> / <code>shift+F4</code></li>
+<li>Workspace Symbol Search: via command Palette <code>LSP: workspace symbol</code></li>
+</ul>
+<h3 id="execute-server-commands">Execute server commands<a class="headerlink" href="#execute-server-commands" title="Permanent link">#</a></h3>
+<p>For LSP servers that can handle <a href="https://microsoft.github.io/language-server-protocol/specification#workspace_executeCommand">workspace/executeCommand</a>, you can make these commands available into the sublime palette by adding an entry to your existing <code>.sublime-commands</code> file or by creating a new one.</p>
+<p>Example:</p>
+<p><div class="highlight"><pre><span></span><code><span class="p">[</span>
+  <span class="c1">// ...</span>
+  <span class="p">{</span>
+    <span class="s2">&quot;caption&quot;</span><span class="o">:</span> <span class="s2">&quot;Thread First&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;command&quot;</span><span class="o">:</span> <span class="s2">&quot;lsp_execute&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;args&quot;</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s2">&quot;command_name&quot;</span><span class="o">:</span> <span class="s2">&quot;thread-first&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;command_args&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;${file_uri}&quot;</span><span class="p">,</span> <span class="mf">0</span><span class="p">,</span> <span class="mf">0</span><span class="p">]</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">]</span>
+</code></pre></div>
+Note: <code>command_args</code> is optional depending on the <code>workspace/executeCommand</code> that are supported by the LSP server.
+The following variables will be expanded, but only if they are top-level array items and not within nested arrays or objects:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>"$document_id"</code> or <code>"${document_id}"</code></td>
+<td>object</td>
+<td>Mapping <code>{ 'uri': string }</code> containing the file URI of the active view, see <a href="https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentIdentifier">Document Identifier</a></td>
+</tr>
+<tr>
+<td><code>"$file_uri"</code> or <code>"${file_uri}"</code></td>
+<td>string</td>
+<td>File URI of the active view</td>
+</tr>
+<tr>
+<td><code>"$selection"</code> or <code>"${selection}"</code></td>
+<td>string</td>
+<td>Content of the (topmost) selection</td>
+</tr>
+<tr>
+<td><code>"$offset"</code> or <code>"${offset}"</code></td>
+<td>int</td>
+<td>Character offset of the (topmost) cursor position</td>
+</tr>
+<tr>
+<td><code>"$selection_begin"</code> or <code>"${selection_begin}"</code></td>
+<td>int</td>
+<td>Character offset of the begin of the (topmost) selection</td>
+</tr>
+<tr>
+<td><code>"$selection_end"</code> or <code>"${selection_end}"</code></td>
+<td>int</td>
+<td>Character offset of the end of the (topmost) selection</td>
+</tr>
+<tr>
+<td><code>"$position"</code> or <code>"${position}"</code></td>
+<td>object</td>
+<td>Mapping <code>{ 'line': int, 'character': int }</code> of the (topmost) cursor position, see <a href="https://microsoft.github.io/language-server-protocol/specifications/specification-current/#position">Position</a></td>
+</tr>
+<tr>
+<td><code>"$range"</code> or <code>"${range}</code></td>
+<td>object</td>
+<td>Mapping with <code>'start'</code> and <code>'end'</code> positions of the (topmost) selection, see <a href="https://microsoft.github.io/language-server-protocol/specifications/specification-current/#range">Range</a></td>
+</tr>
+</tbody>
+</table>
+<h3 id="overriding-keybindings">Overriding keybindings<a class="headerlink" href="#overriding-keybindings" title="Permanent link">#</a></h3>
+<p>LSP's keybindings can be edited from the <code>Preferences: LSP Keybindings</code> command from the command palette.
+There is a special context called <code>lsp.session_with_capability</code> that can check whether there is a language server active
+with the given <a href="https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize">LSP capability</a>.
+Refer to the <code>ServerCapabilities</code> structure in that link.
+The following example overrides <code>ctrl+r</code> to use LSP's symbol provider when we're in a javascript or typescript view:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="s2">&quot;command&quot;</span><span class="o">:</span> <span class="s2">&quot;lsp_document_symbols&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;keys&quot;</span><span class="o">:</span> <span class="p">[</span>
+        <span class="s2">&quot;ctrl+r&quot;</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;context&quot;</span><span class="o">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;key&quot;</span><span class="o">:</span> <span class="s2">&quot;lsp.session_with_capability&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;operator&quot;</span><span class="o">:</span> <span class="s2">&quot;equal&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;operand&quot;</span><span class="o">:</span> <span class="s2">&quot;documentSymbolProvider&quot;</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;key&quot;</span><span class="o">:</span> <span class="s2">&quot;selector&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;operator&quot;</span><span class="o">:</span> <span class="s2">&quot;equal&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;operand&quot;</span><span class="o">:</span> <span class="s2">&quot;source.ts, source.js&quot;</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">},</span>
+</code></pre></div>
+<p>More useful keybindings (OS-X), edit Package Settings -&gt; LSP -&gt; Key Bindings
+<div class="highlight"><pre><span></span><code>  <span class="p">{</span> <span class="s2">&quot;keys&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;f2&quot;</span><span class="p">],</span> <span class="s2">&quot;command&quot;</span><span class="o">:</span> <span class="s2">&quot;lsp_symbol_rename&quot;</span> <span class="p">},</span>
+  <span class="p">{</span> <span class="s2">&quot;keys&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;f12&quot;</span><span class="p">],</span> <span class="s2">&quot;command&quot;</span><span class="o">:</span> <span class="s2">&quot;lsp_symbol_definition&quot;</span> <span class="p">},</span>
+  <span class="p">{</span> <span class="s2">&quot;keys&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;super+option+r&quot;</span><span class="p">],</span> <span class="s2">&quot;command&quot;</span><span class="o">:</span> <span class="s2">&quot;lsp_document_symbols&quot;</span> <span class="p">},</span>
+  <span class="p">{</span> <span class="s2">&quot;keys&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;super+option+h&quot;</span><span class="p">],</span> <span class="s2">&quot;command&quot;</span><span class="o">:</span> <span class="s2">&quot;lsp_hover&quot;</span><span class="p">}</span>
+</code></pre></div></p>
+<h3 id="show-autocomplete-documentation">Show autocomplete documentation<a class="headerlink" href="#show-autocomplete-documentation" title="Permanent link">#</a></h3>
+<p>Some completion items can have documentation associated with them.</p>
+<p><img alt="documentation popup" src="../images/show-docs-popup.png" /></p>
+<p>To show the documentation popup you can click the <strong>More</strong> link in the bottom of the autocomplete,
+or you can use the default sublime keybinding <kbd>F12</kbd> to trigger it.</p>
+<p>You can change the default keybinding by remapping the command as below:</p>
+<p><div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="s2">&quot;command&quot;</span><span class="o">:</span> <span class="s2">&quot;auto_complete_open_link&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;keys&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;f12&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;context&quot;</span><span class="o">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;key&quot;</span><span class="o">:</span> <span class="s2">&quot;auto_complete_visible&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;operator&quot;</span><span class="o">:</span> <span class="s2">&quot;equal&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;operand&quot;</span><span class="o">:</span> <span class="kc">true</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">},</span>
+</code></pre></div>
+Note that <kbd>F12</kbd> may conflict with your Goto Definition keybinding. To avoid the conflict, make sure that you
+have a context which checks that the AC widget is not visible:
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="s2">&quot;command&quot;</span><span class="o">:</span> <span class="s2">&quot;lsp_symbol_definition&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;keys&quot;</span><span class="o">:</span> <span class="p">[</span>
+        <span class="s2">&quot;f12&quot;</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;context&quot;</span><span class="o">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;key&quot;</span><span class="o">:</span> <span class="s2">&quot;lsp.session_with_capability&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;operator&quot;</span><span class="o">:</span> <span class="s2">&quot;equal&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;operand&quot;</span><span class="o">:</span> <span class="s2">&quot;definitionProvider&quot;</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;key&quot;</span><span class="o">:</span> <span class="s2">&quot;auto_complete_visible&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;operator&quot;</span><span class="o">:</span> <span class="s2">&quot;equal&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;operand&quot;</span><span class="o">:</span> <span class="kc">false</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">},</span>
+</code></pre></div>
+There is an example of this in LSP's default keybindings.</p>
+<h3 id="mouse-map-configuration">Mouse map configuration<a class="headerlink" href="#mouse-map-configuration" title="Permanent link">#</a></h3>
+<p>See below link, but bind to <code>lsp_symbol_definition</code> command
+https://stackoverflow.com/questions/16235706/sublime-3-set-key-map-for-function-goto-definition</p>
+<h2 id="configuring">Configuring<a class="headerlink" href="#configuring" title="Permanent link">#</a></h2>
+<h3 id="sublime-settings">Sublime settings<a class="headerlink" href="#sublime-settings" title="Permanent link">#</a></h3>
+<p>Add these settings to LSP settings, your Sublime settings, Syntax-specific settings and/or in Project files.</p>
+<ul>
+<li><code>lsp_format_on_save</code> <code>false</code> <em>run the server's formatProvider (if supported) on a document before saving.</em></li>
+<li><code>lsp_code_actions_on_save</code> <code>{}</code> <em>request code actions with specified identifiers to trigger before saving.</em></li>
+</ul>
+<h3 id="package-settings-lsp">Package settings (LSP)<a class="headerlink" href="#package-settings-lsp" title="Permanent link">#</a></h3>
+<ul>
+<li><code>inhibit_word_completions</code> <code>true</code> <em>disable sublime word completion</em></li>
+<li><code>inhibit_snippet_completions</code> <code>false</code> <em>disable sublime snippet completion</em></li>
+<li><code>show_code_actions</code> <code>annotation</code> <em>Show code actions: "annotation", "bulb"</em></li>
+<li><code>code_action_on_save_timeout_ms</code> <code>2000</code> <em>the amount of time the code actions on save are allowed to run for</em></li>
+<li><code>show_references_in_quick_panel</code> <code>false</code> <em>show symbol references in Sublime's quick panel instead of the bottom panel</em></li>
+<li><code>show_view_status</code> <code>true</code> <em>show permanent language server status in the status bar</em></li>
+<li>'diagnostics_delay_ms' <code>0</code> <em>delay showing diagnostics by this many milliseconds</em></li>
+<li><code>diagnostics_additional_delay_auto_complete_ms</code> <code>0</code> <em>additional delay when the AC widget is visible</em></li>
+<li><code>auto_show_diagnostics_panel</code> <code>always</code> (<code>never</code>, <code>saved</code>) <em>open the diagnostics panel automatically if there are diagnostics</em></li>
+<li><code>show_diagnostics_count_in_view_status</code> <code>false</code> <em>show errors and warnings count in the status bar</em></li>
+<li><code>show_diagnostics_in_view_status</code> <code>true</code> <em>when on a diagnostic with the cursor, show the text in the status bar</em></li>
+<li><code>diagnostics_highlight_style</code> <code>"underline"</code> <em>highlight style of code diagnostics: "box", "underline", "stippled", "squiggly" or ""</em></li>
+<li><code>highlight_active_signature_parameter</code>: <em>highlight the active parameter of the currently active signature</em></li>
+<li><code>document_highlight_style</code>: <em>document highlight style: "box", "underline", "stippled", "squiggly" or ""</em></li>
+<li><code>document_highlight_scopes</code>: <em>customize your sublime text scopes for document highlighting</em></li>
+<li><code>diagnostics_gutter_marker</code> <code>"dot"</code> <em>gutter marker for code diagnostics: "dot", "circle", "bookmark", "sign" or ""</em></li>
+<li><code>show_symbol_action_links</code> <code>false</code> <em>show links to symbol actions like go to, references and rename in the hover popup</em></li>
+<li><code>disabled_capabilities</code>, <code>[]</code> <em>Turn off client capabilities (features): "hover", "completion", "documentHighlight", "colorProvider", "signatureHelp", "codeLensProvider", "codeActionProvider"</em></li>
+<li><code>log_debug</code> <code>false</code> <em>show debug logging in the sublime console</em></li>
+<li><code>log_server</code> <code>[]</code> <em>log communication from and to language servers</em></li>
+<li><code>log_stderr</code> <code>false</code> <em>show language server stderr output in the console</em></li>
+<li><code>log_max_size</code> <code>8192</code> <em>max  number of characters of payloads to print</em></li>
+</ul>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href="../language_servers/" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+            </div>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Language Servers
+              </div>
+            </div>
+          </a>
+        
+        
+          <a href="../guides/client_configuration/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Client Configuration
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+  <div class="md-footer-social">
+    
+      
+      
+        
+        
+      
+      <a href="https://discordapp.com/channels/280102180189634562/645268178397560865" target="_blank" rel="noopener" title="discordapp.com" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M297.216 243.2c0 15.616-11.52 28.416-26.112 28.416-14.336 0-26.112-12.8-26.112-28.416s11.52-28.416 26.112-28.416c14.592 0 26.112 12.8 26.112 28.416zm-119.552-28.416c-14.592 0-26.112 12.8-26.112 28.416s11.776 28.416 26.112 28.416c14.592 0 26.112-12.8 26.112-28.416.256-15.616-11.52-28.416-26.112-28.416zM448 52.736V512c-64.494-56.994-43.868-38.128-118.784-107.776l13.568 47.36H52.48C23.552 451.584 0 428.032 0 398.848V52.736C0 23.552 23.552 0 52.48 0h343.04C424.448 0 448 23.552 448 52.736zm-72.96 242.688c0-82.432-36.864-149.248-36.864-149.248-36.864-27.648-71.936-26.88-71.936-26.88l-3.584 4.096c43.52 13.312 63.744 32.512 63.744 32.512-60.811-33.329-132.244-33.335-191.232-7.424-9.472 4.352-15.104 7.424-15.104 7.424s21.248-20.224 67.328-33.536l-2.56-3.072s-35.072-.768-71.936 26.88c0 0-36.864 66.816-36.864 149.248 0 0 21.504 37.12 78.08 38.912 0 0 9.472-11.52 17.152-21.248-32.512-9.728-44.8-30.208-44.8-30.208 3.766 2.636 9.976 6.053 10.496 6.4 43.21 24.198 104.588 32.126 159.744 8.96 8.96-3.328 18.944-8.192 29.44-15.104 0 0-12.8 20.992-46.336 30.464 7.68 9.728 16.896 20.736 16.896 20.736 56.576-1.792 78.336-38.912 78.336-38.912z"/></svg>
+      </a>
+    
+  </div>
+
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../assets/javascripts/vendor.93c04032.min.js"></script>
+      <script src="../assets/javascripts/bundle.83e5331e.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}</script>
+      
+      <script>
+        app = initialize({
+          base: "..",
+          features: [],
+          search: Object.assign({
+            worker: "../assets/javascripts/worker/search.8c7e0a7e.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>

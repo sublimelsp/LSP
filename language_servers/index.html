@@ -1,0 +1,2333 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="canonical" href="https://sublimelsp.github.io/LSP/language_servers/">
+      
+      <link rel="shortcut icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-6.2.5">
+    
+    
+      
+        <title>Language Servers - LSP for Sublime Text</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.15aa0b43.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.75751829.min.css">
+        
+          
+          
+          <meta name="theme-color" content="#ffa724">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="orange" data-md-color-accent="orange">
+      
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#language-servers" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="https://sublimelsp.github.io/LSP/" title="LSP for Sublime Text" class="md-header-nav__button md-logo" aria-label="LSP for Sublime Text">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M542.22 32.05c-54.8 3.11-163.72 14.43-230.96 55.59-4.64 2.84-7.27 7.89-7.27 13.17v363.87c0 11.55 12.63 18.85 23.28 13.49 69.18-34.82 169.23-44.32 218.7-46.92 16.89-.89 30.02-14.43 30.02-30.66V62.75c.01-17.71-15.35-31.74-33.77-30.7zM264.73 87.64C197.5 46.48 88.58 35.17 33.78 32.05 15.36 31.01 0 45.04 0 62.75V400.6c0 16.24 13.13 29.78 30.02 30.66 49.49 2.6 149.59 12.11 218.77 46.95 10.62 5.35 23.21-1.94 23.21-13.46V100.63c0-5.29-2.62-10.14-7.27-12.99z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      <div class="md-header-nav__ellipsis">
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
+            LSP for Sublime Text
+          </span>
+        </div>
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
+            
+              Language Servers
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/sublimelsp/LSP/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="https://sublimelsp.github.io/LSP/" title="LSP for Sublime Text" class="md-nav__button md-logo" aria-label="LSP for Sublime Text">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M542.22 32.05c-54.8 3.11-163.72 14.43-230.96 55.59-4.64 2.84-7.27 7.89-7.27 13.17v363.87c0 11.55 12.63 18.85 23.28 13.49 69.18-34.82 169.23-44.32 218.7-46.92 16.89-.89 30.02-14.43 30.02-30.66V62.75c.01-17.71-15.35-31.74-33.77-30.7zM264.73 87.64C197.5 46.48 88.58 35.17 33.78 32.05 15.36 31.01 0 45.04 0 62.75V400.6c0 16.24 13.13 29.78 30.02 30.66 49.49 2.6 149.59 12.11 218.77 46.95 10.62 5.35 23.21-1.94 23.21-13.46V100.63c0-5.29-2.62-10.14-7.27-12.99z"/></svg>
+
+    </a>
+    LSP for Sublime Text
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/sublimelsp/LSP/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Language Servers
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Language Servers
+      </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#angular" class="md-nav__link">
+    Angular
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bash" class="md-nav__link">
+    Bash
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cc" class="md-nav__link">
+    C/C++
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#c" class="md-nav__link">
+    C#
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#clojure" class="md-nav__link">
+    Clojure
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#css" class="md-nav__link">
+    CSS
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d" class="md-nav__link">
+    D
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dart" class="md-nav__link">
+    Dart
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dockerfile" class="md-nav__link">
+    Dockerfile
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#elixir" class="md-nav__link">
+    Elixir
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#elm" class="md-nav__link">
+    Elm
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#erlang" class="md-nav__link">
+    Erlang
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#eslint" class="md-nav__link">
+    ESLint
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flow" class="md-nav__link">
+    Flow
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fortran" class="md-nav__link">
+    Fortran
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#go" class="md-nav__link">
+    Go
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graphql" class="md-nav__link">
+    GraphQL
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#haskell" class="md-nav__link">
+    Haskell
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#html" class="md-nav__link">
+    HTML
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#java" class="md-nav__link">
+    Java
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#json" class="md-nav__link">
+    JSON
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#julia" class="md-nav__link">
+    Julia
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kotlin" class="md-nav__link">
+    Kotlin
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#latex" class="md-nav__link">
+    LaTeX
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lisp" class="md-nav__link">
+    Lisp
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lua" class="md-nav__link">
+    Lua
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ocamlreason" class="md-nav__link">
+    OCaml/Reason
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#promql" class="md-nav__link">
+    PromQL
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#php" class="md-nav__link">
+    PHP
+  </a>
+  
+    <nav class="md-nav" aria-label="PHP">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#intelephense" class="md-nav__link">
+    Intelephense
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#serenata" class="md-nav__link">
+    Serenata
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#powershell" class="md-nav__link">
+    PowerShell
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python" class="md-nav__link">
+    Python
+  </a>
+  
+    <nav class="md-nav" aria-label="Python">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pyright" class="md-nav__link">
+    Pyright
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pyls" class="md-nav__link">
+    Pyls
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#r" class="md-nav__link">
+    R
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ruby-ruby-on-rails" class="md-nav__link">
+    Ruby / Ruby on Rails
+  </a>
+  
+    <nav class="md-nav" aria-label="Ruby / Ruby on Rails">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#solargraph" class="md-nav__link">
+    Solargraph
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sorbet" class="md-nav__link">
+    Sorbet
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rust" class="md-nav__link">
+    Rust
+  </a>
+  
+    <nav class="md-nav" aria-label="Rust">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rust-analyzer" class="md-nav__link">
+    Rust Analyzer
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rust-enhanced" class="md-nav__link">
+    Rust Enhanced
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scala" class="md-nav__link">
+    Scala
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stylelint" class="md-nav__link">
+    Stylelint
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#svelte" class="md-nav__link">
+    Svelte
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#swift" class="md-nav__link">
+    Swift
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tagml" class="md-nav__link">
+    TAGML
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#terraform" class="md-nav__link">
+    Terraform
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#typescript-javascript" class="md-nav__link">
+    TypeScript / JavaScript
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vue" class="md-nav__link">
+    Vue
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#xml" class="md-nav__link">
+    XML
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#yaml" class="md-nav__link">
+    YAML
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+      
+
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/" class="md-nav__link">
+        Features
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-4" type="checkbox" id="nav-4" >
+      
+      <label class="md-nav__link" for="nav-4">
+        Guides
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Guides" data-md-level="1">
+        <label class="md-nav__title" for="nav-4">
+          <span class="md-nav__icon md-icon"></span>
+          Guides
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/client_configuration/" class="md-nav__link">
+        Client Configuration
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/cplusplus/" class="md-nav__link">
+        Setup C/C++
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        Troubleshooting
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#angular" class="md-nav__link">
+    Angular
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bash" class="md-nav__link">
+    Bash
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cc" class="md-nav__link">
+    C/C++
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#c" class="md-nav__link">
+    C#
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#clojure" class="md-nav__link">
+    Clojure
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#css" class="md-nav__link">
+    CSS
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d" class="md-nav__link">
+    D
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dart" class="md-nav__link">
+    Dart
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dockerfile" class="md-nav__link">
+    Dockerfile
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#elixir" class="md-nav__link">
+    Elixir
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#elm" class="md-nav__link">
+    Elm
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#erlang" class="md-nav__link">
+    Erlang
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#eslint" class="md-nav__link">
+    ESLint
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flow" class="md-nav__link">
+    Flow
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fortran" class="md-nav__link">
+    Fortran
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#go" class="md-nav__link">
+    Go
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graphql" class="md-nav__link">
+    GraphQL
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#haskell" class="md-nav__link">
+    Haskell
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#html" class="md-nav__link">
+    HTML
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#java" class="md-nav__link">
+    Java
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#json" class="md-nav__link">
+    JSON
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#julia" class="md-nav__link">
+    Julia
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kotlin" class="md-nav__link">
+    Kotlin
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#latex" class="md-nav__link">
+    LaTeX
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lisp" class="md-nav__link">
+    Lisp
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lua" class="md-nav__link">
+    Lua
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ocamlreason" class="md-nav__link">
+    OCaml/Reason
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#promql" class="md-nav__link">
+    PromQL
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#php" class="md-nav__link">
+    PHP
+  </a>
+  
+    <nav class="md-nav" aria-label="PHP">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#intelephense" class="md-nav__link">
+    Intelephense
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#serenata" class="md-nav__link">
+    Serenata
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#powershell" class="md-nav__link">
+    PowerShell
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python" class="md-nav__link">
+    Python
+  </a>
+  
+    <nav class="md-nav" aria-label="Python">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pyright" class="md-nav__link">
+    Pyright
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pyls" class="md-nav__link">
+    Pyls
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#r" class="md-nav__link">
+    R
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ruby-ruby-on-rails" class="md-nav__link">
+    Ruby / Ruby on Rails
+  </a>
+  
+    <nav class="md-nav" aria-label="Ruby / Ruby on Rails">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#solargraph" class="md-nav__link">
+    Solargraph
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sorbet" class="md-nav__link">
+    Sorbet
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rust" class="md-nav__link">
+    Rust
+  </a>
+  
+    <nav class="md-nav" aria-label="Rust">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rust-analyzer" class="md-nav__link">
+    Rust Analyzer
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rust-enhanced" class="md-nav__link">
+    Rust Enhanced
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scala" class="md-nav__link">
+    Scala
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stylelint" class="md-nav__link">
+    Stylelint
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#svelte" class="md-nav__link">
+    Svelte
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#swift" class="md-nav__link">
+    Swift
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tagml" class="md-nav__link">
+    TAGML
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#terraform" class="md-nav__link">
+    Terraform
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#typescript-javascript" class="md-nav__link">
+    TypeScript / JavaScript
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vue" class="md-nav__link">
+    Vue
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#xml" class="md-nav__link">
+    XML
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#yaml" class="md-nav__link">
+    YAML
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/sublimelsp/LSP/edit/st4000-exploration/docs/language_servers.md" title="Edit this page" class="md-content__button md-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+                  </a>
+                
+                
+                <h1 id="language-servers">Language Servers<a class="headerlink" href="#language-servers" title="Permanent link">#</a></h1>
+<p>Follow the setup steps for a language server to get it up and running.</p>
+<p>If you encounter problems, consult the <a href="../troubleshooting/#common-problems">common issues</a> page or search the <a href="https://github.com/sublimelsp/LSP/issues">LSP issues</a> before opening new ones.</p>
+<p>If there are no setup steps for a language server on this page, but a <a href="https://microsoft.github.io/language-server-protocol/implementors/servers/">language server implementation</a> exist, follow the guide for <a href="../guides/client_configuration/">creating a client configuration</a>. Pull requests for adding a new client configuration are welcome.</p>
+<div class="admonition tip">
+<p class="admonition-title">We recommend installing <a href="https://packagecontrol.io/packages/LSP-json">LSP-json</a>.</p>
+<p><a href="https://packagecontrol.io/packages/LSP-json">LSP-json</a> provides completions and diagnostics when editing JSON files that adhere to a JSON schema.</p>
+</div>
+<h2 id="angular">Angular<a class="headerlink" href="#angular" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-angular">LSP-angular</a>.</p>
+<h2 id="bash">Bash<a class="headerlink" href="#bash" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-bash">LSP-bash</a>.</p>
+<h2 id="cc">C/C++<a class="headerlink" href="#cc" title="Permanent link">#</a></h2>
+<p>See the dedicated <a href="../guides/cplusplus/">C/C++ guide</a> for using ccls or clangd.</p>
+<h2 id="c">C#<a class="headerlink" href="#c" title="Permanent link">#</a></h2>
+<ol>
+<li>Download a .NET SDK. The ".NET Core" SDK is known to <em>not</em> work on macOS.</li>
+<li>If on macOS/Linux, download the Mono Runtime in order to be able to run .NET executables and DLLs.</li>
+<li>Download <a href="https://github.com/OmniSharp/omnisharp-roslyn/releases">omnisharp</a>.</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"omnisharp"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><label for="__tabbed_1_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;omnisharp&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;mono&quot;</span><span class="p">,</span> <span class="err">//</span> <span class="err">mo</span><span class="kc">n</span><span class="err">o</span> <span class="err">is</span> <span class="err">o</span><span class="kc">nl</span><span class="err">y</span> <span class="kc">ne</span><span class="err">cessary</span> <span class="kc">f</span><span class="err">or</span> <span class="err">macOS/Li</span><span class="kc">nu</span><span class="err">x</span>
+                <span class="s2">&quot;/home/tb/prebuilt/omnisharp/OmniSharp.exe&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-lsp&quot;</span>
+            <span class="p">],</span>
+            <span class="nt">&quot;env&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="err">//</span> <span class="err">This</span> <span class="err">may</span> <span class="err">or</span> <span class="err">may</span> <span class="kc">n</span><span class="err">o</span><span class="kc">t</span> <span class="err">be</span> <span class="kc">ne</span><span class="err">cessary</span><span class="p">,</span> <span class="err">please</span> <span class="err">repor</span><span class="kc">t</span> <span class="err">your</span> <span class="kc">f</span><span class="err">i</span><span class="kc">n</span><span class="err">di</span><span class="kc">n</span><span class="err">gs!</span>
+                <span class="nt">&quot;FrameworkPathOverride&quot;</span><span class="p">:</span> <span class="s2">&quot;/path/to/omnisharp/.msbuild/Current&quot;</span>
+            <span class="p">},</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.cs&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><label for="__tabbed_1_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;omnisharp&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;mono&quot;</span><span class="p">,</span> <span class="err">//</span> <span class="err">mo</span><span class="kc">n</span><span class="err">o</span> <span class="err">is</span> <span class="err">o</span><span class="kc">nl</span><span class="err">y</span> <span class="kc">ne</span><span class="err">cessary</span> <span class="kc">f</span><span class="err">or</span> <span class="err">macOS/Li</span><span class="kc">nu</span><span class="err">x</span>
+                <span class="s2">&quot;/home/tb/prebuilt/omnisharp/OmniSharp.exe&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-lsp&quot;</span>
+            <span class="p">],</span>
+            <span class="nt">&quot;env&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="err">//</span> <span class="err">This</span> <span class="err">may</span> <span class="err">or</span> <span class="err">may</span> <span class="kc">n</span><span class="err">o</span><span class="kc">t</span> <span class="err">be</span> <span class="kc">ne</span><span class="err">cessary</span><span class="p">,</span> <span class="err">please</span> <span class="err">repor</span><span class="kc">t</span> <span class="err">your</span> <span class="kc">f</span><span class="err">i</span><span class="kc">n</span><span class="err">di</span><span class="kc">n</span><span class="err">gs!</span>
+                <span class="nt">&quot;FrameworkPathOverride&quot;</span><span class="p">:</span> <span class="s2">&quot;/path/to/omnisharp/.msbuild/Current&quot;</span>
+            <span class="p">},</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;csharp&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.cs&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Packages/C#/C#.sublime-syntax&quot;</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<h2 id="clojure">Clojure<a class="headerlink" href="#clojure" title="Permanent link">#</a></h2>
+<ol>
+<li>Download <a href="https://github.com/snoe/clojure-lsp#installation">clojure-lsp</a>.</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"clojure-lsp"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><label for="__tabbed_2_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;clojure-lsp&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;java&quot;</span><span class="p">,</span> <span class="s2">&quot;-jar&quot;</span><span class="p">,</span> <span class="s2">&quot;/PATH/TO/clojure-lsp&quot;</span><span class="p">],</span> <span class="err">//</span> <span class="err">Upda</span><span class="kc">te</span> <span class="kc">t</span><span class="err">he</span> <span class="err">PATH</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.clojure&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;initializationOptions&quot;</span><span class="p">:</span> <span class="p">{}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><label for="__tabbed_2_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;clojure-lsp&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;java&quot;</span><span class="p">,</span> <span class="s2">&quot;-jar&quot;</span><span class="p">,</span> <span class="s2">&quot;/PATH/TO/clojure-lsp&quot;</span><span class="p">],</span> <span class="err">//</span> <span class="err">Upda</span><span class="kc">te</span> <span class="kc">t</span><span class="err">he</span> <span class="err">PATH</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;clojure&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.clojure&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Packages/Clojure/Clojure.sublime-syntax&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;initializationOptions&quot;</span><span class="p">:</span> <span class="p">{}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<div class="admonition info">
+<p class="admonition-title">See available <a href="https://github.com/snoe/clojure-lsp#initializationoptions">initializationOptions</a>.</p>
+</div>
+<h2 id="css">CSS<a class="headerlink" href="#css" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-css">LSP-css</a>.</p>
+<h2 id="d">D<a class="headerlink" href="#d" title="Permanent link">#</a></h2>
+<ol>
+<li>Install the <a href="https://github.com/d-language-server/dls#installation">D Language Server</a>.</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"dls"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><label for="__tabbed_3_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;dls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;/PATH/TO/DLS_EXECUTABLE&quot;</span><span class="p">],</span> <span class="err">//</span> <span class="err">Upda</span><span class="kc">te</span> <span class="kc">t</span><span class="err">he</span> <span class="err">PATH</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.d&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><label for="__tabbed_3_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;dls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;/PATH/TO/DLS_EXECUTABLE&quot;</span><span class="p">],</span> <span class="err">//</span> <span class="err">Upda</span><span class="kc">te</span> <span class="kc">t</span><span class="err">he</span> <span class="err">PATH</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;d&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.d&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Packages/D/D.sublime-syntax&quot;</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<h2 id="dart">Dart<a class="headerlink" href="#dart" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-Dart">LSP-Dart</a>.</p>
+<h2 id="dockerfile">Dockerfile<a class="headerlink" href="#dockerfile" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-dockerfile">LSP-dockerfile</a>.</p>
+<h2 id="elixir">Elixir<a class="headerlink" href="#elixir" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-elixir">LSP-elixir</a>.</p>
+<h2 id="elm">Elm<a class="headerlink" href="#elm" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-elm">LSP-elm</a>.</p>
+<h2 id="erlang">Erlang<a class="headerlink" href="#erlang" title="Permanent link">#</a></h2>
+<ol>
+<li>Install the <a href="https://github.com/erlang-ls/erlang_ls">Erlang Language Server</a>.</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"erlang-ls"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><label for="__tabbed_4_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;erlang-ls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="s2">&quot;/PATH/TO/erlang_ls&quot;</span><span class="p">,</span> <span class="s2">&quot;--transport&quot;</span><span class="p">,</span> <span class="s2">&quot;stdio&quot;</span> <span class="p">],</span> <span class="err">//</span> <span class="err">Upda</span><span class="kc">te</span> <span class="kc">t</span><span class="err">he</span> <span class="err">PATH</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.erlang&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><label for="__tabbed_4_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;erlang-ls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="s2">&quot;/path/to/my/erlang_ls&quot;</span><span class="p">,</span> <span class="s2">&quot;--transport&quot;</span><span class="p">,</span> <span class="s2">&quot;stdio&quot;</span> <span class="p">],</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;erlang&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="s2">&quot;source.erlang&quot;</span> <span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Packages/Erlang/Erlang.sublime-syntax&quot;</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<h2 id="eslint">ESLint<a class="headerlink" href="#eslint" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-eslint">LSP-eslint</a>.</p>
+<h2 id="flow">Flow<a class="headerlink" href="#flow" title="Permanent link">#</a></h2>
+<ol>
+<li>Install <a href="https://github.com/facebook/flow#using-flow">flow</a>.</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"flow"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><label for="__tabbed_5_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;flow&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;flow&quot;</span><span class="p">,</span> <span class="s2">&quot;lsp&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.js | source.js.react&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><label for="__tabbed_5_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;flow&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;flow&quot;</span><span class="p">,</span> <span class="s2">&quot;lsp&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;javascript&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.js&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Packages/Babel/JavaScript (Babel).sublime-syntax&quot;</span><span class="p">,</span> <span class="s2">&quot;Packages/JavaScript/JavaScript.sublime-syntax&quot;</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<h2 id="fortran">Fortran<a class="headerlink" href="#fortran" title="Permanent link">#</a></h2>
+<ol>
+<li>Install the <a href="https://packagecontrol.io/packages/Fortran"> Fortran</a> package from Package Control for syntax highlighting.</li>
+<li>Install the <a href="https://github.com/hansec/fortran-language-server#installation">Fortran Language Server</a>.</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"fortls"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="6:2"><input checked="checked" id="__tabbed_6_1" name="__tabbed_6" type="radio" /><label for="__tabbed_6_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;fortls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;fortls&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.modern-fortran | source.fixedform-fortran&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_6_2" name="__tabbed_6" type="radio" /><label for="__tabbed_6_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;fortls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;fortls&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;fortran&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.modern-fortran&quot;</span><span class="p">,</span> <span class="s2">&quot;source.fixedform-fortran&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;Packages/Fortran/grammars/FortranModern.sublime-syntax&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Packages/Fortran/grammars/FortranFixedForm.sublime-syntax&quot;</span>
+            <span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<div class="admonition info">
+<p class="admonition-title">See available <a href="https://github.com/hansec/fortran-language-server#language-server-settings">configuration options</a>.</p>
+<p>For example set <code>"command": ["fortls", "--lowercase_intrinsics"]</code> to use lowercase for autocomplete suggestions.</p>
+</div>
+<h2 id="go">Go<a class="headerlink" href="#go" title="Permanent link">#</a></h2>
+<ol>
+<li>Install <a href="https://github.com/golang/tools/blob/master/gopls/doc/user.md#installation">gopls</a>.</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"gopls"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="7:2"><input checked="checked" id="__tabbed_7_1" name="__tabbed_7" type="radio" /><label for="__tabbed_7_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;gopls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;gopls&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.go&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;initializationOptions&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;experimentalWorkspaceModule&quot;</span><span class="p">:</span> <span class="kc">false</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_7_2" name="__tabbed_7" type="radio" /><label for="__tabbed_7_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;gopls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;gopls&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;go&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.go&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;Packages/Go/Go.sublime-syntax&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Packages/GoSublime/syntax/GoSublime-Go-Recommended.sublime-syntax&quot;</span>
+            <span class="p">],</span>
+            <span class="nt">&quot;initializationOptions&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;experimentalWorkspaceModule&quot;</span><span class="p">:</span> <span class="kc">false</span>
+            <span class="p">}</span>
+        <span class="p">},</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<div class="admonition info">
+<p class="admonition-title">Visit <a href="https://github.com/golang/tools/tree/master/gopls">gopls repo</a> for more info.</p>
+<p>Enable multi-module workspace support by setting the <code>experimentalWorkspaceModule</code> to <code>true</code>. Most features will work across modules, but some, such as <code>goimports</code>, will not work as expected. Please note that this setting is still very experimental.</p>
+</div>
+<h2 id="graphql">GraphQL<a class="headerlink" href="#graphql" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-graphql">LSP-graphql</a>.</p>
+<h2 id="haskell">Haskell<a class="headerlink" href="#haskell" title="Permanent link">#</a></h2>
+<ol>
+<li>Install <a href="https://github.com/haskell/haskell-language-server">haskell-language-server</a>.</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"haskell-language-server"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="8:2"><input checked="checked" id="__tabbed_8_1" name="__tabbed_8" type="radio" /><label for="__tabbed_8_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;haskell-language-server&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;haskell-language-server-wrapper&quot;</span><span class="p">,</span> <span class="s2">&quot;--lsp&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.haskell&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_8_2" name="__tabbed_8" type="radio" /><label for="__tabbed_8_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;haskell-language-server&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;haskell-language-server-wrapper&quot;</span><span class="p">,</span> <span class="s2">&quot;--lsp&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;haskell&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.haskell&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Packages/Haskell/Haskell.sublime-syntax&quot;</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<h2 id="html">HTML<a class="headerlink" href="#html" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-html">LSP-html</a>.</p>
+<h2 id="java">Java<a class="headerlink" href="#java" title="Permanent link">#</a></h2>
+<ol>
+<li>Download and extract Eclipse's <a href="https://download.eclipse.org/jdtls/snapshots/jdt-language-server-latest.tar.gz">jdt-ls</a>.</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"jdtls"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="9:2"><input checked="checked" id="__tabbed_9_1" name="__tabbed_9" type="radio" /><label for="__tabbed_9_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;jdtls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;java&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--add-modules=ALL-SYSTEM&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--add-opens&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;java.base/java.util=ALL-UNNAMED&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--add-opens&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;java.base/java.lang=ALL-UNNAMED&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-Declipse.application=org.eclipse.jdt.ls.core.id1&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-Dosgi.bundles.defaultStartLevel=4&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-Declipse.product=org.eclipse.jdt.ls.core.product&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-Dfile.encoding=UTF-8&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-DwatchParentProcess={true|false}&quot;</span><span class="p">,</span>  <span class="err">//</span> <span class="kc">false</span> <span class="err">o</span><span class="kc">n</span> <span class="err">wi</span><span class="kc">n</span><span class="err">dows</span><span class="p">,</span> <span class="kc">true</span> <span class="err">o</span><span class="kc">t</span><span class="err">her</span> <span class="err">OSs</span>
+                <span class="s2">&quot;-noverify&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-Xmx1G&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-XX:+UseG1GC&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-XX:+UseStringDeduplication&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-jar&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;PATH/TO/jdt-language-server-latest/plugins/org.eclipse.equinox.launcher_*.jar&quot;</span> <span class="err">//</span> <span class="mf">1.</span> <span class="err">replace</span> <span class="kc">t</span><span class="err">he</span> <span class="err">PATH/TO</span> <span class="err">wi</span><span class="kc">t</span><span class="err">h</span> <span class="err">your</span> <span class="err">ow</span><span class="kc">n</span> <span class="mf">2.</span> <span class="err">replace</span> <span class="err">*</span> <span class="err">wi</span><span class="kc">t</span><span class="err">h</span> <span class="kc">t</span><span class="err">he</span> <span class="kc">f</span><span class="err">ile</span> <span class="err">versio</span><span class="kc">n</span>
+                <span class="s2">&quot;-configuration&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;PATH/TO/jdt-language-server-latest/config_{win|mac|linux}&quot;</span><span class="p">,</span> <span class="err">//</span> <span class="mf">1.</span> <span class="err">replace</span> <span class="kc">t</span><span class="err">he</span> <span class="err">PATH/TO</span> <span class="err">wi</span><span class="kc">t</span><span class="err">h</span> <span class="err">your</span> <span class="err">ow</span><span class="kc">n</span> <span class="mf">2.</span> <span class="err">choose</span> <span class="kc">t</span><span class="err">he</span> <span class="err">co</span><span class="kc">nf</span><span class="err">ig</span> <span class="kc">f</span><span class="err">older</span> <span class="err">based</span> <span class="err">o</span><span class="kc">n</span> <span class="kc">t</span><span class="err">he</span> <span class="err">OS</span>
+                <span class="s2">&quot;-data&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;&lt;TEMP_DIR&gt;/${project_base_name}/jdt_ws&quot;</span> <span class="err">//</span> <span class="err">replace</span> <span class="err">&lt;TEMP_DIR&gt;</span> <span class="err">wi</span><span class="kc">t</span><span class="err">h</span> <span class="kc">t</span><span class="err">he</span> <span class="kc">te</span><span class="err">mp</span> <span class="kc">f</span><span class="err">older</span> <span class="err">i</span><span class="kc">n</span> <span class="err">your</span> <span class="err">sys</span><span class="kc">te</span><span class="err">m.</span> <span class="err">macOS</span><span class="p">:</span> <span class="err">echo</span> <span class="err">$TMPDIR</span>
+            <span class="p">],</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.java&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_9_2" name="__tabbed_9" type="radio" /><label for="__tabbed_9_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;jdtls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;java&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--add-modules=ALL-SYSTEM&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--add-opens&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;java.base/java.util=ALL-UNNAMED&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--add-opens&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;java.base/java.lang=ALL-UNNAMED&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-Declipse.application=org.eclipse.jdt.ls.core.id1&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-Dosgi.bundles.defaultStartLevel=4&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-Declipse.product=org.eclipse.jdt.ls.core.product&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-Dfile.encoding=UTF-8&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-DwatchParentProcess={true|false}&quot;</span><span class="p">,</span>  <span class="err">//</span> <span class="kc">false</span> <span class="err">o</span><span class="kc">n</span> <span class="err">wi</span><span class="kc">n</span><span class="err">dows</span><span class="p">,</span> <span class="kc">true</span> <span class="err">o</span><span class="kc">t</span><span class="err">her</span> <span class="err">OSs</span>
+                <span class="s2">&quot;-noverify&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-Xmx1G&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-XX:+UseG1GC&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-XX:+UseStringDeduplication&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-jar&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;PATH/TO/jdt-language-server-latest/plugins/org.eclipse.equinox.launcher_*.jar&quot;</span> <span class="err">//</span> <span class="mf">1.</span> <span class="err">replace</span> <span class="kc">t</span><span class="err">he</span> <span class="err">PATH/TO</span> <span class="err">wi</span><span class="kc">t</span><span class="err">h</span> <span class="err">your</span> <span class="err">ow</span><span class="kc">n</span> <span class="mf">2.</span> <span class="err">replace</span> <span class="err">*</span> <span class="err">wi</span><span class="kc">t</span><span class="err">h</span> <span class="kc">t</span><span class="err">he</span> <span class="kc">f</span><span class="err">ile</span> <span class="err">versio</span><span class="kc">n</span>
+                <span class="s2">&quot;-configuration&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;PATH/TO/jdt-language-server-latest/config_{win|mac|linux}&quot;</span><span class="p">,</span> <span class="err">//</span> <span class="mf">1.</span> <span class="err">replace</span> <span class="kc">t</span><span class="err">he</span> <span class="err">PATH/TO</span> <span class="err">wi</span><span class="kc">t</span><span class="err">h</span> <span class="err">your</span> <span class="err">ow</span><span class="kc">n</span> <span class="mf">2.</span> <span class="err">choose</span> <span class="kc">t</span><span class="err">he</span> <span class="err">co</span><span class="kc">nf</span><span class="err">ig</span> <span class="kc">f</span><span class="err">older</span> <span class="err">based</span> <span class="err">o</span><span class="kc">n</span> <span class="kc">t</span><span class="err">he</span> <span class="err">OS</span>
+                <span class="s2">&quot;-data&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;&lt;TEMP_DIR&gt;/${project_base_name}/jdt_ws&quot;</span> <span class="err">//</span> <span class="err">replace</span> <span class="err">&lt;TEMP_DIR&gt;</span> <span class="err">wi</span><span class="kc">t</span><span class="err">h</span> <span class="kc">t</span><span class="err">he</span> <span class="kc">te</span><span class="err">mp</span> <span class="kc">f</span><span class="err">older</span> <span class="err">i</span><span class="kc">n</span> <span class="err">your</span> <span class="err">sys</span><span class="kc">te</span><span class="err">m.</span> <span class="err">macOS</span><span class="p">:</span> <span class="err">echo</span> <span class="err">$TMPDIR</span>
+            <span class="p">],</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;java&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.java&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Packages/Java/Java.sublime-syntax&quot;</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<h2 id="json">JSON<a class="headerlink" href="#json" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-json">LSP-json</a>.</p>
+<h2 id="julia">Julia<a class="headerlink" href="#julia" title="Permanent link">#</a></h2>
+<ol>
+<li>Install the <a href="https://packagecontrol.io/packages/Julia">Julia</a> package from Package Control for syntax highlighting.</li>
+<li>
+<p>Install the <code>LanguageServer</code> and <code>SymbolServer</code> packages from the Julia REPL:</p>
+<div class="highlight"><pre><span></span><code>import Pkg;
+Pkg.add(&quot;LanguageServer&quot;)
+Pkg.add(&quot;SymbolServer&quot;)
+</code></pre></div>
+</li>
+<li>
+<p>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"julials"</code> client configuration to the <code>"clients"</code>:</p>
+</li>
+</ol>
+<div class="tabbed-set" data-tabs="10:2"><input checked="checked" id="__tabbed_10_1" name="__tabbed_10" type="radio" /><label for="__tabbed_10_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;julials&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;bash&quot;</span><span class="p">,</span> <span class="s2">&quot;PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh&quot;</span><span class="p">],</span> <span class="err">//</span> <span class="err">o</span><span class="kc">n</span> <span class="err">Li</span><span class="kc">nu</span><span class="err">x/macOS</span>
+          <span class="err">//</span> <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;julia&quot;</span><span class="p">,</span> <span class="s2">&quot;--startup-file=no&quot;</span><span class="p">,</span> <span class="s2">&quot;--history-file=no&quot;</span><span class="p">,</span> <span class="s2">&quot;-e&quot;</span><span class="p">,</span> <span class="s2">&quot;using Pkg; using LanguageServer; using LanguageServer.SymbolServer; env_path=dirname(Pkg.Types.Context().env.project_file); server=LanguageServer.LanguageServerInstance(stdin,stdout,false,env_path); run(server)&quot;</span><span class="p">],</span> <span class="err">//</span> <span class="err">o</span><span class="kc">n</span> <span class="err">Wi</span><span class="kc">n</span><span class="err">dows</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.julia&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;settings&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="err">//</span> <span class="err">De</span><span class="kc">fault</span> <span class="err">values</span> <span class="kc">fr</span><span class="err">om</span> <span class="err">VS</span> <span class="err">Code</span><span class="p">:</span>
+                <span class="nt">&quot;julia.format.calls&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>      <span class="err">//</span> <span class="err">Forma</span><span class="kc">t</span> <span class="kc">fun</span><span class="err">c</span><span class="kc">t</span><span class="err">io</span><span class="kc">n</span> <span class="err">calls</span>
+                <span class="nt">&quot;julia.format.comments&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>   <span class="err">//</span> <span class="err">Forma</span><span class="kc">t</span> <span class="err">comme</span><span class="kc">nts</span>
+                <span class="nt">&quot;julia.format.curly&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>      <span class="err">//</span> <span class="err">Forma</span><span class="kc">t</span> <span class="err">braces</span>
+                <span class="nt">&quot;julia.format.docs&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>       <span class="err">//</span> <span class="err">Forma</span><span class="kc">t</span> <span class="err">i</span><span class="kc">nl</span><span class="err">i</span><span class="kc">ne</span> <span class="err">docume</span><span class="kc">ntat</span><span class="err">io</span><span class="kc">n</span>
+                <span class="nt">&quot;julia.format.indent&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>        <span class="err">//</span> <span class="err">I</span><span class="kc">n</span><span class="err">de</span><span class="kc">nt</span> <span class="err">size</span> <span class="kc">f</span><span class="err">or</span> <span class="kc">f</span><span class="err">orma</span><span class="kc">tt</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span>
+                <span class="nt">&quot;julia.format.indents&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>    <span class="err">//</span> <span class="err">Forma</span><span class="kc">t</span> <span class="kc">f</span><span class="err">ile</span> <span class="err">i</span><span class="kc">n</span><span class="err">de</span><span class="kc">nts</span>
+                <span class="nt">&quot;julia.format.iterOps&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>    <span class="err">//</span> <span class="err">Forma</span><span class="kc">t</span> <span class="err">loop</span> <span class="err">i</span><span class="kc">terat</span><span class="err">ors</span>
+                <span class="nt">&quot;julia.format.kw&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>         <span class="err">//</span> <span class="err">Remove</span> <span class="err">spaces</span> <span class="err">arou</span><span class="kc">n</span><span class="err">d</span> <span class="err">=</span> <span class="err">i</span><span class="kc">n</span> <span class="kc">fun</span><span class="err">c</span><span class="kc">t</span><span class="err">io</span><span class="kc">n</span> <span class="err">keywords</span>
+                <span class="nt">&quot;julia.format.lineends&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>  <span class="err">//</span> <span class="p">[</span><span class="err">u</span><span class="kc">n</span><span class="err">docume</span><span class="kc">nte</span><span class="err">d</span><span class="p">]</span>
+                <span class="nt">&quot;julia.format.ops&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>        <span class="err">//</span> <span class="err">Forma</span><span class="kc">t</span> <span class="err">whi</span><span class="kc">tes</span><span class="err">pace</span> <span class="err">arou</span><span class="kc">n</span><span class="err">d</span> <span class="err">opera</span><span class="kc">t</span><span class="err">ors</span>
+                <span class="nt">&quot;julia.format.tuples&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>     <span class="err">//</span> <span class="err">Forma</span><span class="kc">t</span> <span class="kc">tu</span><span class="err">ples</span>
+                <span class="nt">&quot;julia.lint.call&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>        <span class="err">//</span> <span class="err">Check</span> <span class="err">calls</span> <span class="err">agai</span><span class="kc">nst</span> <span class="err">exis</span><span class="kc">t</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span> <span class="err">me</span><span class="kc">t</span><span class="err">hods</span> <span class="err">(experime</span><span class="kc">ntal</span><span class="err">)</span>
+                <span class="nt">&quot;julia.lint.constif&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>      <span class="err">//</span> <span class="err">Check</span> <span class="kc">f</span><span class="err">or</span> <span class="err">co</span><span class="kc">nstant</span> <span class="err">co</span><span class="kc">n</span><span class="err">di</span><span class="kc">t</span><span class="err">io</span><span class="kc">nals</span> <span class="err">o</span><span class="kc">f</span> <span class="err">i</span><span class="kc">f</span> <span class="err">s</span><span class="kc">tate</span><span class="err">me</span><span class="kc">nts</span>
+                <span class="nt">&quot;julia.lint.datadecl&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>    <span class="err">//</span> <span class="p">[</span><span class="err">u</span><span class="kc">n</span><span class="err">docume</span><span class="kc">nte</span><span class="err">d</span><span class="p">]</span>
+                <span class="nt">&quot;julia.lint.iter&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>         <span class="err">//</span> <span class="err">Check</span> <span class="err">i</span><span class="kc">terat</span><span class="err">or</span> <span class="err">sy</span><span class="kc">nta</span><span class="err">x</span> <span class="err">o</span><span class="kc">f</span> <span class="err">loops</span>
+                <span class="nt">&quot;julia.lint.lazy&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>         <span class="err">//</span> <span class="err">Check</span> <span class="kc">f</span><span class="err">or</span> <span class="err">de</span><span class="kc">ter</span><span class="err">mi</span><span class="kc">n</span><span class="err">is</span><span class="kc">t</span><span class="err">ic</span> <span class="err">lazy</span> <span class="err">boolea</span><span class="kc">n</span> <span class="err">opera</span><span class="kc">t</span><span class="err">ors</span>
+                <span class="nt">&quot;julia.lint.modname&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>      <span class="err">//</span> <span class="err">Check</span> <span class="kc">f</span><span class="err">or</span> <span class="err">i</span><span class="kc">n</span><span class="err">valid</span> <span class="err">submodule</span> <span class="kc">na</span><span class="err">mes</span>
+                <span class="nt">&quot;julia.lint.nothingcomp&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="err">//</span> <span class="p">[</span><span class="err">u</span><span class="kc">n</span><span class="err">docume</span><span class="kc">nte</span><span class="err">d</span><span class="p">]</span>
+                <span class="nt">&quot;julia.lint.pirates&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>      <span class="err">//</span> <span class="err">Check</span> <span class="kc">f</span><span class="err">or</span> <span class="kc">t</span><span class="err">ype</span> <span class="err">piracy</span>
+                <span class="nt">&quot;julia.lint.run&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>          <span class="err">//</span> <span class="err">ru</span><span class="kc">n</span> <span class="kc">t</span><span class="err">he</span> <span class="err">li</span><span class="kc">nter</span> <span class="err">o</span><span class="kc">n</span> <span class="err">ac</span><span class="kc">t</span><span class="err">ive</span> <span class="kc">f</span><span class="err">iles</span>
+                <span class="nt">&quot;julia.lint.typeparam&quot;</span><span class="p">:</span> <span class="kc">true</span>     <span class="err">//</span> <span class="err">Check</span> <span class="kc">f</span><span class="err">or</span> <span class="err">u</span><span class="kc">nuse</span><span class="err">d</span> <span class="err">Da</span><span class="kc">ta</span><span class="err">Type</span> <span class="err">parame</span><span class="kc">ters</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_10_2" name="__tabbed_10" type="radio" /><label for="__tabbed_10_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;julials&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;bash&quot;</span><span class="p">,</span> <span class="s2">&quot;PATH_TO_JULIA_SERVER/LanguageServer/contrib/languageserver.sh&quot;</span><span class="p">],</span> <span class="err">//</span> <span class="err">o</span><span class="kc">n</span> <span class="err">Li</span><span class="kc">nu</span><span class="err">x/macOS</span>
+          <span class="err">//</span> <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;julia&quot;</span><span class="p">,</span> <span class="s2">&quot;--startup-file=no&quot;</span><span class="p">,</span> <span class="s2">&quot;--history-file=no&quot;</span><span class="p">,</span> <span class="s2">&quot;-e&quot;</span><span class="p">,</span> <span class="s2">&quot;using Pkg; using LanguageServer; using LanguageServer.SymbolServer; env_path=dirname(Pkg.Types.Context().env.project_file); server=LanguageServer.LanguageServerInstance(stdin,stdout,false,env_path); run(server)&quot;</span><span class="p">],</span> <span class="err">//</span> <span class="err">o</span><span class="kc">n</span> <span class="err">Wi</span><span class="kc">n</span><span class="err">dows</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;julia&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.julia&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Packages/Julia/Julia.sublime-syntax&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;settings&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="err">//</span> <span class="err">De</span><span class="kc">fault</span> <span class="err">values</span> <span class="kc">fr</span><span class="err">om</span> <span class="err">VS</span> <span class="err">Code</span><span class="p">:</span>
+                <span class="nt">&quot;julia.format.calls&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>      <span class="err">//</span> <span class="err">Forma</span><span class="kc">t</span> <span class="kc">fun</span><span class="err">c</span><span class="kc">t</span><span class="err">io</span><span class="kc">n</span> <span class="err">calls</span>
+                <span class="nt">&quot;julia.format.comments&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>   <span class="err">//</span> <span class="err">Forma</span><span class="kc">t</span> <span class="err">comme</span><span class="kc">nts</span>
+                <span class="nt">&quot;julia.format.curly&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>      <span class="err">//</span> <span class="err">Forma</span><span class="kc">t</span> <span class="err">braces</span>
+                <span class="nt">&quot;julia.format.docs&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>       <span class="err">//</span> <span class="err">Forma</span><span class="kc">t</span> <span class="err">i</span><span class="kc">nl</span><span class="err">i</span><span class="kc">ne</span> <span class="err">docume</span><span class="kc">ntat</span><span class="err">io</span><span class="kc">n</span>
+                <span class="nt">&quot;julia.format.indent&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>        <span class="err">//</span> <span class="err">I</span><span class="kc">n</span><span class="err">de</span><span class="kc">nt</span> <span class="err">size</span> <span class="kc">f</span><span class="err">or</span> <span class="kc">f</span><span class="err">orma</span><span class="kc">tt</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span>
+                <span class="nt">&quot;julia.format.indents&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>    <span class="err">//</span> <span class="err">Forma</span><span class="kc">t</span> <span class="kc">f</span><span class="err">ile</span> <span class="err">i</span><span class="kc">n</span><span class="err">de</span><span class="kc">nts</span>
+                <span class="nt">&quot;julia.format.iterOps&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>    <span class="err">//</span> <span class="err">Forma</span><span class="kc">t</span> <span class="err">loop</span> <span class="err">i</span><span class="kc">terat</span><span class="err">ors</span>
+                <span class="nt">&quot;julia.format.kw&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>         <span class="err">//</span> <span class="err">Remove</span> <span class="err">spaces</span> <span class="err">arou</span><span class="kc">n</span><span class="err">d</span> <span class="err">=</span> <span class="err">i</span><span class="kc">n</span> <span class="kc">fun</span><span class="err">c</span><span class="kc">t</span><span class="err">io</span><span class="kc">n</span> <span class="err">keywords</span>
+                <span class="nt">&quot;julia.format.lineends&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>  <span class="err">//</span> <span class="p">[</span><span class="err">u</span><span class="kc">n</span><span class="err">docume</span><span class="kc">nte</span><span class="err">d</span><span class="p">]</span>
+                <span class="nt">&quot;julia.format.ops&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>        <span class="err">//</span> <span class="err">Forma</span><span class="kc">t</span> <span class="err">whi</span><span class="kc">tes</span><span class="err">pace</span> <span class="err">arou</span><span class="kc">n</span><span class="err">d</span> <span class="err">opera</span><span class="kc">t</span><span class="err">ors</span>
+                <span class="nt">&quot;julia.format.tuples&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>     <span class="err">//</span> <span class="err">Forma</span><span class="kc">t</span> <span class="kc">tu</span><span class="err">ples</span>
+                <span class="nt">&quot;julia.lint.call&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>        <span class="err">//</span> <span class="err">Check</span> <span class="err">calls</span> <span class="err">agai</span><span class="kc">nst</span> <span class="err">exis</span><span class="kc">t</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span> <span class="err">me</span><span class="kc">t</span><span class="err">hods</span> <span class="err">(experime</span><span class="kc">ntal</span><span class="err">)</span>
+                <span class="nt">&quot;julia.lint.constif&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>      <span class="err">//</span> <span class="err">Check</span> <span class="kc">f</span><span class="err">or</span> <span class="err">co</span><span class="kc">nstant</span> <span class="err">co</span><span class="kc">n</span><span class="err">di</span><span class="kc">t</span><span class="err">io</span><span class="kc">nals</span> <span class="err">o</span><span class="kc">f</span> <span class="err">i</span><span class="kc">f</span> <span class="err">s</span><span class="kc">tate</span><span class="err">me</span><span class="kc">nts</span>
+                <span class="nt">&quot;julia.lint.datadecl&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>    <span class="err">//</span> <span class="p">[</span><span class="err">u</span><span class="kc">n</span><span class="err">docume</span><span class="kc">nte</span><span class="err">d</span><span class="p">]</span>
+                <span class="nt">&quot;julia.lint.iter&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>         <span class="err">//</span> <span class="err">Check</span> <span class="err">i</span><span class="kc">terat</span><span class="err">or</span> <span class="err">sy</span><span class="kc">nta</span><span class="err">x</span> <span class="err">o</span><span class="kc">f</span> <span class="err">loops</span>
+                <span class="nt">&quot;julia.lint.lazy&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>         <span class="err">//</span> <span class="err">Check</span> <span class="kc">f</span><span class="err">or</span> <span class="err">de</span><span class="kc">ter</span><span class="err">mi</span><span class="kc">n</span><span class="err">is</span><span class="kc">t</span><span class="err">ic</span> <span class="err">lazy</span> <span class="err">boolea</span><span class="kc">n</span> <span class="err">opera</span><span class="kc">t</span><span class="err">ors</span>
+                <span class="nt">&quot;julia.lint.modname&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>      <span class="err">//</span> <span class="err">Check</span> <span class="kc">f</span><span class="err">or</span> <span class="err">i</span><span class="kc">n</span><span class="err">valid</span> <span class="err">submodule</span> <span class="kc">na</span><span class="err">mes</span>
+                <span class="nt">&quot;julia.lint.nothingcomp&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="err">//</span> <span class="p">[</span><span class="err">u</span><span class="kc">n</span><span class="err">docume</span><span class="kc">nte</span><span class="err">d</span><span class="p">]</span>
+                <span class="nt">&quot;julia.lint.pirates&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>      <span class="err">//</span> <span class="err">Check</span> <span class="kc">f</span><span class="err">or</span> <span class="kc">t</span><span class="err">ype</span> <span class="err">piracy</span>
+                <span class="nt">&quot;julia.lint.run&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>          <span class="err">//</span> <span class="err">ru</span><span class="kc">n</span> <span class="kc">t</span><span class="err">he</span> <span class="err">li</span><span class="kc">nter</span> <span class="err">o</span><span class="kc">n</span> <span class="err">ac</span><span class="kc">t</span><span class="err">ive</span> <span class="kc">f</span><span class="err">iles</span>
+                <span class="nt">&quot;julia.lint.typeparam&quot;</span><span class="p">:</span> <span class="kc">true</span>     <span class="err">//</span> <span class="err">Check</span> <span class="kc">f</span><span class="err">or</span> <span class="err">u</span><span class="kc">nuse</span><span class="err">d</span> <span class="err">Da</span><span class="kc">ta</span><span class="err">Type</span> <span class="err">parame</span><span class="kc">ters</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<h2 id="kotlin">Kotlin<a class="headerlink" href="#kotlin" title="Permanent link">#</a></h2>
+<ol>
+<li>Install the <a href="https://packagecontrol.io/packages/Kotlin">Kotlin</a> package from Package Control for syntax highlighting.</li>
+<li>Install the <a href="https://github.com/fwcd/KotlinLanguageServer">Kotlin Language Server</a> (requires <a href="https://github.com/fwcd/KotlinLanguageServer/blob/master/BUILDING.md">building</a> first).</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"kotlinls"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="11:2"><input checked="checked" id="__tabbed_11_1" name="__tabbed_11" type="radio" /><label for="__tabbed_11_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;kotlinls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;PATH/TO/KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat&quot;</span><span class="p">],</span> <span class="err">//</span> <span class="err">Upda</span><span class="kc">te</span> <span class="kc">t</span><span class="err">he</span> <span class="err">PATH</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.kotlin&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;settings&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;kotlin&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="err">//</span> <span class="err">pu</span><span class="kc">t</span> <span class="err">your</span> <span class="err">server</span> <span class="err">se</span><span class="kc">tt</span><span class="err">i</span><span class="kc">n</span><span class="err">gs</span> <span class="err">here</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_11_2" name="__tabbed_11" type="radio" /><label for="__tabbed_11_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;kotlinls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;PATH/TO/KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat&quot;</span><span class="p">],</span> <span class="err">//</span> <span class="err">Upda</span><span class="kc">te</span> <span class="kc">t</span><span class="err">he</span> <span class="err">PATH</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;kotlin&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.Kotlin&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Packages/kotlin/Kotlin.tmLanguage&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;settings&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;kotlin&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="err">//</span> <span class="err">pu</span><span class="kc">t</span> <span class="err">your</span> <span class="err">server</span> <span class="err">se</span><span class="kc">tt</span><span class="err">i</span><span class="kc">n</span><span class="err">gs</span> <span class="err">here</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<h2 id="latex">LaTeX<a class="headerlink" href="#latex" title="Permanent link">#</a></h2>
+<div class="admonition info">
+<p class="admonition-title">Instructions for Sublime Text 4.</p>
+</div>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-TexLab">LSP-TexLab</a>.</p>
+<hr />
+<div class="admonition info">
+<p class="admonition-title">Instructions for Sublime Text 3.</p>
+</div>
+<ol>
+<li>Download the <a href="https://github.com/latex-lsp/texlab/releases">binary</a>.</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"texlab"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;texlab&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;PATH/TO/texlab&quot;</span><span class="p">],</span> <span class="err">//</span> <span class="err">Upda</span><span class="kc">te</span> <span class="kc">t</span><span class="err">he</span> <span class="err">PATH</span>
+            <span class="nt">&quot;languages&quot;</span><span class="p">:</span> <span class="p">[{</span>
+                <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;latex&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;document_selector&quot;</span><span class="p">:</span> <span class="s2">&quot;text.tex.latex&quot;</span>
+            <span class="p">},</span> <span class="p">{</span>
+                <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;bibtex&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;document_selector&quot;</span><span class="p">:</span> <span class="s2">&quot;text.bibtex&quot;</span>
+            <span class="p">}]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">For further requirements see the <a href="https://texlab.netlify.com/docs#requirements">TexLab Docs</a>.</p>
+</div>
+<h2 id="lisp">Lisp<a class="headerlink" href="#lisp" title="Permanent link">#</a></h2>
+<ol>
+<li>Install <a href="https://github.com/cxxxr/cl-lsp">cc-lsp</a> using Roswell.</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"cc-lsp"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="12:2"><input checked="checked" id="__tabbed_12_1" name="__tabbed_12" type="radio" /><label for="__tabbed_12_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;cc-lsp&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;cl-lsp&quot;</span><span class="p">,</span> <span class="s2">&quot;stdio&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.lisp&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_12_2" name="__tabbed_12" type="radio" /><label for="__tabbed_12_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;cc-lsp&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;cl-lsp&quot;</span><span class="p">,</span> <span class="s2">&quot;stdio&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;lisp&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.lisp&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Packages/Lisp/Lisp.sublime-syntax&quot;</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<h2 id="lua">Lua<a class="headerlink" href="#lua" title="Permanent link">#</a></h2>
+<ol>
+<li>Download the <a href="https://marketplace.visualstudio.com/items?itemName=sumneko.lua">VS Code extension</a>.</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"lua-ls"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="13:2"><input checked="checked" id="__tabbed_13_1" name="__tabbed_13" type="radio" /><label for="__tabbed_13_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;lua-ls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;PATH/TO/sumneko.lua-#.#.#/extension/server/bin/lua-language-server&quot;</span><span class="p">,</span> <span class="err">//</span> <span class="err">Upda</span><span class="kc">te</span> <span class="kc">t</span><span class="err">he</span> <span class="err">PATH</span>
+                <span class="s2">&quot;-E&quot;</span><span class="p">,</span> <span class="s2">&quot;PATH/TO/sumneko.lua-#.#.#/extension/server/main.lua&quot;</span>
+            <span class="p">],</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.lua&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_13_2" name="__tabbed_13" type="radio" /><label for="__tabbed_13_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;lua-ls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;PATH/TO/sumneko.lua-#.#.#/extension/server/bin/lua-language-server&quot;</span><span class="p">,</span> <span class="err">//</span> <span class="err">Upda</span><span class="kc">te</span> <span class="kc">t</span><span class="err">he</span> <span class="err">PATH</span>
+                <span class="s2">&quot;-E&quot;</span><span class="p">,</span> <span class="s2">&quot;PATH/TO/sumneko.lua-#.#.#/extension/server/main.lua&quot;</span>
+            <span class="p">],</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;lua&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.lua&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Packages/Lua/Lua.sublime-syntax&quot;</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<h2 id="ocamlreason">OCaml/Reason<a class="headerlink" href="#ocamlreason" title="Permanent link">#</a></h2>
+<ol>
+<li>Install the <a href="https://packagecontrol.io/packages/Reason">Reason</a> package from Package Control for syntax highlighting.</li>
+<li>Install the <a href="https://github.com/jaredly/reason-language-server#sublime-text">Reason Language Server</a>.</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"reason"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="14:2"><input checked="checked" id="__tabbed_14_1" name="__tabbed_14" type="radio" /><label for="__tabbed_14_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;reason&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;PATH/TO/reason-language-server.exe&quot;</span><span class="p">],</span> <span class="err">//</span> <span class="err">Upda</span><span class="kc">te</span> <span class="kc">t</span><span class="err">he</span> <span class="err">PATH</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.ocaml | source.reason&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_14_2" name="__tabbed_14" type="radio" /><label for="__tabbed_14_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;reason&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;PATH/TO/reason-language-server.exe&quot;</span><span class="p">],</span> <span class="err">//</span> <span class="err">Upda</span><span class="kc">te</span> <span class="kc">t</span><span class="err">he</span> <span class="err">PATH</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;reason&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.ocaml&quot;</span><span class="p">,</span> <span class="s2">&quot;source.reason&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;Packages/Ocaml/OCaml.sublime-syntax&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Packages/Reason/Reason.tmLanguage&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Packages/sublime-reason/Reason.tmLanguage&quot;</span>
+            <span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<h2 id="promql">PromQL<a class="headerlink" href="#promql" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/prometheus-community/sublimelsp-promql">LSP-promql</a>.</p>
+<h2 id="php">PHP<a class="headerlink" href="#php" title="Permanent link">#</a></h2>
+<p>There are multiple options:</p>
+<h3 id="intelephense">Intelephense<a class="headerlink" href="#intelephense" title="Permanent link">#</a></h3>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-intelephense">LSP-intelephense</a>.</p>
+<h3 id="serenata">Serenata<a class="headerlink" href="#serenata" title="Permanent link">#</a></h3>
+<p>Follow installation instructions on <a href="https://github.com/Cloudstek/LSP-serenata">LSP-serenata</a>.</p>
+<h2 id="powershell">PowerShell<a class="headerlink" href="#powershell" title="Permanent link">#</a></h2>
+<ol>
+<li>Install the <a href="https://packagecontrol.io/packages/PowerShell">PowerShell</a> package from Package Control for syntax highlighting.</li>
+<li>Download and extract the <a href="https://github.com/PowerShell/PowerShellEditorServices/releases">latest release</a> PowerShellEditorServices.</li>
+<li>Make sure PowerShell help files are up to date by running <code>Update-Help</code> in the PowerShell console (the one you're using in the command below).</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"powershell-ls"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="15:2"><input checked="checked" id="__tabbed_15_1" name="__tabbed_15" type="radio" /><label for="__tabbed_15_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;powershell-ls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;powershell&quot;</span><span class="p">,</span> <span class="err">//</span> <span class="err">or</span> <span class="err">pwsh</span> <span class="kc">f</span><span class="err">or</span> <span class="err">PowerShell</span> <span class="err">Core</span>
+                <span class="s2">&quot;-NoLogo&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-NoProfile&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-NonInteractive&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-ExecutionPolicy&quot;</span><span class="p">,</span> <span class="s2">&quot;Bypass&quot;</span><span class="p">,</span> <span class="err">//</span> <span class="err">Wi</span><span class="kc">n</span><span class="err">dows</span> <span class="err">o</span><span class="kc">nl</span><span class="err">y</span>
+                <span class="s2">&quot;-Command&quot;</span><span class="p">,</span> <span class="s2">&quot;PATH/TO/PowerShellEditorServices/PowerShellEditorServices/Start-EditorServices.ps1&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-LogPath&quot;</span><span class="p">,</span> <span class="s2">&quot;PATH/TO/pses.log&quot;</span><span class="p">,</span> <span class="err">//</span> <span class="err">speci</span><span class="kc">f</span><span class="err">y</span> <span class="err">a</span> <span class="err">pa</span><span class="kc">t</span><span class="err">h</span> <span class="err">where</span> <span class="err">a</span> <span class="err">log</span><span class="kc">f</span><span class="err">ile</span> <span class="err">should</span> <span class="err">be</span> <span class="err">s</span><span class="kc">t</span><span class="err">ored</span>
+                <span class="s2">&quot;-LogLevel&quot;</span><span class="p">,</span> <span class="s2">&quot;Normal&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-SessionDetailsPath&quot;</span><span class="p">,</span> <span class="s2">&quot;PATH/TO/session.json&quot;</span><span class="p">,</span> <span class="err">//</span> <span class="err">speci</span><span class="kc">f</span><span class="err">y</span> <span class="err">a</span> <span class="err">pa</span><span class="kc">t</span><span class="err">h</span> <span class="err">where</span> <span class="err">a</span> <span class="kc">f</span><span class="err">ile</span> <span class="kc">f</span><span class="err">or</span> <span class="err">sessio</span><span class="kc">n</span> <span class="err">de</span><span class="kc">ta</span><span class="err">ils</span> <span class="err">should</span> <span class="err">be</span> <span class="err">s</span><span class="kc">t</span><span class="err">ored</span>
+                <span class="s2">&quot;-FeatureFlags&quot;</span><span class="p">,</span> <span class="s2">&quot;@()&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-HostName&quot;</span><span class="p">,</span> <span class="s2">&quot;&#39;Sublime Text&#39;&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-HostProfileId&quot;</span><span class="p">,</span> <span class="s2">&quot;subl&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-HostVersion&quot;</span><span class="p">,</span> <span class="s2">&quot;1.0.0&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-AdditionalModules&quot;</span><span class="p">,</span> <span class="s2">&quot;@()&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-BundledModulesPath&quot;</span><span class="p">,</span> <span class="s2">&quot;PATH/TO/PowerShellEditorServices&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-Stdio&quot;</span>
+            <span class="p">],</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.powershell&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_15_2" name="__tabbed_15" type="radio" /><label for="__tabbed_15_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;powershell-ls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;powershell&quot;</span><span class="p">,</span> <span class="err">//</span> <span class="err">or</span> <span class="err">pwsh</span> <span class="kc">f</span><span class="err">or</span> <span class="err">PowerShell</span> <span class="err">Core</span>
+                <span class="s2">&quot;-NoLogo&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-NoProfile&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-NonInteractive&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-ExecutionPolicy&quot;</span><span class="p">,</span> <span class="s2">&quot;Bypass&quot;</span><span class="p">,</span> <span class="err">//</span> <span class="err">Wi</span><span class="kc">n</span><span class="err">dows</span> <span class="err">o</span><span class="kc">nl</span><span class="err">y</span>
+                <span class="s2">&quot;-Command&quot;</span><span class="p">,</span> <span class="s2">&quot;PATH/TO/PowerShellEditorServices/PowerShellEditorServices/Start-EditorServices.ps1&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-LogPath&quot;</span><span class="p">,</span> <span class="s2">&quot;PATH/TO/pses.log&quot;</span><span class="p">,</span> <span class="err">//</span> <span class="err">speci</span><span class="kc">f</span><span class="err">y</span> <span class="err">a</span> <span class="err">pa</span><span class="kc">t</span><span class="err">h</span> <span class="err">where</span> <span class="err">a</span> <span class="err">log</span><span class="kc">f</span><span class="err">ile</span> <span class="err">should</span> <span class="err">be</span> <span class="err">s</span><span class="kc">t</span><span class="err">ored</span>
+                <span class="s2">&quot;-LogLevel&quot;</span><span class="p">,</span> <span class="s2">&quot;Normal&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-SessionDetailsPath&quot;</span><span class="p">,</span> <span class="s2">&quot;PATH/TO/session.json&quot;</span><span class="p">,</span> <span class="err">//</span> <span class="err">speci</span><span class="kc">f</span><span class="err">y</span> <span class="err">a</span> <span class="err">pa</span><span class="kc">t</span><span class="err">h</span> <span class="err">where</span> <span class="err">a</span> <span class="kc">f</span><span class="err">ile</span> <span class="kc">f</span><span class="err">or</span> <span class="err">sessio</span><span class="kc">n</span> <span class="err">de</span><span class="kc">ta</span><span class="err">ils</span> <span class="err">should</span> <span class="err">be</span> <span class="err">s</span><span class="kc">t</span><span class="err">ored</span>
+                <span class="s2">&quot;-FeatureFlags&quot;</span><span class="p">,</span> <span class="s2">&quot;@()&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-HostName&quot;</span><span class="p">,</span> <span class="s2">&quot;&#39;Sublime Text&#39;&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-HostProfileId&quot;</span><span class="p">,</span> <span class="s2">&quot;subl&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-HostVersion&quot;</span><span class="p">,</span> <span class="s2">&quot;1.0.0&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-AdditionalModules&quot;</span><span class="p">,</span> <span class="s2">&quot;@()&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-BundledModulesPath&quot;</span><span class="p">,</span> <span class="s2">&quot;PATH/TO/PowerShellEditorServices&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-Stdio&quot;</span>
+            <span class="p">],</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;powershell&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.powershell&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Packages/PowerShell/Support/PowershellSyntax.tmLanguage&quot;</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<div class="admonition info">
+<p class="admonition-title">For more details see this <a href="https://github.com/PowerShell/PowerShellEditorServices/issues/1057">issue</a>.</p>
+</div>
+<h2 id="python">Python<a class="headerlink" href="#python" title="Permanent link">#</a></h2>
+<p>There are multiple options:</p>
+<h3 id="pyright">Pyright<a class="headerlink" href="#pyright" title="Permanent link">#</a></h3>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-pyright">LSP-pyright</a>.</p>
+<h3 id="pyls">Pyls<a class="headerlink" href="#pyls" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>pip install <span class="s1">&#39;python-language-server[all]&#39;</span>
+</code></pre></div>
+<p>Make sure you can run <code>pyls</code> in your terminal. If you've installed it into a virtualenv, you might need to override the path to <code>pyls</code> in global LSP settings (Package Settings -&gt; LSP -&gt; Settings):</p>
+<div class="tabbed-set" data-tabs="16:2"><input checked="checked" id="__tabbed_16_1" name="__tabbed_16" type="radio" /><label for="__tabbed_16_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;pyls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;pyls&quot;</span><span class="p">],</span>
+            <span class="err">//</span> <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;/Users/mike/.virtualenvs/pyls-virtual-env/bin/pyls&quot;</span><span class="p">],</span> <span class="err">//</span> <span class="err">example</span> <span class="err">pa</span><span class="kc">t</span><span class="err">h</span><span class="p">,</span> <span class="err">adjus</span><span class="kc">t</span> <span class="err">i</span><span class="kc">t</span> <span class="kc">f</span><span class="err">or</span> <span class="err">your</span> <span class="err">use</span> <span class="err">case</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.python&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_16_2" name="__tabbed_16" type="radio" /><label for="__tabbed_16_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;pyls&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;pyls&quot;</span><span class="p">],</span>
+            <span class="err">//</span> <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;/Users/mike/.virtualenvs/pyls-virtual-env/bin/pyls&quot;</span><span class="p">],</span> <span class="err">//</span> <span class="err">example</span> <span class="err">pa</span><span class="kc">t</span><span class="err">h</span><span class="p">,</span> <span class="err">adjus</span><span class="kc">t</span> <span class="err">i</span><span class="kc">t</span> <span class="kc">f</span><span class="err">or</span> <span class="err">your</span> <span class="err">use</span> <span class="err">case</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;python&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.python&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Packages/Python/Python.sublime-syntax&quot;</span><span class="p">,</span> <span class="s2">&quot;Packages/MagicPython/grammars/MagicPython.tmLanguage&quot;</span><span class="p">,</span> <span class="s2">&quot;Packages/Djaneiro/Syntaxes/Python Django.tmLanguage&quot;</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<p>If you use a virtualenv for your current project, add a path to it in your <a href="https://www.sublimetext.com/docs/3/projects.html">project configuration</a> (Project -&gt; Edit Project):</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;settings&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;LSP&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;pyls&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="err">//</span> <span class="err">i</span><span class="kc">f</span> <span class="err">you</span> <span class="err">wa</span><span class="kc">nt</span> <span class="kc">t</span><span class="err">o</span> <span class="err">e</span><span class="kc">na</span><span class="err">ble</span> <span class="err">Py</span><span class="kc">t</span><span class="err">ho</span><span class="kc">n</span> <span class="err">La</span><span class="kc">n</span><span class="err">guage</span> <span class="err">Server</span> <span class="kc">f</span><span class="err">or</span> <span class="err">curre</span><span class="kc">nt</span> <span class="err">projec</span><span class="kc">t</span> <span class="err">o</span><span class="kc">nl</span><span class="err">y</span>
+                <span class="nt">&quot;env&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="err">//</span> <span class="err">example</span> <span class="err">pa</span><span class="kc">t</span><span class="err">h</span><span class="p">,</span> <span class="err">adjus</span><span class="kc">t</span> <span class="err">i</span><span class="kc">t</span> <span class="kc">f</span><span class="err">or</span> <span class="err">your</span> <span class="err">use</span> <span class="err">case</span>
+                    <span class="err">//</span> <span class="err">i</span><span class="kc">t</span> <span class="kc">nee</span><span class="err">ds</span> <span class="kc">t</span><span class="err">o</span> <span class="err">be</span> <span class="err">a</span><span class="kc">n</span> <span class="err">absolu</span><span class="kc">te</span> <span class="err">pa</span><span class="kc">t</span><span class="err">h</span><span class="p">,</span> <span class="kc">ne</span><span class="err">i</span><span class="kc">t</span><span class="err">her</span> <span class="err">$HOME</span> <span class="kc">n</span><span class="err">or</span> <span class="err">~</span> <span class="err">work</span> <span class="err">here</span>
+                    <span class="nt">&quot;PYTHONPATH&quot;</span><span class="p">:</span> <span class="s2">&quot;/Users/mike/.virtualenvs/my-virtual-env/lib/python3.7/site-packages&quot;</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>A basic configuration below can be used for bootstrapping your own:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;pyls&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;pyls&quot;</span><span class="p">],</span>
+    <span class="nt">&quot;settings&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;pyls.env&quot;</span><span class="p">:</span> <span class="p">{</span>
+          <span class="err">//</span> <span class="err">Maki</span><span class="kc">n</span><span class="err">g</span> <span class="err">Sublime&#39;s</span> <span class="err">ow</span><span class="kc">n</span> <span class="err">libs</span> <span class="err">available</span> <span class="kc">t</span><span class="err">o</span> <span class="kc">t</span><span class="err">he</span> <span class="err">li</span><span class="kc">nters</span><span class="err">.</span>
+          <span class="err">//</span> <span class="nt">&quot;PYTHONPATH&quot;</span><span class="p">:</span> <span class="s2">&quot;/Applications/Sublime Text.app/Contents/MacOS/Lib/python33&quot;</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="err">//</span> <span class="err">Co</span><span class="kc">nf</span><span class="err">igura</span><span class="kc">t</span><span class="err">io</span><span class="kc">n</span> <span class="err">is</span> <span class="err">compu</span><span class="kc">te</span><span class="err">d</span> <span class="kc">f</span><span class="err">irs</span><span class="kc">t</span> <span class="kc">fr</span><span class="err">om</span> <span class="err">user</span> <span class="err">co</span><span class="kc">nf</span><span class="err">igura</span><span class="kc">t</span><span class="err">io</span><span class="kc">n</span> <span class="err">(i</span><span class="kc">n</span> <span class="err">home</span> <span class="err">direc</span><span class="kc">t</span><span class="err">ory)</span><span class="p">,</span>
+        <span class="err">//</span> <span class="err">overridde</span><span class="kc">n</span> <span class="err">by</span> <span class="err">co</span><span class="kc">nf</span><span class="err">igura</span><span class="kc">t</span><span class="err">io</span><span class="kc">n</span> <span class="err">passed</span> <span class="err">i</span><span class="kc">n</span> <span class="err">by</span> <span class="kc">t</span><span class="err">he</span> <span class="err">la</span><span class="kc">n</span><span class="err">guage</span> <span class="err">clie</span><span class="kc">nt</span><span class="p">,</span>
+        <span class="err">//</span> <span class="err">a</span><span class="kc">n</span><span class="err">d</span> <span class="kc">t</span><span class="err">he</span><span class="kc">n</span> <span class="err">overridde</span><span class="kc">n</span> <span class="err">by</span> <span class="err">co</span><span class="kc">nf</span><span class="err">igura</span><span class="kc">t</span><span class="err">io</span><span class="kc">n</span> <span class="err">discovered</span> <span class="err">i</span><span class="kc">n</span> <span class="kc">t</span><span class="err">he</span> <span class="err">workspace.</span>
+        <span class="nt">&quot;pyls.configurationSources&quot;</span><span class="p">:</span> <span class="p">[</span>
+          <span class="s2">&quot;pycodestyle&quot;</span><span class="p">,</span> <span class="err">//</span> <span class="err">discovered</span> <span class="err">i</span><span class="kc">n</span> <span class="err">~/.co</span><span class="kc">nf</span><span class="err">ig/pycodes</span><span class="kc">t</span><span class="err">yle</span><span class="p">,</span> <span class="err">se</span><span class="kc">tu</span><span class="err">p.c</span><span class="kc">f</span><span class="err">g</span><span class="p">,</span> <span class="kc">t</span><span class="err">ox.i</span><span class="kc">n</span><span class="err">i</span> <span class="err">a</span><span class="kc">n</span><span class="err">d</span> <span class="err">pycodes</span><span class="kc">t</span><span class="err">yle.c</span><span class="kc">f</span><span class="err">g</span>
+          <span class="err">//</span> <span class="s2">&quot;flake8&quot;</span><span class="p">,</span>   <span class="err">//</span> <span class="err">discovered</span> <span class="err">i</span><span class="kc">n</span> <span class="err">~/.co</span><span class="kc">nf</span><span class="err">ig/</span><span class="kc">fla</span><span class="err">ke</span><span class="mi">8</span><span class="p">,</span> <span class="err">se</span><span class="kc">tu</span><span class="err">p.c</span><span class="kc">f</span><span class="err">g</span><span class="p">,</span> <span class="kc">t</span><span class="err">ox.i</span><span class="kc">n</span><span class="err">i</span> <span class="err">a</span><span class="kc">n</span><span class="err">d</span> <span class="kc">fla</span><span class="err">ke</span><span class="mf">8.</span><span class="err">c</span><span class="kc">f</span><span class="err">g</span>
+        <span class="p">],</span>
+        <span class="nt">&quot;pyls.plugins.jedi.extra_paths&quot;</span><span class="p">:</span> <span class="p">[</span>
+          <span class="err">//</span> <span class="err">The</span> <span class="err">direc</span><span class="kc">t</span><span class="err">ory</span> <span class="err">where</span> <span class="kc">t</span><span class="err">he</span> <span class="err">pip</span> <span class="err">i</span><span class="kc">nstallat</span><span class="err">io</span><span class="kc">n</span> <span class="err">package</span> <span class="err">is</span> <span class="err">loca</span><span class="kc">te</span><span class="err">d</span>
+        <span class="p">],</span>
+        <span class="err">//</span> <span class="err">E</span><span class="kc">na</span><span class="err">ble</span> <span class="kc">fu</span><span class="err">zzy</span> <span class="err">ma</span><span class="kc">t</span><span class="err">ches</span> <span class="err">whe</span><span class="kc">n</span> <span class="err">reques</span><span class="kc">t</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span> <span class="err">au</span><span class="kc">t</span><span class="err">ocomple</span><span class="kc">te</span>
+        <span class="nt">&quot;pyls.plugins.jedi.jedi_completion.fuzzy&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+        <span class="nt">&quot;pyls.plugins.jedi.pycodestyle.enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+        <span class="nt">&quot;pyls.plugins.jedi.pycodestyle.exclude&quot;</span><span class="p">:</span> <span class="p">[</span>
+          <span class="err">//</span> <span class="err">Exclude</span> <span class="kc">f</span><span class="err">iles</span> <span class="err">or</span> <span class="err">direc</span><span class="kc">t</span><span class="err">ories</span> <span class="err">which</span> <span class="err">ma</span><span class="kc">t</span><span class="err">ch</span> <span class="kc">t</span><span class="err">hese</span> <span class="err">pa</span><span class="kc">tterns</span>
+        <span class="p">],</span>
+        <span class="nt">&quot;pyls.plugins.jedi.pycodestyle.ignore&quot;</span><span class="p">:</span> <span class="p">[</span>
+          <span class="err">//</span> <span class="err">Exclude</span> <span class="kc">f</span><span class="err">iles</span> <span class="err">or</span> <span class="err">direc</span><span class="kc">t</span><span class="err">ories</span> <span class="err">which</span> <span class="err">ma</span><span class="kc">t</span><span class="err">ch</span> <span class="kc">t</span><span class="err">hese</span> <span class="err">pa</span><span class="kc">tterns</span>
+        <span class="p">],</span>
+        <span class="err">//</span> <span class="s2">&quot;pyls.plugins.jedi.pycodestyle.maxLineLength: 80&quot;</span> <span class="err">//</span> <span class="err">se</span><span class="kc">t</span> <span class="err">maximum</span> <span class="err">allowed</span> <span class="err">li</span><span class="kc">ne</span> <span class="err">le</span><span class="kc">n</span><span class="err">g</span><span class="kc">t</span><span class="err">h</span>
+        <span class="nt">&quot;pyls.plugins.pydocstyle.enabled&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;pyls.plugins.pyflakes.enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+        <span class="nt">&quot;pyls.plugins.pylint.enabled&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;pyls.plugins.yapf.enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+        <span class="err">//</span> <span class="err">pyls&#39;</span> <span class="mi">3</span><span class="err">rd</span> <span class="err">Par</span><span class="kc">t</span><span class="err">y</span> <span class="err">Plugi</span><span class="kc">ns</span><span class="p">,</span> <span class="err">Mypy</span> <span class="kc">t</span><span class="err">ype</span> <span class="err">checki</span><span class="kc">n</span><span class="err">g</span> <span class="kc">f</span><span class="err">or</span> <span class="err">Py</span><span class="kc">t</span><span class="err">ho</span><span class="kc">n</span> <span class="mi">3</span><span class="p">,</span> <span class="err">Mus</span><span class="kc">t</span> <span class="err">be</span> <span class="err">i</span><span class="kc">nstalle</span><span class="err">d</span> <span class="err">via</span> <span class="err">pip</span> <span class="err">be</span><span class="kc">f</span><span class="err">ore</span> <span class="err">e</span><span class="kc">na</span><span class="err">bli</span><span class="kc">n</span><span class="err">g</span>
+        <span class="nt">&quot;pyls.plugins.pyls_mypy.enabled&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="err">//</span> <span class="err">I</span><span class="kc">nstall</span> <span class="err">wi</span><span class="kc">t</span><span class="err">h</span><span class="p">:</span> <span class="err">pip</span> <span class="err">i</span><span class="kc">nstall</span> <span class="err">pyls</span><span class="mi">-</span><span class="err">mypy</span>
+        <span class="nt">&quot;pyls.plugins.pyls_mypy.live_mode&quot;</span><span class="p">:</span> <span class="kc">true</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>See pylint documentation: <a href="https://github.com/palantir/python-language-server">github:palantir/python-language-server</a>.</p>
+<div class="admonition info">
+<p class="admonition-title">List of all built-in <a href="https://github.com/palantir/python-language-server/blob/develop/vscode-client/package.json">settings</a>.</p>
+</div>
+<h2 id="r">R<a class="headerlink" href="#r" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/REditorSupport/sublime-ide-r#installation">R-IDE</a>.</p>
+<h2 id="ruby-ruby-on-rails">Ruby / Ruby on Rails<a class="headerlink" href="#ruby-ruby-on-rails" title="Permanent link">#</a></h2>
+<p>There are multiple options:</p>
+<h3 id="solargraph">Solargraph<a class="headerlink" href="#solargraph" title="Permanent link">#</a></h3>
+<ol>
+<li>
+<p>Install <a href="https://github.com/castwide/solargraph#installation">solargraph</a>.</p>
+</li>
+<li>
+<p>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"ruby"</code> client configuration to the <code>"clients"</code>:</p>
+</li>
+</ol>
+<div class="tabbed-set" data-tabs="17:2"><input checked="checked" id="__tabbed_17_1" name="__tabbed_17" type="radio" /><label for="__tabbed_17_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;ruby&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;solargraph&quot;</span><span class="p">,</span> <span class="s2">&quot;stdio&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.ruby | text.html.ruby&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;initializationOptions&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;diagnostics&quot;</span><span class="p">:</span> <span class="kc">false</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_17_2" name="__tabbed_17" type="radio" /><label for="__tabbed_17_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;ruby&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;solargraph&quot;</span><span class="p">,</span> <span class="s2">&quot;stdio&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;ruby&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.ruby&quot;</span><span class="p">,</span> <span class="s2">&quot;source.ruby.rails&quot;</span><span class="p">,</span> <span class="s2">&quot;text.html.ruby&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;Packages/Ruby/Ruby.sublime-syntax&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Packages/Rails/Ruby on Rails.sublime-syntax&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Packages/Rails/HTML (Rails).sublime-syntax&quot;</span>
+            <span class="p">],</span>
+            <span class="nt">&quot;initializationOptions&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;diagnostics&quot;</span><span class="p">:</span> <span class="kc">false</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<h3 id="sorbet">Sorbet<a class="headerlink" href="#sorbet" title="Permanent link">#</a></h3>
+<ol>
+<li>
+<p>Install the sorbet and sorbet-runtime gem (see <a href="https://github.com/sorbet/sorbet">github:sorbet/sorbet</a>):</p>
+<div class="highlight"><pre><span></span><code>gem install sorbet
+gem install sorbet-runtime
+</code></pre></div>
+<p>If you have a Gemfile, using bundler, add sorbet and sorbet-runtime to your Gemfile and run:</p>
+<div class="highlight"><pre><span></span><code>bundle install
+</code></pre></div>
+</li>
+<li>
+<p>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"sorbet"</code> client configuration to the <code>"clients"</code>:</p>
+</li>
+</ol>
+<div class="tabbed-set" data-tabs="18:2"><input checked="checked" id="__tabbed_18_1" name="__tabbed_18" type="radio" /><label for="__tabbed_18_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;sorbet&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;srb&quot;</span><span class="p">,</span> <span class="s2">&quot;tc&quot;</span><span class="p">,</span> <span class="s2">&quot;--typed&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">,</span> <span class="s2">&quot;--enable-all-experimental-lsp-features&quot;</span><span class="p">,</span> <span class="s2">&quot;--lsp&quot;</span><span class="p">,</span> <span class="s2">&quot;--disable-watchman&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.ruby | text.html.ruby&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_18_2" name="__tabbed_18" type="radio" /><label for="__tabbed_18_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;sorbet&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;srb&quot;</span><span class="p">,</span> <span class="s2">&quot;tc&quot;</span><span class="p">,</span> <span class="s2">&quot;--typed&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">,</span> <span class="s2">&quot;--enable-all-experimental-lsp-features&quot;</span><span class="p">,</span> <span class="s2">&quot;--lsp&quot;</span><span class="p">,</span> <span class="s2">&quot;--disable-watchman&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;ruby&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.ruby&quot;</span><span class="p">,</span> <span class="s2">&quot;source.ruby.rails&quot;</span><span class="p">,</span> <span class="s2">&quot;text.html.ruby&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;Packages/Ruby/Ruby.sublime-syntax&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Packages/Rails/Ruby on Rails.sublime-syntax&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Packages/Rails/HTML (Rails).sublime-syntax&quot;</span>
+            <span class="p">],</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<h2 id="rust">Rust<a class="headerlink" href="#rust" title="Permanent link">#</a></h2>
+<p>There are multiple options:</p>
+<h3 id="rust-analyzer">Rust Analyzer<a class="headerlink" href="#rust-analyzer" title="Permanent link">#</a></h3>
+<ol>
+<li>Download a binary from the release page of <a href="https://github.com/rust-analyzer/rust-analyzer">rust-analyzer</a>.</li>
+<li>Rename the binary to <code>rust-analyzer</code>.</li>
+<li>Make sure the binary is in your <code>$PATH</code>.</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"rust-analyzer"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="19:2"><input checked="checked" id="__tabbed_19_1" name="__tabbed_19" type="radio" /><label for="__tabbed_19_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;rust-analyzer&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;rust-analyzer&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.rust&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_19_2" name="__tabbed_19" type="radio" /><label for="__tabbed_19_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;rust-analyzer&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;rust-analyzer&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;rust&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.rust&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Packages/Rust/Rust.sublime-syntax&quot;</span><span class="p">,</span> <span class="s2">&quot;Packages/Rust Enhanced/RustEnhanced.sublime-syntax&quot;</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<h3 id="rust-enhanced">Rust Enhanced<a class="headerlink" href="#rust-enhanced" title="Permanent link">#</a></h3>
+<p>Follow installation instructions on <a href="https://github.com/rust-lang/rust-enhanced">Rust Enhanced</a>.</p>
+<h2 id="scala">Scala<a class="headerlink" href="#scala" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/scalameta/metals-sublime">LSP-metals</a>.</p>
+<h2 id="stylelint">Stylelint<a class="headerlink" href="#stylelint" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-stylelint">LSP-stylelint</a>.</p>
+<h2 id="svelte">Svelte<a class="headerlink" href="#svelte" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-svelte">LSP-svelte</a>.</p>
+<h2 id="swift">Swift<a class="headerlink" href="#swift" title="Permanent link">#</a></h2>
+<ol>
+<li>Install the <a href="https://packagecontrol.io/packages/Swift">Swift</a> package from Package Control for syntax highlighting.</li>
+<li>Install Xcode 11.4 or later and ensure that <code>xcrun -find sourcekit-lsp</code> returns the path to sourcekit-lsp.</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"sourcekit-lsp"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="20:2"><input checked="checked" id="__tabbed_20_1" name="__tabbed_20" type="radio" /><label for="__tabbed_20_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;sourcekit-lsp&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;xcrun&quot;</span><span class="p">,</span> <span class="s2">&quot;sourcekit-lsp&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.swift&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_20_2" name="__tabbed_20" type="radio" /><label for="__tabbed_20_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;sourcekit-lsp&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;xcrun&quot;</span><span class="p">,</span> <span class="s2">&quot;sourcekit-lsp&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;swift&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.swift&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Packages/Swift/Syntaxes/Swift.tmLanguage&quot;</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<h2 id="tagml">TAGML<a class="headerlink" href="#tagml" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/HuygensING/LSP-tagml">LSP-tagml</a>.</p>
+<h2 id="terraform">Terraform<a class="headerlink" href="#terraform" title="Permanent link">#</a></h2>
+<ol>
+<li>Install the <a href="https://packagecontrol.io/packages/Terraform">Terraform</a> package from Package Control for syntax highlighting.</li>
+<li>Download <a href="https://github.com/juliosueiras/terraform-lsp/releases">terraform-lsp</a> binary and make it available in your PATH.</li>
+<li>Open <code>Preferences &gt; Package Settings &gt; LSP &gt; Settings</code> and add the <code>"terraform"</code> client configuration to the <code>"clients"</code>:</li>
+</ol>
+<div class="tabbed-set" data-tabs="21:2"><input checked="checked" id="__tabbed_21_1" name="__tabbed_21" type="radio" /><label for="__tabbed_21_1">Sublime Text 4</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;terraform&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;terraform-lsp&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;source.terraform&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_21_2" name="__tabbed_21" type="radio" /><label for="__tabbed_21_2">Sublime Text 3</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="nt">&quot;clients&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;terraform&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;command&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;terraform-lsp&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;languageId&quot;</span><span class="p">:</span> <span class="s2">&quot;terraform&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;source.terraform&quot;</span><span class="p">],</span>
+            <span class="nt">&quot;syntaxes&quot;</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;Packages/Terraform/Terraform.sublime-syntax&quot;</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+<h2 id="typescript-javascript">TypeScript / JavaScript<a class="headerlink" href="#typescript-javascript" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-typescript">LSP-typescript</a>.</p>
+<h2 id="vue">Vue<a class="headerlink" href="#vue" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-vue">LSP-vue</a>.</p>
+<h2 id="xml">XML<a class="headerlink" href="#xml" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-lemminx">LSP-lemminx</a>.</p>
+<h2 id="yaml">YAML<a class="headerlink" href="#yaml" title="Permanent link">#</a></h2>
+<p>Follow installation instructions on <a href="https://github.com/sublimelsp/LSP-yaml">LSP-yaml</a>.</p>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href=".." class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+            </div>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Getting Started
+              </div>
+            </div>
+          </a>
+        
+        
+          <a href="../features/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Features
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+  <div class="md-footer-social">
+    
+      
+      
+        
+        
+      
+      <a href="https://discordapp.com/channels/280102180189634562/645268178397560865" target="_blank" rel="noopener" title="discordapp.com" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M297.216 243.2c0 15.616-11.52 28.416-26.112 28.416-14.336 0-26.112-12.8-26.112-28.416s11.52-28.416 26.112-28.416c14.592 0 26.112 12.8 26.112 28.416zm-119.552-28.416c-14.592 0-26.112 12.8-26.112 28.416s11.776 28.416 26.112 28.416c14.592 0 26.112-12.8 26.112-28.416.256-15.616-11.52-28.416-26.112-28.416zM448 52.736V512c-64.494-56.994-43.868-38.128-118.784-107.776l13.568 47.36H52.48C23.552 451.584 0 428.032 0 398.848V52.736C0 23.552 23.552 0 52.48 0h343.04C424.448 0 448 23.552 448 52.736zm-72.96 242.688c0-82.432-36.864-149.248-36.864-149.248-36.864-27.648-71.936-26.88-71.936-26.88l-3.584 4.096c43.52 13.312 63.744 32.512 63.744 32.512-60.811-33.329-132.244-33.335-191.232-7.424-9.472 4.352-15.104 7.424-15.104 7.424s21.248-20.224 67.328-33.536l-2.56-3.072s-35.072-.768-71.936 26.88c0 0-36.864 66.816-36.864 149.248 0 0 21.504 37.12 78.08 38.912 0 0 9.472-11.52 17.152-21.248-32.512-9.728-44.8-30.208-44.8-30.208 3.766 2.636 9.976 6.053 10.496 6.4 43.21 24.198 104.588 32.126 159.744 8.96 8.96-3.328 18.944-8.192 29.44-15.104 0 0-12.8 20.992-46.336 30.464 7.68 9.728 16.896 20.736 16.896 20.736 56.576-1.792 78.336-38.912 78.336-38.912z"/></svg>
+      </a>
+    
+  </div>
+
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../assets/javascripts/vendor.93c04032.min.js"></script>
+      <script src="../assets/javascripts/bundle.83e5331e.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}</script>
+      
+      <script>
+        app = initialize({
+          base: "..",
+          features: [],
+          search: Object.assign({
+            worker: "../assets/javascripts/worker/search.8c7e0a7e.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>

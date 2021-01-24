@@ -376,17 +376,21 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         pos = self._stored_region.a
         if pos == -1:
             return
-        session = self.session("signatureHelpProvider")
+        session = self.session("signatureHelpProvider", pos)
         if not session:
             return
-        triggers = session.get_capability("signatureHelpProvider.triggerCharacters") or []
+        triggers = []  # type: List[str]
+        if not manual:
+            for sb in self.session_buffers_async():
+                if session == sb.session:
+                    triggers = sb.get_capability("signatureHelpProvider.triggerCharacters") or []
+                    break
         if not manual and not triggers:
             return
         last_char = previous_non_whitespace_char(self.view, pos)
         if manual or last_char in triggers:
             self.purge_changes_async()
             params = text_document_position_params(self.view, pos)
-            assert session
             session.send_request_async(
                 Request.signatureHelp(params, self.view), lambda resp: self._on_signature_help(resp, pos))
         else:

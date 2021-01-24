@@ -121,7 +121,7 @@ class CodeActionsManager:
         on_save_actions: Optional[Dict[str, bool]] = None
     ) -> Optional[CodeActionsCollector]:
         if 'codeActionProvider' in userprefs().disabled_capabilities:
-            return
+            return None
 
         use_cache = on_save_actions is None
         if use_cache:

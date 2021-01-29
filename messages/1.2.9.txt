@@ -1,0 +1,8 @@
+=> 1.2.9
+
+Fixes & Features:
+
+- Fix "go-to" actions with side-by-side flag after a breaking change in ST 4096 (#1563) (Rafał Chłodnicki)
+- Look up the sig help triggers via the buffer capabilities (Raoul Wols)
+- Always look up the session name for lsp_execute (#1557) (Raoul Wols)
+- Extend disabled_capabilities with more options (#1555) (Predrag Nikolic)

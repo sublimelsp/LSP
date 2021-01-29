@@ -13,7 +13,8 @@ from .core.views import text_document_position_params
 def open_location(window: sublime.Window, location: str, side_by_side: bool = True) -> None:
     flags = sublime.ENCODED_POSITION
     if side_by_side:
-        flags |= sublime.ADD_TO_SELECTION_SEMI_TRANSIENT
+        flags |= sublime.ADD_TO_SELECTION
+        flags |= sublime.SEMI_TRANSIENT
     window.open_file(location, flags)
 
 

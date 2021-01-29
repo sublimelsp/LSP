@@ -18,6 +18,7 @@ HOVER_GUTTER = ...  # type: int
 HOVER_MARGIN = ...  # type: int
 ENCODED_POSITION = ...  # type: int
 TRANSIENT = ...  # type: int
+SEMI_TRANSIENT = ...  # type: int
 FORCE_GROUP = ...  # type: int
 ADD_TO_SELECTION = ...  # type: int
 IGNORECASE = ...  # type: int

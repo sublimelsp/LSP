@@ -222,6 +222,8 @@ class LspDocumentSymbolsCommand(LspTextCommand):
 
 
 class SymbolQueryInput(sublime_plugin.TextInputHandler):
+    def want_event(self) -> bool:
+        return False
 
     def validate(self, txt: str) -> bool:
         return txt != ""

@@ -18,6 +18,9 @@ import sublime_plugin
 
 
 class RenameSymbolInputHandler(sublime_plugin.TextInputHandler):
+    def want_event(self) -> bool:
+        return False
+
     def __init__(self, view: sublime.View, placeholder: str) -> None:
         self.view = view
         self._placeholder = placeholder

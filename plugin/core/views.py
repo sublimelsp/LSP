@@ -1,3 +1,4 @@
+from .css import css as lsp_css
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
@@ -9,7 +10,7 @@ from .protocol import Notification
 from .protocol import Point
 from .protocol import Range
 from .protocol import Request
-from .typing import Optional, Dict, Any, Iterable, List, Union, Tuple, Sequence, cast
+from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, Sequence, cast
 from .url import filename_to_uri
 from .url import uri_to_filename
 import html
@@ -351,6 +352,38 @@ def text_document_code_action_params(
     if on_save_actions:
         params['context']['only'] = on_save_actions
     return params
+
+
+# Workaround for a limited margin-collapsing capabilities of the minihtml.
+LSP_POPUP_SPACER_HTML = '<div class="lsp_popup--spacer"></div>'
+
+
+def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bool = False, flags: int = 0,
+                   css: str = None, wrapper_class: str = None,
+                   max_width: int = 800, max_height: int = 800,
+                   on_navigate: Callable = None, on_hide: Callable = None) -> None:
+    css = css if css is not None else lsp_css().popups
+    wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
+    contents += LSP_POPUP_SPACER_HTML
+    mdpopups.show_popup(
+        view,
+        contents,
+        css=css,
+        md=md,
+        flags=flags,
+        location=location,
+        wrapper_class=wrapper_class,
+        max_width=max_width,
+        max_height=max_height,
+        on_navigate=on_navigate)
+
+
+def update_lsp_popup(view: sublime.View, contents: str, md: bool = False, css: str = None,
+                     wrapper_class: str = None) -> None:
+    css = css if css is not None else lsp_css().popups
+    wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
+    contents += LSP_POPUP_SPACER_HTML
+    mdpopups.update_popup(view, contents, css=css, md=md, wrapper_class=wrapper_class)
 
 
 FORMAT_STRING = 0x1

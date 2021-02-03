@@ -40,7 +40,7 @@ class LspResolveDocsCommand(LspTextCommand):
         if detail and not self.is_detail_shown:
             content += "<div class='highlight'>{}</div>".format(detail)
         if documentation:
-            content += "<div>{}</div>".format(documentation)
+            content += documentation
         return content
 
     def show_popup(self, minihtml_content: str) -> None:

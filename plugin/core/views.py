@@ -359,9 +359,9 @@ LSP_POPUP_SPACER_HTML = '<div class="lsp_popup--spacer"></div>'
 
 
 def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bool = False, flags: int = 0,
-                   css: str = None, wrapper_class: str = None,
                    max_width: int = 800, max_height: int = 800,
-                   on_navigate: Callable = None, on_hide: Callable = None) -> None:
+                   css: Optional[str] = None, wrapper_class: Optional[str] = None,
+                   on_navigate: Optional[Callable] = None, on_hide: Optional[Callable] = None) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
     contents += LSP_POPUP_SPACER_HTML
@@ -378,8 +378,8 @@ def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bo
         on_navigate=on_navigate)
 
 
-def update_lsp_popup(view: sublime.View, contents: str, md: bool = False, css: str = None,
-                     wrapper_class: str = None) -> None:
+def update_lsp_popup(view: sublime.View, contents: str, md: bool = False, css: Optional[str] = None,
+                     wrapper_class: Optional[str] = None) -> None:
     css = css if css is not None else lsp_css().popups
     wrapper_class = wrapper_class if wrapper_class is not None else lsp_css().popups_classname
     contents += LSP_POPUP_SPACER_HTML

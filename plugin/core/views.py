@@ -671,6 +671,8 @@ def format_completion(
         st_trigger = lsp_label
         st_annotation = ""
 
+    st_annotation = item.get("detail") or ""
+
     st_details = ""
     if can_resolve_completion_items or item.get("documentation"):
         st_details += make_command_link("lsp_resolve_docs", "More", {"index": index})

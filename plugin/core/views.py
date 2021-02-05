@@ -666,10 +666,8 @@ def format_completion(
 
     if lsp_filter_text and lsp_filter_text != lsp_label:
         st_trigger = lsp_filter_text
-        st_annotation = lsp_label
     else:
         st_trigger = lsp_label
-        st_annotation = ""
 
     st_annotation = item.get("detail") or ""
 

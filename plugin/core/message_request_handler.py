@@ -1,7 +1,7 @@
 from .protocol import Response
 from .sessions import Session
 from .typing import Any, List, Callable
-import mdpopups
+from .views import show_lsp_popup
 import sublime
 
 
@@ -66,15 +66,10 @@ def show_notification(view: sublime.View, source: str, message_type: int, messag
                       on_navigate: Callable, on_hide: Callable) -> None:
     stylesheet = sublime.load_resource("Packages/LSP/notification.css")
     contents = message_content(source, message_type, message, titles)
-    mdpopups.show_popup(
+    show_lsp_popup(
         view,
         contents,
         css=stylesheet,
-        md=False,
-        location=-1,
         wrapper_class='notification',
-        max_width=800,
-        max_height=800,
         on_navigate=on_navigate,
-        on_hide=on_hide
-    )
+        on_hide=on_hide)

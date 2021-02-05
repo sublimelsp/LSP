@@ -1,9 +1,12 @@
 .lsp_popup {
-    margin: 0.5rem;
+    margin: 0.5rem 0.5rem 0 0.5rem;
     font-family: system;
 }
+.lsp_popup--spacer {
+    margin-top: 0.5rem;
+}
 .lsp_popup hr {
-  border-color: color(var(--foreground) alpha(0.10));
+    border-color: color(var(--foreground) alpha(0.10));
 }
 .highlight {
     border-width: 0;

@@ -1,8 +1,6 @@
-import mdpopups
 import sublime
 import sublime_plugin
 import webbrowser
-from .core.css import css
 from .core.logging import debug
 from .core.edit import parse_text_edit
 from .core.protocol import Request, InsertTextFormat, Range
@@ -10,6 +8,8 @@ from .core.registry import LspTextCommand
 from .core.typing import Any, List, Dict, Optional, Generator, Union
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .core.views import range_to_region
+from .core.views import show_lsp_popup
+from .core.views import update_lsp_popup
 
 
 class LspResolveDocsCommand(LspTextCommand):
@@ -40,20 +40,18 @@ class LspResolveDocsCommand(LspTextCommand):
         if detail and not self.is_detail_shown:
             content += "<div class='highlight'>{}</div>".format(detail)
         if documentation:
-            content += "<div>{}</div>".format(documentation)
+            content += documentation
         return content
 
     def show_popup(self, minihtml_content: str) -> None:
         viewport_width = self.view.viewport_extent()[0]
-        mdpopups.show_popup(
+        show_lsp_popup(
             self.view,
             minihtml_content,
             flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
-            css=css().popups,
-            wrapper_class=css().popups_classname,
+            md=True,
             max_width=viewport_width,
-            on_navigate=self.on_navigate
-        )
+            on_navigate=self.on_navigate)
 
     def on_navigate(self, url: str) -> None:
         webbrowser.open(url)
@@ -72,12 +70,7 @@ class LspResolveDocsCommand(LspTextCommand):
         sublime.set_timeout(lambda: show(minihtml_content))
 
     def update_popup(self, minihtml_content: str) -> None:
-        mdpopups.update_popup(
-            self.view,
-            minihtml_content,
-            css=css().popups,
-            wrapper_class=css().popups_classname,
-        )
+        update_lsp_popup(self.view, minihtml_content, md=True)
 
 
 class LspCompleteCommand(sublime_plugin.TextCommand):

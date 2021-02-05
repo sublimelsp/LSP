@@ -1,7 +1,6 @@
 from .code_actions import actions_manager
 from .code_actions import CodeActionsByConfigName
 from .completion import LspResolveDocsCommand
-from .core.css import css
 from .core.logging import debug
 from .core.protocol import CodeLens
 from .core.protocol import Command
@@ -27,8 +26,10 @@ from .core.views import format_completion
 from .core.views import lsp_color_to_phantom
 from .core.views import make_command_link
 from .core.views import range_to_region
+from .core.views import show_lsp_popup
 from .core.views import text_document_identifier
 from .core.views import text_document_position_params
+from .core.views import update_lsp_popup
 from .core.windows import AbstractViewListener
 from .core.windows import WindowManager
 from .session_buffer import SessionBuffer
@@ -37,7 +38,6 @@ from functools import partial
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import functools
-import mdpopups
 import sublime
 import sublime_plugin
 import webbrowser
@@ -417,27 +417,17 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         # TODO: There are a bunch of places in the code where we assume we have exclusive access to a popup. The reality
         # is that there is really only one popup per view. Refactor everything that interacts with the popup to a common
         # class.
-        flags = 0
-        flags |= sublime.HIDE_ON_MOUSE_MOVE_AWAY
-        flags |= sublime.COOPERATE_WITH_AUTO_COMPLETE
-        mdpopups.show_popup(self.view,
-                            content,
-                            css=css().popups,
-                            md=False,
-                            flags=flags,
-                            location=point,
-                            wrapper_class=css().popups_classname,
-                            max_width=800,
-                            on_hide=self._on_sighelp_hide,
-                            on_navigate=self._on_sighelp_navigate)
+        show_lsp_popup(
+            self.view,
+            content,
+            flags=sublime.HIDE_ON_MOUSE_MOVE_AWAY | sublime.COOPERATE_WITH_AUTO_COMPLETE,
+            location=point,
+            on_hide=self._on_sighelp_hide,
+            on_navigate=self._on_sighelp_navigate)
         self._visible = True
 
     def _update_sighelp_popup(self, content: str) -> None:
-        mdpopups.update_popup(self.view,
-                              content,
-                              css=css().popups,
-                              md=False,
-                              wrapper_class=css().popups_classname)
+        update_lsp_popup(self.view, content)
 
     def _on_sighelp_hide(self) -> None:
         self._visible = False

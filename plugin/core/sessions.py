@@ -957,11 +957,6 @@ class Session(TransportCallbacks):
         if mgr:
             getattr(mgr, method)(*args)
 
-    def clear_diagnostics_async(self) -> None:
-        # XXX: Remove this functionality?
-        for sb in self.session_buffers_async():
-            sb.on_diagnostics_async([], None)
-
     def on_stderr_message(self, message: str) -> None:
         self.call_manager('handle_stderr_log', self, message)
         self._logger.stderr_message(message)

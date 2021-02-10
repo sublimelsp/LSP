@@ -302,10 +302,7 @@ class SessionBuffer:
 
         self.diagnostics_debouncer.cancel_pending()
 
-        if not bool(diagnostics) and not self.diagnostics_are_visible:
-            # Nothing was previously visible, and nothing will become visible. So do nothing.
-            pass
-        elif self.diagnostics_are_visible:
+        if self.diagnostics_are_visible:
             # Old diagnostics are visible. Update immediately.
             present()
         else:

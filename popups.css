@@ -10,12 +10,14 @@
     margin-bottom: 0.5rem;
     border-color: color(var(--foreground) alpha(0.10));
 }
-.lsp_popup h1 { font-size: 1rem; }
-.lsp_popup h2 { font-size: 1rem; }
-.lsp_popup h3 { font-size: 1rem; }
-.lsp_popup h4 { font-size: 1rem; }
-.lsp_popup h5 { font-size: 1rem; }
-.lsp_popup h6 { font-size: 1rem; }
+.lsp_popup h1,
+.lsp_popup h2,
+.lsp_popup h3,
+.lsp_popup h4,
+.lsp_popup h5,
+.lsp_popup h6 {
+    font-size: 1rem;
+}
 .highlight {
     border-width: 0;
     border-radius: 0;

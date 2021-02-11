@@ -144,11 +144,11 @@ class SigHelp:
 
 
 def _function(view: sublime.View, content: str) -> str:
-    return _wrap_with_scope_style(view, content, "entity.name.function", False)
+    return _wrap_with_scope_style(view, content, "entity.name.function.sighelp.lsp", False)
 
 
 def _parameter(view: sublime.View, content: str, emphasize: bool) -> str:
-    return _wrap_with_scope_style(view, content, "variable.parameter", emphasize)
+    return _wrap_with_scope_style(view, content, "variable.parameter.sighelp.lsp", emphasize)
 
 
 def _wrap_with_scope_style(view: sublime.View, content: str, scope: str, emphasize: bool) -> str:

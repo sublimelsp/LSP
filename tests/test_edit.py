@@ -141,6 +141,20 @@ LSP_EDIT_DOCUMENT_CHANGES_3 = {
     ]
 }
 
+LSP_EDIT_DOCUMENT_CHANGES_4 = {
+    'changes': {
+        "file:///asdf/foo/bar": [
+            {"newText": "hello there", "range": LSP_RANGE},
+            {"newText": "general", "range": LSP_RANGE},
+            {"newText": "kenobi", "range": LSP_RANGE}
+        ]
+    },
+    'documentChanges': [{
+        'textDocument': {'uri': URI},
+        'edits': [LSP_TEXT_EDIT]
+    }]
+}
+
 
 class TextEditTests(unittest.TestCase):
 
@@ -184,6 +198,12 @@ class WorkspaceEditTests(unittest.TestCase):
         self.assertIn(FILENAME, edit)
         self.assertEqual(len(edit), 1)
         self.assertEqual(len(edit[FILENAME]), 5)
+
+    def test_prefers_document_edits_over_changes(self):
+        edit = parse_workspace_edit(LSP_EDIT_DOCUMENT_CHANGES_4)
+        self.assertIn(FILENAME, edit)
+        self.assertEqual(len(edit), 1)
+        self.assertEqual(len(edit[FILENAME]), 1)  # not 3
 
 
 class SortByApplicationOrderTests(unittest.TestCase):

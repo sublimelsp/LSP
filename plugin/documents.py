@@ -130,6 +130,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
+        self._setup()
+
+    def __del__(self) -> None:
+        self._cleanup()
+
+    def _setup(self) -> None:
         self._manager = None  # type: Optional[WindowManager]
         self._session_views = {}  # type: Dict[str, SessionView]
         self._stored_region = sublime.Region(-1, -1)
@@ -139,7 +145,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._language_id = ""
         self._registered = False
 
-    def __del__(self) -> None:
+    def _cleanup(self) -> None:
         settings = self.view.settings()
         triggers = settings.get("auto_complete_triggers") or []  # type: List[Dict[str, str]]
         triggers = [trigger for trigger in triggers if 'server' not in trigger]
@@ -151,6 +157,17 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._clear_session_views_async()
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
+
+    def on_pre_move_window_async(self) -> None:
+        if self._registered and self._manager:
+            self._manager.unregister_listener_async(self)
+            self._registered = False
+            self._manager = None
+        self._cleanup()
+
+    def on_post_move_window_async(self) -> None:
+        self._setup()
+        self.on_activated_async()
 
     def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()

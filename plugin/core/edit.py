@@ -14,10 +14,6 @@ TextEdit = Tuple[Tuple[int, int], Tuple[int, int], str, Optional[int]]
 
 def parse_workspace_edit(workspace_edit: Dict[str, Any]) -> Dict[str, List[TextEdit]]:
     changes = {}  # type: Dict[str, List[TextEdit]]
-    raw_changes = workspace_edit.get('changes')
-    if isinstance(raw_changes, dict):
-        for uri, file_changes in raw_changes.items():
-            changes[uri_to_filename(uri)] = list(parse_text_edit(change) for change in file_changes)
     document_changes = workspace_edit.get('documentChanges')
     if isinstance(document_changes, list):
         for document_change in document_changes:
@@ -28,6 +24,11 @@ def parse_workspace_edit(workspace_edit: Dict[str, Any]) -> Dict[str, List[TextE
             version = document_change.get('textDocument').get('version')
             text_edit = list(parse_text_edit(change, version) for change in document_change.get('edits'))
             changes.setdefault(uri_to_filename(uri), []).extend(text_edit)
+    else:
+        raw_changes = workspace_edit.get('changes')
+        if isinstance(raw_changes, dict):
+            for uri, file_changes in raw_changes.items():
+                changes[uri_to_filename(uri)] = list(parse_text_edit(change) for change in file_changes)
     return changes
 
 

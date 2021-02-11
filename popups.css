@@ -6,6 +6,8 @@
     margin-top: 0.5rem;
 }
 .lsp_popup hr {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
     border-color: color(var(--foreground) alpha(0.10));
 }
 .highlight {

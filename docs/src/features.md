@@ -29,7 +29,7 @@
 
 ### Execute server commands
 
-For LSP servers that can handle [workspace/executeCommand](https://microsoft.github.io/language-server-protocol/specification#workspace_executeCommand), you can make these commands available in the Sublime's Command Palette by adding an entry to your existing `*.sublime-commands` file or by creating a new one.
+For LSP servers that can handle [workspace/executeCommand](https://microsoft.github.io/language-server-protocol/specification#workspace_executeCommand), you can make these commands available in Sublime's Command Palette by adding an entry to your existing `*.sublime-commands` file or by creating a new one.
 
 Example:
 

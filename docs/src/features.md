@@ -29,7 +29,7 @@
 
 ### Execute server commands
 
-For LSP servers that can handle [workspace/executeCommand](https://microsoft.github.io/language-server-protocol/specification#workspace_executeCommand), you can make these commands available into the sublime palette by adding an entry to your existing `.sublime-commands` file or by creating a new one.
+For LSP servers that can handle [workspace/executeCommand](https://microsoft.github.io/language-server-protocol/specification#workspace_executeCommand), you can make these commands available in Sublime's Command Palette by adding an entry to your existing `*.sublime-commands` file or by creating a new one.
 
 Example:
 
@@ -40,14 +40,20 @@ Example:
     "caption": "Thread First",
     "command": "lsp_execute",
     "args": {
+      "session_name": "LSP-pyright",
       "command_name": "thread-first",
       "command_args": ["${file_uri}", 0, 0]
     }
   }
 ]
 ```
-Note: `command_args` is optional depending on the `workspace/executeCommand` that are supported by the LSP server.
-The following variables will be expanded, but only if they are top-level array items and not within nested arrays or objects:
+
+Notes:
+
+ - the `session_name` is required and needs to match the server's key within the `clients` configuration object.
+ - the `command_args` is optional depending on the `workspace/executeCommand` that are supported by the LSP server.
+
+You can include special variables in the `command_args` array that will be automatically expanded. Supported variables include Sublime's built-in ones (see the full list in the [Build Systems](http://www.sublimetext.com/docs/build_systems.html#variables) documentation) as well as additional variables listed below. Note that the built-in variables will be expanded regardless of where they are in the array and also within nested arrays or objects while the variables listed below will only be expanded in the top-level array values and only if those values match exactly (will not match if they are sub-strings of values):
 
 | Variable | Type | Description |
 | -------- | ---- | ----------- |

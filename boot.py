@@ -217,19 +217,13 @@ class Listener(sublime_plugin.EventListener):
     def on_pre_close_window(self, w: sublime.Window) -> None:
         windows.discard(w)
 
-    def on_pre_move(self, view: sublime.View) -> None:
-        listener = windows.listener_for_view(view)
-        if not listener:
+    def on_post_move_async(self, view: sublime.View) -> None:
+        listeners = sublime_plugin.view_event_listeners.get(view.id())
+        if not isinstance(listeners, list):
             return
-        sublime.set_timeout_async(listener.on_pre_move_window_async)
-
-    def on_post_move(self, view: sublime.View) -> None:
-        # Note: I'm afraid to use on_post_move_async because I don't know for sure whether that will run *after* the
-        # sublime.set_timeout_async in on_pre_move
-        listener = windows.listener_for_view(view)
-        if not listener:
-            return
-        sublime.set_timeout_async(listener.on_post_move_window_async)
+        for listener in listeners:
+            if isinstance(listener, DocumentSyncListener):
+                return listener.on_post_move_window_async()
 
     def on_load(self, view: sublime.View) -> None:
         file_name = view.file_name()

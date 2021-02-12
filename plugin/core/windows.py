@@ -126,10 +126,6 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def on_pre_move_window_async(self) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
     def on_post_move_window_async(self) -> None:
         raise NotImplementedError()
 

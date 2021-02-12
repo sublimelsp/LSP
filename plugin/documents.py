@@ -158,16 +158,24 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
 
-    def on_pre_move_window_async(self) -> None:
-        if self._registered and self._manager:
-            self._manager.unregister_listener_async(self)
-            self._registered = False
-            self._manager = None
-        self._cleanup()
-
     def on_post_move_window_async(self) -> None:
-        self._setup()
-        self.on_activated_async()
+        if self._registered and self._manager:
+            new_window = self.view.window()
+            if not new_window:
+                return
+            old_window = self._manager.window()
+            if new_window.id() == old_window.id():
+                return
+            self._manager.unregister_listener_async(self)
+
+            def reset() -> None:
+                # Have to do this on the main thread, since __init__ and __del__ are invoked on the main thread too
+                self._cleanup()
+                self._setup()
+                # But this has to run on the async thread again
+                sublime.set_timeout_async(self.on_activated_async)
+
+            sublime.set_timeout(reset)
 
     def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()

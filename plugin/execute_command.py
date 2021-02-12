@@ -53,7 +53,7 @@ class LspExecuteCommand(LspTextCommand):
         for i, arg in enumerate(command_args):
             if arg in ["$document_id", "${document_id}"]:
                 command_args[i] = text_document_identifier(view)
-            if arg in ["$file_uri", "${file_uri}"]:
+            elif arg in ["$file_uri", "${file_uri}"]:
                 command_args[i] = uri_from_view(view)
             elif arg in ["$selection", "${selection}"]:
                 command_args[i] = view.substr(region)

@@ -53,7 +53,7 @@ Notes:
  - the `session_name` is required and needs to match the server's key within the `clients` configuration object.
  - the `command_args` is optional depending on the `workspace/executeCommand` that are supported by the LSP server.
 
-You can include special variables in the `command_args` array that will be automatically expanded. Supported variables include the Sublime's built-in ones (see the full list in [Build systems](http://www.sublimetext.com/docs/build_systems.html#variables) documentation) and also additional variables listed below. Note that the built-in variables will be expanded regardless of where they are in the array and also within nested arrays or objects while the variables listed below will only be expanded in the top-level array values and only if those values match exactly (will not match if they are sub-strings of values):
+You can include special variables in the `command_args` array that will be automatically expanded. Supported variables include Sublime's built-in ones (see the full list in the [Build Systems](http://www.sublimetext.com/docs/build_systems.html#variables) documentation) as well as additional variables listed below. Note that the built-in variables will be expanded regardless of where they are in the array and also within nested arrays or objects while the variables listed below will only be expanded in the top-level array values and only if those values match exactly (will not match if they are sub-strings of values):
 
 | Variable | Type | Description |
 | -------- | ---- | ----------- |

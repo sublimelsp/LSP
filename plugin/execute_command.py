@@ -67,4 +67,5 @@ class LspExecuteCommand(LspTextCommand):
                 command_args[i] = offset_to_point(view, region.b).to_lsp()
             elif arg in ["$range", "${range}"]:
                 command_args[i] = region_to_range(view, region).to_lsp()
-        return sublime.expand_variables(command_args, view.window().extract_variables())
+        window_variables = view.window().extract_variables() if view.window() else {}
+        return sublime.expand_variables(command_args, window_variables)

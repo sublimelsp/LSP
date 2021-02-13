@@ -2,6 +2,7 @@ from .code_actions import actions_manager
 from .code_actions import CodeActionsByConfigName
 from .completion import LspResolveDocsCommand
 from .core.logging import debug
+from .core.promise import Promise, ResolveFunc
 from .core.protocol import CodeLens
 from .core.protocol import Command
 from .core.protocol import Diagnostic
@@ -19,7 +20,7 @@ from .core.signature_help import SigHelp
 from .core.types import basescope2languageid
 from .core.types import debounced
 from .core.types import FEATURES_TIMEOUT
-from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
+from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union, cast
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import document_color_params
 from .core.views import format_completion
@@ -53,7 +54,7 @@ _kind2name = {
 }
 
 ResolveCompletionsFn = Callable[[List[sublime.CompletionItem], int], None]
-
+ResolvedCompletion = Tuple[List[sublime.CompletionItem], int]
 
 def is_regular_view(v: sublime.View) -> bool:
     # Not from the quick panel (CTRL+P), must have a filename on-disk, and not a special view like a console,
@@ -606,20 +607,38 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 
-    def _on_query_completions_async(self, resolve: ResolveCompletionsFn, location: int) -> None:
-        session = self.session('completionProvider', location)
-        if not session:
-            resolve([], 0)
+    def _on_query_completions_async(self, resolve_completion_list: ResolveCompletionsFn, location: int) -> None:
+        sessions = self.sessions('completionProvider')
+        if not sessions:
+            resolve_completion_list([], 0)
             return
         self.purge_changes_async()
-        can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
-        config_name = session.config.name
-        session.send_request_async(
-            Request.complete(text_document_position_params(self.view, location), self.view),
-            lambda res: self._on_complete_result(res, resolve, can_resolve_completion_items, config_name),
-            lambda res: self._on_complete_error(res, resolve))
 
-    def _on_complete_result(self, response: Optional[Union[dict, List]], resolve: ResolveCompletionsFn,
+        completion_promises = []  # List[Promise]
+        for session in sessions:
+            can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
+            config_name = session.config.name
+
+            def completion_request() -> Promise:
+                return Promise(lambda resolve: session.send_request_async(
+                    Request.complete(text_document_position_params(self.view, location), self.view),
+                    lambda res: self._on_complete_result(res, resolve, can_resolve_completion_items, config_name),
+                    lambda res: self._on_complete_error(res, resolve)))
+
+            completion_promises.append(completion_request)
+
+        def combine_responses(responses):
+            responses = cast(List[ResolvedCompletion], responses)
+            items = []  # List[CompletionItem]
+            flags = 0  # int
+            for r in responses:
+                items.extend(r[0])
+                flags |= r[1]
+            resolve_completion_list(items, flags)
+
+        Promise.all(completion_promises).then(combine_responses)
+
+    def _on_complete_result(self, response: Optional[Union[dict, List]], resolve_promise: ResolveFunc[ResolvedCompletion],
                             can_resolve_completion_items: bool, session_name: str) -> None:
         response_items = []  # type: List[Dict]
         flags = 0
@@ -640,10 +659,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                  for index, response_item in enumerate(response_items)]
         if items:
             flags |= sublime.INHIBIT_REORDER
-        resolve(items, flags)
+        resolve_promise((items, flags))
 
-    def _on_complete_error(self, error: dict, resolve: ResolveCompletionsFn) -> None:
-        resolve([], 0)
+    def _on_complete_error(self, error: dict, resolve_promise: ResolveFunc[ResolvedCompletion]) -> None:
+        resolve_promise(([], 0))
         LspResolveDocsCommand.completions = []
         sublime.status_message('Completion error: ' + str(error.get('message')))
 

@@ -151,12 +151,10 @@ LocationLink = TypedDict('LocationLink', {
     'targetSelectionRange': Dict[str, Any]
 }, total=False)
 
-
 DiagnosticRelatedInformation = TypedDict('DiagnosticRelatedInformation', {
     'location': Location,
     'message': str
 }, total=False)
-
 
 Diagnostic = TypedDict('Diagnostic', {
     'range': RangeLsp,
@@ -169,6 +167,41 @@ Diagnostic = TypedDict('Diagnostic', {
     'relatedInformation': List[DiagnosticRelatedInformation]
 }, total=False)
 
+TextEdit = TypedDict('TextEdit', {
+    'range': RangeLsp,
+    'newText': str
+}, total=True)
+
+InsertReplaceEdit = TypedDict('InsertReplaceEdit', {
+    'replace': RangeLsp,
+    'insert': RangeLsp,
+    'newText': str
+}, total=True)
+
+CompletionItem = TypedDict('CompletionItem', {
+    'label': str,
+    'kind': Optional[int],
+    'tags': Optional[List[int]],
+    'detail': Optional[str],
+    'documentation': Optional[str],
+    'deprecated': Optional[bool],
+    'preselect': Optional[bool],
+    'sortText': Optional[str],
+    'filterText': Optional[str],
+    'insertText': Optional[str],
+    'insertTextFormat': Optional[int],
+    'insertTextMode': Optional[int],
+    'textEdit': Optional[Union[TextEdit, InsertReplaceEdit]],
+    'additionalTextEdits': Optional[List[TextEdit]],
+    'commitCharacters': Optional[List[str]],
+    'command': Optional[Command],
+    'data': Any
+}, total=True)
+
+CompletionList = TypedDict('CompletionList', {
+    'isIncomplete': bool,
+    'items': List[CompletionItem],
+}, total=True)
 
 class Request:
 

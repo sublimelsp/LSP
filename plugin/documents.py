@@ -2,8 +2,11 @@ from .code_actions import actions_manager
 from .code_actions import CodeActionsByConfigName
 from .completion import LspResolveDocsCommand
 from .core.logging import debug
-from .core.promise import Promise, ResolveFunc
+from .core.promise import Promise
+from .core.promise import ResolveFunc
 from .core.protocol import CodeLens
+from .core.protocol import CompletionItem
+from .core.protocol import CompletionList
 from .core.protocol import Command
 from .core.protocol import Diagnostic
 from .core.protocol import DocumentHighlightKind
@@ -53,8 +56,10 @@ _kind2name = {
     DocumentHighlightKind.Write: "write"
 }
 
-ResolveCompletionsFn = Callable[[List[sublime.CompletionItem], int], None]
-ResolvedCompletion = Tuple[List[sublime.CompletionItem], int]
+Flags = int
+ResolveCompletionsFn = Callable[[List[sublime.CompletionItem], Flags], None]
+ResolvedCompletion = Tuple[List[sublime.CompletionItem], Flags]
+CompletionResponse = Union[List[CompletionItem], CompletionList, None]
 
 def is_regular_view(v: sublime.View) -> bool:
     # Not from the quick panel (CTRL+P), must have a filename on-disk, and not a special view like a console,
@@ -614,7 +619,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         self.purge_changes_async()
 
-        completion_promises = []  # List[Promise]
+        completion_promises = []  # type: List[Promise[ResolvedCompletion]]
         for session in sessions:
             can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
             config_name = session.config.name
@@ -638,9 +643,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
         Promise.all(completion_promises).then(combine_responses)
 
-    def _on_complete_result(self, response: Optional[Union[dict, List]], resolve_promise: ResolveFunc[ResolvedCompletion],
+    def _on_complete_result(self, response: CompletionResponse, resolve_promise: ResolveFunc[ResolvedCompletion],
                             can_resolve_completion_items: bool, session_name: str) -> None:
-        response_items = []  # type: List[Dict]
+        response_items = []  # type: List[CompletionItem]
         flags = 0
         prefs = userprefs()
         if prefs.inhibit_snippet_completions:

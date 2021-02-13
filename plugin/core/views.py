@@ -1,5 +1,5 @@
 from .css import css as lsp_css
-from .protocol import CompletionItemTag
+from .protocol import CompletionItem, CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
 from .protocol import DiagnosticSeverity
@@ -672,7 +672,7 @@ def format_diagnostic_for_html(view: sublime.View, diagnostic: Diagnostic, base_
     return "".join(formatted)
 
 
-def _is_completion_item_deprecated(item: dict) -> bool:
+def _is_completion_item_deprecated(item: CompletionItem) -> bool:
     if item.get("deprecated", False):
         return True
     tags = item.get("tags")
@@ -682,7 +682,7 @@ def _is_completion_item_deprecated(item: dict) -> bool:
 
 
 def format_completion(
-    item: dict, index: int, can_resolve_completion_items: bool, session_name: str
+    item: CompletionItem, index: int, can_resolve_completion_items: bool, session_name: str
 ) -> sublime.CompletionItem:
     # This is a hot function. Don't do heavy computations or IO in this function.
     item_kind = item.get("kind")

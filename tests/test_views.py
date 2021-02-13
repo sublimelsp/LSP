@@ -1,3 +1,5 @@
+from copy import deepcopy
+from LSP.plugin.core.protocol import Diagnostic
 from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.protocol import Range
 from LSP.plugin.core.url import filename_to_uri
@@ -5,6 +7,7 @@ from LSP.plugin.core.views import did_change
 from LSP.plugin.core.views import did_open
 from LSP.plugin.core.views import did_save
 from LSP.plugin.core.views import document_color_params
+from LSP.plugin.core.views import format_diagnostic_for_html
 from LSP.plugin.core.views import FORMAT_STRING, FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from LSP.plugin.core.views import location_to_encoded_filename
 from LSP.plugin.core.views import lsp_color_to_html
@@ -313,3 +316,32 @@ class ViewsTest(DeferrableTestCase):
         self.assertEqual(
             document_color_params(self.view),
             {"textDocument": {"uri": filename_to_uri(self.view.file_name())}})
+
+    def test_format_diagnostic_for_html(self) -> None:
+        diagnostic1 = {
+            "message": "oops",
+            "severity": 1,
+            # The relatedInformation is present here, but it's an empty list.
+            # This should have the same behavior as having no relatedInformation present.
+            "relatedInformation": [],
+            "range": {
+                "start": {
+                    "character": 0,
+                    "line": 0
+                },
+                "end": {
+                    "character": 5,
+                    "line": 0
+                }
+            }
+        }  # type: Diagnostic
+        # Make the same diagnostic but without the relatedInformation
+        diagnostic2 = deepcopy(diagnostic1)
+        diagnostic2.pop("relatedInformation")
+        self.assertIn("relatedInformation", diagnostic1)
+        self.assertNotIn("relatedInformation", diagnostic2)
+        # They should result in the same minihtml.
+        self.assertEqual(
+            format_diagnostic_for_html(self.view, diagnostic1, "/foo/bar"),
+            format_diagnostic_for_html(self.view, diagnostic2, "/foo/bar")
+        )

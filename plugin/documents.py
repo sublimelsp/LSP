@@ -625,7 +625,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     lambda res: self._on_complete_result(res, resolve, can_resolve_completion_items, config_name),
                     lambda res: self._on_complete_error(res, resolve)))
 
-            completion_promises.append(completion_request)
+            completion_promises.append(completion_request())
 
         def combine_responses(responses):
             responses = cast(List[ResolvedCompletion], responses)

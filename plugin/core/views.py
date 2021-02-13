@@ -372,7 +372,7 @@ def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bo
         flags=flags,
         location=location,
         wrapper_class=wrapper_class,
-        max_width=view.viewport_extent()[0],
+        max_width=int(view.em_width() * 80.0),
         max_height=1000000,
         on_navigate=on_navigate)
 
@@ -395,6 +395,7 @@ def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allo
     Formats provided input content into markup accepted by minihtml.
 
     Content can be in one of those formats:
+
      - string: treated as plain text
      - MarkedString: string or { language: string; value: string }
      - MarkedString[]

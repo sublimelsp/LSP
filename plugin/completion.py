@@ -44,13 +44,11 @@ class LspResolveDocsCommand(LspTextCommand):
         return content
 
     def show_popup(self, minihtml_content: str) -> None:
-        viewport_width = self.view.viewport_extent()[0]
         show_lsp_popup(
             self.view,
             minihtml_content,
             flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
             md=True,
-            max_width=viewport_width,
             on_navigate=self.on_navigate)
 
     def on_navigate(self, url: str) -> None:

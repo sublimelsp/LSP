@@ -359,7 +359,6 @@ LSP_POPUP_SPACER_HTML = '<div class="lsp_popup--spacer"></div>'
 
 
 def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bool = False, flags: int = 0,
-                   max_width: int = 800, max_height: int = 800,
                    css: Optional[str] = None, wrapper_class: Optional[str] = None,
                    on_navigate: Optional[Callable] = None, on_hide: Optional[Callable] = None) -> None:
     css = css if css is not None else lsp_css().popups
@@ -373,8 +372,8 @@ def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bo
         flags=flags,
         location=location,
         wrapper_class=wrapper_class,
-        max_width=max_width,
-        max_height=max_height,
+        max_width=int(view.em_width() * 120.0),  # Around 120 characters per line
+        max_height=1000000,
         on_navigate=on_navigate)
 
 
@@ -396,6 +395,7 @@ def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allo
     Formats provided input content into markup accepted by minihtml.
 
     Content can be in one of those formats:
+
      - string: treated as plain text
      - MarkedString: string or { language: string; value: string }
      - MarkedString[]

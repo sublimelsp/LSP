@@ -58,8 +58,9 @@ _kind2name = {
 
 Flags = int
 ResolveCompletionsFn = Callable[[List[sublime.CompletionItem], Flags], None]
-ResolvedCompletion = Tuple[List[sublime.CompletionItem], Flags]
+
 CompletionResponse = Union[List[CompletionItem], CompletionList, None]
+CompletionResponseWithSession = Tuple[CompletionResponse, Session]
 
 def is_regular_view(v: sublime.View) -> bool:
     # Not from the quick panel (CTRL+P), must have a filename on-disk, and not a special view like a console,
@@ -619,57 +620,58 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         self.purge_changes_async()
 
-        completion_promises = []  # type: List[Promise[ResolvedCompletion]]
+        completion_promises = []  # type: List[Promise[CompletionResponseWithSession]]
         for session in sessions:
-            can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
-            config_name = session.config.name
 
             def completion_request() -> Promise:
                 return Promise(lambda resolve: session.send_request_async(
                     Request.complete(text_document_position_params(self.view, location), self.view),
-                    lambda res: self._on_complete_result(res, resolve, can_resolve_completion_items, config_name),
-                    lambda res: self._on_complete_error(res, resolve)))
+                    lambda res: self._on_complete_result(res, resolve, session),
+                    lambda res: self._on_complete_error(res, resolve, session)))
 
             completion_promises.append(completion_request())
 
-        def combine_responses(responses):
-            responses = cast(List[ResolvedCompletion], responses)
-            items = []  # List[CompletionItem]
-            flags = 0  # int
-            for r in responses:
-                items.extend(r[0])
-                flags |= r[1]
-            resolve_completion_list(items, flags)
+        LspResolveDocsCommand.completions = []
+        Promise.all(completion_promises).then(
+            lambda responses: self._on_all_settled(responses, resolve_completion_list))
 
-        Promise.all(completion_promises).then(combine_responses)
+    def _on_complete_result(self, response: CompletionResponse, resolve_promise: ResolveFunc[CompletionResponseWithSession], session: Session) -> None:
+        resolve_promise((response, session))
 
-    def _on_complete_result(self, response: CompletionResponse, resolve_promise: ResolveFunc[ResolvedCompletion],
-                            can_resolve_completion_items: bool, session_name: str) -> None:
-        response_items = []  # type: List[CompletionItem]
-        flags = 0
+    def _on_complete_error(self, error: dict, resolve_promise: ResolveFunc[CompletionResponseWithSession], session: Session) -> None:
+        resolve_promise((None, session))
+        sublime.status_message('Completion error: ' + str(error.get('message')))
+
+    def _on_all_settled(self,
+        responses: Optional[List[CompletionResponseWithSession]],
+        resolve_completion_list: ResolveCompletionsFn
+    ):
+        if not responses:
+            resolve_completion_list([], 0)
+        items = []  # type: List[sublime.CompletionItem]
+        flags = 0  # int
         prefs = userprefs()
         if prefs.inhibit_snippet_completions:
             flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
         if prefs.inhibit_word_completions:
             flags |= sublime.INHIBIT_WORD_COMPLETIONS
-        if isinstance(response, dict):
-            response_items = response["items"] or []
-            if response.get("isIncomplete", False):
-                flags |= sublime.DYNAMIC_COMPLETIONS
-        elif isinstance(response, list):
-            response_items = response
-        response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
-        LspResolveDocsCommand.completions = response_items
-        items = [format_completion(response_item, index, can_resolve_completion_items, session_name)
-                 for index, response_item in enumerate(response_items)]
+
+        for response, session in responses:
+            response_items = []  # type: List[CompletionItem]
+            if isinstance(response, dict):
+                response_items = response["items"] or []
+                if response.get("isIncomplete", False):
+                    flags |= sublime.DYNAMIC_COMPLETIONS
+            elif isinstance(response, list):
+                response_items = response
+            response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
+            LspResolveDocsCommand.completions.extend(response_items)
+            can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
+            items.extend([format_completion(response_item, len(items) + index, can_resolve_completion_items, session.config.name)
+                     for index, response_item in enumerate(response_items)])
         if items:
             flags |= sublime.INHIBIT_REORDER
-        resolve_promise((items, flags))
-
-    def _on_complete_error(self, error: dict, resolve_promise: ResolveFunc[ResolvedCompletion]) -> None:
-        resolve_promise(([], 0))
-        LspResolveDocsCommand.completions = []
-        sublime.status_message('Completion error: ' + str(error.get('message')))
+        resolve_completion_list(items, flags)
 
     # --- Public utility methods ---------------------------------------------------------------------------------------
 

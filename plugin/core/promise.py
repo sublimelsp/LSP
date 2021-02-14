@@ -75,19 +75,19 @@ class Promise(Generic[T]):
             resolve_value: The value to resolve the promise with.
         """
         def executor_func(resolve_fn: ResolveFunc[T]) -> None:
-            resolve_fn(resolve_value)
+            resolve_fn(resolve_value or None)
 
         return cls(executor_func)
 
     @classmethod
     def on_main_thread(cls, value: T = None) -> 'Promise[T]':
         """Return a promise that resolves on the main thread."""
-        return Promise(lambda resolve: sublime.set_timeout(lambda: resolve(value)))
+        return Promise(lambda resolve: sublime.set_timeout(lambda: resolve(value or None)))
 
     @classmethod
     def on_async_thread(cls, value: T = None) -> 'Promise[T]':
         """Return a promise that resolves on the worker thread."""
-        return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(value)))
+        return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(value or None)))
 
     @classmethod
     def packaged_task(cls) -> PackagedTask[T]:

@@ -372,7 +372,7 @@ def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bo
         flags=flags,
         location=location,
         wrapper_class=wrapper_class,
-        max_width=int(view.em_width() * 80.0),
+        max_width=int(view.em_width() * 120.0),  # Around 120 characters per line
         max_height=1000000,
         on_navigate=on_navigate)
 

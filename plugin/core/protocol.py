@@ -203,6 +203,7 @@ CompletionList = TypedDict('CompletionList', {
     'items': List[CompletionItem],
 }, total=True)
 
+
 class Request:
 
     __slots__ = ('method', 'params', 'view', 'progress')

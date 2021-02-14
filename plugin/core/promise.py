@@ -4,16 +4,17 @@ import sublime
 import threading
 
 T = TypeVar('T')
+TExecutor = TypeVar('TExecutor')
 T_contra = TypeVar('T_contra', contravariant=True)
 TResult = TypeVar('TResult')
 
 
 class ResolveFunc(Protocol[T_contra]):
-    def __call__(self, value: Union[T_contra, 'Promise[T_contra]'] = None) -> None:
+    def __call__(self, value: Union[T_contra, 'Promise[T_contra]']) -> None:
         ...
 
 
-FullfillFunc = Callable[[T], Union[TResult, 'Promise[TResult]', None]]
+FullfillFunc = Callable[[T], Union[TResult, 'Promise[TResult]']]
 ExecutorFunc = Callable[[ResolveFunc[T]], None]
 PackagedTask = Tuple['Promise[T]', ResolveFunc[T]]
 
@@ -91,17 +92,17 @@ class Promise(Generic[T]):
     @classmethod
     def packaged_task(cls) -> PackagedTask[T]:
 
-        class Executor:
+        class Executor(Generic[TExecutor]):
 
             __slots__ = ("resolver",)
 
             def __init__(self) -> None:
-                self.resolver = None  # type: Optional[ResolveFunc[T]]
+                self.resolver = None  # type: Optional[ResolveFunc[TExecutor]]
 
-            def __call__(self, resolver: ResolveFunc[T]) -> None:
+            def __call__(self, resolver: ResolveFunc[TExecutor]) -> None:
                 self.resolver = resolver
 
-        executor = Executor()
+        executor = Executor()  # type: Executor[T]
         promise = cls(executor)
         assert callable(executor.resolver)
         return promise, executor.resolver
@@ -121,14 +122,14 @@ class Promise(Generic[T]):
         def executor(resolve: ResolveFunc[List[T]]) -> None:
             was_resolved = False
 
-            def recheck_resolve_status(_: Optional[T]) -> None:
+            def recheck_resolve_status(_: T) -> None:
                 nonlocal was_resolved
                 # We're being called from a Promise that is holding a lock so don't try to use
                 # any methods that would try to acquire it.
                 if not was_resolved and all(p.resolved for p in promises):
                     was_resolved = True
                     values = [p.value for p in promises]
-                    resolve(values)  # type: ignore
+                    resolve(values)
 
             for p in promises:
                 assert isinstance(p, Promise)
@@ -146,7 +147,6 @@ class Promise(Generic[T]):
             It gets passed a "resolve" function. The "resolve" function, when
             called, resolves the Promise with the value passed to it.
         """
-        self.value = None  # type: Optional[T]
         self.resolved = False
         self.mutex = threading.Lock()
         self.callbacks = []  # type: List[ResolveFunc[T]]
@@ -157,7 +157,7 @@ class Promise(Generic[T]):
             return 'Promise({})'.format(self.value)
         return 'Promise(<pending>)'
 
-    def then(self, onfullfilled: FullfillFunc[Optional[T], TResult]) -> 'Promise[TResult]':
+    def then(self, onfullfilled: FullfillFunc[T, TResult]) -> 'Promise[TResult]':
         """Create a new promise and chain it with this promise.
 
         When this promise gets resolved, the callback will be called with the
@@ -168,7 +168,7 @@ class Promise(Generic[T]):
         Arguments:
             onfullfilled: The callback to call when this promise gets resolved.
         """
-        def callback_wrapper(resolve_fn: ResolveFunc[TResult], resolve_value: Optional[T]) -> None:
+        def callback_wrapper(resolve_fn: ResolveFunc[TResult], resolve_value: T) -> None:
             """A wrapper called when this promise resolves.
 
             Arguments:
@@ -179,7 +179,7 @@ class Promise(Generic[T]):
             # If returned value is a promise then this promise needs to be
             # resolved with the value of returned promise.
             if isinstance(result, Promise):
-                result.then(resolve_fn)
+                result.then(lambda value: resolve_fn(value))
             else:
                 resolve_fn(result)
 
@@ -221,6 +221,6 @@ class Promise(Generic[T]):
         with self.mutex:
             return self.resolved
 
-    def _get_value(self) -> Optional[T]:
+    def _get_value(self) -> T:
         with self.mutex:
             return self.value

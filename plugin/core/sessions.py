@@ -985,7 +985,7 @@ class Session(TransportCallbacks):
         if self._plugin:
             task = Promise.packaged_task()  # type: PackagedTask[None]
             promise, resolve = task
-            if self._plugin.on_pre_server_command(command, resolve):
+            if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                 return promise
         # TODO: Our Promise class should be able to handle errors/exceptions
         return Promise(
@@ -1046,7 +1046,7 @@ class Session(TransportCallbacks):
         changes = parse_workspace_edit(edit)
         return Promise.on_main_thread() \
             .then(lambda _: apply_workspace_edit(self.window, changes)) \
-            .then(Promise.on_async_thread)
+            .then(lambda _: Promise.on_async_thread())
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

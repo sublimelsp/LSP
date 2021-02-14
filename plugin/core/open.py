@@ -62,7 +62,7 @@ def open_file_and_center_async(window: sublime.Window, file_path: str, r: Option
     """Open a file asynchronously and center the range, worker thread version."""
     return Promise.on_main_thread() \
         .then(lambda _: open_file_and_center(window, file_path, r, flag, group)) \
-        .then(Promise.on_async_thread)
+        .then(lambda _: Promise.on_async_thread())
 
 
 def open_externally(uri: str, take_focus: bool) -> bool:

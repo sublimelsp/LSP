@@ -196,7 +196,7 @@ CompletionItem = TypedDict('CompletionItem', {
     'commitCharacters': Optional[List[str]],
     'command': Optional[Command],
     'data': Any
-}, total=True)
+}, total=False)
 
 CompletionList = TypedDict('CompletionList', {
     'isIncomplete': bool,

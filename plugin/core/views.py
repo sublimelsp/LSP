@@ -662,21 +662,19 @@ def format_completion(
 
     lsp_label = item["label"]
     lsp_filter_text = item.get("filterText")
-    lsp_detail = html.escape(item.get("detail") or "").replace('\n', ' ')
-
-    if lsp_filter_text and lsp_filter_text != lsp_label:
-        st_trigger = lsp_filter_text
-    else:
-        st_trigger = lsp_label
-
-    st_annotation = item.get("detail") or ""
+    st_annotation = (item.get("detail") or "").replace('\n', ' ')
 
     st_details = ""
     if can_resolve_completion_items or item.get("documentation"):
         st_details += make_command_link("lsp_resolve_docs", "More", {"index": index})
-        st_details += " | " if lsp_detail else ""
 
-    st_details += "<p>{}</p>".format(lsp_detail)
+    if lsp_filter_text and lsp_filter_text != lsp_label:
+        st_trigger = lsp_filter_text
+        if st_details:
+            st_details += " | "
+        st_details += "<p>{}</p>".format(html.escape(lsp_label))
+    else:
+        st_trigger = lsp_label
 
     # NOTE: Some servers return "textEdit": null. We have to check if it's truthy.
     if item.get("textEdit") or item.get("additionalTextEdits") or item.get("command"):

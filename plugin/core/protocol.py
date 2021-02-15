@@ -58,6 +58,10 @@ CodeDescription = TypedDict('CodeDescription', {
     'href': str
 }, total=True)
 
+MarkupContent = TypedDict('MarkupContent', {
+    'kind': str,
+    'value': str
+}, total=True)
 
 ExecuteCommandParams = TypedDict('ExecuteCommandParams', {
     'command': str,
@@ -183,7 +187,7 @@ CompletionItem = TypedDict('CompletionItem', {
     'kind': Optional[int],
     'tags': Optional[List[int]],
     'detail': Optional[str],
-    'documentation': Optional[str],
+    'documentation': Optional[Union[str, MarkupContent]],
     'deprecated': Optional[bool],
     'preselect': Optional[bool],
     'sortText': Optional[str],

@@ -1,5 +1,6 @@
 from .css import css as lsp_css
-from .protocol import CompletionItem, CompletionItemTag
+from .protocol import CompletionItem
+from .protocol import CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
 from .protocol import DiagnosticSeverity

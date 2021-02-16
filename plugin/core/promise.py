@@ -65,7 +65,7 @@ class Promise(Generic[T]):
     """
 
     @classmethod
-    def resolve(cls, resolve_value: T = None) -> 'Promise[T]':
+    def resolve(cls, resolve_value: T) -> 'Promise[T]':
         """Immediately resolves a Promise.
 
         Convenience function for creating a Promise that gets immediately
@@ -80,12 +80,12 @@ class Promise(Generic[T]):
         return cls(executor_func)
 
     @classmethod
-    def on_main_thread(cls, value: T = None) -> 'Promise[T]':
+    def on_main_thread(cls, value: T) -> 'Promise[T]':
         """Return a promise that resolves on the main thread."""
         return Promise(lambda resolve: sublime.set_timeout(lambda: resolve(value)))
 
     @classmethod
-    def on_async_thread(cls, value: T = None) -> 'Promise[T]':
+    def on_async_thread(cls, value: T) -> 'Promise[T]':
         """Return a promise that resolves on the worker thread."""
         return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(value)))
 

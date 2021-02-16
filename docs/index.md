@@ -405,16 +405,19 @@ npm install -g flow-language-server
 
 ### Haskell
 
-1. Install [ghcide](https://github.com/digital-asset/ghcide).
+1. Install [haskell-language-server](https://github.com/haskell/haskell-language-server).
 2. Add to LSP settings' clients:
 
 ```js
-"ghcide": {
-  "enabled": true,
-  "languageId": "haskell",
-  "command": ["ghcide", "--lsp"],
-  "scopes": ["source.haskell"],
-  "syntaxes": ["Packages/Haskell/Haskell.sublime-syntax"]
+{
+  "clients": {
+    "haskell-language-server": {
+      "command": ["haskell-language-server-wrapper", "--lsp"],
+      "scopes": ["source.haskell"],
+      "syntaxes": ["Packages/Haskell/Haskell.sublime-syntax"],
+      "languageId": "haskell"
+    }
+  }
 }
 ```
 

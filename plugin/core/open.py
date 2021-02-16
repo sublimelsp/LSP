@@ -58,7 +58,7 @@ def open_file_and_center(window: sublime.Window, file_path: str, r: Optional[Ran
 
 
 def open_file_and_center_async(window: sublime.Window, file_path: str, r: Optional[RangeLsp], flag: int = 0,
-                               group: int = -1) -> Promise:
+                               group: int = -1) -> Promise[None]:
     """Open a file asynchronously and center the range, worker thread version."""
     return Promise.on_main_thread(None) \
         .then(lambda _: open_file_and_center(window, file_path, r, flag, group)) \

@@ -1038,7 +1038,7 @@ class Session(TransportCallbacks):
             return promise.then(lambda _: self.execute_command(execute_command, False))
         return promise
 
-    def _apply_workspace_edit_async(self, edit: Any) -> Promise:
+    def _apply_workspace_edit_async(self, edit: Any) -> Promise[None]:
         """
         Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
         applied.

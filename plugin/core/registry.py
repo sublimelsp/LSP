@@ -29,6 +29,17 @@ def best_session(view: sublime.View, sessions: Iterable[Session], point: Optiona
         return None
 
 
+def sessions(view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
+    yield from sessions_for_view(view, capability)
+
+
+def session_by_name(view: sublime.View, session_name: str) -> Optional[Session]:
+    for session in sessions(view):
+        if session.config.name == session_name:
+            return session
+    return None
+
+
 configs = ConfigManager(client_configs.all)
 client_configs.set_listener(configs.update)
 windows = WindowRegistry(configs)
@@ -68,7 +79,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
                 return False
         if not self.capability and not self.session_name:
             # Any session will do.
-            return any(self.sessions())
+            return any(sessions(self.view))
         return True
 
     def want_event(self) -> bool:
@@ -80,13 +91,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
     def session_by_name(self, name: Optional[str] = None) -> Optional[Session]:
         target = name if name else self.session_name
-        for session in self.sessions():
-            if session.config.name == target:
-                return session
-        return None
-
-    def sessions(self, capability: Optional[str] = None) -> Generator[Session, None, None]:
-        yield from sessions_for_view(self.view, capability)
+        return session_by_name(self.view, target)
 
 
 class LspRestartClientCommand(sublime_plugin.TextCommand):

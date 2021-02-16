@@ -58,6 +58,12 @@ CodeDescription = TypedDict('CodeDescription', {
     'href': str
 }, total=True)
 
+MarkedStringDict = TypedDict('MarkedStringDict', {
+    'language': str,
+    'value': str
+}, total=True)
+MarkedString = Union[str, MarkedStringDict]
+
 MarkupContent = TypedDict('MarkupContent', {
     'kind': str,
     'value': str
@@ -97,13 +103,13 @@ CodeLens = TypedDict('CodeLens', {
 
 ParameterInformation = TypedDict('ParameterInformation', {
     'label': Union[str, List[int]],
-    'documentation': Union[str, Dict[str, str]]
+    'documentation': Union[str, MarkupContent]
 }, total=False)
 
 
 SignatureInformation = TypedDict('SignatureInformation', {
     'label': str,
-    'documentation': Union[str, Dict[str, str]],
+    'documentation': Union[str, MarkupContent],
     'parameters': List[ParameterInformation]
 }, total=False)
 

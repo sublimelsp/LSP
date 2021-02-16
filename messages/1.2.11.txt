@@ -1,0 +1,17 @@
+=> 1.2.11
+
+Fixes and features:
+- Account for font size for popup width (#1580) (Raoul Wols)
+  em_width() is now employed instead of a hardcoded 800px
+- Fix a tiny html render bug regarding diagnostic.relatedInformation (Raoul Wols)
+- Expand also built-in variables in lsp_execute's command arguments (#1577) (Rafał Chłodnicki)
+- Change popup style (#1574) (Предраг Николић / Predrag Nikolic)
+- A bit more precise selectors so users can customize their color scheme (Raoul Wols)
+  You can assign colors to the following scopes in your color scheme to customize
+  the signature help look:
+  * entity.name.function.sighelp.lsp
+  * variable.function.sighelp.lsp
+- Fix #1572: prefer documentEdits over changes (Raoul Wols)
+  This fixes a bug in LSP that caused duplicate text edits for the elm language server
+- Fix issue with diagnostics regions sometimes not being removed on undo (Rafał Chłodnicki)
+- Fix inconsistent popup's bottom margins (#1568) (Rafał Chłodnicki)

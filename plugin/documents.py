@@ -627,7 +627,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             def completion_request() -> Promise:
                 return Promise(lambda resolve: session.send_request_async(
                     Request.complete(text_document_position_params(self.view, location), self.view),
-                    lambda res: self._on_complete_result(res, resolve, session),
+                    lambda res: resolve((res, session)),
                     lambda res: self._on_complete_error(res, resolve, session)))
 
             completion_promises.append(completion_request())
@@ -635,10 +635,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         LspResolveDocsCommand.completions = []
         Promise.all(completion_promises).then(
             lambda responses: self._on_all_settled(responses, resolve_completion_list))
-
-    def _on_complete_result(self, response: CompletionResponse,
-                            resolve_promise: ResolveFunc[CompletionResponseWithSession], session: Session) -> None:
-        resolve_promise((response, session))
 
     def _on_complete_error(self, error: dict,
                            resolve_promise: ResolveFunc[CompletionResponseWithSession], session: Session) -> None:

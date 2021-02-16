@@ -645,12 +645,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _on_all_settled(
         self,
-        responses: Optional[List[ResolvedCompletions]],
+        responses: List[ResolvedCompletions],
         resolve_completion_list: ResolveCompletionsFn
     ) -> None:
-        if not responses:
-            resolve_completion_list([], 0)
-            return
         items = []  # type: List[sublime.CompletionItem]
         flags = 0  # int
         prefs = userprefs()

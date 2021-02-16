@@ -985,7 +985,7 @@ class Session(TransportCallbacks):
         if self._plugin:
             task = Promise.packaged_task()  # type: PackagedTask[None]
             promise, resolve = task
-            if self._plugin.on_pre_server_command(command, resolve):
+            if self._plugin.on_pre_server_command(command, lambda: resolve(None)):
                 return promise
         # TODO: Our Promise class should be able to handle errors/exceptions
         return Promise(
@@ -1020,15 +1020,15 @@ class Session(TransportCallbacks):
             return self.send_request_task(request)
         return Promise.resolve(code_action)
 
-    def _apply_code_action_async(self, code_action: Union[CodeAction, Error, None]) -> Promise:
+    def _apply_code_action_async(self, code_action: Union[CodeAction, Error, None]) -> Promise[None]:
         if not code_action:
-            return Promise.resolve()
+            return Promise.resolve(None)
         if isinstance(code_action, Error):
             # TODO: our promise must be able to handle exceptions (or, wait until we can use coroutines)
             self.window.status_message("Failed to apply code action: {}".format(code_action))
-            return Promise.resolve()
+            return Promise.resolve(None)
         edit = code_action.get("edit")
-        promise = self._apply_workspace_edit_async(edit) if edit else Promise.resolve()
+        promise = self._apply_workspace_edit_async(edit) if edit else Promise.resolve(None)
         command = code_action.get("command")
         if isinstance(command, dict):
             execute_command = {
@@ -1038,15 +1038,15 @@ class Session(TransportCallbacks):
             return promise.then(lambda _: self.execute_command(execute_command, False))
         return promise
 
-    def _apply_workspace_edit_async(self, edit: Any) -> Promise:
+    def _apply_workspace_edit_async(self, edit: Any) -> Promise[None]:
         """
         Apply workspace edits, and return a promise that resolves on the async thread again after the edits have been
         applied.
         """
         changes = parse_workspace_edit(edit)
-        return Promise.on_main_thread() \
+        return Promise.on_main_thread(None) \
             .then(lambda _: apply_workspace_edit(self.window, changes)) \
-            .then(Promise.on_async_thread)
+            .then(lambda _: Promise.on_async_thread(None))
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

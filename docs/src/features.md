@@ -182,7 +182,6 @@ Add these settings to LSP settings, your Sublime settings, Syntax-specific setti
 * `diagnostics_highlight_style` `"underline"` *highlight style of code diagnostics: "box", "underline", "stippled", "squiggly" or ""*
 * `highlight_active_signature_parameter`: *highlight the active parameter of the currently active signature*
 * `document_highlight_style`: *document highlight style: "box", "underline", "stippled", "squiggly" or ""*
-* `document_highlight_scopes`: *customize your sublime text scopes for document highlighting*
 * `diagnostics_gutter_marker` `"dot"` *gutter marker for code diagnostics: "dot", "circle", "bookmark", "sign" or ""*
 * `show_symbol_action_links` `false` *show links to symbol actions like go to, references and rename in the hover popup*
 * `disabled_capabilities`, `[]` *Turn off client capabilities (features): "hover", "completion", "documentHighlight", "colorProvider", "signatureHelp", "codeLensProvider", "codeActionProvider"*
@@ -190,3 +189,54 @@ Add these settings to LSP settings, your Sublime settings, Syntax-specific setti
 * `log_server` `[]` *log communication from and to language servers*
 * `log_stderr` `false` *show language server stderr output in the console*
 * `log_max_size` `8192` *max  number of characters of payloads to print*
+
+### Color configurations
+
+Some features use TextMate scopes to control the colors (underline, background or text color) of styled regions in a document or popup.
+Colors can be customized by adding a rule for these scopes into your color scheme, see https://www.sublimetext.com/docs/3/color_schemes.html#customization.
+
+The following tables give an overview about the scope names used by LSP.
+
+#### Document Highlights
+
+!!! info "This feature is only available if the server has the *documentHighlightProvider* capability."
+    Highlights other occurrences of the symbol at a given cursor position.
+
+| scope | DocumentHighlightKind | description |
+| ----- | --------------------- | ----------- |
+| `markup.highlight.text.lsp` | Text | A textual occurrence |
+| `markup.highlight.read.lsp` | Read | Read-access of a symbol, like reading a variable |
+| `markup.highlight.write.lsp` | Write | Write-access of a symbol, like writing to a variable |
+
+If `document_highlight_style` is set to "fill" in the LSP settings, additionally `meta.fill.lsp` gets prepended to the listed scopes.
+
+#### Diagnostics
+
+=== "Sublime Text 4"
+| scope | DiagnosticSeverity | description |
+| ----- | ------------------ | ----------- |
+| `region.redish` | Error | Reports an error |
+| `region.yellowish` | Warning | Reports a warning |
+| `region.bluish` | Information | Reports an information |
+| `region.bluish` | Hint | Reports a hint |
+
+=== "Sublime Text 3"
+| scope | DiagnosticSeverity | description |
+| ----- | ------------------ | ----------- |
+| `markup.error.lsp` | Error | Reports an error |
+| `markup.warning.lsp` | Warning | Reports a warning |
+| `markup.info.lsp` | Information | Reports an information |
+| `markup.info.suggestion.lsp` | Hint | Reports a hint |
+
+#### Signature Help
+
+| scope | description |
+| ----- | ----------- |
+| `entity.name.function.sighelp.lsp` | Function name in the signature help popup |
+| `variable.parameter.sighelp.lsp` | Function argument in the signature help popup |
+
+#### Code Lens
+
+| scope | description |
+| ----- | ----------- |
+| `markup.codelens.accent` | Accent color for code lens annotations |

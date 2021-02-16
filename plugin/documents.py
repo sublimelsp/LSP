@@ -16,6 +16,7 @@ from .core.protocol import Request
 from .core.protocol import SignatureHelp
 from .core.registry import best_session
 from .core.registry import LspTextCommand
+from .core.registry import session_by_name
 from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
@@ -59,8 +60,9 @@ _kind2name = {
 Flags = int
 ResolveCompletionsFn = Callable[[List[sublime.CompletionItem], Flags], None]
 
+SessionName = str
 CompletionResponse = Union[List[CompletionItem], CompletionList, None]
-CompletionResponseWithSession = Tuple[CompletionResponse, Session]
+ResolvedCompletions = Tuple[CompletionResponse, SessionName]
 
 
 def is_regular_view(v: sublime.View) -> bool:
@@ -621,14 +623,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             return
         self.purge_changes_async()
 
-        completion_promises = []  # type: List[Promise[CompletionResponseWithSession]]
+        completion_promises = []  # type: List[Promise[ResolvedCompletions]]
         for session in sessions:
 
             def completion_request() -> Promise:
                 return Promise(lambda resolve: session.send_request_async(
                     Request.complete(text_document_position_params(self.view, location), self.view),
-                    lambda res: resolve((res, session)),
-                    lambda res: self._on_complete_error(res, resolve, session)))
+                    lambda res: resolve((res, session.config.name)),
+                    lambda res: self._on_complete_error(res, resolve, session.config.name)))
 
             completion_promises.append(completion_request())
 
@@ -637,13 +639,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             lambda responses: self._on_all_settled(responses, resolve_completion_list))
 
     def _on_complete_error(self, error: dict,
-                           resolve_promise: ResolveFunc[CompletionResponseWithSession], session: Session) -> None:
-        resolve_promise((None, session))
+                           resolve_promise: ResolveFunc[ResolvedCompletions], session_name: str) -> None:
+        resolve_promise((None, session_name))
         sublime.status_message('Completion error: ' + str(error.get('message')))
 
     def _on_all_settled(
         self,
-        responses: Optional[List[CompletionResponseWithSession]],
+        responses: Optional[List[ResolvedCompletions]],
         resolve_completion_list: ResolveCompletionsFn
     ) -> None:
         if not responses:
@@ -657,7 +659,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if prefs.inhibit_word_completions:
             flags |= sublime.INHIBIT_WORD_COMPLETIONS
 
-        for response, session in responses:
+        for response, session_name in responses:
+            session = session_by_name(self.view, session_name)
+            if not session:
+                continue
+
             response_items = []  # type: List[CompletionItem]
             if isinstance(response, dict):
                 response_items = response["items"] or []
@@ -667,7 +673,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 response_items = response
             response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
             LspResolveDocsCommand.completions.extend(response_items)
-            can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
+            can_resolve_completion_items = session.has_capability('completionProvider.resolveProvider')
             items.extend(
                 [format_completion(response_item, len(items) + index, can_resolve_completion_items, session.config.name)
                  for index, response_item in enumerate(response_items)])

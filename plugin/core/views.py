@@ -8,6 +8,7 @@ from .protocol import InsertTextFormat
 from .protocol import Location
 from .protocol import LocationLink
 from .protocol import Notification
+from .protocol import MarkupContent
 from .protocol import Point
 from .protocol import Range
 from .protocol import Request
@@ -392,7 +393,7 @@ FORMAT_MARKED_STRING = 0x2
 FORMAT_MARKUP_CONTENT = 0x4
 
 
-def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allowed_formats: int) -> str:
+def minihtml(view: sublime.View, content: Union[str, MarkupContent, list], allowed_formats: int) -> str:
     """
     Formats provided input content into markup accepted by minihtml.
 
@@ -708,7 +709,7 @@ def format_completion(
 
     st_details = ""
     if can_resolve_completion_items or item.get("documentation"):
-        st_details += make_command_link("lsp_resolve_docs", "More", {"index": index})
+        st_details += make_command_link("lsp_resolve_docs", "More", {"index": index, "session_name": session_name})
         st_details += " | " if lsp_detail else ""
 
     st_details += "<p>{}</p>".format(lsp_detail)

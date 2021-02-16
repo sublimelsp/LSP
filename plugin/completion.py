@@ -3,8 +3,9 @@ import sublime_plugin
 import webbrowser
 from .core.logging import debug
 from .core.edit import parse_text_edit
-from .core.protocol import Request, InsertTextFormat, Range, CompletionItem
+from .core.protocol import Request, InsertTextFormat, Range, CompletionItem, MarkupContent
 from .core.registry import LspTextCommand
+from .core.registry import session_by_name
 from .core.typing import Any, List, Dict, Optional, Generator, Union
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .core.views import range_to_region
@@ -16,7 +17,7 @@ class LspResolveDocsCommand(LspTextCommand):
 
     completions = []  # type: List[CompletionItem]
 
-    def run(self, edit: sublime.Edit, index: int, event: Optional[dict] = None) -> None:
+    def run(self, edit: sublime.Edit, index: int, session_name: str, event: Optional[dict] = None) -> None:
         item = self.completions[index]
         detail = self.format_documentation(item.get('detail') or "")
         documentation = self.format_documentation(item.get("documentation") or "")
@@ -25,14 +26,14 @@ class LspResolveDocsCommand(LspTextCommand):
         if not detail or not documentation:
             # To make sure that the detail or documentation fields doesn't exist we need to resove the completion item.
             # If those fields appear after the item is resolved we show them in the popup.
-            session = self.best_session('completionProvider.resolveProvider')
-            if session:
+            session = session_by_name(self.view, session_name)
+            if session and session.has_capability('completionProvider.resolveProvider'):
                 session.send_request(Request.resolveCompletionItem(item, self.view), self.handle_resolve_response)
                 return
         minihtml_content = self.get_content(documentation, detail)
         self.show_popup(minihtml_content)
 
-    def format_documentation(self, content: Union[str, Dict[str, str]]) -> str:
+    def format_documentation(self, content: Union[str, MarkupContent]) -> str:
         return minihtml(self.view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
 
     def get_content(self, documentation: str, detail: str) -> str:

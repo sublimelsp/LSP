@@ -208,7 +208,8 @@ The following tables give an overview about the scope names used by LSP.
 | `markup.highlight.read.lsp` | Read | Read-access of a symbol, like reading a variable |
 | `markup.highlight.write.lsp` | Write | Write-access of a symbol, like writing to a variable |
 
-If `document_highlight_style` is set to "fill" in the LSP settings, additionally `meta.fill.lsp` gets prepended to the listed scopes.
+!!! note
+    If `document_highlight_style` is set to "fill" in the LSP settings, the highlighting color can be controlled via the "background" color from a color scheme rule for the listed scopes.
 
 #### Diagnostics
 

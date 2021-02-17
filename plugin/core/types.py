@@ -72,7 +72,7 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
 def _settings_style_to_add_regions_flag(style: str) -> int:
     flags = 0
     if style == "fill":
-        pass
+        flags = sublime.DRAW_NO_OUTLINE
     elif style == "box":
         flags = sublime.DRAW_NO_FILL
     else:

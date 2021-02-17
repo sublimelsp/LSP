@@ -52,9 +52,9 @@ _kind2name = {
 }
 
 _kind2scope = {
-    DocumentHighlightKind.Text: "text markup.highlight.text.lsp",
-    DocumentHighlightKind.Read: "markup.inserted markup.highlight.read.lsp",
-    DocumentHighlightKind.Write: "markup.changed markup.highlight.write.lsp"
+    DocumentHighlightKind.Text: "region.bluish markup.highlight.text.lsp",
+    DocumentHighlightKind.Read: "region.greenish markup.highlight.read.lsp",
+    DocumentHighlightKind.Write: "region.yellowish markup.highlight.write.lsp"
 }
 
 ResolveCompletionsFn = Callable[[List[sublime.CompletionItem], int], None]
@@ -606,8 +606,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             for kind, regions in kind2regions.items():
                 if regions:
                     scope = _kind2scope[kind]
-                    if not flags & sublime.DRAW_NO_FILL:
-                        scope = "meta.fill.lsp " + scope
                     self.view.add_regions(
                         "lsp_highlight_{}".format(_kind2name[kind]),
                         regions,

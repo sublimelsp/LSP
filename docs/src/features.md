@@ -218,7 +218,7 @@ The following tables give an overview about the scope names used by LSP.
 | `markup.error.lsp` | Error | Reports an error |
 | `markup.warning.lsp` | Warning | Reports a warning |
 | `markup.info.lsp` | Information | Reports an information |
-| `markup.info.suggestion.lsp` | Hint | Reports a hint |
+| `markup.info.hint.lsp` | Hint | Reports a hint |
 
 !!! note
     If `diagnostics_highlight_style` is set to "fill" in the LSP settings, the highlighting color can be controlled via the "background" color from a color scheme rule for the listed scopes.

@@ -213,21 +213,15 @@ The following tables give an overview about the scope names used by LSP.
 
 #### Diagnostics
 
-=== "Sublime Text 4"
-| scope | DiagnosticSeverity | description |
-| ----- | ------------------ | ----------- |
-| `region.redish` | Error | Reports an error |
-| `region.yellowish` | Warning | Reports a warning |
-| `region.bluish` | Information | Reports an information |
-| `region.bluish` | Hint | Reports a hint |
-
-=== "Sublime Text 3"
 | scope | DiagnosticSeverity | description |
 | ----- | ------------------ | ----------- |
 | `markup.error.lsp` | Error | Reports an error |
 | `markup.warning.lsp` | Warning | Reports a warning |
 | `markup.info.lsp` | Information | Reports an information |
 | `markup.info.suggestion.lsp` | Hint | Reports a hint |
+
+!!! note
+    If `diagnostics_highlight_style` is set to "fill" in the LSP settings, the highlighting color can be controlled via the "background" color from a color scheme rule for the listed scopes.
 
 #### Signature Help
 

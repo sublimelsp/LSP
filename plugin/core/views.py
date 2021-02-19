@@ -24,11 +24,11 @@ import sublime_plugin
 import tempfile
 
 DIAGNOSTIC_SEVERITY = [
-    # Kind       CSS class   Scope for color     Icon resource
-    ("error",   "errors",   "region.redish",    "Packages/LSP/icons/error.png"),
-    ("warning", "warnings", "region.yellowish", "Packages/LSP/icons/warning.png"),
-    ("info",    "info",     "region.bluish",    "Packages/LSP/icons/info.png"),
-    ("hint",    "hints",    "region.bluish",    "Packages/LSP/icons/info.png"),
+    # Kind       CSS class   Scope for color                        Icon resource
+    ("error",   "errors",   "region.redish markup.error.lsp",      "Packages/LSP/icons/error.png"),
+    ("warning", "warnings", "region.yellowish markup.warning.lsp", "Packages/LSP/icons/warning.png"),
+    ("info",    "info",     "region.bluish markup.info.lsp",       "Packages/LSP/icons/info.png"),
+    ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "Packages/LSP/icons/info.png"),
 ]
 
 # The scope names mainly come from http://www.sublimetext.com/docs/3/scope_naming.html

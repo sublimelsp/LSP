@@ -1,6 +1,5 @@
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
-from .core.protocol import DiagnosticTag
 from .core.protocol import TextDocumentSyncKindFull
 from .core.protocol import TextDocumentSyncKindNone
 from .core.protocol import Range

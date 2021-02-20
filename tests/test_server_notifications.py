@@ -1,6 +1,8 @@
+from LSP.plugin.core.protocol import DiagnosticSeverity
+from LSP.plugin.core.protocol import DiagnosticTag
+from LSP.plugin.core.protocol import PublishDiagnosticsParams
 from LSP.plugin.core.typing import Generator
 from LSP.plugin.core.url import filename_to_uri
-from LSP.plugin.core.protocol import DiagnosticSeverity
 from setup import TextDocumentTestCase
 import sublime
 
@@ -9,8 +11,8 @@ class ServerNotifications(TextDocumentTestCase):
 
     def test_publish_diagnostics(self) -> Generator:
         self.insert_characters("a b c\n")
-        yield from self.await_client_notification("textDocument/publishDiagnostics", {
-            'uri': filename_to_uri(self.view.file_name()),
+        params = {
+            'uri': filename_to_uri(self.view.file_name() or ''),
             'diagnostics': [
                 {
                     'message': "foo",
@@ -28,19 +30,27 @@ class ServerNotifications(TextDocumentTestCase):
                     'message': "baz",
                     'severity': DiagnosticSeverity.Information,
                     'source': 'qux',
-                    'range': {'end': {'character': 5, 'line': 0}, 'start': {'character': 4, 'line': 0}}
+                    'range': {'end': {'character': 5, 'line': 0}, 'start': {'character': 4, 'line': 0}},
+                    'tags': [DiagnosticTag.Unnecessary]
                 }
             ]
-        })
+        }  # type: PublishDiagnosticsParams
+        yield from self.await_client_notification("textDocument/publishDiagnostics", params)
         yield lambda: len(self.view.get_regions("lspTESTd1")) > 0
         yield lambda: len(self.view.get_regions("lspTESTd2")) > 0
         yield lambda: len(self.view.get_regions("lspTESTd3")) > 0
         errors = self.view.get_regions("lspTESTd1")
         warnings = self.view.get_regions("lspTESTd2")
         info = self.view.get_regions("lspTESTd3")
+        info_tags = self.view.get_regions("lspTESTd3_tags")
+        self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0], sublime.Region(0, 1))
+        self.assertEqual(len(warnings), 1)
         self.assertEqual(warnings[0], sublime.Region(2, 3))
+        self.assertEqual(len(info), 1)
         self.assertEqual(info[0], sublime.Region(4, 5))
+        self.assertEqual(len(info_tags), 1)
+        self.assertEqual(info_tags[0], sublime.Region(4, 5))
 
         # Testing whether the popup with the diagnostic moves along with next_result
 

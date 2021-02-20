@@ -181,6 +181,7 @@ class SessionView:
             data = data_per_severity.get(severity)
             if data is None:
                 self.view.erase_regions(key)
+                self.view.erase_regions('{}_tags'.format(key))
             elif ((severity <= userprefs().show_diagnostics_severity_level) and
                     (data.icon or flags != (sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE))):
                 # allow showing diagnostics with same begin and end range in the view
@@ -192,9 +193,10 @@ class SessionView:
                         if v in data.tags:
                             tag_scopes.append('markup.tag.{}.lsp'.format(k.lower()))
                     if tag_scopes:
-                        self.view.add_regions(key, data.regions, ' '.join(tag_scopes))
+                        self.view.add_regions('{}_tags'.format(key), data.regions, ' '.join(tag_scopes))
             else:
                 self.view.erase_regions(key)
+                self.view.erase_regions('{}_tags'.format(key))
         listener = self.listener()
         if listener:
             listener.on_diagnostics_updated_async()

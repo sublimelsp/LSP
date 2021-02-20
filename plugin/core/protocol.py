@@ -169,8 +169,15 @@ Diagnostic = TypedDict('Diagnostic', {
     'codeDescription': CodeDescription,
     'source': str,
     'message': str,
-    'tags': List[DiagnosticTag],
+    'tags': List[int],
     'relatedInformation': List[DiagnosticRelatedInformation]
+}, total=False)
+
+
+PublishDiagnosticsParams = TypedDict('PublishDiagnosticsParams', {
+    'uri': DocumentUri,
+    'version': Optional[int],
+    'diagnostics': List[Diagnostic],
 }, total=False)
 
 

@@ -1,4 +1,3 @@
-from .core.logging import debug
 from .core.progress import ViewProgressReporter
 from .core.protocol import Notification
 from .core.protocol import Request
@@ -51,10 +50,8 @@ class SessionView:
             self._increment_hover_count()
         self._clear_auto_complete_triggers(settings)
         self._setup_auto_complete_triggers(settings)
-        debug(self, "__init__")
 
     def __del__(self) -> None:
-        debug(self, "__del__")
         settings = self.view.settings()  # type: sublime.Settings
         self._clear_auto_complete_triggers(settings)
         if self.session.has_capability(self.HOVER_PROVIDER_KEY):
@@ -249,4 +246,4 @@ class SessionView:
         return progress
 
     def __str__(self) -> str:
-        return '{}:{}:{}'.format(self.session.config.name, self.session.window.id(), self.view.id())
+        return '{}:{}'.format(self.session.config.name, self.view.id())

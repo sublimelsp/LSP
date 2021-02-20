@@ -1,4 +1,3 @@
-from re import DEBUG
 from .collections import DottedDict
 from .edit import apply_workspace_edit
 from .edit import parse_workspace_edit
@@ -771,10 +770,6 @@ class Session(TransportCallbacks):
         self._progress = {}  # type: Dict[str, Optional[WindowProgressReporter]]
         self._plugin_class = plugin_class
         self._plugin = None  # type: Optional[AbstractPlugin]
-        debug(self, "__init__")
-
-    def __del__(self) -> None:
-        debug(self, "__del__")
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -1369,6 +1364,3 @@ class Session(TransportCallbacks):
 
     def _get_handler(self, method: str) -> Optional[Callable]:
         return getattr(self, method2attr(method), None)
-
-    def __str__(self) -> str:
-        return "<Session {}, window {}, {}>".format(self.config.name, self.window.id(), self._workspace_folders)

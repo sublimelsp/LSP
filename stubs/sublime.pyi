@@ -244,11 +244,11 @@ def save_settings(base_name: str) -> None:
     ...
 
 
-def set_timeout(f: Callable[[], None], timeout_ms: int = ...) -> None:
+def set_timeout(f: Callable[[], Any], timeout_ms: int = ...) -> None:
     ...
 
 
-def set_timeout_async(f: Callable[[], None], timeout_ms: int = ...) -> None:
+def set_timeout_async(f: Callable[[], Any], timeout_ms: int = ...) -> None:
     ...
 
 

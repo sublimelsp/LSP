@@ -4,9 +4,9 @@ from .completion import LspResolveDocsCommand
 from .core.logging import debug
 from .core.promise import Promise
 from .core.protocol import CodeLens
+from .core.protocol import Command
 from .core.protocol import CompletionItem
 from .core.protocol import CompletionList
-from .core.protocol import Command
 from .core.protocol import Diagnostic
 from .core.protocol import DocumentHighlightKind
 from .core.protocol import Error

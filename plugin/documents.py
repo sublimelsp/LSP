@@ -621,7 +621,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             resolve_completion_list([], 0)
             return
         self.purge_changes_async()
-
         completion_promises = []  # type: List[Promise[ResolvedCompletions]]
         for session in sessions:
 
@@ -631,7 +630,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 ).then(lambda response: (response, session.config.name))
 
             completion_promises.append(completion_request())
-
         LspResolveDocsCommand.completions = []
         Promise.all(completion_promises).then(
             lambda responses: self._on_all_settled(responses, resolve_completion_list))

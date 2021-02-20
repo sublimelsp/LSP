@@ -10,6 +10,7 @@ from .core.protocol import CompletionList
 from .core.protocol import Command
 from .core.protocol import Diagnostic
 from .core.protocol import DocumentHighlightKind
+from .core.protocol import Error
 from .core.protocol import Notification
 from .core.protocol import Range
 from .core.protocol import Request
@@ -61,7 +62,7 @@ ResolveCompletionsFn = Callable[[List[sublime.CompletionItem], Flags], None]
 
 SessionName = str
 CompletionResponse = Union[List[CompletionItem], CompletionList, None]
-ResolvedCompletions = Tuple[CompletionResponse, SessionName]
+ResolvedCompletions = Tuple[Union[CompletionResponse, Error], SessionName]
 
 
 def is_regular_view(v: sublime.View) -> bool:
@@ -625,22 +626,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         completion_promises = []  # type: List[Promise[ResolvedCompletions]]
         for session in sessions:
 
-            def completion_request() -> Promise:
-                return Promise(lambda resolve: session.send_request_async(
-                    Request.complete(text_document_position_params(self.view, location), self.view),
-                    lambda res: resolve((res, session.config.name)),
-                    lambda res: self._on_complete_error(res, resolve, session.config.name)))
+            def completion_request() -> Promise[ResolvedCompletions]:
+                return session.send_request_task(
+                    Request.complete(text_document_position_params(self.view, location), self.view)
+                ).then(lambda response: (response, session.config.name))
 
             completion_promises.append(completion_request())
 
         LspResolveDocsCommand.completions = []
         Promise.all(completion_promises).then(
             lambda responses: self._on_all_settled(responses, resolve_completion_list))
-
-    def _on_complete_error(self, error: dict,
-                           resolve_promise: ResolveFunc[ResolvedCompletions], session_name: str) -> None:
-        resolve_promise((None, session_name))
-        sublime.status_message('Completion error: ' + str(error.get('message')))
 
     def _on_all_settled(
         self,
@@ -656,6 +651,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             flags |= sublime.INHIBIT_WORD_COMPLETIONS
 
         for response, session_name in responses:
+            if isinstance(response, Error):
+                sublime.status_message('Completion error: '.format(response))
+                continue
+
             session = self.session_by_name(session_name)
             if not session:
                 continue

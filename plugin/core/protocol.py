@@ -58,16 +58,6 @@ CodeDescription = TypedDict('CodeDescription', {
     'href': str
 }, total=True)
 
-MarkedStringDict = TypedDict('MarkedStringDict', {
-    'language': str,
-    'value': str
-}, total=True)
-MarkedString = Union[str, MarkedStringDict]
-
-MarkupContent = TypedDict('MarkupContent', {
-    'kind': str,
-    'value': str
-}, total=True)
 
 ExecuteCommandParams = TypedDict('ExecuteCommandParams', {
     'command': str,
@@ -103,13 +93,13 @@ CodeLens = TypedDict('CodeLens', {
 
 ParameterInformation = TypedDict('ParameterInformation', {
     'label': Union[str, List[int]],
-    'documentation': Union[str, MarkupContent]
+    'documentation': Union[str, Dict[str, str]]
 }, total=False)
 
 
 SignatureInformation = TypedDict('SignatureInformation', {
     'label': str,
-    'documentation': Union[str, MarkupContent],
+    'documentation': Union[str, Dict[str, str]],
     'parameters': List[ParameterInformation]
 }, total=False)
 
@@ -177,36 +167,7 @@ Diagnostic = TypedDict('Diagnostic', {
     'relatedInformation': List[DiagnosticRelatedInformation]
 }, total=False)
 
-TextEdit = TypedDict('TextEdit', {
-    'range': RangeLsp,
-    'newText': str
-}, total=True)
-
-InsertReplaceEdit = TypedDict('InsertReplaceEdit', {
-    'replace': RangeLsp,
-    'insert': RangeLsp,
-    'newText': str
-}, total=True)
-
-CompletionItem = TypedDict('CompletionItem', {
-    'label': str,
-    'kind': Optional[int],
-    'tags': Optional[List[int]],
-    'detail': Optional[str],
-    'documentation': Optional[Union[str, MarkupContent]],
-    'deprecated': Optional[bool],
-    'preselect': Optional[bool],
-    'sortText': Optional[str],
-    'filterText': Optional[str],
-    'insertText': Optional[str],
-    'insertTextFormat': Optional[int],
-    'insertTextMode': Optional[int],
-    'textEdit': Optional[Union[TextEdit, InsertReplaceEdit]],
-    'additionalTextEdits': Optional[List[TextEdit]],
-    'commitCharacters': Optional[List[str]],
-    'command': Optional[Command],
-    'data': Any
-}, total=False)
+CompletionItem = Dict[str, Any]
 
 CompletionList = TypedDict('CompletionList', {
     'isIncomplete': bool,

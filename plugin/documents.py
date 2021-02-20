@@ -652,7 +652,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
         for response, session_name in responses:
             if isinstance(response, Error):
-                sublime.status_message('Completion error: '.format(response))
+                sublime.status_message('Completion error: {}'.format(response))
                 continue
 
             session = self.session_by_name(session_name)

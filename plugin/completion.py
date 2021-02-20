@@ -3,7 +3,7 @@ import sublime_plugin
 import webbrowser
 from .core.logging import debug
 from .core.edit import parse_text_edit
-from .core.protocol import Request, InsertTextFormat, Range, CompletionItem, MarkupContent
+from .core.protocol import Request, InsertTextFormat, Range, CompletionItem
 from .core.registry import LspTextCommand
 from .core.typing import Any, List, Dict, Optional, Generator, Union
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
@@ -32,7 +32,7 @@ class LspResolveDocsCommand(LspTextCommand):
         minihtml_content = self.get_content(documentation, detail)
         self.show_popup(minihtml_content)
 
-    def format_documentation(self, content: Union[str, MarkupContent]) -> str:
+    def format_documentation(self, content: Union[str, Dict[str, str]]) -> str:
         return minihtml(self.view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
 
     def get_content(self, documentation: str, detail: str) -> str:

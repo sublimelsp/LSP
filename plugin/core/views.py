@@ -8,9 +8,6 @@ from .protocol import InsertTextFormat
 from .protocol import Location
 from .protocol import LocationLink
 from .protocol import Notification
-from .protocol import MarkedString
-from .protocol import MarkedStringDict
-from .protocol import MarkupContent
 from .protocol import Point
 from .protocol import Range
 from .protocol import Request
@@ -394,7 +391,7 @@ FORMAT_MARKED_STRING = 0x2
 FORMAT_MARKUP_CONTENT = 0x4
 
 
-def minihtml(view: sublime.View, content: Union[str, MarkupContent, MarkedString, list], allowed_formats: int) -> str:
+def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allowed_formats: int) -> str:
     """
     Formats provided input content into markup accepted by minihtml.
 
@@ -448,15 +445,15 @@ def minihtml(view: sublime.View, content: Union[str, MarkupContent, MarkedString
         result = "\n".join(formatted)
     if (parse_marked_string or parse_markup_content) and isinstance(content, dict):
         # MarkupContent or MarkedString (dict)
+        language = content.get("language")
+        kind = content.get("kind")
         value = content.get("value") or ""
-        if parse_markup_content and 'kind' in content:
-            content = cast(MarkupContent, content)  # cast is not necessary for pyright, but required by mypy
-            kind = content.get("kind")
+        if parse_markup_content and kind:
+            # MarkupContent
             is_plain_text = kind != "markdown"
             result = value
-        if parse_marked_string and 'language' in content:
-            content = cast(MarkedStringDict, content)  # cast is not necessary for pyright, but required by mypy
-            language = content.get("language")
+        if parse_marked_string and language:
+            # MarkedString (dict)
             is_plain_text = False
             result = "```{}\n{}\n```\n".format(language, value)
     if is_plain_text:

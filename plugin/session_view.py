@@ -184,9 +184,6 @@ class SessionView:
                 self.view.erase_regions('{}_tags'.format(key))
             elif ((severity <= userprefs().show_diagnostics_severity_level) and
                     (data.icon or flags != (sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE))):
-                # allow showing diagnostics with same begin and end range in the view
-                flags |= sublime.DRAW_EMPTY
-                self.view.add_regions(key, data.regions, data.scope, data.icon, flags)
                 if data.tags:
                     tag_scopes = []
                     for k, v in DiagnosticTag.__dict__.items():
@@ -194,6 +191,9 @@ class SessionView:
                             tag_scopes.append('markup.tag.{}.lsp'.format(k.lower()))
                     if tag_scopes:
                         self.view.add_regions('{}_tags'.format(key), data.regions, ' '.join(tag_scopes))
+                # allow showing diagnostics with same begin and end range in the view
+                flags |= sublime.DRAW_EMPTY
+                self.view.add_regions(key, data.regions, data.scope, data.icon, flags)
             else:
                 self.view.erase_regions(key)
                 self.view.erase_regions('{}_tags'.format(key))

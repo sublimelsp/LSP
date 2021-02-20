@@ -667,8 +667,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             LspResolveDocsCommand.completions.extend(response_items)
             can_resolve_completion_items = session.has_capability('completionProvider.resolveProvider')
             items.extend(
-                [format_completion(response_item, len(items) + index, can_resolve_completion_items, session.config.name)
-                 for index, response_item in enumerate(response_items)])
+                format_completion(response_item, len(items) + index, can_resolve_completion_items, session.config.name)
+                for index, response_item in enumerate(response_items))
         if items:
             flags |= sublime.INHIBIT_REORDER
         resolve_completion_list(items, flags)

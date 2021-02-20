@@ -5,7 +5,6 @@ from .core.logging import debug
 from .core.edit import parse_text_edit
 from .core.protocol import Request, InsertTextFormat, Range, CompletionItem, MarkupContent
 from .core.registry import LspTextCommand
-from .core.registry import session_by_name
 from .core.typing import Any, List, Dict, Optional, Generator, Union
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .core.views import range_to_region
@@ -26,7 +25,7 @@ class LspResolveDocsCommand(LspTextCommand):
         if not detail or not documentation:
             # To make sure that the detail or documentation fields doesn't exist we need to resove the completion item.
             # If those fields appear after the item is resolved we show them in the popup.
-            session = session_by_name(self.view, session_name)
+            session = self.session_by_name(session_name)
             if session and session.has_capability('completionProvider.resolveProvider'):
                 session.send_request(Request.resolveCompletionItem(item, self.view), self.handle_resolve_response)
                 return

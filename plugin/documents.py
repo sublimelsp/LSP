@@ -16,7 +16,6 @@ from .core.protocol import Request
 from .core.protocol import SignatureHelp
 from .core.registry import best_session
 from .core.registry import LspTextCommand
-from .core.registry import session_by_name
 from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
@@ -657,7 +656,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             flags |= sublime.INHIBIT_WORD_COMPLETIONS
 
         for response, session_name in responses:
-            session = session_by_name(self.view, session_name)
+            session = self.session_by_name(session_name)
             if not session:
                 continue
 
@@ -695,6 +694,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def session(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
         return best_session(self.view, self.sessions(capability), point)
+
+    def session_by_name(self, name: Optional[str] = None) -> Optional[Session]:
+        for sb in self.session_buffers_async():
+            if sb.session.config.name == name:
+                return sb.session
+        return None
 
     def get_capability_async(self, session: Session, capability_path: str) -> Optional[Any]:
         for sv in self.session_views_async():

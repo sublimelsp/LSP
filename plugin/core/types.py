@@ -72,7 +72,7 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
 def _settings_style_to_add_regions_flag(style: str) -> int:
     flags = 0
     if style == "fill":
-        pass
+        flags = sublime.DRAW_NO_OUTLINE
     elif style == "box":
         flags = sublime.DRAW_NO_FILL
     else:
@@ -155,7 +155,6 @@ class Settings:
     diagnostics_highlight_style = None  # type: str
     diagnostics_panel_include_severity_level = None  # type: int
     disabled_capabilities = None  # type: List[str]
-    document_highlight_scopes = None  # type: Dict[str, str]
     document_highlight_style = None  # type: str
     inhibit_snippet_completions = None  # type: bool
     inhibit_word_completions = None  # type: bool
@@ -191,7 +190,6 @@ class Settings:
         r("diagnostics_highlight_style", "underline")
         r("diagnostics_panel_include_severity_level", 4)
         r("disabled_capabilities", [])
-        r("document_highlight_scopes", {"unknown": "text", "text": "text", "read": "markup.inserted", "write": "markup.changed"})  # noqa
         r("document_highlight_style", "stippled")
         r("log_debug", False)
         r("log_max_size", 8 * 1024)

@@ -30,7 +30,6 @@ class InsertTextFormat:
 
 
 class DocumentHighlightKind:
-    Unknown = 0
     Text = 1
     Read = 2
     Write = 3

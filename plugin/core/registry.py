@@ -88,6 +88,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
     def sessions(self, capability: Optional[str] = None) -> Generator[Session, None, None]:
         yield from sessions_for_view(self.view, capability)
 
+
 class LspRestartClientCommand(sublime_plugin.TextCommand):
     def run(self, edit: Any) -> None:
         window = self.view.window()

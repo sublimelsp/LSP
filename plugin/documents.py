@@ -640,22 +640,20 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         resolve_completion_list: ResolveCompletionsFn
     ) -> None:
         items = []  # type: List[sublime.CompletionItem]
+        errors = []  # type: List[Error]
         flags = 0  # int
         prefs = userprefs()
         if prefs.inhibit_snippet_completions:
             flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
         if prefs.inhibit_word_completions:
             flags |= sublime.INHIBIT_WORD_COMPLETIONS
-
         for response, session_name in responses:
             if isinstance(response, Error):
-                sublime.status_message('Completion error: {}'.format(response))
+                errors.append(response)
                 continue
-
             session = self.session_by_name(session_name)
             if not session:
                 continue
-
             response_items = []  # type: List[CompletionItem]
             if isinstance(response, dict):
                 response_items = response["items"] or []
@@ -671,6 +669,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 for index, response_item in enumerate(response_items))
         if items:
             flags |= sublime.INHIBIT_REORDER
+        if errors:
+            error_messages = ", ".join(str(error) for error in errors)
+            sublime.status_message('Completion error: {}'.format(error_messages))
         resolve_completion_list(items, flags)
 
     # --- Public utility methods ---------------------------------------------------------------------------------------

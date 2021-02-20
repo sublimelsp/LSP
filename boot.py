@@ -1,98 +1,71 @@
-import importlib
-import importlib.abc
 import os
 import sublime
 import sublime_plugin
 import sys
 import weakref
-import contextlib
 
-_toposorted_modules = []
-
-
-class _MetaPathFinder(importlib.abc.MetaPathFinder):
-
-    def __init__(self, backend) -> None:
-        self.toposort = []
-        self._backend = backend
-
-    def find_module(self, fullname, path):
-        if fullname.startswith("LSP."):
-            _toposorted_modules.append(fullname)
-        return self._backend.find_module(fullname, path)
-
-    def invalidate_caches(self) -> None:
-        return self._backend.invalidate_caches()
-
-
-try:
-    sys.meta_path.insert(0, _MetaPathFinder(sys.meta_path[0]))
-
-    # Please keep this list sorted (Edit -> Sort Lines)
-    from .plugin.code_actions import LspCodeActionsCommand
-    from .plugin.completion import LspCompleteInsertTextCommand
-    from .plugin.completion import LspCompleteTextEditCommand
-    from .plugin.completion import LspResolveDocsCommand
-    from .plugin.configuration import LspDisableLanguageServerGloballyCommand
-    from .plugin.configuration import LspDisableLanguageServerInProjectCommand
-    from .plugin.configuration import LspEnableLanguageServerGloballyCommand
-    from .plugin.configuration import LspEnableLanguageServerInProjectCommand
-    from .plugin.core.collections import DottedDict
-    from .plugin.core.css import load as load_css
-    from .plugin.core.handlers import LanguageHandler
-    from .plugin.core.logging import exception_log
-    from .plugin.core.open import opening_files
-    from .plugin.core.panels import destroy_output_panels
-    from .plugin.core.panels import LspClearPanelCommand
-    from .plugin.core.panels import LspUpdatePanelCommand
-    from .plugin.core.panels import LspUpdateServerPanelCommand
-    from .plugin.core.protocol import Response
-    from .plugin.core.protocol import WorkspaceFolder
-    from .plugin.core.registry import LspRecheckSessionsCommand
-    from .plugin.core.registry import LspRestartClientCommand
-    from .plugin.core.registry import windows
-    from .plugin.core.sessions import AbstractPlugin
-    from .plugin.core.sessions import method2attr
-    from .plugin.core.sessions import register_plugin
-    from .plugin.core.sessions import Session
-    from .plugin.core.settings import client_configs
-    from .plugin.core.settings import load_settings
-    from .plugin.core.settings import unload_settings
-    from .plugin.core.transports import kill_all_subprocesses
-    from .plugin.core.types import ClientConfig
-    from .plugin.core.typing import Any, Optional, List, Type, Callable, Dict, Tuple
-    from .plugin.core.views import LspRunTextCommandHelperCommand
-    from .plugin.documents import DocumentSyncListener
-    from .plugin.documents import LspCodeLensCommand
-    from .plugin.documents import TextChangeListener
-    from .plugin.edit import LspApplyDocumentEditCommand
-    from .plugin.execute_command import LspExecuteCommand
-    from .plugin.formatting import LspFormatDocumentCommand
-    from .plugin.formatting import LspFormatDocumentRangeCommand
-    from .plugin.goto import LspSymbolDeclarationCommand
-    from .plugin.goto import LspSymbolDefinitionCommand
-    from .plugin.goto import LspSymbolImplementationCommand
-    from .plugin.goto import LspSymbolTypeDefinitionCommand
-    from .plugin.hover import LspHoverCommand
-    from .plugin.panels import LspShowDiagnosticsPanelCommand
-    from .plugin.panels import LspToggleServerPanelCommand
-    from .plugin.references import LspSymbolReferencesCommand
-    from .plugin.rename import LspSymbolRenameCommand
-    from .plugin.save_command import LspSaveCommand
-    from .plugin.selection_range import LspExpandSelectionCommand
-    from .plugin.symbols import LspDocumentSymbolsCommand
-    from .plugin.symbols import LspSelectionAddCommand
-    from .plugin.symbols import LspSelectionClearCommand
-    from .plugin.symbols import LspSelectionSetCommand
-    from .plugin.symbols import LspWorkspaceSymbolsCommand
-    from .plugin.tooling import LspCopyToClipboardFromBase64Command
-    from .plugin.tooling import LspDumpBufferCapabilities
-    from .plugin.tooling import LspDumpWindowConfigs
-    from .plugin.tooling import LspParseVscodePackageJson
-    from .plugin.tooling import LspTroubleshootServerCommand
-
-finally:
-    sys.meta_path.pop(0)
+# Please keep this list sorted (Edit -> Sort Lines)
+from .plugin.code_actions import LspCodeActionsCommand
+from .plugin.completion import LspCompleteInsertTextCommand
+from .plugin.completion import LspCompleteTextEditCommand
+from .plugin.completion import LspResolveDocsCommand
+from .plugin.configuration import LspDisableLanguageServerGloballyCommand
+from .plugin.configuration import LspDisableLanguageServerInProjectCommand
+from .plugin.configuration import LspEnableLanguageServerGloballyCommand
+from .plugin.configuration import LspEnableLanguageServerInProjectCommand
+from .plugin.core.collections import DottedDict
+from .plugin.core.css import load as load_css
+from .plugin.core.handlers import LanguageHandler
+from .plugin.core.logging import exception_log
+from .plugin.core.open import opening_files
+from .plugin.core.panels import destroy_output_panels
+from .plugin.core.panels import LspClearPanelCommand
+from .plugin.core.panels import LspUpdatePanelCommand
+from .plugin.core.panels import LspUpdateServerPanelCommand
+from .plugin.core.protocol import Response
+from .plugin.core.protocol import WorkspaceFolder
+from .plugin.core.registry import LspRecheckSessionsCommand
+from .plugin.core.registry import LspRestartClientCommand
+from .plugin.core.registry import windows
+from .plugin.core.sessions import AbstractPlugin
+from .plugin.core.sessions import method2attr
+from .plugin.core.sessions import register_plugin
+from .plugin.core.sessions import Session
+from .plugin.core.settings import client_configs
+from .plugin.core.settings import load_settings
+from .plugin.core.settings import unload_settings
+from .plugin.core.transports import kill_all_subprocesses
+from .plugin.core.types import ClientConfig
+from .plugin.core.typing import Any, Optional, List, Type, Callable, Dict, Tuple
+from .plugin.core.views import LspRunTextCommandHelperCommand
+from .plugin.documents import DocumentSyncListener
+from .plugin.documents import LspCodeLensCommand
+from .plugin.documents import TextChangeListener
+from .plugin.edit import LspApplyDocumentEditCommand
+from .plugin.execute_command import LspExecuteCommand
+from .plugin.formatting import LspFormatDocumentCommand
+from .plugin.formatting import LspFormatDocumentRangeCommand
+from .plugin.goto import LspSymbolDeclarationCommand
+from .plugin.goto import LspSymbolDefinitionCommand
+from .plugin.goto import LspSymbolImplementationCommand
+from .plugin.goto import LspSymbolTypeDefinitionCommand
+from .plugin.hover import LspHoverCommand
+from .plugin.panels import LspShowDiagnosticsPanelCommand
+from .plugin.panels import LspToggleServerPanelCommand
+from .plugin.references import LspSymbolReferencesCommand
+from .plugin.rename import LspSymbolRenameCommand
+from .plugin.save_command import LspSaveCommand
+from .plugin.selection_range import LspExpandSelectionCommand
+from .plugin.symbols import LspDocumentSymbolsCommand
+from .plugin.symbols import LspSelectionAddCommand
+from .plugin.symbols import LspSelectionClearCommand
+from .plugin.symbols import LspSelectionSetCommand
+from .plugin.symbols import LspWorkspaceSymbolsCommand
+from .plugin.tooling import LspCopyToClipboardFromBase64Command
+from .plugin.tooling import LspDumpBufferCapabilities
+from .plugin.tooling import LspDumpWindowConfigs
+from .plugin.tooling import LspParseVscodePackageJson
+from .plugin.tooling import LspTroubleshootServerCommand
 
 
 def _get_final_subclasses(derived: List[Type], results: List[Type]) -> None:
@@ -196,8 +169,6 @@ def plugin_unloaded() -> None:
         except Exception as ex:
             exception_log("failed to unload window", ex)
     unload_settings()
-    for module_name in reversed(_toposorted_modules):
-        sys.modules.pop(module_name)
 
 
 class Listener(sublime_plugin.EventListener):

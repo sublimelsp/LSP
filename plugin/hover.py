@@ -87,7 +87,7 @@ class LspHoverCommand(LspTextCommand):
             if not listener:
                 return
             if not only_diagnostics:
-                self.request_symbol_hover(listener, hover_point)
+                self.request_symbol_hover_async(listener, hover_point)
             self._diagnostics_by_config, covering = listener.diagnostics_touching_point_async(hover_point)
             if self._diagnostics_by_config:
                 if not only_diagnostics:
@@ -98,11 +98,11 @@ class LspHoverCommand(LspTextCommand):
 
         sublime.set_timeout_async(run_async)
 
-    def request_symbol_hover(self, listener: AbstractViewListener, point: int) -> None:
+    def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
         session = listener.session('hoverProvider', point)
         if session:
             document_position = text_document_position_params(self.view, point)
-            session.send_request(
+            session.send_request_async(
                 Request("textDocument/hover", document_position, self.view),
                 lambda response: self.handle_response(listener, response, point))
 

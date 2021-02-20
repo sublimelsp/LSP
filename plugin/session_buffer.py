@@ -49,7 +49,7 @@ class DiagnosticSeverityData:
         _, _, self.scope, self.icon = DIAGNOSTIC_SEVERITY[severity - 1]
         if userprefs().diagnostics_gutter_marker != "sign":
             self.icon = userprefs().diagnostics_gutter_marker
-        self.tags = []  # type: List[DiagnosticTag]
+        self.tags = []  # type: List[int]
 
 
 class SessionBuffer:

@@ -253,39 +253,6 @@
               "default": "underline",
               "markdownDescription": "Highlighting style of `\"highlights\"`: accentuating nearby text entities that are related to the one under your cursor. When set to the empty string (`\"\"`), no diagnostics are shown in-line."
             },
-            "document_highlight_scopes": {
-              "type": "object",
-              "properties": {
-                "unknown": {
-                  "type": "string",
-                  "default": "text",
-                  "markdownDescription": "What Sublime Text scope should receive the LSP `\"unknown\"` scope?"
-                },
-                "text": {
-                  "type": "string",
-                  "default": "text",
-                  "markdownDescription": "What Sublime Text scope should receive the LSP `\"text\"` scope?"
-                },
-                "read": {
-                  "type": "string",
-                  "default": "markup.inserted",
-                  "markdownDescription": "What Sublime Text scope should receive the LSP `\"read\"` scope?"
-                },
-                "write": {
-                  "type": "string",
-                  "default": "markup.changed",
-                  "markdownDescription": "What Sublime Text scope should receive the LSP `\"write\"` scope?"
-                },
-                "additionalProperties": false
-              },
-              "default": {
-                "unknown": "text",
-                "text": "text",
-                "read": "markup.inserted",
-                "write": "markup.changed"
-              },
-              "markdownDescription": "Map the LSP scopes `\"unknown\"`, `\"text\"`, `\"read\"` and `\"write\"` to the given Sublime Text scopes. You can use those scopes in your .sublime-color-scheme to color the document highlight scopes."
-            },
             "diagnostics_gutter_marker": {
               "enum": [
                 "dot",

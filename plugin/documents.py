@@ -46,10 +46,15 @@ import webbrowser
 SUBLIME_WORD_MASK = 515
 
 _kind2name = {
-    DocumentHighlightKind.Unknown: "unknown",
     DocumentHighlightKind.Text: "text",
     DocumentHighlightKind.Read: "read",
     DocumentHighlightKind.Write: "write"
+}
+
+_kind2scope = {
+    DocumentHighlightKind.Text: "region.bluish markup.highlight.text.lsp",
+    DocumentHighlightKind.Read: "region.greenish markup.highlight.read.lsp",
+    DocumentHighlightKind.Write: "region.yellowish markup.highlight.write.lsp"
 }
 
 ResolveCompletionsFn = Callable[[List[sublime.CompletionItem], int], None]
@@ -584,12 +589,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 
     def _clear_highlight_regions(self) -> None:
-        for kind in userprefs().document_highlight_scopes.keys():
-            self.view.erase_regions("lsp_highlight_{}".format(kind))
+        for kind in range(1, 4):
+            self.view.erase_regions("lsp_highlight_{}".format(_kind2name[kind]))
 
     def _is_in_higlighted_region(self, point: int) -> bool:
-        for kind in userprefs().document_highlight_scopes.keys():
-            regions = self.view.get_regions("lsp_highlight_{}".format(kind))
+        for kind in range(1, 4):
+            regions = self.view.get_regions("lsp_highlight_{}".format(_kind2name[kind]))
             for r in regions:
                 if r.contains(point):
                     return True
@@ -609,23 +614,28 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if not response:
             self._clear_highlight_regions()
             return
-        kind2regions = {}  # type: Dict[str, List[sublime.Region]]
-        for kind in range(0, 4):
-            kind2regions[_kind2name[kind]] = []
+        kind2regions = {}  # type: Dict[int, List[sublime.Region]]
+        for kind in range(1, 4):
+            kind2regions[kind] = []
         for highlight in response:
             r = range_to_region(Range.from_lsp(highlight["range"]), self.view)
-            kind = highlight.get("kind", DocumentHighlightKind.Unknown)
-            if kind is not None:
-                kind2regions[_kind2name[kind]].append(r)
+            kind = highlight.get("kind", DocumentHighlightKind.Text)
+            if kind in kind2regions:
+                kind2regions[kind].append(r)
+            else:
+                debug("unknown DocumentHighlightKind", kind)
 
         def render_highlights_on_main_thread() -> None:
             self._clear_highlight_regions()
             flags = userprefs().document_highlight_style_to_add_regions_flags()
-            for kind_str, regions in kind2regions.items():
+            for kind, regions in kind2regions.items():
                 if regions:
-                    scope = userprefs().document_highlight_scopes.get(kind_str, None)
-                    if scope:
-                        self.view.add_regions("lsp_highlight_{}".format(kind_str), regions, scope=scope, flags=flags)
+                    scope = _kind2scope[kind]
+                    self.view.add_regions(
+                        "lsp_highlight_{}".format(_kind2name[kind]),
+                        regions,
+                        scope=scope,
+                        flags=flags)
 
         sublime.set_timeout(render_highlights_on_main_thread)
 

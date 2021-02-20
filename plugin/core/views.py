@@ -24,11 +24,11 @@ import sublime_plugin
 import tempfile
 
 DIAGNOSTIC_SEVERITY = [
-    # Kind       CSS class   Scope for color     Icon resource
-    ("error",   "errors",   "region.redish",    "Packages/LSP/icons/error.png"),
-    ("warning", "warnings", "region.yellowish", "Packages/LSP/icons/warning.png"),
-    ("info",    "info",     "region.bluish",    "Packages/LSP/icons/info.png"),
-    ("hint",    "hints",    "region.bluish",    "Packages/LSP/icons/info.png"),
+    # Kind       CSS class   Scope for color                        Icon resource
+    ("error",   "errors",   "region.redish markup.error.lsp",      "Packages/LSP/icons/error.png"),
+    ("warning", "warnings", "region.yellowish markup.warning.lsp", "Packages/LSP/icons/warning.png"),
+    ("info",    "info",     "region.bluish markup.info.lsp",       "Packages/LSP/icons/info.png"),
+    ("hint",    "hints",    "region.bluish markup.info.hint.lsp",  "Packages/LSP/icons/info.png"),
 ]
 
 # The scope names mainly come from http://www.sublimetext.com/docs/3/scope_naming.html
@@ -696,21 +696,19 @@ def format_completion(
 
     lsp_label = item["label"]
     lsp_filter_text = item.get("filterText")
-    lsp_detail = html.escape(item.get("detail") or "").replace('\n', ' ')
-
-    if lsp_filter_text and lsp_filter_text != lsp_label:
-        st_trigger = lsp_filter_text
-        st_annotation = lsp_label
-    else:
-        st_trigger = lsp_label
-        st_annotation = ""
+    st_annotation = (item.get("detail") or "").replace('\n', ' ')
 
     st_details = ""
     if can_resolve_completion_items or item.get("documentation"):
         st_details += make_command_link("lsp_resolve_docs", "More", {"index": index})
-        st_details += " | " if lsp_detail else ""
 
-    st_details += "<p>{}</p>".format(lsp_detail)
+    if lsp_filter_text and lsp_filter_text != lsp_label:
+        st_trigger = lsp_filter_text
+        if st_details:
+            st_details += " | "
+        st_details += "<p>{}</p>".format(html.escape(lsp_label))
+    else:
+        st_trigger = lsp_label
 
     # NOTE: Some servers return "textEdit": null. We have to check if it's truthy.
     if item.get("textEdit") or item.get("additionalTextEdits") or item.get("command"):

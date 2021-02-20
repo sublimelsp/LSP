@@ -1,7 +1,6 @@
 import os
 import sublime
 import sublime_plugin
-import sys
 import weakref
 
 # Please keep this list sorted (Edit -> Sort Lines)

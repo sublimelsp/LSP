@@ -220,8 +220,18 @@ The following tables give an overview about the scope names used by LSP.
 | `markup.info.lsp` | Information | Reports an information |
 | `markup.info.hint.lsp` | Hint | Reports a hint |
 
+Diagnostics will also optionally include those scopes if marked with a corresponding tag.
+
 !!! note
     If `diagnostics_highlight_style` is set to "fill" in the LSP settings, the highlighting color can be controlled via the "background" color from a color scheme rule for the listed scopes.
+
+| scope | Diagnostic tag name | description |
+| ----- | ------------------- | ----------- |
+| `markup.tag.unnecessary.lsp` | Unnecessary | Unused or unnecessary code |
+| `markup.tag.deprecated.lsp` | Deprecated | Deprecated or obsolete code |
+
+!!! note
+    The regions created for those scopes don't follow the `diagnostics_highlight_style` setting and always use the "fill" style instead.
 
 #### Signature Help
 

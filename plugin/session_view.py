@@ -1,4 +1,5 @@
 from .core.progress import ViewProgressReporter
+from .core.protocol import DiagnosticTag
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.sessions import Session
@@ -185,6 +186,13 @@ class SessionView:
                 # allow showing diagnostics with same begin and end range in the view
                 flags |= sublime.DRAW_EMPTY
                 self.view.add_regions(key, data.regions, data.scope, data.icon, flags)
+                if data.tags:
+                    tag_scopes = []
+                    for k, v in DiagnosticTag.__dict__.items():
+                        if v in data.tags:
+                            tag_scopes.append('markup.tag.{}.lsp'.format(k.lower()))
+                    if tag_scopes:
+                        self.view.add_regions(key, data.regions, ' '.join(tag_scopes))
             else:
                 self.view.erase_regions(key)
         listener = self.listener()

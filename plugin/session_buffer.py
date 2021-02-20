@@ -1,7 +1,9 @@
-from .core.protocol import Diagnostic, Range
+from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
+from .core.protocol import DiagnosticTag
 from .core.protocol import TextDocumentSyncKindFull
 from .core.protocol import TextDocumentSyncKindNone
+from .core.protocol import Range
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
 from .core.types import Capabilities
@@ -38,15 +40,16 @@ class PendingChanges:
 
 class DiagnosticSeverityData:
 
-    __slots__ = ('regions', 'annotations', 'panel_contribution', 'scope', 'icon')
+    __slots__ = ('regions', 'annotations', 'panel_contribution', 'scope', 'icon', 'tags')
 
     def __init__(self, severity: int) -> None:
         self.regions = []  # type: List[sublime.Region]
         self.annotations = []  # type: List[str]
         self.panel_contribution = []  # type: List[Tuple[str, Optional[int], Optional[str], Optional[str]]]
-        _, __, self.scope, self.icon = DIAGNOSTIC_SEVERITY[severity - 1]
+        _, _, self.scope, self.icon = DIAGNOSTIC_SEVERITY[severity - 1]
         if userprefs().diagnostics_gutter_marker != "sign":
             self.icon = userprefs().diagnostics_gutter_marker
+        self.tags = []  # type: List[DiagnosticTag]
 
 
 class SessionBuffer:
@@ -262,6 +265,7 @@ class SessionBuffer:
                     data_per_severity[severity] = data
                 region = range_to_region(Range.from_lsp(diagnostic["range"]), view)
                 data.regions.append(region)
+                data.tags = diagnostic.get('tags', [])
                 diagnostics.append((diagnostic, region))
                 if severity == DiagnosticSeverity.Error:
                     total_errors += 1

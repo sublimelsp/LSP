@@ -5,7 +5,6 @@ import sublime
 import sublime_plugin
 import sys
 import weakref
-import contextlib
 
 _toposorted_modules = []
 

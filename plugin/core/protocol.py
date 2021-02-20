@@ -16,6 +16,11 @@ class DiagnosticSeverity:
     Hint = 4
 
 
+class DiagnosticTag:
+    Unnecessary = 1
+    Deprecated = 2
+
+
 class CompletionItemTag:
     Deprecated = 1
 
@@ -164,7 +169,7 @@ Diagnostic = TypedDict('Diagnostic', {
     'codeDescription': CodeDescription,
     'source': str,
     'message': str,
-    'tags': List[int],
+    'tags': List[DiagnosticTag],
     'relatedInformation': List[DiagnosticRelatedInformation]
 }, total=False)
 

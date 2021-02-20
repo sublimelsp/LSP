@@ -11,6 +11,7 @@ from .promise import Promise
 from .protocol import CodeAction
 from .protocol import Command
 from .protocol import CompletionItemTag
+from .protocol import DiagnosticTag
 from .protocol import SymbolTag
 from .protocol import Diagnostic
 from .protocol import Error
@@ -114,6 +115,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                           config: ClientConfig) -> dict:
     completion_kinds = list(range(1, len(COMPLETION_KINDS) + 1))
     symbol_kinds = list(range(1, len(SYMBOL_KINDS) + 1))
+    diagnostic_tag_value_set = [v for k, v in DiagnosticTag.__dict__.items() if not k.startswith('_')]
     completion_tag_value_set = [v for k, v in CompletionItemTag.__dict__.items() if not k.startswith('_')]
     symbol_tag_value_set = [v for k, v in SymbolTag.__dict__.items() if not k.startswith('_')]
     first_folder = workspace_folders[0] if workspace_folders else None
@@ -225,6 +227,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             },
             "publishDiagnostics": {
                 "relatedInformation": True,
+                "tagSupport": {
+                    "valueSet": diagnostic_tag_value_set
+                },
                 "versionSupport": True,
                 "codeDescriptionSupport": True,
                 "dataSupport": True

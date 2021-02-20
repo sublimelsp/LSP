@@ -530,6 +530,7 @@ class WindowRegistry(object):
         w = view.window()
         if not w:
             return None
+        debug("Looking up listener for view", view.id(), "in window", w.id())
         return self.lookup(w).listener_for_view(view)
 
     def discard(self, window: sublime.Window) -> None:

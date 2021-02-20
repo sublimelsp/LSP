@@ -1,3 +1,4 @@
+from .core.logging import debug
 from .core.protocol import Diagnostic, Range
 from .core.protocol import DiagnosticSeverity
 from .core.protocol import TextDocumentSyncKindFull
@@ -85,8 +86,10 @@ class SessionBuffer:
         self.diagnostics_debouncer = Debouncer()
         self._check_did_open(view)
         self.session.register_session_buffer_async(self)
+        debug(self, "__init__")
 
     def __del__(self) -> None:
+        debug(self, "__del__")
         mgr = self.session.manager()
         if mgr:
             mgr.update_diagnostics_panel_async()
@@ -347,4 +350,4 @@ class SessionBuffer:
             mgr.update_diagnostics_panel_async()
 
     def __str__(self) -> str:
-        return '{}:{}:{}'.format(self.session.config.name, self.id, self.file_name)
+        return '{}:{}:{}:{}'.format(self.session.config.name, self.session.window.id(), self.id, self.file_name)

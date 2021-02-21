@@ -135,6 +135,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
+        self._setup()
+
+    def __del__(self) -> None:
+        self._cleanup()
+
+    def _setup(self) -> None:
         self._manager = None  # type: Optional[WindowManager]
         self._session_views = {}  # type: Dict[str, SessionView]
         self._stored_region = sublime.Region(-1, -1)
@@ -144,7 +150,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._language_id = ""
         self._registered = False
 
-    def __del__(self) -> None:
+    def _cleanup(self) -> None:
         settings = self.view.settings()
         triggers = settings.get("auto_complete_triggers") or []  # type: List[Dict[str, str]]
         triggers = [trigger for trigger in triggers if 'server' not in trigger]
@@ -156,6 +162,25 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._clear_session_views_async()
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
+
+    def on_post_move_window_async(self) -> None:
+        if self._registered and self._manager:
+            new_window = self.view.window()
+            if not new_window:
+                return
+            old_window = self._manager.window()
+            if new_window.id() == old_window.id():
+                return
+            self._manager.unregister_listener_async(self)
+
+            def reset() -> None:
+                # Have to do this on the main thread, since __init__ and __del__ are invoked on the main thread too
+                self._cleanup()
+                self._setup()
+                # But this has to run on the async thread again
+                sublime.set_timeout_async(self.on_activated_async)
+
+            sublime.set_timeout(reset)
 
     def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()

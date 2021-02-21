@@ -125,6 +125,10 @@ class AbstractViewListener(metaclass=ABCMeta):
     def do_signature_help_async(self, manual: bool) -> None:
         raise NotImplementedError()
 
+    @abstractmethod
+    def on_post_move_window_async(self) -> None:
+        raise NotImplementedError()
+
 
 def extract_message(params: Any) -> str:
     return params.get("message", "???") if isinstance(params, dict) else "???"
@@ -202,6 +206,9 @@ class WindowManager(Manager):
         self._pending_listeners.appendleft(listener)
         if self._new_listener is None:
             self._dequeue_listener_async()
+
+    def unregister_listener_async(self, listener: AbstractViewListener) -> None:
+        self._listeners.discard(listener)
 
     def listeners(self) -> Generator[AbstractViewListener, None, None]:
         yield from self._listeners

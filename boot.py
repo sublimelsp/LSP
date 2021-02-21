@@ -187,6 +187,14 @@ class Listener(sublime_plugin.EventListener):
     def on_pre_close_window(self, w: sublime.Window) -> None:
         windows.discard(w)
 
+    def on_post_move_async(self, view: sublime.View) -> None:
+        listeners = sublime_plugin.view_event_listeners.get(view.id())
+        if not isinstance(listeners, list):
+            return
+        for listener in listeners:
+            if isinstance(listener, DocumentSyncListener):
+                return listener.on_post_move_window_async()
+
     def on_load(self, view: sublime.View) -> None:
         file_name = view.file_name()
         if not file_name:

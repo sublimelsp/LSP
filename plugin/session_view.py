@@ -193,7 +193,8 @@ class SessionView:
                             if 'background' in self.view.style_for_scope(scope):
                                 tag_scopes.append(scope)
                     if tag_scopes:
-                        self.view.add_regions('{}_tags'.format(key), data.regions, ' '.join(tag_scopes))
+                        self.view.add_regions('{}_tags'.format(key), data.regions, ' '.join(tag_scopes),
+                                              flags=sublime.DRAW_NO_OUTLINE)
                 # allow showing diagnostics with same begin and end range in the view
                 flags |= sublime.DRAW_EMPTY
                 self.view.add_regions(key, data.regions, data.scope, data.icon, flags)

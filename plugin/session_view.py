@@ -188,7 +188,10 @@ class SessionView:
                     tag_scopes = []
                     for k, v in DiagnosticTag.__dict__.items():
                         if v in data.tags:
-                            tag_scopes.append('markup.tag.{}.lsp'.format(k.lower()))
+                            scope = 'markup.{}.lsp'.format(k.lower())
+                            # Trick to only add tag regions if there is a corresponding color scheme scope defined.
+                            if 'background' in self.view.style_for_scope(scope):
+                                tag_scopes.append(scope)
                     if tag_scopes:
                         self.view.add_regions('{}_tags'.format(key), data.regions, ' '.join(tag_scopes))
                 # allow showing diagnostics with same begin and end range in the view

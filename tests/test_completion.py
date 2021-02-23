@@ -598,3 +598,34 @@ class QueryCompletionsTests(TextDocumentTestCase):
         formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "")
         self.assertEqual('⚠', formatted_completion_item.kind[1])
         self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
+
+    def test_forbidden_st_trigger_prefix_character(self) -> None:
+        r"""
+        triggers should not start with any of the characters ' ', '\t', '\n', '\0', '(', ')', '[', ']', '{', '}'.
+        Internally, when ST looks for the characters in the buffer to consider matching against the characters in the
+        trigger, it looks to the left until it hits one of those. It sounds like we have a bug when a completion does
+        start with one of those characters, but in any case there will be less surprises if you do the filtering
+        yourself.
+        """
+        self.type('[')
+        self.set_response("textDocument/completion", [{
+            "textEdit": {
+                "newText": "[ngClass]",
+                # The replacement range is the `[` character that was just typed
+                "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 1}}
+            },
+            # There is no filterText. So the label is the trigger text.
+            'label': "[ngClass]"
+        }])
+        # Pretend `[` is a trigger character
+        self.view.run_command('auto_complete')  # show the AC widget
+        yield from self.await_message("textDocument/completion")
+        yield 100
+        self.view.run_command('insert', {'characters': 'n'})  # type characters
+        yield 100
+        self.view.run_command('insert', {'characters': 'g'})  # while the AC widget is open
+        yield 100
+        # Commit the completion. The buffer has been modified in the meantime, so the old text edit that says to
+        # replace '[' is invalid. The code in completion.py must be able to handle this.
+        yield self.create_commit_completion_closure()
+        self.assertEqual(self.read_file(), '[ngClass]')

@@ -868,6 +868,8 @@ class Session(TransportCallbacks):
         return value is not False and value is not None
 
     def get_capability(self, capability: str) -> Optional[Any]:
+        if self.config.is_disabled_capability(capability):
+            return None
         return self.capabilities.get(capability)
 
     def should_notify_did_open(self) -> bool:

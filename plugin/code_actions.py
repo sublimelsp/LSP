@@ -120,10 +120,6 @@ class CodeActionsManager:
         actions_handler: Callable[[CodeActionsByConfigName], None],
         on_save_actions: Optional[Dict[str, bool]] = None
     ) -> None:
-        if 'codeActionProvider' in userprefs().disabled_capabilities:
-            sublime.set_timeout_async(lambda: actions_handler({}))
-            return
-
         use_cache = on_save_actions is None
         if use_cache:
             location_cache_key = "{}#{}:{}:{}".format(

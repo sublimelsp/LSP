@@ -148,8 +148,10 @@ class SessionBuffer:
             sv.on_capability_removed_async(registration_id, discarded)
 
     def get_capability(self, capability_path: str) -> Optional[Any]:
+        if self.session.config.is_disabled_capability(capability_path):
+            return None
         value = self.capabilities.get(capability_path)
-        return value if value is not None else self.session.get_capability(capability_path)
+        return value if value is not None else self.session.capabilities.get(capability_path)
 
     def has_capability(self, capability: str) -> bool:
         value = self.get_capability(capability)

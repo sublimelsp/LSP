@@ -541,6 +541,7 @@ class ClientConfig:
                  settings: DottedDict = DottedDict(),
                  env: Dict[str, str] = {},
                  experimental_capabilities: Optional[Dict[str, Any]] = None,
+                 disabled_capabilities: DottedDict = DottedDict(),
                  path_maps: Optional[List[PathMap]] = None) -> None:
         self.name = name
         self.selector = selector
@@ -558,6 +559,7 @@ class ClientConfig:
         self.settings = settings
         self.env = env
         self.experimental_capabilities = experimental_capabilities
+        self.disabled_capabilities = disabled_capabilities
         self.path_maps = path_maps
         self.status_key = "lsp_{}".format(self.name)
 
@@ -568,6 +570,11 @@ class ClientConfig:
         settings.update(read_dict_setting(s, "settings", {}))  # overrides from the user
         init_options = DottedDict(base.get("initializationOptions", {}))
         init_options.update(read_dict_setting(s, "initializationOptions", {}))
+        disabled_capabilities = s.get("disabled_capabilities")
+        if isinstance(disabled_capabilities, dict):
+            disabled_capabilities = DottedDict(disabled_capabilities)
+        else:
+            disabled_capabilities = DottedDict()
         return ClientConfig(
             name=name,
             selector=_read_selector(s),
@@ -582,11 +589,17 @@ class ClientConfig:
             settings=settings,
             env=read_dict_setting(s, "env", {}),
             experimental_capabilities=s.get("experimental_capabilities"),
+            disabled_capabilities=disabled_capabilities,
             path_maps=PathMap.parse(s.get("path_maps"))
         )
 
     @classmethod
     def from_dict(cls, name: str, d: Dict[str, Any]) -> "ClientConfig":
+        disabled_capabilities = d.get("disabled_capabilities")
+        if isinstance(disabled_capabilities, dict):
+            disabled_capabilities = DottedDict(disabled_capabilities)
+        else:
+            disabled_capabilities = DottedDict()
         return ClientConfig(
             name=name,
             selector=_read_selector(d),
@@ -599,13 +612,19 @@ class ClientConfig:
             init_options=DottedDict(d.get("initializationOptions")),
             settings=DottedDict(d.get("settings")),
             env=d.get("env", dict()),
-            experimental_capabilities=d.get("experimental_capabilities", dict()),
+            experimental_capabilities=d.get("experimental_capabilities"),
+            disabled_capabilities=disabled_capabilities,
             path_maps=PathMap.parse(d.get("path_maps"))
         )
 
     @classmethod
     def from_config(cls, src_config: "ClientConfig", override: Dict[str, Any]) -> "ClientConfig":
         path_map_override = PathMap.parse(override.get("path_maps"))
+        disabled_capabilities = override.get("disabled_capabilities")
+        if isinstance(disabled_capabilities, dict):
+            disabled_capabilities = DottedDict(disabled_capabilities)
+        else:
+            disabled_capabilities = src_config.disabled_capabilities
         return ClientConfig(
             name=src_config.name,
             selector=_read_selector(override) or src_config.selector,
@@ -622,6 +641,7 @@ class ClientConfig:
             env=override.get("env", src_config.env),
             experimental_capabilities=override.get(
                 "experimental_capabilities", src_config.experimental_capabilities),
+            disabled_capabilities=disabled_capabilities,
             path_maps=path_map_override if path_map_override else src_config.path_maps
         )
 
@@ -685,6 +705,19 @@ class ClientConfig:
                 if mapped:
                     break
         return path
+
+    def is_disabled_capability(self, capability_path: str) -> bool:
+        for value in self.disabled_capabilities.walk(capability_path):
+            if isinstance(value, bool):
+                return value
+            elif isinstance(value, dict):
+                if value:
+                    # If it's not empty we'll continue the walk
+                    continue
+                else:
+                    # This might be a leaf node
+                    return True
+        return False
 
     def __repr__(self) -> str:
         items = []  # type: List[str]

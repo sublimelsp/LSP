@@ -674,8 +674,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             response_items = sorted(response_items, key=lambda item: item.get("sortText") or item["label"])
             LspResolveDocsCommand.completions.extend(response_items)
             can_resolve_completion_items = session.has_capability('completionProvider.resolveProvider')
+            items_count = len(items)
             items.extend(
-                format_completion(response_item, len(items) + index, can_resolve_completion_items, session.config.name)
+                format_completion(response_item, items_count + index, can_resolve_completion_items, session.config.name)
                 for index, response_item in enumerate(response_items))
         if items:
             flags |= sublime.INHIBIT_REORDER

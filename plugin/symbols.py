@@ -100,7 +100,7 @@ class LspDocumentSymbolsCommand(LspTextCommand):
         self.regions = []  # type: List[Tuple[sublime.Region, Optional[sublime.Region], str]]
         self.is_first_selection = False
 
-    def run(self, edit: sublime.Edit) -> None:
+    def run(self, edit: sublime.Edit, event: Optional[Dict[str, Any]] = None) -> None:
         self.view.settings().set(SUPPRESS_INPUT_SETTING_KEY, True)
         session = self.best_session(self.capability)
         if session:

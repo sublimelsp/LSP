@@ -8,7 +8,6 @@ class CSS:
         self.popups_classname = "lsp_popup"
         self.notification = sublime.load_resource("Packages/LSP/notification.css")
         self.notification_classname = "notification"
-        self.phantoms = sublime.load_resource("Packages/LSP/phantoms.css")
         self.sheets = sublime.load_resource("Packages/LSP/sheets.css")
         self.sheets_classname = "lsp_sheet"
 

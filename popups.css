@@ -24,7 +24,7 @@
 }
 .diagnostics {
     margin-bottom: 0.5rem;
-    font-family: monospace;
+    font-family: var(--mdpopups-font-mono);
 }
 .errors {
     border-width: 0;

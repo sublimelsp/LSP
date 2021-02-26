@@ -178,26 +178,27 @@ class SessionView:
         data_per_severity = self.session_buffer.data_per_severity
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
             key = self.diagnostics_key(severity)
+            key_tag = '{}_tags'.format(key)
             data = data_per_severity.get(severity)
             if data is None:
                 self.view.erase_regions(key)
-                self.view.erase_regions('{}_tags'.format(key))
+                self.view.erase_regions(key_tag)
             elif ((severity <= userprefs().show_diagnostics_severity_level) and
                     (data.icon or flags != (sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE))):
+                tag_scopes = []
                 if data.tags:
-                    tag_scopes = []
                     for k, v in DiagnosticTag.__dict__.items():
                         if v in data.tags:
                             scope = 'markup.{}.lsp'.format(k.lower())
                             # Trick to only add tag regions if there is a corresponding color scheme scope defined.
                             if 'background' in self.view.style_for_scope(scope):
                                 tag_scopes.append(scope)
-                    if tag_scopes:
-                        self.view.add_regions('{}_tags'.format(key), data.regions, ' '.join(tag_scopes),
-                                              flags=sublime.DRAW_NO_OUTLINE)
-                # allow showing diagnostics with same begin and end range in the view
-                flags |= sublime.DRAW_EMPTY
-                self.view.add_regions(key, data.regions, data.scope, data.icon, flags)
+                if tag_scopes:
+                    self.view.add_regions(key_tag, data.regions, ' '.join(tag_scopes), flags=sublime.DRAW_NO_OUTLINE)
+                else:
+                    # allow showing diagnostics with same begin and end range in the view
+                    flags |= sublime.DRAW_EMPTY
+                    self.view.add_regions(key, data.regions, data.scope, data.icon, flags)
             else:
                 self.view.erase_regions(key)
                 self.view.erase_regions('{}_tags'.format(key))

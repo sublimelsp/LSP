@@ -713,16 +713,12 @@ class ClientConfig:
                     return True
         return False
 
-    def filter_disabled_capabilities(self, capability_path: str, options: Dict[str, Any]) -> bool:
-        if self.is_disabled_capability(capability_path):
-            return True
-        to_be_removed = []  # type: List[str]
-        for k in options.keys():
-            if self.is_disabled_capability("{}.{}".format(capability_path, k)):
-                to_be_removed.append(k)
-        for k in to_be_removed:
-            options.pop(k)
-        return False
+    def filter_out_disabled_capabilities(self, capability_path: str, options: Dict[str, Any]) -> Dict[str, Any]:
+        result = {}  # type: Dict[str, Any]
+        for k, v in options.items():
+            if not self.is_disabled_capability("{}.{}".format(capability_path, k)):
+                result[k] = v
+        return result
 
     def __repr__(self) -> str:
         items = []  # type: List[str]

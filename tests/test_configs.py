@@ -87,7 +87,7 @@ class ConfigParsingTests(DeferrableTestCase):
         # This one should be enabled
         self.assertFalse(config.is_disabled_capability("definitionProvider"))
 
-    def test_filter_disabled_capabilities_ignore_partially(self):
+    def test_filter_out_disabled_capabilities_ignore_partially(self):
         settings = {
             "command": ["pyls"],
             "selector": "source.python",
@@ -96,20 +96,9 @@ class ConfigParsingTests(DeferrableTestCase):
         config = read_client_config("pyls", settings)
         capability_path = "completionProvider"
         options = {"triggerCharacters": ["!"], "resolveProvider": True}
-        self.assertFalse(config.filter_disabled_capabilities(capability_path, options))
+        options = config.filter_out_disabled_capabilities(capability_path, options)
         self.assertNotIn("triggerCharacters", options)
         self.assertIn("resolveProvider", options)
-
-    def test_filter_disabled_capabilities_ignore_fully(self):
-        settings = {
-            "command": ["pyls"],
-            "selector": "source.python",
-            "disabled_capabilities": {"codeActionProvider": True}
-        }
-        config = read_client_config("pyls", settings)
-        capability_path = "codeActionProvider"
-        options = {"codeActionKinds": [], "resolveProvider": True}
-        self.assertTrue(config.filter_disabled_capabilities(capability_path, options))
 
     def test_path_maps(self):
         config = read_client_config("asdf", {

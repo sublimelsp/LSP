@@ -1095,14 +1095,15 @@ class Session(TransportCallbacks):
         """handles the client/registerCapability request"""
         registrations = params["registrations"]
         for registration in registrations:
-            registration_id = registration["id"]
             capability_path, registration_path = method_to_capability(registration["method"])
+            if self.config.is_disabled_capability(capability_path):
+                continue
             debug("{}: registering capability:".format(self.config.name), capability_path)
             options = registration.get("registerOptions")  # type: Optional[Dict[str, Any]]
             if not isinstance(options, dict):
                 options = {}
-            if self.config.filter_disabled_capabilities(capability_path, options):
-                continue
+            options = self.config.filter_out_disabled_capabilities(capability_path, options)
+            registration_id = registration["id"]
             data = _RegistrationData(registration_id, capability_path, registration_path, options)
             self._registrations[registration_id] = data
             if data.selector:

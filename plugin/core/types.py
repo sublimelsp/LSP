@@ -535,7 +535,6 @@ class ClientConfig:
                  binary_args: Optional[List[str]] = None,  # DEPRECATED
                  tcp_port: Optional[int] = None,
                  auto_complete_selector: Optional[str] = None,
-                 ignore_server_trigger_chars: bool = False,
                  enabled: bool = True,
                  init_options: DottedDict = DottedDict(),
                  settings: DottedDict = DottedDict(),
@@ -553,7 +552,6 @@ class ClientConfig:
             self.command = binary_args
         self.tcp_port = tcp_port
         self.auto_complete_selector = auto_complete_selector
-        self.ignore_server_trigger_chars = ignore_server_trigger_chars
         self.enabled = enabled
         self.init_options = init_options
         self.settings = settings
@@ -582,7 +580,6 @@ class ClientConfig:
             command=read_list_setting(s, "command", []),
             tcp_port=s.get("tcp_port"),
             auto_complete_selector=s.get("auto_complete_selector"),
-            ignore_server_trigger_chars=bool(s.get("ignore_server_trigger_chars", False)),
             # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
             init_options=init_options,
@@ -607,7 +604,6 @@ class ClientConfig:
             command=d.get("command", []),
             tcp_port=d.get("tcp_port"),
             auto_complete_selector=d.get("auto_complete_selector"),
-            ignore_server_trigger_chars=bool(d.get("ignore_server_trigger_chars", False)),
             enabled=d.get("enabled", False),
             init_options=DottedDict(d.get("initializationOptions")),
             settings=DottedDict(d.get("settings")),
@@ -632,8 +628,6 @@ class ClientConfig:
             command=override.get("command", src_config.command),
             tcp_port=override.get("tcp_port", src_config.tcp_port),
             auto_complete_selector=override.get("auto_complete_selector", src_config.auto_complete_selector),
-            ignore_server_trigger_chars=bool(
-                override.get("ignore_server_trigger_chars", src_config.ignore_server_trigger_chars)),
             enabled=override.get("enabled", src_config.enabled),
             init_options=DottedDict.from_base_and_override(
                 src_config.init_options, override.get("initializationOptions")),
@@ -717,6 +711,17 @@ class ClientConfig:
                 else:
                     # This might be a leaf node
                     return True
+        return False
+
+    def filter_disabled_capabilities(self, capability_path: str, options: Dict[str, Any]) -> bool:
+        if self.is_disabled_capability(capability_path):
+            return True
+        to_be_removed = []  # type: List[str]
+        for k in options.keys():
+            if self.is_disabled_capability("{}.{}".format(capability_path, k)):
+                to_be_removed.append(k)
+        for k in to_be_removed:
+            options.pop(k)
         return False
 
     def __repr__(self) -> str:

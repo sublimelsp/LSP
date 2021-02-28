@@ -11,7 +11,6 @@ from .promise import Promise
 from .protocol import CodeAction
 from .protocol import Command
 from .protocol import CompletionItemTag
-from .protocol import SymbolTag
 from .protocol import Diagnostic
 from .protocol import Error
 from .protocol import ErrorCode
@@ -19,6 +18,7 @@ from .protocol import ExecuteCommandParams
 from .protocol import Notification
 from .protocol import Request
 from .protocol import Response
+from .protocol import SymbolTag
 from .protocol import WorkspaceFolder
 from .settings import client_configs
 from .transports import Transport
@@ -43,6 +43,7 @@ from abc import ABCMeta
 from abc import abstractmethod
 from weakref import WeakSet
 import functools
+import mdpopups
 import os
 import sublime
 import weakref
@@ -119,8 +120,18 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     first_folder = workspace_folders[0] if workspace_folders else None
     capabilities = {
         "general": {
+            # https://microsoft.github.io/language-server-protocol/specification#regExp
             "regularExpressions": {
+                # https://www.sublimetext.com/docs/completions.html#ver-dev
+                # https://www.boost.org/doc/libs/1_64_0/libs/regex/doc/html/boost_regex/syntax/perl_syntax.html
+                # ECMAScript syntax is a subset of Perl syntax
                 "engine": "ECMAScript"
+            },
+            # https://microsoft.github.io/language-server-protocol/specification#markupContent
+            "markdown": {
+                # https://python-markdown.github.io
+                "parser": "Python-Markdown",
+                "version": mdpopups.markdown.__version__
             }
         },
         "textDocument": {

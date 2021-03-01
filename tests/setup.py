@@ -68,7 +68,7 @@ def remove_config(config):
     client_configs.remove_for_testing(config)
 
 
-def close_test_view(view: sublime.View):
+def close_test_view(view: Optional[sublime.View]):
     if view:
         view.set_scratch(True)
         view.close()
@@ -81,6 +81,10 @@ def expand(s: str, w: sublime.Window) -> str:
 class TextDocumentTestCase(DeferrableTestCase):
 
     @classmethod
+    def get_stdio_test_config(cls) -> ClientConfig:
+        return make_stdio_test_config()
+
+    @classmethod
     def setUpClass(cls) -> Generator:
         super().setUpClass()
         test_name = cls.get_test_name()
@@ -89,7 +93,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(test_name)), window)
         open_view = window.find_open_file(filename)
         close_test_view(open_view)
-        cls.config = make_stdio_test_config()
+        cls.config = cls.get_stdio_test_config()
         cls.config.init_options.set("serverResponse", server_capabilities)
         add_config(cls.config)
         cls.wm = windows.lookup(window)

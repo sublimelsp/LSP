@@ -77,8 +77,8 @@ class SessionView:
     def _setup_auto_complete_triggers(self, settings: sublime.Settings) -> None:
         """Register trigger characters from static capabilities of the server."""
         trigger_chars = self.session.get_capability(self.TRIGGER_CHARACTERS_KEY)
-        if isinstance(trigger_chars, list):
-            self._apply_auto_complete_triggers(settings, trigger_chars)
+        if isinstance(trigger_chars, list) or self.session.config.auto_complete_selector:
+            self._apply_auto_complete_triggers(settings, trigger_chars or [])
 
     def _register_auto_complete_triggers(self, registration_id: str, trigger_chars: List[str]) -> None:
         """Register trigger characters from a dynamic server registration."""
@@ -115,7 +115,7 @@ class SessionView:
             # from the auto_complete_triggers array once the session is stopped.
             "server": self.session.config.name
         }
-        if not self.session.config.ignore_server_trigger_chars:
+        if trigger_chars:
             trigger["characters"] = "".join(trigger_chars)
         if isinstance(registration_id, str):
             # This key is not used by Sublime, but is used as a "breadcrumb" as well, for dynamic registrations.
@@ -149,8 +149,8 @@ class SessionView:
             self._increment_hover_count()
         elif capability_path.startswith(self.COMPLETION_PROVIDER_KEY):
             trigger_chars = options.get("triggerCharacters")
-            if isinstance(trigger_chars, list):
-                self._register_auto_complete_triggers(registration_id, trigger_chars)
+            if isinstance(trigger_chars, list) or self.session.config.auto_complete_selector:
+                self._register_auto_complete_triggers(registration_id, trigger_chars or [])
         elif capability_path.startswith("codeLensProvider"):
             listener = self.listener()
             if listener:

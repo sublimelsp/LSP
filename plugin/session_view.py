@@ -191,14 +191,15 @@ class SessionView:
                 self.view.erase_regions(key_tag)
             elif ((severity <= userprefs().show_diagnostics_severity_level) and
                     (data.icon or flags != (sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE))):
+                non_tag_regions = data.regions
                 for tag, regions in data.regions_with_tag.items():
                     tag_scope = self.diagnostics_tag_scope(tag)
                     # Trick to only add tag regions if there is a corresponding color scheme scope defined.
                     if tag_scope and 'background' in self.view.style_for_scope(tag_scope):
                         self.view.add_regions(key_tag, regions, tag_scope, flags=sublime.DRAW_NO_OUTLINE)
                     else:
-                        self.view.add_regions(key, regions, data.scope, data.icon, flags | sublime.DRAW_EMPTY)
-                self.view.add_regions(key, data.regions, data.scope, data.icon, flags | sublime.DRAW_EMPTY)
+                        non_tag_regions.extend(regions)
+                self.view.add_regions(key, non_tag_regions, data.scope, data.icon, flags | sublime.DRAW_EMPTY)
             else:
                 self.view.erase_regions(key)
                 self.view.erase_regions('{}_tags'.format(key))

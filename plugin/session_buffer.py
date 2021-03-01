@@ -39,16 +39,16 @@ class PendingChanges:
 
 class DiagnosticSeverityData:
 
-    __slots__ = ('regions', 'annotations', 'panel_contribution', 'scope', 'icon', 'tags')
+    __slots__ = ('regions', 'regions_with_tag', 'annotations', 'panel_contribution', 'scope', 'icon')
 
     def __init__(self, severity: int) -> None:
         self.regions = []  # type: List[sublime.Region]
+        self.regions_with_tag = {}  # type: Dict[int, List[sublime.Region]]
         self.annotations = []  # type: List[str]
         self.panel_contribution = []  # type: List[Tuple[str, Optional[int], Optional[str], Optional[str]]]
         _, _, self.scope, self.icon = DIAGNOSTIC_SEVERITY[severity - 1]
         if userprefs().diagnostics_gutter_marker != "sign":
             self.icon = userprefs().diagnostics_gutter_marker
-        self.tags = []  # type: List[int]
 
 
 class SessionBuffer:
@@ -265,8 +265,14 @@ class SessionBuffer:
                     data = DiagnosticSeverityData(severity)
                     data_per_severity[severity] = data
                 region = range_to_region(Range.from_lsp(diagnostic["range"]), view)
-                data.regions.append(region)
-                data.tags = diagnostic.get('tags', [])
+                tags = diagnostic.get('tags', [])
+                if tags:
+                    for tag in tags:
+                        if tag not in data.regions_with_tag:
+                            data.regions_with_tag[tag] = []
+                        data.regions_with_tag[tag].append(region)
+                else:
+                    data.regions.append(region)
                 diagnostics.append((diagnostic, region))
                 if severity == DiagnosticSeverity.Error:
                     total_errors += 1

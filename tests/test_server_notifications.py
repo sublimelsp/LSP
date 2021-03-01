@@ -36,9 +36,9 @@ class ServerNotifications(TextDocumentTestCase):
             ]
         }  # type: PublishDiagnosticsParams
         yield from self.await_client_notification("textDocument/publishDiagnostics", params)
-        yield lambda: len(self.view.get_regions("lspTESTd1")) == 1
-        yield lambda: len(self.view.get_regions("lspTESTd2")) == 1
-        yield lambda: len(self.view.get_regions("lspTESTd3")) == 1
+        yield lambda: len(self.view.get_regions("lspTESTd1")) > 0
+        yield lambda: len(self.view.get_regions("lspTESTd2")) > 0
+        yield lambda: len(self.view.get_regions("lspTESTd3")) > 0
         yield lambda: len(self.view.get_regions("lspTESTd3_tags")) == 0
         errors = self.view.get_regions("lspTESTd1")
         warnings = self.view.get_regions("lspTESTd2")

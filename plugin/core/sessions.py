@@ -131,7 +131,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "markdown": {
                 # https://python-markdown.github.io
                 "parser": "Python-Markdown",
-                "version": mdpopups.markdown.__version__
+                "version": mdpopups.markdown.__version__  # type: ignore
             }
         },
         "textDocument": {

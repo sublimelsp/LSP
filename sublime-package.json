@@ -49,7 +49,7 @@
             "ClientIgnoreServerTriggerChars": {
               "type": "boolean",
               "default": false,
-              "markdownDescription": "A language server may register a list of characters that, when typed, trigger the auto-complete. These days, there are Sublime syntaxes that are so good that it is possible to detect via a selector when the auto-complete should be triggered. This can result in a much better editor experience. When this is the case for your syntax, choose an appropriate selector for the `\"auto_complete_selector\"` and set this setting to `\"true\"`.\n\n**Hint.** You may look at `view.settings().get(\"auto_complete_triggers\")` in the Console to verify your settings."
+              "deprecationMessage": "Use disabled_capabilities instead: \"disabled_capabilities\": {\"completionProvider\": {\"triggerCharacters\": true}}"
             },
             "ClientInitializationOptions": {
               "type": "object",

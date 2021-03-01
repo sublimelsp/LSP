@@ -12,7 +12,6 @@ from .protocol import CodeAction
 from .protocol import Command
 from .protocol import CompletionItemTag
 from .protocol import DiagnosticTag
-from .protocol import SymbolTag
 from .protocol import Diagnostic
 from .protocol import Error
 from .protocol import ErrorCode
@@ -20,6 +19,7 @@ from .protocol import ExecuteCommandParams
 from .protocol import Notification
 from .protocol import Request
 from .protocol import Response
+from .protocol import SymbolTag
 from .protocol import WorkspaceFolder
 from .settings import client_configs
 from .transports import Transport
@@ -44,6 +44,7 @@ from abc import ABCMeta
 from abc import abstractmethod
 from weakref import WeakSet
 import functools
+import mdpopups
 import os
 import sublime
 import weakref
@@ -121,8 +122,18 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     first_folder = workspace_folders[0] if workspace_folders else None
     capabilities = {
         "general": {
+            # https://microsoft.github.io/language-server-protocol/specification#regExp
             "regularExpressions": {
+                # https://www.sublimetext.com/docs/completions.html#ver-dev
+                # https://www.boost.org/doc/libs/1_64_0/libs/regex/doc/html/boost_regex/syntax/perl_syntax.html
+                # ECMAScript syntax is a subset of Perl syntax
                 "engine": "ECMAScript"
+            },
+            # https://microsoft.github.io/language-server-protocol/specification#markupContent
+            "markdown": {
+                # https://python-markdown.github.io
+                "parser": "Python-Markdown",
+                "version": mdpopups.markdown.__version__  # type: ignore
             }
         },
         "textDocument": {
@@ -1100,12 +1111,15 @@ class Session(TransportCallbacks):
         """handles the client/registerCapability request"""
         registrations = params["registrations"]
         for registration in registrations:
-            registration_id = registration["id"]
             capability_path, registration_path = method_to_capability(registration["method"])
+            if self.config.is_disabled_capability(capability_path):
+                continue
             debug("{}: registering capability:".format(self.config.name), capability_path)
             options = registration.get("registerOptions")  # type: Optional[Dict[str, Any]]
             if not isinstance(options, dict):
                 options = {}
+            options = self.config.filter_out_disabled_capabilities(capability_path, options)
+            registration_id = registration["id"]
             data = _RegistrationData(registration_id, capability_path, registration_path, options)
             self._registrations[registration_id] = data
             if data.selector:
@@ -1132,11 +1146,7 @@ class Session(TransportCallbacks):
             capability_path, registration_path = method_to_capability(unregistration["method"])
             debug("{}: unregistering capability:".format(self.config.name), capability_path)
             data = self._registrations.pop(registration_id, None)
-            if not data:
-                message = "no registration data found for registration ID {}".format(registration_id)
-                self.send_error_response(request_id, Error(ErrorCode.InvalidParams, message))
-                return
-            elif not data.selector:
+            if data and not data.selector:
                 discarded = self.capabilities.unregister(registration_id, capability_path, registration_path)
                 # We must inform our SessionViews of the removed capabilities, in case it's for instance a hoverProvider
                 # or a completionProvider for trigger characters.

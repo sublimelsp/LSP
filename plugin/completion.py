@@ -11,13 +11,14 @@ from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import update_lsp_popup
 
+SessionName = str
 
 class LspResolveDocsCommand(LspTextCommand):
 
-    completions = []  # type: List[CompletionItem]
+    completions = {}  # type: Dict[SessionName, List[CompletionItem]]
 
     def run(self, edit: sublime.Edit, index: int, session_name: str, event: Optional[dict] = None) -> None:
-        item = self.completions[index]
+        item = self.completions[session_name][index]
         detail = self.format_documentation(item.get('detail') or "")
         documentation = self.format_documentation(item.get("documentation") or "")
         # don't show the detail in the cooperate AC popup if it is already shown in the AC details filed.

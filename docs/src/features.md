@@ -225,15 +225,15 @@ The following tables give an overview about the scope names used by LSP.
 
 Diagnostics will also optionally include the following scopes:
 
-| scope | Diagnostic tag name | description |
-| ----- | ------------------- | ----------- |
-| `markup.unnecessary.lsp` | Unnecessary | Unused or unnecessary code |
-| `markup.deprecated.lsp` | Deprecated | Deprecated or obsolete code |
+| scope                    | diagnostic tag name | description                 |
+| ------------------------ | ------------------- | --------------------------- |
+| `markup.unnecessary.lsp` | Unnecessary         | Unused or unnecessary code  |
+| `markup.deprecated.lsp`  | Deprecated          | Deprecated or obsolete code |
 
 !!! note
     Regions created for those scopes don't follow the `diagnostics_highlight_style` setting and instead always use the "fill" style.
 
-    Those scopes can be used to, for example, gray out the text color of unused code, if the server supports that.
+    Those scopes can be used to, for example, gray-out the text color of unused code, if the server supports that.
 
     For example, to add a custom rule for `Mariana` color scheme, select `UI: Customize Color Scheme` from the Command Palette and add the following rule:
 
@@ -248,6 +248,8 @@ Diagnostics will also optionally include the following scopes:
         ]
     }
     ```
+
+    For other color schemes, pick a background color that is as close as possible to the original background color of the scheme.
 
 
 #### Signature Help

@@ -13,6 +13,7 @@ from .core.views import update_lsp_popup
 
 SessionName = str
 
+
 class LspResolveDocsCommand(LspTextCommand):
 
     completions = {}  # type: Dict[SessionName, List[CompletionItem]]

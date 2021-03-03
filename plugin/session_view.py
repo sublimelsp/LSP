@@ -14,6 +14,8 @@ from weakref import WeakValueDictionary
 import sublime
 import functools
 
+DIAGNOSTIC_TAG_VALUES = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]
+
 
 class SessionView:
     """
@@ -184,11 +186,12 @@ class SessionView:
         data_per_severity = self.session_buffer.data_per_severity
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
             key = self.diagnostics_key(severity)
-            key_tag = '{}_tags'.format(key)
+            key_tags = {tag: '{}_tags_{}'.format(key, tag) for tag in DIAGNOSTIC_TAG_VALUES}
             data = data_per_severity.get(severity)
             if data is None:
                 self.view.erase_regions(key)
-                self.view.erase_regions(key_tag)
+                for key_tag in key_tags.values():
+                    self.view.erase_regions(key_tag)
             elif ((severity <= userprefs().show_diagnostics_severity_level) and
                     (data.icon or flags != (sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE))):
                 non_tag_regions = data.regions
@@ -196,13 +199,14 @@ class SessionView:
                     tag_scope = self.diagnostics_tag_scope(tag)
                     # Trick to only add tag regions if there is a corresponding color scheme scope defined.
                     if tag_scope and 'background' in self.view.style_for_scope(tag_scope):
-                        self.view.add_regions(key_tag, regions, tag_scope, flags=sublime.DRAW_NO_OUTLINE)
+                        self.view.add_regions(key_tags[tag], regions, tag_scope, flags=sublime.DRAW_NO_OUTLINE)
                     else:
                         non_tag_regions.extend(regions)
                 self.view.add_regions(key, non_tag_regions, data.scope, data.icon, flags | sublime.DRAW_EMPTY)
             else:
                 self.view.erase_regions(key)
-                self.view.erase_regions('{}_tags'.format(key))
+                for key_tag in key_tags.values():
+                    self.view.erase_regions(key_tag)
         listener = self.listener()
         if listener:
             listener.on_diagnostics_updated_async()

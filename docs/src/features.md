@@ -249,7 +249,7 @@ Diagnostics will also optionally include the following scopes:
     }
     ```
 
-    For other color schemes, pick a background color that is as close as possible to the original background color of the scheme.
+    The color scheme rule only works if the "background" color is different from the global background of the scheme. So for other color schemes, ideally pick a background color that is as close as possible, but marginally different from the original background.
 
 
 #### Signature Help

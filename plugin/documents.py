@@ -640,7 +640,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 ).then(lambda response: (response, session.config.name))
 
             completion_promises.append(completion_request())
-        LspResolveDocsCommand.completions = {}
+
         Promise.all(completion_promises).then(
             lambda responses: self._on_all_settled(responses, resolve_completion_list))
 
@@ -649,6 +649,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         responses: List[ResolvedCompletions],
         resolve_completion_list: ResolveCompletionsFn
     ) -> None:
+        LspResolveDocsCommand.completions = {}
         items = []  # type: List[sublime.CompletionItem]
         errors = []  # type: List[Error]
         flags = 0  # int

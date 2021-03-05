@@ -8,7 +8,7 @@
 [![Coverage Status](https://codecov.io/github/sublimelsp/LSP/branch/master/graph/badge.svg)](https://codecov.io/gh/sublimelsp/LSP/tree/master/plugin)
 [![SublimeHQ Discord](https://img.shields.io/discord/280102180189634562?label=SublimeHQ%20Discord&logo=discord)](#chat)
 
-Language Server Protocol support for Sublime Text that gives you IDE [features](https://lsp.readthedocs.io/en/latest/features/).
+Language Server Protocol support for Sublime Text that gives you IDE [features](https://sublimelsp.github.io/LSP/features/).
 
 ![diagnostics screen-shot](docs/src/images/showcase.gif "TypeScript Server Example")
 
@@ -36,7 +36,7 @@ LSP uses [mdpopups](https://github.com/facelessuser/sublime-markdown-popups) to 
 
 ## Getting help
 
-If you have any problems, see the [troubleshooting](https://lsp.readthedocs.io/en/latest/troubleshooting/) guide for tips and known limitations. If the documentation cannot solve your problem, you can look for help in:
+If you have any problems, see the [troubleshooting](https://sublimelsp.github.io/LSP/troubleshooting/) guide for tips and known limitations. If the documentation cannot solve your problem, you can look for help in:
 <a name="chat"></a>
 
 * The [#lsp](https://discordapp.com/channels/280102180189634562/645268178397560865) channel (join the [SublimeHQ Discord](https://discord.gg/TZ5WN8t) first!)

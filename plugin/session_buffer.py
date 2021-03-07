@@ -268,9 +268,7 @@ class SessionBuffer:
                 tags = diagnostic.get('tags', [])
                 if tags:
                     for tag in tags:
-                        if tag not in data.regions_with_tag:
-                            data.regions_with_tag[tag] = []
-                        data.regions_with_tag[tag].append(region)
+                        data.regions_with_tag.setdefault(tag, []).append(region)
                 else:
                     data.regions.append(region)
                 diagnostics.append((diagnostic, region))

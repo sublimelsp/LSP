@@ -155,12 +155,10 @@ LocationLink = TypedDict('LocationLink', {
     'targetSelectionRange': Dict[str, Any]
 }, total=False)
 
-
 DiagnosticRelatedInformation = TypedDict('DiagnosticRelatedInformation', {
     'location': Location,
     'message': str
 }, total=False)
-
 
 Diagnostic = TypedDict('Diagnostic', {
     'range': RangeLsp,
@@ -172,6 +170,13 @@ Diagnostic = TypedDict('Diagnostic', {
     'tags': List[int],
     'relatedInformation': List[DiagnosticRelatedInformation]
 }, total=False)
+
+CompletionItem = Dict[str, Any]
+
+CompletionList = TypedDict('CompletionList', {
+    'isIncomplete': bool,
+    'items': List[CompletionItem],
+}, total=True)
 
 
 PublishDiagnosticsParams = TypedDict('PublishDiagnosticsParams', {

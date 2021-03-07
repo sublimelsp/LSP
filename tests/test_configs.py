@@ -62,6 +62,44 @@ class ConfigParsingTests(DeferrableTestCase):
         config = read_client_config("pyls", settings)
         self.assertEqual(config.experimental_capabilities, experimental_capabilities)
 
+    def test_disabled_capabilities(self):
+        settings = {
+            "command": ["pyls"],
+            "selector": "source.python",
+            "disabled_capabilities": {
+                "colorProvider": True,
+                "completionProvider": {"triggerCharacters": True},
+                "codeActionProvider": True
+            }
+        }
+        config = read_client_config("pyls", settings)
+        self.assertTrue(config.is_disabled_capability("colorProvider"))
+        # If only a sub path is disabled, the entire capability should not be disabled as a whole
+        self.assertFalse(config.is_disabled_capability("completionProvider"))
+        # This sub path should be disabled
+        self.assertTrue(config.is_disabled_capability("completionProvider.triggerCharacters"))
+        # But not this sub path
+        self.assertFalse(config.is_disabled_capability("completionProvider.resolveProvider"))
+        # The entire codeActionProvider is disabld
+        self.assertTrue(config.is_disabled_capability("codeActionProvider"))
+        # If codeActionProvider is disabled, all of its sub paths should be disabled as well
+        self.assertTrue(config.is_disabled_capability("codeActionProvider.codeActionKinds"))
+        # This one should be enabled
+        self.assertFalse(config.is_disabled_capability("definitionProvider"))
+
+    def test_filter_out_disabled_capabilities_ignore_partially(self):
+        settings = {
+            "command": ["pyls"],
+            "selector": "source.python",
+            "disabled_capabilities": {"completionProvider": {"triggerCharacters": True}}
+        }
+        config = read_client_config("pyls", settings)
+        capability_path = "completionProvider"
+        options = {"triggerCharacters": ["!"], "resolveProvider": True}
+        options = config.filter_out_disabled_capabilities(capability_path, options)
+        self.assertNotIn("triggerCharacters", options)
+        self.assertIn("resolveProvider", options)
+
     def test_path_maps(self):
         config = read_client_config("asdf", {
             "command": ["asdf"],

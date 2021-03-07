@@ -49,7 +49,7 @@
             "ClientIgnoreServerTriggerChars": {
               "type": "boolean",
               "default": false,
-              "markdownDescription": "A language server may register a list of characters that, when typed, trigger the auto-complete. These days, there are Sublime syntaxes that are so good that it is possible to detect via a selector when the auto-complete should be triggered. This can result in a much better editor experience. When this is the case for your syntax, choose an appropriate selector for the `\"auto_complete_selector\"` and set this setting to `\"true\"`.\n\n**Hint.** You may look at `view.settings().get(\"auto_complete_triggers\")` in the Console to verify your settings."
+              "deprecationMessage": "Use disabled_capabilities instead: \"disabled_capabilities\": {\"completionProvider\": {\"triggerCharacters\": true}}"
             },
             "ClientInitializationOptions": {
               "type": "object",
@@ -62,6 +62,10 @@
             "ClientExperimentalCapabilities": {
               "type": "object",
               "markdownDescription": "Experimental capabilities that are passed to the language server process during the _initialize_ phase. This is different per language server, so you'll need to look up documentation for your particular language server."
+            },
+            "ClientDisabledCapabilities": {
+              "type": "object",
+              "markdownDescription": "A dictionary that \"masks\" (disables) the capabilities registered by this language server. For instance, to disable completions, use `{\"completionProvider\": true}`. To disable hover info, use `{\"hoverProvider\": true}`. Multiple providers can be disabled. To disable a subset of a provider, use a nested dictionary. For intance, to disable only the trigger characters of a language server, but not the completion functionality itself, use `{\"completionProvider\": {\"triggerCharacters\": true}}`.\n\nTo figure out exactly which _provider_ you need to disable here is an advanced topic. You'll have to study the official specification to see what particular providers exist. Here are a few common provider names that might do what you want:\n\n- hoverProvider\n- completionProvider\n- colorProvider\n- documentHighlightProvider\n- signatureHelpProvider\n- codeLensProvider\n- codeActionProvider"
             },
             "ClientEnv": {
               "type": "object",
@@ -117,6 +121,9 @@
                 },
                 "experimental_capabilities": {
                   "$ref": "#/definitions/ClientExperimentalCapabilities"
+                },
+                "disabled_capabilities": {
+                  "$ref": "#/definitions/ClientDisabledCapabilities"
                 },
                 "env": {
                   "$ref": "#/definitions/ClientEnv"
@@ -299,21 +306,9 @@
             },
             "disabled_capabilities": {
               "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "hover",
-                  "completion",
-                  "colorProvider",
-                  "documentHighlight",
-                  "signatureHelp",
-                  "codeLensProvider",
-                  "codeActionProvider"
-                ]
-              },
               "uniqueItems": true,
               "minItems": 0,
-              "markdownDescription": "Disable language server capabilities."
+              "deprecationMessage": "Instead of a global option, this option is now on a per-client basis. Moreover, this is now an object instead of an array."
             },
             "log_debug": {
               "type": "boolean",
@@ -427,6 +422,9 @@
             },
             "experimental_capabilities": {
               "$ref": "sublime://settings/LSP#/definitions/ClientExperimentalCapabilities"
+            },
+            "disabled_capabilities": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientDisabledCapabilities"
             },
             "env": {
               "$ref": "sublime://settings/LSP#/definitions/ClientEnv"

@@ -535,12 +535,12 @@ class ClientConfig:
                  binary_args: Optional[List[str]] = None,  # DEPRECATED
                  tcp_port: Optional[int] = None,
                  auto_complete_selector: Optional[str] = None,
-                 ignore_server_trigger_chars: bool = False,
                  enabled: bool = True,
                  init_options: DottedDict = DottedDict(),
                  settings: DottedDict = DottedDict(),
                  env: Dict[str, str] = {},
                  experimental_capabilities: Optional[Dict[str, Any]] = None,
+                 disabled_capabilities: DottedDict = DottedDict(),
                  path_maps: Optional[List[PathMap]] = None) -> None:
         self.name = name
         self.selector = selector
@@ -552,12 +552,12 @@ class ClientConfig:
             self.command = binary_args
         self.tcp_port = tcp_port
         self.auto_complete_selector = auto_complete_selector
-        self.ignore_server_trigger_chars = ignore_server_trigger_chars
         self.enabled = enabled
         self.init_options = init_options
         self.settings = settings
         self.env = env
         self.experimental_capabilities = experimental_capabilities
+        self.disabled_capabilities = disabled_capabilities
         self.path_maps = path_maps
         self.status_key = "lsp_{}".format(self.name)
 
@@ -568,6 +568,11 @@ class ClientConfig:
         settings.update(read_dict_setting(s, "settings", {}))  # overrides from the user
         init_options = DottedDict(base.get("initializationOptions", {}))
         init_options.update(read_dict_setting(s, "initializationOptions", {}))
+        disabled_capabilities = s.get("disabled_capabilities")
+        if isinstance(disabled_capabilities, dict):
+            disabled_capabilities = DottedDict(disabled_capabilities)
+        else:
+            disabled_capabilities = DottedDict()
         return ClientConfig(
             name=name,
             selector=_read_selector(s),
@@ -575,18 +580,23 @@ class ClientConfig:
             command=read_list_setting(s, "command", []),
             tcp_port=s.get("tcp_port"),
             auto_complete_selector=s.get("auto_complete_selector"),
-            ignore_server_trigger_chars=bool(s.get("ignore_server_trigger_chars", False)),
             # Default to True, because an LSP plugin is enabled iff it is enabled as a Sublime package.
             enabled=bool(s.get("enabled", True)),
             init_options=init_options,
             settings=settings,
             env=read_dict_setting(s, "env", {}),
             experimental_capabilities=s.get("experimental_capabilities"),
+            disabled_capabilities=disabled_capabilities,
             path_maps=PathMap.parse(s.get("path_maps"))
         )
 
     @classmethod
     def from_dict(cls, name: str, d: Dict[str, Any]) -> "ClientConfig":
+        disabled_capabilities = d.get("disabled_capabilities")
+        if isinstance(disabled_capabilities, dict):
+            disabled_capabilities = DottedDict(disabled_capabilities)
+        else:
+            disabled_capabilities = DottedDict()
         return ClientConfig(
             name=name,
             selector=_read_selector(d),
@@ -594,18 +604,23 @@ class ClientConfig:
             command=d.get("command", []),
             tcp_port=d.get("tcp_port"),
             auto_complete_selector=d.get("auto_complete_selector"),
-            ignore_server_trigger_chars=bool(d.get("ignore_server_trigger_chars", False)),
             enabled=d.get("enabled", False),
             init_options=DottedDict(d.get("initializationOptions")),
             settings=DottedDict(d.get("settings")),
             env=d.get("env", dict()),
-            experimental_capabilities=d.get("experimental_capabilities", dict()),
+            experimental_capabilities=d.get("experimental_capabilities"),
+            disabled_capabilities=disabled_capabilities,
             path_maps=PathMap.parse(d.get("path_maps"))
         )
 
     @classmethod
     def from_config(cls, src_config: "ClientConfig", override: Dict[str, Any]) -> "ClientConfig":
         path_map_override = PathMap.parse(override.get("path_maps"))
+        disabled_capabilities = override.get("disabled_capabilities")
+        if isinstance(disabled_capabilities, dict):
+            disabled_capabilities = DottedDict(disabled_capabilities)
+        else:
+            disabled_capabilities = src_config.disabled_capabilities
         return ClientConfig(
             name=src_config.name,
             selector=_read_selector(override) or src_config.selector,
@@ -613,8 +628,6 @@ class ClientConfig:
             command=override.get("command", src_config.command),
             tcp_port=override.get("tcp_port", src_config.tcp_port),
             auto_complete_selector=override.get("auto_complete_selector", src_config.auto_complete_selector),
-            ignore_server_trigger_chars=bool(
-                override.get("ignore_server_trigger_chars", src_config.ignore_server_trigger_chars)),
             enabled=override.get("enabled", src_config.enabled),
             init_options=DottedDict.from_base_and_override(
                 src_config.init_options, override.get("initializationOptions")),
@@ -622,6 +635,7 @@ class ClientConfig:
             env=override.get("env", src_config.env),
             experimental_capabilities=override.get(
                 "experimental_capabilities", src_config.experimental_capabilities),
+            disabled_capabilities=disabled_capabilities,
             path_maps=path_map_override if path_map_override else src_config.path_maps
         )
 
@@ -685,6 +699,26 @@ class ClientConfig:
                 if mapped:
                     break
         return path
+
+    def is_disabled_capability(self, capability_path: str) -> bool:
+        for value in self.disabled_capabilities.walk(capability_path):
+            if isinstance(value, bool):
+                return value
+            elif isinstance(value, dict):
+                if value:
+                    # If it's not empty we'll continue the walk
+                    continue
+                else:
+                    # This might be a leaf node
+                    return True
+        return False
+
+    def filter_out_disabled_capabilities(self, capability_path: str, options: Dict[str, Any]) -> Dict[str, Any]:
+        result = {}  # type: Dict[str, Any]
+        for k, v in options.items():
+            if not self.is_disabled_capability("{}.{}".format(capability_path, k)):
+                result[k] = v
+        return result
 
     def __repr__(self) -> str:
         items = []  # type: List[str]

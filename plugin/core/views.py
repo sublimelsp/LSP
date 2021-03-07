@@ -464,7 +464,7 @@ def minihtml(view: sublime.View, content: Union[str, Dict[str, str], list], allo
             "markdown_extensions": [
                 {
                     "pymdownx.escapeall": {
-                        "hardbreak": False,
+                        "hardbreak": True,
                         "nbsp": False
                     }
                 },

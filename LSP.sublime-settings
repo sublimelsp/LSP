@@ -110,10 +110,6 @@
   // Show symbol references in Sublime's quick panel instead of the bottom panel.
   "show_references_in_quick_panel": false,
 
-  // Disable language client capabilities. Supported values:
-  // "hover", "completion", "colorProvider", "documentHighlight", "signatureHelp", "codeLensProvider", "codeActionProvider"
-  "disabled_capabilities": [],
-
   // Show verbose debug messages in the sublime console.
   "log_debug": false,
 
@@ -173,6 +169,9 @@
   //
   //     // Sent once to server in initialize request
   //     "initializationOptions": { },
+  //
+  //     // Disable providers if so desired
+  //     "disabled_capabilities": { },
   //
   //     // Extra variables to override/add to language server's environment.
   //     "env": { },

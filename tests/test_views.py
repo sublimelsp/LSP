@@ -345,3 +345,9 @@ class ViewsTest(DeferrableTestCase):
             format_diagnostic_for_html(self.view, diagnostic1, "/foo/bar"),
             format_diagnostic_for_html(self.view, diagnostic2, "/foo/bar")
         )
+
+    def test_escaped_newline_in_markdown(self) -> None:
+        self.assertEqual(
+            minihtml(self.view, {"kind": "markdown", "value": "hello\\\nworld"}, FORMAT_MARKUP_CONTENT),
+            "<p>hello<br />\nworld</p>"
+        )

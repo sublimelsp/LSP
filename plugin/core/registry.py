@@ -37,8 +37,11 @@ windows = WindowRegistry(configs)
 def get_position(view: sublime.View, event: Optional[dict] = None, point: Optional[int] = None) -> int:
     if isinstance(point, int):
         return point
-    elif event:
-        return view.window_to_text((event["x"], event["y"]))
+    if event is None:
+        return view.sel()[0].begin()
+    x, y = event.get("x"), event.get("y")
+    if x is not None and y is not None:
+        return view.window_to_text((x, y))
     else:
         return view.sel()[0].begin()
 

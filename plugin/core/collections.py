@@ -1,7 +1,7 @@
 """
 Module with additional collections.
 """
-from .typing import Optional, Dict, Any
+from .typing import Optional, Dict, Any, Generator
 from copy import deepcopy
 import sublime
 
@@ -48,6 +48,17 @@ class DottedDict:
             else:
                 return None
         return current
+
+    def walk(self, path: str) -> Generator[Any, None, None]:
+        current = self._d  # type: Any
+        keys = path.split('.')
+        for key in keys:
+            if isinstance(current, dict):
+                current = current.get(key)
+                yield current
+            else:
+                yield None
+                return
 
     def set(self, path: str, value: Any) -> None:
         """

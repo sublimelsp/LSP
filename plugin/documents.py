@@ -144,6 +144,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
+        self._setup()
+
+    def __del__(self) -> None:
+        self._cleanup()
+
+    def _setup(self) -> None:
         self._manager = None  # type: Optional[WindowManager]
         self._session_views = {}  # type: Dict[str, SessionView]
         self._stored_region = sublime.Region(-1, -1)
@@ -153,7 +159,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._language_id = ""
         self._registered = False
 
-    def __del__(self) -> None:
+    def _cleanup(self) -> None:
         settings = self.view.settings()
         triggers = settings.get("auto_complete_triggers") or []  # type: List[Dict[str, str]]
         triggers = [trigger for trigger in triggers if 'server' not in trigger]
@@ -165,6 +171,25 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._clear_session_views_async()
 
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
+
+    def on_post_move_window_async(self) -> None:
+        if self._registered and self._manager:
+            new_window = self.view.window()
+            if not new_window:
+                return
+            old_window = self._manager.window()
+            if new_window.id() == old_window.id():
+                return
+            self._manager.unregister_listener_async(self)
+
+            def reset() -> None:
+                # Have to do this on the main thread, since __init__ and __del__ are invoked on the main thread too
+                self._cleanup()
+                self._setup()
+                # But this has to run on the async thread again
+                sublime.set_timeout_async(self.on_activated_async)
+
+            sublime.set_timeout(reset)
 
     def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()
@@ -179,10 +204,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.view.settings().set("lsp_active", True)
             added = True
         if added:
-            if "colorProvider" not in userprefs().disabled_capabilities:
-                self._do_color_boxes_async()
-            if "codeLensProvider" not in userprefs().disabled_capabilities:
-                self._do_code_lenses_async()
+            self._do_color_boxes_async()
+            self._do_code_lenses_async()
 
     def on_session_shutdown_async(self, session: Session) -> None:
         removed_session = self._session_views.pop(session.config.name, None)
@@ -278,18 +301,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 sv.on_text_changed_async(change_count, changes)
         if not different:
             return
-        if "documentHighlight" not in userprefs().disabled_capabilities:
-            self._clear_highlight_regions()
-            self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
-                                                      after_ms=self.highlights_debounce_time)
-        if "colorProvider" not in userprefs().disabled_capabilities:
-            self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region,
-                                                      after_ms=self.color_boxes_debounce_time)
-        if "signatureHelp" not in userprefs().disabled_capabilities:
-            self.do_signature_help_async(manual=False)
-        if "codeLensProvider" not in userprefs().disabled_capabilities:
-            self._when_selection_remains_stable_async(self._do_code_lenses_async, current_region,
-                                                      after_ms=self.code_lenses_debounce_time)
+        self._clear_highlight_regions()
+        self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
+                                                  after_ms=self.highlights_debounce_time)
+        self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region,
+                                                  after_ms=self.color_boxes_debounce_time)
+        self.do_signature_help_async(manual=False)
+        self._when_selection_remains_stable_async(self._do_code_lenses_async, current_region,
+                                                  after_ms=self.code_lenses_debounce_time)
 
     def get_language_id(self) -> str:
         return self._language_id
@@ -313,11 +332,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_selection_modified_async(self) -> None:
         different, current_region = self._update_stored_region_async()
         if different:
-            if "documentHighlight" not in userprefs().disabled_capabilities:
-                if not self._is_in_higlighted_region(current_region.b):
-                    self._clear_highlight_regions()
-                self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
-                                                          after_ms=self.highlights_debounce_time)
+            if not self._is_in_higlighted_region(current_region.b):
+                self._clear_highlight_regions()
+            self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
+                                                      after_ms=self.highlights_debounce_time)
             self._clear_code_actions_annotation()
             self._when_selection_remains_stable_async(self._do_code_actions, current_region,
                                                       after_ms=self.code_actions_debounce_time)
@@ -354,16 +372,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return False
 
     def on_hover(self, point: int, hover_zone: int) -> None:
-        if (hover_zone != sublime.HOVER_TEXT
-                or self.view.is_popup_visible()
-                or "hover" in userprefs().disabled_capabilities):
+        if hover_zone != sublime.HOVER_TEXT or self.view.is_popup_visible():
             return
         self.view.run_command("lsp_hover", {"point": point})
 
     def on_post_text_command(self, command_name: str, args: Optional[Dict[str, Any]]) -> None:
         if command_name in ("next_field", "prev_field") and args is None:
-            if "signatureHelp" not in userprefs().disabled_capabilities:
-                sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))
+            sublime.set_timeout_async(lambda: self.do_signature_help_async(manual=True))
         if not self.view.is_popup_visible():
             return
         if command_name in ["hide_auto_complete", "move", "commit_completion"] or 'delete' in command_name:
@@ -371,8 +386,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self.view.hide_popup()
 
     def on_query_completions(self, prefix: str, locations: List[int]) -> Optional[sublime.CompletionList]:
-        if "completion" in userprefs().disabled_capabilities:
-            return None
 
         def resolve(clist: sublime.CompletionList, items: List[sublime.CompletionItem], flags: int = 0) -> None:
             # Resolve on the main thread to prevent any sort of data race for _set_target (see sublime_plugin.py).

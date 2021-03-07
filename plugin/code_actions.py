@@ -2,6 +2,7 @@ from .core.promise import Promise
 from .core.protocol import CodeAction
 from .core.protocol import Command
 from .core.protocol import Diagnostic
+from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import sessions_for_view
@@ -120,10 +121,6 @@ class CodeActionsManager:
         actions_handler: Callable[[CodeActionsByConfigName], None],
         on_save_actions: Optional[Dict[str, bool]] = None
     ) -> None:
-        if 'codeActionProvider' in userprefs().disabled_capabilities:
-            sublime.set_timeout_async(lambda: actions_handler({}))
-            return
-
         use_cache = on_save_actions is None
         if use_cache:
             location_cache_key = "{}#{}:{}:{}".format(
@@ -316,6 +313,12 @@ class LspCodeActionsCommand(LspTextCommand):
                 selected = self.commands[index]
                 session = self.session_by_name(selected[0])
                 if session:
-                    session.run_code_action_async(selected[2], progress=True)
+                    name = session.config.name
+                    session.run_code_action_async(selected[2], progress=True).then(
+                        lambda resp: self.handle_response_async(name, resp))
 
             sublime.set_timeout_async(run_async)
+
+    def handle_response_async(self, session_name: str, response: Any) -> None:
+        if isinstance(response, Error):
+            sublime.error_message("{}: {}".format(session_name, str(response)))

@@ -10,8 +10,10 @@ def filename_to_uri(path: str) -> str:
 
 
 def uri_to_filename(uri: str) -> str:
+    parsed = urlparse(uri)
+    assert parsed.scheme == "file"
     if os.name == 'nt':
         # url2pathname does not understand %3A (VS Code's encoding forced on all servers :/)
-        return url2pathname(urlparse(uri).path).strip('\\')
+        return url2pathname(parsed.path).strip('\\')
     else:
-        return url2pathname(urlparse(uri).path)
+        return url2pathname(parsed.path)

@@ -6,17 +6,21 @@ from .logging import exception_log
 from .open import open_externally
 from .open import open_file_and_center_async
 from .progress import WindowProgressReporter
-from .promise import PackagedTask
+from .promise import PackagedTask, ResolveFunc
 from .promise import Promise
-from .protocol import CodeAction
+from .protocol import CodeAction, Location, LocationLink
 from .protocol import Command
 from .protocol import CompletionItemTag
-from .protocol import DiagnosticTag
 from .protocol import Diagnostic
+from .protocol import DiagnosticTag
+from .protocol import DocumentUri
 from .protocol import Error
 from .protocol import ErrorCode
 from .protocol import ExecuteCommandParams
 from .protocol import Notification
+from .protocol import Point
+from .protocol import Position
+from .protocol import RangeLsp
 from .protocol import Request
 from .protocol import Response
 from .protocol import SymbolTag
@@ -35,9 +39,10 @@ from .types import SettingsRegistration
 from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
 from .url import uri_to_filename
 from .version import __version__
-from .views import COMPLETION_KINDS
+from .views import COMPLETION_KINDS, get_uri_and_position_from_location
 from .views import extract_variables
 from .views import get_storage_path
+from .views import point_to_offset
 from .views import SYMBOL_KINDS
 from .workspace import is_subpath_of
 from abc import ABCMeta
@@ -593,6 +598,19 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
+    def on_open_uri_async(self, uri: DocumentUri, callback: Callable[[str, str, str], None]) -> bool:
+        """
+        Called when a language server reports to open an URI. If you know how to handle this URI, then return True and
+        invoke the passed-in callback some time.
+
+        The arguments of the provided callback work as follows:
+
+        - The first argument is the title of the view that will be populated with the content of a new scratch view
+        - The second argument is the content of the view
+        - The third argument is the syntax to apply for the new view
+        """
+        return False
+
 
 _plugins = {}  # type: Dict[str, Tuple[Type[AbstractPlugin], SettingsRegistration]]
 
@@ -1030,6 +1048,50 @@ class Session(TransportCallbacks):
         code_action = cast(CodeAction, code_action)
         return self._maybe_resolve_code_action(code_action).then(self._apply_code_action_async)
 
+    def open_uri_async(
+        self,
+        uri: DocumentUri,
+        line: int,
+        offset_utf16: int,
+        flags: int = 0,
+        group: int = -1
+    ) -> Promise[bool]:
+        if uri.startswith("file:"):
+            path = self.config.map_server_uri_to_client_path(uri)
+            p = {"line": line, "character": offset_utf16}  # type: Position
+            r = {"start": p, "end": p}  # type: RangeLsp
+            return open_file_and_center_async(self.window, path, r).then(lambda view: bool(view))
+        if self._plugin:
+            # I cannot type-hint an unpacked tuple
+            pair = Promise.packaged_task()  # type: PackagedTask[Tuple[str, str, str]]
+            # It'd be nice to have automatic tuple unpacking continuations
+            callback = lambda a, b, c: pair[1]((a, b, c))  # noqa: E731
+            if self._plugin.on_open_uri_async(uri, callback):
+
+                def open_scratch_buffer(resolve: ResolveFunc, title: str, content: str, syntax: str) -> None:
+                    v = self.window.new_file(syntax=syntax, flags=flags)
+                    v.set_scratch(True)
+                    v.set_name(title)
+                    v.run_command("append", {"characters": content})
+                    offset = point_to_offset(Point(line, offset_utf16), v)
+                    v.show_at_center(offset)
+                    v.run_command("lsp_selection_set", {"regions": [(offset, offset)]})
+                    sublime.set_timeout_async(lambda: resolve(True))
+
+                result = Promise.packaged_task()  # type: PackagedTask[bool]
+                pair[0].then(lambda tup: sublime.set_timeout(lambda: open_scratch_buffer(result[1], *tup)))
+                return result[0]
+        return Promise.resolve(False)
+
+    def open_location_async(
+        self,
+        location: Union[Location, LocationLink],
+        flags: int = 0,
+        group: int = -1
+    ) -> Promise[bool]:
+        uri, position = get_uri_and_position_from_location(location)
+        return self.open_uri_async(uri, position["line"], position["character"], flags, group)
+
     def _maybe_resolve_code_action(self, code_action: CodeAction) -> Promise[Union[CodeAction, Error]]:
         if "edit" not in code_action and self.has_capability("codeActionProvider.resolveProvider"):
             # TODO: Should we accept a SessionBuffer? What if this capability is registered with a documentSelector?
@@ -1159,16 +1221,13 @@ class Session(TransportCallbacks):
         """handles the window/showDocument request"""
         uri = params.get("uri")
 
-        def success(b: bool) -> None:
+        def reply(b: bool) -> None:
             self.send_response(Response(request_id, {"success": b}))
 
         if params.get("external"):
-            success(open_externally(uri, bool(params.get("takeFocus"))))
+            reply(open_externally(uri, bool(params.get("takeFocus"))))
         else:
-            # TODO: ST API does not allow us to say "do not focus this new view"
-            filename = uri_to_filename(uri)
-            selection = params.get("selection")
-            open_file_and_center_async(self.window, filename, selection).then(lambda _: success(True))
+            self.open_uri_async(uri, 0, 0).then(reply)
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
         """handles the window/workDoneProgress/create request"""

@@ -1,5 +1,5 @@
 from .css import css as lsp_css
-from .protocol import CompletionItem
+from .protocol import CompletionItem, DocumentUri, Position
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
@@ -93,14 +93,11 @@ COMPLETION_KINDS = [
 ]
 
 
-def get_line(window: Optional[sublime.Window], file_name: str, row: int) -> str:
+def get_line(window: sublime.Window, file_name: str, row: int) -> str:
     '''
     Get the line from the buffer if the view is open, else get line from linecache.
     row - is 0 based. If you want to get the first line, you should pass 0.
     '''
-    if not window:
-        return ''
-
     view = window.find_open_file(file_name)
     if view:
         # get from buffer
@@ -158,7 +155,12 @@ def region_to_range(view: sublime.View, region: sublime.Region) -> Range:
     )
 
 
-def location_to_encoded_filename(location: Union[Location, LocationLink]) -> str:
+def _to_encoded_filename(path: str, position: Position) -> str:
+    # WARNING: Cannot possibly do UTF-16 conversion :) Oh well.
+    return '{}:{}:{}'.format(path, position['line'] + 1, position['character'] + 1)
+
+
+def get_uri_and_position_from_location(location: Union[Location, LocationLink]) -> Tuple[DocumentUri, Position]:
     if "targetUri" in location:
         location = cast(LocationLink, location)
         uri = location["targetUri"]
@@ -167,8 +169,11 @@ def location_to_encoded_filename(location: Union[Location, LocationLink]) -> str
         location = cast(Location, location)
         uri = location["uri"]
         position = location["range"]["start"]
-    # WARNING: Cannot possibly do UTF-16 conversion :) Oh well.
-    return '{}:{}:{}'.format(uri_to_filename(uri), position['line'] + 1, position['character'] + 1)
+    return uri, position
+
+
+def location_to_encoded_filename(location: Union[Location, LocationLink]) -> str:
+    return _to_encoded_filename(*get_uri_and_position_from_location(location))
 
 
 class MissingFilenameError(Exception):

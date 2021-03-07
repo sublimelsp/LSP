@@ -25,12 +25,16 @@ class LspResolveDocsCommand(LspTextCommand):
         # don't show the detail in the cooperate AC popup if it is already shown in the AC details filed.
         self.is_detail_shown = bool(detail)
         if not detail or not documentation:
-            # To make sure that the detail or documentation fields doesn't exist we need to resove the completion item.
-            # If those fields appear after the item is resolved we show them in the popup.
-            session = self.session_by_name(session_name)
-            if session and session.has_capability('completionProvider.resolveProvider'):
-                session.send_request(Request.resolveCompletionItem(item, self.view), self.handle_resolve_response)
-                return
+
+            def run_async() -> None:
+                # To make sure that the detail or documentation fields doesn't exist we need to resove the completion
+                # item. If those fields appear after the item is resolved we show them in the popup.
+                session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
+                if session:
+                    request = Request.resolveCompletionItem(item, self.view)
+                    session.send_request_async(request, self.handle_resolve_response_async)
+
+            sublime.set_timeout_async(run_async)
         minihtml_content = self.get_content(documentation, detail)
         self.show_popup(minihtml_content)
 
@@ -56,7 +60,7 @@ class LspResolveDocsCommand(LspTextCommand):
     def on_navigate(self, url: str) -> None:
         webbrowser.open(url)
 
-    def handle_resolve_response(self, item: Optional[dict]) -> None:
+    def handle_resolve_response_async(self, item: Optional[dict]) -> None:
         detail = ""
         documentation = ""
         if item:

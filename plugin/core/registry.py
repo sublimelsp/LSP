@@ -81,11 +81,16 @@ class LspTextCommand(sublime_plugin.TextCommand):
         listener = windows.listener_for_view(self.view)
         return listener.session(capability, point) if listener else None
 
-    def session_by_name(self, name: Optional[str] = None) -> Optional[Session]:
+    def session_by_name(self, name: Optional[str] = None, capability_path: Optional[str] = None) -> Optional[Session]:
         target = name if name else self.session_name
-        for session in self.sessions():
-            if session.config.name == target:
-                return session
+        listener = windows.listener_for_view(self.view)
+        if listener:
+            for sv in listener.session_views_async():
+                if sv.session.config.name == target:
+                    if capability_path is None or sv.has_capability_async(capability_path):
+                        return sv.session
+                    else:
+                        return None
         return None
 
     def sessions(self, capability: Optional[str] = None) -> Generator[Session, None, None]:

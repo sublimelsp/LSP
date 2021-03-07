@@ -34,7 +34,7 @@ class LspResolveDocsCommand(LspTextCommand):
                     request = Request.resolveCompletionItem(item, self.view)
                     session.send_request_async(request, self.handle_resolve_response_async)
 
-            sublime.set_timeout_async(run_async)
+            return sublime.set_timeout_async(run_async)
         minihtml_content = self.get_content(documentation, detail)
         self.show_popup(minihtml_content)
 

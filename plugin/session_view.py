@@ -1,4 +1,5 @@
 from .core.progress import ViewProgressReporter
+from .core.protocol import DiagnosticTag
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.sessions import Session
@@ -12,6 +13,8 @@ from weakref import ref
 from weakref import WeakValueDictionary
 import sublime
 import functools
+
+DIAGNOSTIC_TAG_VALUES = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]
 
 
 class SessionView:
@@ -173,20 +176,37 @@ class SessionView:
     def diagnostics_key(self, severity: int) -> str:
         return "lsp{}d{}".format(self.session.config.name, severity)
 
+    def diagnostics_tag_scope(self, tag: int) -> Optional[str]:
+        for k, v in DiagnosticTag.__dict__.items():
+            if v == tag:
+                return 'markup.{}.lsp'.format(k.lower())
+        return None
+
     def present_diagnostics_async(self, flags: int) -> None:
         data_per_severity = self.session_buffer.data_per_severity
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
             key = self.diagnostics_key(severity)
+            key_tags = {tag: '{}_tags_{}'.format(key, tag) for tag in DIAGNOSTIC_TAG_VALUES}
             data = data_per_severity.get(severity)
             if data is None:
                 self.view.erase_regions(key)
+                for key_tag in key_tags.values():
+                    self.view.erase_regions(key_tag)
             elif ((severity <= userprefs().show_diagnostics_severity_level) and
                     (data.icon or flags != (sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE))):
-                # allow showing diagnostics with same begin and end range in the view
-                flags |= sublime.DRAW_EMPTY
-                self.view.add_regions(key, data.regions, data.scope, data.icon, flags)
+                non_tag_regions = data.regions
+                for tag, regions in data.regions_with_tag.items():
+                    tag_scope = self.diagnostics_tag_scope(tag)
+                    # Trick to only add tag regions if there is a corresponding color scheme scope defined.
+                    if tag_scope and 'background' in self.view.style_for_scope(tag_scope):
+                        self.view.add_regions(key_tags[tag], regions, tag_scope, flags=sublime.DRAW_NO_OUTLINE)
+                    else:
+                        non_tag_regions.extend(regions)
+                self.view.add_regions(key, non_tag_regions, data.scope, data.icon, flags | sublime.DRAW_EMPTY)
             else:
                 self.view.erase_regions(key)
+                for key_tag in key_tags.values():
+                    self.view.erase_regions(key_tag)
         listener = self.listener()
         if listener:
             listener.on_diagnostics_updated_async()

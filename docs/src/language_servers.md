@@ -544,7 +544,7 @@ Follow installation instructions on [LSP-json](https://github.com/sublimelsp/LSP
             "kotlinls": {
                 "enabled": true,
                 "command": ["PATH/TO/KotlinLanguageServer/build/install/kotlin-language-server/bin/kotlin-language-server.bat"], // Update the PATH
-                "selector": "source.kotlin",
+                "selector": "source.Kotlin",
                 "settings": {
                     "kotlin": {
                         // put your server settings here

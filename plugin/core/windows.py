@@ -338,10 +338,11 @@ class WindowManager(Manager):
                 lambda session, is_error: self._on_post_session_initialize(initiating_view, session, is_error))
             self._new_session = session
         except Exception as e:
-            message = "\n\n".join((
-                "Failed to start subprocess for {0}. Reason:",
-                "{1}",
-                "{0} will be disabled for this project. Enable {0} again using the Command Palette."
+            message = "".join((
+                "Failed tot start subprocess for {0}. Reason:\n\n",
+                "{1}\n\n",
+                "{0} will be disabled for this project. Enable {0} again by running ",
+                "LSP: Enable Language Server In Project from the Command Palette."
             )).format(config.name, str(e))
             exception_log("Unable to start subprocess for {}".format(config.name), e)
             if isinstance(e, CalledProcessError):
@@ -425,8 +426,10 @@ class WindowManager(Manager):
             msg = "{} exited with status code {}".format(config.name, exit_code)
             if exception:
                 msg += " and message:\n\n---\n{}\n---".format(str(exception))
-            msg += "".join(("\n\nDo you want to restart {0}?\n\nIf you choose Cancel, {0} will be disabled for this ",
-                            "project. You can re-enable {0} manually using the Command Palette.")).format(config.name)
+            msg += "".join((
+                "\n\nDo you want to restart {0}?\n\nIf you choose Cancel, {0} will be disabled for this project. ",
+                "Enable {0} again by running LSP: Enable Language Server In Project from the Command Palette."
+            )).format(config.name)
             if sublime.ok_cancel_dialog(msg, "Restart {}".format(config.name)):
                 for listener in self._listeners:
                     self.register_listener_async(listener)

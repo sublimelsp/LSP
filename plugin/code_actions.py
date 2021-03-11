@@ -291,7 +291,7 @@ class LspCodeActionsCommand(LspTextCommand):
     def handle_responses_async(self, responses: CodeActionsByConfigName) -> None:
         self.commands_by_config = responses
         self.commands = self.combine_commands()
-        self.show_popup_menu()
+        self.show_code_actions()
 
     def combine_commands(self) -> 'List[Tuple[str, str, CodeActionOrCommand]]':
         results = []
@@ -300,12 +300,12 @@ class LspCodeActionsCommand(LspTextCommand):
                 results.append((config, command['title'], command))
         return results
 
-    def show_popup_menu(self) -> None:
+    def show_code_actions(self) -> None:
         if len(self.commands) > 0:
             items = [command[1] for command in self.commands]
-            win = self.view.window()
-            if win:
-                win.show_quick_panel(items, self.handle_select, placeholder="Code action")
+            window = self.view.window()
+            if window:
+                window.show_quick_panel(items, self.handle_select, placeholder="Code action")
             else:
                 self.view.show_popup_menu(items, self.handle_select)
         else:

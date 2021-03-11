@@ -302,7 +302,9 @@ class LspCodeActionsCommand(LspTextCommand):
 
     def show_popup_menu(self) -> None:
         if len(self.commands) > 0:
-            self.view.show_popup_menu([command[1] for command in self.commands], self.handle_select)
+            self.view.window().show_quick_panel([command[1] for command in self.commands], 
+                    self.handle_select, 
+                    placeholder="Code action")
         else:
             self.view.show_popup('No actions available', sublime.HIDE_ON_MOUSE_MOVE_AWAY)
 

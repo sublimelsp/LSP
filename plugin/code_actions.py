@@ -305,9 +305,7 @@ class LspCodeActionsCommand(LspTextCommand):
             items = [command[1] for command in self.commands]
             win = self.view.window()
             if win:
-                win.show_quick_panel(items, 
-                        self.handle_select, 
-                        placeholder="Code action")
+                win.show_quick_panel(items, self.handle_select, placeholder="Code action")
             else:
                 self.view.show_popup_menu(items, self.handle_select)
         else:

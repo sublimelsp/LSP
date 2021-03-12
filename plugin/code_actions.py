@@ -306,8 +306,6 @@ class LspCodeActionsCommand(LspTextCommand):
             window = self.view.window()
             if window:
                 window.show_quick_panel(items, self.handle_select, placeholder="Code action")
-            else:
-                self.view.show_popup_menu(items, self.handle_select)
         else:
             self.view.show_popup('No actions available', sublime.HIDE_ON_MOUSE_MOVE_AWAY)
 

@@ -186,8 +186,6 @@ class LspHoverCommand(LspTextCommand):
             if window:
                 window.show_quick_panel(titles, lambda i: self.handle_code_action_select(config_name, i),
                                         placeholder="Code actions")
-            else:
-                self.view.show_popup_menu(titles, lambda i: self.handle_code_action_select(config_name, i))
         elif href.startswith("location:"):
             window = self.view.window()
             if window:

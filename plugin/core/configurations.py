@@ -1,6 +1,6 @@
 from .logging import debug
 from .types import ClientConfig
-from .typing import Any, Generator, List, Dict, Set
+from .typing import Any, Generator, List, Dict
 from .workspace import enable_in_project, disable_in_project
 import sublime
 
@@ -27,7 +27,6 @@ class WindowConfigManager(object):
     def __init__(self, window: sublime.Window, global_configs: Dict[str, ClientConfig]) -> None:
         self._window = window
         self._global_configs = global_configs
-        self._temp_disabled_configs = set()  # type: Set[str]
         self.all = {}  # type: Dict[str, ClientConfig]
         self.update()
 
@@ -66,12 +65,6 @@ class WindowConfigManager(object):
         for name, c in project_settings.items():
             debug("loading project-only configuration", name)
             self.all[name] = ClientConfig.from_dict(name, c)
-        for name in self._temp_disabled_configs:
-            try:
-                self.all[name].enabled = False
-            except KeyError:
-                # The plugin is updating
-                self._temp_disabled_configs.discard(name)
         self._window.run_command("lsp_recheck_sessions")
 
     def enable_config(self, config_name: str) -> None:
@@ -80,8 +73,4 @@ class WindowConfigManager(object):
 
     def disable_config(self, config_name: str) -> None:
         disable_in_project(self._window, config_name)
-        self.update()
-
-    def disable_temporarily(self, config_name: str) -> None:
-        self._temp_disabled_configs.add(config_name)
         self.update()

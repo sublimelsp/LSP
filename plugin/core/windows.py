@@ -338,15 +338,16 @@ class WindowManager(Manager):
                 lambda session, is_error: self._on_post_session_initialize(initiating_view, session, is_error))
             self._new_session = session
         except Exception as e:
-            message = "\n\n".join([
-                "Could not start {}",
-                "{}",
-                "Server will be disabled for this window"
-            ]).format(config.name, str(e))
-            exception_log("Unable to start {}".format(config.name), e)
+            message = "".join((
+                "Failed to start subprocess for {0}. Reason:\n\n",
+                "{1}\n\n",
+                "{0} will be disabled for this project. Enable {0} again by running ",
+                "\"LSP: Enable Language Server In Project\" from the Command Palette."
+            )).format(config.name, str(e))
+            exception_log("Unable to start subprocess for {}".format(config.name), e)
             if isinstance(e, CalledProcessError):
                 print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
-            self._configs.disable_temporarily(config.name)
+            self._configs.disable_config(config.name)
             config.erase_view_status(initiating_view)
             sublime.message_dialog(message)
             # Continue with handling pending listeners
@@ -425,13 +426,15 @@ class WindowManager(Manager):
             msg = "{} exited with status code {}".format(config.name, exit_code)
             if exception:
                 msg += " and message:\n\n---\n{}\n---".format(str(exception))
-            msg += "\n\nDo you want to restart {0}?\n\nIf you choose Cancel, {0} will "\
-                   "be disabled for this window until you restart Sublime Text.".format(config.name)
+            msg += "".join((
+                "\n\nDo you want to restart {0}?\n\nIf you choose Cancel, {0} will be disabled for this project. ",
+                "Enable {0} again by running \"LSP: Enable Language Server In Project\" from the Command Palette."
+            )).format(config.name)
             if sublime.ok_cancel_dialog(msg, "Restart {}".format(config.name)):
                 for listener in self._listeners:
                     self.register_listener_async(listener)
             else:
-                self._configs.disable_temporarily(config.name)
+                self._configs.disable_config(config.name)
 
     def plugin_unloaded(self) -> None:
         """

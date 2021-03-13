@@ -56,12 +56,15 @@ class WindowConfigManager(object):
         project_settings = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
         self.all.clear()
         for name, config in self._global_configs.items():
-            overrides = project_settings.get(name)
+            overrides = project_settings.pop(name, None)
             if isinstance(overrides, dict):
                 debug("applying .sublime-project override for", name)
             else:
                 overrides = {}
             self.all[name] = ClientConfig.from_config(config, overrides)
+        for name, c in project_settings.items():
+            debug("loading project-only configuration", name)
+            self.all[name] = ClientConfig.from_dict(name, c)
         self._window.run_command("lsp_recheck_sessions")
 
     def enable_config(self, config_name: str) -> None:

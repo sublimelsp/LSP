@@ -62,6 +62,7 @@
     "source.json.tern": "json", // https://github.com/SublimeText/AFileIcon
     "source.jsx": "javascriptreact",
     "source.jsx.unittest": "javascriptreact", // https://github.com/SublimeText/AFileIcon
+    "source.Kotlin": "kotlin", // https://github.com/vkostyukov/kotlin-sublime-package
     "source.modern-fortran": "fortran", // https://packagecontrol.io/packages/Fortran
     "source.objc": "objective-c",
     "source.objc++": "objective-cpp",

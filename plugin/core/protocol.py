@@ -16,6 +16,11 @@ class DiagnosticSeverity:
     Hint = 4
 
 
+class DiagnosticTag:
+    Unnecessary = 1
+    Deprecated = 2
+
+
 class CompletionItemTag:
     Deprecated = 1
 
@@ -150,12 +155,10 @@ LocationLink = TypedDict('LocationLink', {
     'targetSelectionRange': Dict[str, Any]
 }, total=False)
 
-
 DiagnosticRelatedInformation = TypedDict('DiagnosticRelatedInformation', {
     'location': Location,
     'message': str
 }, total=False)
-
 
 Diagnostic = TypedDict('Diagnostic', {
     'range': RangeLsp,
@@ -166,6 +169,20 @@ Diagnostic = TypedDict('Diagnostic', {
     'message': str,
     'tags': List[int],
     'relatedInformation': List[DiagnosticRelatedInformation]
+}, total=False)
+
+CompletionItem = Dict[str, Any]
+
+CompletionList = TypedDict('CompletionList', {
+    'isIncomplete': bool,
+    'items': List[CompletionItem],
+}, total=True)
+
+
+PublishDiagnosticsParams = TypedDict('PublishDiagnosticsParams', {
+    'uri': DocumentUri,
+    'version': Optional[int],
+    'diagnostics': List[Diagnostic],
 }, total=False)
 
 

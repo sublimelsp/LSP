@@ -78,7 +78,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
     def test_none(self) -> 'Generator':
         self.set_response("textDocument/completion", None)
         self.view.run_command('auto_complete')
-        yield lambda: self.view.is_auto_complete_visible()
+        yield lambda: self.view.is_auto_complete_visible() is False
 
     def test_simple_label(self) -> 'Generator':
         yield from self.verify(

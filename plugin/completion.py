@@ -3,7 +3,7 @@ import sublime_plugin
 import webbrowser
 from .core.logging import debug
 from .core.edit import parse_text_edit
-from .core.protocol import Request, InsertTextFormat, Range
+from .core.protocol import Request, InsertTextFormat, Range, CompletionItem
 from .core.registry import LspTextCommand
 from .core.typing import Any, List, Dict, Optional, Generator, Union
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
@@ -11,64 +11,60 @@ from .core.views import range_to_region
 from .core.views import show_lsp_popup
 from .core.views import update_lsp_popup
 
+SessionName = str
+
 
 class LspResolveDocsCommand(LspTextCommand):
 
-    completions = []  # type: List[Dict[str, Any]]
+    completions = {}  # type: Dict[SessionName, List[CompletionItem]]
 
-    def run(self, edit: sublime.Edit, index: int, event: Optional[dict] = None) -> None:
-        item = self.completions[index]
-        detail = self.format_documentation(item.get('detail') or "")
-        documentation = self.format_documentation(item.get("documentation") or "")
-        # don't show the detail in the cooperate AC popup if it is already shown in the AC details filed.
-        self.is_detail_shown = bool(detail)
-        if not detail or not documentation:
-            # To make sure that the detail or documentation fields doesn't exist we need to resove the completion item.
-            # If those fields appear after the item is resolved we show them in the popup.
-            session = self.best_session('completionProvider.resolveProvider')
+    def run(self, edit: sublime.Edit, index: int, session_name: str, event: Optional[dict] = None) -> None:
+
+        def run_async() -> None:
+            item = self.completions[session_name][index]
+            session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
             if session:
-                session.send_request(Request.resolveCompletionItem(item, self.view), self.handle_resolve_response)
-                return
-        minihtml_content = self.get_content(documentation, detail)
-        self.show_popup(minihtml_content)
+                request = Request.resolveCompletionItem(item, self.view)
+                session.send_request_async(request, self._handle_resolve_response_async)
+            else:
+                self._handle_resolve_response_async(item)
 
-    def format_documentation(self, content: Union[str, Dict[str, str]]) -> str:
+        sublime.set_timeout_async(run_async)
+
+    def _format_documentation(self, content: Union[str, Dict[str, str]]) -> str:
         return minihtml(self.view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
 
-    def get_content(self, documentation: str, detail: str) -> str:
-        content = ""
-        if detail and not self.is_detail_shown:
-            content += "<div class='highlight'>{}</div>".format(detail)
-        if documentation:
-            content += documentation
-        return content
-
-    def show_popup(self, minihtml_content: str) -> None:
-        show_lsp_popup(
-            self.view,
-            minihtml_content,
-            flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
-            md=True,
-            on_navigate=self.on_navigate)
-
-    def on_navigate(self, url: str) -> None:
-        webbrowser.open(url)
-
-    def handle_resolve_response(self, item: Optional[dict]) -> None:
+    def _handle_resolve_response_async(self, item: Optional[dict]) -> None:
         detail = ""
         documentation = ""
         if item:
-            detail = self.format_documentation(item.get('detail') or "")
-            documentation = self.format_documentation(item.get("documentation") or "")
+            detail = self._format_documentation(item.get('detail') or "")
+            documentation = self._format_documentation(item.get("documentation") or "")
         if not documentation:
-            documentation = self.format_documentation({"kind": "markdown", "value": "*No documentation available.*"})
-        minihtml_content = self.get_content(documentation, detail)
-        show = self.update_popup if self.view.is_popup_visible() else self.show_popup
-        # NOTE: Update/show popups from the main thread, or else the popup might make the AC widget disappear.
-        sublime.set_timeout(lambda: show(minihtml_content))
+            documentation = self._format_documentation({"kind": "markdown", "value": "*No documentation available.*"})
+        minihtml_content = ""
+        if detail:
+            minihtml_content += "<div class='highlight'>{}</div>".format(detail)
+        if documentation:
+            minihtml_content += documentation
 
-    def update_popup(self, minihtml_content: str) -> None:
-        update_lsp_popup(self.view, minihtml_content, md=True)
+        def run_main() -> None:
+            if not self.view.is_valid():
+                return
+            if self.view.is_popup_visible():
+                update_lsp_popup(self.view, minihtml_content, md=True)
+            else:
+                show_lsp_popup(
+                    self.view,
+                    minihtml_content,
+                    flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
+                    md=True,
+                    on_navigate=self._on_navigate)
+
+        sublime.set_timeout(run_main)
+
+    def _on_navigate(self, url: str) -> None:
+        webbrowser.open(url)
 
 
 class LspCompleteCommand(sublime_plugin.TextCommand):

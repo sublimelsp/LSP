@@ -18,7 +18,7 @@ contexts:
     - match: '{{filename_and_colon}}'
       captures:
         0: meta.reference.preamble.lsp
-        1: string.unquoted.lsp entity.name.file.references.lsp
+        1: entity.name.filename.lsp
         2: punctuation.separator.lsp
 
   references-body:
@@ -27,7 +27,7 @@ contexts:
         - ensure-reference-meta-scope
         - code
         - expect-line-maybe-column
-      
+
   code:
     - match: '(?=\S)'
       set:
@@ -43,9 +43,9 @@ contexts:
     - include: pop-at-end
     - match: (\d+)(?:(:)(\d+))?
       captures:
-        1: constant.numeric.integer.decimal.lsp
+        1: meta.number.integer.decimal.lsp constant.numeric.line-number.lsp
         2: punctuation.separator.lsp
-        3: constant.numeric.integer.decimal.lsp
+        3: meta.number.integer.decimal.lsp constant.numeric.col-number.lsp
       pop: true
 
   pop-at-end:

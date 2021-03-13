@@ -43,9 +43,9 @@ contexts:
     - include: pop-at-end
     - match: (\d+)(?:(:)(\d+))?
       captures:
-        1: constant.numeric.line-number.lsp
+        1: meta.number.integer.decimal.lsp constant.numeric.line-number.lsp
         2: punctuation.separator.lsp
-        3: constant.numeric.col-number.lsp
+        3: meta.number.integer.decimal.lsp constant.numeric.col-number.lsp
       pop: true
 
   pop-at-end:

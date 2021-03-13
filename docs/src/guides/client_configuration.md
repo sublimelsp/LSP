@@ -12,7 +12,7 @@ Here is an example of the `LSP.sublime-settings` file with configurations for th
 ```js
 {
   // General settings
-  "log_debug": true,
+  "show_diagnostics_panel_on_save": 0,
 
   // Language server configurations
   "clients": {
@@ -31,7 +31,7 @@ Some language servers support multiple languages, which can be specified in the 
 ```js
 {
   // General settings
-  "log_debug": true,
+  "show_diagnostics_panel_on_save": 0,
 
   // Language server configurations
   "clients": {

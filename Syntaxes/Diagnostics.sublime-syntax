@@ -16,7 +16,7 @@ contexts:
     - match: ^(?!\s*\d+:\d+)(.*)(:)$
       captures:
         0: meta.diagnostic.preamble.lsp
-        1: string.unquoted.lsp
+        1: entity.name.filename.lsp
         2: punctuation.separator.lsp
 
   line:
@@ -68,9 +68,9 @@ contexts:
     - include: pop-at-end
     - match: (\d+)(:)(\d+)
       captures:
-        1: constant.numeric.integer.decimal.lsp
+        1: constant.numeric.line-number.lsp
         2: punctuation.separator.lsp
-        3: constant.numeric.integer.decimal.lsp
+        3: constant.numeric.col-number.lsp
       pop: true
 
   pop-at-end:

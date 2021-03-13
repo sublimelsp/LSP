@@ -187,7 +187,6 @@ Add these settings to LSP settings, your Sublime settings, Syntax-specific setti
 * `disabled_capabilities`, `[]` *Turn off client capabilities (features): "hover", "completion", "documentHighlight", "colorProvider", "signatureHelp", "codeLensProvider", "codeActionProvider"*
 * `log_debug` `false` *show debug logging in the sublime console*
 * `log_server` `[]` *log communication from and to language servers*
-* `log_stderr` `false` *show language server stderr output in the console*
 * `log_max_size` `8192` *max  number of characters of payloads to print*
 
 ### Color configurations

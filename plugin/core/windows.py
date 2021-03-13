@@ -450,8 +450,7 @@ class WindowManager(Manager):
         self.handle_server_message(session.config.name, extract_message(params))
 
     def handle_stderr_log(self, session: Session, message: str) -> None:
-        if userprefs().log_stderr:
-            self.handle_server_message(session.config.name, message)
+        self.handle_server_message(session.config.name, message)
 
     def handle_show_message(self, session: Session, params: Any) -> None:
         sublime.status_message("{}: {}".format(session.config.name, extract_message(params)))

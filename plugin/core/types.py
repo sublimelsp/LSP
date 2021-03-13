@@ -161,7 +161,6 @@ class Settings:
     log_debug = None  # type: bool
     log_max_size = None  # type: int
     log_server = None  # type: List[str]
-    log_stderr = None  # type: bool
     lsp_code_actions_on_save = None  # type: Dict[str, bool]
     lsp_format_on_save = None  # type: bool
     only_show_lsp_completions = None  # type: bool
@@ -194,7 +193,6 @@ class Settings:
         r("log_debug", False)
         r("log_max_size", 8 * 1024)
         # r("log_server", [])
-        r("log_stderr", False)
         r("lsp_code_actions_on_save", {})
         r("lsp_format_on_save", False)
         r("only_show_lsp_completions", False)

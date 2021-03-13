@@ -339,10 +339,10 @@ class WindowManager(Manager):
             self._new_session = session
         except Exception as e:
             message = "".join((
-                "Failed tot start subprocess for {0}. Reason:\n\n",
+                "Failed to start subprocess for {0}. Reason:\n\n",
                 "{1}\n\n",
                 "{0} will be disabled for this project. Enable {0} again by running ",
-                "LSP: Enable Language Server In Project from the Command Palette."
+                "\"LSP: Enable Language Server In Project\" from the Command Palette."
             )).format(config.name, str(e))
             exception_log("Unable to start subprocess for {}".format(config.name), e)
             if isinstance(e, CalledProcessError):
@@ -428,7 +428,7 @@ class WindowManager(Manager):
                 msg += " and message:\n\n---\n{}\n---".format(str(exception))
             msg += "".join((
                 "\n\nDo you want to restart {0}?\n\nIf you choose Cancel, {0} will be disabled for this project. ",
-                "Enable {0} again by running LSP: Enable Language Server In Project from the Command Palette."
+                "Enable {0} again by running \"LSP: Enable Language Server In Project\" from the Command Palette."
             )).format(config.name)
             if sublime.ok_cancel_dialog(msg, "Restart {}".format(config.name)):
                 for listener in self._listeners:

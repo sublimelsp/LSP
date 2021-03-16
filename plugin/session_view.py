@@ -187,11 +187,11 @@ class SessionView:
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
             key = self.diagnostics_key(severity)
             key_tags = {tag: '{}_tags_{}'.format(key, tag) for tag in DIAGNOSTIC_TAG_VALUES}
+            for key_tag in key_tags.values():
+                self.view.erase_regions(key_tag)
             data = data_per_severity.get(severity)
             if data is None:
                 self.view.erase_regions(key)
-                for key_tag in key_tags.values():
-                    self.view.erase_regions(key_tag)
             elif ((severity <= userprefs().show_diagnostics_severity_level) and
                     (data.icon or flags != (sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE))):
                 non_tag_regions = data.regions
@@ -205,8 +205,6 @@ class SessionView:
                 self.view.add_regions(key, non_tag_regions, data.scope, data.icon, flags | sublime.DRAW_EMPTY)
             else:
                 self.view.erase_regions(key)
-                for key_tag in key_tags.values():
-                    self.view.erase_regions(key_tag)
         listener = self.listener()
         if listener:
             listener.on_diagnostics_updated_async()

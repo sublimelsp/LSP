@@ -58,7 +58,7 @@ def sort_by_application_order(changes: Iterable[TextEdit]) -> List[TextEdit]:
     return list(sorted(changes, key=operator.itemgetter(0)))
 
 
-def apply_workspace_edit(window: sublime.Window, changes: Dict[str, List[TextEdit]]) -> Promise:
+def apply_workspace_edit(window: sublime.Window, changes: Dict[str, List[TextEdit]]) -> Promise[List[None]]:
     """Apply workspace edits. This function must be called from the main thread!"""
     return Promise.all([open_file(window, fn).then(partial(_apply_edits, edits)) for fn, edits in changes.items()])
 

@@ -1,6 +1,7 @@
 from .logging import exception_log
 from .promise import Promise
 from .promise import ResolveFunc
+from .promise import PackagedTask
 from .protocol import Range, RangeLsp
 from .typing import Dict, Tuple, Optional
 from .url import uri_to_filename
@@ -60,9 +61,15 @@ def open_file_and_center(window: sublime.Window, file_path: str, r: Optional[Ran
 def open_file_and_center_async(window: sublime.Window, file_path: str, r: Optional[RangeLsp], flag: int = 0,
                                group: int = -1) -> Promise[None]:
     """Open a file asynchronously and center the range, worker thread version."""
-    return Promise.on_main_thread(None) \
-        .then(lambda _: open_file_and_center(window, file_path, r, flag, group)) \
-        .then(lambda _: Promise.on_async_thread(None))
+    pair = Promise.packaged_task()  # type: PackagedTask[None]
+    sublime.set_timeout(
+        lambda: open_file_and_center(window, file_path, r, flag, group).then(
+            lambda view: sublime.set_timeout_async(
+                lambda: pair[1](view)
+            )
+        )
+    )
+    return pair[0]
 
 
 def open_externally(uri: str, take_focus: bool) -> bool:

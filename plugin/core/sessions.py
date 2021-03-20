@@ -1062,9 +1062,15 @@ class Session(TransportCallbacks):
         applied.
         """
         changes = parse_workspace_edit(edit)
-        return Promise.on_main_thread(None) \
-            .then(lambda _: apply_workspace_edit(self.window, changes)) \
-            .then(lambda _: Promise.on_async_thread(None))
+        pair = Promise.packaged_task()  # type: PackagedTask[None]
+        sublime.set_timeout(
+            lambda: apply_workspace_edit(self.window, changes).then(
+                lambda _: sublime.set_timeout_async(
+                    lambda: pair[1](None)
+                )
+            )
+        )
+        return pair[0]
 
     # --- server request handlers --------------------------------------------------------------------------------------
 

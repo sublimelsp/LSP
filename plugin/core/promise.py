@@ -1,7 +1,5 @@
 from .typing import Callable, Generic, List, Optional, Protocol, Tuple, TypeVar, Union
 import functools
-import sublime
-import threading
 
 T = TypeVar('T')
 TExecutor = TypeVar('TExecutor')
@@ -14,7 +12,7 @@ class ResolveFunc(Protocol[T_contra]):
         ...
 
 
-FullfillFunc = Callable[[T], Union[TResult, 'Promise[TResult]']]
+Continuation = Callable[[T], Union[TResult, 'Promise[TResult]']]
 ExecutorFunc = Callable[[ResolveFunc[T]], None]
 PackagedTask = Tuple['Promise[T]', ResolveFunc[T]]
 
@@ -80,16 +78,6 @@ class Promise(Generic[T]):
         return cls(executor_func)
 
     @classmethod
-    def on_main_thread(cls, value: T) -> 'Promise[T]':
-        """Return a promise that resolves on the main thread."""
-        return Promise(lambda resolve: sublime.set_timeout(lambda: resolve(value)))
-
-    @classmethod
-    def on_async_thread(cls, value: T) -> 'Promise[T]':
-        """Return a promise that resolves on the worker thread."""
-        return Promise(lambda resolve: sublime.set_timeout_async(lambda: resolve(value)))
-
-    @classmethod
     def packaged_task(cls) -> PackagedTask[T]:
 
         class Executor(Generic[TExecutor]):
@@ -148,7 +136,6 @@ class Promise(Generic[T]):
             called, resolves the Promise with the value passed to it.
         """
         self.resolved = False
-        self.mutex = threading.Lock()
         self.callbacks = []  # type: List[ResolveFunc[T]]
         executor_func(lambda value=None: self._do_resolve(value))
 
@@ -157,7 +144,7 @@ class Promise(Generic[T]):
             return 'Promise({})'.format(self.value)
         return 'Promise(<pending>)'
 
-    def then(self, onfullfilled: FullfillFunc[T, TResult]) -> 'Promise[TResult]':
+    def then(self, continuation: Continuation[T, TResult]) -> 'Promise[TResult]':
         """Create a new promise and chain it with this promise.
 
         When this promise gets resolved, the callback will be called with the
@@ -166,7 +153,7 @@ class Promise(Generic[T]):
         Returns a new promise that can be used to do further chaining.
 
         Arguments:
-            onfullfilled: The callback to call when this promise gets resolved.
+            continuation: The callback to call when this promise gets resolved.
         """
         def callback_wrapper(resolve_fn: ResolveFunc[TResult], resolve_value: T) -> None:
             """A wrapper called when this promise resolves.
@@ -175,7 +162,7 @@ class Promise(Generic[T]):
                 resolve_fn: A resolve function of newly created promise.
                 resolve_value: The value with which this promise resolved.
             """
-            result = onfullfilled(resolve_value)
+            result = continuation(resolve_value)
             # If returned value is a promise then this promise needs to be
             # resolved with the value of returned promise.
             if isinstance(result, Promise):
@@ -207,20 +194,16 @@ class Promise(Generic[T]):
         # No need to block as we can't change from resolved to unresolved.
         if self.resolved:
             raise RuntimeError("cannot set the value of an already resolved promise")
-        with self.mutex:
-            self.resolved = True
-            self.value = new_value
-            for callback in self.callbacks:
-                callback(new_value)
+        self.resolved = True
+        self.value = new_value
+        for callback in self.callbacks:
+            callback(new_value)
 
     def _add_callback(self, callback: ResolveFunc[T]) -> None:
-        with self.mutex:
-            self.callbacks.append(callback)
+        self.callbacks.append(callback)
 
     def _is_resolved(self) -> bool:
-        with self.mutex:
-            return self.resolved
+        return self.resolved
 
     def _get_value(self) -> T:
-        with self.mutex:
-            return self.value
+        return self.value

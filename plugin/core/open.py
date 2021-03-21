@@ -1,4 +1,5 @@
 from .logging import exception_log
+from .promise import PackagedTask
 from .promise import Promise
 from .promise import ResolveFunc
 from .protocol import Range, RangeLsp
@@ -42,27 +43,35 @@ def open_file(
     return promise
 
 
-def open_file_and_center(window: sublime.Window, file_path: str, r: Optional[RangeLsp], flag: int = 0,
-                         group: int = -1) -> Promise:
+def open_file_and_center(window: sublime.Window, file_path: str, r: Optional[RangeLsp], flags: int = 0,
+                         group: int = -1) -> Promise[Optional[sublime.View]]:
     """Open a file asynchronously and center the range. It is only safe to call this function from the UI thread."""
 
-    def center_selection(v: Optional[sublime.View]) -> None:
-        if not v or not v.is_valid() or not r:
-            return
-        selection = range_to_region(Range.from_lsp(r), v)
-        v.show_at_center(selection.a)
-        v.run_command("lsp_selection_set", {"regions": [(selection.a, selection.b)]})
+    def center_selection(v: Optional[sublime.View]) -> Optional[sublime.View]:
+        if v and v.is_valid():
+            if r:
+                selection = range_to_region(Range.from_lsp(r), v)
+                v.show_at_center(selection.a)
+                v.run_command("lsp_selection_set", {"regions": [(selection.a, selection.b)]})
+            return v
+        return None
 
     # TODO: ST API does not allow us to say "do not focus this new view"
-    return open_file(window, file_path).then(center_selection)
+    return open_file(window, file_path, flags, group).then(center_selection)
 
 
-def open_file_and_center_async(window: sublime.Window, file_path: str, r: Optional[RangeLsp], flag: int = 0,
-                               group: int = -1) -> Promise[None]:
+def open_file_and_center_async(window: sublime.Window, file_path: str, r: Optional[RangeLsp], flags: int = 0,
+                               group: int = -1) -> Promise[Optional[sublime.View]]:
     """Open a file asynchronously and center the range, worker thread version."""
-    return Promise.on_main_thread(None) \
-        .then(lambda _: open_file_and_center(window, file_path, r, flag, group)) \
-        .then(lambda _: Promise.on_async_thread(None))
+    pair = Promise.packaged_task()  # type: PackagedTask[Optional[sublime.View]]
+    sublime.set_timeout(
+        lambda: open_file_and_center(window, file_path, r, flags, group).then(
+            lambda view: sublime.set_timeout_async(
+                lambda: pair[1](view)
+            )
+        )
+    )
+    return pair[0]
 
 
 def open_externally(uri: str, take_focus: bool) -> bool:

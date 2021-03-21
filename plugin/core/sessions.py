@@ -1159,7 +1159,13 @@ class Session(TransportCallbacks):
         """handles the window/showDocument request"""
         uri = params.get("uri")
 
-        def success(b: bool) -> None:
+        def success(b: Union[None, bool, sublime.View]) -> None:
+            if isinstance(b, bool):
+                pass
+            elif isinstance(b, sublime.View):
+                b = b.is_valid()
+            else:
+                b = False
             self.send_response(Response(request_id, {"success": b}))
 
         if params.get("external"):
@@ -1168,7 +1174,7 @@ class Session(TransportCallbacks):
             # TODO: ST API does not allow us to say "do not focus this new view"
             filename = uri_to_filename(uri)
             selection = params.get("selection")
-            open_file_and_center_async(self.window, filename, selection).then(lambda _: success(True))
+            open_file_and_center_async(self.window, filename, selection).then(success)
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
         """handles the window/workDoneProgress/create request"""

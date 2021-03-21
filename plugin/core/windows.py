@@ -339,10 +339,10 @@ class WindowManager(Manager):
             self._new_session = session
         except Exception as e:
             message = "".join((
-                "Failed to start subprocess for {0}. Reason:\n\n",
-                "{1}\n\n",
-                "{0} will be disabled for this project. Enable {0} again by running ",
-                "\"LSP: Enable Language Server In Project\" from the Command Palette."
+                "Failed to start subprocess for {0}. {0} will be disabled for this window. ",
+                "Enable {0} again by running \"LSP: Enable Language Server In Project\" from the Command Palette.",
+                "\n\n",
+                "{1}"
             )).format(config.name, str(e))
             exception_log("Unable to start subprocess for {}".format(config.name), e)
             if isinstance(e, CalledProcessError):
@@ -423,13 +423,13 @@ class WindowManager(Manager):
             listener.on_session_shutdown_async(session)
         if exit_code != 0 or exception:
             config = session.config
-            msg = "{} exited with status code {}".format(config.name, exit_code)
-            if exception:
-                msg += " and message:\n\n---\n{}\n---".format(str(exception))
-            msg += "".join((
-                "\n\nDo you want to restart {0}?\n\nIf you choose Cancel, {0} will be disabled for this project. ",
+            msg = "".join((
+                "{0} exited with status code {1}. ",
+                "Do you want to restart {0}? If you choose Cancel, {0} will be disabled for this window. ",
                 "Enable {0} again by running \"LSP: Enable Language Server In Project\" from the Command Palette."
-            )).format(config.name)
+            )).format(config.name, exit_code)
+            if exception:
+                msg += "\n\n---\n{}\n---".format(str(exception))
             if sublime.ok_cancel_dialog(msg, "Restart {}".format(config.name)):
                 for listener in self._listeners:
                     self.register_listener_async(listener)

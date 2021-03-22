@@ -425,8 +425,8 @@ class WindowManager(Manager):
             config = session.config
             msg = "".join((
                 "{0} exited with status code {1}. ",
-                "Do you want to restart {0}? If you choose Cancel, {0} will be disabled for this window. ",
-                "Enable {0} again by running \"LSP: Enable Language Server In Project\" from the Command Palette."
+                "Do you want to restart it? If you choose Cancel, it will be disabled for this window. ",
+                "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette."
             )).format(config.name, exit_code)
             if exception:
                 msg += "\n\n---\n{}\n---".format(str(exception))

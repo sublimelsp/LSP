@@ -429,7 +429,7 @@ class WindowManager(Manager):
                 "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette."
             )).format(config.name, exit_code)
             if exception:
-                msg += "\n\n---\n{}\n---".format(str(exception))
+                msg += "\n\n--- Error: ---\n{}".format(str(exception))
             if sublime.ok_cancel_dialog(msg, "Restart {}".format(config.name)):
                 for listener in self._listeners:
                     self.register_listener_async(listener)

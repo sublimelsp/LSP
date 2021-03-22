@@ -339,7 +339,7 @@ class WindowManager(Manager):
             self._new_session = session
         except Exception as e:
             message = "".join((
-                "Failed to start \"{0}\" - disabling for this window. ",
+                "Failed to start {0} - disabling for this window. ",
                 "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette.",
                 "\n\n",
                 "{1}"

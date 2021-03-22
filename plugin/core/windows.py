@@ -341,8 +341,7 @@ class WindowManager(Manager):
             message = "".join((
                 "Failed to start {0} - disabling for this window. ",
                 "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette.",
-                "\n\n",
-                "{1}"
+                "\n\n--- Error: ---\n{1}"
             )).format(config.name, str(e))
             exception_log("Unable to start subprocess for {}".format(config.name), e)
             if isinstance(e, CalledProcessError):

@@ -339,8 +339,8 @@ class WindowManager(Manager):
             self._new_session = session
         except Exception as e:
             message = "".join((
-                "Failed to start subprocess for {0}. {0} will be disabled for this window. ",
-                "Enable {0} again by running \"LSP: Enable Language Server In Project\" from the Command Palette.",
+                "Failed to start \"{0}\" - disabling for this window. ",
+                "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette.",
                 "\n\n",
                 "{1}"
             )).format(config.name, str(e))

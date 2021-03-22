@@ -51,16 +51,18 @@ class LocationPicker:
             parsed = urlparse(uri)
             if parsed.scheme == "file":
                 fmt = "{}:{}"
-                prefix = url2pathname(parsed.path)
-                if os.name == "nt" and re.match(r'^/[a-zA-Z]:/', prefix):
-                    prefix = prefix[1:]
-                if base_dir and is_subpath_of(prefix, base_dir):
-                    prefix = prefix[len(os.path.commonprefix((prefix, base_dir))) + 1:]
+                urlpath = parsed.path
+                if os.name == "nt" and re.match(r'^\/[a-zA-Z](?:\:|%3[aA])\/', urlpath):
+                    pathname = url2pathname(urlpath)[1:]
+                else:
+                    pathname = url2pathname(urlpath)
+                if base_dir and is_subpath_of(pathname, base_dir):
+                    pathname = pathname[len(os.path.commonprefix((pathname, base_dir))) + 1:]
             else:
                 # https://tools.ietf.org/html/rfc5147
                 fmt = "{}#line={}"
-                prefix = uri
-            items.append(fmt.format(prefix, position['line'] + 1))
+                pathname = uri
+            items.append(fmt.format(pathname, position['line'] + 1))
         self._window.show_quick_panel(
             items=items,
             on_select=self._select_entry,

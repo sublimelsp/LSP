@@ -639,9 +639,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 
     def _on_query_completions_async(self, resolve_completion_list: ResolveCompletionsFn, location: int) -> None:
+        sessions = list(self.sessions('completionProvider'))
+        if not sessions:
+            resolve_completion_list([], 0)
+            return
         self.purge_changes_async()
         completion_promises = []  # type: List[Promise[ResolvedCompletions]]
-        for session in self.sessions('completionProvider'):
+        for session in sessions:
 
             def completion_request() -> Promise[ResolvedCompletions]:
                 return session.send_request_task(
@@ -649,10 +653,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 ).then(lambda response: (response, session.config.name))
 
             completion_promises.append(completion_request())
-
-        if not completion_promises:
-            resolve_completion_list([], 0)
-            return
 
         Promise.all(completion_promises).then(
             lambda responses: self._on_all_settled(responses, resolve_completion_list))

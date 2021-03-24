@@ -8,7 +8,7 @@
 [![Coverage Status](https://codecov.io/github/sublimelsp/LSP/branch/master/graph/badge.svg)](https://codecov.io/gh/sublimelsp/LSP/tree/master/plugin)
 [![SublimeHQ Discord](https://img.shields.io/discord/280102180189634562?label=SublimeHQ%20Discord&logo=discord)](#chat)
 
-Language Server Protocol support for Sublime Text that gives you IDE [features](https://sublimelsp.github.io/LSP/features/).
+Language Server Protocol support for Sublime Text that gives you IDE [features](https://lsp.sublimetext.io/features).
 
 ![diagnostics screen-shot](docs/src/images/showcase.gif "TypeScript Server Example")
 
@@ -24,11 +24,11 @@ Clone this repository into your Packages directory. Open the command palette and
 
 ## Getting started
 
-Follow the installation steps for a [specific language server](https://sublimelsp.github.io/LSP/language_servers/).
+Follow the installation steps for a [specific language server](https://lsp.sublimetext.io/language_servers).
 
 Open a document supported by the language server. LSP should report the language server starting in the status bar.
 
-See more information in the [documentation](https://sublimelsp.github.io/LSP/) :open_book:.
+See more information in the [documentation](https://lsp.sublimetext.io) :open_book:.
 
 ## Customisation of the popups
 

@@ -1,5 +1,5 @@
 from .css import css as lsp_css
-from .protocol import CompletionItem, DocumentUri, Position
+from .protocol import CompletionItem, DocumentUri, Position, RangeLsp
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
@@ -158,6 +158,18 @@ def region_to_range(view: sublime.View, region: sublime.Region) -> Range:
 def _to_encoded_filename(path: str, position: Position) -> str:
     # WARNING: Cannot possibly do UTF-16 conversion :) Oh well.
     return '{}:{}:{}'.format(path, position['line'] + 1, position['character'] + 1)
+
+
+def get_uri_and_range_from_location(location: Union[Location, LocationLink]) -> Tuple[DocumentUri, RangeLsp]:
+    if "targetUri" in location:
+        location = cast(LocationLink, location)
+        uri = location["targetUri"]
+        r = location["targetSelectionRange"]
+    else:
+        location = cast(Location, location)
+        uri = location["uri"]
+        r = location["range"]
+    return uri, r
 
 
 def get_uri_and_position_from_location(location: Union[Location, LocationLink]) -> Tuple[DocumentUri, Position]:

@@ -639,7 +639,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 
     def _on_query_completions_async(self, resolve_completion_list: ResolveCompletionsFn, location: int) -> None:
-        sessions = self.sessions('completionProvider')
+        sessions = list(self.sessions('completionProvider'))
         if not sessions:
             resolve_completion_list([], 0)
             return

@@ -1065,6 +1065,7 @@ class Session(TransportCallbacks):
                     v.set_scratch(True)
                     v.set_name(title)
                     v.run_command("append", {"characters": content})
+                    v.set_read_only(True)
                     region = range_to_region(Range.from_lsp(r), v)
                     v.show_at_center(region.a)
                     v.run_command("lsp_selection_set", {"regions": [(region.a, region.b)]})

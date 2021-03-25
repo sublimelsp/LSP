@@ -275,7 +275,7 @@ Follow installation instructions on [LSP-eslint](https://github.com/sublimelsp/L
 
 ## Go
 
-1. Install [gopls](https://github.com/golang/tools/blob/master/gopls/doc/user.md#installation).
+1. Install [gopls](https://github.com/golang/tools/blob/master/gopls/README.md#installation).
 2. Open `Preferences > Package Settings > LSP > Settings` and add the `"gopls"` client configuration to the `"clients"`:
 
 === "Sublime Text 4"

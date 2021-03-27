@@ -30,10 +30,6 @@ Open a document supported by the language server. LSP should report the language
 
 See more information in the [documentation](https://lsp.sublimetext.io) :open_book:.
 
-## Customisation of the popups
-
-LSP uses [mdpopups](https://github.com/facelessuser/sublime-markdown-popups) to display the popup. You can override its style by creating a `Packages/User/mdpopups.css` file. See the [mdpopups documentation](http://facelessuser.github.io/sublime-markdown-popups/) for more details.
-
 ## Getting help
 
 If you have any problems, see the [troubleshooting](https://sublimelsp.github.io/LSP/troubleshooting/) guide for tips and known limitations. If the documentation cannot solve your problem, you can look for help in:

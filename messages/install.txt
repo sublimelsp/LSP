@@ -16,4 +16,4 @@ figuring things out!
 
 To get up and running for your favorite language, open the documentation at
 
-    https://sublimelsp.github.io/LSP
+    https://lsp.sublimetext.io

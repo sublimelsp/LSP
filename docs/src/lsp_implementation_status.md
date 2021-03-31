@@ -3,42 +3,42 @@
 ## Text Document Capabilities
 
 - ✅ synchronization
-  - ✅ didOpen
-  - ✅ didChange
-    - ✅ Full text sync
-    - ✅ Incremental text sync
-  - ✅ willSave
-  - ✅ willSaveWaitUntil
-  - ✅ didSave
-    - ✅ Include text
-  - ✅ didClose
+    - ✅ didOpen
+    - ✅ didChange
+        - ✅ Full text sync
+        - ✅ Incremental text sync
+    - ✅ willSave
+    - ✅ willSaveWaitUntil
+    - ✅ didSave
+        - ✅ Include text
+    - ✅ didClose
 - ✅ completion
-  - ✅ insertText
-  - ✅ textEdit
-  - ❌ prefix filter textEdit
-  - ✅ documentation (both static and from completionItem/resolve)
-  - ✅ Run command after inserting completion
-  - ❌ insertReplaceEdit variant
+    - ✅ insertText
+    - ✅ textEdit
+    - ❌ prefix filter textEdit
+    - ✅ documentation (both static and from completionItem/resolve)
+    - ✅ Run command after inserting completion
+    - ❌ insertReplaceEdit variant
 - ✅ hover
 - ✅ signatureHelp
-  - ❌ context
+    - ❌ context
 - ✅ declaration
-  - ✅ link support
+    - ✅ link support
 - ✅ definition
-  - ✅ link support
+    - ✅ link support
 - ✅ typeDefinition
-  - ✅ link support
+    - ✅ link support
 - ✅ implementation
-  - ✅ link support
+    - ✅ link support
 - ✅ references
 - ✅ documentHighlight
 - ✅ documentSymbol
 - ✅ codeAction
-  - ✅ resolve
+    - ✅ resolve
 - ✅ codeLens (*only when backed by a helper package*)
 - ❌ documentLink
 - ✅ colorProvider
-  - ❌ color picker [#1291](https://github.com/sublimelsp/LSP/issues/1291)
+    - ❌ color picker [#1291](https://github.com/sublimelsp/LSP/issues/1291)
 - ✅ formatting
 - ✅ rangeFormatting
 - ❌ onTypeFormatting
@@ -53,9 +53,9 @@
 
 - ✅ applyEdit
 - ✅ workspaceEdit
-  - ✅ documentChanges
-  - ❌ resourceOperations
-  - ❌ failureHandling
+    - ✅ documentChanges
+    - ❌ resourceOperations
+    - ❌ failureHandling
 - ✅ didChangeConfiguration
 - ❌ didChangeWatchedFiles [#892](https://github.com/sublimelsp/LSP/issues/892), [sublimehq/sublime_text#2669](https://github.com/sublimehq/sublime_text/issues/2669)
 - ✅ symbol
@@ -64,8 +64,8 @@
 ## Window Capabilities
 
 - ✅ workDoneProgress
-  - ✅ create
-  - ❌ cancel
+    - ✅ create
+    - ❌ cancel
 - ✅ showMessage request additionalPropertiesSupport
 
 ## Dynamic Registration

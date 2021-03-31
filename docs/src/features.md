@@ -57,14 +57,14 @@ You can include special variables in the `command_args` array that will be autom
 
 | Variable | Type | Description |
 | -------- | ---- | ----------- |
-| `"$document_id"` or `"${document_id}"` | object | Mapping `{ 'uri': string }` containing the file URI of the active view, see [Document Identifier](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentIdentifier) |
+| `"$document_id"` or `"${document_id}"` | object | JSON object `{ 'uri': string }` containing the file URI of the active view, see [Document Identifier](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentIdentifier) |
 | `"$file_uri"` or `"${file_uri}"` | string | File URI of the active view |
 | `"$selection"` or `"${selection}"` | string | Content of the (topmost) selection |
 | `"$offset"` or `"${offset}"` | int | Character offset of the (topmost) cursor position |
 | `"$selection_begin"` or `"${selection_begin}"` | int | Character offset of the begin of the (topmost) selection |
 | `"$selection_end"` or `"${selection_end}"` | int | Character offset of the end of the (topmost) selection |
-| `"$position"` or `"${position}"` | object | Mapping `{ 'line': int, 'character': int }` of the (topmost) cursor position, see [Position](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#position) |
-| `"$range"` or `"${range}` | object | Mapping with `'start'` and `'end'` positions of the (topmost) selection, see [Range](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#range) |
+| `"$position"` or `"${position}"` | object | JSON object `{ 'line': int, 'character': int }` of the (topmost) cursor position, see [Position](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#position) |
+| `"$range"` or `"${range}"` | object | JSON object with `'start'` and `'end'` positions of the (topmost) selection, see [Range](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#range) |
 
 ### Overriding keybindings
 
@@ -155,111 +155,3 @@ There is an example of this in LSP's default keybindings.
 
 See below link, but bind to `lsp_symbol_definition` command
 https://stackoverflow.com/questions/16235706/sublime-3-set-key-map-for-function-goto-definition
-
-
-## Configuring
-
-### Sublime settings
-
-Add these settings to LSP settings, your Sublime settings, Syntax-specific settings and/or in Project files.
-
-* `lsp_format_on_save` `false` *run the server's formatProvider (if supported) on a document before saving.*
-* `lsp_code_actions_on_save` `{}` *request code actions with specified identifiers to trigger before saving.*
-
-### Package settings (LSP)
-
-* `inhibit_word_completions` `true` *disable sublime word completion*
-* `inhibit_snippet_completions` `false` *disable sublime snippet completion*
-* `show_code_actions` `annotation` *Show code actions: "annotation", "bulb"*
-* `code_action_on_save_timeout_ms` `2000` *the amount of time the code actions on save are allowed to run for*
-* `show_references_in_quick_panel` `false` *show symbol references in Sublime's quick panel instead of the bottom panel*
-* `show_view_status` `true` *show permanent language server status in the status bar*
-* 'diagnostics_delay_ms' `0` *delay showing diagnostics by this many milliseconds*
-* `diagnostics_additional_delay_auto_complete_ms` `0` *additional delay when the AC widget is visible*
-* `auto_show_diagnostics_panel` `always` (`never`, `saved`) *open the diagnostics panel automatically if there are diagnostics*
-* `show_diagnostics_count_in_view_status` `false` *show errors and warnings count in the status bar*
-* `show_diagnostics_in_view_status` `true` *when on a diagnostic with the cursor, show the text in the status bar*
-* `diagnostics_highlight_style` `"underline"` *highlight style of code diagnostics: "box", "underline", "stippled", "squiggly" or ""*
-* `highlight_active_signature_parameter`: *highlight the active parameter of the currently active signature*
-* `document_highlight_style`: *document highlight style: "box", "underline", "stippled", "squiggly" or ""*
-* `diagnostics_gutter_marker` `"dot"` *gutter marker for code diagnostics: "dot", "circle", "bookmark", "sign" or ""*
-* `show_symbol_action_links` `false` *show links to symbol actions like go to, references and rename in the hover popup*
-* `disabled_capabilities`, `[]` *Turn off client capabilities (features): "hover", "completion", "documentHighlight", "colorProvider", "signatureHelp", "codeLensProvider", "codeActionProvider"*
-* `log_debug` `false` *show debug logging in the sublime console*
-* `log_server` `[]` *log communication from and to language servers*
-* `log_max_size` `8192` *max  number of characters of payloads to print*
-
-### Color configurations
-
-Some features use TextMate scopes to control the colors (underline, background or text color) of styled regions in a document or popup.
-Colors can be customized by adding a rule for these scopes into your color scheme, see https://www.sublimetext.com/docs/3/color_schemes.html#customization.
-
-The following tables give an overview about the scope names used by LSP.
-
-#### Document Highlights
-
-!!! info "This feature is only available if the server has the *documentHighlightProvider* capability."
-    Highlights other occurrences of the symbol at a given cursor position.
-
-| scope | DocumentHighlightKind | description |
-| ----- | --------------------- | ----------- |
-| `markup.highlight.text.lsp` | Text | A textual occurrence |
-| `markup.highlight.read.lsp` | Read | Read-access of a symbol, like reading a variable |
-| `markup.highlight.write.lsp` | Write | Write-access of a symbol, like writing to a variable |
-
-!!! note
-    If `document_highlight_style` is set to "fill" in the LSP settings, the highlighting color can be controlled via the "background" color from a color scheme rule for the listed scopes.
-
-#### Diagnostics
-
-| scope | DiagnosticSeverity | description |
-| ----- | ------------------ | ----------- |
-| `markup.error.lsp` | Error | Reports an error |
-| `markup.warning.lsp` | Warning | Reports a warning |
-| `markup.info.lsp` | Information | Reports an information |
-| `markup.info.hint.lsp` | Hint | Reports a hint |
-
-!!! note
-    If `diagnostics_highlight_style` is set to "fill" in the LSP settings, the highlighting color can be controlled via the "background" color from a color scheme rule for the listed scopes.
-
-Diagnostics will also optionally include the following scopes:
-
-| scope                    | diagnostic tag name | description                 |
-| ------------------------ | ------------------- | --------------------------- |
-| `markup.unnecessary.lsp` | Unnecessary         | Unused or unnecessary code  |
-| `markup.deprecated.lsp`  | Deprecated          | Deprecated or obsolete code |
-
-!!! note
-    Regions created for those scopes don't follow the `diagnostics_highlight_style` setting and instead always use the "fill" style.
-
-    Those scopes can be used to, for example, gray-out the text color of unused code, if the server supports that.
-
-    For example, to add a custom rule for `Mariana` color scheme, select `UI: Customize Color Scheme` from the Command Palette and add the following rule:
-
-    ```json
-    {
-        "rules": [
-            {
-                "scope": "markup.unnecessary.lsp",
-                "foreground": "color(rgb(255, 255, 255) alpha(0.4))",
-                "background": "color(var(blue3) alpha(0.9))"
-            }
-        ]
-    }
-    ```
-
-    The color scheme rule only works if the "background" color is different from the global background of the scheme. So for other color schemes, ideally pick a background color that is as close as possible, but marginally different from the original background.
-
-
-#### Signature Help
-
-| scope | description |
-| ----- | ----------- |
-| `entity.name.function.sighelp.lsp` | Function name in the signature help popup |
-| `variable.parameter.sighelp.lsp` | Function argument in the signature help popup |
-
-#### Code Lens
-
-| scope | description |
-| ----- | ----------- |
-| `markup.codelens.accent` | Accent color for code lens annotations |

@@ -3,6 +3,7 @@ from .edit import apply_workspace_edit
 from .edit import parse_workspace_edit
 from .logging import debug
 from .logging import exception_log
+from .open import center_selection
 from .open import open_externally
 from .open import open_file_and_center_async
 from .progress import WindowProgressReporter
@@ -18,7 +19,6 @@ from .protocol import Error
 from .protocol import ErrorCode
 from .protocol import ExecuteCommandParams
 from .protocol import Notification
-from .protocol import Range
 from .protocol import RangeLsp
 from .protocol import Request
 from .protocol import Response
@@ -42,7 +42,6 @@ from .views import COMPLETION_KINDS
 from .views import extract_variables
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
-from .views import range_to_region
 from .views import SYMBOL_KINDS
 from .workspace import is_subpath_of
 from abc import ABCMeta
@@ -1066,9 +1065,7 @@ class Session(TransportCallbacks):
                     v.set_name(title)
                     v.run_command("append", {"characters": content})
                     v.set_read_only(True)
-                    region = range_to_region(Range.from_lsp(r), v)
-                    v.show_at_center(region.a)
-                    v.run_command("lsp_selection_set", {"regions": [(region.a, region.b)]})
+                    center_selection(v, r)
                     sublime.set_timeout_async(lambda: result[1](True))
 
                 pair[0].then(lambda tup: sublime.set_timeout(lambda: open_scratch_buffer(*tup)))

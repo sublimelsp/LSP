@@ -155,7 +155,7 @@ def region_to_range(view: sublime.View, region: sublime.Region) -> Range:
     )
 
 
-def _to_encoded_filename(path: str, position: Position) -> str:
+def to_encoded_filename(path: str, position: Position) -> str:
     # WARNING: Cannot possibly do UTF-16 conversion :) Oh well.
     return '{}:{}:{}'.format(path, position['line'] + 1, position['character'] + 1)
 
@@ -185,7 +185,7 @@ def get_uri_and_position_from_location(location: Union[Location, LocationLink]) 
 
 
 def location_to_encoded_filename(location: Union[Location, LocationLink]) -> str:
-    return _to_encoded_filename(*get_uri_and_position_from_location(location))
+    return to_encoded_filename(*get_uri_and_position_from_location(location))
 
 
 class MissingFilenameError(Exception):

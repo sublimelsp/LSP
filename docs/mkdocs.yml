@@ -37,10 +37,10 @@ nav:
     - Getting Started: 'index.md'
     - Language Servers: 'language_servers.md'
     - Features: 'features.md'
+    - Customization: 'customization.md'
     - Guides:
       - Client Configuration: 'guides/client_configuration.md'
       - Setup C/C++: 'guides/cplusplus.md'
-      - Customisation of the popups: 'guides/customisation_of_the_popups.md'
     - Troubleshooting: 'troubleshooting.md'
 
 extra:

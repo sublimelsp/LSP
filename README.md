@@ -6,6 +6,7 @@
 [![GitHub release](https://img.shields.io/github/release/sublimelsp/LSP.svg)](https://github.com/sublimelsp/LSP/releases)
 [![Github Action](https://github.com/sublimelsp/LSP/workflows/main/badge.svg?branch=master)](https://github.com/sublimelsp/LSP/actions)
 [![Coverage Status](https://codecov.io/github/sublimelsp/LSP/branch/master/graph/badge.svg)](https://codecov.io/gh/sublimelsp/LSP/tree/master/plugin)
+[![Documentation](https://img.shields.io/badge/docs-ST4-blue)](https://lsp.sublimetext.io/)
 [![SublimeHQ Discord](https://img.shields.io/discord/280102180189634562?label=SublimeHQ%20Discord&logo=discord)](#chat)
 
 Language Server Protocol support for Sublime Text that gives you IDE [features](https://lsp.sublimetext.io/features).

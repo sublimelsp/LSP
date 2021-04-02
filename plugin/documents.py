@@ -156,6 +156,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
         self._code_lenses = []  # type: List[Tuple[CodeLens, sublime.Region]]
         self._sighelp = None  # type: Optional[SigHelp]
+        self._uri = ""
         self._language_id = ""
         self._registered = False
 
@@ -309,6 +310,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self.do_signature_help_async(manual=False)
         self._when_selection_remains_stable_async(self._do_code_lenses_async, current_region,
                                                   after_ms=self.code_lenses_debounce_time)
+
+    def get_uri(self) -> str:
+        return self._uri
 
     def get_language_id(self) -> str:
         return self._language_id

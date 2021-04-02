@@ -82,5 +82,9 @@
     {
         "caption": "LSP: Rename",
         "command": "lsp_symbol_rename"
+    },
+    {
+        "caption": "LSP: Find References",
+        "command": "lsp_symbol_references"
     }
 ]

@@ -1,0 +1,25 @@
+=> 1.2.13
+
+# Features and Fixes
+
+- Add Find References to commands list (Yeray Diaz Diaz)
+- Add docs badge to README (Janos Wortmann)
+- Move LSP spec implementation status from README to docs (Janos Wortmann)
+- Reorder some sections in the documentation (Janos Wortmann)
+- Point install.txt to the new docs website (Raoul Wols)
+- move customization of popups to docs (Predrag)
+- Fix gopls install link. (Ryan McQuen)
+- Fix null session completions (#1623) (deathaxe)
+- Put instructions at the top when langserver gets disabled (#1619) (Raoul Wols)
+- Update links to documentation (Raoul Wols)
+- Fix case where tag regions would not get removed (Rafał Chłodnicki)
+- Remove "log_stderr" in favor of always logging errors to the log panel (#1613) (Предраг Николић / Predrag Nikolic)
+- Make scopes in output panels consistent with Find results panel (#1614) (jwortmann)
+- feat(code actions): display code actions within a quick panel  (#1611) (Benoit Pingris)
+- Remove temp disabled config logic (#1606) (Raoul Wols)
+- Fix edit button in the documentation (Rafał Chłodnicki)
+- Fix casing in language-ids.sublime-settings (Raoul Wols)
+- Enable project-only configurations (Raoul Wols)
+- Create extra regions for diagnostics with tags (#1588) (Rafał Chłodnicki)
+- Send completion request to multiple sessions (#1582) (Предраг Николић / Predrag Nikolic)
+- Link to the new documentation in the readme (#1604) (Rafał Chłodnicki)

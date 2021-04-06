@@ -46,7 +46,7 @@ class WindowPanelListener(sublime_plugin.EventListener):
 
     server_log_map = {}  # type: Dict[int, List[Tuple[str, str]]]
 
-    def on_init(self, views) -> None:
+    def on_init(self, views: List[sublime.View]) -> None:
         for window in sublime.windows():
             self.server_log_map[window.id()] = []
 
@@ -56,7 +56,7 @@ class WindowPanelListener(sublime_plugin.EventListener):
     def on_pre_close_window(self, window: sublime.Window) -> None:
         self.server_log_map.pop(window.id())
 
-    def on_window_command(self, window, command_name, args) -> None:
+    def on_window_command(self, window: sublime.Window, command_name: str, args: Dict) -> None:
         if command_name in ('show_panel', 'hide_panel'):
             sublime.set_timeout(lambda: self.maybe_update_server_panel(window))
 
@@ -155,13 +155,13 @@ def log_server_message(window: sublime.Window, prefix: str, message: str) -> Non
 
 
 def update_server_panel(panel: sublime.View, window_id: int) -> None:
-    panel.run_command("lsp_update_server_panel", {"window_id": window_id}),
+    panel.run_command("lsp_update_server_panel", {"window_id": window_id})
 
 
 class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
 
     def run(self, edit: sublime.Edit, window_id: int) -> None:
-        to_process = WindowPanelListener.server_log_map.get(window_id)
+        to_process = WindowPanelListener.server_log_map.get(window_id) or []
         WindowPanelListener.server_log_map[window_id] = []
         with mutable(self.view):
             for prefix, message in to_process:

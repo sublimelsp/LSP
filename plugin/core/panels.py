@@ -1,5 +1,4 @@
 from .typing import Dict, Optional, List, Generator, Tuple
-from .types import debounced
 from contextlib import contextmanager
 import sublime
 import sublime_plugin
@@ -7,9 +6,6 @@ import sublime_plugin
 
 # about 80 chars per line implies maintaining a buffer of about 40kb per window
 SERVER_PANEL_MAX_LINES = 500
-
-# If nothing else shows up after 80ms, actually print the messages to the panel
-SERVER_PANEL_DEBOUNCE_TIME_MS = 80
 
 OUTPUT_PANEL_SETTINGS = {
     "auto_indent": False,
@@ -44,6 +40,31 @@ def mutable(view: sublime.View) -> Generator:
     view.set_read_only(False)
     yield
     view.set_read_only(True)
+
+
+class WindowPanelListener(sublime_plugin.EventListener):
+
+    server_log_map = {}  # type: Dict[int, List[Tuple[str, str]]]
+
+    def on_init(self, views) -> None:
+        for window in sublime.windows():
+            self.server_log_map[window.id()] = []
+
+    def on_new_window(self, window: sublime.Window) -> None:
+        self.server_log_map[window.id()] = []
+
+    def on_pre_close_window(self, window: sublime.Window) -> None:
+        self.server_log_map.pop(window.id())
+
+    def on_window_command(self, window, command_name, args) -> None:
+        if command_name in ('show_panel', 'hide_panel'):
+            sublime.set_timeout(lambda: self.maybe_update_server_panel(window))
+
+    def maybe_update_server_panel(self, window: sublime.Window) -> None:
+        if is_server_panel_open(window):
+            panel = ensure_server_panel(window)
+            if panel:
+                update_server_panel(panel, window.id())
 
 
 def create_output_panel(window: sublime.Window, name: str) -> Optional[sublime.View]:
@@ -118,44 +139,30 @@ def ensure_server_panel(window: sublime.Window) -> Optional[sublime.View]:
     return ensure_panel(window, PanelName.LanguageServers, "", "", "Packages/LSP/Syntaxes/ServerLog.sublime-syntax")
 
 
-def update_server_panel(window: sublime.Window, prefix: str, message: str) -> None:
+def is_server_panel_open(window: sublime.Window) -> bool:
+    return window.is_valid() and window.active_panel() == "output.{}".format(PanelName.LanguageServers)
+
+
+def log_server_message(window: sublime.Window, prefix: str, message: str) -> None:
     if not window.is_valid():
         return
     window_id = window.id()
-    panel = ensure_server_panel(window)
-    if not panel:
-        return
-    LspUpdateServerPanelCommand.to_be_processed.setdefault(window_id, []).append((prefix, message))
-    previous_length = len(LspUpdateServerPanelCommand.to_be_processed[window_id])
+    WindowPanelListener.server_log_map[window_id].append((prefix, message))
+    if is_server_panel_open(window):
+        panel = ensure_server_panel(window)
+        if panel:
+            update_server_panel(panel, window_id)
 
-    def condition() -> bool:
-        if not panel:
-            return False
-        if not panel.is_valid():
-            return False
-        to_process = LspUpdateServerPanelCommand.to_be_processed.get(window_id)
-        if to_process is None:
-            return False
-        current_length = len(to_process)
-        if current_length >= 10:
-            # Do not let the queue grow large.
-            return True
-        # If the queue remains stable, flush the messages.
-        return current_length == previous_length
 
-    debounced(
-        lambda: panel.run_command("lsp_update_server_panel", {"window_id": window_id}) if panel else None,
-        SERVER_PANEL_DEBOUNCE_TIME_MS,
-        condition
-    )
+def update_server_panel(panel: sublime.View, window_id: int) -> None:
+    panel.run_command("lsp_update_server_panel", {"window_id": window_id}),
 
 
 class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
 
-    to_be_processed = {}  # type: Dict[int, List[Tuple[str, str]]]
-
     def run(self, edit: sublime.Edit, window_id: int) -> None:
-        to_process = self.to_be_processed.pop(window_id)
+        to_process = WindowPanelListener.server_log_map.get(window_id)
+        WindowPanelListener.server_log_map[window_id] = []
         with mutable(self.view):
             for prefix, message in to_process:
                 message = message.replace("\r\n", "\n")  # normalize Windows eol

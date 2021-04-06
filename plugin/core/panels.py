@@ -148,10 +148,9 @@ def log_server_message(window: sublime.Window, prefix: str, message: str) -> Non
         return
     window_id = window.id()
     WindowPanelListener.server_log_map[window_id].append((prefix, message))
-    if is_server_panel_open(window):
-        panel = ensure_server_panel(window)
-        if panel:
-            update_server_panel(panel, window_id)
+    panel = ensure_server_panel(window)
+    if is_server_panel_open(window) and panel:
+        update_server_panel(panel, window_id)
 
 
 def update_server_panel(panel: sublime.View, window_id: int) -> None:

@@ -163,15 +163,18 @@ class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
         to_process = WindowPanelListener.server_log_map.get(window_id) or []
         WindowPanelListener.server_log_map[window_id] = []
         with mutable(self.view):
+            new_lines = []
             for prefix, message in to_process:
                 message = message.replace("\r\n", "\n")  # normalize Windows eol
-                self.view.insert(edit, self.view.size(), "{}: {}\n".format(prefix, message))
-            last_region_end = 0  # Starting from point 0 in the panel ...
-            total_lines, _ = self.view.rowcol(self.view.size())
-            for _ in range(0, max(0, total_lines - SERVER_PANEL_MAX_LINES)):
-                # ... collect all regions that span an entire line ...
-                region = self.view.full_line(last_region_end)
-                last_region_end = region.b
-            erase_region = sublime.Region(0, last_region_end)
-            if not erase_region.empty():
-                self.view.erase(edit, erase_region)
+                new_lines.append("{}: {}\n".format(prefix, message))
+            if new_lines:
+                self.view.insert(edit, self.view.size(), ''.join(new_lines))
+                last_region_end = 0  # Starting from point 0 in the panel ...
+                total_lines, _ = self.view.rowcol(self.view.size())
+                for _ in range(0, max(0, total_lines - SERVER_PANEL_MAX_LINES)):
+                    # ... collect all regions that span an entire line ...
+                    region = self.view.full_line(last_region_end)
+                    last_region_end = region.b
+                erase_region = sublime.Region(0, last_region_end)
+                if not erase_region.empty():
+                    self.view.erase(edit, erase_region)

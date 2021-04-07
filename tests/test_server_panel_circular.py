@@ -1,7 +1,6 @@
 from LSP.plugin.core.panels import ensure_server_panel
-from LSP.plugin.core.panels import SERVER_PANEL_DEBOUNCE_TIME_MS
 from LSP.plugin.core.panels import SERVER_PANEL_MAX_LINES
-from LSP.plugin.core.panels import update_server_panel
+from LSP.plugin.core.panels import log_server_message
 from unittesting import DeferrableTestCase
 import sublime
 
@@ -27,7 +26,7 @@ class LspServerPanelTests(DeferrableTestCase):
         self.assertEqual(actual_total_lines, expected_total_lines)
 
     def update_panel(self, msg: str) -> None:
-        update_server_panel(self.window, "test", msg)
+        log_server_message(self.window, "test", msg)
 
     def test_server_panel_circular_behavior(self):
         n = SERVER_PANEL_MAX_LINES
@@ -36,5 +35,4 @@ class LspServerPanelTests(DeferrableTestCase):
         self.update_panel("overflow")
         self.update_panel("overflow")
         self.update_panel("one\ntwo\nthree")
-        yield SERVER_PANEL_DEBOUNCE_TIME_MS
         self.assert_total_lines_equal(n)

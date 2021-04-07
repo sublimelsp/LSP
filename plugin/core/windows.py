@@ -5,7 +5,7 @@ from .diagnostics import ensure_diagnostics_panel
 from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
-from .panels import update_server_panel
+from .panels import log_server_message
 from .protocol import CodeLens, Diagnostic
 from .protocol import Error
 from .sessions import get_plugin
@@ -443,7 +443,7 @@ class WindowManager(Manager):
         self._end_sessions_async()
 
     def handle_server_message(self, server_name: str, message: str) -> None:
-        sublime.set_timeout(lambda: update_server_panel(self._window, server_name, message))
+        sublime.set_timeout(lambda: log_server_message(self._window, server_name, message))
 
     def handle_log_message(self, session: Session, params: Any) -> None:
         self.handle_server_message(session.config.name, extract_message(params))

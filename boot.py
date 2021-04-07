@@ -21,6 +21,7 @@ from .plugin.core.panels import destroy_output_panels
 from .plugin.core.panels import LspClearPanelCommand
 from .plugin.core.panels import LspUpdatePanelCommand
 from .plugin.core.panels import LspUpdateServerPanelCommand
+from .plugin.core.panels import WindowPanelListener
 from .plugin.core.protocol import Response
 from .plugin.core.protocol import WorkspaceFolder
 from .plugin.core.registry import LspRecheckSessionsCommand

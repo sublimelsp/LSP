@@ -172,4 +172,6 @@ class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
                 # ... collect all regions that span an entire line ...
                 region = self.view.full_line(last_region_end)
                 last_region_end = region.b
-            self.view.erase(edit, sublime.Region(0, last_region_end))
+            erase_region = sublime.Region(0, last_region_end)
+            if not erase_region.empty():
+                self.view.erase(edit, erase_region)

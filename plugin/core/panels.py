@@ -166,14 +166,10 @@ class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
             for prefix, message in to_process:
                 message = message.replace("\r\n", "\n")  # normalize Windows eol
                 self.view.insert(edit, self.view.size(), "{}: {}\n".format(prefix, message))
-                total_lines, _ = self.view.rowcol(self.view.size())
-                point = 0  # Starting from point 0 in the panel ...
-                regions = []  # type: List[sublime.Region]
+            last_region_end = 0  # Starting from point 0 in the panel ...
+            total_lines, _ = self.view.rowcol(self.view.size())
             for _ in range(0, max(0, total_lines - SERVER_PANEL_MAX_LINES)):
                 # ... collect all regions that span an entire line ...
-                region = self.view.full_line(point)
-                regions.append(region)
-                point = region.b
-            for region in reversed(regions):
-                # ... and erase them in reverse order
-                self.view.erase(edit, region)
+                region = self.view.full_line(last_region_end)
+                last_region_end = region.b
+            self.view.erase(edit, sublime.Region(0, last_region_end))

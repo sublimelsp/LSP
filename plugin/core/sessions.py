@@ -593,6 +593,17 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
+    def on_register_capability_async(self, registration_id: str, capability_path: str, options: Dict[str, Any]) -> None:
+        pass
+
+    def on_unregister_capability_async(
+        self, registration_id: str, capability_path: str, options: Dict[str, Any]
+    ) -> None:
+        pass
+
+    def on_session_end_async(self) -> None:
+        pass
+
 
 _plugins = {}  # type: Dict[str, Tuple[Type[AbstractPlugin], SettingsRegistration]]
 
@@ -1136,6 +1147,10 @@ class Session(TransportCallbacks):
                     # Inform only after the response is sent, otherwise we might start doing requests for capabilities
                     # which are technically not yet done registering.
                     sublime.set_timeout_async(inform)
+            if self._plugin:
+                inform = functools.partial(
+                    self._plugin.on_register_capability_async, registration_id, capability_path, options)
+                sublime.set_timeout_async(inform)
         self.send_response(Response(request_id, None))
 
     def m_client_unregisterCapability(self, params: Any, request_id: Any) -> None:
@@ -1153,6 +1168,10 @@ class Session(TransportCallbacks):
                 if isinstance(discarded, dict):
                     for sv in self.session_views_async():
                         sv.on_capability_removed_async(registration_id, discarded)
+            if self._plugin:
+                inform = functools.partial(
+                    self._plugin.on_unregister_capability_async, registration_id, capability_path, registration_path)
+                sublime.set_timeout_async(inform)
         self.send_response(Response(request_id, None))
 
     def m_window_showDocument(self, params: Any, request_id: Any) -> None:
@@ -1232,7 +1251,9 @@ class Session(TransportCallbacks):
         if self.exiting:
             return
         self.exiting = True
-        self._plugin = None
+        if self._plugin:
+            self._plugin.on_session_end_async()
+            self._plugin = None
         for sv in self.session_views_async():
             sv.shutdown_async()
         self.capabilities.clear()

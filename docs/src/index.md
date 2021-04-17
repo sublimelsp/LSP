@@ -1,7 +1,7 @@
 # Getting started
 
-1. Find a server for the programming language of your choice in the [list of language servers](language_servers.md) and follow its setup instructions.
-2. Open a document in your chosen programming language - if the server starts successfully then its name will be shown on the left in the status bar.
+1. Find a server for the language of your choice in the [list of language servers](language_servers.md) and follow its setup instructions.
+2. Open a document in your chosen language - if the server starts successfully then its name will be shown on the left in the status bar.
 
 If you are having issues with starting the server, check the [Troubleshooting](troubleshooting.md) section.
 

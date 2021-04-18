@@ -594,14 +594,38 @@ class AbstractPlugin(metaclass=ABCMeta):
         pass
 
     def on_register_capability_async(self, registration_id: str, capability_path: str, options: Dict[str, Any]) -> None:
+        """
+        Notifies about server dynamically registering a capability using the client/registerCapability request.
+        This API is triggered on async thread.
+
+        :param registration_id: The registration identifier
+        :param capability_path: The registration capability path
+        :param options: The registration options
+        """
         pass
 
     def on_unregister_capability_async(
         self, registration_id: str, capability_path: str, options: Dict[str, Any]
     ) -> None:
+        """
+        Notifies about server un-registering a capability using the client/unregisterCapability request.
+        This API is triggered on async thread.
+
+        :param registration_id: The registration identifier
+        :param capability_path: The registration capability path
+        :param options: The registration options
+        """
         pass
 
+
     def on_session_end_async(self) -> None:
+        """
+        Notifies about the session ending (also if the session has crashed). Provides an opportunity to clean up
+        any stored state or delete references to the session or plugin instance that would otherwise prevent the
+        instance from being garbage-collected. If the plugin hasn't crashed, a shutdown message will be send immediately
+        after this method returns.
+        This API is triggered on async thread.
+        """
         pass
 
 

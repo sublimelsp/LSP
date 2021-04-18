@@ -1,8 +1,9 @@
 # Getting started
 
-1. Install a language server from the [list of language servers](language_servers.md), ensuring it can be started from the command line (is in your PATH).
-2. Run "LSP: Enable Language Server Globally" or "LSP: Enable Lanuage Server in Project" from Sublime's Command Palette to allow the server to start.
-3. Open a document in your language - if the server starts its name will be in the left side of the status bar.
+1. Find a server for the language of your choice in the [list of language servers](language_servers.md) and follow its setup instructions.
+2. Open a document in your chosen language - if the server starts successfully then its name will be shown on the left in the status bar.
+
+If you are having issues with starting the server, check the [Troubleshooting](troubleshooting.md) section.
 
 
 ## About LSP
@@ -12,20 +13,3 @@ This LSP package acts as an interface between Sublime Text and the language serv
 Language servers can be provided as standalone executables or might require a runtime environment like Node.js or Python.
 The [list of language servers](language_servers.md) shows installation instructions and example configurations for several servers that have been tested and are known to work with the LSP package.
 Visit [Langserver.org](https://langserver.org/) or the [list of language server implementations](https://microsoft.github.io/language-server-protocol/implementors/servers/) maintained by Microsoft for a complete overview of available servers for various programming languages.
-
-For a few languages you can also find dedicated packages on Package Control, which can optionally be installed to simplify the configuration and installation process of a language server and might provide additional features such as automatic updates for the server:
-
-* [LSP-bash](https://packagecontrol.io/packages/LSP-bash)
-* [LSP-css](https://packagecontrol.io/packages/LSP-css)
-* [LSP-dockerfile](https://packagecontrol.io/packages/LSP-dockerfile)
-* [LSP-elm](https://packagecontrol.io/packages/LSP-elm)
-* [LSP-eslint](https://packagecontrol.io/packages/LSP-eslint)
-* [LSP-html](https://packagecontrol.io/packages/LSP-html)
-* [LSP-intelephense](https://packagecontrol.io/packages/LSP-intelephense)
-* [LSP-json](https://packagecontrol.io/packages/LSP-json)
-* [LSP-metals](https://packagecontrol.io/packages/LSP-metals)
-* [LSP-serenata](https://packagecontrol.io/packages/LSP-serenata)
-* [LSP-typescript](https://packagecontrol.io/packages/LSP-typescript)
-* [LSP-vue](https://packagecontrol.io/packages/LSP-vue)
-* [LSP-yaml](https://packagecontrol.io/packages/LSP-yaml)
-

@@ -1248,6 +1248,8 @@ class Session(TransportCallbacks):
         self.state = ClientStates.STOPPING
         self.transport = None
         self._response_handlers.clear()
+        if self._plugin:
+            self._plugin = None
         if self._initialize_error:
             # Override potential exit error with a saved one.
             exit_code, exception = self._initialize_error

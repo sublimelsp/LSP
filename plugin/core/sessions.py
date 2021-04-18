@@ -1161,6 +1161,8 @@ class Session(TransportCallbacks):
             capability_path, registration_path = method_to_capability(unregistration["method"])
             debug("{}: unregistering capability:".format(self.config.name), capability_path)
             data = self._registrations.pop(registration_id, None)
+            if data and self._plugin:
+                self._plugin.on_unregister_capability_async(registration_id, capability_path, data.options)
             if data and not data.selector:
                 discarded = self.capabilities.unregister(registration_id, capability_path, registration_path)
                 # We must inform our SessionViews of the removed capabilities, in case it's for instance a hoverProvider
@@ -1168,10 +1170,6 @@ class Session(TransportCallbacks):
                 if isinstance(discarded, dict):
                     for sv in self.session_views_async():
                         sv.on_capability_removed_async(registration_id, discarded)
-            if self._plugin:
-                inform = functools.partial(
-                    self._plugin.on_unregister_capability_async, registration_id, capability_path, registration_path)
-                sublime.set_timeout_async(inform)
         self.send_response(Response(request_id, None))
 
     def m_window_showDocument(self, params: Any, request_id: Any) -> None:

@@ -617,7 +617,6 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
-
     def on_session_end_async(self) -> None:
         """
         Notifies about the session ending (also if the session has crashed). Provides an opportunity to clean up

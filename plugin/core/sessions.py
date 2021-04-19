@@ -593,6 +593,40 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         pass
 
+    def on_register_capability_async(self, registration_id: str, capability_path: str, options: Dict[str, Any]) -> None:
+        """
+        Notifies about server dynamically registering a capability using the client/registerCapability request.
+        This API is triggered on async thread.
+
+        :param registration_id: The registration identifier
+        :param capability_path: The registration capability path
+        :param options: The registration options
+        """
+        pass
+
+    def on_unregister_capability_async(
+        self, registration_id: str, capability_path: str, options: Dict[str, Any]
+    ) -> None:
+        """
+        Notifies about server un-registering a capability using the client/unregisterCapability request.
+        This API is triggered on async thread.
+
+        :param registration_id: The registration identifier
+        :param capability_path: The registration capability path
+        :param options: The registration options
+        """
+        pass
+
+    def on_session_end_async(self) -> None:
+        """
+        Notifies about the session ending (also if the session has crashed). Provides an opportunity to clean up
+        any stored state or delete references to the session or plugin instance that would otherwise prevent the
+        instance from being garbage-collected. If the plugin hasn't crashed, a shutdown message will be send immediately
+        after this method returns.
+        This API is triggered on async thread.
+        """
+        pass
+
 
 _plugins = {}  # type: Dict[str, Tuple[Type[AbstractPlugin], SettingsRegistration]]
 
@@ -1136,6 +1170,10 @@ class Session(TransportCallbacks):
                     # Inform only after the response is sent, otherwise we might start doing requests for capabilities
                     # which are technically not yet done registering.
                     sublime.set_timeout_async(inform)
+            if self._plugin:
+                inform = functools.partial(
+                    self._plugin.on_register_capability_async, registration_id, capability_path, options)
+                sublime.set_timeout_async(inform)
         self.send_response(Response(request_id, None))
 
     def m_client_unregisterCapability(self, params: Any, request_id: Any) -> None:
@@ -1146,6 +1184,8 @@ class Session(TransportCallbacks):
             capability_path, registration_path = method_to_capability(unregistration["method"])
             debug("{}: unregistering capability:".format(self.config.name), capability_path)
             data = self._registrations.pop(registration_id, None)
+            if data and self._plugin:
+                self._plugin.on_unregister_capability_async(registration_id, capability_path, data.options)
             if data and not data.selector:
                 discarded = self.capabilities.unregister(registration_id, capability_path, registration_path)
                 # We must inform our SessionViews of the removed capabilities, in case it's for instance a hoverProvider
@@ -1232,7 +1272,9 @@ class Session(TransportCallbacks):
         if self.exiting:
             return
         self.exiting = True
-        self._plugin = None
+        if self._plugin:
+            self._plugin.on_session_end_async()
+            self._plugin = None
         for sv in self.session_views_async():
             sv.shutdown_async()
         self.capabilities.clear()

@@ -1291,6 +1291,7 @@ class Session(TransportCallbacks):
         self.transport = None
         self._response_handlers.clear()
         if self._plugin:
+            self._plugin.on_session_end_async()
             self._plugin = None
         if self._initialize_error:
             # Override potential exit error with a saved one.

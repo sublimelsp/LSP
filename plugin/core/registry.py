@@ -37,13 +37,14 @@ windows = WindowRegistry(configs)
 def get_position(view: sublime.View, event: Optional[dict] = None, point: Optional[int] = None) -> int:
     if isinstance(point, int):
         return point
-    if event is None:
+    if event:
+        x, y = event.get("x"), event.get("y")
+        if x is not None and y is not None:
+            return view.window_to_text((x, y))
+    try:
         return view.sel()[0].begin()
-    x, y = event.get("x"), event.get("y")
-    if x is not None and y is not None:
-        return view.window_to_text((x, y))
-    else:
-        return view.sel()[0].begin()
+    except IndexError:
+        return 0
 
 
 class LspTextCommand(sublime_plugin.TextCommand):

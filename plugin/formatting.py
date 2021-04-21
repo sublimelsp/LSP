@@ -5,6 +5,7 @@ from .core.sessions import Session
 from .core.settings import userprefs
 from .core.typing import Any, Callable, List, Optional, Iterator
 from .core.views import entire_content_region
+from .core.views import first_selection
 from .core.views import text_document_formatting
 from .core.views import text_document_range_formatting
 from .core.views import will_save_wait_until
@@ -120,5 +121,5 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
         session = self.best_session(self.capability)
         if session:
-            req = text_document_range_formatting(self.view, self.view.sel()[0])
+            req = text_document_range_formatting(self.view, first_selection(self.view))
             session.send_request(req, lambda response: apply_response_to_view(response, self.view))

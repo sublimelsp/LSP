@@ -10,6 +10,7 @@ from .core.settings import userprefs
 from .core.typing import List, Optional, Any, Dict, Tuple, Sequence
 from .core.views import diagnostic_severity
 from .core.views import format_diagnostic_for_html
+from .core.views import first_selection
 from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .core.views import make_command_link
 from .core.views import make_link
@@ -70,10 +71,17 @@ class LspHoverCommand(LspTextCommand):
         point: Optional[int] = None,
         event: Optional[dict] = None
     ) -> None:
-        hover_point = point or self.view.sel()[0].begin()
+        temp_point = point
+        if temp_point is None:
+            region = first_selection(self.view)
+            if region:
+                temp_point = region.begin()
+        if temp_point is None:
+            return
         window = self.view.window()
         if not window:
             return
+        hover_point = temp_point
         wm = windows.lookup(window)
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
         self._hover = None  # type: Optional[Any]

@@ -5,6 +5,11 @@ Enable server logging: set `log_server` to ["panel"]
 Run "LSP: Toggle Log Panel" from the command palette. No restart is needed.
 If you believe the issue is with this package, please include the output from the Sublime console in your issue report!
 
+| test | foo |
+| ---- | --- |
+| hey  | ho  |
+| hey  | ho  |
+
 ## Updating the PATH used by LSP servers
 
 You can confirm that your issue is due to `PATH` being different by starting Sublime Text from the command line so that it inherits your shell's environment.

@@ -257,6 +257,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
             "didChangeConfiguration": {
                 "dynamicRegistration": True
             },
+            "didChangeWatchedFiles": {
+                "dynamicRegistration": True
+            },
             "executeCommand": {},
             "workspaceEdit": {
                 "documentChanges": True,

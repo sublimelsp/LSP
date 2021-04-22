@@ -82,7 +82,10 @@ class LspSymbolRenameCommand(LspTextCommand):
         point: Optional[int] = None
     ) -> None:
         if position is None:
-            pos = get_position(self.view, event, point)
+            tmp_pos = get_position(self.view, event, point)
+            if tmp_pos is None:
+                return
+            pos = tmp_pos
             if new_name:
                 return self._do_rename(pos, new_name)
             else:

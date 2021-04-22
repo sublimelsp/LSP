@@ -192,10 +192,12 @@ def text_document_identifier(view_or_file_name: Union[str, sublime.View]) -> Dic
         uri = uri_from_view(view_or_file_name)
     return {"uri": uri}
 
+
 def first_selection(view: sublime.View) -> Optional[sublime.Region]:
     if len(view.sel()):
         return view.sel()[0]
     return None
+
 
 def entire_content_region(view: sublime.View) -> sublime.Region:
     return sublime.Region(0, view.size())

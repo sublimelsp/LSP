@@ -71,13 +71,17 @@ class LspHoverCommand(LspTextCommand):
         point: Optional[int] = None,
         event: Optional[dict] = None
     ) -> None:
+        temp_point = point
+        if temp_point is None:
+            region = first_selection(self.view)
+            if region:
+                temp_point = region.begin()
+        if temp_point is None:
+            return
         window = self.view.window()
         if not window:
             return
-        region = first_selection(self.view)
-        if point is None and region is None:
-            return
-        hover_point = point or region.begin()
+        hover_point = temp_point
         wm = windows.lookup(window)
         self._base_dir = wm.get_project_path(self.view.file_name() or "")
         self._hover = None  # type: Optional[Any]

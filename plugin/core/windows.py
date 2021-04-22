@@ -20,8 +20,6 @@ from .types import ClientConfig
 from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Iterable, Sequence, Union
 from .views import extract_variables
 from .views import make_link
-from .workspace import disable_in_project
-from .workspace import enable_in_project
 from .workspace import ProjectFolders
 from .workspace import sorted_workspace_folders
 from abc import ABCMeta

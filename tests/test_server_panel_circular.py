@@ -35,4 +35,6 @@ class LspServerPanelTests(DeferrableTestCase):
         self.update_panel("overflow")
         self.update_panel("overflow")
         self.update_panel("one\ntwo\nthree")
-        self.assert_total_lines_equal(n)
+        # The panel only updates when visible but we don't want to test that as
+        # it would hide the unittesting panel.
+        self.assert_total_lines_equal(1)

@@ -186,14 +186,10 @@ class WindowManager(Manager):
                 session.update_folders(workspace_folders)
 
     def enable_config_async(self, config_name: str) -> None:
-        enable_in_project(self._window, config_name)
-        # TODO: Why doesn't enable_in_project cause on_load_project_async to be called?
-        self._configs.update()
+        self._configs.enable_config(config_name)
 
     def disable_config_async(self, config_name: str) -> None:
-        disable_in_project(self._window, config_name)
-        # TODO: Why doesn't disable_in_project cause on_load_project_async to be called?
-        self._configs.update()
+        self._configs.disable_config(config_name)
 
     def _register_listener(self, listener: AbstractViewListener) -> None:
         sublime.set_timeout_async(lambda: self.register_listener_async(listener))
@@ -424,7 +420,8 @@ class WindowManager(Manager):
             config = session.config
             msg = "".join((
                 "{0} exited with status code {1}. ",
-                "Do you want to restart it? If you choose Cancel, it will be disabled for this window. ",
+                "Do you want to restart it? If you choose Cancel, it will be disabled for this window for the ",
+                "duration of the current session. ",
                 "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette."
             )).format(config.name, exit_code)
             if exception:
@@ -433,7 +430,7 @@ class WindowManager(Manager):
                 for listener in self._listeners:
                     self.register_listener_async(listener)
             else:
-                self._configs.disable_config(config.name)
+                self._configs.disable_config(config.name, only_for_session=True)
 
     def plugin_unloaded(self) -> None:
         """

@@ -49,7 +49,10 @@ class LspGotoCommand(LspTextCommand):
     ) -> None:
         session = self.best_session(self.capability)
         if session:
-            params = text_document_position_params(self.view, get_position(self.view, event, point))
+            position = get_position(self.view, event, point)
+            if position is None:
+                return
+            params = text_document_position_params(self.view, position)
             session.send_request(
                 Request(self.method, params, self.view, progress=True),
                 # It's better to run this on the UI thread so we are guaranteed no AttributeErrors anywhere

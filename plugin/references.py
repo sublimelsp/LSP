@@ -37,7 +37,10 @@ class LspSymbolReferencesCommand(LspTextCommand):
         session = self.best_session(self.capability)
         file_path = self.view.file_name()
         if session and file_path:
-            pos = get_position(self.view, event, point)
+            tmp_pos = get_position(self.view, event, point)
+            if tmp_pos is None:
+                return
+            pos = tmp_pos
             window = self.view.window()
             if not window:
                 return

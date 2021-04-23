@@ -56,7 +56,7 @@ class LspExecuteCommand(LspTextCommand):
                 command_args[i] = text_document_identifier(view)
             elif arg in ["$file_uri", "${file_uri}"]:
                 command_args[i] = uri_from_view(view)
-            elif region:
+            elif region is not None:
                 if arg in ["$selection", "${selection}"]:
                     command_args[i] = view.substr(region)
                 elif arg in ["$offset", "${offset}"]:

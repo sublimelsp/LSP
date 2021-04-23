@@ -64,7 +64,7 @@ class LspSymbolRenameCommand(LspTextCommand):
                 # guess the symbol name
                 if not isinstance(point, int):
                     region = first_selection(self.view)
-                    if not region:
+                    if region is None:
                         return None
                     point = region.b
                 placeholder = self.view.substr(self.view.word(point))

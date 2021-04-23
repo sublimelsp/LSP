@@ -600,7 +600,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _do_highlights_async(self) -> None:
         region = first_selection(self.view)
-        if not region:
+        if region is None:
             return
         point = region.b
         session = self.session("documentHighlightProvider", point)

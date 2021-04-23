@@ -74,7 +74,7 @@ class LspHoverCommand(LspTextCommand):
         temp_point = point
         if temp_point is None:
             region = first_selection(self.view)
-            if region:
+            if region is not None:
                 temp_point = region.begin()
         if temp_point is None:
             return

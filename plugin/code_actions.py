@@ -278,7 +278,7 @@ class LspCodeActionsCommand(LspTextCommand):
         self.commands_by_config = {}  # type: CodeActionsByConfigName
         view = self.view
         region = first_selection(view)
-        if not region:
+        if region is None:
             return
         listener = windows.listener_for_view(view)
         if not listener:

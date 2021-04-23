@@ -121,6 +121,6 @@ class LspFormatDocumentRangeCommand(LspTextCommand):
     def run(self, edit: sublime.Edit, event: Optional[dict] = None) -> None:
         session = self.best_session(self.capability)
         selection = first_selection(self.view)
-        if session and selection:
+        if session and selection is not None:
             req = text_document_range_formatting(self.view, selection)
             session.send_request(req, lambda response: apply_response_to_view(response, self.view))

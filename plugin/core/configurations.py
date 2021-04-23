@@ -86,7 +86,8 @@ class WindowConfigManager(object):
         self._disabled_for_session.add(config_name)
 
     def _reenable_disabled_for_session(self, config_name: str) -> bool:
-        if config_name in self._disabled_for_session:
+        try:
             self._disabled_for_session.remove(config_name)
             return True
-        return False
+        except KeyError:
+            return False

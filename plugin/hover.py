@@ -10,7 +10,7 @@ from .core.settings import userprefs
 from .core.typing import List, Optional, Any, Dict, Tuple, Sequence
 from .core.views import diagnostic_severity
 from .core.views import format_diagnostic_for_html
-from .core.views import first_selection
+from .core.views import first_selection_region
 from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .core.views import make_command_link
 from .core.views import make_link
@@ -73,7 +73,7 @@ class LspHoverCommand(LspTextCommand):
     ) -> None:
         temp_point = point
         if temp_point is None:
-            region = first_selection(self.view)
+            region = first_selection_region(self.view)
             if region is not None:
                 temp_point = region.begin()
         if temp_point is None:

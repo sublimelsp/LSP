@@ -10,7 +10,7 @@ from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.types import PANEL_FILE_REGEX, PANEL_LINE_REGEX
 from .core.typing import Any, Optional, Dict, List
-from .core.views import range_to_region, get_line
+from .core.views import first_selection_region, range_to_region, get_line
 from .core.views import text_document_position_params
 import os
 import sublime
@@ -63,7 +63,10 @@ class LspSymbolRenameCommand(LspTextCommand):
                 point = args.get("point")
                 # guess the symbol name
                 if not isinstance(point, int):
-                    point = self.view.sel()[0].b
+                    region = first_selection_region(self.view)
+                    if region is None:
+                        return None
+                    point = region.b
                 placeholder = self.view.substr(self.view.word(point))
             return RenameSymbolInputHandler(self.view, placeholder)
         else:
@@ -79,7 +82,10 @@ class LspSymbolRenameCommand(LspTextCommand):
         point: Optional[int] = None
     ) -> None:
         if position is None:
-            pos = get_position(self.view, event, point)
+            tmp_pos = get_position(self.view, event, point)
+            if tmp_pos is None:
+                return
+            pos = tmp_pos
             if new_name:
                 return self._do_rename(pos, new_name)
             else:

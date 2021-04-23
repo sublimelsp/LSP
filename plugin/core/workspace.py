@@ -1,7 +1,6 @@
-from .logging import debug
 from .protocol import WorkspaceFolder
 from .types import diff
-from .typing import List, Any, Union
+from .typing import List, Union
 import sublime
 import os
 
@@ -60,7 +59,7 @@ def sorted_workspace_folders(folders: List[str], file_path: str) -> List[Workspa
     return [WorkspaceFolder.from_path(path) for path in matching_paths + other_paths]
 
 
-def enable_in_project(window: Any, config_name: str) -> None:
+def enable_in_project(window: sublime.Window, config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
         project_settings = project_data.setdefault('settings', dict())
@@ -69,10 +68,11 @@ def enable_in_project(window: Any, config_name: str) -> None:
         project_client_settings['enabled'] = True
         window.set_project_data(project_data)
     else:
-        debug('non-dict returned in project_settings: ', project_data)
+        sublime.message_dialog(
+            "Can't enable {} in the current workspace. Ensure that the project is saved first.".format(config_name))
 
 
-def disable_in_project(window: Any, config_name: str) -> None:
+def disable_in_project(window: sublime.Window, config_name: str, only_for_session: bool = False) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
         project_settings = project_data.setdefault('settings', dict())
@@ -81,4 +81,5 @@ def disable_in_project(window: Any, config_name: str) -> None:
         project_client_settings['enabled'] = False
         window.set_project_data(project_data)
     else:
-        debug('non-dict returned in project_settings: ', project_data)
+        sublime.message_dialog(
+            "Can't disable {} in the current workspace. Ensure that the project is saved first.".format(config_name))

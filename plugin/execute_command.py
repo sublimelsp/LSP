@@ -4,6 +4,7 @@ from .core.protocol import ExecuteCommandParams
 from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.typing import List, Optional, Any
+from .core.views import first_selection_region
 from .core.views import uri_from_view, offset_to_point, region_to_range, text_document_identifier
 
 
@@ -49,24 +50,25 @@ class LspExecuteCommand(LspTextCommand):
 
     def _expand_variables(self, command_args: List[Any]) -> List[Any]:
         view = self.view  # type: sublime.View
-        region = view.sel()[0]
+        region = first_selection_region(view)
         for i, arg in enumerate(command_args):
             if arg in ["$document_id", "${document_id}"]:
                 command_args[i] = text_document_identifier(view)
             elif arg in ["$file_uri", "${file_uri}"]:
                 command_args[i] = uri_from_view(view)
-            elif arg in ["$selection", "${selection}"]:
-                command_args[i] = view.substr(region)
-            elif arg in ["$offset", "${offset}"]:
-                command_args[i] = region.b
-            elif arg in ["$selection_begin", "${selection_begin}"]:
-                command_args[i] = region.begin()
-            elif arg in ["$selection_end", "${selection_end}"]:
-                command_args[i] = region.end()
-            elif arg in ["$position", "${position}"]:
-                command_args[i] = offset_to_point(view, region.b).to_lsp()
-            elif arg in ["$range", "${range}"]:
-                command_args[i] = region_to_range(view, region).to_lsp()
+            elif region is not None:
+                if arg in ["$selection", "${selection}"]:
+                    command_args[i] = view.substr(region)
+                elif arg in ["$offset", "${offset}"]:
+                    command_args[i] = region.b
+                elif arg in ["$selection_begin", "${selection_begin}"]:
+                    command_args[i] = region.begin()
+                elif arg in ["$selection_end", "${selection_end}"]:
+                    command_args[i] = region.end()
+                elif arg in ["$position", "${position}"]:
+                    command_args[i] = offset_to_point(view, region.b).to_lsp()
+                elif arg in ["$range", "${range}"]:
+                    command_args[i] = region_to_range(view, region).to_lsp()
         window = view.window()
         window_variables = window.extract_variables() if window else {}
         return sublime.expand_variables(command_args, window_variables)

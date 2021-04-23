@@ -11,6 +11,7 @@ from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.typing import Any, List, Dict, Callable, Optional, Tuple, Union, Sequence
 from .core.views import entire_content_region
+from .core.views import first_selection_region
 from .core.views import text_document_code_action_params
 from .save_command import LspSaveCommand, SaveTask
 import sublime
@@ -276,9 +277,8 @@ class LspCodeActionsCommand(LspTextCommand):
         self.commands = []  # type: List[Tuple[str, str, CodeActionOrCommand]]
         self.commands_by_config = {}  # type: CodeActionsByConfigName
         view = self.view
-        try:
-            region = view.sel()[0]
-        except IndexError:
+        region = first_selection_region(view)
+        if region is None:
             return
         listener = windows.listener_for_view(view)
         if not listener:

@@ -22,9 +22,10 @@ class LspSymbolReferencesCommand(LspTextCommand):
     def run(self, _: sublime.Edit, event: Optional[dict] = None, point: Optional[int] = None) -> None:
         session = self.best_session(self.capability)
         file_path = self.view.file_name()
-        if session and file_path:
+        pos = get_position(self.view, event, point)
+        if session and file_path and pos is not None:
             self.weaksession = weakref.ref(session)
-            params = text_document_position_params(self.view, get_position(self.view, event, point))
+            params = text_document_position_params(self.view, pos)
             params['context'] = {"includeDeclaration": False}
             request = Request("textDocument/references", params, self.view, progress=True)
             session.send_request(request, functools.partial(self._handle_response_async, session))

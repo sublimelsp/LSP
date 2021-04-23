@@ -233,7 +233,12 @@ class ViewsTest(DeferrableTestCase):
 
     def test_minihtml_magiclinks(self) -> None:
         content = {'value': 'https://github.com/sublimelsp/LSP', 'kind': 'markdown'}
-        expect = '<p><a href="https://github.com/sublimelsp/LSP">github.com/sublimelsp/LSP</a></p>'
+        expect_attributes = [
+            'class="magiclink magiclink-github magiclink-repository"',
+            'href="https://github.com/sublimelsp/LSP"',
+            'title="GitHub Repository: sublimelsp/LSP"'
+        ]
+        expect = '<p><a {}>sublimelsp/LSP</a></p>'.format(' '.join(expect_attributes))
         self.assertEqual(minihtml(self.view, content, allowed_formats=FORMAT_MARKUP_CONTENT), expect)
 
     def _strip_style_attributes(self, content: str) -> str:

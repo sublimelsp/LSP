@@ -62,7 +62,6 @@ class WindowConfigManagerTests(unittest.TestCase):
             }
         })
         manager = WindowConfigManager(window, {DISABLED_CONFIG.name: DISABLED_CONFIG})
-        manager.update()
         view.syntax = MagicMock(return_value=sublime.Syntax(
             path="Packages/Text/Plain text.tmLanguage",
             name="Plain Text",
@@ -89,11 +88,6 @@ class WindowConfigManagerTests(unittest.TestCase):
         })
 
         manager = WindowConfigManager(window, {DISABLED_CONFIG.name: DISABLED_CONFIG})
-        manager.update()
-
-        # crash handler disables config and shows popup
-        manager.disable_temporarily(DISABLED_CONFIG.name)
-
-        # view is activated after popup, we try to start a session again...
-        manager.update()
+        # disables config in-memory
+        manager.disable_config(DISABLED_CONFIG.name, only_for_session=True)
         self.assertFalse(any(manager.match_view(view)))

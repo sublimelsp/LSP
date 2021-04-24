@@ -1,0 +1,9 @@
+=> 1.3.0
+
+# Features and Fixes
+
+- Add plugin APIs: "on_*_capability_async" and "on_session_end_async" (#1638) (Rafał Chłodnicki)
+- Lazily update log panel when it's opened (#1636) (Rafał Chłodnicki)
+- Various improvements to the server troubleshooting functionality (Rafał Chłodnicki)
+- Disable crashed servers in-memory instead of in project data (#1647) (Rafał Chłodnicki)
+- Handle all cases where selection is absent thus resulting in a crash (#1646) (Rafał Chłodnicki)

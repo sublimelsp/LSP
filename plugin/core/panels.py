@@ -148,6 +148,10 @@ def log_server_message(window: sublime.Window, prefix: str, message: str) -> Non
         return
     window_id = window.id()
     WindowPanelListener.server_log_map[window_id].append((prefix, message))
+    list_len = len(WindowPanelListener.server_log_map[window_id])
+    if list_len >= SERVER_PANEL_MAX_LINES:
+        # Trim leading items in the list, leaving only the max allowed count.
+        del WindowPanelListener.server_log_map[window_id][:list_len - SERVER_PANEL_MAX_LINES]
     panel = ensure_server_panel(window)
     if is_server_panel_open(window) and panel:
         update_server_panel(panel, window_id)
@@ -163,17 +167,18 @@ class LspUpdateServerPanelCommand(sublime_plugin.TextCommand):
         to_process = WindowPanelListener.server_log_map.get(window_id) or []
         WindowPanelListener.server_log_map[window_id] = []
         with mutable(self.view):
+            new_lines = []
             for prefix, message in to_process:
                 message = message.replace("\r\n", "\n")  # normalize Windows eol
-                self.view.insert(edit, self.view.size(), "{}: {}\n".format(prefix, message))
+                new_lines.append("{}: {}\n".format(prefix, message))
+            if new_lines:
+                self.view.insert(edit, self.view.size(), ''.join(new_lines))
+                last_region_end = 0  # Starting from point 0 in the panel ...
                 total_lines, _ = self.view.rowcol(self.view.size())
-                point = 0  # Starting from point 0 in the panel ...
-                regions = []  # type: List[sublime.Region]
-            for _ in range(0, max(0, total_lines - SERVER_PANEL_MAX_LINES)):
-                # ... collect all regions that span an entire line ...
-                region = self.view.full_line(point)
-                regions.append(region)
-                point = region.b
-            for region in reversed(regions):
-                # ... and erase them in reverse order
-                self.view.erase(edit, region)
+                for _ in range(0, max(0, total_lines - SERVER_PANEL_MAX_LINES)):
+                    # ... collect all regions that span an entire line ...
+                    region = self.view.full_line(last_region_end)
+                    last_region_end = region.b
+                erase_region = sublime.Region(0, last_region_end)
+                if not erase_region.empty():
+                    self.view.erase(edit, erase_region)

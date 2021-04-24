@@ -1,5 +1,6 @@
 from .core.css import css
 from .core.registry import windows
+from .core.sessions import get_plugin
 from .core.transports import create_transport
 from .core.transports import Transport
 from .core.transports import TransportCallbacks
@@ -99,7 +100,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
     def run(self) -> None:
         window = self.window
         active_view = window.active_view()
-        configs = [c for c in windows.lookup(window).get_config_manager().get_configs() if c.enabled]
+        configs = windows.lookup(window).get_config_manager().get_configs()
         config_names = [config.name for config in configs]
         if config_names:
             window.show_quick_panel(config_names, lambda index: self.on_selected(index, configs, active_view),
@@ -119,22 +120,23 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
                               active_view: Optional[sublime.View], output_sheet: sublime.HtmlSheet) -> None:
         server = ServerTestRunner(
             config, window,
-            lambda output, exit_code: self.update_sheet(config, active_view, output_sheet, output, exit_code))
+            lambda resolved_command, output, exit_code: self.update_sheet(
+                config, active_view, output_sheet, resolved_command, output, exit_code))
         # Store the instance so that it's not GC'ed before it's finished.
         self.test_runner = server  # type: Optional[ServerTestRunner]
 
     def update_sheet(self, config: ClientConfig, active_view: Optional[sublime.View], output_sheet: sublime.HtmlSheet,
-                     server_output: str, exit_code: int) -> None:
+                     resolved_command: List[str], server_output: str, exit_code: int) -> None:
         self.test_runner = None
         frontmatter = mdpopups.format_frontmatter({'allow_code_wrap': True})
-        contents = self.get_contents(config, active_view, server_output, exit_code)
+        contents = self.get_contents(config, active_view, resolved_command, server_output, exit_code)
         # The href needs to be encoded to avoid having markdown parser ruin it.
         copy_link = make_command_link('lsp_copy_to_clipboard_from_base64', '<kbd>Copy to clipboard</kbd>',
                                       {'contents': b64encode(contents.encode()).decode()})
         formatted = '{}{}\n{}'.format(frontmatter, copy_link, contents)
         mdpopups.update_html_sheet(output_sheet, formatted, css=css().sheets, wrapper_class=css().sheets_classname)
 
-    def get_contents(self, config: ClientConfig, active_view: Optional[sublime.View],
+    def get_contents(self, config: ClientConfig, active_view: Optional[sublime.View], resolved_command: List[str],
                      server_output: str, exit_code: int) -> str:
         lines = []
 
@@ -152,7 +154,7 @@ class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallba
 
         line('## Server Configuration')
         line(' - command\n{}'.format(self.json_dump(config.command)))
-        line(' - shell command\n{}'.format(self.code_block(list2cmdline(config.command), 'sh')))
+        line(' - shell command\n{}'.format(self.code_block(list2cmdline(resolved_command), 'sh')))
         line(' - selector\n{}'.format(self.code_block(config.selector)))
         line(' - priority_selector\n{}'.format(self.code_block(config.priority_selector)))
         line(' - init_options')
@@ -278,14 +280,25 @@ class ServerTestRunner(TransportCallbacks):
 
     CLOSE_TIMEOUT_SEC = 2
 
-    def __init__(self, config: ClientConfig, window: sublime.Window, on_close: Callable[[str, int], None]) -> None:
-        self._on_close = on_close  # type: Callable[[str, int], None]
+    def __init__(
+        self, config: ClientConfig, window: sublime.Window, on_close: Callable[[List[str], str, int], None]
+    ) -> None:
+        self._on_close = on_close
         self._transport = None  # type: Optional[Transport]
+        self._resolved_command = []  # type: List[str]
         self._stderr_lines = []  # type: List[str]
         try:
-            cwd = window.folders()[0] if window.folders() else None
             variables = extract_variables(window)
+            plugin_class = get_plugin(config.name)
+            if plugin_class is not None:
+                if plugin_class.needs_update_or_installation():
+                    plugin_class.install_or_update()
+                additional_variables = plugin_class.additional_variables()
+                if isinstance(additional_variables, dict):
+                    variables.update(additional_variables)
+            cwd = window.folders()[0] if window.folders() else None
             transport_config = config.resolve_transport_config(variables)
+            self._resolved_command = transport_config.command
             self._transport = create_transport(transport_config, cwd, self)
             sublime.set_timeout_async(self.force_close_transport, self.CLOSE_TIMEOUT_SEC * 1000)
         except Exception as ex:
@@ -304,4 +317,4 @@ class ServerTestRunner(TransportCallbacks):
     def on_transport_close(self, exit_code: int, exception: Optional[Exception]) -> None:
         self._transport = None
         output = str(exception) if exception else '\n'.join(self._stderr_lines).rstrip()
-        sublime.set_timeout(lambda: self._on_close(output, exit_code))
+        sublime.set_timeout(lambda: self._on_close(self._resolved_command, output, exit_code))

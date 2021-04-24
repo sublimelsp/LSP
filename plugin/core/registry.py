@@ -34,16 +34,17 @@ client_configs.set_listener(configs.update)
 windows = WindowRegistry(configs)
 
 
-def get_position(view: sublime.View, event: Optional[dict] = None, point: Optional[int] = None) -> int:
+def get_position(view: sublime.View, event: Optional[dict] = None, point: Optional[int] = None) -> Optional[int]:
     if isinstance(point, int):
         return point
-    if event is None:
+    if event:
+        x, y = event.get("x"), event.get("y")
+        if x is not None and y is not None:
+            return view.window_to_text((x, y))
+    try:
         return view.sel()[0].begin()
-    x, y = event.get("x"), event.get("y")
-    if x is not None and y is not None:
-        return view.window_to_text((x, y))
-    else:
-        return view.sel()[0].begin()
+    except IndexError:
+        return None
 
 
 class LspTextCommand(sublime_plugin.TextCommand):
@@ -63,7 +64,10 @@ class LspTextCommand(sublime_plugin.TextCommand):
     def is_enabled(self, event: Optional[dict] = None, point: Optional[int] = None) -> bool:
         if self.capability:
             # At least one active session with the given capability must exist.
-            if not self.best_session(self.capability, get_position(self.view, event, point)):
+            position = get_position(self.view, event, point)
+            if position is None:
+                return False
+            if not self.best_session(self.capability, position):
                 return False
         if self.session_name:
             # There must exist an active session with the given (config) name.

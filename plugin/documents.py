@@ -26,6 +26,7 @@ from .core.types import FEATURES_TIMEOUT
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import document_color_params
+from .core.views import first_selection_region
 from .core.views import format_completion
 from .core.views import lsp_color_to_phantom
 from .core.views import make_command_link
@@ -602,9 +603,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return False
 
     def _do_highlights_async(self) -> None:
-        if not len(self.view.sel()):
+        region = first_selection_region(self.view)
+        if region is None:
             return
-        point = self.view.sel()[0].b
+        point = region.b
         session = self.session("documentHighlightProvider", point)
         if session:
             params = text_document_position_params(self.view, point)
@@ -810,18 +812,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         :returns:   A tuple with two elements. The second element is the new region, the first element signals whether
                     the previous region was different from the newly stored region.
         """
-        current_region = self._get_current_region_async()
+        current_region = first_selection_region(self.view)
         if current_region is not None:
             if self._stored_region != current_region:
                 self._stored_region = current_region
                 return True, current_region
         return False, sublime.Region(-1, -1)
-
-    def _get_current_region_async(self) -> Optional[sublime.Region]:
-        try:
-            return self.view.sel()[0]
-        except IndexError:
-            return None
 
     def _clear_session_views_async(self) -> None:
         session_views = self._session_views

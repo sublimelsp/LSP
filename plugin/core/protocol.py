@@ -46,6 +46,11 @@ class SignatureHelpTriggerKind:
     ContentChange = 3
 
 
+class InsertTextMode:
+    AsIs = 1
+    AdjustIndentation = 2
+
+
 DocumentUri = str
 
 Position = TypedDict('Position', {
@@ -171,7 +176,30 @@ Diagnostic = TypedDict('Diagnostic', {
     'relatedInformation': List[DiagnosticRelatedInformation]
 }, total=False)
 
-CompletionItem = Dict[str, Any]
+TextEdit = TypedDict('TextEdit', {
+    'newText': str,
+    'range': RangeLsp
+}, total=True)
+
+CompletionItem = TypedDict('CompletionItem', {
+    'additionalTextEdits': List[TextEdit],
+    'command': Command,
+    'commitCharacters': List[str],
+    'data': Any,
+    'deprecated': bool,
+    'detail': str,
+    'documentation': Union[str, Dict[str, str]],
+    'filterText': str,
+    'insertText': str,
+    'insertTextFormat': InsertTextFormat,
+    'insertTextMode': InsertTextMode,
+    'kind': int,
+    'label': str,
+    'preselect': bool,
+    'sortText': str,
+    'tags': List[CompletionItemTag],
+    'textEdit': TextEdit
+}, total=False)
 
 CompletionList = TypedDict('CompletionList', {
     'isIncomplete': bool,
@@ -235,7 +263,7 @@ class Request:
         return Request("textDocument/documentHighlight", params, view)
 
     @classmethod
-    def resolveCompletionItem(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+    def resolveCompletionItem(cls, params: CompletionItem, view: sublime.View) -> 'Request':
         return Request("completionItem/resolve", params, view)
 
     @classmethod

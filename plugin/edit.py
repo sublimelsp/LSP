@@ -1,6 +1,6 @@
 import sublime
 import sublime_plugin
-from .core.edit import sort_by_application_order, TextEdit
+from .core.edit import sort_by_application_order, TextEditTuple
 from .core.logging import debug
 from .core.typing import List, Optional, Any, Generator
 from contextlib import contextmanager
@@ -21,7 +21,7 @@ def temporary_setting(settings: sublime.Settings, key: str, val: Any) -> Generat
 
 class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
 
-    def run(self, edit: Any, changes: Optional[List[TextEdit]] = None) -> None:
+    def run(self, edit: Any, changes: Optional[List[TextEditTuple]] = None) -> None:
         # Apply the changes in reverse, so that we don't invalidate the range
         # of any change that we haven't applied yet.
         if not changes:

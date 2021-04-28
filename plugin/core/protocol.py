@@ -177,28 +177,28 @@ Diagnostic = TypedDict('Diagnostic', {
 }, total=False)
 
 TextEdit = TypedDict('TextEdit', {
-    'range': RangeLsp,
-    'newText': str
+    'newText': str,
+    'range': RangeLsp
 }, total=True)
 
 CompletionItem = TypedDict('CompletionItem', {
-    'label': str,
-    'kind': int,
-    'tags': List[CompletionItemTag],
+    'additionalTextEdits': List[TextEdit],
+    'command': Command,
+    'commitCharacters': List[str],
+    'data': Any,
+    'deprecated': bool,
     'detail': str,
     'documentation': Union[str, Dict[str, str]],
-    'deprecated': bool,
-    'preselect': bool,
-    'sortText': str,
     'filterText': str,
     'insertText': str,
     'insertTextFormat': InsertTextFormat,
     'insertTextMode': InsertTextMode,
-    'textEdit': TextEdit,
-    'additionalTextEdits': List[TextEdit],
-    'commitCharacters': List[str],
-    'command': Command,
-    'data': Any
+    'kind': int,
+    'label': str,
+    'preselect': bool,
+    'sortText': str,
+    'tags': List[CompletionItemTag],
+    'textEdit': TextEdit
 }, total=False)
 
 CompletionList = TypedDict('CompletionList', {

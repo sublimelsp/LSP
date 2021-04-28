@@ -1,4 +1,5 @@
 from .core.edit import parse_text_edit
+from .core.protocol import TextEdit
 from .core.registry import LspTextCommand
 from .core.registry import sessions_for_view
 from .core.sessions import Session
@@ -9,7 +10,6 @@ from .core.views import text_document_formatting
 from .core.views import text_document_range_formatting
 from .core.views import will_save_wait_until
 from .save_command import LspSaveCommand, SaveTask
-from .core.protocol import TextEdit
 import sublime
 
 

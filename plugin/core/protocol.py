@@ -196,7 +196,7 @@ CompletionItem = TypedDict('CompletionItem', {
     'insertTextMode': InsertTextMode,
     'textEdit': TextEdit,
     'additionalTextEdits': List[TextEdit],
-    'commitCharacters': str,
+    'commitCharacters': List[str],
     'command': Command,
     'data': Any
 }, total=False)

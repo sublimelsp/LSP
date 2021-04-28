@@ -3,9 +3,9 @@ import sublime_plugin
 import webbrowser
 from .core.logging import debug
 from .core.edit import parse_text_edit
-from .core.protocol import Request, InsertTextFormat, Range, CompletionItem, TextEdit
+from .core.protocol import Request, InsertTextFormat, Range, CompletionItem
 from .core.registry import LspTextCommand
-from .core.typing import Any, List, Dict, Optional, Generator, Union, cast
+from .core.typing import Any, List, Dict, Optional, Generator, Union
 from .core.views import FORMAT_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
@@ -100,7 +100,9 @@ class LspCompleteTextEditCommand(LspCompleteCommand):
 
     def run(self, edit: sublime.Edit, item: CompletionItem, session_name: Optional[str] = None) -> None:
         # LspCompleteTextEditCommand command will only be run if "textEdit" exist on the completion item
-        text_edit = cast(TextEdit, item.get("textEdit"))
+        text_edit = item.get("textEdit")
+        if not text_edit:
+            return
         new_text = text_edit["newText"]
         edit_region = range_to_region(Range.from_lsp(text_edit['range']), self.view)
         if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:

@@ -99,7 +99,6 @@ class LspCompleteInsertTextCommand(LspCompleteCommand):
 class LspCompleteTextEditCommand(LspCompleteCommand):
 
     def run(self, edit: sublime.Edit, item: CompletionItem, session_name: Optional[str] = None) -> None:
-        # LspCompleteTextEditCommand command will only be run if "textEdit" exist on the completion item
         text_edit = item.get("textEdit")
         if not text_edit:
             return

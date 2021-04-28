@@ -1,6 +1,6 @@
 from .core.edit import apply_workspace_edit
 from .core.edit import parse_workspace_edit
-from .core.edit import TextEdit
+from .core.edit import TextEditTuple
 from .core.panels import ensure_panel
 from .core.panels import PanelName
 from .core.protocol import Range
@@ -157,7 +157,12 @@ class LspSymbolRenameCommand(LspTextCommand):
         else:
             return file_path
 
-    def _render_rename_panel(self, changes: Dict[str, List[TextEdit]], total_changes: int, file_count: int) -> None:
+    def _render_rename_panel(
+        self,
+        changes: Dict[str, List[TextEditTuple]],
+        total_changes: int,
+        file_count: int
+    ) -> None:
         window = self.view.window()
         if not window:
             return

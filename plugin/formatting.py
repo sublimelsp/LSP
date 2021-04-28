@@ -9,10 +9,11 @@ from .core.views import text_document_formatting
 from .core.views import text_document_range_formatting
 from .core.views import will_save_wait_until
 from .save_command import LspSaveCommand, SaveTask
+from .core.protocol import TextEdit
 import sublime
 
 
-def apply_response_to_view(response: Optional[List[dict]], view: sublime.View) -> None:
+def apply_response_to_view(response: Optional[List[TextEdit]], view: sublime.View) -> None:
     edits = list(parse_text_edit(change) for change in response) if response else []
     view.run_command('lsp_apply_document_edit', {'changes': edits})
 

@@ -1,9 +1,9 @@
+from copy import deepcopy
 from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable
 from LSP.plugin.core.views import format_completion
 from setup import TextDocumentTestCase
 import sublime
-from copy import deepcopy
 
 
 additional_edits = {

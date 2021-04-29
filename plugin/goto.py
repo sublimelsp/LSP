@@ -29,7 +29,7 @@ class LspGotoCommand(LspTextCommand):
         session = self.best_session(self.capability)
         position = get_position(self.view, event, point)
         if session and position is not None:
-            params = text_document_position_params(self.view, get_position(self.view, event, point))
+            params = text_document_position_params(self.view, position)
             request = Request(self.method, params, self.view, progress=True)
             session.send_request(request, functools.partial(self._handle_response_async, session, side_by_side))
 

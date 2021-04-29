@@ -4,7 +4,6 @@ from .protocol import CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
 from .protocol import DiagnosticSeverity
-from .protocol import InsertTextFormat
 from .protocol import Location
 from .protocol import LocationLink
 from .protocol import Notification

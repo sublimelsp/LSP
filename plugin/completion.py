@@ -102,26 +102,27 @@ class LspSelectCompletionItemCommand(LspTextCommand):
 
     def epilogue(self, item: CompletionItem, session_name: str) -> None:
         session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
+
+        def resolve_on_main_thread(item: CompletionItem, session_name: str) -> None:
+            sublime.set_timeout(lambda: self.on_resolved(item, session_name))
+
         if session:
             request = Request.resolveCompletionItem(item, self.view)
-            session.send_request_async(request, lambda response: self.on_resolved(response, session_name))
+            session.send_request_async(request, lambda response: resolve_on_main_thread(response, session_name))
         else:
-            self.on_resolved(item, session_name)
+            resolve_on_main_thread(item, session_name)
 
     def on_resolved(self, item: CompletionItem, session_name: str) -> None:
-        def run_main() -> None:
-            additional_edits = item.get('additionalTextEdits')
-            if additional_edits:
-                edits = [parse_text_edit(additional_edit) for additional_edit in additional_edits]
-                self.view.run_command("lsp_apply_document_edit", {'changes': edits})
-            command = item.get("command")
-            if command:
-                debug('Running server command "{}" for view {}'.format(command, self.view.id()))
-                args = {
-                    "command_name": command["command"],
-                    "command_args": command.get("arguments"),
-                    "session_name": session_name
-                }
-                self.view.run_command("lsp_execute", args)
-
-        sublime.set_timeout(run_main)
+        additional_edits = item.get('additionalTextEdits')
+        if additional_edits:
+            edits = [parse_text_edit(additional_edit) for additional_edit in additional_edits]
+            self.view.run_command("lsp_apply_document_edit", {'changes': edits})
+        command = item.get("command")
+        if command:
+            debug('Running server command "{}" for view {}'.format(command, self.view.id()))
+            args = {
+                "command_name": command["command"],
+                "command_args": command.get("arguments"),
+                "session_name": session_name
+            }
+            self.view.run_command("lsp_execute", args)

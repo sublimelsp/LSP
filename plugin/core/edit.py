@@ -1,6 +1,7 @@
 from .logging import debug
 from .open import open_file
 from .promise import Promise
+from .protocol import TextEdit as LspTextEdit, Position
 from .typing import List, Dict, Any, Iterable, Optional, Tuple
 from .url import uri_to_filename
 from functools import partial
@@ -9,11 +10,11 @@ import sublime
 
 
 # tuple of start, end, newText, version
-TextEdit = Tuple[Tuple[int, int], Tuple[int, int], str, Optional[int]]
+TextEditTuple = Tuple[Tuple[int, int], Tuple[int, int], str, Optional[int]]
 
 
-def parse_workspace_edit(workspace_edit: Dict[str, Any]) -> Dict[str, List[TextEdit]]:
-    changes = {}  # type: Dict[str, List[TextEdit]]
+def parse_workspace_edit(workspace_edit: Dict[str, Any]) -> Dict[str, List[TextEditTuple]]:
+    changes = {}  # type: Dict[str, List[TextEditTuple]]
     document_changes = workspace_edit.get('documentChanges')
     if isinstance(document_changes, list):
         for document_change in document_changes:
@@ -32,11 +33,11 @@ def parse_workspace_edit(workspace_edit: Dict[str, Any]) -> Dict[str, List[TextE
     return changes
 
 
-def parse_range(range: Dict[str, int]) -> Tuple[int, int]:
+def parse_range(range: Position) -> Tuple[int, int]:
     return range['line'], range['character']
 
 
-def parse_text_edit(text_edit: Dict[str, Any], version: int = None) -> TextEdit:
+def parse_text_edit(text_edit: LspTextEdit, version: int = None) -> TextEditTuple:
     return (
         parse_range(text_edit['range']['start']),
         parse_range(text_edit['range']['end']),
@@ -46,7 +47,7 @@ def parse_text_edit(text_edit: Dict[str, Any], version: int = None) -> TextEdit:
     )
 
 
-def sort_by_application_order(changes: Iterable[TextEdit]) -> List[TextEdit]:
+def sort_by_application_order(changes: Iterable[TextEditTuple]) -> List[TextEditTuple]:
     # The spec reads:
     # > However, it is possible that multiple edits have the same start position: multiple
     # > inserts, or any number of inserts followed by a single remove or replace edit. If
@@ -58,12 +59,12 @@ def sort_by_application_order(changes: Iterable[TextEdit]) -> List[TextEdit]:
     return list(sorted(changes, key=operator.itemgetter(0)))
 
 
-def apply_workspace_edit(window: sublime.Window, changes: Dict[str, List[TextEdit]]) -> Promise:
+def apply_workspace_edit(window: sublime.Window, changes: Dict[str, List[TextEditTuple]]) -> Promise:
     """Apply workspace edits. This function must be called from the main thread!"""
     return Promise.all([open_file(window, fn).then(partial(_apply_edits, edits)) for fn, edits in changes.items()])
 
 
-def _apply_edits(edits: List[TextEdit], view: Optional[sublime.View]) -> None:
+def _apply_edits(edits: List[TextEditTuple], view: Optional[sublime.View]) -> None:
     if view and view.is_valid():
         # Text commands run blocking. After this call has returned the changes are applied.
         view.run_command("lsp_apply_document_edit", {"changes": edits})

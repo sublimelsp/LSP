@@ -34,7 +34,7 @@ class LspResolveDocsCommand(LspTextCommand):
     def _format_documentation(self, content: Union[str, Dict[str, str]]) -> str:
         return minihtml(self.view, content, allowed_formats=FORMAT_STRING | FORMAT_MARKUP_CONTENT)
 
-    def _handle_resolve_response_async(self, item: Optional[dict]) -> None:
+    def _handle_resolve_response_async(self, item: CompletionItem) -> None:
         detail = ""
         documentation = ""
         if item:
@@ -69,7 +69,7 @@ class LspResolveDocsCommand(LspTextCommand):
 
 class LspCompleteCommand(sublime_plugin.TextCommand):
 
-    def epilogue(self, item: Dict[str, Any], session_name: Optional[str] = None) -> None:
+    def epilogue(self, item: CompletionItem, session_name: Optional[str] = None) -> None:
         additional_edits = item.get('additionalTextEdits')
         if additional_edits:
             edits = [parse_text_edit(additional_edit) for additional_edit in additional_edits]
@@ -98,9 +98,11 @@ class LspCompleteInsertTextCommand(LspCompleteCommand):
 
 class LspCompleteTextEditCommand(LspCompleteCommand):
 
-    def run(self, edit: sublime.Edit, item: Any, session_name: Optional[str] = None) -> None:
-        text_edit = item["textEdit"]
-        new_text = text_edit['newText']
+    def run(self, edit: sublime.Edit, item: CompletionItem, session_name: Optional[str] = None) -> None:
+        text_edit = item.get("textEdit")
+        if not text_edit:
+            return
+        new_text = text_edit["newText"]
         edit_region = range_to_region(Range.from_lsp(text_edit['range']), self.view)
         if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
             for region in self.translated_regions(edit_region):

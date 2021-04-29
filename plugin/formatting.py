@@ -1,4 +1,5 @@
 from .core.edit import parse_text_edit
+from .core.protocol import TextEdit
 from .core.registry import LspTextCommand
 from .core.registry import sessions_for_view
 from .core.sessions import Session
@@ -13,7 +14,7 @@ from .save_command import LspSaveCommand, SaveTask
 import sublime
 
 
-def apply_response_to_view(response: Optional[List[dict]], view: sublime.View) -> None:
+def apply_response_to_view(response: Optional[List[TextEdit]], view: sublime.View) -> None:
     edits = list(parse_text_edit(change) for change in response) if response else []
     view.run_command('lsp_apply_document_edit', {'changes': edits})
 

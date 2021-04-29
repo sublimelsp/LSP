@@ -109,7 +109,7 @@ class LspSelectCompletionItemCommand(LspTextCommand):
             self.on_resolved(item, session_name)
 
     def on_resolved(self, item: CompletionItem, session_name: str) -> None:
-        def run_main():
+        def run_main() -> None:
             additional_edits = item.get('additionalTextEdits')
             if additional_edits:
                 edits = [parse_text_edit(additional_edit) for additional_edit in additional_edits]

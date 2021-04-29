@@ -3,6 +3,7 @@ from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable
 from LSP.plugin.core.views import format_completion
 from setup import TextDocumentTestCase
 import sublime
+from copy import deepcopy
 
 
 additional_edits = {
@@ -353,26 +354,28 @@ class QueryCompletionsTests(TextDocumentTestCase):
             insert_text='e',
             expected_text='def foo: Int \u003d ???\n   def boo: Int \u003d ???')
 
-    def test_additional_edits(self) -> 'Generator':
-        yield from self.verify(
-            completion_items=[{
-                'label': 'asdf',
-                'additionalTextEdits': [
-                    {
-                        'range': {
-                            'start': {
-                                'line': 0,
-                                'character': 0
-                            },
-                            'end': {
-                                'line': 0,
-                                'character': 0
-                            }
+    def test_additional_edits_if_session_has_the_resolve_capability(self) -> 'Generator':
+        completion_item = {
+            'label': 'asdf',
+            'additionalTextEdits': [
+                {
+                    'range': {
+                        'start': {
+                            'line': 0,
+                            'character': 0
                         },
-                        'newText': 'import asdf;\n'
-                    }
-                ]
-            }],
+                        'end': {
+                            'line': 0,
+                            'character': 0
+                        }
+                    },
+                    'newText': 'import asdf;\n'
+                }
+            ]
+        }
+        self.set_response("completionItem/resolve", completion_item)
+        yield from self.verify(
+            completion_items=[completion_item],
             insert_text='',
             expected_text='import asdf;\nasdf')
 
@@ -598,3 +601,40 @@ class QueryCompletionsTests(TextDocumentTestCase):
         formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "")
         self.assertEqual('⚠', formatted_completion_item.kind[1])
         self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
+
+
+class QueryCompletionsNoResolverTests(QueryCompletionsTests):
+    '''
+    The difference between QueryCompletionsTests and QueryCompletionsNoResolverTests
+    is that QueryCompletionsTests has the completion item resolve capability enabled
+    and the QueryCompletionsNoResolverTests has the resolve capability disabled
+    '''
+    @classmethod
+    def get_test_server_capabilities(cls) -> dict:
+        capabilities = deepcopy(super().get_test_server_capabilities())
+        capabilities['capabilities']['completionProvider']['resolveProvider'] = False
+        return capabilities
+
+    def test_additional_edits_if_session_does_not_have_the_resolve_capability(self) -> 'Generator':
+        completion_item = {
+            'label': 'asdf',
+            'additionalTextEdits': [
+                {
+                    'range': {
+                        'start': {
+                            'line': 0,
+                            'character': 0
+                        },
+                        'end': {
+                            'line': 0,
+                            'character': 0
+                        }
+                    },
+                    'newText': 'import asdf;\n'
+                }
+            ]
+        }
+        yield from self.verify(
+            completion_items=[completion_item],
+            insert_text='',
+            expected_text='import asdf;\nasdf')

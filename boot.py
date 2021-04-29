@@ -5,8 +5,7 @@ import weakref
 
 # Please keep this list sorted (Edit -> Sort Lines)
 from .plugin.code_actions import LspCodeActionsCommand
-from .plugin.completion import LspCompleteInsertTextCommand
-from .plugin.completion import LspCompleteTextEditCommand
+from .plugin.completion import LspSelectCompletionItemCommand
 from .plugin.completion import LspResolveDocsCommand
 from .plugin.configuration import LspDisableLanguageServerGloballyCommand
 from .plugin.configuration import LspDisableLanguageServerInProjectCommand

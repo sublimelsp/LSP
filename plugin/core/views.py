@@ -718,34 +718,17 @@ def format_completion(
     else:
         st_trigger = lsp_label
 
-    # NOTE: Some servers return "textEdit": null. We have to check if it's truthy.
-    if item.get("textEdit") or item.get("additionalTextEdits") or item.get("command"):
-        command = "lsp_complete_text_edit" if item.get("textEdit") else "lsp_complete_insert_text"
-        args = {"item": item}  # type: Dict[str, Any]
-        if item.get("command"):
-            # If there is a "command", we'll have to run the command on the same session so store the name.
-            args["session_name"] = session_name
-        completion = sublime.CompletionItem.command_completion(
-            trigger=st_trigger,
-            command=command,
-            args=args,
-            annotation=st_annotation,
-            kind=kind,
-            details=st_details)
-        if item.get("textEdit"):
-            completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
-    else:
-        # A plain old completion suffices for insertText with no additionalTextEdits and no command.
-        if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.PlainText:
-            st_format = sublime.COMPLETION_FORMAT_TEXT
-        else:
-            st_format = sublime.COMPLETION_FORMAT_SNIPPET
-        completion = sublime.CompletionItem(
-            trigger=st_trigger,
-            annotation=st_annotation,
-            completion=item.get("insertText") or item["label"],
-            completion_format=st_format,
-            kind=kind,
-            details=st_details)
-
+    args = {
+        "item": item,
+        "session_name": session_name
+    }  # type: Dict[str, Any]
+    completion = sublime.CompletionItem.command_completion(
+        trigger=st_trigger,
+        command="lsp_select_completion_item",
+        args=args,
+        annotation=st_annotation,
+        kind=kind,
+        details=st_details)
+    if item.get("textEdit"):
+        completion.flags = sublime.COMPLETION_FLAG_KEEP_PREFIX
     return completion

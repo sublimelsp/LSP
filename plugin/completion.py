@@ -67,9 +67,49 @@ class LspResolveDocsCommand(LspTextCommand):
         webbrowser.open(url)
 
 
-class LspCompleteCommand(sublime_plugin.TextCommand):
+class LspSelectCompletionItemCommand(LspTextCommand):
+    def run(self, edit: sublime.Edit, item: CompletionItem, session_name: str) -> None:
+        text_edit = item.get("textEdit")
+        if text_edit:
+            new_text = text_edit["newText"]
+            edit_region = range_to_region(Range.from_lsp(text_edit['range']), self.view)
+            if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
+                for region in self.translated_regions(edit_region):
+                    self.view.erase(edit, region)
+                self.view.run_command("insert_snippet", {"contents": new_text})
+            else:
+                for region in self.translated_regions(edit_region):
+                    # NOTE: Cannot do .replace, because ST will select the replacement.
+                    self.view.erase(edit, region)
+                    self.view.insert(edit, region.a, new_text)
+        else:
+            insert_text = item.get("insertText") or item.get("label")
+            if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
+                self.view.run_command("insert_snippet", {"contents": insert_text})
+            else:
+                self.view.run_command("insert", {"characters": insert_text})
+        self.epilogue(item, session_name)
 
-    def epilogue(self, item: CompletionItem, session_name: Optional[str] = None) -> None:
+    def translated_regions(self, edit_region: sublime.Region) -> Generator[sublime.Region, None, None]:
+        selection = self.view.sel()
+        primary_cursor_position = selection[0].b
+        for region in reversed(selection):
+            # For each selection region, apply the same removal as for the "primary" region.
+            # To do that, translate, or offset, the LSP edit region into the non-"primary" regions.
+            # The concept of "primary" is our own, and there is no mention of it in the LSP spec.
+            translation = region.b - primary_cursor_position
+            translated_edit_region = sublime.Region(edit_region.a + translation, edit_region.b + translation)
+            yield translated_edit_region
+
+    def epilogue(self, item: CompletionItem, session_name: str) -> None:
+        session = self.session_by_name(session_name, 'completionProvider.resolveProvider')
+        if session:
+            request = Request.resolveCompletionItem(item, self.view)
+            session.send_request_async(request, lambda response: self.on_resolved(response, session_name))
+        else:
+            self.on_resolved(item, session_name)
+
+    def on_resolved(self, item: CompletionItem, session_name: str) -> None:
         additional_edits = item.get('additionalTextEdits')
         if additional_edits:
             edits = [parse_text_edit(additional_edit) for additional_edit in additional_edits]
@@ -83,45 +123,3 @@ class LspCompleteCommand(sublime_plugin.TextCommand):
                 "session_name": session_name
             }
             self.view.run_command("lsp_execute", args)
-
-
-class LspCompleteInsertTextCommand(LspCompleteCommand):
-
-    def run(self, edit: sublime.Edit, item: Any, session_name: Optional[str] = None) -> None:
-        insert_text = item.get("insertText") or item["label"]
-        if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
-            self.view.run_command("insert_snippet", {"contents": insert_text})
-        else:
-            self.view.run_command("insert", {"characters": insert_text})
-        self.epilogue(item, session_name)
-
-
-class LspCompleteTextEditCommand(LspCompleteCommand):
-
-    def run(self, edit: sublime.Edit, item: CompletionItem, session_name: Optional[str] = None) -> None:
-        text_edit = item.get("textEdit")
-        if not text_edit:
-            return
-        new_text = text_edit["newText"]
-        edit_region = range_to_region(Range.from_lsp(text_edit['range']), self.view)
-        if item.get("insertTextFormat", InsertTextFormat.PlainText) == InsertTextFormat.Snippet:
-            for region in self.translated_regions(edit_region):
-                self.view.erase(edit, region)
-            self.view.run_command("insert_snippet", {"contents": new_text})
-        else:
-            for region in self.translated_regions(edit_region):
-                # NOTE: Cannot do .replace, because ST will select the replacement.
-                self.view.erase(edit, region)
-                self.view.insert(edit, region.a, new_text)
-        self.epilogue(item, session_name)
-
-    def translated_regions(self, edit_region: sublime.Region) -> Generator[sublime.Region, None, None]:
-        selection = self.view.sel()
-        primary_cursor_position = selection[0].b
-        for region in reversed(selection):
-            # For each selection region, apply the same removal as for the "primary" region.
-            # To do that, translate, or offset, the LSP edit region into the non-"primary" regions.
-            # The concept of "primary" is our own, and there is no mention of it in the LSP spec.
-            translation = region.b - primary_cursor_position
-            translated_edit_region = sublime.Region(edit_region.a + translation, edit_region.b + translation)
-            yield translated_edit_region

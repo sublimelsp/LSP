@@ -109,16 +109,19 @@ class LspSelectCompletionItemCommand(LspTextCommand):
             self.on_resolved(item, session_name)
 
     def on_resolved(self, item: CompletionItem, session_name: str) -> None:
-        additional_edits = item.get('additionalTextEdits')
-        if additional_edits:
-            edits = [parse_text_edit(additional_edit) for additional_edit in additional_edits]
-            self.view.run_command("lsp_apply_document_edit", {'changes': edits})
-        command = item.get("command")
-        if command:
-            debug('Running server command "{}" for view {}'.format(command, self.view.id()))
-            args = {
-                "command_name": command["command"],
-                "command_args": command.get("arguments"),
-                "session_name": session_name
-            }
-            self.view.run_command("lsp_execute", args)
+        def run_main():
+            additional_edits = item.get('additionalTextEdits')
+            if additional_edits:
+                edits = [parse_text_edit(additional_edit) for additional_edit in additional_edits]
+                self.view.run_command("lsp_apply_document_edit", {'changes': edits})
+            command = item.get("command")
+            if command:
+                debug('Running server command "{}" for view {}'.format(command, self.view.id()))
+                args = {
+                    "command_name": command["command"],
+                    "command_args": command.get("arguments"),
+                    "session_name": session_name
+                }
+                self.view.run_command("lsp_execute", args)
+
+        sublime.set_timeout(run_main)

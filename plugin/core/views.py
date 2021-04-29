@@ -717,10 +717,6 @@ def format_completion(
     else:
         st_trigger = lsp_label
 
-    args = {
-        "item": item,
-        "session_name": session_name
-    }  # type: Dict[str, Any]
     completion = sublime.CompletionItem.command_completion(
         trigger=st_trigger,
         command="lsp_select_completion_item",

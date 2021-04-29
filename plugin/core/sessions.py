@@ -1259,8 +1259,7 @@ class Session(TransportCallbacks):
             success(open_externally(uri, bool(params.get("takeFocus"))))
         else:
             # TODO: ST API does not allow us to say "do not focus this new view"
-            selection = params.get("selection")
-            self.open_uri_async(uri, selection["start"]["line"], selection["start"]["character"]).then(success)
+            self.open_uri_async(uri, params["selection"]["start"]).then(success)
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
         """handles the window/workDoneProgress/create request"""

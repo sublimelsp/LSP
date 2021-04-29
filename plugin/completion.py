@@ -110,7 +110,7 @@ class LspSelectCompletionItemCommand(LspTextCommand):
             request = Request.resolveCompletionItem(item, self.view)
             session.send_request_async(request, lambda response: resolve_on_main_thread(response, session_name))
         else:
-            resolve_on_main_thread(item, session_name)
+            self.on_resolved(item, session_name)
 
     def on_resolved(self, item: CompletionItem, session_name: str) -> None:
         additional_edits = item.get('additionalTextEdits')

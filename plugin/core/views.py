@@ -724,7 +724,7 @@ def format_completion(
     completion = sublime.CompletionItem.command_completion(
         trigger=st_trigger,
         command="lsp_select_completion_item",
-        args=args,
+        args={"item": item, "session_name": session_name},
         annotation=st_annotation,
         kind=kind,
         details=st_details)

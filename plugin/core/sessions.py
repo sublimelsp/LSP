@@ -157,7 +157,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                         "valueSet": completion_tag_value_set
                     },
                     "resolveSupport": {
-                        "properties": ["detail", "documentation", "additionalTextEdits", "command"]
+                        "properties": ["detail", "documentation", "additionalTextEdits"]
                     }
                 },
                 "completionItemKind": {

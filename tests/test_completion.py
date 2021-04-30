@@ -25,9 +25,7 @@ additional_edits = {
     ]
 }
 
-
-class QueryCompletionsTests(TextDocumentTestCase):
-
+class CompletionHelpers:
     @classmethod
     def init_view_settings(cls) -> None:
         super().init_view_settings()
@@ -76,6 +74,8 @@ class QueryCompletionsTests(TextDocumentTestCase):
         yield from self.await_message("textDocument/completion")
         self.assertEqual(self.read_file(), expected_text)
 
+
+class QueryCompletionsTests(TextDocumentTestCase, CompletionHelpers):
     def test_none(self) -> 'Generator':
         self.set_response("textDocument/completion", None)
         self.view.run_command('auto_complete')
@@ -356,6 +356,9 @@ class QueryCompletionsTests(TextDocumentTestCase):
 
     def test_additional_edits_if_session_has_the_resolve_capability(self) -> 'Generator':
         completion_item = {
+            'label': 'asdf'
+        }
+        self.set_response("completionItem/resolve", {
             'label': 'asdf',
             'additionalTextEdits': [
                 {
@@ -372,8 +375,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
                     'newText': 'import asdf;\n'
                 }
             ]
-        }
-        self.set_response("completionItem/resolve", completion_item)
+        })
         yield from self.verify(
             completion_items=[completion_item],
             insert_text='',
@@ -603,7 +605,7 @@ class QueryCompletionsTests(TextDocumentTestCase):
         self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
 
 
-class QueryCompletionsNoResolverTests(QueryCompletionsTests):
+class QueryCompletionsNoResolverTests(TextDocumentTestCase, CompletionHelpers):
     '''
     The difference between QueryCompletionsTests and QueryCompletionsNoResolverTests
     is that QueryCompletionsTests has the completion item resolve capability enabled
@@ -617,7 +619,7 @@ class QueryCompletionsNoResolverTests(QueryCompletionsTests):
 
     def test_additional_edits_if_session_does_not_have_the_resolve_capability(self) -> 'Generator':
         completion_item = {
-            'label': 'asdf',
+            'label': 'ghjk',
             'additionalTextEdits': [
                 {
                     'range': {
@@ -630,11 +632,11 @@ class QueryCompletionsNoResolverTests(QueryCompletionsTests):
                             'character': 0
                         }
                     },
-                    'newText': 'import asdf;\n'
+                    'newText': 'import ghjk;\n'
                 }
             ]
         }
         yield from self.verify(
             completion_items=[completion_item],
             insert_text='',
-            expected_text='import asdf;\nasdf')
+            expected_text='import ghjk;\nghjk')

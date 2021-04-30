@@ -106,7 +106,8 @@ class LspSelectCompletionItemCommand(LspTextCommand):
         def resolve_on_main_thread(item: CompletionItem, session_name: str) -> None:
             sublime.set_timeout(lambda: self.on_resolved(item, session_name))
 
-        if session:
+        additional_text_edits = item.get('additionalTextEdits')
+        if session and not additional_text_edits:
             request = Request.resolveCompletionItem(item, self.view)
             session.send_request_async(request, lambda response: resolve_on_main_thread(response, session_name))
         else:

@@ -25,6 +25,7 @@ additional_edits = {
     ]
 }
 
+
 class CompletionHelpers:
     @classmethod
     def init_view_settings(cls) -> None:

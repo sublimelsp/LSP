@@ -26,7 +26,7 @@ additional_edits = {
 }
 
 
-class CompletionHelpers:
+class CompletionsTestsBase(TextDocumentTestCase):
     @classmethod
     def init_view_settings(cls) -> None:
         super().init_view_settings()
@@ -76,7 +76,7 @@ class CompletionHelpers:
         self.assertEqual(self.read_file(), expected_text)
 
 
-class QueryCompletionsTests(TextDocumentTestCase, CompletionHelpers):
+class QueryCompletionsTests(CompletionsTestsBase):
     def test_none(self) -> 'Generator':
         self.set_response("textDocument/completion", None)
         self.view.run_command('auto_complete')
@@ -606,7 +606,7 @@ class QueryCompletionsTests(TextDocumentTestCase, CompletionHelpers):
         self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
 
 
-class QueryCompletionsNoResolverTests(TextDocumentTestCase, CompletionHelpers):
+class QueryCompletionsNoResolverTests(CompletionsTestsBase):
     '''
     The difference between QueryCompletionsTests and QueryCompletionsNoResolverTests
     is that QueryCompletionsTests has the completion item resolve capability enabled

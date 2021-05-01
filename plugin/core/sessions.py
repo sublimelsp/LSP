@@ -5,7 +5,6 @@ from .logging import debug
 from .logging import exception_log
 from .open import center_selection
 from .open import open_externally
-from .open import open_file_and_center_async
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
@@ -43,6 +42,7 @@ from .views import extract_variables
 from .views import get_storage_path
 from .views import get_uri_and_range_from_location
 from .views import SYMBOL_KINDS
+from .views import to_encoded_filename
 from .workspace import is_subpath_of
 from abc import ABCMeta
 from abc import abstractmethod
@@ -1086,8 +1086,10 @@ class Session(TransportCallbacks):
 
     def open_uri_async(self, uri: DocumentUri, r: RangeLsp, flags: int = 0, group: int = -1) -> Promise[bool]:
         if uri.startswith("file:"):
+            # TODO: open_file_and_center_async seems broken for views that have *just* been opened via on_load
             path = self.config.map_server_uri_to_client_path(uri)
-            return open_file_and_center_async(self.window, path, r, group=group).then(bool)
+            self.window.open_file(to_encoded_filename(path, r["start"]), flags, group)
+            return Promise.resolve(True)
         if self._plugin:
             # I cannot type-hint an unpacked tuple
             pair = Promise.packaged_task()  # type: PackagedTask[Tuple[str, str, str]]

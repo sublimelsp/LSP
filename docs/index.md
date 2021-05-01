@@ -723,17 +723,19 @@ More info: [Polymer/polymer-editor-service](https://github.com/Polymer/polymer-e
 
 There are at least two language servers, use either one.
 
-#### Palantir's Python Language Server
+#### python-lsp Python Language Server
 
 ```sh
-pip install 'python-language-server[all]'
+pip install 'python-lsp-server[all]'
 ```
 
-Make sure you can run `pyls` in your terminal. If you've installed it into a virtualenv, you might need to override the path to `pyls` in global LSP settings (Package Settings -> LSP -> Settings):
+Make sure you can run `pylsp` in your terminal. If you've installed it into a virtualenv, you might need to override the path to `pylsp` in global LSP settings (Package Settings -> LSP -> Settings):
+
+This project was forked from the unmaintained Palantir project, it uses a different command for execution (`pylsp` vs. `pyls` as expected by the existing sublimelsp plugin), so at the least the `command` paramater as shown below is required.
 
 ```js
-"pyls": {
-  "command": ["/Users/mike/.virtualenvs/pyls-virtual-env/bin/pyls"], // example path, adjust it for your use case
+"pyls": { // still identified by old project identifier
+  "command": ["pylsp"],
   "enabled": true // if you want to enable Python Language Server globally
 }
 ```
@@ -745,6 +747,7 @@ If you use a virtualenv for your current project, add a path to it in your [proj
   "settings": {
     "LSP": {
       "pyls": {
+        "command": ["/Users/mike/.virtualenvs/pylsp-virtual-env/bin/pylsp"], // example path, adjust it for your use case
         "enabled": true, // if you want to enable Python Language Server for current project only
         "env": {
           // example path, adjust it for your use case
@@ -763,7 +766,7 @@ A basic configuration below can be used for bootstrapping your own:
   //...
 "pyls": {
   "enabled": true,
-  "command": ["pyls"],
+  "command": ["pylsp"],
   "languageId": "python",
   "scopes": ["source.python"],
   "syntaxes": [
@@ -818,7 +821,7 @@ A basic configuration below can be used for bootstrapping your own:
 },
 ```
 
-See pylint documentation: [github:palantir/python-language-server](https://github.com/palantir/python-language-server)
+Documentation: [github:python-lsp/python-lsp-server](https://github.com/python-lsp/python-lsp-server)
 
 Description of all built-in settings: https://github.com/palantir/python-language-server/blob/develop/vscode-client/package.json
 

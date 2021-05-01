@@ -1,3 +1,4 @@
+from copy import deepcopy
 from LSP.plugin.core.protocol import CompletionItemTag
 from LSP.plugin.core.typing import Any, Generator, List, Dict, Callable
 from LSP.plugin.core.views import format_completion
@@ -25,8 +26,7 @@ additional_edits = {
 }
 
 
-class QueryCompletionsTests(TextDocumentTestCase):
-
+class CompletionsTestsBase(TextDocumentTestCase):
     @classmethod
     def init_view_settings(cls) -> None:
         super().init_view_settings()
@@ -75,6 +75,8 @@ class QueryCompletionsTests(TextDocumentTestCase):
         yield from self.await_message("textDocument/completion")
         self.assertEqual(self.read_file(), expected_text)
 
+
+class QueryCompletionsTests(CompletionsTestsBase):
     def test_none(self) -> 'Generator':
         self.set_response("textDocument/completion", None)
         self.view.run_command('auto_complete')
@@ -353,26 +355,30 @@ class QueryCompletionsTests(TextDocumentTestCase):
             insert_text='e',
             expected_text='def foo: Int \u003d ???\n   def boo: Int \u003d ???')
 
-    def test_additional_edits(self) -> 'Generator':
-        yield from self.verify(
-            completion_items=[{
-                'label': 'asdf',
-                'additionalTextEdits': [
-                    {
-                        'range': {
-                            'start': {
-                                'line': 0,
-                                'character': 0
-                            },
-                            'end': {
-                                'line': 0,
-                                'character': 0
-                            }
+    def test_additional_edits_if_session_has_the_resolve_capability(self) -> 'Generator':
+        completion_item = {
+            'label': 'asdf'
+        }
+        self.set_response("completionItem/resolve", {
+            'label': 'asdf',
+            'additionalTextEdits': [
+                {
+                    'range': {
+                        'start': {
+                            'line': 0,
+                            'character': 0
                         },
-                        'newText': 'import asdf;\n'
-                    }
-                ]
-            }],
+                        'end': {
+                            'line': 0,
+                            'character': 0
+                        }
+                    },
+                    'newText': 'import asdf;\n'
+                }
+            ]
+        })
+        yield from self.verify(
+            completion_items=[completion_item],
             insert_text='',
             expected_text='import asdf;\nasdf')
 
@@ -598,3 +604,40 @@ class QueryCompletionsTests(TextDocumentTestCase):
         formatted_completion_item = format_completion(item_with_deprecated_tags, 0, False, "")
         self.assertEqual('⚠', formatted_completion_item.kind[1])
         self.assertEqual('⚠ Method - Deprecated', formatted_completion_item.kind[2])
+
+
+class QueryCompletionsNoResolverTests(CompletionsTestsBase):
+    '''
+    The difference between QueryCompletionsTests and QueryCompletionsNoResolverTests
+    is that QueryCompletionsTests has the completion item resolve capability enabled
+    and the QueryCompletionsNoResolverTests has the resolve capability disabled
+    '''
+    @classmethod
+    def get_test_server_capabilities(cls) -> dict:
+        capabilities = deepcopy(super().get_test_server_capabilities())
+        capabilities['capabilities']['completionProvider']['resolveProvider'] = False
+        return capabilities
+
+    def test_additional_edits_if_session_does_not_have_the_resolve_capability(self) -> 'Generator':
+        completion_item = {
+            'label': 'ghjk',
+            'additionalTextEdits': [
+                {
+                    'range': {
+                        'start': {
+                            'line': 0,
+                            'character': 0
+                        },
+                        'end': {
+                            'line': 0,
+                            'character': 0
+                        }
+                    },
+                    'newText': 'import ghjk;\n'
+                }
+            ]
+        }
+        yield from self.verify(
+            completion_items=[completion_item],
+            insert_text='',
+            expected_text='import ghjk;\nghjk')

@@ -814,22 +814,22 @@ There are multiple options:
 
 Follow installation instructions on [LSP-pyright](https://github.com/sublimelsp/LSP-pyright).
 
-### Pyls
+### Python LSP Server
 
 ```sh
-pip install 'python-language-server[all]'
+pip install 'python-lsp-server[all]'
 ```
 
-Make sure you can run `pyls` in your terminal. If you've installed it into a virtualenv, you might need to override the path to `pyls` in global LSP settings (Package Settings -> LSP -> Settings):
+Make sure you can run `pylsp` in your terminal. If you've installed it into a virtualenv, you might need to override the path to `pylsp` in global LSP settings (Package Settings -> LSP -> Settings):
 
 === "Sublime Text 4"
     ```json
     {
         "clients": {
-            "pyls": {
+            "pylsp": {
                 "enabled": true,
-                "command": ["pyls"],
-                // "command": ["/Users/mike/.virtualenvs/pyls-virtual-env/bin/pyls"], // example path, adjust it for your use case
+                "command": ["pylsp"],
+                // "command": ["/Users/mike/.virtualenvs/pylsp-virtual-env/bin/pylsp"], // example path, adjust it for your use case
                 "selector": "source.python"
             }
         }
@@ -840,10 +840,10 @@ Make sure you can run `pyls` in your terminal. If you've installed it into a vir
     ```json
     {
         "clients": {
-            "pyls": {
+            "pylsp": {
                 "enabled": true,
-                "command": ["pyls"],
-                // "command": ["/Users/mike/.virtualenvs/pyls-virtual-env/bin/pyls"], // example path, adjust it for your use case
+                "command": ["pylsp"],
+                // "command": ["/Users/mike/.virtualenvs/pylsp-virtual-env/bin/pylsp"], // example path, adjust it for your use case
                 "languageId": "python",
                 "scopes": ["source.python"],
                 "syntaxes": ["Packages/Python/Python.sublime-syntax", "Packages/MagicPython/grammars/MagicPython.tmLanguage", "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage"]
@@ -858,7 +858,7 @@ If you use a virtualenv for your current project, add a path to it in your [proj
 {
     "settings": {
         "LSP": {
-            "pyls": {
+            "pylsp": {
                 "enabled": true, // if you want to enable Python Language Server for current project only
                 "env": {
                     // example path, adjust it for your use case
@@ -874,46 +874,46 @@ If you use a virtualenv for your current project, add a path to it in your [proj
 A basic configuration below can be used for bootstrapping your own:
 
 ```json
-"pyls": {
+"pylsp": {
     "enabled": true,
-    "command": ["pyls"],
+    "command": ["pylsp"],
     "settings": {
-        "pyls.env": {
+        "pylsp.env": {
           // Making Sublime's own libs available to the linters.
           // "PYTHONPATH": "/Applications/Sublime Text.app/Contents/MacOS/Lib/python33",
         },
         // Configuration is computed first from user configuration (in home directory),
         // overridden by configuration passed in by the language client,
         // and then overridden by configuration discovered in the workspace.
-        "pyls.configurationSources": [
+        "pylsp.configurationSources": [
           "pycodestyle", // discovered in ~/.config/pycodestyle, setup.cfg, tox.ini and pycodestyle.cfg
           // "flake8",   // discovered in ~/.config/flake8, setup.cfg, tox.ini and flake8.cfg
         ],
-        "pyls.plugins.jedi.extra_paths": [
+        "pylsp.plugins.jedi.extra_paths": [
           // The directory where the pip installation package is located
         ],
         // Enable fuzzy matches when requesting autocomplete
-        "pyls.plugins.jedi.jedi_completion.fuzzy": true,
-        "pyls.plugins.jedi.pycodestyle.enabled": true,
-        "pyls.plugins.jedi.pycodestyle.exclude": [
+        "pylsp.plugins.jedi.jedi_completion.fuzzy": true,
+        "pylsp.plugins.jedi.pycodestyle.enabled": true,
+        "pylsp.plugins.jedi.pycodestyle.exclude": [
           // Exclude files or directories which match these patterns
         ],
-        "pyls.plugins.jedi.pycodestyle.ignore": [
+        "pylsp.plugins.jedi.pycodestyle.ignore": [
           // Exclude files or directories which match these patterns
         ],
-        // "pyls.plugins.jedi.pycodestyle.maxLineLength: 80" // set maximum allowed line length
-        "pyls.plugins.pydocstyle.enabled": false,
-        "pyls.plugins.pyflakes.enabled": true,
-        "pyls.plugins.pylint.enabled": false,
-        "pyls.plugins.yapf.enabled": true,
-        // pyls' 3rd Party Plugins, Mypy type checking for Python 3, Must be installed via pip before enabling
-        "pyls.plugins.pyls_mypy.enabled": false, // Install with: pip install pyls-mypy
-        "pyls.plugins.pyls_mypy.live_mode": true
+        // "pylsp.plugins.jedi.pycodestyle.maxLineLength: 80" // set maximum allowed line length
+        "pylsp.plugins.pydocstyle.enabled": false,
+        "pylsp.plugins.pyflakes.enabled": true,
+        "pylsp.plugins.pylint.enabled": false,
+        "pylsp.plugins.yapf.enabled": true,
+        // pylsp' 3rd Party Plugins, Mypy type checking for Python 3, Must be installed via pip before enabling
+        "pylsp.plugins.pyls_mypy.enabled": false, // Install with: pip install pyls-mypy
+        "pylsp.plugins.pyls_mypy.live_mode": true
     }
 }
 ```
 
-See pylint documentation: [github:palantir/python-language-server](https://github.com/palantir/python-language-server).
+Documentation: [github:python-lsp/python-lsp-server](https://github.com/python-lsp/python-lsp-server).
 
 !!! info "List of all built-in [settings](https://github.com/palantir/python-language-server/blob/develop/vscode-client/package.json)."
 

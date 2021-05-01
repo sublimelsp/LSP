@@ -731,29 +731,32 @@ pip install 'python-lsp-server[all]'
 
 Make sure you can run `pylsp` in your terminal. If you've installed it into a virtualenv, you might need to override the path to `pylsp` in global LSP settings (Package Settings -> LSP -> Settings):
 
-This project was forked from the unmaintained Palantir project, it uses a different command for execution (`pylsp` vs. `pyls` as expected by the existing sublimelsp plugin), so at the least the `command` paramater as shown below is required.
+Add the following to your LSP settings
 
 ```js
-"pyls": { // still identified by old project identifier
-  "command": ["pylsp"],
-  "enabled": true // if you want to enable Python Language Server globally
-}
+	"clients": {
+		"pylsp": {
+			"command": [
+				"pylsp"
+			],
+			"selector": "source.python"
+		}
+	}
 ```
-
-If you use a virtualenv for your current project, add a path to it in your [project configuration](https://www.sublimetext.com/docs/3/projects.html) (Project -> Edit Project):
+Add the following to your [project configuration](https://www.sublimetext.com/docs/3/projects.html) (Project -> Edit Project):
 
 ```js
 {
   "settings": {
     "LSP": {
-      "pyls": {
-        "command": ["/Users/mike/.virtualenvs/pylsp-virtual-env/bin/pylsp"], // example path, adjust it for your use case
-        "enabled": true, // if you want to enable Python Language Server for current project only
-        "env": {
-          // example path, adjust it for your use case
-          // it needs to be an absolute path, neither $HOME nor ~ work here
-          "PYTHONPATH": "/Users/mike/.virtualenvs/my-virtual-env/lib/python3.7/site-packages"
-        }
+      "pylsp": {
+        "enabled": true,
+        // "command": ["python", "-m", "pylsp"], // optional: update command path if required
+        // "env": {
+        //   // optional path to virtualenv
+        //   // it needs to be an absolute path, neither $HOME nor ~ work here
+        //   "PYTHONPATH": "/Users/mike/.virtualenvs/my-virtual-env/lib/python3.7/site-packages"
+        // }
       }
     }
   }
@@ -764,7 +767,7 @@ A basic configuration below can be used for bootstrapping your own:
 
 ```js
   //...
-"pyls": {
+"pylsp": {
   "enabled": true,
   "command": ["pylsp"],
   "languageId": "python",
@@ -775,7 +778,7 @@ A basic configuration below can be used for bootstrapping your own:
     "Packages/Djaneiro/Syntaxes/Python Django.tmLanguage",
   ],
   "settings": {
-    "pyls": {
+    "pylsp": {
       "env":
       {
         // Making Sublime's own libs available to the linters.

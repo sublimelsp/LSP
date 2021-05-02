@@ -10,9 +10,11 @@ from .protocol import Notification
 from .protocol import Point
 from .protocol import Range
 from .protocol import Request
+from .types import ClientConfig
 from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, Sequence, cast
 from .url import filename_to_uri
-from .url import uri_to_filename
+from .workspace import is_subpath_of
+from urllib.parse import urlparse
 import html
 import itertools
 import linecache
@@ -648,15 +650,63 @@ def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[i
     return result, offset, code, href
 
 
-def _format_diagnostic_related_info(info: DiagnosticRelatedInformation, base_dir: Optional[str] = None) -> str:
+def location_to_human_readable(
+    config: ClientConfig,
+    base_dir: Optional[str],
+    location: Union[Location, LocationLink]
+) -> str:
+    """
+    Format an LSP Location (or LocationLink) into a string suitable for a human to read
+    """
+    uri, position = get_uri_and_position_from_location(location)
+    parsed = urlparse(uri)
+    if parsed.scheme == "file":
+        fmt = "{}:{}"
+        pathname = config.map_server_uri_to_client_path(uri)
+        if base_dir and is_subpath_of(pathname, base_dir):
+            pathname = pathname[len(os.path.commonprefix((pathname, base_dir))) + 1:]
+    else:
+        # https://tools.ietf.org/html/rfc5147
+        fmt = "{}#line={}"
+        pathname = uri
+    return fmt.format(pathname, position["line"] + 1)
+
+
+def location_to_href(config: ClientConfig, location: Union[Location, LocationLink]) -> str:
+    """
+    Encode an LSP Location (or LocationLink) into a string suitable as a hyperlink in minihtml
+    """
+    uri, position = get_uri_and_position_from_location(location)
+    return "location:{}@{}#{},{}".format(config.name, uri, position["line"], position["character"])
+
+
+def unpack_href_location(href: str) -> Tuple[str, str, int, int]:
+    """
+    Return the session name, URI, row, and col_utf16 from an encoded href.
+    """
+    session_name, uri_with_fragment = href[len("location:"):].split("@")
+    uri, fragment = uri_with_fragment.split("#")
+    row, col_utf16 = map(int, fragment.split(","))
+    return session_name, uri, row, col_utf16
+
+
+def is_location_href(href: str) -> bool:
+    """
+    Check whether this href is an encoded location.
+    """
+    return href.startswith("location:")
+
+
+def _format_diagnostic_related_info(
+    config: ClientConfig,
+    info: DiagnosticRelatedInformation,
+    base_dir: Optional[str] = None
+) -> str:
     location = info["location"]
-    file_path = uri_to_filename(location["uri"])
-    if base_dir and file_path.startswith(base_dir):
-        file_path = os.path.relpath(file_path, base_dir)
-    return '<a href="location:{}">{}</a>: {}'.format(
-        location_to_encoded_filename(location),
-        text2html(file_path),
-        text2html(info["message"])
+    return '<a href="{}">{}</a>: {}'.format(
+        location_to_href(config, location),
+        location_to_human_readable(config, base_dir, location),
+        info["message"]
     )
 
 
@@ -668,7 +718,12 @@ def _with_scope_color(view: sublime.View, text: Any, scope: str) -> str:
     return _with_color(text, view.style_for_scope(scope)["foreground"])
 
 
-def format_diagnostic_for_html(view: sublime.View, diagnostic: Diagnostic, base_dir: Optional[str] = None) -> str:
+def format_diagnostic_for_html(
+    view: sublime.View,
+    config: ClientConfig,
+    diagnostic: Diagnostic,
+    base_dir: Optional[str] = None
+) -> str:
     formatted = [
         '<pre class="',
         DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1],
@@ -689,7 +744,7 @@ def format_diagnostic_for_html(view: sublime.View, diagnostic: Diagnostic, base_
     related_infos = diagnostic.get("relatedInformation")
     if related_infos:
         formatted.append('<pre class="related_info">')
-        formatted.append("<br>".join(_format_diagnostic_related_info(info, base_dir)
+        formatted.append("<br>".join(_format_diagnostic_related_info(config, info, base_dir)
                                      for info in related_infos))
         formatted.append("</pre>")
     formatted.append("</pre>")

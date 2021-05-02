@@ -2,6 +2,8 @@ from .code_actions import actions_manager
 from .code_actions import CodeActionOrCommand
 from .core.logging import debug
 from .core.protocol import Diagnostic
+from .core.protocol import Position
+from .core.protocol import RangeLsp
 from .core.protocol import Request
 from .core.registry import LspTextCommand
 from .core.registry import windows
@@ -9,13 +11,15 @@ from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.typing import List, Optional, Any, Dict, Tuple, Sequence
 from .core.views import diagnostic_severity
-from .core.views import format_diagnostic_for_html
 from .core.views import first_selection_region
+from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import make_link
 from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
+from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from .core.windows import AbstractViewListener
 import functools
@@ -144,7 +148,7 @@ class LspHoverCommand(LspTextCommand):
             formatted.append('<div class="diagnostics">')
             for diagnostic in diagnostics:
                 by_severity.setdefault(diagnostic_severity(diagnostic), []).append(
-                    format_diagnostic_for_html(self.view, diagnostic, self._base_dir))
+                    format_diagnostic_for_html(self.view, sb.session.config, diagnostic, self._base_dir))
             for items in by_severity.values():
                 formatted.extend(items)
             config_name = sb.session.config.name
@@ -194,10 +198,13 @@ class LspHoverCommand(LspTextCommand):
             if window:
                 window.show_quick_panel(titles, lambda i: self.handle_code_action_select(config_name, i),
                                         placeholder="Code actions")
-        elif href.startswith("location:"):
-            window = self.view.window()
-            if window:
-                window.open_file(href[len("location:"):], flags=sublime.ENCODED_POSITION)
+        elif is_location_href(href):
+            session_name, uri, row, col_utf16 = unpack_href_location(href)
+            session = self.session_by_name(session_name)
+            if session:
+                position = {"line": row, "character": col_utf16}  # type: Position
+                r = {"start": position, "end": position}  # type: RangeLsp
+                sublime.set_timeout_async(functools.partial(session.open_uri_async, uri, r))
         else:
             # NOTE: Remove this check when on py3.8.
             if not (href.lower().startswith("http://") or href.lower().startswith("https://")):

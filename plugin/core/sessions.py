@@ -1088,7 +1088,7 @@ class Session(TransportCallbacks):
         if uri.startswith("file:"):
             # TODO: open_file_and_center_async seems broken for views that have *just* been opened via on_load
             path = self.config.map_server_uri_to_client_path(uri)
-            self.window.open_file(to_encoded_filename(path, r["start"]), flags, group)
+            self.window.open_file(to_encoded_filename(path, r["start"]), flags | sublime.ENCODED_POSITION, group)
             return Promise.resolve(True)
         if self._plugin:
             # I cannot type-hint an unpacked tuple

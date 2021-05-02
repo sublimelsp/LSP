@@ -3,14 +3,10 @@ from .core.protocol import DocumentUri, Location, Position
 from .core.protocol import LocationLink
 from .core.sessions import Session
 from .core.typing import Union, List, Optional, Tuple
-from .core.views import to_encoded_filename
 from .core.views import get_uri_and_position_from_location
-from .core.workspace import is_subpath_of
-from urllib.parse import urlparse
-from urllib.request import url2pathname
+from .core.views import location_to_human_readable
+from .core.views import to_encoded_filename
 import functools
-import os
-import re
 import sublime
 import weakref
 
@@ -59,26 +55,8 @@ class LocationPicker:
         self._items = locations
         manager = session.manager()
         base_dir = manager.get_project_path(view.file_name() or "") if manager else None
-        items = []
-        for location in locations:
-            uri, position = get_uri_and_position_from_location(location)
-            parsed = urlparse(uri)
-            if parsed.scheme == "file":
-                fmt = "{}:{}"
-                urlpath = parsed.path
-                if os.name == "nt" and re.match(r'^\/[a-zA-Z](?:\:|%3[aA])\/', urlpath):
-                    pathname = url2pathname(urlpath)[1:]
-                else:
-                    pathname = url2pathname(urlpath)
-                if base_dir and is_subpath_of(pathname, base_dir):
-                    pathname = pathname[len(os.path.commonprefix((pathname, base_dir))) + 1:]
-            else:
-                # https://tools.ietf.org/html/rfc5147
-                fmt = "{}#line={}"
-                pathname = uri
-            items.append(fmt.format(pathname, position['line'] + 1))
         self._window.show_quick_panel(
-            items=items,
+            items=[location_to_human_readable(session.config, base_dir, location) for location in locations],
             on_select=self._select_entry,
             on_highlight=self._highlight_entry,
             flags=sublime.KEEP_OPEN_ON_FOCUS_LOST

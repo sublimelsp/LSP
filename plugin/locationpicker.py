@@ -62,13 +62,6 @@ class LocationPicker:
             flags=sublime.KEEP_OPEN_ON_FOCUS_LOST
         )
 
-    @property
-    def flags(self) -> int:
-        result = sublime.ENCODED_POSITION
-        if self._side_by_side:
-            result |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
-        return result
-
     def _unpack(self, index: int) -> Tuple[Optional[Session], Union[Location, LocationLink], DocumentUri, Position]:
         location = self._items[index]
         uri, position = get_uri_and_position_from_location(location)
@@ -80,7 +73,10 @@ class LocationPicker:
             if not session:
                 return
             if uri.startswith("file:"):
-                open_basic_file(session, uri, position, self.flags)
+                flags = sublime.ENCODED_POSITION
+                if self._side_by_side:
+                    flags |= sublime.ADD_TO_SELECTION | sublime.SEMI_TRANSIENT
+                open_basic_file(session, uri, position, flags)
             else:
                 sublime.set_timeout_async(functools.partial(open_location_async, session, location, self._side_by_side))
         else:

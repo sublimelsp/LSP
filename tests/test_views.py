@@ -9,7 +9,6 @@ from LSP.plugin.core.views import did_save
 from LSP.plugin.core.views import document_color_params
 from LSP.plugin.core.views import format_diagnostic_for_html
 from LSP.plugin.core.views import FORMAT_STRING, FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
-from LSP.plugin.core.views import location_to_encoded_filename
 from LSP.plugin.core.views import lsp_color_to_html
 from LSP.plugin.core.views import lsp_color_to_phantom
 from LSP.plugin.core.views import MissingFilenameError
@@ -281,16 +280,6 @@ class ViewsTest(DeferrableTestCase):
         content = "'https://github.com/sublimelsp/LSP'"
         expect = "'<a href='https://github.com/sublimelsp/LSP'>https://github.com/sublimelsp/LSP</a>'"
         self.assertEqual(text2html(content), expect)
-
-    def test_location_to_encoded_filename(self) -> None:
-        self.assertEqual(
-            location_to_encoded_filename(
-                {'uri': 'file:///foo/bar', 'range': {'start': {'line': 0, 'character': 5}}}),
-            '/foo/bar:1:6')
-        self.assertEqual(
-            location_to_encoded_filename(
-                {'targetUri': 'file:///foo/bar', 'targetSelectionRange': {'start': {'line': 1234, 'character': 4321}}}),
-            '/foo/bar:1235:4322')
 
     def test_lsp_color_to_phantom(self) -> None:
         response = [

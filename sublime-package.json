@@ -299,11 +299,6 @@
               "default": true,
               "markdownDescription": "Disable Sublime Text's word completions. \"word\" completion means Sublime Text's internal completer that takes words from the current buffer you're editing and presents them in the auto-complete widget."
             },
-            "show_references_in_quick_panel": {
-              "type": "boolean",
-              "default": false,
-              "markdownDescription": "Show symbol references in Sublime's quick panel instead of the bottom panel."
-            },
             "disabled_capabilities": {
               "type": "array",
               "uniqueItems": true,

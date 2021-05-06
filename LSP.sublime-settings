@@ -107,9 +107,6 @@
   // sorting algorithm and instead uses the sorting defined by the relevant language server.
   "inhibit_word_completions": true,
 
-  // Show symbol references in Sublime's quick panel instead of the bottom panel.
-  "show_references_in_quick_panel": false,
-
   // Show verbose debug messages in the sublime console.
   "log_debug": false,
 

@@ -1,4 +1,3 @@
-from plugin.core.logging import debug
 from .css import css as lsp_css
 from .protocol import CompletionItem, DocumentUri, Position, RangeLsp
 from .protocol import CompletionItemTag

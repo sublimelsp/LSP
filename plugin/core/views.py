@@ -1,3 +1,4 @@
+from plugin.core.logging import debug
 from .css import css as lsp_css
 from .protocol import CompletionItem, DocumentUri, Position, RangeLsp
 from .protocol import CompletionItemTag
@@ -186,6 +187,9 @@ def get_uri_and_position_from_location(location: Union[Location, LocationLink]) 
 
 
 def location_to_encoded_filename(location: Union[Location, LocationLink]) -> str:
+    """
+    DEPRECATED
+    """
     return to_encoded_filename(*get_uri_and_position_from_location(location))
 
 

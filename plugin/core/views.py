@@ -1,14 +1,17 @@
 from .css import css as lsp_css
-from .protocol import CompletionItem, DocumentUri, Position, RangeLsp
+from .protocol import CompletionItem
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticRelatedInformation
 from .protocol import DiagnosticSeverity
+from .protocol import DocumentUri
 from .protocol import Location
 from .protocol import LocationLink
 from .protocol import Notification
 from .protocol import Point
+from .protocol import Position
 from .protocol import Range
+from .protocol import RangeLsp
 from .protocol import Request
 from .types import ClientConfig
 from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, Sequence, cast

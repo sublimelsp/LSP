@@ -30,7 +30,6 @@ OUTPUT_PANEL_SETTINGS = {
 
 class PanelName:
     Diagnostics = "diagnostics"
-    References = "references"
     Rename = "rename"
     LanguageServers = "language servers"
 

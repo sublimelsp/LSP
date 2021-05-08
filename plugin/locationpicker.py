@@ -68,10 +68,12 @@ class LocationPicker:
         return self._weaksession(), location, uri, position
 
     def _select_entry(self, index: int) -> None:
-        if index >= 0:
+        if index >= 0 and self._view.is_valid():
             session, location, uri, position = self._unpack(index)
             if not session:
                 return
+            # Note: this has to run on the main thread (and not via open_location_async)
+            # otherwise the bevior feels weird. It's the only reason why open_basic_file exists.
             if uri.startswith("file:"):
                 flags = sublime.ENCODED_POSITION
                 if self._side_by_side:

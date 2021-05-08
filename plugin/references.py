@@ -35,6 +35,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
 
     def _handle_response(self, session: Session, response: Optional[List[Location]]) -> None:
         if response:
+            self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
             self._picker = LocationPicker(self.view, session, response, side_by_side=False)
         else:
             window = self.view.window()

@@ -40,6 +40,7 @@ class LspGotoCommand(LspTextCommand):
         response: Union[None, Location, List[Location], List[LocationLink]]
     ) -> None:
         if isinstance(response, dict):
+            self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
             open_location_async(session, response, side_by_side)
         elif isinstance(response, list):
             if len(response) == 0:
@@ -47,8 +48,10 @@ class LspGotoCommand(LspTextCommand):
                 if window:
                     window.status_message("No results found")
             elif len(response) == 1:
+                self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
                 open_location_async(session, response[0], side_by_side)
             else:
+                self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
                 sublime.set_timeout(functools.partial(LocationPicker, self.view, session, response, side_by_side))
         else:
             window = self.view.window()

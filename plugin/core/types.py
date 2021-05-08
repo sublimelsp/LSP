@@ -168,7 +168,6 @@ class Settings:
     show_diagnostics_count_in_view_status = None  # type: bool
     show_diagnostics_in_view_status = None  # type: bool
     show_diagnostics_severity_level = None  # type: int
-    show_references_in_quick_panel = None  # type: bool
     show_symbol_action_links = None  # type: bool
     show_view_status = None  # type: bool
 
@@ -200,7 +199,6 @@ class Settings:
         r("show_diagnostics_count_in_view_status", False)
         r("show_diagnostics_in_view_status", True)
         r("show_diagnostics_severity_level", 2)
-        r("show_references_in_quick_panel", False)
         r("show_symbol_action_links", False)
         r("show_view_status", True)
 

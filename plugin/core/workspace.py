@@ -72,7 +72,7 @@ def enable_in_project(window: sublime.Window, config_name: str) -> None:
             "Can't enable {} in the current workspace. Ensure that the project is saved first.".format(config_name))
 
 
-def disable_in_project(window: sublime.Window, config_name: str, only_for_session: bool = False) -> None:
+def disable_in_project(window: sublime.Window, config_name: str) -> None:
     project_data = window.project_data()
     if isinstance(project_data, dict):
         project_settings = project_data.setdefault('settings', dict())

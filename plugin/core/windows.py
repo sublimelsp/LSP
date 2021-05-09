@@ -333,14 +333,14 @@ class WindowManager(Manager):
             self._new_session = session
         except Exception as e:
             message = "".join((
-                "Failed to start {0} - disabling for this window. ",
+                "Failed to start {0} - disabling for this window for the duration of the current session.\n",
                 "Re-enable by running \"LSP: Enable Language Server In Project\" from the Command Palette.",
                 "\n\n--- Error: ---\n{1}"
             )).format(config.name, str(e))
             exception_log("Unable to start subprocess for {}".format(config.name), e)
             if isinstance(e, CalledProcessError):
                 print("Server output:\n{}".format(e.output.decode('utf-8', 'replace')))
-            self._configs.disable_config(config.name)
+            self._configs.disable_config(config.name, only_for_session=True)
             config.erase_view_status(initiating_view)
             sublime.message_dialog(message)
             # Continue with handling pending listeners

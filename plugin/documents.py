@@ -483,9 +483,22 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             scope = 'markup.changed'
             icon = 'Packages/LSP/icons/lightbulb.png'
         else:  # 'annotation'
+            annotations_template = """
+            <body id="lsp-line-annotation">
+                <style>
+                    html, body {{
+                        font-family: system;
+                        margin: 0;
+                        padding: 0;
+                    }}
+                </style>
+                {text}
+            </body>
+            """
+
             suffix = 's' if action_count > 1 else ''
             code_actions_link = make_command_link('lsp_code_actions', '{} code action{}'.format(action_count, suffix))
-            annotations = ["<div class=\"actions\">{}</div>".format(code_actions_link)]
+            annotations = [annotations_template.format(text=code_actions_link)]
             annotation_color = '#2196F3'
         self.view.add_regions(self.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)
 

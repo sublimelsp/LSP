@@ -79,7 +79,7 @@ class WindowConfigManager(object):
         if only_for_session:
             self._disable_for_session(config_name)
         else:
-            disable_in_project(self._window, config_name, only_for_session)
+            disable_in_project(self._window, config_name)
         self.update()
 
     def _disable_for_session(self, config_name: str) -> None:

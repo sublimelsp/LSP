@@ -78,4 +78,10 @@ Diagnostics will also optionally include the following scopes:
 
 | scope | description |
 | ----- | ----------- |
-| `markup.codelens.accent` | Accent color for code lens annotations |
+| `markup.accent.codelens.lsp` | Accent color for code lens annotations |
+
+### Code Actions
+
+| scope | description |
+| ----- | ----------- |
+| `markup.accent.codeaction.lsp` | Accent color for code action annotations |

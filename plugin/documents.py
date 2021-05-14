@@ -139,6 +139,20 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     highlights_debounce_time = FEATURES_TIMEOUT
     code_lenses_debounce_time = FEATURES_TIMEOUT + 2000
 
+    ANNOTATIONS_TEMPLATE = """
+    <body id="lsp-annotation">
+        <style>
+        html, body {{
+            padding: 0;
+            margin: 0;
+            font-family: system;
+            height:{height}
+        }}
+        </style>
+        <div style="vertical-align: middle">{text}</div>
+    </body>
+    """
+
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:
         return False
@@ -480,26 +494,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         annotations = []
         annotation_color = ""
         if userprefs().show_code_actions == 'bulb':
-            scope = 'markup.changed'
+            scope = 'region.yellowish lightbulb.lsp'
             icon = 'Packages/LSP/icons/lightbulb.png'
         else:  # 'annotation'
-            annotations_template = """
-            <body id="lsp-line-annotation">
-                <style>
-                    html, body {{
-                        font-family: system;
-                        margin: 0;
-                        padding: 0;
-                    }}
-                </style>
-                {text}
-            </body>
-            """
-
             suffix = 's' if action_count > 1 else ''
             code_actions_link = make_command_link('lsp_code_actions', '{} code action{}'.format(action_count, suffix))
-            annotations = [annotations_template.format(text=code_actions_link)]
-            annotation_color = '#2196F3'
+            annotations = [self.ANNOTATIONS_TEMPLATE.format(text=code_actions_link, height=self.view.line_height())]
+            annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
         self.view.add_regions(self.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)
 
     def _clear_code_actions_annotation(self) -> None:
@@ -538,8 +539,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 annotation = command["title"]
         else:
             annotation = "..."
-        annotation = '<div class="codelens">{}</div>'.format(annotation)
-        accent = self.view.style_for_scope("region.greenish markup.codelens.accent")["foreground"]
+        annotation = self.ANNOTATIONS_TEMPLATE.format(text=annotation, height=self.view.line_height())
+        accent = self.view.style_for_scope("region.greenish markup.accent.codelens.lsp")["foreground"]
         self.view.add_regions(self._code_lens_key(index), [region], "", "", 0, [annotation], accent)
 
     def _do_code_lenses_async(self) -> None:

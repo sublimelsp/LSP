@@ -247,7 +247,8 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
                     }
                 ]
             }}
-        view.run_command("append", {"characters": json.dumps(sublime_package_json, indent=2)})
+        view.run_command("append", {"characters": json.dumps(sublime_package_json, indent=2, separators=(",", ": "))})
+        view.run_command("append", {"characters": "\n"})
         view.set_read_only(True)
 
 

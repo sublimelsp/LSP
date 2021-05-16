@@ -33,7 +33,7 @@ class LspApplyDocumentEditCommand(sublime_plugin.TextCommand):
                 if version is not None and version != view_version:
                     debug('ignoring edit due to non-matching document version')
                     continue
-                region = sublime.Region(self.view.text_point_utf16(*start), self.view.text_point_utf16(*end))
+                region = sublime.Region(self.view.text_point_utf16(start[0], start[1], clamp_column=True), self.view.text_point_utf16(end[0], end[1], clamp_column=True))
                 if start[0] > last_row and replacement[0] != '\n':
                     # Handle when a language server (eg gopls) inserts at a row beyond the document
                     # some editors create the line automatically, sublime needs to have the newline prepended.

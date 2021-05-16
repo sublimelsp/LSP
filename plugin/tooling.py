@@ -6,7 +6,7 @@ from .core.transports import Transport
 from .core.transports import TransportCallbacks
 from .core.types import Capabilities
 from .core.types import ClientConfig
-from .core.typing import Any, Callable, Dict, List, Optional
+from .core.typing import Any, Callable, Dict, List, Optional, Tuple
 from .core.version import __version__
 from .core.views import extract_variables
 from .core.views import make_command_link
@@ -19,6 +19,65 @@ import os
 import sublime
 import sublime_plugin
 import textwrap
+import urllib.parse
+import urllib.request
+
+
+def _translate_description(translations: Optional[Dict[str, str]], descr: str) -> Tuple[str, bool]:
+    """
+    Translate a placeholder description like "%foo.bar.baz" into an English translation. The translation map is
+    the first argument.
+    """
+    if translations and descr.startswith("%") and descr.endswith("%") and len(descr) > 2:
+        translated = translations.get(descr.strip("%"))
+        if isinstance(translated, str):
+            return translated, True
+    return descr, False
+
+
+def _preprocess_properties(translations: Optional[Dict[str, str]], properties: Dict[str, Any]) -> None:
+    """
+    Preprocess the server settings from a package.json file:
+
+    - Replace description translation placeholders by their English translation
+    - Discard the "scope" key
+    """
+    for v in properties.values():
+        v.pop("scope", None)
+        descr = v.get("description")
+        if not isinstance(descr, str):
+            descr = v.get("markdownDescription")
+        if isinstance(descr, str):
+            descr, translated = _translate_description(translations, descr)
+            if translated:
+                if "markdownDescription" in v:
+                    v["markdownDescription"] = descr
+                elif "description" in v:
+                    v["description"] = descr
+        enums = v.get("enumDescriptions")
+        if not isinstance(enums, list):
+            enums = v.get("markdownEnumDescriptions")
+        if isinstance(enums, list):
+            new_enums = []  # type: List[str]
+            for descr in enums:
+                descr, _ = _translate_description(translations, descr)
+                new_enums.append(descr)
+            if "enumDescriptions" in v:
+                v["enumDescriptions"] = new_enums
+            elif "markdownEnumDescriptions" in v:
+                v["markdownEnumDescriptions"] = new_enums
+        child_properties = v.get("properties")
+        if isinstance(child_properties, dict):
+            _preprocess_properties(translations, child_properties)
+
+
+class BasePackageNameInputHandler(sublime_plugin.TextInputHandler):
+
+    def initial_text(self) -> str:
+        return "foobar"
+
+    def preview(self, text: str) -> str:
+        return "Suggested resource location: Packages/LSP-{0}/LSP-{0}.sublime-settings".format(text)
 
 
 class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
@@ -33,8 +92,35 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
     def writeline4(self, contents: str) -> None:
         self.writeline(contents, indent=4)
 
-    def run(self) -> None:
-        package = json.loads(sublime.get_clipboard())
+    def input(self, args: Dict[str, Any]) -> Optional[sublime_plugin.CommandInputHandler]:
+        if "base_package_name" not in args:
+            return BasePackageNameInputHandler()
+        return None
+
+    def run(self, base_package_name: str) -> None:
+        # Download the contents of the URL pointing to the package.json file.
+        base_url = sublime.get_clipboard()
+        try:
+            urllib.parse.urlparse(base_url)
+        except Exception:
+            sublime.error_message("The clipboard content must be a URL to a package.json file.")
+            return
+        if not base_url.endswith("package.json"):
+            sublime.error_message("URL must end with 'package.json'")
+            return
+        try:
+            package = json.loads(urllib.request.urlopen(base_url).read().decode("utf-8"))
+        except Exception as ex:
+            sublime.error_message('Unable to load "{}": {}'.format(base_url, ex))
+            return
+
+        # There might be a translations file as well.
+        translations_url = base_url[:-len("package.json")] + "package.nls.json"
+        try:
+            translations = json.loads(urllib.request.urlopen(translations_url).read().decode("utf-8"))
+        except Exception:
+            translations = None
+
         contributes = package.get("contributes")
         if not isinstance(contributes, dict):
             sublime.error_message('No "contributes" key found!')
@@ -47,18 +133,25 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
         if not isinstance(properties, dict):
             sublime.error_message('No "contributes.configuration.properties" key found!')
             return
+
+        # Process each key-value pair of the server settings.
+        # If a translations file was found, then we replace the translation key with the English translation.
+        _preprocess_properties(translations, properties)
+
+        # We fill a scratch buffer where we create a proposed dictionary of key-value pairs to be used in an
+        # LSP-foobar.sublime-settings file, under a "settings" key.
         self.view = sublime.active_window().new_file()
         self.view.set_scratch(True)
-        self.view.set_name("--- PARSED SETTINGS ---")
+        self.view.set_name("--- Proposed server settings for .sublime-settings file ---")
         self.view.assign_syntax("Packages/JSON/JSON.sublime-syntax")
         self.writeline("{")
-        # schema = {}  TODO: Also generate a schema. Sublime settings are not rigid.
         for k, v in sorted(properties.items()):
-            typ = v.get("type")
             description = v.get("description")
+            if not isinstance(description, str):
+                description = v.get("markdownDescription")
             if isinstance(description, str):
                 for line in description.splitlines():
-                    for wrapped_line in textwrap.wrap(line, width=73):
+                    for wrapped_line in textwrap.wrap(line, width=80 - 8 - 3):
                         self.writeline4('// {}'.format(wrapped_line))
             else:
                 self.writeline4('// unknown setting')
@@ -70,7 +163,8 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
             if has_default:
                 value = default
             else:
-                self.writeline4('// NO DEFAULT VALUE <-- NEEDS ATTENTION')
+                typ = v.get("type")
+                # self.writeline4('// NO DEFAULT VALUE <-- NEEDS ATTENTION')
                 if typ == "string":
                     value = ""
                 elif typ == "boolean":
@@ -93,6 +187,78 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
                 else:
                     self.writeline4('{}{}'.format(line, terminator))
         self.writeline("}")
+        self.view.set_read_only(True)
+        self.view = None
+
+        # Create a scratch buffer for the proposed sublime-package.json file. This is actually easier to do than
+        # rendering the server settings for the .sublime-settings file.
+        view = sublime.active_window().new_file()
+        view.set_scratch(True)
+        view.set_name("--- Proposed sublime-package.json ---")
+        view.assign_syntax("Packages/JSON/JSON.sublime-syntax")
+        sublime_package_json = {
+            "contributions": {
+                "settings": [
+                    {
+                        "file_patterns": [
+                            "/LSP-{}.sublime-settings".format(base_package_name)
+                        ],
+                        "schema": {
+                            "$id": "sublime://settings/LSP-{}".format(base_package_name),
+                            "definitions": {
+                                "PluginConfig": {
+                                    "properties": {
+                                        "settings": {
+                                            "additionalProperties": False,
+                                            "properties": {k: v for k, v in properties.items()}
+                                        }
+                                    },
+                                },
+                            },
+                            "allOf": [
+                                {
+                                    "$ref": "sublime://settings/LSP-plugin-base"
+                                },
+                                {
+                                    "$ref": "sublime://settings/LSP-{}#/definitions/PluginConfig".format(base_package_name)  # noqa: E501
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "file_patterns": [
+                            "/*.sublime-project"
+                        ],
+                        "schema": {
+                            "properties": {
+                                "settings": {
+                                    "properties": {
+                                        "LSP": {
+                                            "properties": {
+                                                "LSP-{}".format(base_package_name): {
+                                                    "$ref": "sublime://settings/LSP-{}#/definitions/PluginConfig".format(base_package_name)  # noqa: E501
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            }}
+        view.run_command(
+            "append",
+            {
+                "characters": json.dumps(
+                    sublime_package_json,
+                    indent=2,
+                    separators=(",", ": "),
+                    sort_keys=True)
+            }
+        )
+        view.run_command("append", {"characters": "\n"})
+        view.set_read_only(True)
 
 
 class LspTroubleshootServerCommand(sublime_plugin.WindowCommand, TransportCallbacks):

@@ -1,6 +1,7 @@
 from copy import deepcopy
 from LSP.plugin import Request
 from LSP.plugin.core.url import filename_to_uri
+from LSP.plugin.core.views import entire_content
 from LSP.plugin.hover import _test_contents
 from setup import TextDocumentTestCase
 from setup import TIMEOUT_TIME
@@ -50,6 +51,18 @@ class SingleDocumentTestCase(TextDocumentTestCase):
         # Just the existence of this method checks "initialize" -> "initialized" -> "textDocument/didOpen"
         # -> "shutdown" -> client shut down
         pass
+
+    def test_out_of_bounds_column_for_text_document_edit(self) -> 'Generator':
+        self.insert_characters("a\nb\nc\n")
+        self.view.run_command("lsp_apply_document_edit", {"changes": [
+            (
+                (1, 0),  # start row-col
+                (1, 10000),  # end row-col (the col offset is out of bounds intentionally)
+                "hello there",  # new text
+                None  # version
+            )
+        ]})
+        self.assertEqual(entire_content(self.view), "a\nhello there\nc\n")
 
     def test_did_close(self) -> 'Generator':
         self.assertTrue(self.view)

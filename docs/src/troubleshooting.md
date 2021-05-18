@@ -1,9 +1,17 @@
 ## Self-help instructions
 
-Enable LSP logging: In LSP Settings enable the `log_debug` setting.
-Enable server logging: set `log_server` to ["panel"]
-Run "LSP: Toggle Log Panel" from the command palette. No restart is needed.
+To get more visibility into the inner-workings of the LSP client and the server and be able to diagnose problems, open `Preferences: LSP Settings` from the Command Palette and set the following options:
+
+| Option                  | Description                                                          |
+| ----------------------- | -------------------------------------------------------------------- |
+| `log_debug: true`       | Show verbose debug messages in the Sublime Text console.             |
+| `log_server: ["panel"]` | Log communication from and to language servers in the output panel.  |
+
+Once enabled (no restart necessary), the communication log can be seen by running `LSP: Toggle Log Panel` from the Command Palette. It might be a good idea to restart the Sublime Text and reproduce the issue again, so that the logs are clean.
+
 If you believe the issue is with this package, please include the output from the Sublime console in your issue report!
+
+If the server is crashing on startup, try running `LSP: Troubleshoot server` from the Command Palette and checking the "Server output" for potential errors or eventually also sharing the output of this command in the report.
 
 ## Updating the PATH used by LSP servers
 

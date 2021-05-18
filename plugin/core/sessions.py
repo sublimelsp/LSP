@@ -39,6 +39,7 @@ from .views import COMPLETION_KINDS
 from .views import extract_variables
 from .views import get_storage_path
 from .views import SYMBOL_KINDS
+from .watcher import Watcher
 from .workspace import is_subpath_of
 from abc import ABCMeta
 from abc import abstractmethod
@@ -155,9 +156,6 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                     "documentationFormat": ["markdown", "plaintext"],
                     "tagSupport": {
                         "valueSet": completion_tag_value_set
-                    },
-                    "resolveSupport": {
-                        "properties": ["detail", "documentation", "additionalTextEdits"]
                     }
                 },
                 "completionItemKind": {
@@ -258,6 +256,9 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
         "workspace": {
             "applyEdit": True,
             "didChangeConfiguration": {
+                "dynamicRegistration": True
+            },
+            "didChangeWatchedFiles": {
                 "dynamicRegistration": True
             },
             "executeCommand": {},
@@ -1177,6 +1178,8 @@ class Session(TransportCallbacks):
                 inform = functools.partial(
                     self._plugin.on_register_capability_async, registration_id, capability_path, options)
                 sublime.set_timeout_async(inform)
+            if capability_path == "didChangeWatchedFilesProvider":
+                Watcher.register(registration_id, options, self)
         self.send_response(Response(request_id, None))
 
     def m_client_unregisterCapability(self, params: Any, request_id: Any) -> None:

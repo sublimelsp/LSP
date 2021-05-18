@@ -382,6 +382,10 @@ class Notification:
         return Notification("workspace/didChangeWorkspaceFolders", params)
 
     @classmethod
+    def didChangeWatchedFiles(cls, params: dict) -> 'Notification':
+        return Notification("workspace/didChangeWatchedFiles", params)
+
+    @classmethod
     def exit(cls) -> 'Notification':
         return Notification("exit")
 

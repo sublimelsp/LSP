@@ -11,7 +11,7 @@ Once enabled (no restart necessary), the communication log can be seen by runnin
 
 If you believe the issue is with this package, please include the output from the Sublime console in your issue report!
 
-If the server is crashing on startup, try running `LSP: Troubleshoot server` from the Command Palette and checking the "Server output" for potential errors or eventually also sharing the output of this command in the report.
+If the server is crashing on startup, try running `LSP: Troubleshoot server` from the Command Palette and check the "Server output" for potential errors. Consider sharing the output of this command in the report.
 
 ## Updating the PATH used by LSP servers
 

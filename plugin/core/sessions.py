@@ -259,7 +259,7 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
                 "dynamicRegistration": True
             },
             "didChangeWatchedFiles": {
-                "dynamicRegistration": True
+                "dynamicRegistration": Watcher.is_available()
             },
             "executeCommand": {},
             "workspaceEdit": {
@@ -1190,6 +1190,8 @@ class Session(TransportCallbacks):
             capability_path, registration_path = method_to_capability(unregistration["method"])
             debug("{}: unregistering capability:".format(self.config.name), capability_path)
             data = self._registrations.pop(registration_id, None)
+            if capability_path == "didChangeWatchedFilesProvider":
+                Watcher.unregister(registration_id)
             if data and self._plugin:
                 self._plugin.on_unregister_capability_async(registration_id, capability_path, data.options)
             if data and not data.selector:

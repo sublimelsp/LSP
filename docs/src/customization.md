@@ -74,8 +74,9 @@ Diagnostics will also optionally include the following scopes:
 | `entity.name.function.sighelp.lsp` | Function name in the signature help popup |
 | `variable.parameter.sighelp.lsp` | Function argument in the signature help popup |
 
-### Code Lens
+### Annotations
 
 | scope | description |
 | ----- | ----------- |
-| `markup.codelens.accent` | Accent color for code lens annotations |
+| `markup.accent.codelens.lsp` | Accent color for code lens annotations |
+| `markup.accent.codeaction.lsp` | Accent color for code action annotations |

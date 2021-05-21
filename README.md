@@ -1,11 +1,24 @@
 :information_source: You are reading the README of the `main` branch. This branch targets ST4. If you are looking for the ST3 version, switch to the [st3 branch](https://github.com/sublimelsp/LSP/tree/st3).
 
-# LSP
+<p>
+  <h1 align="center">LSP</h1>
+</p>
 
-[![License](https://img.shields.io/github/license/sublimelsp/LSP)](https://github.com/sublimelsp/LSP/blob/main/LICENSE)
-[![GitHub release](https://img.shields.io/github/release/sublimelsp/LSP.svg)](https://github.com/sublimelsp/LSP/releases)
-[![Documentation](https://img.shields.io/badge/docs-ST4-blue)](https://lsp.sublimetext.io/)
-[![SublimeHQ Discord](https://img.shields.io/discord/280102180189634562?label=SublimeHQ%20Discord&logo=discord)](#chat)
+<p align="center">
+  <a href="https://github.com/sublimelsp/LSP/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/sublimelsp/LSP">
+  </a>
+  <a href="https://github.com/sublimelsp/LSP/releases">
+    <img src="https://img.shields.io/github/release/sublimelsp/LSP.svg">
+  </a>
+  <a href="https://lsp.sublimetext.io">
+    <img src="https://img.shields.io/badge/docs-ST4-blue">
+  </a>
+  <a href="#chat">
+    <img src="https://img.shields.io/discord/280102180189634562?label=SublimeHQ%20Discord&logo=discord">
+  </a>
+  <br>
+</p>
 
 Language Server Protocol support for Sublime Text that gives you IDE [features](https://lsp.sublimetext.io/features).
 

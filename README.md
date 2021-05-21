@@ -20,9 +20,9 @@
   <br>
 </p>
 
-Language Server Protocol support for Sublime Text that gives you IDE [features](https://lsp.sublimetext.io/features).
+<p align="center">Language Server Protocol support for Sublime Text that gives you IDE [features](https://lsp.sublimetext.io/features).</p>
 
-![diagnostics screen-shot](docs/src/images/showcase.gif "TypeScript Server Example")
+<p align="center"><img src="docs/src/images/showcase.gif" alt="TypeScript Server Example"></img></p>
 
 ## Installation
 

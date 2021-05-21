@@ -2,7 +2,7 @@ name: docs
 on:
   push:
     branches:
-      - st4000-exploration
+      - main
     paths:
       - ".github/workflows/docs.yml"
       - "docs/**"
@@ -18,4 +18,3 @@ jobs:
       - run: |
           cd docs
           mkdocs gh-deploy --force
-

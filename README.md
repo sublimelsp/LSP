@@ -1,4 +1,4 @@
-:information_source: You are reading the README of the `st4000-exploration` branch. This branch targets ST4. If you are looking for the ST3 version, switch to the [master branch](https://github.com/sublimelsp/LSP/tree/master).
+:information_source: You are reading the README of the `main` branch. This branch targets ST4. If you are looking for the ST3 version, switch to the [master branch](https://github.com/sublimelsp/LSP/tree/master).
 
 # LSP
 

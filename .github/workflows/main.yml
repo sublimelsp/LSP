@@ -4,11 +4,11 @@ on:
   push:
     branches:
       - master
-      - st4000-exploration
+      - main
   pull_request:
     branches:
       - master
-      - st4000-exploration
+      - main
 
 env:
   CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}

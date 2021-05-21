@@ -9,6 +9,8 @@ If there are no setup steps for a language server on this page, but a [language 
 !!! tip "We recommend installing [LSP-json](https://packagecontrol.io/packages/LSP-json)."
     [LSP-json](https://packagecontrol.io/packages/LSP-json) provides completions and diagnostics when editing JSON files that adhere to a JSON schema.
 
+!!! For legacy ST3 docs, see <a href="https://lsp.readthedocs.io">lsp.readthedocs.io</a>.
+
 
 ## Angular
 

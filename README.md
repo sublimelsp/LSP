@@ -1,11 +1,9 @@
-:information_source: You are reading the README of the `main` branch. This branch targets ST4. If you are looking for the ST3 version, switch to the [master branch](https://github.com/sublimelsp/LSP/tree/master).
+:information_source: You are reading the README of the `main` branch. This branch targets ST4. If you are looking for the ST3 version, switch to the [st3 branch](https://github.com/sublimelsp/LSP/tree/st3).
 
 # LSP
 
-[![License](https://img.shields.io/github/license/sublimelsp/LSP)](https://github.com/sublimelsp/LSP/blob/master/LICENSE)
+[![License](https://img.shields.io/github/license/sublimelsp/LSP)](https://github.com/sublimelsp/LSP/blob/main/LICENSE)
 [![GitHub release](https://img.shields.io/github/release/sublimelsp/LSP.svg)](https://github.com/sublimelsp/LSP/releases)
-[![Github Action](https://github.com/sublimelsp/LSP/workflows/main/badge.svg?branch=master)](https://github.com/sublimelsp/LSP/actions)
-[![Coverage Status](https://codecov.io/github/sublimelsp/LSP/branch/master/graph/badge.svg)](https://codecov.io/gh/sublimelsp/LSP/tree/master/plugin)
 [![Documentation](https://img.shields.io/badge/docs-ST4-blue)](https://lsp.sublimetext.io/)
 [![SublimeHQ Discord](https://img.shields.io/discord/280102180189634562?label=SublimeHQ%20Discord&logo=discord)](#chat)
 

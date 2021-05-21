@@ -484,13 +484,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         annotations = []
         annotation_color = ""
         if userprefs().show_code_actions == 'bulb':
-            scope = 'markup.changed'
+            scope = 'region.yellowish lightbulb.lsp'
             icon = 'Packages/LSP/icons/lightbulb.png'
         else:  # 'annotation'
             suffix = 's' if action_count > 1 else ''
             code_actions_link = make_command_link('lsp_code_actions', '{} code action{}'.format(action_count, suffix))
             annotations = ["<div class=\"actions\">{}</div>".format(code_actions_link)]
-            annotation_color = '#2196F3'
+            annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
         self.view.add_regions(self.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)
 
     def _clear_code_actions_annotation(self) -> None:
@@ -530,7 +530,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         else:
             annotation = "..."
         annotation = '<div class="codelens">{}</div>'.format(annotation)
-        accent = self.view.style_for_scope("region.greenish markup.codelens.accent")["foreground"]
+        accent = self.view.style_for_scope("region.greenish markup.accent.codelens.lsp")["foreground"]
         self.view.add_regions(self._code_lens_key(index), [region], "", "", 0, [annotation], accent)
 
     def _do_code_lenses_async(self) -> None:

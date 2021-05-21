@@ -1,5 +1,7 @@
 # LSP
 
+This is the ST3 branch of LSP. This branch is no longer maintained.
+
 [![License](https://img.shields.io/github/license/sublimelsp/LSP)](https://github.com/sublimelsp/LSP/blob/master/LICENSE)
 [![GitHub release](https://img.shields.io/github/release/sublimelsp/LSP.svg)](https://github.com/sublimelsp/LSP/releases)
 [![Github Action](https://github.com/sublimelsp/LSP/workflows/main/badge.svg?branch=master)](https://github.com/sublimelsp/LSP/actions)

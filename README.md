@@ -20,7 +20,7 @@
   <br>
 </p>
 
-<p align="center">Language Server Protocol support for Sublime Text that gives you IDE [features](https://lsp.sublimetext.io/features).</p>
+<p align="center">Like an IDE, except it's the good parts. <a href="https://lsp.sublimetext.io">Learn more</a>.</p>
 
 <p align="center"><img src="docs/src/images/showcase.gif" alt="TypeScript Server Example"></img></p>
 

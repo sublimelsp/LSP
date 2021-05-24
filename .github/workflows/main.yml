@@ -13,6 +13,7 @@ env:
   SUBLIME_TEXT_VERSION: "4"
   SUBLIME_TEXT_ARCH: x64
   PACKAGE: LSP
+  UNITTESTING_TAG: master
 
 jobs:
   macOS:

@@ -702,14 +702,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- Public utility methods ---------------------------------------------------------------------------------------
 
-    @property
-    def manager(self) -> WindowManager:  # TODO: Return type is an Optional[WindowManager] !
-        if not self._manager:
-            window = self.view.window()
-            if window:
-                self._manager = windows.lookup(window)
-        return self._manager  # type: ignore
-
     def sessions(self, capability: Optional[str]) -> Generator[Session, None, None]:
         for sb in self.session_buffers_async():
             if capability is None or sb.has_capability(capability):
@@ -782,7 +774,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             debug("couldn't find a text change listener for", self)
             return
         self._registered = True
-        self.manager.register_listener_async(self)
+        if not self._manager:
+            window = self.view.window()
+            if not window:
+                return
+            self._manager = windows.lookup(window)
+        self._manager.register_listener_async(self)
         views = buf.views()
         if not isinstance(views, list):
             debug("skipping clone checks for", self)

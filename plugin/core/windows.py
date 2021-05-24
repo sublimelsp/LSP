@@ -45,11 +45,6 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     view = None  # type: sublime.View
 
-    @property
-    @abstractmethod
-    def manager(self) -> "WindowManager":
-        raise NotImplementedError()
-
     @abstractmethod
     def session(self, capability_path: str, point: Optional[int] = None) -> Optional[Session]:
         raise NotImplementedError()

@@ -323,7 +323,6 @@ class CodeActionsTestCase(TextDocumentTestCase):
             ])
         )
         params = yield from self.await_message('textDocument/codeAction')
-        print(params)
         self.assertEquals(params['range']['start']['line'], 1)
         self.assertEquals(params['range']['start']['character'], 0)
         self.assertEquals(params['range']['end']['line'], 1)

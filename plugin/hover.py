@@ -9,8 +9,8 @@ from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
 from .core.typing import List, Optional, Any, Dict, Tuple, Sequence
 from .core.views import diagnostic_severity
-from .core.views import format_diagnostic_for_html
 from .core.views import first_selection_region
+from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from .core.views import make_command_link
 from .core.views import make_link
@@ -18,6 +18,7 @@ from .core.views import show_lsp_popup
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import AbstractViewListener
+from urllib.parse import urlparse
 import functools
 import sublime
 import webbrowser
@@ -186,6 +187,12 @@ class LspHoverCommand(LspTextCommand):
     def _on_navigate(self, href: str, point: int) -> None:
         if href.startswith("subl:"):
             pass
+        elif href.startswith("file:"):
+            window = self.view.window()
+            if window:
+                parsed = urlparse(href)
+                fn = "{}:{}".format(parsed.path, parsed.fragment) if parsed.fragment else parsed.path
+                window.open_file(fn, flags=sublime.ENCODED_POSITION)
         elif href.startswith('code-actions:'):
             _, config_name = href.split(":")
             titles = [command["title"] for command in self._actions_by_config[config_name]]

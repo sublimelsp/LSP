@@ -66,6 +66,16 @@ def _preprocess_properties(translations: Optional[Dict[str, str]], properties: D
                 v["enumDescriptions"] = new_enums
             elif "markdownEnumDescriptions" in v:
                 v["markdownEnumDescriptions"] = new_enums
+        depr = v.get("deprecationMessage")
+        if not isinstance(depr, str):
+            depr = v.get("markdownDeprecationMessage")
+        if isinstance(depr, str):
+            depr, translated = _translate_description(translations, depr)
+            if translated:
+                if "markdownDeprecationMessage" in v:
+                    v["markdownDeprecationMessage"] = depr
+                elif "deprecationMessage" in v:
+                    v["deprecationMessage"] = depr
         child_properties = v.get("properties")
         if isinstance(child_properties, dict):
             _preprocess_properties(translations, child_properties)

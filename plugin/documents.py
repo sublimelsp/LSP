@@ -484,16 +484,16 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             icon = 'Packages/LSP/icons/lightbulb.png'
         else:  # 'annotation'
             if action_count > 1:
-                code_actions_link = make_command_link('lsp_code_actions', '{} code actions'.format(action_count))
+                title = '{} code actions'.format(action_count)
             else:
-                for name, commands in responses.items():
-                    command = commands[0].get('command')
-                code_actions_link = make_command_link('lsp_execute', commands[0].get('title'), {
-                    "session_name": name,
-                    "command_name": command.get('command'),
-                    "command_args": command.get('arguments')
-                })
+                command = {}
+                for commands in responses.values():
+                    command = commands[0]
+                title = command.get('title')
 
+            code_actions_link = make_command_link('lsp_code_actions', title, {
+                "commands_by_config": responses
+            })
             annotations = ["<div class=\"actions\">{}</div>".format(code_actions_link)]
             annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
         self.view.add_regions(self.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)

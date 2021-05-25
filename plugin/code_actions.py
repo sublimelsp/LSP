@@ -277,10 +277,9 @@ class LspCodeActionsCommand(LspTextCommand):
             only_kinds: Optional[List[str]] = None, commands_by_config: CodeActionsByConfigName = None) -> None:
         self.commands = []  # type: List[Tuple[str, str, CodeActionOrCommand]]
         self.commands_by_config = {}  # type: CodeActionsByConfigName
-        self.has_commands_by_config = False
         if commands_by_config:
-            self.has_commands_by_config = True
-            self.handle_responses_async(commands_by_config)
+            self.commands_by_config = commands_by_config
+            self.handle_responses_async()
         else:
             view = self.view
             region = first_selection_region(view)
@@ -294,10 +293,11 @@ class LspCodeActionsCommand(LspTextCommand):
             actions_manager.request_for_region_async(
                 view, covering, session_buffer_diagnostics, self.handle_responses_async, dict_kinds)
 
-    def handle_responses_async(self, responses: CodeActionsByConfigName) -> None:
-        self.commands_by_config = responses
+    def handle_responses_async(self, responses: CodeActionsByConfigName = None) -> None:
+        if responses:
+            self.commands_by_config = responses
         self.commands = self.combine_commands()
-        if len(self.commands) == 1 and self.has_commands_by_config:
+        if len(self.commands) == 1 and responses is None:
             self.handle_select(0)
         else:
             self.show_code_actions()

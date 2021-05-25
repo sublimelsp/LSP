@@ -292,11 +292,10 @@ class LspCodeActionsCommand(LspTextCommand):
             actions_manager.request_for_region_async(
                 view, covering, session_buffer_diagnostics, self.handle_responses_async, dict_kinds)
 
-    def handle_responses_async(self, responses: CodeActionsByConfigName,
-                               has_commands_by_config: bool = False) -> None:
+    def handle_responses_async(self, responses: CodeActionsByConfigName, has_actions: bool = False) -> None:
         self.commands_by_config = responses
         self.commands = self.combine_commands()
-        if len(self.commands) == 1 and has_commands_by_config:
+        if len(self.commands) == 1 and has_actions:
             self.handle_select(0)
         else:
             self.show_code_actions()

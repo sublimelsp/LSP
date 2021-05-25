@@ -136,10 +136,15 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
             sublime.error_message('No "contributes" key found!')
             return
         configuration = contributes.get("configuration")
-        if not isinstance(configuration, dict):
+        if not isinstance(configuration, dict) and not isinstance(configuration, list):
             sublime.error_message('No "contributes.configuration" key found!')
             return
-        properties = configuration.get("properties")
+        if isinstance(configuration, dict):
+            properties = configuration.get("properties")
+        else:
+            properties = {}
+            for configuration_item in configuration:
+                properties.update(configuration_item.get("properties"))
         if not isinstance(properties, dict):
             sublime.error_message('No "contributes.configuration.properties" key found!')
             return
@@ -161,7 +166,7 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
                 description = v.get("markdownDescription")
             if isinstance(description, str):
                 for line in description.splitlines():
-                    for wrapped_line in textwrap.wrap(line, width=80 - 8 - 3):
+                    for wrapped_line in textwrap.wrap(line, width=100 - 8 - 3):
                         self.writeline4('// {}'.format(wrapped_line))
             else:
                 self.writeline4('// unknown setting')

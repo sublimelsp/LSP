@@ -278,7 +278,7 @@ class LspCodeActionsCommand(LspTextCommand):
         self.commands = []  # type: List[Tuple[str, str, CodeActionOrCommand]]
         self.commands_by_config = {}  # type: CodeActionsByConfigName
         self.has_commands_by_config = False
-        if commands_by_config not None:
+        if commands_by_config:
             self.has_commands_by_config = True
             self.handle_responses_async(commands_by_config)
         else:

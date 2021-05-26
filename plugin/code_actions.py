@@ -254,7 +254,7 @@ class CodeActionOnSaveTask(SaveTask):
         tasks = []  # type: List[Promise]
         for config_name, code_actions in responses.items():
             if code_actions:
-                for session in sessions_for_view(self._task_runner.view, 'codeActionProvider'):
+                for session in self._task_runner.sessions('codeActionProvider'):
                     if session.config.name == config_name:
                         for code_action in code_actions:
                             tasks.append(session.run_code_action_async(code_action, progress=False))

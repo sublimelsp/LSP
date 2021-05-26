@@ -161,7 +161,7 @@ def plugin_loaded() -> None:
 def plugin_unloaded() -> None:
     _unregister_all_plugins()
     for window in sublime.windows():
-        destroy_output_panels(window)  # diags, rename, and logs panel
+        destroy_output_panels(window)  # references and diagnostics panels
         try:
             windows.lookup(window).plugin_unloaded()
             windows.discard(window)

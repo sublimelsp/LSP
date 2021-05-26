@@ -22,6 +22,7 @@ from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from .core.windows import AbstractViewListener
+from urllib.parse import urlparse
 import functools
 import sublime
 import webbrowser
@@ -190,6 +191,12 @@ class LspHoverCommand(LspTextCommand):
     def _on_navigate(self, href: str, point: int) -> None:
         if href.startswith("subl:"):
             pass
+        elif href.startswith("file:"):
+            window = self.view.window()
+            if window:
+                parsed = urlparse(href)
+                fn = "{}:{}".format(parsed.path, parsed.fragment) if parsed.fragment else parsed.path
+                window.open_file(fn, flags=sublime.ENCODED_POSITION)
         elif href.startswith('code-actions:'):
             _, config_name = href.split(":")
             titles = [command["title"] for command in self._actions_by_config[config_name]]

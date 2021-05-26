@@ -1,7 +1,6 @@
 from .core.edit import parse_text_edit
 from .core.protocol import TextEdit
 from .core.registry import LspTextCommand
-from .core.registry import sessions_for_view
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.typing import Any, Callable, List, Optional, Iterator

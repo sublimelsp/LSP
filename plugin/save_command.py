@@ -56,8 +56,6 @@ class SaveTask(metaclass=ABCMeta):
         self._completed = True
         if not self._cancelled:
             self._on_done()
-        self._on_done = None
-        self._task_runner = None
 
     def _purge_changes_async(self) -> None:
         # Supermassive hack that will go away later.

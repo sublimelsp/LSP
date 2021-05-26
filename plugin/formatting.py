@@ -30,7 +30,7 @@ class WillSaveWaitTask(SaveTask):
 
     def run_async(self) -> None:
         super().run_async()
-        self._session_iterator = sessions_for_view(self._task_runner.view, 'textDocumentSync.willSaveWaitUntil')
+        self._session_iterator = self._task_runner.sessions('textDocumentSync.willSaveWaitUntil')
         self._handle_next_session_async()
 
     def _handle_next_session_async(self) -> None:

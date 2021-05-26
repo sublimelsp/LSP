@@ -48,6 +48,7 @@ import sublime
 import sublime_plugin
 import webbrowser
 
+
 SUBLIME_WORD_MASK = 515
 
 _kind2name = {

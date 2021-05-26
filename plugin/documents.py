@@ -486,9 +486,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if action_count > 1:
                 title = '{} code actions'.format(action_count)
             else:
-                title = ''
-                for actions in responses.values():
-                    title = actions[0].get('title', 'code action')
+                title = next(iter(responses.values()))['title']
             code_actions_link = make_command_link('lsp_code_actions', title, {
                 "commands_by_config": responses
             })

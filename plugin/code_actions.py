@@ -274,7 +274,7 @@ class LspCodeActionsCommand(LspTextCommand):
     capability = 'codeActionProvider'
 
     def run(self, edit: sublime.Edit, event: Optional[dict] = None,
-            only_kinds: Optional[List[str]] = None, commands_by_config: CodeActionsByConfigName = None) -> None:
+            only_kinds: Optional[List[str]] = None, commands_by_config: Optional[CodeActionsByConfigName] = None) -> None:
         self.commands = []  # type: List[Tuple[str, str, CodeActionOrCommand]]
         self.commands_by_config = {}  # type: CodeActionsByConfigName
         if commands_by_config:
@@ -292,10 +292,10 @@ class LspCodeActionsCommand(LspTextCommand):
             actions_manager.request_for_region_async(
                 view, covering, session_buffer_diagnostics, self.handle_responses_async, dict_kinds)
 
-    def handle_responses_async(self, responses: CodeActionsByConfigName, has_actions: bool = False) -> None:
+    def handle_responses_async(self, responses: CodeActionsByConfigName, run_first: bool = False) -> None:
         self.commands_by_config = responses
         self.commands = self.combine_commands()
-        if len(self.commands) == 1 and has_actions:
+        if len(self.commands) == 1 and run_first:
             self.handle_select(0)
         else:
             self.show_code_actions()

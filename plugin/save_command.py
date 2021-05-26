@@ -9,8 +9,6 @@ class SaveTask(metaclass=ABCMeta):
     """
     Base class for tasks that run on save.
 
-    Takes care of timing out lask after specified timeout provided that base run() is called.
-
     Note: The whole task runs on the async thread.
     """
 

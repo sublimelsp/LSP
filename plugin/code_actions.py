@@ -273,8 +273,13 @@ class LspCodeActionsCommand(LspTextCommand):
 
     capability = 'codeActionProvider'
 
-    def run(self, edit: sublime.Edit, event: Optional[dict] = None,
-            only_kinds: Optional[List[str]] = None, commands_by_config: Optional[CodeActionsByConfigName] = None) -> None:
+    def run(
+        self,
+        edit: sublime.Edit,
+        event: Optional[dict] = None,
+        only_kinds: Optional[List[str]] = None,
+        commands_by_config: Optional[CodeActionsByConfigName] = None
+    ) -> None:
         self.commands = []  # type: List[Tuple[str, str, CodeActionOrCommand]]
         self.commands_by_config = {}  # type: CodeActionsByConfigName
         if commands_by_config:

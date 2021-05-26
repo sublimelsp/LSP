@@ -283,7 +283,7 @@ class LspCodeActionsCommand(LspTextCommand):
         self.commands = []  # type: List[Tuple[str, str, CodeActionOrCommand]]
         self.commands_by_config = {}  # type: CodeActionsByConfigName
         if commands_by_config:
-            self.handle_responses_async(commands_by_config, True)
+            self.handle_responses_async(commands_by_config, run_first=True)
         else:
             view = self.view
             region = first_selection_region(view)

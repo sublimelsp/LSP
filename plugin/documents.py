@@ -43,10 +43,10 @@ from functools import partial
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import functools
+import itertools
 import sublime
 import sublime_plugin
 import webbrowser
-import itertools
 
 SUBLIME_WORD_MASK = 515
 
@@ -487,9 +487,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 title = '{} code actions'.format(action_count)
             else:
                 title = next(itertools.chain.from_iterable(responses.values()))['title']
-            code_actions_link = make_command_link('lsp_code_actions', title, {
-                "commands_by_config": responses
-            })
+            code_actions_link = make_command_link('lsp_code_actions', title, {"commands_by_config": responses})
             annotations = ["<div class=\"actions\">{}</div>".format(code_actions_link)]
             annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
         self.view.add_regions(self.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)

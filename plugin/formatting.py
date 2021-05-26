@@ -24,13 +24,13 @@ class WillSaveWaitTask(SaveTask):
     def is_applicable(cls, view: sublime.View) -> bool:
         return bool(view.file_name())
 
-    def __init__(self, view: sublime.View, on_complete: Callable[[], None]) -> None:
-        super().__init__(view, on_complete)
+    def __init__(self, task_runner: LspTextCommand, on_complete: Callable[[], None]) -> None:
+        super().__init__(task_runner, on_complete)
         self._session_iterator = None  # type: Optional[Iterator[Session]]
 
     def run_async(self) -> None:
         super().run_async()
-        self._session_iterator = sessions_for_view(self._view, 'textDocumentSync.willSaveWaitUntil')
+        self._session_iterator = sessions_for_view(self._task_runner.view, 'textDocumentSync.willSaveWaitUntil')
         self._handle_next_session_async()
 
     def _handle_next_session_async(self) -> None:
@@ -43,13 +43,13 @@ class WillSaveWaitTask(SaveTask):
 
     def _will_save_wait_until_async(self, session: Session) -> None:
         session.send_request_async(
-            will_save_wait_until(self._view, reason=1),  # TextDocumentSaveReason.Manual
+            will_save_wait_until(self._task_runner.view, reason=1),  # TextDocumentSaveReason.Manual
             self._on_response,
             lambda error: self._on_response(None))
 
     def _on_response(self, response: Any) -> None:
         if response and not self._cancelled:
-            apply_response_to_view(response, self._view)
+            apply_response_to_view(response, self._task_runner.view)
         sublime.set_timeout_async(self._handle_next_session_async)
 
 
@@ -64,19 +64,17 @@ class FormattingTask(SaveTask):
     def run_async(self) -> None:
         super().run_async()
         self._purge_changes_async()
-        self._format_on_save_async()
-
-    def _format_on_save_async(self) -> None:
-        session = next(sessions_for_view(self._view, 'documentFormattingProvider'), None)
+        session = self._task_runner.best_session(LspFormatDocumentCommand.capability)
         if session:
             session.send_request_async(
-                text_document_formatting(self._view), self._on_response, lambda error: self._on_response(None))
+                text_document_formatting(self._task_runner.view), self._on_response,
+                lambda error: self._on_response(None))
         else:
             self._on_complete()
 
     def _on_response(self, response: Any) -> None:
         if response and not self._cancelled:
-            apply_response_to_view(response, self._view)
+            apply_response_to_view(response, self._task_runner.view)
         sublime.set_timeout_async(self._on_complete)
 
 

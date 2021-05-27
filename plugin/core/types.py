@@ -147,7 +147,6 @@ def read_list_setting(settings_obj: sublime.Settings, key: str, default: list) -
 class Settings:
 
     # This is only for mypy
-    show_diagnostics_panel_on_save = None  # type: int
     code_action_on_save_timeout_ms = None  # type: int
     diagnostics_additional_delay_auto_complete_ms = None  # type: int
     diagnostics_delay_ms = None  # type: int
@@ -164,9 +163,12 @@ class Settings:
     lsp_code_actions_on_save = None  # type: Dict[str, bool]
     lsp_format_on_save = None  # type: bool
     only_show_lsp_completions = None  # type: bool
+    popup_max_characters_height = None  # type: int
+    popup_max_characters_width = None  # type: int
     show_code_actions = None  # type: bool
     show_diagnostics_count_in_view_status = None  # type: bool
     show_diagnostics_in_view_status = None  # type: bool
+    show_diagnostics_panel_on_save = None  # type: int
     show_diagnostics_severity_level = None  # type: int
     show_references_in_quick_panel = None  # type: bool
     show_symbol_action_links = None  # type: bool
@@ -181,7 +183,6 @@ class Settings:
             val = s.get(name)
             setattr(self, name, val if isinstance(val, default.__class__) else default)
 
-        r("show_diagnostics_panel_on_save", 2)
         r("code_action_on_save_timeout_ms", 2000)
         r("diagnostics_additional_delay_auto_complete_ms", 0)
         r("diagnostics_delay_ms", 0)
@@ -192,13 +193,15 @@ class Settings:
         r("document_highlight_style", "stippled")
         r("log_debug", False)
         r("log_max_size", 8 * 1024)
-        # r("log_server", [])
         r("lsp_code_actions_on_save", {})
         r("lsp_format_on_save", False)
         r("only_show_lsp_completions", False)
+        r("popup_max_characters_height", 1000)
+        r("popup_max_characters_width", 120)
         r("show_code_actions", "annotation")
         r("show_diagnostics_count_in_view_status", False)
         r("show_diagnostics_in_view_status", True)
+        r("show_diagnostics_panel_on_save", 2)
         r("show_diagnostics_severity_level", 2)
         r("show_references_in_quick_panel", False)
         r("show_symbol_action_links", False)

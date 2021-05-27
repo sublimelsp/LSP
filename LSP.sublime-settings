@@ -110,6 +110,12 @@
   // Show symbol references in Sublime's quick panel instead of the bottom panel.
   "show_references_in_quick_panel": false,
 
+  // The maximum number of characters (approximately) before wrapping in the popup.
+  "popup_max_characters_width": 120,
+
+  // The maximum number of characters (approximately) before a scrollbar appears.
+  "popup_max_characters_height": 1000,
+
   // Show verbose debug messages in the sublime console.
   "log_debug": false,
 

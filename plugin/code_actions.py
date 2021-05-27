@@ -244,22 +244,22 @@ class CodeActionOnSaveTask(SaveTask):
 
     def _request_code_actions_async(self) -> None:
         self._purge_changes_async()
-        on_save_actions = self._get_code_actions_on_save(self._view)
-        actions_manager.request_on_save(self._view, self._handle_response_async, on_save_actions)
+        on_save_actions = self._get_code_actions_on_save(self._task_runner.view)
+        actions_manager.request_on_save(self._task_runner.view, self._handle_response_async, on_save_actions)
 
     def _handle_response_async(self, responses: CodeActionsByConfigName) -> None:
         if self._cancelled:
             return
-        document_version = self._view.change_count()
+        document_version = self._task_runner.view.change_count()
         tasks = []  # type: List[Promise]
         for config_name, code_actions in responses.items():
             if code_actions:
-                for session in sessions_for_view(self._view, 'codeActionProvider'):
+                for session in self._task_runner.sessions('codeActionProvider'):
                     if session.config.name == config_name:
                         for code_action in code_actions:
                             tasks.append(session.run_code_action_async(code_action, progress=False))
                         break
-        if document_version != self._view.change_count():
+        if document_version != self._task_runner.view.change_count():
             # Give on_text_changed_async a chance to trigger.
             Promise.all(tasks).then(lambda _: sublime.set_timeout_async(self._request_code_actions_async))
         else:

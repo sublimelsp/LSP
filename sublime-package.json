@@ -310,6 +310,18 @@
               "default": false,
               "markdownDescription": "Show symbol references in Sublime's quick panel instead of the bottom panel."
             },
+            "popup_max_characters_width": {
+              "type": "integer",
+              "default": 120,
+              "minimum": 1,
+              "description": "The maximum number of characters (approximately) before wrapping in the popup."
+            },
+            "popup_max_characters_height": {
+              "type": "integer",
+              "default": 1000,
+              "minimum": 1,
+              "description": "The maximum number of characters (approximately) before a scrollbar appears."
+            },
             "disabled_capabilities": {
               "type": "array",
               "uniqueItems": true,

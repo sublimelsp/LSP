@@ -274,10 +274,16 @@
             "show_code_actions": {
               "enum": [
                 "annotation",
-                "bulb"
+                "bulb",
+                ""
+              ],
+              "enumDescriptions": [
+                "Show code actions to right as a clickable bluish annotation.",
+                "Show code actions in the gutter as a light bulb.",
+                "Do not show code actions."
               ],
               "default": "annotation",
-              "markdownDescription": "Where to show `\"code actions\"`. Either as an `\"annotation\"` to the right, or as a `\"bulb\"` in the gutter area. Due to API limitations, the `\"bulb\"` icon can not be clicked so the code actions can only be triggered using a keyboard shortcut or the context menu."
+              "markdownDescription": "Where to show `\"code actions\"`. Due to API limitations, the `\"bulb\"` icon can not be clicked so the code actions can only be triggered using a keyboard shortcut or the context menu."
             },
             "show_symbol_action_links": {
               "type": "boolean",

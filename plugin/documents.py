@@ -273,7 +273,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def on_diagnostics_updated_async(self) -> None:
         self._clear_code_actions_annotation()
-        self._do_code_actions()
+        if userprefs().show_code_actions:
+            self._do_code_actions()
         self._update_diagnostic_in_status_bar_async()
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
@@ -339,8 +340,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
                                                       after_ms=self.highlights_debounce_time)
             self._clear_code_actions_annotation()
-            self._when_selection_remains_stable_async(self._do_code_actions, current_region,
-                                                      after_ms=self.code_actions_debounce_time)
+            if userprefs().show_code_actions:
+                self._when_selection_remains_stable_async(self._do_code_actions, current_region,
+                                                          after_ms=self.code_actions_debounce_time)
             self._update_diagnostic_in_status_bar_async()
             self._resolve_visible_code_lenses_async()
 

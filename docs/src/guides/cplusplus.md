@@ -4,8 +4,26 @@ The below was written for clangd, but much applies to cquery and ccls as well.
 
 ### CCLS
 
-Build and install from source or download for your distribution.
+1. Build and install from source or download for your distribution.
 See the [ccls wiki](https://github.com/MaskRay/ccls/wiki/Build) for more details.
+
+2. Configue the Sublime Text LSP settings to include ccls as a client.
+
+```json
+{
+    "clients": {
+        "ccls": {
+            "command": ["cd/path/to/ccls"],
+            "selector": "source.c | source.c++ | source.objc | source.objc++",
+            "auto_complete_selector": "punctuation.accessor | (meta.preprocessor.include string - punctuation.definition.string.end)"
+        }
+    }
+}
+```
+3. You need to tell ccls about build flags. You either create your own `ccls` file at the root for you project or generate a `compile_commands.json` file. A useful too for this is [bear](https://github.com/rizsotto/Bear)
+4. In Sublime Text, run: `LSP: Enable Language Server in Project` then select `ccls` in the C/C++ project that you want the langauge server to run in.
+
+
 
 ### Clangd
 

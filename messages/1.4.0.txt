@@ -1,0 +1,9 @@
+=> 1.4.0
+
+# Breaking
+
+- Remove built-in "pyls" client configuration. Use https://github.com/sublimelsp/LSP-pylsp instead. (Rafal Chlodnicki)
+
+# Features and Fixes
+
+-

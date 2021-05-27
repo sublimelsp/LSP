@@ -366,10 +366,6 @@ def text_document_code_action_params(
 LSP_POPUP_SPACER_HTML = '<div class="lsp_popup--spacer"></div>'
 
 
-def _chars_to_pixels(view: sublime.View, characters: int) -> int:
-    return int(view.em_width() * float(characters))
-
-
 def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bool = False, flags: int = 0,
                    css: Optional[str] = None, wrapper_class: Optional[str] = None,
                    on_navigate: Optional[Callable] = None, on_hide: Optional[Callable] = None) -> None:
@@ -384,8 +380,8 @@ def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bo
         flags=flags,
         location=location,
         wrapper_class=wrapper_class,
-        max_width=_chars_to_pixels(view, userprefs().popup_max_characters_width),
-        max_height=_chars_to_pixels(view, userprefs().popup_max_characters_height),
+        max_width=int(view.em_width() * float(userprefs().popup_max_characters_width)),
+        max_height=int(view.line_height() * float(userprefs().popup_max_characters_height)),
         on_navigate=on_navigate)
 
 

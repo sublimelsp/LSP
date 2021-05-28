@@ -541,7 +541,7 @@ Follow installation instructions on [LSP-typescript](https://github.com/sublimel
 Follow installation instructions on [LSP-vue](https://github.com/sublimelsp/LSP-vue).
 
 ## Vala
-1. Install [Vala-TMBundle](https://github.com/technosophos/Vala-TMBundle) package to add Vala syntax highlighting and for Vala files to be reconginsed.
+1. Install the [Vala-TMBundle](https://packagecontrol.io/packages/Vala-TMBundle) package from Package Control to add Vala syntax highlighting and for Vala files to be reconginsed.
 2. Install the [Vala Language Server](https://github.com/Prince781/vala-language-server)
 3. Add Vala Langauge Server to LSP settings:
 
@@ -558,7 +558,7 @@ Follow installation instructions on [LSP-vue](https://github.com/sublimelsp/LSP-
 }
 ```
 4. Enable the Vala Langauge Server for the project by going to `Tools > LSP > Enable Language Server In Project...`
-5. For the server to fully understand your code, you will need to generate a `compile_commands.json` file or build your project with [meson] (https://mesonbuild.com/)
+5. For the server to fully understand your code, you will need to generate a `compile_commands.json` file or build your project with [meson](https://mesonbuild.com/).
 
 ## XML
 

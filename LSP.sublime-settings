@@ -185,6 +185,12 @@
   // DO NOT MODIFY THIS SETTING!
   // Use "clients" to override settings instead!
   "default_clients": {
+    "pyls": {
+      "command": [
+        "pyls"
+      ],
+      "selector": "source.python",
+    },
     "rust-analyzer": {
       "command": [
         "rust-analyzer"

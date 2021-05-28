@@ -1,0 +1,9 @@
+=> 1.4.0
+
+# Deprecated
+
+- The built-in "pyls" client configuration is now deprecated and will be removed in the future. Please switch to https://github.com/sublimelsp/LSP-pylsp instead.
+
+# Features and Fixes
+
+-

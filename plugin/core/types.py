@@ -520,6 +520,8 @@ class TransportConfig:
         env: Dict[str, str],
         listener_socket: Optional[socket.socket]
     ) -> None:
+        if not command and not tcp_port:
+            raise ValueError('neither "command" nor "tcp_port" is provided; cannot start a language server')
         self.name = name
         self.command = command
         self.tcp_port = tcp_port

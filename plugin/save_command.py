@@ -1,3 +1,4 @@
+from .core.registry import LspTextCommand
 from .core.typing import Callable, List, Type
 from abc import ABCMeta, abstractmethod
 import sublime
@@ -7,8 +8,6 @@ import sublime_plugin
 class SaveTask(metaclass=ABCMeta):
     """
     Base class for tasks that run on save.
-
-    Takes care of timing out lask after specified timeout provided that base run() is called.
 
     Note: The whole task runs on the async thread.
     """
@@ -20,8 +19,8 @@ class SaveTask(metaclass=ABCMeta):
     def is_applicable(cls, view: sublime.View) -> bool:
         pass
 
-    def __init__(self, view: sublime.View, on_done: Callable[[], None]):
-        self._view = view
+    def __init__(self, task_runner: LspTextCommand, on_done: Callable[[], None]):
+        self._task_runner = task_runner
         self._on_done = on_done
         self._completed = False
         self._cancelled = False
@@ -44,11 +43,11 @@ class SaveTask(metaclass=ABCMeta):
         self._cancelled = True
 
     def _set_view_status(self, text: str) -> None:
-        self._view.set_status(self._status_key, text)
+        self._task_runner.view.set_status(self._status_key, text)
         sublime.set_timeout_async(self._erase_view_status, 5000)
 
     def _erase_view_status(self) -> None:
-        self._view.erase_status(self._status_key)
+        self._task_runner.view.erase_status(self._status_key)
 
     def _on_complete(self) -> None:
         assert not self._completed
@@ -58,14 +57,14 @@ class SaveTask(metaclass=ABCMeta):
 
     def _purge_changes_async(self) -> None:
         # Supermassive hack that will go away later.
-        listeners = sublime_plugin.view_event_listeners.get(self._view.id(), [])
+        listeners = sublime_plugin.view_event_listeners.get(self._task_runner.view.id(), [])
         for listener in listeners:
             if listener.__class__.__name__ == 'DocumentSyncListener':
                 listener.purge_changes_async()  # type: ignore
                 break
 
 
-class LspSaveCommand(sublime_plugin.TextCommand):
+class LspSaveCommand(LspTextCommand):
     """
     A command used as a substitute for native save command. Runs code actions and document
     formatting before triggering the native save command.
@@ -89,7 +88,7 @@ class LspSaveCommand(sublime_plugin.TextCommand):
         sublime.set_timeout_async(self._trigger_on_pre_save_async)
         for Task in self._tasks:
             if Task.is_applicable(self.view):
-                self._pending_tasks.append(Task(self.view, self._on_task_completed_async))
+                self._pending_tasks.append(Task(self, self._on_task_completed_async))
         if self._pending_tasks:
             sublime.set_timeout_async(self._run_next_task_async)
         else:

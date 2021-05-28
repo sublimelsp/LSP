@@ -244,22 +244,22 @@ class CodeActionOnSaveTask(SaveTask):
 
     def _request_code_actions_async(self) -> None:
         self._purge_changes_async()
-        on_save_actions = self._get_code_actions_on_save(self._view)
-        actions_manager.request_on_save(self._view, self._handle_response_async, on_save_actions)
+        on_save_actions = self._get_code_actions_on_save(self._task_runner.view)
+        actions_manager.request_on_save(self._task_runner.view, self._handle_response_async, on_save_actions)
 
     def _handle_response_async(self, responses: CodeActionsByConfigName) -> None:
         if self._cancelled:
             return
-        document_version = self._view.change_count()
+        document_version = self._task_runner.view.change_count()
         tasks = []  # type: List[Promise]
         for config_name, code_actions in responses.items():
             if code_actions:
-                for session in sessions_for_view(self._view, 'codeActionProvider'):
+                for session in self._task_runner.sessions('codeActionProvider'):
                     if session.config.name == config_name:
                         for code_action in code_actions:
                             tasks.append(session.run_code_action_async(code_action, progress=False))
                         break
-        if document_version != self._view.change_count():
+        if document_version != self._task_runner.view.change_count():
             # Give on_text_changed_async a chance to trigger.
             Promise.all(tasks).then(lambda _: sublime.set_timeout_async(self._request_code_actions_async))
         else:
@@ -273,25 +273,37 @@ class LspCodeActionsCommand(LspTextCommand):
 
     capability = 'codeActionProvider'
 
-    def run(self, edit: sublime.Edit, event: Optional[dict] = None, only_kinds: Optional[List[str]] = None) -> None:
+    def run(
+        self,
+        edit: sublime.Edit,
+        event: Optional[dict] = None,
+        only_kinds: Optional[List[str]] = None,
+        commands_by_config: Optional[CodeActionsByConfigName] = None
+    ) -> None:
         self.commands = []  # type: List[Tuple[str, str, CodeActionOrCommand]]
         self.commands_by_config = {}  # type: CodeActionsByConfigName
-        view = self.view
-        region = first_selection_region(view)
-        if region is None:
-            return
-        listener = windows.listener_for_view(view)
-        if not listener:
-            return
-        session_buffer_diagnostics, covering = listener.diagnostics_intersecting_async(region)
-        dict_kinds = {kind: True for kind in only_kinds} if only_kinds else None
-        actions_manager.request_for_region_async(
-            view, covering, session_buffer_diagnostics, self.handle_responses_async, dict_kinds)
+        if commands_by_config:
+            self.handle_responses_async(commands_by_config, run_first=True)
+        else:
+            view = self.view
+            region = first_selection_region(view)
+            if region is None:
+                return
+            listener = windows.listener_for_view(view)
+            if not listener:
+                return
+            session_buffer_diagnostics, covering = listener.diagnostics_intersecting_async(region)
+            dict_kinds = {kind: True for kind in only_kinds} if only_kinds else None
+            actions_manager.request_for_region_async(
+                view, covering, session_buffer_diagnostics, self.handle_responses_async, dict_kinds)
 
-    def handle_responses_async(self, responses: CodeActionsByConfigName) -> None:
+    def handle_responses_async(self, responses: CodeActionsByConfigName, run_first: bool = False) -> None:
         self.commands_by_config = responses
         self.commands = self.combine_commands()
-        self.show_code_actions()
+        if len(self.commands) == 1 and run_first:
+            self.handle_select(0)
+        else:
+            self.show_code_actions()
 
     def combine_commands(self) -> 'List[Tuple[str, str, CodeActionOrCommand]]':
         results = []

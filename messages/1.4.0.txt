@@ -1,9 +1,32 @@
 => 1.4.0
 
-# Deprecated
+# Deprecations
 
-- The built-in "pyls" client configuration is now deprecated and will be removed in the future. Please switch to https://github.com/sublimelsp/LSP-pylsp instead.
+We want to remove the default configurations in LSP.sublime-settings
+and replace them by helper packages a la SublimeLinter.
 
-# Features and Fixes
+The following default configurations are **DEPRECATED** and **WILL BE REMOVED**
+in a future release:
 
--
+- "pyls": Use the LSP-pylsp package instead.
+- "dart": Use the LSP-Dart package instead.
+- "elixir-ls": Use the LSP-elixir package instead.
+- "flow": Use the LSP-flow package instead.
+- "jdtls": Use the LSP-jdtls package instead.
+- "sourcekit-lsp": Use the LSP-SourceKit package instead.
+
+# Documentation
+
+- Add Vala Language Server Instructions (#1693) (Colin Kiama)
+- Add information about LSP-pylsp (#1691) (Rafał Chłodnicki)
+
+# Fixes and Features
+
+- Raise an exception when neither "command" nor "tcp_port" is given (Raoul Wols)
+- Fallback to range formatting if available when formatting on save (Rafal Chlodnicki)
+- Allow adjustable extents of the popups (#1689) (Raoul Wols)
+- Allow no automatic code actions (Raoul Wols)
+- Handle 'file:' URIs in hover content (Raoul Wols)
+- Small tweaks for annotations and lightbulb colors (Janos Wortmann)
+- Account for out-of-bounds columnn offsets of text edits (Raoul Wols)
+- Improve the parser for parsing package.json files (#1664) (Raoul Wols)

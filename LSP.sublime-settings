@@ -47,6 +47,9 @@
   // under the cursor in status bar if available.
   "show_diagnostics_in_view_status": true,
 
+  // Show the diagnostics as inline annotations.
+  "show_diagnostics_inline": "off",
+
   // Show highlights and gutter markers in the file views for diagnostics
   // with level equal to or less than:
   // none: 0 (never show)

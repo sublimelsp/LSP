@@ -285,6 +285,20 @@
               "default": true,
               "markdownDescription": "Show the diagnostics description of the code under the cursor in status bar if available."
             },
+            "show_diagnostics_inline": {
+              "default": "off",
+              "enum": [
+                "all",
+                "at-cursor",
+                "off"
+              ],
+              "markdownEnumDescriptions": [
+                "Show all existing diagnostics as inline annotations.",
+                "Only show those diagnostics inline that intersect with current selection / cursor. Enabling this option forces the `show_code_actions` option to `\"bulb\"` if set to `\"annotation\"`.",
+                "Don't show diagnostics inline."
+              ],
+              "markdownDescription": "Show the diagnostics as inline annotations."
+            },
             "show_diagnostics_severity_level": {
               "type": "integer",
               "default": 4,

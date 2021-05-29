@@ -47,9 +47,11 @@ class PendingChanges:
 
 class DiagnosticSeverityData:
 
-    __slots__ = ('regions', 'regions_with_tag', 'annotations', 'scope', 'icon')
+    __slots__ = ('region_diagnostics', 'tag_diagnostics', 'regions', 'regions_with_tag', 'annotations', 'scope', 'icon')
 
     def __init__(self, severity: int) -> None:
+        self.region_diagnostics = []  # type: List[Diagnostic]
+        self.tag_diagnostics = []  # type: List[Diagnostic]
         self.regions = []  # type: List[sublime.Region]
         self.regions_with_tag = {}  # type: Dict[int, List[sublime.Region]]
         self.annotations = []  # type: List[str]
@@ -361,8 +363,10 @@ class SessionBuffer:
                 if tags:
                     for tag in tags:
                         data.regions_with_tag.setdefault(tag, []).append(region)
+                        data.tag_diagnostics.append(diagnostic)
                 else:
                     data.regions.append(region)
+                    data.region_diagnostics.append(diagnostic)
                 diagnostics.append((diagnostic, region))
                 if severity == DiagnosticSeverity.Error:
                     total_errors += 1

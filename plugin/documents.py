@@ -27,9 +27,11 @@ from .core.types import SettingsRegistration
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
 from .core.url import parse_uri
 from .core.url import view_to_uri
+from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import diagnostic_severity
 from .core.views import first_selection_region
 from .core.views import format_completion
+from .core.views import format_diagnostics_for_annotation
 from .core.views import make_command_link
 from .core.views import MarkdownLangMap
 from .core.views import range_to_region
@@ -257,7 +259,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             for diagnostic, candidate in diagnostics:
                 # Checking against points is inclusive unlike checking whether region intersects another
                 # region which is exclusive (at region end) and we want an inclusive behavior in this case.
-                if region.contains(candidate.a) or region.contains(candidate.b):
+                if region.intersects(candidate) or region.contains(candidate.a) or region.contains(candidate.b):
                     covering = covering.cover(candidate)
                     intersections.append(diagnostic)
             if intersections:
@@ -289,6 +291,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if userprefs().show_code_actions:
             self._do_code_actions()
         self._update_diagnostic_in_status_bar_async()
+        self._update_inline_diagnostic_async()
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
         if userprefs().show_diagnostics_in_view_status:
@@ -303,6 +306,30 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                             self.view.set_status(self.ACTIVE_DIAGNOSTIC, diag["message"])
                             return
         self.view.erase_status(self.ACTIVE_DIAGNOSTIC)
+
+    def _update_inline_diagnostic_async(self) -> None:
+        region_key = "lsp_d-a"
+        self.view.erase_regions(region_key)
+        if userprefs().show_diagnostics_inline != 'at-cursor':
+            return
+        r = first_selection_region(self.view)
+        if r is None:
+            return
+        sorted_diagnostics = []  # type: List[Diagnostic]
+        session_buffer_diagnostics, _ = self.diagnostics_intersecting_region_async(r)
+        for _, diagnostics in session_buffer_diagnostics:
+            sorted_diagnostics.extend(diagnostics)
+        if sorted_diagnostics:
+            sorted_diagnostics = sorted(sorted_diagnostics, key=lambda d: d.get('severity', 1))
+            first_diagnostic = sorted_diagnostics[0]
+            lsp_range = first_diagnostic.get('range')
+            if lsp_range:
+                scope = DIAGNOSTIC_SEVERITY[first_diagnostic.get('severity', 1) - 1][2]
+                icon = ""
+                flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+                annotation_color = self.view.style_for_scope(scope).get('foreground') or 'red'
+                regions, annotations = format_diagnostics_for_annotation(sorted_diagnostics, self.view)
+                self.view.add_regions(region_key, regions, scope, icon, flags, annotations, annotation_color)
 
     def session_views_async(self) -> Generator[SessionView, None, None]:
         yield from self._session_views.values()
@@ -364,6 +391,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 self._when_selection_remains_stable_async(self._do_code_actions, current_region,
                                                           after_ms=self.code_actions_debounce_time)
             self._update_diagnostic_in_status_bar_async()
+            self._update_inline_diagnostic_async()
             self._resolve_visible_code_lenses_async()
 
     def on_post_save_async(self) -> None:
@@ -555,7 +583,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
         annotations = []
         annotation_color = ""
-        if userprefs().show_code_actions == 'bulb':
+        if userprefs().show_code_actions == 'bulb' or (
+            userprefs().show_code_actions == 'annotation' and userprefs().show_diagnostics_inline == 'at-cursor'
+        ):
             scope = 'region.yellowish lightbulb.lsp'
             icon = 'Packages/LSP/icons/lightbulb.png'
             self._lightbulb_line = self.view.rowcol(regions[0].begin())[0]

@@ -703,6 +703,26 @@ def diagnostic_source(diagnostic: Diagnostic) -> str:
     return diagnostic.get("source", "unknown-source")
 
 
+def format_diagnostics_for_annotation(
+    diagnostics: List[Diagnostic], view: sublime.View
+) -> Tuple[List[sublime.Region], List[str]]:
+    regions = []
+    annotations = []
+    for diagnostic in diagnostics:
+        lsp_range = diagnostic.get('range')
+        if not lsp_range:
+            continue
+        message = text2html(diagnostic.get('message') or '')
+        source = diagnostic.get('source')
+        css_class = DIAGNOSTIC_SEVERITY[diagnostic_severity(diagnostic) - 1][1]
+        line = "[{}] {}".format(source, message) if source else message
+        content = '<body id="annotation" class="{1}"><style>{0}</style><div class="{2}">{3}</div></body>'.format(
+            lsp_css().annotations, lsp_css().annotations_classname, css_class, line)
+        regions.append(range_to_region(Range.from_lsp(lsp_range), view))
+        annotations.append(content)
+    return (regions, annotations)
+
+
 def format_diagnostic_for_panel(diagnostic: Diagnostic) -> Tuple[str, Optional[int], Optional[str], Optional[str]]:
     """
     Turn an LSP diagnostic into a string suitable for an output panel.

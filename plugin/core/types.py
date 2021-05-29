@@ -2,8 +2,8 @@ from .collections import DottedDict
 from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
 from .protocol import TextDocumentSyncKindNone
-from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypedDict, TypeVar
-from .typing import cast
+from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Literal, Union, Set, Tuple
+from .typing import cast, TypedDict, TypeVar
 from .url import filename_to_uri
 from .url import parse_uri
 from threading import RLock
@@ -209,6 +209,7 @@ class Settings:
     show_diagnostics_count_in_view_status = None  # type: bool
     show_multiline_diagnostics_highlights = None  # type: bool
     show_diagnostics_in_view_status = None  # type: bool
+    show_diagnostics_inline = None  # type: Literal["all", "at-cursor", "off"]
     show_diagnostics_panel_on_save = None  # type: int
     show_diagnostics_severity_level = None  # type: int
     show_references_in_quick_panel = None  # type: bool
@@ -244,6 +245,7 @@ class Settings:
         r("show_code_actions_in_hover", True)
         r("show_diagnostics_count_in_view_status", False)
         r("show_diagnostics_in_view_status", True)
+        r("show_diagnostics_inline", "none")
         r("show_multiline_diagnostics_highlights", True)
         r("show_diagnostics_panel_on_save", 2)
         r("show_diagnostics_severity_level", 2)

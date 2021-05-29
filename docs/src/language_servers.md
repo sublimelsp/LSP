@@ -333,89 +333,7 @@ Follow installation instructions on [LSP-pyright](https://github.com/sublimelsp/
 
 ### Python LSP Server
 
-```sh
-pip install 'python-lsp-server[all]'
-```
-
-Make sure you can run `pylsp` in your terminal. If you've installed it into a virtualenv, you might need to override the path to `pylsp` in global LSP settings (Package Settings -> LSP -> Settings):
-
-    ```json
-    {
-        "clients": {
-            "pylsp": {
-                "enabled": true,
-                "command": ["pylsp"],
-                // "command": ["/Users/mike/.virtualenvs/pylsp-virtual-env/bin/pylsp"], // example path, adjust it for your use case
-                "selector": "source.python"
-            }
-        }
-    }
-    ```
-
-If you use a virtualenv for your current project, add a path to it in your [project configuration](https://www.sublimetext.com/docs/3/projects.html) (Project -> Edit Project):
-
-```json
-{
-    "settings": {
-        "LSP": {
-            "pylsp": {
-                "enabled": true, // if you want to enable Python Language Server for current project only
-                "env": {
-                    // example path, adjust it for your use case
-                    // it needs to be an absolute path, neither $HOME nor ~ work here
-                    "PYTHONPATH": "/Users/mike/.virtualenvs/my-virtual-env/lib/python3.7/site-packages"
-                }
-            }
-        }
-    }
-}
-```
-
-A basic configuration below can be used for bootstrapping your own:
-
-```json
-"pylsp": {
-    "enabled": true,
-    "command": ["pylsp"],
-    "settings": {
-        "pylsp.env": {
-          // Making Sublime's own libs available to the linters.
-          // "PYTHONPATH": "/Applications/Sublime Text.app/Contents/MacOS/Lib/python33",
-        },
-        // Configuration is computed first from user configuration (in home directory),
-        // overridden by configuration passed in by the language client,
-        // and then overridden by configuration discovered in the workspace.
-        "pylsp.configurationSources": [
-          "pycodestyle", // discovered in ~/.config/pycodestyle, setup.cfg, tox.ini and pycodestyle.cfg
-          // "flake8",   // discovered in ~/.config/flake8, setup.cfg, tox.ini and flake8.cfg
-        ],
-        "pylsp.plugins.jedi.extra_paths": [
-          // The directory where the pip installation package is located
-        ],
-        // Enable fuzzy matches when requesting autocomplete
-        "pylsp.plugins.jedi.jedi_completion.fuzzy": true,
-        "pylsp.plugins.jedi.pycodestyle.enabled": true,
-        "pylsp.plugins.jedi.pycodestyle.exclude": [
-          // Exclude files or directories which match these patterns
-        ],
-        "pylsp.plugins.jedi.pycodestyle.ignore": [
-          // Exclude files or directories which match these patterns
-        ],
-        // "pylsp.plugins.jedi.pycodestyle.maxLineLength: 80" // set maximum allowed line length
-        "pylsp.plugins.pydocstyle.enabled": false,
-        "pylsp.plugins.pyflakes.enabled": true,
-        "pylsp.plugins.pylint.enabled": false,
-        "pylsp.plugins.yapf.enabled": true,
-        // pylsp' 3rd Party Plugins, Mypy type checking for Python 3, Must be installed via pip before enabling
-        "pylsp.plugins.pyls_mypy.enabled": false, // Install with: pip install pyls-mypy
-        "pylsp.plugins.pyls_mypy.live_mode": true
-    }
-}
-```
-
-Documentation: [github:python-lsp/python-lsp-server](https://github.com/python-lsp/python-lsp-server).
-
-!!! info "List of all built-in [settings](https://github.com/palantir/python-language-server/blob/develop/vscode-client/package.json)."
+Follow installation instructions on [LSP-pylsp](https://github.com/sublimelsp/LSP-pylsp).
 
 ## R
 
@@ -539,6 +457,28 @@ Follow installation instructions on [LSP-typescript](https://github.com/sublimel
 ## Vue
 
 Follow installation instructions on [LSP-vue](https://github.com/sublimelsp/LSP-vue).
+
+## Vala
+
+1. Install the [Vala-TMBundle](https://packagecontrol.io/packages/Vala-TMBundle) package from Package Control to add Vala syntax highlighting and for Vala files to be reconginsed.
+2. Install the [Vala Language Server](https://github.com/Prince781/vala-language-server)
+3. Add Vala Langauge Server to LSP settings:
+
+    ```json
+    {
+        "clients": {
+            "vala-language-server": {
+                "command": [
+                    "/path/to/vala-language-server"
+                ],
+                "selector": "source.vala | source.genie"
+            },
+        },
+    }
+    ```
+
+4. Enable the Vala Langauge Server for the project by going to `Tools > LSP > Enable Language Server In Project...`
+5. For the server to fully understand your code, you will need to generate a `compile_commands.json` file or build your project with [meson](https://mesonbuild.com/).
 
 ## XML
 

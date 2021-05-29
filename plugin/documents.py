@@ -43,7 +43,6 @@ from functools import partial
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import functools
-import itertools
 import sublime
 import sublime_plugin
 import webbrowser
@@ -274,7 +273,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def on_diagnostics_updated_async(self) -> None:
         self._clear_code_actions_annotation()
-        self._do_code_actions()
+        if userprefs().show_code_actions:
+            self._do_code_actions()
         self._update_diagnostic_in_status_bar_async()
 
     def _update_diagnostic_in_status_bar_async(self) -> None:
@@ -343,8 +343,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
                                                       after_ms=self.highlights_debounce_time)
             self._clear_code_actions_annotation()
-            self._when_selection_remains_stable_async(self._do_code_actions, current_region,
-                                                      after_ms=self.code_actions_debounce_time)
+            if userprefs().show_code_actions:
+                self._when_selection_remains_stable_async(self._do_code_actions, current_region,
+                                                          after_ms=self.code_actions_debounce_time)
             self._update_diagnostic_in_status_bar_async()
             self._resolve_visible_code_lenses_async()
 
@@ -488,11 +489,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             scope = 'region.yellowish lightbulb.lsp'
             icon = 'Packages/LSP/icons/lightbulb.png'
         else:  # 'annotation'
-            if action_count > 1:
-                title = '{} code actions'.format(action_count)
-            else:
-                title = next(itertools.chain.from_iterable(responses.values()))['title']
-            code_actions_link = make_command_link('lsp_code_actions', title, {"commands_by_config": responses})
+            suffix = 's' if action_count > 1 else ''
+            code_actions_link = make_command_link('lsp_code_actions', '{} code action{}'.format(action_count, suffix))
             annotations = ["<div class=\"actions\">{}</div>".format(code_actions_link)]
             annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
         self.view.add_regions(self.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)

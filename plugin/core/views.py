@@ -13,6 +13,7 @@ from .protocol import Position
 from .protocol import Range
 from .protocol import RangeLsp
 from .protocol import Request
+from .settings import userprefs
 from .types import ClientConfig
 from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, Sequence, cast
 from .url import filename_to_uri
@@ -404,8 +405,8 @@ def show_lsp_popup(view: sublime.View, contents: str, location: int = -1, md: bo
         flags=flags,
         location=location,
         wrapper_class=wrapper_class,
-        max_width=int(view.em_width() * 120.0),  # Around 120 characters per line
-        max_height=1000000,
+        max_width=int(view.em_width() * float(userprefs().popup_max_characters_width)),
+        max_height=int(view.line_height() * float(userprefs().popup_max_characters_height)),
         on_navigate=on_navigate)
 
 

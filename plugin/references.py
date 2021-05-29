@@ -1,23 +1,27 @@
-import os
-import sublime
-import linecache
-
 from .core.panels import ensure_panel
-from .core.protocol import Request, Point
+from .core.protocol import Location
+from .core.protocol import Point
+from .core.protocol import Request
 from .core.registry import get_position
 from .core.registry import LspTextCommand
-from .core.registry import windows
+from .core.sessions import Session
 from .core.settings import PLUGIN_NAME
 from .core.settings import userprefs
-from .core.types import PANEL_FILE_REGEX, PANEL_LINE_REGEX
-from .core.typing import List, Dict, Optional, Tuple, TypedDict
-from .core.url import uri_to_filename
-from .core.views import get_line, text_document_position_params
+from .core.types import ClientConfig
+from .core.types import PANEL_FILE_REGEX
+from .core.types import PANEL_LINE_REGEX
+from .core.typing import Dict, List, Optional, Tuple
+from .core.views import get_line
+from .core.views import get_uri_and_position_from_location
+from .core.views import text_document_position_params
+from .locationpicker import LocationPicker
+import functools
+import linecache
+import os
+import sublime
 
-ReferenceDict = TypedDict('ReferenceDict', {'uri': str, 'range': dict})
 
-
-def ensure_references_panel(window: sublime.Window) -> 'Optional[sublime.View]':
+def ensure_references_panel(window: sublime.Window) -> Optional[sublime.View]:
     return ensure_panel(window, "references", PANEL_FILE_REGEX, PANEL_LINE_REGEX,
                         "Packages/" + PLUGIN_NAME + "/Syntaxes/References.sublime-syntax")
 
@@ -28,157 +32,99 @@ class LspSymbolReferencesCommand(LspTextCommand):
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
-        self.reflist = []  # type: List[List[str]]
-        self.word_region = None  # type: Optional[sublime.Region]
-        self.word = ""
-        self.base_dir = None  # type: Optional[str]
+        self._picker = None  # type: Optional[LocationPicker]
 
-    def run(self, edit: sublime.Edit, event: Optional[dict] = None, point: Optional[int] = None) -> None:
+    def run(self, _: sublime.Edit, event: Optional[dict] = None, point: Optional[int] = None) -> None:
         session = self.best_session(self.capability)
         file_path = self.view.file_name()
-        if session and file_path:
-            tmp_pos = get_position(self.view, event, point)
-            if tmp_pos is None:
-                return
-            pos = tmp_pos
-            window = self.view.window()
-            if not window:
-                return
-            self.word_region = self.view.word(pos)
-            self.word = self.view.substr(self.word_region)
-
-            # use relative paths if file on the same root.
-            base_dir = windows.lookup(window).get_project_path(file_path)
-            if base_dir:
-                if os.path.commonprefix([base_dir, file_path]):
-                    self.base_dir = base_dir
-
+        pos = get_position(self.view, event, point)
+        if session and file_path and pos is not None:
             params = text_document_position_params(self.view, pos)
             params['context'] = {"includeDeclaration": False}
             request = Request("textDocument/references", params, self.view, progress=True)
-            session.send_request(request, lambda response: self.handle_response(response, pos))
-
-    def handle_response(self, response: Optional[List[ReferenceDict]], pos: int) -> None:
-        window = self.view.window()
-
-        if response is None:
-            response = []
-
-        if window:
-            references_count = len(response)
-            # return if there are no references
-            if references_count < 1:
-                window.run_command("hide_panel", {"panel": "output.references"})
-                window.status_message("No references found")
-                return
-
-            references_by_file = self._group_references_by_file(response)
-
-            if userprefs().show_references_in_quick_panel:
-                self.show_quick_panel(references_by_file)
-            else:
-                self.show_references_panel(references_by_file)
-
-    def show_quick_panel(self, references_by_file: Dict[str, List[Tuple[Point, str]]]) -> None:
-        selected_index = -1
-        current_file_path = self.view.file_name()
-        self.reflist.clear()
-        for file_path, references in references_by_file.items():
-            for reference in references:
-                point, line = reference
-                item = ['{}:{}:{}'.format(self.get_relative_path(file_path), point.row + 1, point.col + 1), line]
-                self.reflist.append(item)
-
-                # pre-select a reference in the current file.
-                if current_file_path == file_path and selected_index == -1:
-                    selected_index = len(self.reflist) - 1
-
-        flags = sublime.KEEP_OPEN_ON_FOCUS_LOST
-        window = self.view.window()
-        if window:
-            window.show_quick_panel(
-                self.reflist,
-                self.on_ref_choice,
-                flags,
-                selected_index,
-                self.on_ref_highlight
+            session.send_request(
+                request,
+                functools.partial(
+                    self._handle_response_async,
+                    self.view.substr(self.view.word(pos)),
+                    session
+                )
             )
 
-    def on_ref_choice(self, index: int) -> None:
-        self.open_ref_index(index)
+    def _handle_response_async(self, word: str, session: Session, response: Optional[List[Location]]) -> None:
+        sublime.set_timeout(lambda: self._handle_response(word, session, response))
 
-    def on_ref_highlight(self, index: int) -> None:
-        self.open_ref_index(index, transient=True)
-
-    def open_ref_index(self, index: int, transient: bool = False) -> None:
-        if index != -1:
-            flags = sublime.ENCODED_POSITION | sublime.TRANSIENT if transient else sublime.ENCODED_POSITION
+    def _handle_response(self, word: str, session: Session, response: Optional[List[Location]]) -> None:
+        if response:
+            if userprefs().show_references_in_quick_panel:
+                self._show_references_in_quick_panel(session, response)
+            else:
+                self._show_references_in_output_panel(word, session, response)
+        else:
             window = self.view.window()
             if window:
-                window.open_file(self.get_selected_file_path(index), flags)
+                window.status_message("No references found")
 
-    def show_references_panel(self, references_by_file: Dict[str, List[Tuple[Point, str]]]) -> None:
-        window = self.view.window()
-        if window:
-            panel = ensure_references_panel(window)
-            if not panel:
-                return
+    def _show_references_in_quick_panel(self, session: Session, locations: List[Location]) -> None:
+        self.view.run_command("add_jump_record", {"selection": [(r.a, r.b) for r in self.view.sel()]})
+        LocationPicker(self.view, session, locations, side_by_side=False)
 
-            to_render = []  # type: List[str]
-            references_count = 0
-            for file, references in references_by_file.items():
-                to_render.append('{}:'.format(self.get_relative_path(file)))
-                for reference in references:
-                    references_count += 1
-                    point, line = reference
-                    to_render.append('{:>5}:{:<4} {}'.format(point.row + 1, point.col + 1, line))
-                to_render.append("")  # add spacing between filenames
-            characters = "\n".join(to_render)
-            base_dir = windows.lookup(window).get_project_path(self.view.file_name() or "")
-            panel.settings().set("result_base_dir", base_dir)
+    def _show_references_in_output_panel(self, word: str, session: Session, locations: List[Location]) -> None:
+        window = session.window
+        panel = ensure_references_panel(window)
+        if not panel:
+            return
+        manager = session.manager()
+        if not manager:
+            return
+        base_dir = manager.get_project_path(self.view.file_name() or "")
+        to_render = []  # type: List[str]
+        references_count = 0
+        references_by_file = _group_locations_by_uri(window, session.config, locations)
+        for file, references in references_by_file.items():
+            to_render.append('{}:'.format(_get_relative_path(base_dir, file)))
+            for reference in references:
+                references_count += 1
+                point, line = reference
+                to_render.append('{:>5}:{:<4} {}'.format(point.row + 1, point.col + 1, line))
+            to_render.append("")  # add spacing between filenames
+        characters = "\n".join(to_render)
+        panel.settings().set("result_base_dir", base_dir)
+        panel.run_command("lsp_clear_panel")
+        window.run_command("show_panel", {"panel": "output.references"})
+        panel.run_command('append', {
+            'characters': "{} references for '{}'\n\n{}".format(references_count, word, characters),
+            'force': True,
+            'scroll_to_end': False
+        })
+        # highlight all word occurrences
+        regions = panel.find_all(r"\b{}\b".format(word))
+        panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_OUTLINED)
 
-            panel.run_command("lsp_clear_panel")
-            window.run_command("show_panel", {"panel": "output.references"})
-            panel.run_command('append', {
-                'characters': "{} references for '{}'\n\n{}".format(references_count, self.word, characters),
-                'force': True,
-                'scroll_to_end': False
-            })
 
-            # highlight all word occurrences
-            regions = panel.find_all(r"\b{}\b".format(self.word))
-            panel.add_regions('ReferenceHighlight', regions, 'comment', flags=sublime.DRAW_OUTLINED)
-
-    def get_selected_file_path(self, index: int) -> str:
-        return self.get_full_path(self.reflist[index][0])
-
-    def get_relative_path(self, file_path: str) -> str:
-        if self.base_dir:
-            return os.path.relpath(file_path, self.base_dir)
-        else:
-            return file_path
-
-    def get_full_path(self, file_path: str) -> str:
-        if self.base_dir:
-            return os.path.join(self.base_dir, file_path)
+def _get_relative_path(base_dir: Optional[str], file_path: str) -> str:
+    if base_dir:
+        return os.path.relpath(file_path, base_dir)
+    else:
         return file_path
 
-    def _group_references_by_file(self, references: List[ReferenceDict]
-                                  ) -> Dict[str, List[Tuple[Point, str]]]:
-        """ Return a dictionary that groups references by the file it belongs. """
-        grouped_references = {}  # type: Dict[str, List[Tuple[Point, str]]]
-        for reference in references:
-            file_path = uri_to_filename(reference["uri"])
-            point = Point.from_lsp(reference['range']['start'])
 
-            # get line of the reference, to showcase its use
-            reference_line = get_line(self.view.window(), file_path, point.row)
-
-            if grouped_references.get(file_path) is None:
-                grouped_references[file_path] = []
-            grouped_references[file_path].append((point, reference_line))
-
-        # we don't want to cache the line, we always want to get fresh data
-        linecache.clearcache()
-
-        return grouped_references
+def _group_locations_by_uri(
+    window: sublime.Window,
+    config: ClientConfig,
+    locations: List[Location]
+) -> Dict[str, List[Tuple[Point, str]]]:
+    """Return a dictionary that groups locations by the URI it belongs."""
+    grouped_locations = {}  # type: Dict[str, List[Tuple[Point, str]]]
+    for location in locations:
+        uri, position = get_uri_and_position_from_location(location)
+        file_path = config.map_server_uri_to_client_path(uri)
+        point = Point.from_lsp(position)
+        # get line of the reference, to showcase its use
+        reference_line = get_line(window, file_path, point.row)
+        if grouped_locations.get(file_path) is None:
+            grouped_locations[file_path] = []
+        grouped_locations[file_path].append((point, reference_line))
+    # we don't want to cache the line, we always want to get fresh data
+    linecache.clearcache()
+    return grouped_locations

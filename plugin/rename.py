@@ -180,7 +180,7 @@ class LspSymbolRenameCommand(LspTextCommand):
             to_render.append('{}:'.format(self._get_relative_path(file)))
             for edit in file_changes:
                 start = edit[0]
-                line_content = get_line(self.view.window(), file, start[0])
+                line_content = get_line(window, file, start[0])
                 to_render.append('{:>5}:{:<4} {}'.format(start[0] + 1, start[1] + 1, line_content))
             to_render.append("")  # this adds a spacing between filenames
         characters = "\n".join(to_render)

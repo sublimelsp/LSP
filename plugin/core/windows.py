@@ -115,6 +115,10 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
+    def get_uri(self) -> str:
+        raise NotImplementedError()
+
+    @abstractmethod
     def do_signature_help_async(self, manual: bool) -> None:
         raise NotImplementedError()
 

@@ -43,21 +43,24 @@ def open_file(
     return promise
 
 
+def center_selection(v: sublime.View, r: RangeLsp) -> sublime.View:
+    selection = range_to_region(Range.from_lsp(r), v)
+    v.run_command("lsp_selection_set", {"regions": [(selection.a, selection.a)]})
+    v.show_at_center(selection)
+    return v
+
+
 def open_file_and_center(window: sublime.Window, file_path: str, r: Optional[RangeLsp], flags: int = 0,
                          group: int = -1) -> Promise[Optional[sublime.View]]:
     """Open a file asynchronously and center the range. It is only safe to call this function from the UI thread."""
 
-    def center_selection(v: Optional[sublime.View]) -> Optional[sublime.View]:
+    def center(v: Optional[sublime.View]) -> Optional[sublime.View]:
         if v and v.is_valid():
-            if r:
-                selection = range_to_region(Range.from_lsp(r), v)
-                v.show_at_center(selection.a)
-                v.run_command("lsp_selection_set", {"regions": [(selection.a, selection.b)]})
-            return v
+            return center_selection(v, r) if r else v
         return None
 
     # TODO: ST API does not allow us to say "do not focus this new view"
-    return open_file(window, file_path, flags, group).then(center_selection)
+    return open_file(window, file_path, flags, group).then(center)
 
 
 def open_file_and_center_async(window: sublime.Window, file_path: str, r: Optional[RangeLsp], flags: int = 0,

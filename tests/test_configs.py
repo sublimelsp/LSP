@@ -1,4 +1,6 @@
 from LSP.plugin.core.settings import read_client_config, update_client_config
+from LSP.plugin.core.views import get_uri_and_position_from_location
+from LSP.plugin.core.views import to_encoded_filename
 from os.path import dirname
 from unittesting import DeferrableTestCase
 
@@ -138,3 +140,17 @@ class ConfigParsingTests(DeferrableTestCase):
         # but locally we are running Linux?
         path = config.map_server_uri_to_client_path("file:///c%3A/dir%20ectory/file.txt")
         self.assertEqual(path, "/c:/dir ectory/file.txt")
+
+        # Test to_encoded_filename
+        uri, position = get_uri_and_position_from_location({
+            'uri': 'file:///foo/bar',
+            'range': {'start': {'line': 0, 'character': 5}}
+        })  # type: ignore
+        path = config.map_server_uri_to_client_path(uri)
+        self.assertEqual(to_encoded_filename(path, position), '/foo/bar:1:6')
+        uri, position = get_uri_and_position_from_location({
+                'targetUri': 'file:///foo/bar',
+                'targetSelectionRange': {'start': {'line': 1234, 'character': 4321}}
+            })  # type: ignore
+        path = config.map_server_uri_to_client_path(uri)
+        self.assertEqual(to_encoded_filename(path, position), '/foo/bar:1235:4322')

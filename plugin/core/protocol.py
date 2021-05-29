@@ -156,8 +156,8 @@ SymbolInformation = TypedDict('SymbolInformation', {
 LocationLink = TypedDict('LocationLink', {
     'originSelectionRange': Optional[RangeLsp],
     'targetUri': DocumentUri,
-    'targetRange': Dict[str, Any],
-    'targetSelectionRange': Dict[str, Any]
+    'targetRange': RangeLsp,
+    'targetSelectionRange': RangeLsp
 }, total=False)
 
 DiagnosticRelatedInformation = TypedDict('DiagnosticRelatedInformation', {

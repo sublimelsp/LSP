@@ -1,8 +1,8 @@
+import weakref
 from .core.protocol import Request, Range, DocumentSymbol, SymbolInformation, SymbolTag
 from .core.registry import LspTextCommand
 from .core.sessions import print_to_status_bar
 from .core.typing import Any, List, Optional, Tuple, Dict, Generator, Union, cast
-from .core.views import location_to_encoded_filename
 from .core.views import range_to_region
 from .core.views import SYMBOL_KINDS
 from .core.views import text_document_identifier
@@ -245,15 +245,15 @@ class LspWorkspaceSymbolsCommand(LspTextCommand):
             if session:
                 params = {"query": symbol_query_input}
                 request = Request("workspace/symbol", params, None, progress=True)
+                self.weaksession = weakref.ref(session)
                 session.send_request(request, lambda r: self._handle_response(
                     symbol_query_input, r), self._handle_error)
 
     def _open_file(self, symbols: List[SymbolInformation], index: int) -> None:
         if index != -1:
-            symbol = symbols[index]
-            window = self.view.window()
-            if window:
-                window.open_file(location_to_encoded_filename(symbol['location']), sublime.ENCODED_POSITION)
+            session = self.weaksession()
+            if session:
+                session.open_location_async(symbols[index]['location'], sublime.ENCODED_POSITION)
 
     def _handle_response(self, query: str, response: Union[List[SymbolInformation], None]) -> None:
         if response:

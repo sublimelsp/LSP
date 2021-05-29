@@ -43,7 +43,6 @@ from functools import partial
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import functools
-import itertools
 import sublime
 import sublime_plugin
 import webbrowser
@@ -486,11 +485,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             scope = 'region.yellowish lightbulb.lsp'
             icon = 'Packages/LSP/icons/lightbulb.png'
         else:  # 'annotation'
-            if action_count > 1:
-                title = '{} code actions'.format(action_count)
-            else:
-                title = next(itertools.chain.from_iterable(responses.values()))['title']
-            code_actions_link = make_command_link('lsp_code_actions', title, {"commands_by_config": responses})
+            suffix = 's' if action_count > 1 else ''
+            code_actions_link = make_command_link('lsp_code_actions', '{} code action{}'.format(action_count, suffix))
             annotations = ["<div class=\"actions\">{}</div>".format(code_actions_link)]
             annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
         self.view.add_regions(self.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)

@@ -20,6 +20,8 @@ Follow installation instructions on [LSP-angular](https://github.com/sublimelsp/
 
 Follow installation instructions on [LSP-bash](https://github.com/sublimelsp/LSP-bash).
 
+Also see [Shell](#shell).
+
 ## C/C++
 
 See the dedicated [C/C++ guide](guides/cplusplus.md) for using ccls or clangd.

@@ -20,6 +20,8 @@ Follow installation instructions on [LSP-angular](https://github.com/sublimelsp/
 
 Follow installation instructions on [LSP-bash](https://github.com/sublimelsp/LSP-bash).
 
+Also see [Shell](#shell).
+
 ## C/C++
 
 See the dedicated [C/C++ guide](guides/cplusplus.md) for using ccls or clangd.
@@ -415,6 +417,61 @@ There are multiple options:
 ## Scala
 
 Follow installation instructions on [LSP-metals](https://github.com/scalameta/metals-sublime).
+
+## Shell
+
+1. Install [shellcheck](https://github.com/koalaman/shellcheck) (follow instructions in the repo).
+2. Install the [diagnostic-languageserver](https://github.com/iamcco/diagnostic-languageserver) server.
+
+    ```sh
+    # with NPM
+    npm i -g diagnostic-languageserver
+    # or with Yarn
+    yarn global add diagnostic-languageserver
+    ```
+3.  Open `Preferences > Package Settings > LSP > Settings` and add the `"diagnostic-ls"` client configuration to the `"clients"`:
+
+    ```json
+    {
+        "clients": {
+            "diagnostic-ls": {
+                "enabled": true,
+                "command": ["diagnostic-languageserver", "--stdio"],
+                "selector": "source.shell",
+                "initializationOptions": {
+                    "linters": {
+                        "shellcheck": {
+                            "command": "shellcheck",
+                            "args": ["--format=json", "-"],
+                            "debounce": 100,
+                            "formatLines": 1,
+                            "offsetLine": 0,
+                            "offsetColumn": 0,
+                            "sourceName": "shellcheck",
+                            "parseJson": {
+                                "line": "line",
+                                "column": "column",
+                                "endLine": "endLine",
+                                "endColumn": "endColumn",
+                                "security": "level",
+                                "message": "\\${message} [\\${code}]",
+                            },
+                            "securities": {
+                                "error": "error",
+                                "warning": "warning",
+                                "note": "info",
+                            },
+                        }
+                    },
+                    "formatters": {},
+                    "filetypes": {
+                        "shellscript": "shellcheck",
+                    }
+                }
+            }
+        }
+    }
+    ```
 
 ## Stylelint
 

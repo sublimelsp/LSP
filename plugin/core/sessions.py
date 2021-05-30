@@ -864,6 +864,8 @@ class Session(TransportCallbacks):
     def register_session_view_async(self, sv: SessionViewProtocol) -> None:
         self._session_views.add(sv)
         self._views_opened += 1
+        for status_key, message in self._status_messages.items():
+            sv.view.set_status(status_key, message)
 
     def unregister_session_view_async(self, sv: SessionViewProtocol) -> None:
         self._session_views.discard(sv)

@@ -49,8 +49,6 @@ class SessionView:
         self.session_buffer = session_buffer
         session.register_session_view_async(self)
         session.config.set_view_status(self.view, "")
-        for status_key, message in session._status_messages.items():
-            self.view.set_status(status_key, message)
         if self.session.has_capability(self.HOVER_PROVIDER_KEY):
             self._increment_hover_count()
         self._clear_auto_complete_triggers(settings)

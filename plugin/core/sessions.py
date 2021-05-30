@@ -840,6 +840,7 @@ class Session(TransportCallbacks):
         self._progress = {}  # type: Dict[str, Optional[WindowProgressReporter]]
         self._plugin_class = plugin_class
         self._plugin = None  # type: Optional[AbstractPlugin]
+        self._status_messages = {}  # type: Dict[str, str]
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -883,10 +884,12 @@ class Session(TransportCallbacks):
         return None
 
     def set_window_status_async(self, key: str, message: str) -> None:
+        self._status_messages[key] = message
         for sv in self.session_views_async():
             sv.view.set_status(key, message)
 
     def erase_window_status_async(self, key: str) -> None:
+        self._status_messages.pop(key, None)
         for sv in self.session_views_async():
             sv.view.erase_status(key)
 

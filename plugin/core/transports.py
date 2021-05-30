@@ -325,7 +325,13 @@ def _connect_tcp(port: int) -> Optional[socket.socket]:
 
 
 def _encode(d: Dict[str, Any]) -> bytes:
-    return json.dumps(d, sort_keys=False, check_circular=False, separators=(',', ':')).encode('utf-8')
+    return json.dumps(
+        d,
+        ensure_ascii=False,
+        sort_keys=False,
+        check_circular=False,
+        separators=(',', ':')
+    ).encode('utf-8')
 
 
 def _decode(message: bytes) -> Dict[str, Any]:

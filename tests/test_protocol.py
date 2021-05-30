@@ -2,6 +2,8 @@ from LSP.plugin.core.protocol import (
     Point, Range, Request, Notification
 )
 import unittest
+from LSP.plugin.core.transports import _encode, _decode
+
 
 LSP_START_POSITION = {'line': 10, 'character': 4}
 LSP_END_POSITION = {'line': 11, 'character': 3}
@@ -125,6 +127,14 @@ class RangeTests(unittest.TestCase):
         other_range = Range(Point(1, 1), Point(1, 2))
         base_range.extend(other_range)
         self.assertEqual(base_range, Range(Point(1, 0), Point(1, 5)))
+
+
+class EncodingTests(unittest.TestCase):
+    def test_encode(self):
+        encoded = _encode({"text": "😃"})
+        self.assertEqual(encoded, b'{"text":"\xF0\x9F\x98\x83"}')
+        decoded = _decode(encoded)
+        self.assertEqual(decoded, {"text": "😃"})
 
 
 class RequestTests(unittest.TestCase):

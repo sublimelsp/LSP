@@ -704,6 +704,15 @@ def is_location_href(href: str) -> bool:
     return href.startswith("location:")
 
 
+def is_file(href: str) -> bool:
+    """
+    Check whether this href is a path to an existing file, possibly with :row or :row:col suffix.
+    """
+    drive, tail = os.path.splitdrive(href)
+    path = tail.split(':')[0]
+    return os.path.isfile(drive + path)
+
+
 def _format_diagnostic_related_info(
     config: ClientConfig,
     info: DiagnosticRelatedInformation,

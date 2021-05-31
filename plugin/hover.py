@@ -14,6 +14,7 @@ from .core.views import diagnostic_severity
 from .core.views import first_selection_region
 from .core.views import format_diagnostic_for_html
 from .core.views import FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
+from .core.views import is_file
 from .core.views import is_location_href
 from .core.views import make_command_link
 from .core.views import make_link
@@ -24,6 +25,7 @@ from .core.views import update_lsp_popup
 from .core.windows import AbstractViewListener
 from urllib.parse import urlparse
 import functools
+import os
 import sublime
 import webbrowser
 
@@ -212,6 +214,10 @@ class LspHoverCommand(LspTextCommand):
                 position = {"line": row, "character": col_utf16}  # type: Position
                 r = {"start": position, "end": position}  # type: RangeLsp
                 sublime.set_timeout_async(functools.partial(session.open_uri_async, uri, r))
+        elif os.path.isabs(href) and is_file(href):
+            window = self.view.window()
+            if window:
+                window.open_file(href, flags=sublime.ENCODED_POSITION)
         else:
             # NOTE: Remove this check when on py3.8.
             if not (href.lower().startswith("http://") or href.lower().startswith("https://")):

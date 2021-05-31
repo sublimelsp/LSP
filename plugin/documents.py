@@ -45,6 +45,7 @@ from weakref import WeakValueDictionary
 import functools
 import sublime
 import sublime_plugin
+import textwrap
 import webbrowser
 
 
@@ -489,9 +490,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             scope = 'region.yellowish lightbulb.lsp'
             icon = 'Packages/LSP/icons/lightbulb.png'
         else:  # 'annotation'
-            suffix = 's' if action_count > 1 else ''
-            code_actions_link = make_command_link('lsp_code_actions', '{} code action{}'.format(action_count, suffix))
-            annotations = ["<div class=\"actions\">{}</div>".format(code_actions_link)]
+            if action_count > 1:
+                title = '{} code actions'.format(action_count)
+            else:
+                title = next(iter(responses.values()))[0]['title']
+                title = "<br>".join(textwrap.wrap(title, width=30))
+            code_actions_link = make_command_link('lsp_code_actions', title, {"commands_by_config": responses})
+            annotations = ["<div class=\"actions\" style=\"font-family:system\">{}</div>".format(code_actions_link)]
             annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
         self.view.add_regions(self.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)
 

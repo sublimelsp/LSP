@@ -273,25 +273,37 @@ class LspCodeActionsCommand(LspTextCommand):
 
     capability = 'codeActionProvider'
 
-    def run(self, edit: sublime.Edit, event: Optional[dict] = None, only_kinds: Optional[List[str]] = None) -> None:
+    def run(
+        self,
+        edit: sublime.Edit,
+        event: Optional[dict] = None,
+        only_kinds: Optional[List[str]] = None,
+        commands_by_config: Optional[CodeActionsByConfigName] = None
+    ) -> None:
         self.commands = []  # type: List[Tuple[str, str, CodeActionOrCommand]]
         self.commands_by_config = {}  # type: CodeActionsByConfigName
-        view = self.view
-        region = first_selection_region(view)
-        if region is None:
-            return
-        listener = windows.listener_for_view(view)
-        if not listener:
-            return
-        session_buffer_diagnostics, covering = listener.diagnostics_intersecting_async(region)
-        dict_kinds = {kind: True for kind in only_kinds} if only_kinds else None
-        actions_manager.request_for_region_async(
-            view, covering, session_buffer_diagnostics, self.handle_responses_async, dict_kinds)
+        if commands_by_config:
+            self.handle_responses_async(commands_by_config, run_first=True)
+        else:
+            view = self.view
+            region = first_selection_region(view)
+            if region is None:
+                return
+            listener = windows.listener_for_view(view)
+            if not listener:
+                return
+            session_buffer_diagnostics, covering = listener.diagnostics_intersecting_async(region)
+            dict_kinds = {kind: True for kind in only_kinds} if only_kinds else None
+            actions_manager.request_for_region_async(
+                view, covering, session_buffer_diagnostics, self.handle_responses_async, dict_kinds)
 
-    def handle_responses_async(self, responses: CodeActionsByConfigName) -> None:
+    def handle_responses_async(self, responses: CodeActionsByConfigName, run_first: bool = False) -> None:
         self.commands_by_config = responses
         self.commands = self.combine_commands()
-        self.show_code_actions()
+        if len(self.commands) == 1 and run_first:
+            self.handle_select(0)
+        else:
+            self.show_code_actions()
 
     def combine_commands(self) -> 'List[Tuple[str, str, CodeActionOrCommand]]':
         results = []

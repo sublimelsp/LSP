@@ -151,7 +151,6 @@ class Settings:
     diagnostics_additional_delay_auto_complete_ms = None  # type: int
     diagnostics_delay_ms = None  # type: int
     diagnostics_gutter_marker = None  # type: str
-    diagnostics_highlight_style = None  # type: str
     diagnostics_panel_include_severity_level = None  # type: int
     disabled_capabilities = None  # type: List[str]
     document_highlight_style = None  # type: str
@@ -187,7 +186,6 @@ class Settings:
         r("diagnostics_additional_delay_auto_complete_ms", 0)
         r("diagnostics_delay_ms", 0)
         r("diagnostics_gutter_marker", "dot")
-        r("diagnostics_highlight_style", "underline")
         r("diagnostics_panel_include_severity_level", 4)
         r("disabled_capabilities", [])
         r("document_highlight_style", "stippled")
@@ -238,9 +236,6 @@ class Settings:
 
     def document_highlight_style_to_add_regions_flags(self) -> int:
         return _settings_style_to_add_regions_flag(self.document_highlight_style)
-
-    def diagnostics_highlight_style_to_add_regions_flag(self) -> int:
-        return _settings_style_to_add_regions_flag(self.diagnostics_highlight_style)
 
 
 class ClientStates:

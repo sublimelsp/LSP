@@ -328,7 +328,7 @@ class SessionViewProtocol(Protocol):
     def shutdown_async(self) -> None:
         ...
 
-    def present_diagnostics_async(self, flags: int) -> None:
+    def present_diagnostics_async(self) -> None:
         ...
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
@@ -365,7 +365,7 @@ class SessionBufferProtocol(Protocol):
     ) -> None:
         ...
 
-    def on_diagnostics_async(self, diagnostics: List[Diagnostic], version: Optional[int]) -> None:
+    def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
         ...
 
 

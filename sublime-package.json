@@ -236,18 +236,6 @@
               "minimum": 0,
               "markdownDescription": "Add an additional delay when the auto-complete widget is currently visible. Just like `\"diagnostics_delay_ms\"`, the unit is milliseconds. The total amount of delay would be `diagnostics_delay_ms + diagnostics_additional_delay_auto_complete_ms`."
             },
-            "diagnostics_highlight_style": {
-              "enum": [
-                "fill",
-                "box",
-                "underline",
-                "stippled",
-                "squiggly",
-                ""
-              ],
-              "default": "squiggly",
-              "markdownDescription": "Highlighting style of code diagnostics. When set to the empty string (`\"\"`), no diagnostics are shown in-line."
-            },
             "document_highlight_style": {
               "enum": [
                 "fill",

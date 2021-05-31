@@ -28,15 +28,14 @@ The following tables give an overview about the scope names used by LSP.
 
 ### Diagnostics
 
-| scope | DiagnosticSeverity | description |
-| ----- | ------------------ | ----------- |
-| `markup.error.lsp` | Error | Reports an error |
-| `markup.warning.lsp` | Warning | Reports a warning |
-| `markup.info.lsp` | Information | Reports an information |
-| `markup.info.hint.lsp` | Hint | Reports a hint |
+| scope | DiagnosticSeverity | description | drawn as
+| ----- | ------------------ | ----------- | --------
+| `markup.error.lsp` | Error | Reports an error | Squiggly underlines
+| `markup.warning.lsp` | Warning | Reports a warning | Squiggly underlines
+| `markup.info.lsp` | Information | Reports an information | Stippled underlines
+| `markup.info.hint.lsp` | Hint | Reports a hint | Stippled underlines
 
-!!! note
-    If `diagnostics_highlight_style` is set to "fill" in the LSP settings, the highlighting color can be controlled via the "background" color from a color scheme rule for the listed scopes.
+When the region of the diagnostic spans more than one line, the diagnostic is always drawn as a box.
 
 Diagnostics will also optionally include the following scopes:
 
@@ -45,27 +44,23 @@ Diagnostics will also optionally include the following scopes:
 | `markup.unnecessary.lsp` | Unnecessary         | Unused or unnecessary code  |
 | `markup.deprecated.lsp`  | Deprecated          | Deprecated or obsolete code |
 
-!!! note
-    Regions created for those scopes don't follow the `diagnostics_highlight_style` setting and instead always use the "fill" style.
+Those scopes can be used to, for example, gray-out the text color of unused code, if the server supports that.
 
-    Those scopes can be used to, for example, gray-out the text color of unused code, if the server supports that.
+For example, to add a custom rule for `Mariana` color scheme, select `UI: Customize Color Scheme` from the Command Palette and add the following rule:
 
-    For example, to add a custom rule for `Mariana` color scheme, select `UI: Customize Color Scheme` from the Command Palette and add the following rule:
+```json
+{
+    "rules": [
+        {
+            "scope": "markup.unnecessary.lsp",
+            "foreground": "color(rgb(255, 255, 255) alpha(0.4))",
+            "background": "color(var(blue3) alpha(0.9))"
+        }
+    ]
+}
+```
 
-    ```json
-    {
-        "rules": [
-            {
-                "scope": "markup.unnecessary.lsp",
-                "foreground": "color(rgb(255, 255, 255) alpha(0.4))",
-                "background": "color(var(blue3) alpha(0.9))"
-            }
-        ]
-    }
-    ```
-
-    The color scheme rule only works if the "background" color is different from the global background of the scheme. So for other color schemes, ideally pick a background color that is as close as possible, but marginally different from the original background.
-
+The color scheme rule only works if the "background" color is different from the global background of the scheme. So for other color schemes, ideally pick a background color that is as close as possible, but marginally different from the original background.
 
 ### Signature Help
 

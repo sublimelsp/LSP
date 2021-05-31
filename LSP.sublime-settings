@@ -75,11 +75,6 @@
   // See also: "diagnostics_delay_ms".
   "diagnostics_additional_delay_auto_complete_ms": 0,
 
-  // Highlighting style of code diagnostics.
-  // Valid values are "fill", "box", "underline", "stippled", "squiggly" or "".
-  // When set to the empty string (""), no diagnostics are shown in-line.
-  "diagnostics_highlight_style": "squiggly",
-
   // Highlighting style of "highlights": accentuating nearby text entities that
   // are related to the one under your cursor.
   // Valid values are "fill", "box", "underline", "stippled", "squiggly" or "".

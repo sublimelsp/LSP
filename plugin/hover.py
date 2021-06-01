@@ -103,11 +103,11 @@ class LspHoverCommand(LspTextCommand):
                 self.request_symbol_hover_async(listener, hover_point)
             self._diagnostics_by_config, covering = listener.diagnostics_touching_point_async(hover_point)
             if self._diagnostics_by_config:
-                if not only_diagnostics:
-                    actions_manager.request_with_diagnostics_async(
-                        self.view, covering, self._diagnostics_by_config,
-                        functools.partial(self.handle_code_actions, listener, hover_point))
                 self.show_hover(listener, hover_point, only_diagnostics)
+            if not only_diagnostics:
+                actions_manager.request_for_region_async(
+                    self.view, covering, self._diagnostics_by_config,
+                    functools.partial(self.handle_code_actions, listener, hover_point))
 
         sublime.set_timeout_async(run_async)
 
@@ -152,14 +152,21 @@ class LspHoverCommand(LspTextCommand):
                     format_diagnostic_for_html(self.view, sb.session.config, diagnostic, self._base_dir))
             for items in by_severity.values():
                 formatted.extend(items)
-            config_name = sb.session.config.name
-            if config_name in self._actions_by_config:
-                action_count = len(self._actions_by_config[config_name])
-                if action_count > 0:
-                    href = "{}:{}".format('code-actions', config_name)
-                    text = "choose code action ({} available)".format(action_count)
-                    formatted.append('<div class="actions">[{}] {}</div>'.format(config_name, make_link(href, text)))
             formatted.append("</div>")
+        return "".join(formatted)
+
+    def code_actions_content(self) -> str:
+        formatted = []
+        for config_name, actions in self._actions_by_config.items():
+            action_count = len(actions)
+            if action_count > 0:
+                href = "{}:{}".format('code-actions', config_name)
+                if action_count > 1:
+                    text = "choose code action ({} available)".format(action_count)
+                else:
+                    text = actions[0].get('title', 'code action')
+                formatted.append('<div class="actions">[{}] Code action: {}</div>'.format(
+                    config_name, make_link(href, text)))
         return "".join(formatted)
 
     def hover_content(self) -> str:
@@ -170,8 +177,9 @@ class LspHoverCommand(LspTextCommand):
         sublime.set_timeout(lambda: self._show_hover(listener, point, only_diagnostics))
 
     def _show_hover(self, listener: AbstractViewListener, point: int, only_diagnostics: bool) -> None:
-        contents = self.diagnostics_content() + self.hover_content()
-        if contents and not only_diagnostics:
+        hover_content = self.hover_content()
+        contents = self.diagnostics_content() + hover_content + self.code_actions_content()
+        if contents and not only_diagnostics and hover_content:
             contents += self.symbol_actions_content(listener, point)
 
         _test_contents.clear()
@@ -201,10 +209,13 @@ class LspHoverCommand(LspTextCommand):
             _, config_name = href.split(":")
             titles = [command["title"] for command in self._actions_by_config[config_name]]
             self.view.run_command("lsp_selection_set", {"regions": [(point, point)]})
-            window = self.view.window()
-            if window:
-                window.show_quick_panel(titles, lambda i: self.handle_code_action_select(config_name, i),
-                                        placeholder="Code actions")
+            if len(titles) > 1:
+                window = self.view.window()
+                if window:
+                    window.show_quick_panel(titles, lambda i: self.handle_code_action_select(config_name, i),
+                                            placeholder="Code actions")
+            else:
+                self.handle_code_action_select(config_name, 0)
         elif is_location_href(href):
             session_name, uri, row, col_utf16 = unpack_href_location(href)
             session = self.session_by_name(session_name)

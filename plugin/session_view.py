@@ -184,10 +184,9 @@ class SessionView:
         return None
 
     def present_diagnostics_async(self) -> None:
-        for index, tup in enumerate(DIAGNOSTIC_SEVERITY):
-            _, _, _, _, single_line_flags, multi_line_flags = tup
-            self._draw_diagnostics(index + 1, single_line_flags, False)
-            self._draw_diagnostics(index + 1, multi_line_flags, True)
+        for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
+            self._draw_diagnostics(severity, DIAGNOSTIC_SEVERITY[severity - 1][4], False)
+            self._draw_diagnostics(severity, DIAGNOSTIC_SEVERITY[severity - 1][5], True)
         listener = self.listener()
         if listener:
             listener.on_diagnostics_updated_async()

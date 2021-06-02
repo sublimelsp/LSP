@@ -43,11 +43,11 @@ from functools import partial
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import functools
+import itertools
 import sublime
 import sublime_plugin
 import textwrap
 import webbrowser
-import itertools
 
 
 SUBLIME_WORD_MASK = 515

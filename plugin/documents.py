@@ -47,6 +47,7 @@ import sublime
 import sublime_plugin
 import textwrap
 import webbrowser
+import itertools
 
 
 SUBLIME_WORD_MASK = 515
@@ -608,14 +609,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _is_in_higlighted_region(self, point: int) -> bool:
         for kind in range(1, 4):
-            regions = self.view.get_regions(self._highlights_key(kind, False))
-            for r in regions:
-                if r.contains(point):
-                    return True
-            regions = self.view.get_regions(self._highlights_key(kind, True))
-            for r in regions:
-                if r.contains(point):
-                    return True
+            regions = itertools.chain(
+                self.view.get_regions(self._highlights_key(kind, False)),
+                self.view.get_regions(self._highlights_key(kind, True))
+            )  # type: Iterable[sublime.Region]
+            if any(region.contains(point) for region in regions):
+                return True
         return False
 
     def _do_highlights_async(self) -> None:
@@ -640,15 +639,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
         def render_highlights_on_main_thread() -> None:
             self._clear_highlight_regions()
-            flags_multi, flags_single = userprefs().document_highlight_style_to_add_regions_flags()
+            flags_multi, flags_single = userprefs().document_highlight_style_region_flags()
             for tup, regions in kind2regions.items():
+                if not regions:
+                    continue
                 kind, multiline = tup
                 key = self._highlights_key(kind, multiline)
-                if regions:
-                    flags = flags_multi if multiline else flags_single
-                    self.view.add_regions(key, regions, scope=_kind2scope[kind], flags=flags)
-                else:
-                    self.view.erase_regions(key)
+                flags = flags_multi if multiline else flags_single
+                self.view.add_regions(key, regions, scope=_kind2scope[kind], flags=flags)
 
         sublime.set_timeout(render_highlights_on_main_thread)
 

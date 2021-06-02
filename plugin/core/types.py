@@ -236,7 +236,7 @@ class Settings:
 
         set_debug_logging(self.log_debug)
 
-    def document_highlight_style_to_add_regions_flags(self) -> Tuple[int, int]:
+    def document_highlight_style_region_flags(self) -> Tuple[int, int]:
         if self.document_highlight_style == "fill":
             return sublime.DRAW_NO_OUTLINE, sublime.DRAW_NO_OUTLINE
         else:

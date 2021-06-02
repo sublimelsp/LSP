@@ -1,4 +1,7 @@
 {
+  // To discover more customization and example client configurations, see
+  // https://lsp.sublimetext.io
+
   // Show permanent language server status in the status bar.
   "show_view_status": true,
 
@@ -185,12 +188,6 @@
   // DO NOT MODIFY THIS SETTING!
   // Use "clients" to override settings instead!
   "default_clients": {
-    "pyls": {
-      "command": [
-        "pyls"
-      ],
-      "selector": "source.python",
-    },
     "rust-analyzer": {
       "command": [
         "rust-analyzer"
@@ -204,21 +201,6 @@
       "selector": "source.c | source.c++ | source.objc | source.objc++",
       "auto_complete_selector": "punctuation.accessor | (meta.preprocessor.include string - punctuation.definition.string.end)",
     },
-    "dart": {
-      "command": [
-        // Specify a dart command like the below in your LSP User settings.
-        // "dart", "/usr/local/opt/dart/libexec/bin/snapshots/analysis_server.dart.snapshot", "--lsp"
-      ],
-      "selector": "source.dart",
-    },
-    "elixir-ls": {
-      "command": [
-        // Specify path to language_server.sh from https://github.com/elixir-lsp/elixir-ls here
-        // "/home/someUser/somePlace/elixir-ls/release/language_server.sh"
-      ],
-      "selector": "source.elixir",
-      "settings": {}
-    },
     "erlang-ls": {
       "command": [
         "erlang_ls",
@@ -226,13 +208,6 @@
         "stdio"
       ],
       "selector": "source.erlang",
-    },
-    "flow": {
-      "command": [
-        "flow",
-        "lsp"
-      ],
-      "selector": "source.js", // TODO: should this be source.js.flow ?
     },
     // deprecated: please use haskell-language-server, see lsp.readthedocs.io
     "haskell-ide-engine": {
@@ -254,16 +229,6 @@
         "gopls"
       ],
       "selector": "source.go",
-    },
-    "jdtls": {
-      "command": [
-        "java",
-        "-jar",
-        "PATH_TO_JDT_SERVER/plugins/org.eclipse.equinox.launcher_1.4.0.v20161219-1356.jar",
-        "-configuration",
-        "PATH_TO_CONFIG_DIR"
-      ],
-      "selector": "source.java",
     },
     "polymer-ide": {
       "command": [
@@ -305,13 +270,6 @@
         "languageserver::run()"
       ],
       "selector": "source.r | text.html.markdown.rmarkdown",
-    },
-    "sourcekit-lsp": {
-      "command": [
-        "xcrun",
-        "sourcekit-lsp"
-      ],
-      "selector": "source.swift",
     },
   }
 }

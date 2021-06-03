@@ -343,8 +343,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if different:
             if not self._is_in_higlighted_region(current_region.b):
                 self._clear_highlight_regions()
-            self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
-                                                      after_ms=self.highlights_debounce_time)
+            if userprefs().document_highlight_style:
+                self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
+                                                          after_ms=self.highlights_debounce_time)
             self._clear_code_actions_annotation()
             if userprefs().show_code_actions:
                 self._when_selection_remains_stable_async(self._do_code_actions, current_region,

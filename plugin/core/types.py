@@ -69,23 +69,6 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
     runner(run, timeout_ms)
 
 
-def _settings_style_to_add_regions_flag(style: str) -> int:
-    flags = 0
-    if style == "fill":
-        flags = sublime.DRAW_NO_OUTLINE
-    elif style == "box":
-        flags = sublime.DRAW_NO_FILL
-    else:
-        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
-        if style == "underline":
-            flags |= sublime.DRAW_SOLID_UNDERLINE
-        elif style == "stippled":
-            flags |= sublime.DRAW_STIPPLED_UNDERLINE
-        elif style == "squiggly":
-            flags |= sublime.DRAW_SQUIGGLY_UNDERLINE
-    return flags
-
-
 class SettingsRegistration:
     __slots__ = ("_settings",)
 

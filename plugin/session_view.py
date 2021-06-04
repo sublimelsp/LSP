@@ -185,21 +185,22 @@ class SessionView:
 
     def present_diagnostics_async(self) -> None:
         flags = 0 if userprefs().show_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
-        for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            self._draw_diagnostics(severity, DIAGNOSTIC_SEVERITY[severity - 1][4] if flags == 0 else flags, False)
-            self._draw_diagnostics(severity, DIAGNOSTIC_SEVERITY[severity - 1][5] if flags == 0 else flags, True)
+        level = userprefs().show_diagnostics_severity_level
+        for sev in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
+            self._draw_diagnostics(sev, level, DIAGNOSTIC_SEVERITY[sev - 1][4] if flags == 0 else flags, False)
+            self._draw_diagnostics(sev, level, DIAGNOSTIC_SEVERITY[sev - 1][5] if flags == 0 else flags, True)
         listener = self.listener()
         if listener:
             listener.on_diagnostics_updated_async()
 
-    def _draw_diagnostics(self, severity: int, flags: int, multiline: bool) -> None:
+    def _draw_diagnostics(self, severity: int, max_severity_level: int, flags: int, multiline: bool) -> None:
         key = self.diagnostics_key(severity, multiline)
         key_tags = {tag: '{}_tags_{}'.format(key, tag) for tag in DIAGNOSTIC_TAG_VALUES}
         for key_tag in key_tags.values():
             self.view.erase_regions(key_tag)
         data = self.session_buffer.data_per_severity.get((severity, multiline))
         # TODO: Why do we have this data.icon check?
-        if data and data.icon and severity <= userprefs().show_diagnostics_severity_level:
+        if data and data.icon and severity <= max_severity_level:
             non_tag_regions = data.regions
             for tag, regions in data.regions_with_tag.items():
                 tag_scope = self.diagnostics_tag_scope(tag)

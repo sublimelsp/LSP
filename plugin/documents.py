@@ -496,7 +496,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if action_count > 1:
                 title = '{} code actions'.format(action_count)
             else:
-                title = next(iter(responses.values()))[0]['title']
+                title = next(itertools.chain.from_iterable(responses.values()))['title']
                 title = "<br>".join(textwrap.wrap(title, width=30))
             code_actions_link = make_command_link('lsp_code_actions', title, {"commands_by_config": responses})
             annotations = ["<div class=\"actions\" style=\"font-family:system\">{}</div>".format(code_actions_link)]

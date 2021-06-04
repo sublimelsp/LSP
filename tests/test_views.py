@@ -22,6 +22,7 @@ from LSP.plugin.core.views import text_document_range_formatting
 from LSP.plugin.core.views import uri_from_view
 from LSP.plugin.core.views import will_save
 from LSP.plugin.core.views import will_save_wait_until
+from setup import make_stdio_test_config
 from unittest.mock import MagicMock
 from unittesting import DeferrableTestCase
 import re
@@ -68,7 +69,7 @@ class ViewsTest(DeferrableTestCase):
         })
 
     def test_will_save(self) -> None:
-        self.assertEqual(will_save(self.view, 42).params, {
+        self.assertEqual(will_save(self.view.file_name() or '', 42).params, {
             "textDocument": {"uri": filename_to_uri(self.mock_file_name)},
             "reason": 42
         })
@@ -309,7 +310,7 @@ class ViewsTest(DeferrableTestCase):
     def test_document_color_params(self) -> None:
         self.assertEqual(
             document_color_params(self.view),
-            {"textDocument": {"uri": filename_to_uri(self.view.file_name())}})
+            {"textDocument": {"uri": filename_to_uri(self.view.file_name() or '')}})
 
     def test_format_diagnostic_for_html(self) -> None:
         diagnostic1 = {
@@ -334,10 +335,11 @@ class ViewsTest(DeferrableTestCase):
         diagnostic2.pop("relatedInformation")
         self.assertIn("relatedInformation", diagnostic1)
         self.assertNotIn("relatedInformation", diagnostic2)
+        client_config = make_stdio_test_config
         # They should result in the same minihtml.
         self.assertEqual(
-            format_diagnostic_for_html(self.view, diagnostic1, "/foo/bar"),
-            format_diagnostic_for_html(self.view, diagnostic2, "/foo/bar")
+            format_diagnostic_for_html(self.view, client_config, diagnostic1, "/foo/bar"),
+            format_diagnostic_for_html(self.view, client_config, diagnostic2, "/foo/bar")
         )
 
     def test_escaped_newline_in_markdown(self) -> None:

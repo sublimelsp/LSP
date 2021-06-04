@@ -203,8 +203,9 @@ class LspHoverCommand(LspTextCommand):
         elif href.startswith("file:"):
             window = self.view.window()
             if window:
-                parsed = urlparse(href)
-                filepath = unquote(parsed.path)  # decode percent-encoded characters
+                decoded = unquote(href)  # decode percent-encoded characters
+                parsed = urlparse(decoded)
+                filepath = parsed.path
                 if sublime.platform() == "windows":
                     filepath = re.sub(r"^/([a-zA-Z]:)", r"\1", filepath)  # remove slash preceding drive letter
                 fn = "{}:{}".format(filepath, parsed.fragment) if parsed.fragment else filepath

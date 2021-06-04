@@ -190,7 +190,7 @@ class Settings:
         r("diagnostics_highlight_style", "underline")
         r("diagnostics_panel_include_severity_level", 4)
         r("disabled_capabilities", [])
-        r("document_highlight_style", "stippled")
+        r("document_highlight_style", "underline")
         r("log_debug", False)
         r("log_max_size", 8 * 1024)
         r("lsp_code_actions_on_save", {})
@@ -236,8 +236,11 @@ class Settings:
 
         set_debug_logging(self.log_debug)
 
-    def document_highlight_style_to_add_regions_flags(self) -> int:
-        return _settings_style_to_add_regions_flag(self.document_highlight_style)
+    def document_highlight_style_region_flags(self) -> Tuple[int, int]:
+        if self.document_highlight_style == "fill":
+            return sublime.DRAW_NO_OUTLINE, sublime.DRAW_NO_OUTLINE
+        else:
+            return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE
 
     def diagnostics_highlight_style_to_add_regions_flag(self) -> int:
         return _settings_style_to_add_regions_flag(self.diagnostics_highlight_style)

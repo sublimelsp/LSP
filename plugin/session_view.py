@@ -184,9 +184,10 @@ class SessionView:
         return None
 
     def present_diagnostics_async(self) -> None:
+        flags = 0 if userprefs().show_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            self._draw_diagnostics(severity, DIAGNOSTIC_SEVERITY[severity - 1][4], False)
-            self._draw_diagnostics(severity, DIAGNOSTIC_SEVERITY[severity - 1][5], True)
+            self._draw_diagnostics(severity, DIAGNOSTIC_SEVERITY[severity - 1][4] if flags == 0 else flags, False)
+            self._draw_diagnostics(severity, DIAGNOSTIC_SEVERITY[severity - 1][5] if flags == 0 else flags, True)
         listener = self.listener()
         if listener:
             listener.on_diagnostics_updated_async()

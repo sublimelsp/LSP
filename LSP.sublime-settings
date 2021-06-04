@@ -99,6 +99,11 @@
   // Show code actions in hover popup if available
   "show_code_actions_in_hover": true,
 
+  // Show diagnostics (error/warning squigglies) in the view. When disabled,
+  // gutter markers are still drawn, unless "diagnostics_gutter_marker" is
+  // set to "".
+  "show_diagnostics_highlights": true,
+
   // Show symbol action links in hover popup if available
   "show_symbol_action_links": true,
 

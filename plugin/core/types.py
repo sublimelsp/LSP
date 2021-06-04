@@ -167,6 +167,7 @@ class Settings:
     show_code_actions = None  # type: bool
     show_code_actions_in_hover = None  # type: bool
     show_diagnostics_count_in_view_status = None  # type: bool
+    show_diagnostics_highlights = None  # type: bool
     show_diagnostics_in_view_status = None  # type: bool
     show_diagnostics_panel_on_save = None  # type: int
     show_diagnostics_severity_level = None  # type: int
@@ -201,6 +202,7 @@ class Settings:
         r("show_code_actions_in_hover", True)
         r("show_diagnostics_count_in_view_status", False)
         r("show_diagnostics_in_view_status", True)
+        r("show_diagnostics_highlights", True)
         r("show_diagnostics_panel_on_save", 2)
         r("show_diagnostics_severity_level", 2)
         r("show_references_in_quick_panel", False)
@@ -233,6 +235,14 @@ class Settings:
         else:
             r("inhibit_snippet_completions", False)
             r("inhibit_word_completions", True)
+
+        # Backwards-compatible with "diagnostics_highlight_style"
+        diagnostics_highlight_style = s.get("diagnostics_highlight_style")
+        if isinstance(diagnostics_highlight_style, str):
+            if diagnostics_highlight_style:
+                self.show_diagnostics_highlights = True
+            else:
+                self.show_diagnostics_highlights = False
 
         set_debug_logging(self.log_debug)
 

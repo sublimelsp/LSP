@@ -22,8 +22,9 @@ from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from .core.windows import AbstractViewListener
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 import functools
+import re
 import sublime
 import webbrowser
 
@@ -203,7 +204,10 @@ class LspHoverCommand(LspTextCommand):
             window = self.view.window()
             if window:
                 parsed = urlparse(href)
-                fn = "{}:{}".format(parsed.path, parsed.fragment) if parsed.fragment else parsed.path
+                filepath = unquote(parsed.path)  # decode percent-encoded characters
+                if sublime.platform() == "windows":
+                    filepath = re.sub(r"^/([a-zA-Z]:)", r"\1", filepath)  # remove slash preceding drive letter
+                fn = "{}:{}".format(filepath, parsed.fragment) if parsed.fragment else filepath
                 window.open_file(fn, flags=sublime.ENCODED_POSITION)
         elif href.startswith('code-actions:'):
             _, config_name = href.split(":")

@@ -239,10 +239,7 @@
             "document_highlight_style": {
               "enum": [
                 "fill",
-                "box",
                 "underline",
-                "stippled",
-                "squiggly",
                 ""
               ],
               "default": "underline",

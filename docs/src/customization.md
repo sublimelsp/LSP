@@ -2,6 +2,15 @@
 
 LSP uses [mdpopups](https://github.com/facelessuser/sublime-markdown-popups) to display the popup.
 You can override its style by creating a `Packages/User/mdpopups.css` file.
+In particular, to get the same font in the popup as your `"font_face"` setting in `Packages/User/Preferences.sublime-settings`, add
+
+```css
+html {
+    --mdpopups-font-mono: "your desired font face";
+}
+```
+
+to `Packages/User/mdpopups.css`.
 See the [mdpopups documentation](http://facelessuser.github.io/sublime-markdown-popups/) for more details.
 
 ## Color scheme customizations

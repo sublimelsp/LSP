@@ -437,7 +437,7 @@ Follow installation instructions on [LSP-metals](https://github.com/scalameta/me
             "diagnostic-ls": {
                 "enabled": true,
                 "command": ["diagnostic-languageserver", "--stdio"],
-                "selector": "source.shell",
+                "selector": "source.shell.bash",
                 "initializationOptions": {
                     "linters": {
                         "shellcheck": {

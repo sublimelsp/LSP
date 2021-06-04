@@ -43,8 +43,10 @@ from functools import partial
 from weakref import WeakSet
 from weakref import WeakValueDictionary
 import functools
+import itertools
 import sublime
 import sublime_plugin
+import textwrap
 import webbrowser
 
 
@@ -305,8 +307,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if not different:
             return
         self._clear_highlight_regions()
-        self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
-                                                  after_ms=self.highlights_debounce_time)
+        if userprefs().document_highlight_style:
+            self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
+                                                      after_ms=self.highlights_debounce_time)
         self._when_selection_remains_stable_async(self._do_color_boxes_async, current_region,
                                                   after_ms=self.color_boxes_debounce_time)
         self.do_signature_help_async(manual=False)
@@ -340,8 +343,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if different:
             if not self._is_in_higlighted_region(current_region.b):
                 self._clear_highlight_regions()
-            self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
-                                                      after_ms=self.highlights_debounce_time)
+            if userprefs().document_highlight_style:
+                self._when_selection_remains_stable_async(self._do_highlights_async, current_region,
+                                                          after_ms=self.highlights_debounce_time)
             self._clear_code_actions_annotation()
             if userprefs().show_code_actions:
                 self._when_selection_remains_stable_async(self._do_code_actions, current_region,
@@ -489,9 +493,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             scope = 'region.yellowish lightbulb.lsp'
             icon = 'Packages/LSP/icons/lightbulb.png'
         else:  # 'annotation'
-            suffix = 's' if action_count > 1 else ''
-            code_actions_link = make_command_link('lsp_code_actions', '{} code action{}'.format(action_count, suffix))
-            annotations = ["<div class=\"actions\">{}</div>".format(code_actions_link)]
+            if action_count > 1:
+                title = '{} code actions'.format(action_count)
+            else:
+                title = next(itertools.chain.from_iterable(responses.values()))['title']
+                title = "<br>".join(textwrap.wrap(title, width=30))
+            code_actions_link = make_command_link('lsp_code_actions', title, {"commands_by_config": responses})
+            annotations = ["<div class=\"actions\" style=\"font-family:system\">{}</div>".format(code_actions_link)]
             annotation_color = self.view.style_for_scope("region.bluish markup.accent.codeaction.lsp")["foreground"]
         self.view.add_regions(self.CODE_ACTIONS_KEY, regions, scope, icon, flags, annotations, annotation_color)
 
@@ -592,16 +600,22 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 
+    def _highlights_key(self, kind: int, multiline: bool) -> str:
+        return "lsp_highlight_{}{}".format(_kind2name[kind], "m" if multiline else "s")
+
     def _clear_highlight_regions(self) -> None:
         for kind in range(1, 4):
-            self.view.erase_regions("lsp_highlight_{}".format(_kind2name[kind]))
+            self.view.erase_regions(self._highlights_key(kind, False))
+            self.view.erase_regions(self._highlights_key(kind, True))
 
     def _is_in_higlighted_region(self, point: int) -> bool:
         for kind in range(1, 4):
-            regions = self.view.get_regions("lsp_highlight_{}".format(_kind2name[kind]))
-            for r in regions:
-                if r.contains(point):
-                    return True
+            regions = itertools.chain(
+                self.view.get_regions(self._highlights_key(kind, False)),
+                self.view.get_regions(self._highlights_key(kind, True))
+            )  # type: Iterable[sublime.Region]
+            if any(region.contains(point) for region in regions):
+                return True
         return False
 
     def _do_highlights_async(self) -> None:
@@ -616,31 +630,24 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             session.send_request_async(request, self._on_highlights)
 
     def _on_highlights(self, response: Optional[List]) -> None:
-        if not response:
-            self._clear_highlight_regions()
-            return
-        kind2regions = {}  # type: Dict[int, List[sublime.Region]]
-        for kind in range(1, 4):
-            kind2regions[kind] = []
+        if not isinstance(response, list):
+            response = []
+        kind2regions = {}  # type: Dict[Tuple[int, bool], List[sublime.Region]]
         for highlight in response:
             r = range_to_region(Range.from_lsp(highlight["range"]), self.view)
             kind = highlight.get("kind", DocumentHighlightKind.Text)
-            if kind in kind2regions:
-                kind2regions[kind].append(r)
-            else:
-                debug("unknown DocumentHighlightKind", kind)
+            kind2regions.setdefault((kind, len(self.view.split_by_newlines(r)) > 1), []).append(r)
 
         def render_highlights_on_main_thread() -> None:
             self._clear_highlight_regions()
-            flags = userprefs().document_highlight_style_to_add_regions_flags()
-            for kind, regions in kind2regions.items():
-                if regions:
-                    scope = _kind2scope[kind]
-                    self.view.add_regions(
-                        "lsp_highlight_{}".format(_kind2name[kind]),
-                        regions,
-                        scope=scope,
-                        flags=flags)
+            flags_multi, flags_single = userprefs().document_highlight_style_region_flags()
+            for tup, regions in kind2regions.items():
+                if not regions:
+                    continue
+                kind, multiline = tup
+                key = self._highlights_key(kind, multiline)
+                flags = flags_multi if multiline else flags_single
+                self.view.add_regions(key, regions, scope=_kind2scope[kind], flags=flags)
 
         sublime.set_timeout(render_highlights_on_main_thread)
 

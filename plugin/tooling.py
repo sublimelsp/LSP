@@ -43,42 +43,43 @@ def _preprocess_properties(translations: Optional[Dict[str, str]], properties: D
     - Discard the "scope" key
     """
     for v in properties.values():
-        v.pop("scope", None)
-        descr = v.get("description")
-        if not isinstance(descr, str):
-            descr = v.get("markdownDescription")
-        if isinstance(descr, str):
-            descr, translated = _translate_description(translations, descr)
-            if translated:
-                if "markdownDescription" in v:
-                    v["markdownDescription"] = descr
-                elif "description" in v:
-                    v["description"] = descr
-        enums = v.get("enumDescriptions")
-        if not isinstance(enums, list):
-            enums = v.get("markdownEnumDescriptions")
-        if isinstance(enums, list):
-            new_enums = []  # type: List[str]
-            for descr in enums:
-                descr, _ = _translate_description(translations, descr)
-                new_enums.append(descr)
-            if "enumDescriptions" in v:
-                v["enumDescriptions"] = new_enums
-            elif "markdownEnumDescriptions" in v:
-                v["markdownEnumDescriptions"] = new_enums
-        depr = v.get("deprecationMessage")
-        if not isinstance(depr, str):
-            depr = v.get("markdownDeprecationMessage")
-        if isinstance(depr, str):
-            depr, translated = _translate_description(translations, depr)
-            if translated:
-                if "markdownDeprecationMessage" in v:
-                    v["markdownDeprecationMessage"] = depr
-                elif "deprecationMessage" in v:
-                    v["deprecationMessage"] = depr
-        child_properties = v.get("properties")
-        if isinstance(child_properties, dict):
-            _preprocess_properties(translations, child_properties)
+        if isinstance(v, dict):
+            v.pop("scope", None)
+            descr = v.get("description")
+            if not isinstance(descr, str):
+                descr = v.get("markdownDescription")
+            if isinstance(descr, str):
+                descr, translated = _translate_description(translations, descr)
+                if translated:
+                    if "markdownDescription" in v:
+                        v["markdownDescription"] = descr
+                    elif "description" in v:
+                        v["description"] = descr
+            enums = v.get("enumDescriptions")
+            if not isinstance(enums, list):
+                enums = v.get("markdownEnumDescriptions")
+            if isinstance(enums, list):
+                new_enums = []  # type: List[str]
+                for descr in enums:
+                    descr, _ = _translate_description(translations, descr)
+                    new_enums.append(descr)
+                if "enumDescriptions" in v:
+                    v["enumDescriptions"] = new_enums
+                elif "markdownEnumDescriptions" in v:
+                    v["markdownEnumDescriptions"] = new_enums
+            depr = v.get("deprecationMessage")
+            if not isinstance(depr, str):
+                depr = v.get("markdownDeprecationMessage")
+            if isinstance(depr, str):
+                depr, translated = _translate_description(translations, depr)
+                if translated:
+                    if "markdownDeprecationMessage" in v:
+                        v["markdownDeprecationMessage"] = depr
+                    elif "deprecationMessage" in v:
+                        v["deprecationMessage"] = depr
+            child_properties = v.get("properties")
+            if isinstance(child_properties, dict):
+                _preprocess_properties(translations, child_properties)
 
 
 class BasePackageNameInputHandler(sublime_plugin.TextInputHandler):
@@ -161,46 +162,47 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
         self.view.assign_syntax("Packages/JSON/JSON.sublime-syntax")
         self.writeline("{")
         for k, v in sorted(properties.items()):
-            description = v.get("description")
-            if not isinstance(description, str):
-                description = v.get("markdownDescription")
-            if isinstance(description, str):
-                for line in description.splitlines():
-                    for wrapped_line in textwrap.wrap(line, width=100 - 8 - 3):
-                        self.writeline4('// {}'.format(wrapped_line))
-            else:
-                self.writeline4('// unknown setting')
-            enum = v.get("enum")
-            has_default = "default" in v
-            default = v.get("default")
-            if isinstance(enum, list):
-                self.writeline4('// possible values: {}'.format(", ".join(enum)))
-            if has_default:
-                value = default
-            else:
-                typ = v.get("type")
-                # self.writeline4('// NO DEFAULT VALUE <-- NEEDS ATTENTION')
-                if typ == "string":
-                    value = ""
-                elif typ == "boolean":
-                    value = False
-                elif typ == "array":
-                    value = []
-                elif typ == "object":
-                    value = {}
-                elif typ == "number":
-                    value = 0
+            if isinstance(v, dict):
+                description = v.get("description")
+                if not isinstance(description, str):
+                    description = v.get("markdownDescription")
+                if isinstance(description, str):
+                    for line in description.splitlines():
+                        for wrapped_line in textwrap.wrap(line, width=100 - 8 - 3):
+                            self.writeline4('// {}'.format(wrapped_line))
                 else:
-                    self.writeline4('// UNKNOWN TYPE: {} <-- NEEDS ATTENTION'.format(typ))
-                    value = ""
-            value_lines = json.dumps(value, ensure_ascii=False, indent=4).splitlines()
-            for index, line in enumerate(value_lines, 1):
-                is_last_line = index == len(value_lines)
-                terminator = ',' if is_last_line else ''
-                if index == 1:
-                    self.writeline4('"{}": {}{}'.format(k, line, terminator))
+                    self.writeline4('// unknown setting')
+                enum = v.get("enum")
+                has_default = "default" in v
+                default = v.get("default")
+                if isinstance(enum, list):
+                    self.writeline4('// possible values: {}'.format(", ".join(enum)))
+                if has_default:
+                    value = default
                 else:
-                    self.writeline4('{}{}'.format(line, terminator))
+                    typ = v.get("type")
+                    # self.writeline4('// NO DEFAULT VALUE <-- NEEDS ATTENTION')
+                    if typ == "string":
+                        value = ""
+                    elif typ == "boolean":
+                        value = False
+                    elif typ == "array":
+                        value = []
+                    elif typ == "object":
+                        value = {}
+                    elif typ == "number":
+                        value = 0
+                    else:
+                        self.writeline4('// UNKNOWN TYPE: {} <-- NEEDS ATTENTION'.format(typ))
+                        value = ""
+                value_lines = json.dumps(value, ensure_ascii=False, indent=4).splitlines()
+                for index, line in enumerate(value_lines, 1):
+                    is_last_line = index == len(value_lines)
+                    terminator = ',' if is_last_line else ''
+                    if index == 1:
+                        self.writeline4('"{}": {}{}'.format(k, line, terminator))
+                    else:
+                        self.writeline4('{}{}'.format(line, terminator))
         self.writeline("}")
         self.view.set_read_only(True)
         self.view = None

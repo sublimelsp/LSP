@@ -270,9 +270,14 @@
               "default": "annotation",
               "markdownDescription": "Where to show `\"code actions\"`. Due to API limitations, the `\"bulb\"` icon can not be clicked so the code actions can only be triggered using a keyboard shortcut or the context menu."
             },
+            "show_code_actions_in_hover": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Show code actions in hover popup if available."
+            },
             "show_symbol_action_links": {
               "type": "boolean",
-              "default": false,
+              "default": true,
               "markdownDescription": "Show symbol action links in hover popup if available."
             },
             "only_show_lsp_completions": {

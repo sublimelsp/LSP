@@ -101,6 +101,9 @@
   // using a keyboard shortcut or the context menu.
   "show_code_actions": "annotation",
 
+  // Show code actions in hover popup if available
+  "show_code_actions_in_hover": true,
+
   // Show symbol action links in hover popup if available
   "show_symbol_action_links": true,
 

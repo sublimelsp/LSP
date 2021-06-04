@@ -104,7 +104,7 @@ class LspHoverCommand(LspTextCommand):
             self._diagnostics_by_config, covering = listener.diagnostics_touching_point_async(hover_point)
             if self._diagnostics_by_config:
                 self.show_hover(listener, hover_point, only_diagnostics)
-            if not only_diagnostics and userprefs().show_code_actions:
+            if not only_diagnostics and userprefs().show_code_actions_in_hover:
                 actions_manager.request_for_region_async(
                     self.view, covering, self._diagnostics_by_config,
                     functools.partial(self.handle_code_actions, listener, hover_point))

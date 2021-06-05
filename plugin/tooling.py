@@ -1,4 +1,5 @@
 from .core.css import css
+from .core.logging import debug
 from .core.registry import windows
 from .core.sessions import get_plugin
 from .core.transports import create_transport
@@ -41,45 +42,49 @@ def _preprocess_properties(translations: Optional[Dict[str, str]], properties: D
 
     - Replace description translation placeholders by their English translation
     - Discard the "scope" key
+    - Removes key/values whose value is not a dict
     """
+    non_dict_keys = [k for k, v in properties.items() if not isinstance(v, dict)]
+    for k in non_dict_keys:
+        debug("discarding key:", k)
+        properties.pop(k)
     for v in properties.values():
-        if isinstance(v, dict):
-            v.pop("scope", None)
-            descr = v.get("description")
-            if not isinstance(descr, str):
-                descr = v.get("markdownDescription")
-            if isinstance(descr, str):
-                descr, translated = _translate_description(translations, descr)
-                if translated:
-                    if "markdownDescription" in v:
-                        v["markdownDescription"] = descr
-                    elif "description" in v:
-                        v["description"] = descr
-            enums = v.get("enumDescriptions")
-            if not isinstance(enums, list):
-                enums = v.get("markdownEnumDescriptions")
-            if isinstance(enums, list):
-                new_enums = []  # type: List[str]
-                for descr in enums:
-                    descr, _ = _translate_description(translations, descr)
-                    new_enums.append(descr)
-                if "enumDescriptions" in v:
-                    v["enumDescriptions"] = new_enums
-                elif "markdownEnumDescriptions" in v:
-                    v["markdownEnumDescriptions"] = new_enums
-            depr = v.get("deprecationMessage")
-            if not isinstance(depr, str):
-                depr = v.get("markdownDeprecationMessage")
-            if isinstance(depr, str):
-                depr, translated = _translate_description(translations, depr)
-                if translated:
-                    if "markdownDeprecationMessage" in v:
-                        v["markdownDeprecationMessage"] = depr
-                    elif "deprecationMessage" in v:
-                        v["deprecationMessage"] = depr
-            child_properties = v.get("properties")
-            if isinstance(child_properties, dict):
-                _preprocess_properties(translations, child_properties)
+        v.pop("scope", None)
+        descr = v.get("description")
+        if not isinstance(descr, str):
+            descr = v.get("markdownDescription")
+        if isinstance(descr, str):
+            descr, translated = _translate_description(translations, descr)
+            if translated:
+                if "markdownDescription" in v:
+                    v["markdownDescription"] = descr
+                elif "description" in v:
+                    v["description"] = descr
+        enums = v.get("enumDescriptions")
+        if not isinstance(enums, list):
+            enums = v.get("markdownEnumDescriptions")
+        if isinstance(enums, list):
+            new_enums = []  # type: List[str]
+            for descr in enums:
+                descr, _ = _translate_description(translations, descr)
+                new_enums.append(descr)
+            if "enumDescriptions" in v:
+                v["enumDescriptions"] = new_enums
+            elif "markdownEnumDescriptions" in v:
+                v["markdownEnumDescriptions"] = new_enums
+        depr = v.get("deprecationMessage")
+        if not isinstance(depr, str):
+            depr = v.get("markdownDeprecationMessage")
+        if isinstance(depr, str):
+            depr, translated = _translate_description(translations, depr)
+            if translated:
+                if "markdownDeprecationMessage" in v:
+                    v["markdownDeprecationMessage"] = depr
+                elif "deprecationMessage" in v:
+                    v["deprecationMessage"] = depr
+        child_properties = v.get("properties")
+        if isinstance(child_properties, dict):
+            _preprocess_properties(translations, child_properties)
 
 
 class BasePackageNameInputHandler(sublime_plugin.TextInputHandler):

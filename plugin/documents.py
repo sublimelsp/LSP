@@ -23,7 +23,7 @@ from .core.signature_help import SigHelp
 from .core.types import basescope2languageid
 from .core.types import debounced
 from .core.types import FEATURES_TIMEOUT
-from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
+from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Set, Tuple, Union
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import document_color_params
 from .core.views import first_selection_region
@@ -142,7 +142,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     highlights_debounce_time = FEATURES_TIMEOUT
     code_lenses_debounce_time = FEATURES_TIMEOUT + 2000
 
-    known_ids = set()  # type: set[str]
+    known_ids = set()  # type: Set[str]
 
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:
@@ -386,7 +386,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         print('DocumentSyncListener.on_close view({}), buffer({})'.format(self.view, self.view.buffer_id()),
               file=sys.stderr)
         self._clear_session_views_async()
-        self._manager.unregister_listener_async(self)
+        if self._registered and self._manager:
+            self._manager.unregister_listener_async(self)
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool:
         if key == "lsp.session_with_capability" and operator == sublime.OP_EQUAL and isinstance(operand, str):

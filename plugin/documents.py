@@ -227,7 +227,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         # Sort by severity
         for severity in range(1, len(DIAGNOSTIC_SEVERITY) + 1):
             for sb in self.session_buffers_async():
-                data = sb.data_per_severity.get(severity)
+                data = sb.data_per_severity.get((severity, False))
+                if data:
+                    result.extend(data.panel_contribution)
+                data = sb.data_per_severity.get((severity, True))
                 if data:
                     result.extend(data.panel_contribution)
         # sort the result by asc line number

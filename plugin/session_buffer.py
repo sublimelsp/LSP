@@ -48,7 +48,7 @@ class DiagnosticSeverityData:
         self.regions_with_tag = {}  # type: Dict[int, List[sublime.Region]]
         self.annotations = []  # type: List[str]
         self.panel_contribution = []  # type: List[Tuple[str, Optional[int], Optional[str], Optional[str]]]
-        _, _, self.scope, self.icon = DIAGNOSTIC_SEVERITY[severity - 1]
+        _, _, self.scope, self.icon, _, _ = DIAGNOSTIC_SEVERITY[severity - 1]
         if userprefs().diagnostics_gutter_marker != "sign":
             self.icon = userprefs().diagnostics_gutter_marker
 
@@ -78,7 +78,7 @@ class SessionBuffer:
         self.id = buffer_id
         self.pending_changes = None  # type: Optional[PendingChanges]
         self.diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
-        self.data_per_severity = {}  # type: Dict[int, DiagnosticSeverityData]
+        self.data_per_severity = {}  # type: Dict[Tuple[int, bool], DiagnosticSeverityData]
         self.diagnostics_version = -1
         self.diagnostics_flags = 0
         self.diagnostics_are_visible = False
@@ -251,7 +251,7 @@ class SessionBuffer:
 
     def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
         print('on_diagnostics_async:', file=sys.stderr)
-        data_per_severity = {}  # type: Dict[int, DiagnosticSeverityData]
+        data_per_severity = {}  # type: Dict[Tuple[int, bool], DiagnosticSeverityData]
         total_errors = 0
         total_warnings = 0
         should_show_diagnostics_panel = False
@@ -266,12 +266,13 @@ class SessionBuffer:
             diagnostics_version = version
             diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
             for diagnostic in raw_diagnostics:
+                region = range_to_region(Range.from_lsp(diagnostic["range"]), view)
                 severity = diagnostic_severity(diagnostic)
-                data = data_per_severity.get(severity)
+                key = (severity, len(view.split_by_newlines(region)) > 1)
+                data = data_per_severity.get(key)
                 if data is None:
                     data = DiagnosticSeverityData(severity)
-                    data_per_severity[severity] = data
-                region = range_to_region(Range.from_lsp(diagnostic["range"]), view)
+                    data_per_severity[key] = data
                 tags = diagnostic.get('tags', [])
                 if tags:
                     for tag in tags:
@@ -302,7 +303,7 @@ class SessionBuffer:
         self,
         diagnostics_version: int,
         diagnostics: List[Tuple[Diagnostic, sublime.Region]],
-        data_per_severity: Dict[int, DiagnosticSeverityData],
+        data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData],
         total_errors: int,
         total_warnings: int,
         should_show_diagnostics_panel: bool
@@ -347,7 +348,7 @@ class SessionBuffer:
         self,
         diagnostics_version: int,
         diagnostics: List[Tuple[Diagnostic, sublime.Region]],
-        data_per_severity: Dict[int, DiagnosticSeverityData],
+        data_per_severity: Dict[Tuple[int, bool], DiagnosticSeverityData],
         total_errors: int,
         total_warnings: int,
         should_show_diagnostics_panel: bool
@@ -360,9 +361,8 @@ class SessionBuffer:
         self.total_errors = total_errors
         self.total_warnings = total_warnings
         self.should_show_diagnostics_panel = should_show_diagnostics_panel
-        flags = userprefs().diagnostics_highlight_style_to_add_regions_flag()
         for sv in self.session_views:
-            sv.present_diagnostics_async(flags)
+            sv.present_diagnostics_async()
         mgr = self.session.manager()
         if mgr:
             mgr.update_diagnostics_panel_async()

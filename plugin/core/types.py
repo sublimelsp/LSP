@@ -69,23 +69,6 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
     runner(run, timeout_ms)
 
 
-def _settings_style_to_add_regions_flag(style: str) -> int:
-    flags = 0
-    if style == "fill":
-        flags = sublime.DRAW_NO_OUTLINE
-    elif style == "box":
-        flags = sublime.DRAW_NO_FILL
-    else:
-        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
-        if style == "underline":
-            flags |= sublime.DRAW_SOLID_UNDERLINE
-        elif style == "stippled":
-            flags |= sublime.DRAW_STIPPLED_UNDERLINE
-        elif style == "squiggly":
-            flags |= sublime.DRAW_SQUIGGLY_UNDERLINE
-    return flags
-
-
 class SettingsRegistration:
     __slots__ = ("_settings",)
 
@@ -151,7 +134,6 @@ class Settings:
     diagnostics_additional_delay_auto_complete_ms = None  # type: int
     diagnostics_delay_ms = None  # type: int
     diagnostics_gutter_marker = None  # type: str
-    diagnostics_highlight_style = None  # type: str
     diagnostics_panel_include_severity_level = None  # type: int
     disabled_capabilities = None  # type: List[str]
     document_highlight_style = None  # type: str
@@ -168,6 +150,7 @@ class Settings:
     show_code_actions = None  # type: bool
     show_code_actions_in_hover = None  # type: bool
     show_diagnostics_count_in_view_status = None  # type: bool
+    show_diagnostics_highlights = None  # type: bool
     show_diagnostics_in_view_status = None  # type: bool
     show_diagnostics_panel_on_save = None  # type: int
     show_diagnostics_severity_level = None  # type: int
@@ -188,7 +171,6 @@ class Settings:
         r("diagnostics_additional_delay_auto_complete_ms", 0)
         r("diagnostics_delay_ms", 0)
         r("diagnostics_gutter_marker", "dot")
-        r("diagnostics_highlight_style", "underline")
         r("diagnostics_panel_include_severity_level", 4)
         r("disabled_capabilities", [])
         r("document_highlight_style", "underline")
@@ -203,6 +185,7 @@ class Settings:
         r("show_code_actions_in_hover", True)
         r("show_diagnostics_count_in_view_status", False)
         r("show_diagnostics_in_view_status", True)
+        r("show_diagnostics_highlights", True)
         r("show_diagnostics_panel_on_save", 2)
         r("show_diagnostics_severity_level", 2)
         r("show_references_in_quick_panel", False)
@@ -236,6 +219,12 @@ class Settings:
             r("inhibit_snippet_completions", False)
             r("inhibit_word_completions", True)
 
+        # Backwards-compatible with "diagnostics_highlight_style"
+        diagnostics_highlight_style = s.get("diagnostics_highlight_style")
+        if isinstance(diagnostics_highlight_style, str):
+            if not diagnostics_highlight_style:
+                self.show_diagnostics_highlights = False
+
         set_debug_logging(self.log_debug)
 
     def document_highlight_style_region_flags(self) -> Tuple[int, int]:
@@ -243,9 +232,6 @@ class Settings:
             return sublime.DRAW_NO_OUTLINE, sublime.DRAW_NO_OUTLINE
         else:
             return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE
-
-    def diagnostics_highlight_style_to_add_regions_flag(self) -> int:
-        return _settings_style_to_add_regions_flag(self.diagnostics_highlight_style)
 
 
 class ClientStates:

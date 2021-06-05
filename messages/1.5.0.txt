@@ -1,0 +1,62 @@
+=> 1.5.0
+
+# Removed Default Client Configurations
+
+As was mentioned in the release notes of 1.4.0, the following default
+configurations have been removed:
+
+- pyls
+- dart
+- elixir-ls
+- flow
+- jdtls
+- sourcekit-lsp
+
+For all of these, a helper package is available on packagecontrol.io that
+automates the boring set up and installation of server binaries.
+
+# Deprecated Default Client Configurations
+
+The following default client configs are **DEPRECATED** and **WILL BE REMOVED**:
+
+- haskell-ide-engine -> set up haskell-language-server instead, see
+  lsp.sublimetext.io for instructions
+- rlang -> use the R-IDE package, which provides an LSP client configuration
+  under the hood.
+
+# New Example Configurations
+
+An example client configuration for "diagnostic-language-server" has been added
+to lsp.sublimetext.io. It is a general-purpose language server which allows
+you to hook up any command-line linter program or formatter program. It can be
+regarded as a replacement of SublimeLinter. There is an example set up for the
+shellcheck program to lint your Bash source code.
+
+# New Settings
+
+- Use show_code_actions_in_hover to disable code actions in the hover popup.
+- Use show_diagnostics_highlights to disable inline diagnostics in the view.
+
+# Removed Settings
+
+- diagnostics_highlights_style is replaced by show_diagnostics_highlights.
+
+# Features and Fixes
+
+- Draw empty regions as a small horizontal line (Raoul Wols)
+- Fix the `LSP Development` command (#1724) (Arnav Jindal)
+- Refine diagnostics presentation (#1710) (Raoul Wols)
+- Fix crash on showing code actions (Rafal Chlodnicki)
+- Handle percent-encoding and leading slash in file URIs (#1722) (jwortmann)
+- Add show_code_actions_in_hover boolean setting (#1717) (husanjun)
+- Use box-style for multiline doc highlights (#1712) (Raoul Wols)
+- Remove some default configs (Raoul Wols)
+- Mention font face in customization docs (#1714) (Raoul Wols)
+- Improve hover code actions UX (husanjun)
+- Improve code action annotation UX (#1707) (husanjun)
+- Apply all status messages when a SessionView is opened (#1706) (jwortmann)
+- Add instructions for shellcheck (#1703) (Rafał Chłodnicki)
+- Don't ascii-escape Unicode (Raoul Wols)
+  This makes the Flow language server work with non-ascii characters.
+- Handle schemes other than the file scheme (#1620) (Raoul Wols)
+  This makes the Deno language server work for goto-def and find-references.

@@ -335,7 +335,7 @@ class ViewsTest(DeferrableTestCase):
         diagnostic2.pop("relatedInformation")
         self.assertIn("relatedInformation", diagnostic1)
         self.assertNotIn("relatedInformation", diagnostic2)
-        client_config = make_stdio_test_config
+        client_config = make_stdio_test_config()
         # They should result in the same minihtml.
         self.assertEqual(
             format_diagnostic_for_html(self.view, client_config, diagnostic1, "/foo/bar"),

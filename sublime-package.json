@@ -237,16 +237,8 @@
               "markdownDescription": "Add an additional delay when the auto-complete widget is currently visible. Just like `\"diagnostics_delay_ms\"`, the unit is milliseconds. The total amount of delay would be `diagnostics_delay_ms + diagnostics_additional_delay_auto_complete_ms`."
             },
             "diagnostics_highlight_style": {
-              "enum": [
-                "fill",
-                "box",
-                "underline",
-                "stippled",
-                "squiggly",
-                ""
-              ],
-              "default": "squiggly",
-              "markdownDescription": "Highlighting style of code diagnostics. When set to the empty string (`\"\"`), no diagnostics are shown in-line."
+              "enum": [],
+              "deprecationMessage": "Use \"show_diagnostics_highlights\" instead",
             },
             "document_highlight_style": {
               "enum": [
@@ -286,6 +278,11 @@
               "type": "boolean",
               "default": true,
               "markdownDescription": "Show code actions in hover popup if available."
+            },
+            "show_diagnostics_highlights": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Show diagnostics (error/warning squigglies) in the view. When disabled, gutter markers are still drawn, unless `\"diagnostics_gutter_marker\"` is set to `\"\"`."
             },
             "show_symbol_action_links": {
               "type": "boolean",

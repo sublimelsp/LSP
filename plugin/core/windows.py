@@ -251,8 +251,12 @@ class WindowManager(Manager):
 
     def _publish_sessions_to_listener_async(self, listener: AbstractViewListener) -> None:
         inside_workspace = self._workspace.contains(listener.view)
+        print('_publish_sessions_to_listener_async: sessions len({})'.format(len(list(self._sessions))),
+              file=sys.stderr)
         for session in self._sessions:
+            print('_publish_sessions_to_listener_async: sessions config({})'.format(session.config), file=sys.stderr)
             if session.can_handle(listener.view, None, inside_workspace):
+                print('_publish_sessions_to_listener_async: view({})'.format(listener.view), file=sys.stderr)
                 # debug("registering session", session.config.name, "to listener", listener)
                 listener.on_session_initialized_async(session)
 
@@ -393,6 +397,7 @@ class WindowManager(Manager):
     def _end_sessions_async(self) -> None:
         for session in self._sessions:
             session.end_async()
+        print('_end_sessions_async: remove all', file=sys.stderr)
         self._sessions.clear()
 
     def end_config_sessions_async(self, config_name: str) -> None:
@@ -400,6 +405,7 @@ class WindowManager(Manager):
         for session in sessions:
             if session.config.name == config_name:
                 session.end_async()
+                print('end_config_sessions_async: remove session({})'.format(session.config), file=sys.stderr)
                 self._sessions.discard(session)
 
     def get_project_path(self, file_path: str) -> Optional[str]:
@@ -411,6 +417,7 @@ class WindowManager(Manager):
         return candidate
 
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
+        print('on_post_exit_async: remove session({})'.format(session.config), file=sys.stderr)
         self._sessions.discard(session)
         for listener in self._listeners:
             listener.on_session_shutdown_async(session)

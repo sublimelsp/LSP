@@ -1197,6 +1197,8 @@ class Session(TransportCallbacks):
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:
             sb.on_diagnostics_async(params["diagnostics"], params.get("version"))
+        else:
+            raise Exception('publishDiagnostics: SessionBuffer does not exist (view closed)?')
 
     def m_client_registerCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/registerCapability request"""

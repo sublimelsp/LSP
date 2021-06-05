@@ -256,6 +256,7 @@ class SessionBuffer:
         should_show_diagnostics_panel = False
         view = self.some_view()
         if view is None:
+            print('on_diagnostics_async: No view!', file=sys.stderr)
             return
         change_count = view.change_count()
         if version is None:
@@ -293,6 +294,8 @@ class SessionBuffer:
                 total_warnings,
                 should_show_diagnostics_panel
             )
+        else:
+            print('on_diagnostics_async: version has not changed!', file=sys.stderr)
 
     def _publish_diagnostics_to_session_views(
         self,
@@ -324,6 +327,7 @@ class SessionBuffer:
             delay_in_seconds = userprefs().diagnostics_delay_ms / 1000.0 + self.last_text_change_time - time.time()
             view = self.some_view()
             if view is None:
+                print('_publish_diagnostics_to_session_views: no view!', file=sys.stderr)
                 return
             if view.is_auto_complete_visible():
                 delay_in_seconds += userprefs().diagnostics_additional_delay_auto_complete_ms / 1000.0
@@ -360,6 +364,8 @@ class SessionBuffer:
         mgr = self.session.manager()
         if mgr:
             mgr.update_diagnostics_panel_async()
+        else:
+            print('_present_diagnostics_async: no Manager!', file=sys.stderr)
 
     def __str__(self) -> str:
         return '{}:{}:{}'.format(self.session.config.name, self.id, self.file_name)

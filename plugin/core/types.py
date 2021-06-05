@@ -221,7 +221,7 @@ class Settings:
 
         # Backwards-compatible with "diagnostics_highlight_style"
         diagnostics_highlight_style = s.get("diagnostics_highlight_style")
-        if isinstance(diagnostics_highlight_style, str):
+        if isinstance(diagnostics_highlight_style, str) and not s.has("show_diagnostics_highlights"):
             if diagnostics_highlight_style:
                 self.show_diagnostics_highlights = True
             else:

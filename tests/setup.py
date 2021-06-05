@@ -12,6 +12,7 @@ from sublime_plugin import view_event_listeners
 from test_mocks import basic_responses
 from unittesting import DeferrableTestCase
 import sublime
+import sys
 
 
 CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
@@ -86,6 +87,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     @classmethod
     def setUpClass(cls) -> Generator:
+        print('TextDocumentTestCase.setUpClass START', file=sys.stderr)
         super().setUpClass()
         test_name = cls.get_test_name()
         server_capabilities = cls.get_test_server_capabilities()
@@ -107,8 +109,10 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield {"condition": lambda: cls.session.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
         yield from cls.await_message("initialize")
         yield from cls.await_message("initialized")
+        print('TextDocumentTestCase.setUpClass END', file=sys.stderr)
 
     def setUp(self) -> Generator:
+        print('TextDocumentTestCase.setUp START', file=sys.stderr)
         window = sublime.active_window()
         filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(self.get_test_name())), window)
         open_view = window.find_open_file(filename)
@@ -119,6 +123,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         self.init_view_settings()
         yield self.ensure_document_listener_created
         yield from self.await_message("textDocument/didOpen")
+        print('TextDocumentTestCase.setUp END', file=sys.stderr)
 
     @classmethod
     def get_test_name(cls) -> str:

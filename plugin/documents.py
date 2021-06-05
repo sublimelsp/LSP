@@ -243,10 +243,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         for sb in self.session_buffers_async():
             # do not provide stale diagnostics
             if sb.diagnostics_version == change_count:
+                print('diagnostics_async: bufferid({})! diag: {}'.format(sb.id, sb.diagnostics), file=sys.stderr)
                 yield sb, sb.diagnostics
             else:
-                print('diagnostics_async: outdated diagnostics! d: {}, v: {}'.format(sb.diagnostics_version,
-                                                                                     change_count), file=sys.stderr)
+                print('diagnostics_async: outdated diagnostics({})! d: {}, v: {}'.format(
+                    sb.id, sb.diagnostics_version, change_count), file=sys.stderr)
 
     def diagnostics_intersecting_region_async(
         self,

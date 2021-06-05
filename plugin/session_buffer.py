@@ -63,6 +63,7 @@ class SessionBuffer:
     """
 
     def __init__(self, session_view: SessionViewProtocol, buffer_id: int, language_id: str) -> None:
+        print('SessionBuffer init', file=sys.stderr)
         view = session_view.view
         file_name = view.file_name()
         if not file_name:
@@ -353,7 +354,8 @@ class SessionBuffer:
         total_warnings: int,
         should_show_diagnostics_panel: bool
     ) -> None:
-        print('_present_diagnostics_async: set diagnostics_version: {}'.format(diagnostics_version), file=sys.stderr)
+        print('_present_diagnostics_async({}): set diagnostics_version: {}'.format(
+            self.id, diagnostics_version), file=sys.stderr)
         self.diagnostics_version = diagnostics_version
         self.diagnostics = diagnostics
         self.data_per_severity = data_per_severity

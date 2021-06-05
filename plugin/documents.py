@@ -46,6 +46,7 @@ import functools
 import itertools
 import sublime
 import sublime_plugin
+import sys
 import textwrap
 import webbrowser
 
@@ -240,6 +241,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             # do not provide stale diagnostics
             if sb.diagnostics_version == change_count:
                 yield sb, sb.diagnostics
+            else:
+                print('diagnostics_async: outdated diagnostics! d: {}, v: {}'.format(sb.diagnostics_version,
+                                                                                     change_count), file=sys.stderr)
 
     def diagnostics_intersecting_region_async(
         self,
@@ -476,6 +480,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/codeAction --------------------------------------------------------------------------------------
 
     def _do_code_actions(self) -> None:
+        print('_do_code_actions: region: '.format(self._stored_region), file=sys.stderr)
         diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_region)
         actions_manager.request_for_region_async(self.view, covering, diagnostics_by_config, self._on_code_actions)
 

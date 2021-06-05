@@ -266,7 +266,7 @@ class CodeActionOnSaveTask(SaveTask):
             # Give on_text_changed_async a chance to trigger.
             sublime.set_timeout_async(self._request_code_actions_async)
         else:
-            sublime.set_timeout_async(self._on_complete)
+            self._on_complete()
 
 
 LspSaveCommand.register_task(CodeActionOnSaveTask)

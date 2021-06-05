@@ -385,9 +385,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self.known_ids.remove(key)
         print('DocumentSyncListener.on_close view({}), buffer({})'.format(self.view, self.view.buffer_id()),
               file=sys.stderr)
-        self._clear_session_views_async()
         if self._registered and self._manager:
-            self._manager.unregister_listener_async(self)
+            sublime.set_timeout_async(lambda: self._manager.unregister_listener_async(self))
+        self._clear_session_views_async()
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool:
         if key == "lsp.session_with_capability" and operator == sublime.OP_EQUAL and isinstance(operand, str):

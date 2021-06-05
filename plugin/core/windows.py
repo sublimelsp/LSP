@@ -198,6 +198,7 @@ class WindowManager(Manager):
         # There is no currently no notification in ST that would notify about folder changes.
         self.update_workspace_folders_async()
         self._pending_listeners.appendleft(listener)
+        print('register_listener_async ({})'.format(self._pending_listeners), file=sys.stderr)
         if self._new_listener is None:
             self._dequeue_listener_async()
 
@@ -223,6 +224,8 @@ class WindowManager(Manager):
             try:
                 listener = self._pending_listeners.pop()
                 if not listener.view.is_valid():
+                    print('_dequeue_listener_async: listener is no longer valid view({}), buffer({})'.format(
+                        listener.view, listener.view.buffer_id()), file=sys.stderr)
                     # debug("listener", listener, "is no longer valid")
                     return self._dequeue_listener_async()
                 # debug("adding new pending listener", listener)
@@ -392,6 +395,8 @@ class WindowManager(Manager):
         listeners = list(self._listeners)
         self._listeners.clear()
         for listener in listeners:
+            print('restart_sessions_async: register_listener_async view({}), buffer({})'.format(
+                listener.view, listener.view.buffer_id()), file=sys.stderr)
             self.register_listener_async(listener)
 
     def _end_sessions_async(self) -> None:

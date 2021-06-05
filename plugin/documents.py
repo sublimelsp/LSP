@@ -339,10 +339,14 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
 
     def on_load_async(self) -> None:
+        print('DocumentSyncListener.on_load_async view({}), buffer({})'.format(self.view, self.view.buffer_id()),
+              file=sys.stderr)
         if not self._registered and is_regular_view(self.view):
             self._register_async()
 
     def on_activated_async(self) -> None:
+        print('DocumentSyncListener.on_activated_async view({}), buffer({})'.format(self.view, self.view.buffer_id()),
+              file=sys.stderr)
         if not self._registered and not self.view.is_loading() and is_regular_view(self.view):
             self._register_async()
 
@@ -367,6 +371,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 sv.on_post_save_async()
 
     def on_close(self) -> None:
+        print('DocumentSyncListener.on_close view({}), buffer({})'.format(self.view, self.view.buffer_id()),
+              file=sys.stderr)
         self._clear_session_views_async()
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool:

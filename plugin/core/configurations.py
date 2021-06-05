@@ -3,6 +3,7 @@ from .types import ClientConfig
 from .typing import Any, Generator, List, Set, Dict
 from .workspace import enable_in_project, disable_in_project
 import sublime
+import sys
 
 
 class ConfigManager(object):
@@ -49,6 +50,7 @@ class WindowConfigManager(object):
         return any(self.match_view(view))
 
     def update(self) -> None:
+        print('WindowConfigManager.update', file=sys.stderr)
         project_settings = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
         self.all.clear()
         for name, config in self._global_configs.items():

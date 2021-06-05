@@ -87,7 +87,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     @classmethod
     def setUpClass(cls) -> Generator:
-        print('TextDocumentTestCase.setUpClass START', file=sys.stderr)
+        print('\n\nTextDocumentTestCase.setUpClass START', file=sys.stderr)
         super().setUpClass()
         test_name = cls.get_test_name()
         server_capabilities = cls.get_test_server_capabilities()
@@ -118,7 +118,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         print('TextDocumentTestCase.setUpClass END', file=sys.stderr)
 
     def setUp(self) -> Generator:
-        print('TextDocumentTestCase.setUp START', file=sys.stderr)
+        print('\n\nTextDocumentTestCase.setUp START', file=sys.stderr)
         window = sublime.active_window()
         filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(self.get_test_name())), window)
         open_view = window.find_open_file(filename)
@@ -284,6 +284,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     @classmethod
     def tearDownClass(cls) -> 'Generator':
+        print('TextDocumentTestCase.tearDownClass\n', file=sys.stderr)
         if cls.session and cls.wm:
             sublime.set_timeout_async(cls.session.end_async)
             yield lambda: cls.session.state == ClientStates.STOPPING
@@ -296,6 +297,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         super().tearDownClass()
 
     def doCleanups(self) -> 'Generator':
+        print('TextDocumentTestCase.doCleanups', file=sys.stderr)
         if self.view and self.view.is_valid():
             close_test_view(self.view)
         yield from super().doCleanups()

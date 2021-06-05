@@ -58,6 +58,7 @@ class SessionView:
         self._setup_auto_complete_triggers(settings)
 
     def __del__(self) -> None:
+        print('SessionView __del__ buffer_id({})'.format(self.view.buffer_id()), file=sys.stderr)
         settings = self.view.settings()  # type: sublime.Settings
         self._clear_auto_complete_triggers(settings)
         if self.session.has_capability(self.HOVER_PROVIDER_KEY):

@@ -480,7 +480,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/codeAction --------------------------------------------------------------------------------------
 
     def _do_code_actions(self) -> None:
-        print('_do_code_actions: region: '.format(self._stored_region), file=sys.stderr)
+        print('_do_code_actions: region: {}'.format(self._stored_region), file=sys.stderr)
         diagnostics_by_config, covering = self.diagnostics_intersecting_async(self._stored_region)
         actions_manager.request_for_region_async(self.view, covering, diagnostics_by_config, self._on_code_actions)
 

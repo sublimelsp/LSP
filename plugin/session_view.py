@@ -40,7 +40,7 @@ class SessionView:
         self.progress = {}  # type: Dict[int, ViewProgressReporter]
         settings = self.view.settings()
         buffer_id = self.view.buffer_id()
-        print('SessionView init buffer_id({})'.format(buffer_id), file=sys.stderr)
+        print('SessionView init config({}) buffer_id({})'.format(session.config.name, buffer_id), file=sys.stderr)
         key = (session.config.name, session.window.id(), buffer_id)
         session_buffer = self._session_buffers.get(key)
         if session_buffer is None:
@@ -58,7 +58,8 @@ class SessionView:
         self._setup_auto_complete_triggers(settings)
 
     def __del__(self) -> None:
-        print('SessionView __del__ buffer_id({})'.format(self.view.buffer_id()), file=sys.stderr)
+        print('SessionView __del__ config({}) buffer_id({})'.format(self.session.config.name, self.view.buffer_id()),
+              file=sys.stderr)
         settings = self.view.settings()  # type: sublime.Settings
         self._clear_auto_complete_triggers(settings)
         if self.session.has_capability(self.HOVER_PROVIDER_KEY):

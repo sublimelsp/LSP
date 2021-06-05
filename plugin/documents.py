@@ -655,7 +655,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _on_query_completions_async(self, resolve_completion_list: ResolveCompletionsFn, location: int) -> None:
         sessions = list(self.sessions('completionProvider'))
-        if not sessions:
+        if not sessions or not self.view.is_valid():
             resolve_completion_list([], 0)
             return
         self.purge_changes_async()

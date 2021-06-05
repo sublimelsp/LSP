@@ -259,11 +259,14 @@ class CodeActionOnSaveTask(SaveTask):
                         for code_action in code_actions:
                             tasks.append(session.run_code_action_async(code_action, progress=False))
                         break
-        if document_version != self._task_runner.view.change_count():
+        Promise.all(tasks).then(lambda _: self._on_code_actions_completed(document_version))
+
+    def _on_code_actions_completed(self, previous_document_version: int) -> None:
+        if previous_document_version != self._task_runner.view.change_count():
             # Give on_text_changed_async a chance to trigger.
-            Promise.all(tasks).then(lambda _: sublime.set_timeout_async(self._request_code_actions_async))
+            sublime.set_timeout_async(self._request_code_actions_async)
         else:
-            Promise.all(tasks).then(lambda _: sublime.set_timeout_async(self._on_complete))
+            sublime.set_timeout_async(self._on_complete)
 
 
 LspSaveCommand.register_task(CodeActionOnSaveTask)

@@ -411,7 +411,7 @@ class WindowManager(Manager):
         for session in sessions:
             if session.config.name == config_name:
                 session.end_async()
-                print('end_config_sessions_async: remove session({})'.format(session.config), file=sys.stderr)
+                print('end_config_sessions_async: remove session({})'.format(session.config.name), file=sys.stderr)
                 self._sessions.discard(session)
 
     def get_project_path(self, file_path: str) -> Optional[str]:
@@ -423,7 +423,7 @@ class WindowManager(Manager):
         return candidate
 
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
-        print('on_post_exit_async: remove session({})'.format(session.config), file=sys.stderr)
+        print('on_post_exit_async: remove session({})'.format(session.config.name), file=sys.stderr)
         self._sessions.discard(session)
         for listener in self._listeners:
             listener.on_session_shutdown_async(session)

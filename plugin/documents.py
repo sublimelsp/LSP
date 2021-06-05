@@ -142,6 +142,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     highlights_debounce_time = FEATURES_TIMEOUT
     code_lenses_debounce_time = FEATURES_TIMEOUT + 2000
 
+    known_ids = set()  # type: set[str]
+
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:
         return False
@@ -166,6 +168,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._uri = ""
         self._language_id = ""
         self._registered = False
+        key = '{}-{}'.format(self.view.id(), self.view.buffer_id())
+        if key in self.known_ids:
+            raise Exception('Duplicate View+Buffer: {}'.format(key))
+        else:
+            self.known_ids.add(key)
 
     def _cleanup(self) -> None:
         settings = self.view.settings()
@@ -374,9 +381,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 sv.on_post_save_async()
 
     def on_close(self) -> None:
+        key = '{}-{}'.format(self.view.id(), self.view.buffer_id())
+        self.known_ids.remove(key)
         print('DocumentSyncListener.on_close view({}), buffer({})'.format(self.view, self.view.buffer_id()),
               file=sys.stderr)
         self._clear_session_views_async()
+        self._manager.unregister_listener_async(self)
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool:
         if key == "lsp.session_with_capability" and operator == sublime.OP_EQUAL and isinstance(operand, str):

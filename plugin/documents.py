@@ -152,6 +152,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._setup()
 
     def __del__(self) -> None:
+        print('DocumentSyncListener.__del__ view({}), buffer({})'.format(self.view, self.view.buffer_id()),
+              file=sys.stderr)
         self._cleanup()
 
     def _setup(self) -> None:

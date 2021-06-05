@@ -250,6 +250,7 @@ class SessionBuffer:
         return None
 
     def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
+        print('on_diagnostics_async:', file=sys.stderr)
         data_per_severity = {}  # type: Dict[int, DiagnosticSeverityData]
         total_errors = 0
         total_warnings = 0
@@ -351,6 +352,7 @@ class SessionBuffer:
         total_warnings: int,
         should_show_diagnostics_panel: bool
     ) -> None:
+        print('_present_diagnostics_async: set diagnostics_version: {}'.format(diagnostics_version), file=sys.stderr)
         self.diagnostics_version = diagnostics_version
         self.diagnostics = diagnostics
         self.data_per_severity = data_per_severity

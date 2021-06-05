@@ -386,7 +386,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         print('DocumentSyncListener.on_close view({}), buffer({})'.format(self.view, self.view.buffer_id()),
               file=sys.stderr)
         if self._registered and self._manager:
-            sublime.set_timeout_async(lambda: self._manager.unregister_listener_async(self))
+            manager = self._manager
+            sublime.set_timeout_async(lambda: manager.unregister_listener_async(self))
         self._clear_session_views_async()
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool:

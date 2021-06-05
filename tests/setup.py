@@ -98,8 +98,14 @@ class TextDocumentTestCase(DeferrableTestCase):
         cls.config = cls.get_stdio_test_config()
         cls.config.init_options.set("serverResponse", server_capabilities)
         add_config(cls.config)
+        print('Views bofore', file=sys.stderr)
+        for view in window.views():
+            print('{}, buffer_id({}), path: {}'.format(view, view.buffer_id(), view.file_name()), file=sys.stderr)
         cls.wm = windows.lookup(window)
-        cls.view = window.find_open_file(filename) or window.open_file(filename)
+        cls.view = window.open_file(filename)
+        print('Views after', file=sys.stderr)
+        for view in window.views():
+            print('{}, buffer_id({}), path: {}'.format(view, view.buffer_id(), view.file_name()), file=sys.stderr)
         yield {"condition": lambda: not cls.view.is_loading(), "timeout": TIMEOUT_TIME}
         yield cls.ensure_document_listener_created
         yield {

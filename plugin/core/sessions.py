@@ -50,6 +50,7 @@ from weakref import WeakSet
 import functools
 import mdpopups
 import os
+import sys
 import sublime
 import weakref
 
@@ -1198,7 +1199,7 @@ class Session(TransportCallbacks):
         if sb:
             sb.on_diagnostics_async(params["diagnostics"], params.get("version"))
         else:
-            raise Exception('publishDiagnostics: SessionBuffer does not exist (view closed)?')
+            print('\npublishDiagnostics: SessionBuffer does not exist (view closed)?\n', file=sys.stderr)
 
     def m_client_registerCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/registerCapability request"""

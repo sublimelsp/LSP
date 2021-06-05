@@ -329,6 +329,7 @@ class SessionBuffer:
             if delay_in_seconds <= 0.0:
                 present()
             else:
+                print('\nDebouncing diagnostics for {}\n'.format(delay_in_seconds), file=sys.stderr)
                 self.diagnostics_debouncer.debounce(
                     present,
                     timeout_ms=int(1000.0 * delay_in_seconds),

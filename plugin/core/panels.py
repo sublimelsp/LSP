@@ -2,7 +2,6 @@ from .typing import Dict, Optional, List, Generator, Tuple
 from contextlib import contextmanager
 import sublime
 import sublime_plugin
-import sys
 
 
 # about 80 chars per line implies maintaining a buffer of about 40kb per window
@@ -145,7 +144,6 @@ def is_server_panel_open(window: sublime.Window) -> bool:
 
 
 def log_server_message(window: sublime.Window, prefix: str, message: str) -> None:
-    print("{}: {}\n".format(prefix, message), file=sys.stderr)
     if not window.is_valid():
         return
     window_id = window.id()

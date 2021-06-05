@@ -33,6 +33,7 @@ import functools
 import json
 import os
 import sublime
+import sys
 import threading
 
 
@@ -437,6 +438,7 @@ class WindowManager(Manager):
         self._end_sessions_async()
 
     def handle_server_message(self, server_name: str, message: str) -> None:
+        print("{}: {}".format(server_name, message), file=sys.stderr)
         sublime.set_timeout(lambda: log_server_message(self._window, server_name, message))
 
     def handle_log_message(self, session: Session, params: Any) -> None:

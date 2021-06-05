@@ -99,7 +99,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         cls.config.init_options.set("serverResponse", server_capabilities)
         add_config(cls.config)
         cls.wm = windows.lookup(window)
-        cls.view = window.open_file(filename)
+        cls.view = window.find_open_file(filename) or window.open_file(filename)
         yield {"condition": lambda: not cls.view.is_loading(), "timeout": TIMEOUT_TIME}
         yield cls.ensure_document_listener_created
         yield {

@@ -147,6 +147,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return False
 
     def __init__(self, view: sublime.View) -> None:
+        print('DocumentSyncListener.__init__ view({}), buffer({})'.format(view, view.buffer_id()), file=sys.stderr)
         super().__init__(view)
         self._setup()
 

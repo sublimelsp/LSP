@@ -821,7 +821,7 @@ class Session(TransportCallbacks):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: List[WorkspaceFolder],
                  config: ClientConfig, plugin_class: Optional[Type[AbstractPlugin]]) -> None:
-        print('Session()', file=sys.stderr)
+        print('Session({})'.format(config.name), file=sys.stderr)
         self.transport = None  # type: Optional[Transport]
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger

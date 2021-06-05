@@ -257,7 +257,8 @@ class WindowManager(Manager):
         print('_publish_sessions_to_listener_async: sessions len({})'.format(len(list(self._sessions))),
               file=sys.stderr)
         for session in self._sessions:
-            print('_publish_sessions_to_listener_async: sessions config({})'.format(session.config), file=sys.stderr)
+            print('_publish_sessions_to_listener_async: sessions config({})'.format(session.config.name),
+                  file=sys.stderr)
             if session.can_handle(listener.view, None, inside_workspace):
                 print('_publish_sessions_to_listener_async: view({})'.format(listener.view), file=sys.stderr)
                 # debug("registering session", session.config.name, "to listener", listener)

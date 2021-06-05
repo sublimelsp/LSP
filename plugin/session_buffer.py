@@ -63,7 +63,7 @@ class SessionBuffer:
     """
 
     def __init__(self, session_view: SessionViewProtocol, buffer_id: int, language_id: str) -> None:
-        print('SessionBuffer init id({})'.format(buffer_id), file=sys.stderr)
+        print('SessionBuffer init name({}) id({})'.format(session_view.session.config.name, buffer_id), file=sys.stderr)
         view = session_view.view
         file_name = view.file_name()
         if not file_name:
@@ -92,7 +92,7 @@ class SessionBuffer:
         self.session.register_session_buffer_async(self)
 
     def __del__(self) -> None:
-        print('SessionBuffer __del__ id({})'.format(self.id), file=sys.stderr)
+        print('SessionBuffer __del__ name({}) id({})'.format(self.session.config.name, self.id), file=sys.stderr)
         mgr = self.session.manager()
         if mgr:
             mgr.update_diagnostics_panel_async()

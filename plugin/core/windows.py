@@ -401,7 +401,8 @@ class WindowManager(Manager):
     def _end_sessions_async(self) -> None:
         for session in self._sessions:
             session.end_async()
-        print('WindowsManager._end_sessions_async: (ended: {})'.format([s.config.name for s in self._sessions]), file=sys.stderr)
+        print('WindowsManager._end_sessions_async: (ended: {})'.format([s.config.name for s in self._sessions]),
+              file=sys.stderr)
         self._sessions.clear()
 
     def end_config_sessions_async(self, config_name: str) -> None:

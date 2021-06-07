@@ -27,7 +27,7 @@ class SaveTask(metaclass=ABCMeta):
 
     def run_async(self) -> None:
         self._erase_view_status()
-        sublime.set_timeout_async(self._on_timeout, userprefs().code_action_on_save_timeout_ms)
+        sublime.set_timeout_async(self._on_timeout, userprefs().on_save_task_timeout_ms)
 
     def _on_timeout(self) -> None:
         if not self._completed and not self._cancelled:

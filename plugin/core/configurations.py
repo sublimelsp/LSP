@@ -50,7 +50,6 @@ class WindowConfigManager(object):
         return any(self.match_view(view))
 
     def update(self) -> None:
-        print('WindowConfigManager.update', file=sys.stderr)
         project_settings = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
         self.all.clear()
         for name, config in self._global_configs.items():
@@ -65,6 +64,7 @@ class WindowConfigManager(object):
         for name, c in project_settings.items():
             debug("loading project-only configuration", name)
             self.all[name] = ClientConfig.from_dict(name, c)
+        print('WindowConfigManager.update (new configs: {})'.format(self.all.keys()), file=sys.stderr)
         self._window.run_command("lsp_recheck_sessions")
 
     def enable_config(self, config_name: str) -> None:

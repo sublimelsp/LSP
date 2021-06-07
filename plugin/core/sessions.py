@@ -864,6 +864,10 @@ class Session(TransportCallbacks):
     # --- session view management --------------------------------------------------------------------------------------
 
     def register_session_view_async(self, sv: SessionViewProtocol) -> None:
+        print('Session.register_session_view_async - new: {}, existing: {}'.format(
+                '{} buffer_id({})'.format(sv.view, sv.view.buffer_id()),
+                ['{} buffer_id({})'.format(sv.view, sv.view.buffer_id()) for sv in self._session_views]
+            ), file=sys.stderr)
         self._session_views.add(sv)
         self._views_opened += 1
         for status_key, message in self._status_messages.items():
@@ -871,6 +875,10 @@ class Session(TransportCallbacks):
 
     def unregister_session_view_async(self, sv: SessionViewProtocol) -> None:
         self._session_views.discard(sv)
+        print('Session.unregister_session_view_async - removed: {}, remaining SessionViews: {}'.format(
+                '{} buffer_id({})'.format(sv.view, sv.view.buffer_id()),
+                ['{} buffer_id({})'.format(sv.view, sv.view.buffer_id()) for sv in self._session_views]
+            ), file=sys.stderr)
         if not self._session_views:
             current_count = self._views_opened
             debounced(self.end_async, 3000, lambda: self._views_opened == current_count, async_thread=True)

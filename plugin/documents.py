@@ -149,7 +149,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         return False
 
     def __init__(self, view: sublime.View) -> None:
-        print('DocumentSyncListener.__init__ view({}), buffer({})'.format(view, view.buffer_id()), file=sys.stderr)
+        print('DocumentSyncListener.__init__ view({}), buffer({}) {}'.format(
+            view, view.buffer_id(), view.element() or view.file_name() or 'EMPTY'), file=sys.stderr)
         super().__init__(view)
         self._setup()
 
@@ -349,13 +350,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
 
     def on_load_async(self) -> None:
-        print('DocumentSyncListener.on_load_async view({}), buffer({})'.format(self.view, self.view.buffer_id()),
+        print('DocumentSyncListener.on_load_async {}, buffer({})'.format(self.view, self.view.buffer_id()),
               file=sys.stderr)
         if not self._registered and is_regular_view(self.view):
             self._register_async()
 
     def on_activated_async(self) -> None:
-        print('DocumentSyncListener.on_activated_async view({}), buffer({})'.format(self.view, self.view.buffer_id()),
+        print('DocumentSyncListener.on_activated_async {}, buffer({})'.format(self.view, self.view.buffer_id()),
               file=sys.stderr)
         if not self._registered and not self.view.is_loading() and is_regular_view(self.view):
             self._register_async()
@@ -383,8 +384,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_close(self) -> None:
         key = '{}-{}'.format(self.view.id(), self.view.buffer_id())
         self.known_ids.remove(key)
-        print('DocumentSyncListener.on_close view({}), buffer({})'.format(self.view, self.view.buffer_id()),
-              file=sys.stderr)
+        print('DocumentSyncListener.on_close view({}), buffer({}) {}'.format(
+            self.view, self.view.buffer_id(), self.view.element() or self.view.file_name() or 'EMPTY'), file=sys.stderr)
         if self._registered and self._manager:
             manager = self._manager
             sublime.set_timeout_async(lambda: manager.unregister_listener_async(self))

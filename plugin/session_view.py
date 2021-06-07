@@ -40,7 +40,8 @@ class SessionView:
         self.progress = {}  # type: Dict[int, ViewProgressReporter]
         settings = self.view.settings()
         buffer_id = self.view.buffer_id()
-        print('SessionView init config({}) buffer_id({})'.format(session.config.name, buffer_id), file=sys.stderr)
+        print('SessionView.__init__({}) {} buffer_id({})'.format(session.config.name, self.view, buffer_id),
+              file=sys.stderr)
         key = (session.config.name, session.window.id(), buffer_id)
         session_buffer = self._session_buffers.get(key)
         if session_buffer is None:

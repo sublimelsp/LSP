@@ -87,7 +87,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     @classmethod
     def setUpClass(cls) -> Generator:
-        print('\n\nTextDocumentTestCase.setUpClass START', file=sys.stderr)
+        print('\n\n{}.setUpClass START'.format(cls.__name__), file=sys.stderr)
         super().setUpClass()
         test_name = cls.get_test_name()
         server_capabilities = cls.get_test_server_capabilities()
@@ -98,38 +98,39 @@ class TextDocumentTestCase(DeferrableTestCase):
         cls.config = cls.get_stdio_test_config()
         cls.config.init_options.set("serverResponse", server_capabilities)
         add_config(cls.config)
-        print('Views bofore', file=sys.stderr)
-        for view in window.views():
-            print('{}, buffer_id({}), path: {}'.format(view, view.buffer_id(), view.file_name()), file=sys.stderr)
+        print('Views before ({})'.format(['{}, buffer_id({})'.format(v, v.buffer_id()) for v in window.views()]),
+              file=sys.stderr)
         cls.wm = windows.lookup(window)
         cls.view = window.open_file(filename)
-        print('Views after', file=sys.stderr)
-        for view in window.views():
-            print('{}, buffer_id({}), path: {}'.format(view, view.buffer_id(), view.file_name()), file=sys.stderr)
+        print('Views after ({})'.format(['{}, buffer_id({})'.format(v, v.buffer_id()) for v in window.views()]),
+              file=sys.stderr)
         yield {"condition": lambda: not cls.view.is_loading(), "timeout": TIMEOUT_TIME}
         yield cls.ensure_document_listener_created
         yield {
-            "condition": lambda: cls.wm.get_session(cls.config.name, cls.view.file_name()) is not None,
+            "condition": lambda: cls.wm.get_session(cls.config.name, filename) is not None,
             "timeout": TIMEOUT_TIME}
-        cls.session = cls.wm.get_session(cls.config.name, cls.view.file_name())
+        cls.session = cls.wm.get_session(cls.config.name, filename)
         yield {"condition": lambda: cls.session.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
         yield from cls.await_message("initialize")
         yield from cls.await_message("initialized")
-        print('TextDocumentTestCase.setUpClass END', file=sys.stderr)
+        close_test_view(cls.view)
+        print('{}.setUpClass END\n'.format(cls.__name__), file=sys.stderr)
 
     def setUp(self) -> Generator:
-        print('\n\nTextDocumentTestCase.setUp START', file=sys.stderr)
+        print('\n\n{}.setUp START'.format(type(self).__name__), file=sys.stderr)
         window = sublime.active_window()
         filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(self.get_test_name())), window)
         open_view = window.find_open_file(filename)
         if not open_view:
+            print('{}.setUp Open file'.format(type(self).__name__), file=sys.stderr)
             self.__class__.view = window.open_file(filename)
             yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
             self.assertTrue(self.wm._configs.match_view(self.view))
         self.init_view_settings()
         yield self.ensure_document_listener_created
-        yield from self.await_message("textDocument/didOpen")
-        print('TextDocumentTestCase.setUp END', file=sys.stderr)
+        params = yield from self.await_message("textDocument/didOpen")
+        self.assertEquals(params['textDocument']['version'], 0)
+        print('{}.setUp END\n'.format(type(self).__name__), file=sys.stderr)
 
     @classmethod
     def get_test_name(cls) -> str:
@@ -284,7 +285,7 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     @classmethod
     def tearDownClass(cls) -> 'Generator':
-        print('TextDocumentTestCase.tearDownClass\n', file=sys.stderr)
+        print('{}.tearDownClass START'.format(cls.__name__), file=sys.stderr)
         if cls.session and cls.wm:
             sublime.set_timeout_async(cls.session.end_async)
             yield lambda: cls.session.state == ClientStates.STOPPING
@@ -295,9 +296,11 @@ class TextDocumentTestCase(DeferrableTestCase):
         # restore the user's configs
         remove_config(cls.config)
         super().tearDownClass()
+        print('{}.tearDownClass END\n'.format(cls.__name__), file=sys.stderr)
 
     def doCleanups(self) -> 'Generator':
-        print('TextDocumentTestCase.doCleanups', file=sys.stderr)
+        print('{}.doCleanups START'.format(type(self).__name__), file=sys.stderr)
         if self.view and self.view.is_valid():
             close_test_view(self.view)
         yield from super().doCleanups()
+        print('{}.doCleanups END\n'.format(type(self).__name__), file=sys.stderr)

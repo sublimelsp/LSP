@@ -245,6 +245,7 @@ class WindowManager(Manager):
         config = self._needed_config(listener.view)
         if config:
             # debug("found new config for listener", listener)
+            print('_dequeue_listener_async: starting new Session({})'.format(config.name), file=sys.stderr)
             self._new_listener = listener
             self.start_async(config, listener.view)
         else:
@@ -254,13 +255,10 @@ class WindowManager(Manager):
 
     def _publish_sessions_to_listener_async(self, listener: AbstractViewListener) -> None:
         inside_workspace = self._workspace.contains(listener.view)
-        print('_publish_sessions_to_listener_async: sessions len({})'.format(len(list(self._sessions))),
-              file=sys.stderr)
         for session in self._sessions:
-            print('_publish_sessions_to_listener_async: sessions config({})'.format(session.config.name),
-                  file=sys.stderr)
             if session.can_handle(listener.view, None, inside_workspace):
-                print('_publish_sessions_to_listener_async: view({})'.format(listener.view), file=sys.stderr)
+                print('_dequeue_listener_async: existing session started for listener({})'.format(listener.view),
+                      file=sys.stderr)
                 # debug("registering session", session.config.name, "to listener", listener)
                 listener.on_session_initialized_async(session)
 
@@ -403,7 +401,7 @@ class WindowManager(Manager):
     def _end_sessions_async(self) -> None:
         for session in self._sessions:
             session.end_async()
-        print('_end_sessions_async: remove all', file=sys.stderr)
+        print('WindowsManager._end_sessions_async: (ended: {})'.format([s.config.name for s in self._sessions]), file=sys.stderr)
         self._sessions.clear()
 
     def end_config_sessions_async(self, config_name: str) -> None:

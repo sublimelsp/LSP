@@ -63,8 +63,9 @@ class SessionBuffer:
     """
 
     def __init__(self, session_view: SessionViewProtocol, buffer_id: int, language_id: str) -> None:
-        print('SessionBuffer init name({}) id({})'.format(session_view.session.config.name, buffer_id), file=sys.stderr)
         view = session_view.view
+        print('SessionBuffer.__init__ name({}) {} id({})'.format(session_view.session.config.name, view, buffer_id),
+              file=sys.stderr)
         file_name = view.file_name()
         if not file_name:
             raise ValueError("missing filename")

@@ -235,9 +235,6 @@ class CodeActionOnSaveTask(SaveTask):
                 allowed_code_actions[key] = value
         return allowed_code_actions
 
-    def get_task_timeout_ms(self) -> int:
-        return userprefs().code_action_on_save_timeout_ms
-
     def run_async(self) -> None:
         super().run_async()
         self._request_code_actions_async()

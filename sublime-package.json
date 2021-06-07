@@ -185,7 +185,12 @@
             "code_action_on_save_timeout_ms": {
               "type": "integer",
               "default": 2000,
-              "markdownDescription": "The amount of time the code actions on save are allowed to run for."
+              "deprecationMessage": "Use the \"on_save_task_timeout_ms\" setting instead."
+            },
+            "on_save_task_timeout_ms": {
+              "type": "integer",
+              "default": 2000,
+              "markdownDescription": "The amount of time the save tasks (like code actions on save, formatting or WillSaveWaitUntil) are each allowed to run for."
             },
             "show_diagnostics_panel_on_save": {
               "type": "integer",

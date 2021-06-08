@@ -323,7 +323,7 @@ Follow installation instructions on [LSP-serenata](https://github.com/Cloudstek/
 
 ## PowerShell
 
-Follow installation instructions on [LSP-PowerShellEditorServices](https://github.com/Cloudstek/LSP-PowerShellEditorServices).
+Follow installation instructions on [LSP-PowerShellEditorServices](https://github.com/sublimelsp/LSP-PowerShellEditorServices).
 
 ## Python
 

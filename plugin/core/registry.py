@@ -108,13 +108,14 @@ class LspRestartServerCommand(LspTextCommand):
             return
         self._config_names = [session.config.name for session in self.sessions()] if not config_name else [config_name]
         if len(self._config_names) > 0:
-            if len(self._config_names) == 1 or not show_quick_panel:
-                if not show_quick_panel:
-                    self._config_names.clear()
+            if len(self._config_names) == 1:
                 self.restart_server(0)
             else:
                 self._config_names.insert(0, 'All Servers')
-                self.window.show_quick_panel(self._config_names, self.restart_server)
+                if not show_quick_panel:
+                    self.restart_server(0)
+                else:
+                    self.window.show_quick_panel(self._config_names, self.restart_server)
 
     def restart_server(self, index: int) -> None:
         if index > -1:

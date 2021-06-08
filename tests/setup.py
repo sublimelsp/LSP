@@ -69,9 +69,12 @@ def remove_config(config):
     client_configs.remove_for_testing(config)
 
 
-def close_test_view(view: Optional[sublime.View]):
+def close_test_view(view: Optional[sublime.View]) -> 'Generator':
     if view:
         view.set_scratch(True)
+        # Ensure that the view stopped loading before closing to avoid ST issue:
+        # https://github.com/sublimehq/sublime_text/issues/2333
+        yield {"condition": lambda: not view.is_loading(), "timeout": TIMEOUT_TIME}
         view.close()
 
 
@@ -94,7 +97,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         window = sublime.active_window()
         filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(test_name)), window)
         open_view = window.find_open_file(filename)
-        close_test_view(open_view)
+        yield from close_test_view(open_view)
         cls.config = cls.get_stdio_test_config()
         cls.config.init_options.set("serverResponse", server_capabilities)
         add_config(cls.config)
@@ -113,7 +116,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield {"condition": lambda: cls.session.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
         yield from cls.await_message("initialize")
         yield from cls.await_message("initialized")
-        close_test_view(cls.view)
+        yield from close_test_view(cls.view)
         print('{}.setUpClass END\n'.format(cls.__name__), file=sys.stderr)
 
     def setUp(self) -> Generator:
@@ -301,6 +304,6 @@ class TextDocumentTestCase(DeferrableTestCase):
     def doCleanups(self) -> 'Generator':
         print('{}.doCleanups START'.format(type(self).__name__), file=sys.stderr)
         if self.view and self.view.is_valid():
-            close_test_view(self.view)
+            yield from close_test_view(self.view)
         yield from super().doCleanups()
         print('{}.doCleanups END\n'.format(type(self).__name__), file=sys.stderr)

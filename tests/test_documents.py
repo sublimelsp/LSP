@@ -62,7 +62,7 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
     def test_sends_did_open_to_multiple_sessions(self) -> Generator:
         filename = expand(join("$packages", "LSP", "tests", "testfile.txt"), self.window)
         open_view = self.window.find_open_file(filename)
-        close_test_view(open_view)
+        yield from close_test_view(open_view)
         self.view = self.window.open_file(filename)
         yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
         self.assertTrue(self.wm._configs.match_view(self.view))
@@ -89,12 +89,12 @@ class WindowDocumentHandlerTests(DeferrableTestCase):
         yield from self.await_message("textDocument/didChange")
         self.assertEqual(self.view.get_status("lsp_TEST"), "TEST")
         self.assertEqual(self.view.get_status("lsp_TEST-2"), "TEST-2")
-        close_test_view(self.view)
+        yield from close_test_view(self.view)
         yield from self.await_message("textDocument/didClose")
 
     def doCleanups(self) -> Generator:
         try:
-            close_test_view(self.view)
+            yield from close_test_view(self.view)
         except Exception:
             pass
         if self.session1:

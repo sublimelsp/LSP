@@ -102,17 +102,19 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
 
 class LspRestartServerCommand(LspTextCommand):
-    def run(self, edit: Any, config_name: str = None) -> None:
+    def run(self, edit: Any, config_name: str = None, show_quick_panel: bool = False) -> None:
         self.window = self.view.window()
-        if self.window:
-            self._config_names = [session.config.name for session in self.sessions()] if not config_name else [
-                config_name]
-            if len(self._config_names) > 0:
-                if len(self._config_names) == 1:
-                    self.restart_server(0)
-                else:
-                    self._config_names.insert(0, 'All Servers')
-                    self.window.show_quick_panel(self._config_names, self.restart_server)
+        if not self.window:
+            return
+        self._config_names = [session.config.name for session in self.sessions()] if not config_name else [config_name]
+        if len(self._config_names) > 0:
+            if len(self._config_names) == 1 or not show_quick_panel:
+                if not show_quick_panel:
+                    self._config_names.clear()
+                self.restart_server(0)
+            else:
+                self._config_names.insert(0, 'All Servers')
+                self.window.show_quick_panel(self._config_names, self.restart_server)
 
     def restart_server(self, index: int) -> None:
         if index > -1:
@@ -120,7 +122,7 @@ class LspRestartServerCommand(LspTextCommand):
             def run_async() -> None:
                 wm = windows.lookup(self.window)
                 config_name = self._config_names[index]
-                if not self.session_by_name(config_name):
+                if not config_name or not self.session_by_name(config_name):
                     wm.restart_sessions_async()
                 else:
                     wm.end_config_sessions_async(config_name)

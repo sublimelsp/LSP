@@ -104,9 +104,12 @@ class LspSymbolReferencesCommand(LspTextCommand):
 
 def _get_relative_path(base_dir: Optional[str], file_path: str) -> str:
     if base_dir:
-        return os.path.relpath(file_path, base_dir)
-    else:
-        return file_path
+        try:
+            return os.path.relpath(file_path, base_dir)
+        except ValueError:
+            # On Windows, ValueError is raised when path and start are on different drives.
+            pass
+    return file_path
 
 
 def _group_locations_by_uri(

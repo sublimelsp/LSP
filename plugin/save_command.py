@@ -1,4 +1,5 @@
 from .core.registry import LspTextCommand
+from .core.settings import userprefs
 from .core.typing import Callable, List, Type
 from abc import ABCMeta, abstractmethod
 import sublime
@@ -11,8 +12,6 @@ class SaveTask(metaclass=ABCMeta):
 
     Note: The whole task runs on the async thread.
     """
-
-    DEFAULT_TASK_TIMEOUT = 1000
 
     @classmethod
     @abstractmethod
@@ -28,16 +27,13 @@ class SaveTask(metaclass=ABCMeta):
 
     def run_async(self) -> None:
         self._erase_view_status()
-        sublime.set_timeout_async(self._on_timeout, self.get_task_timeout_ms())
+        sublime.set_timeout_async(self._on_timeout, userprefs().on_save_task_timeout_ms)
 
     def _on_timeout(self) -> None:
         if not self._completed and not self._cancelled:
             self._set_view_status('LSP: Timeout processing {}'.format(self.__class__.__name__))
             self._cancelled = True
             self._on_done()
-
-    def get_task_timeout_ms(self) -> int:
-        return self.DEFAULT_TASK_TIMEOUT
 
     def cancel(self) -> None:
         self._cancelled = True

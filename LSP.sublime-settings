@@ -27,8 +27,9 @@
     // "source.organizeImports": true,
   },
 
-  // The amount of time the code actions on save are allowed to run for.
-  "code_action_on_save_timeout_ms": 2000,
+  // The amount of time the save tasks (like code actions on save,
+  // formatting or WillSaveWaitUntil) are each allowed to run for.
+  "on_save_task_timeout_ms": 2000,
 
   // Open the diagnostics panel automatically on save when diagnostics level is
   // equal to or less than:

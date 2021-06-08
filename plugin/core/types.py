@@ -130,7 +130,6 @@ def read_list_setting(settings_obj: sublime.Settings, key: str, default: list) -
 class Settings:
 
     # This is only for mypy
-    code_action_on_save_timeout_ms = None  # type: int
     diagnostics_additional_delay_auto_complete_ms = None  # type: int
     diagnostics_delay_ms = None  # type: int
     diagnostics_gutter_marker = None  # type: str
@@ -144,6 +143,7 @@ class Settings:
     log_server = None  # type: List[str]
     lsp_code_actions_on_save = None  # type: Dict[str, bool]
     lsp_format_on_save = None  # type: bool
+    on_save_task_timeout_ms = None  # type: int
     only_show_lsp_completions = None  # type: bool
     popup_max_characters_height = None  # type: int
     popup_max_characters_width = None  # type: int
@@ -167,7 +167,6 @@ class Settings:
             val = s.get(name)
             setattr(self, name, val if isinstance(val, default.__class__) else default)
 
-        r("code_action_on_save_timeout_ms", 2000)
         r("diagnostics_additional_delay_auto_complete_ms", 0)
         r("diagnostics_delay_ms", 0)
         r("diagnostics_gutter_marker", "dot")
@@ -178,6 +177,7 @@ class Settings:
         r("log_max_size", 8 * 1024)
         r("lsp_code_actions_on_save", {})
         r("lsp_format_on_save", False)
+        r("on_save_task_timeout_ms", 2000)
         r("only_show_lsp_completions", False)
         r("popup_max_characters_height", 1000)
         r("popup_max_characters_width", 120)
@@ -224,6 +224,11 @@ class Settings:
         if isinstance(diagnostics_highlight_style, str):
             if not diagnostics_highlight_style:
                 self.show_diagnostics_highlights = False
+
+        # Backwards-compatible with "code_action_on_save_timeout_ms"
+        code_action_on_save_timeout_ms = s.get("code_action_on_save_timeout_ms")
+        if isinstance(code_action_on_save_timeout_ms, int):
+            self.on_save_task_timeout_ms = code_action_on_save_timeout_ms
 
         set_debug_logging(self.log_debug)
 

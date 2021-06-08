@@ -72,8 +72,6 @@ def remove_config(config):
 def close_test_view(view: Optional[sublime.View]) -> 'Generator':
     if view:
         view.set_scratch(True)
-        # Ensure that the view stopped loading before closing to avoid ST issue:
-        # https://github.com/sublimehq/sublime_text/issues/2333
         yield {"condition": lambda: not view.is_loading(), "timeout": TIMEOUT_TIME}
         view.close()
 

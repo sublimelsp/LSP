@@ -52,8 +52,8 @@
         "command": "lsp_format_document_range",
     },
     {
-        "caption": "LSP: Restart Servers",
-        "command": "lsp_restart_client",
+        "caption": "LSP: Restart Server",
+        "command": "lsp_restart_server",
     },
     {
         "caption": "LSP: Goto Symbol",

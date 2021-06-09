@@ -3,23 +3,21 @@ name: main
 on:
   push:
     branches:
-      - master
       - main
   pull_request:
     branches:
-      - master
       - main
 
 env:
   CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
-  SUBLIME_TEXT_VERSION: "3"
+  SUBLIME_TEXT_VERSION: "4"
   SUBLIME_TEXT_ARCH: x64
   PACKAGE: LSP
+  UNITTESTING_TAG: master
 
 jobs:
   macOS:
     runs-on: macos-latest
-    if: github.ref == 'refs/heads/master' || github.base_ref == 'master'
     steps:
       - uses: actions/checkout@v1
       - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
@@ -32,15 +30,11 @@ jobs:
           sh ci.sh install_package_control
           subl --stay &
           sleep 8
-          sh ci.sh run_tests --coverage
+          sh ci.sh run_tests
         name: Run UnitTesting tests
-      - run: |
-          pip3 install coverage==4.5.4 codecov==2.0.15
-          codecov
 
   Linux:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master' || github.base_ref == 'master'
     container: sublimetext/unittesting
     steps:
       - uses: actions/checkout@v1
@@ -55,11 +49,8 @@ jobs:
           PATH="$HOME/.local/bin:$PATH"
           sh github.sh bootstrap
           sh github.sh install_package_control
-          sh github.sh run_tests --coverage
+          sh github.sh run_tests
         name: Run UnitTesting tests
-      - run: |
-          pip3 install coverage==4.5.4 codecov==2.0.15
-          codecov
 
   Lint:
     runs-on: ubuntu-latest

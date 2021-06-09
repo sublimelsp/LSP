@@ -362,6 +362,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 sv.on_post_save_async()
 
     def on_close(self) -> None:
+        if self._registered and self._manager:
+            manager = self._manager
+            sublime.set_timeout_async(lambda: manager.unregister_listener_async(self))
         self._clear_session_views_async()
 
     def on_query_context(self, key: str, operator: int, operand: Any, match_all: bool) -> bool:
@@ -658,7 +661,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _on_query_completions_async(self, resolve_completion_list: ResolveCompletionsFn, location: int) -> None:
         sessions = list(self.sessions('completionProvider'))
-        if not sessions:
+        if not sessions or not self.view.is_valid():
             resolve_completion_list([], 0)
             return
         self.purge_changes_async()

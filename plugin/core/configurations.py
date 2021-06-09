@@ -40,14 +40,9 @@ class WindowConfigManager(object):
         """
         try:
             for config in self.all.values():
-                if config.match_view(view):
-                    if config.enabled:
-                        yield config
-                    elif include_disabled:
-                        yield config
-        except IndexError:
-            # We're in the worker thread, and the view is already closed. This means view.scope_name(0) returns an
-            # empty string.
+                if config.match_view(view) and (config.enabled or include_disabled):
+                    yield config
+        except (IndexError, RuntimeError):
             pass
 
     def is_supported(self, view: Any) -> bool:

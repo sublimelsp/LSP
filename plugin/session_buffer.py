@@ -17,6 +17,7 @@ from .core.views import did_close
 from .core.views import did_open
 from .core.views import did_save
 from .core.views import format_diagnostic_for_panel
+from .core.views import MissingFilenameError
 from .core.views import range_to_region
 from .core.views import will_save
 from weakref import WeakSet
@@ -212,8 +213,11 @@ class SessionBuffer:
             else:
                 changes = self.pending_changes.changes
                 version = self.pending_changes.version
-            notification = did_change(view, version, changes)
-            self.session.send_notification(notification)
+            try:
+                notification = did_change(view, version, changes)
+                self.session.send_notification(notification)
+            except MissingFilenameError:
+                pass  # we're closing
             self.pending_changes = None
 
     def on_pre_save_async(self, view: sublime.View, old_file_name: str) -> None:

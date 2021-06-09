@@ -1331,6 +1331,8 @@ class Session(TransportCallbacks):
             self._plugin.on_session_end_async()
             self._plugin = None
         for sv in self.session_views_async():
+            for status_key in self._status_messages.keys():
+                sv.view.erase_status(status_key)
             sv.shutdown_async()
         self.capabilities.clear()
         self._registrations.clear()

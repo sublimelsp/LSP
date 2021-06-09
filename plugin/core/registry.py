@@ -107,7 +107,7 @@ class LspRestartServerCommand(LspTextCommand):
         if not self.window:
             return
         self._config_names = [session.config.name for session in self.sessions()] if not config_name else [config_name]
-        if len(self._config_names) < 0:
+        if not self._config_names:
             return
         if len(self._config_names) == 1:
             self.restart_server(0)

@@ -122,7 +122,7 @@ class LspRestartServerCommand(LspTextCommand):
         if index > -1:
 
             def run_async() -> None:
-                wm = windows.lookup(self.view.window)
+                wm = windows.lookup(self.view.window())
                 config_name = self._config_names[index]
                 if not config_name or not self.session_by_name(config_name):
                     wm.restart_sessions_async()

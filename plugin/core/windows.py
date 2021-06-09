@@ -33,7 +33,6 @@ import functools
 import json
 import os
 import sublime
-import sys
 import threading
 
 
@@ -198,7 +197,6 @@ class WindowManager(Manager):
         # There is no currently no notification in ST that would notify about folder changes.
         self.update_workspace_folders_async()
         self._pending_listeners.appendleft(listener)
-        print('register_listener_async ({})'.format(self._pending_listeners), file=sys.stderr)
         if self._new_listener is None:
             self._dequeue_listener_async()
 
@@ -224,8 +222,6 @@ class WindowManager(Manager):
             try:
                 listener = self._pending_listeners.pop()
                 if not listener.view.is_valid():
-                    print('_dequeue_listener_async: listener is no longer valid view({}), buffer({})'.format(
-                        listener.view, listener.view.buffer_id()), file=sys.stderr)
                     # debug("listener", listener, "is no longer valid")
                     return self._dequeue_listener_async()
                 # debug("adding new pending listener", listener)
@@ -245,7 +241,6 @@ class WindowManager(Manager):
         config = self._needed_config(listener.view)
         if config:
             # debug("found new config for listener", listener)
-            print('_dequeue_listener_async: starting new Session({})'.format(config.name), file=sys.stderr)
             self._new_listener = listener
             self.start_async(config, listener.view)
         else:
@@ -257,8 +252,6 @@ class WindowManager(Manager):
         inside_workspace = self._workspace.contains(listener.view)
         for session in self._sessions:
             if session.can_handle(listener.view, None, inside_workspace):
-                print('_dequeue_listener_async: existing session started for listener({})'.format(listener.view),
-                      file=sys.stderr)
                 # debug("registering session", session.config.name, "to listener", listener)
                 listener.on_session_initialized_async(session)
 
@@ -394,15 +387,11 @@ class WindowManager(Manager):
         listeners = list(self._listeners)
         self._listeners.clear()
         for listener in listeners:
-            print('restart_sessions_async: register_listener_async view({}), buffer({})'.format(
-                listener.view, listener.view.buffer_id()), file=sys.stderr)
             self.register_listener_async(listener)
 
     def _end_sessions_async(self) -> None:
         for session in self._sessions:
             session.end_async()
-        print('WindowsManager._end_sessions_async: (ended: {})'.format([s.config.name for s in self._sessions]),
-              file=sys.stderr)
         self._sessions.clear()
 
     def end_config_sessions_async(self, config_name: str) -> None:
@@ -410,7 +399,6 @@ class WindowManager(Manager):
         for session in sessions:
             if session.config.name == config_name:
                 session.end_async()
-                print('end_config_sessions_async: remove session({})'.format(session.config.name), file=sys.stderr)
                 self._sessions.discard(session)
 
     def get_project_path(self, file_path: str) -> Optional[str]:
@@ -422,7 +410,6 @@ class WindowManager(Manager):
         return candidate
 
     def on_post_exit_async(self, session: Session, exit_code: int, exception: Optional[Exception]) -> None:
-        print('on_post_exit_async: remove session({})'.format(session.config.name), file=sys.stderr)
         self._sessions.discard(session)
         for listener in self._listeners:
             listener.on_session_shutdown_async(session)
@@ -450,7 +437,6 @@ class WindowManager(Manager):
         self._end_sessions_async()
 
     def handle_server_message(self, server_name: str, message: str) -> None:
-        print("{}: {}".format(server_name, message), file=sys.stderr)
         sublime.set_timeout(lambda: log_server_message(self._window, server_name, message))
 
     def handle_log_message(self, session: Session, params: Any) -> None:

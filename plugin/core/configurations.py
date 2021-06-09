@@ -3,7 +3,6 @@ from .types import ClientConfig
 from .typing import Any, Generator, List, Set, Dict
 from .workspace import enable_in_project, disable_in_project
 import sublime
-import sys
 
 
 class ConfigManager(object):
@@ -64,7 +63,6 @@ class WindowConfigManager(object):
         for name, c in project_settings.items():
             debug("loading project-only configuration", name)
             self.all[name] = ClientConfig.from_dict(name, c)
-        print('WindowConfigManager.update (new configs: {})'.format(self.all.keys()), file=sys.stderr)
         self._window.run_command("lsp_recheck_sessions")
 
     def enable_config(self, config_name: str) -> None:

@@ -12,7 +12,6 @@ from .session_buffer import SessionBuffer
 from weakref import ref
 from weakref import WeakValueDictionary
 import sublime
-import sys
 import functools
 
 DIAGNOSTIC_TAG_VALUES = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]
@@ -40,15 +39,12 @@ class SessionView:
         self.progress = {}  # type: Dict[int, ViewProgressReporter]
         settings = self.view.settings()
         buffer_id = self.view.buffer_id()
-        print('SessionView.__init__({}) {} buffer_id({})'.format(session.config.name, self.view, buffer_id),
-              file=sys.stderr)
         key = (session.config.name, session.window.id(), buffer_id)
         session_buffer = self._session_buffers.get(key)
         if session_buffer is None:
             session_buffer = SessionBuffer(self, buffer_id, listener.get_language_id())
             self._session_buffers[key] = session_buffer
         else:
-            print('Found existing buffer_id({})'.format(buffer_id), file=sys.stderr)
             session_buffer.add_session_view(self)
         self.session_buffer = session_buffer
         session.register_session_view_async(self)
@@ -59,8 +55,6 @@ class SessionView:
         self._setup_auto_complete_triggers(settings)
 
     def __del__(self) -> None:
-        print('SessionView __del__ config({}) buffer_id({})'.format(self.session.config.name, self.view.buffer_id()),
-              file=sys.stderr)
         settings = self.view.settings()  # type: sublime.Settings
         self._clear_auto_complete_triggers(settings)
         if self.session.has_capability(self.HOVER_PROVIDER_KEY):

@@ -50,7 +50,6 @@ from weakref import WeakSet
 import functools
 import mdpopups
 import os
-import sys
 import sublime
 import weakref
 
@@ -821,7 +820,6 @@ class Session(TransportCallbacks):
 
     def __init__(self, manager: Manager, logger: Logger, workspace_folders: List[WorkspaceFolder],
                  config: ClientConfig, plugin_class: Optional[Type[AbstractPlugin]]) -> None:
-        print('Session({})'.format(config.name), file=sys.stderr)
         self.transport = None  # type: Optional[Transport]
         self.request_id = 0  # Our request IDs are always integers.
         self._logger = logger
@@ -864,10 +862,6 @@ class Session(TransportCallbacks):
     # --- session view management --------------------------------------------------------------------------------------
 
     def register_session_view_async(self, sv: SessionViewProtocol) -> None:
-        print('Session.register_session_view_async - new: {}, existing: {}'.format(
-                '{} buffer_id({})'.format(sv.view, sv.view.buffer_id()),
-                ['{} buffer_id({})'.format(sv.view, sv.view.buffer_id()) for sv in self._session_views]
-            ), file=sys.stderr)
         self._session_views.add(sv)
         self._views_opened += 1
         for status_key, message in self._status_messages.items():
@@ -875,10 +869,6 @@ class Session(TransportCallbacks):
 
     def unregister_session_view_async(self, sv: SessionViewProtocol) -> None:
         self._session_views.discard(sv)
-        print('Session.unregister_session_view_async - removed: {}, remaining SessionViews: {}'.format(
-                '{} buffer_id({})'.format(sv.view, sv.view.buffer_id()),
-                ['{} buffer_id({})'.format(sv.view, sv.view.buffer_id()) for sv in self._session_views]
-            ), file=sys.stderr)
         if not self._session_views:
             current_count = self._views_opened
             debounced(self.end_async, 3000, lambda: self._views_opened == current_count, async_thread=True)
@@ -1207,8 +1197,6 @@ class Session(TransportCallbacks):
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:
             sb.on_diagnostics_async(params["diagnostics"], params.get("version"))
-        else:
-            print('\npublishDiagnostics: SessionBuffer does not exist (view closed)?\n', file=sys.stderr)
 
     def m_client_registerCapability(self, params: Any, request_id: Any) -> None:
         """handles the client/registerCapability request"""

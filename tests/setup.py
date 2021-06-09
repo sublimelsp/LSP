@@ -12,7 +12,6 @@ from sublime_plugin import view_event_listeners
 from test_mocks import basic_responses
 from unittesting import DeferrableTestCase
 import sublime
-import sys
 
 
 CI = any(key in environ for key in ("TRAVIS", "CI", "GITHUB_ACTIONS"))
@@ -88,7 +87,6 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     @classmethod
     def setUpClass(cls) -> Generator:
-        print('\n\n{}.setUpClass START'.format(cls.__name__), file=sys.stderr)
         super().setUpClass()
         test_name = cls.get_test_name()
         server_capabilities = cls.get_test_server_capabilities()
@@ -99,12 +97,8 @@ class TextDocumentTestCase(DeferrableTestCase):
         cls.config = cls.get_stdio_test_config()
         cls.config.init_options.set("serverResponse", server_capabilities)
         add_config(cls.config)
-        print('Views before ({})'.format(['{}, buffer_id({})'.format(v, v.buffer_id()) for v in window.views()]),
-              file=sys.stderr)
         cls.wm = windows.lookup(window)
         cls.view = window.open_file(filename)
-        print('Views after ({})'.format(['{}, buffer_id({})'.format(v, v.buffer_id()) for v in window.views()]),
-              file=sys.stderr)
         yield {"condition": lambda: not cls.view.is_loading(), "timeout": TIMEOUT_TIME}
         yield cls.ensure_document_listener_created
         yield {
@@ -115,15 +109,12 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield from cls.await_message("initialize")
         yield from cls.await_message("initialized")
         yield from close_test_view(cls.view)
-        print('{}.setUpClass END\n'.format(cls.__name__), file=sys.stderr)
 
     def setUp(self) -> Generator:
-        print('\n\n{}.setUp START'.format(type(self).__name__), file=sys.stderr)
         window = sublime.active_window()
         filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(self.get_test_name())), window)
         open_view = window.find_open_file(filename)
         if not open_view:
-            print('{}.setUp Open file'.format(type(self).__name__), file=sys.stderr)
             self.__class__.view = window.open_file(filename)
             yield {"condition": lambda: not self.view.is_loading(), "timeout": TIMEOUT_TIME}
             self.assertTrue(self.wm._configs.match_view(self.view))
@@ -131,7 +122,6 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield self.ensure_document_listener_created
         params = yield from self.await_message("textDocument/didOpen")
         self.assertEquals(params['textDocument']['version'], 0)
-        print('{}.setUp END\n'.format(type(self).__name__), file=sys.stderr)
 
     @classmethod
     def get_test_name(cls) -> str:
@@ -286,7 +276,6 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     @classmethod
     def tearDownClass(cls) -> 'Generator':
-        print('{}.tearDownClass START'.format(cls.__name__), file=sys.stderr)
         if cls.session and cls.wm:
             sublime.set_timeout_async(cls.session.end_async)
             yield lambda: cls.session.state == ClientStates.STOPPING
@@ -297,11 +286,8 @@ class TextDocumentTestCase(DeferrableTestCase):
         # restore the user's configs
         remove_config(cls.config)
         super().tearDownClass()
-        print('{}.tearDownClass END\n'.format(cls.__name__), file=sys.stderr)
 
     def doCleanups(self) -> 'Generator':
-        print('{}.doCleanups START'.format(type(self).__name__), file=sys.stderr)
         if self.view and self.view.is_valid():
             yield from close_test_view(self.view)
         yield from super().doCleanups()
-        print('{}.doCleanups END\n'.format(type(self).__name__), file=sys.stderr)

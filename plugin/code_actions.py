@@ -75,19 +75,6 @@ class CodeActionsManager:
     def __init__(self) -> None:
         self._response_cache = None  # type: Optional[Tuple[str, CodeActionsCollector]]
 
-    def request_with_diagnostics_async(
-        self,
-        view: sublime.View,
-        region: sublime.Region,
-        session_buffer_diagnostics: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]],
-        actions_handler: Callable[[CodeActionsByConfigName], None]
-    ) -> None:
-        """
-        Requests code actions *only* for provided diagnostics. If session has no diagnostics then
-        it will be skipped.
-        """
-        self._request_async(view, region, session_buffer_diagnostics, True, actions_handler)
-
     def request_for_region_async(
         self,
         view: sublime.View,

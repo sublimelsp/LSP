@@ -249,7 +249,6 @@ class SessionBuffer:
         return None
 
     def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
-        print('on_diagnostics_async:', file=sys.stderr)
         data_per_severity = {}  # type: Dict[Tuple[int, bool], DiagnosticSeverityData]
         total_errors = 0
         total_warnings = 0

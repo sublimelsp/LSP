@@ -103,8 +103,8 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
 class LspRestartServerCommand(LspTextCommand):
     def run(self, edit: Any, config_name: str = None, show_quick_panel: bool = False) -> None:
-        self.window = self.view.window()
-        if not self.window:
+        window = self.view.window()
+        if not window:
             return
         self._config_names = [session.config.name for session in self.sessions()] if not config_name else [config_name]
         if not self._config_names:
@@ -116,13 +116,13 @@ class LspRestartServerCommand(LspTextCommand):
             if not show_quick_panel:
                 self.restart_server(0)
             else:
-                self.window.show_quick_panel(self._config_names, self.restart_server)
+                window.show_quick_panel(self._config_names, self.restart_server)
 
     def restart_server(self, index: int) -> None:
         if index > -1:
 
             def run_async() -> None:
-                wm = windows.lookup(self.window)
+                wm = windows.lookup(self.view.window)
                 config_name = self._config_names[index]
                 if not config_name or not self.session_by_name(config_name):
                     wm.restart_sessions_async()

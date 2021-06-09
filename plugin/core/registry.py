@@ -109,6 +109,7 @@ class LspRestartServerCommand(LspTextCommand):
         self._config_names = [session.config.name for session in self.sessions()] if not config_name else [config_name]
         if not self._config_names:
             return
+        self._wm = windows.lookup(window)
         if len(self._config_names) == 1:
             self.restart_server(0)
         else:
@@ -122,13 +123,12 @@ class LspRestartServerCommand(LspTextCommand):
         if index > -1:
 
             def run_async() -> None:
-                wm = windows.lookup(self.view.window())
                 config_name = self._config_names[index]
                 if not config_name or not self.session_by_name(config_name):
-                    wm.restart_sessions_async()
+                    self._wm.restart_sessions_async()
                 else:
-                    wm.end_config_sessions_async(config_name)
-                    wm.register_listener_async(wm.listener_for_view(self.view))  # type: ignore
+                    self._wm.end_config_sessions_async(config_name)
+                    self._wm.register_listener_async(self._wm.listener_for_view(self.view))  # type: ignore
 
             sublime.set_timeout_async(run_async)
 

@@ -113,12 +113,6 @@ class SessionBuffer:
     def add_session_view(self, sv: SessionViewProtocol) -> None:
         self.session_views.add(sv)
 
-    def shutdown_async(self) -> None:
-        for sv in self.session_views:
-            listener = sv.listener()
-            if listener:
-                listener.on_session_shutdown_async(self.session)
-
     def register_capability_async(
         self,
         registration_id: str,

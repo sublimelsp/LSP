@@ -188,9 +188,6 @@ class WindowManager(Manager):
     def disable_config_async(self, config_name: str) -> None:
         self._configs.disable_config(config_name)
 
-    def _register_listener(self, listener: AbstractViewListener) -> None:
-        sublime.set_timeout_async(lambda: self.register_listener_async(listener))
-
     def register_listener_async(self, listener: AbstractViewListener) -> None:
         set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)
         # Update workspace folders in case the user have changed those since window was created.

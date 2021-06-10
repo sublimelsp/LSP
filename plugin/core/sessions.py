@@ -718,10 +718,13 @@ def unregister_plugin(plugin: Type[AbstractPlugin]) -> None:
     by a user, your language server is shut down for the views that it is attached to. This results in a good user
     experience.
     """
+    from .registry import windows
     global _plugins
     name = plugin.name()
     try:
         _plugins.pop(name, None)
+        for window in sublime.windows():
+            windows.lookup(window).end_config_sessions_async(name)
         client_configs.remove_external_config(name)
     except Exception as ex:
         exception_log('Failed to unregister plugin "{}"'.format(name), ex)

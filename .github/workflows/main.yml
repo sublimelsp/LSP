@@ -4,9 +4,15 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - ".github/workflows/docs.yml"
+      - "docs/**"
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - ".github/workflows/docs.yml"
+      - "docs/**"
 
 env:
   CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}

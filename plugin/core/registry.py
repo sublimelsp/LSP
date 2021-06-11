@@ -73,7 +73,7 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
     def best_session(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
         listener = windows.listener_for_view(self.view)
-        return listener.session(capability, point) if listener else None
+        return listener.session_async(capability, point) if listener else None
 
     def session_by_name(self, name: Optional[str] = None, capability_path: Optional[str] = None) -> Optional[Session]:
         target = name if name else self.session_name

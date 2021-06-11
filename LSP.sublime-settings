@@ -213,14 +213,6 @@
       ],
       "selector": "source.erlang",
     },
-    // deprecated: please use haskell-language-server, see lsp.readthedocs.io
-    "haskell-ide-engine": {
-      "command": [
-        "hie",
-        "--lsp"
-      ],
-      "selector": "source.haskell",
-    },
     "ocaml": {
       "command": [
         "ocaml-language-server",
@@ -265,15 +257,6 @@
         "--disable-watchman"
       ],
       "selector": "source.ruby | text.html.ruby",
-    },
-    "rlang": {
-      "command": [
-        "R",
-        "--slave",
-        "-e",
-        "languageserver::run()"
-      ],
-      "selector": "source.r | text.html.markdown.rmarkdown",
     },
   }
 }

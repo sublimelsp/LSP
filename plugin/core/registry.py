@@ -7,16 +7,6 @@ import sublime
 import sublime_plugin
 
 
-def sessions_for_view(view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
-    """
-    Returns all sessions for this view, optionally matching the capability path.
-    """
-    window = view.window()
-    if window:
-        manager = windows.lookup(window)
-        yield from manager.sessions(view, capability)
-
-
 def best_session(view: sublime.View, sessions: Iterable[Session], point: Optional[int] = None) -> Optional[Session]:
     if point is None:
         try:
@@ -97,8 +87,12 @@ class LspTextCommand(sublime_plugin.TextCommand):
                         return None
         return None
 
-    def sessions(self, capability: Optional[str] = None) -> Generator[Session, None, None]:
-        yield from sessions_for_view(self.view, capability)
+    def sessions(self, capability_path: Optional[str] = None) -> Generator[Session, None, None]:
+        listener = windows.listener_for_view(self.view)
+        if listener:
+            for sv in listener.session_views_async():
+                if capability_path is None or sv.has_capability_async(capability_path):
+                    yield sv.session
 
 
 class LspRestartClientCommand(sublime_plugin.TextCommand):

@@ -1,4 +1,0 @@
-=> 1.2.10
-
-Features and Fixes:
-- fix for ST build 4097: '*InputHandler' object has no attribute 'want_event' (Predrag)

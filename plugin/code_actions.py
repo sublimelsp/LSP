@@ -126,10 +126,7 @@ class CodeActionsManager:
             if file_name:
                 listener = windows.listener_for_view(view)
                 if listener:
-                    for sv in listener.session_views_async():
-                        if not sv.has_capability_async('codeActionProvider'):
-                            continue
-                        session = sv.session
+                    for session in listener.sessions_async('codeActionProvider'):
                         if on_save_actions:
                             supported_kinds = session.get_capability('codeActionProvider.codeActionKinds')
                             matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])

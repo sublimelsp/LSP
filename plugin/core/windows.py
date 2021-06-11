@@ -46,7 +46,15 @@ class AbstractViewListener(metaclass=ABCMeta):
     view = None  # type: sublime.View
 
     @abstractmethod
-    def session(self, capability_path: str, point: Optional[int] = None) -> Optional[Session]:
+    def session_async(self, capability_path: str, point: Optional[int] = None) -> Optional[Session]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def sessions_async(self, capability_path: Optional[str] = None) -> Generator[Session, None, None]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def session_views_async(self) -> Iterable[SessionViewProtocol]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -104,10 +112,6 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Iterable[CodeLens]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def session_views_async(self) -> Iterable[SessionViewProtocol]:
         raise NotImplementedError()
 
     @abstractmethod

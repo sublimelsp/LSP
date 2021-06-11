@@ -8,7 +8,7 @@ from .open import open_externally
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
-from .protocol import CodeAction, Location, LocationLink
+from .protocol import CodeAction, Location, LocationLink, Position
 from .protocol import Command
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
@@ -1089,11 +1089,18 @@ class Session(TransportCallbacks):
         code_action = cast(CodeAction, code_action)
         return self._maybe_resolve_code_action(code_action).then(self._apply_code_action_async)
 
-    def open_uri_async(self, uri: DocumentUri, r: RangeLsp, flags: int = 0, group: int = -1) -> Promise[bool]:
+    def open_uri_async(
+        self,
+        uri: DocumentUri,
+        r: Optional[RangeLsp],
+        flags: int = 0,
+        group: int = -1
+    ) -> Promise[bool]:
         if uri.startswith("file:"):
             # TODO: open_file_and_center_async seems broken for views that have *just* been opened via on_load
             path = self.config.map_server_uri_to_client_path(uri)
-            self.window.open_file(to_encoded_filename(path, r["start"]), flags | sublime.ENCODED_POSITION, group)
+            pos = r["start"] if r else {"line": 0, "character": 0}  # type: Position
+            self.window.open_file(to_encoded_filename(path, pos), flags | sublime.ENCODED_POSITION, group)
             return Promise.resolve(True)
         if self._plugin:
             # I cannot type-hint an unpacked tuple
@@ -1109,7 +1116,8 @@ class Session(TransportCallbacks):
                     v.set_name(title)
                     v.run_command("append", {"characters": content})
                     v.set_read_only(True)
-                    center_selection(v, r)
+                    if r:
+                        center_selection(v, r)
                     sublime.set_timeout_async(lambda: result[1](True))
 
                 pair[0].then(lambda tup: sublime.set_timeout(lambda: open_scratch_buffer(*tup)))
@@ -1269,7 +1277,7 @@ class Session(TransportCallbacks):
             success(open_externally(uri, bool(params.get("takeFocus"))))
         else:
             # TODO: ST API does not allow us to say "do not focus this new view"
-            self.open_uri_async(uri, params["selection"]["start"]).then(success)
+            self.open_uri_async(uri, params.get("selection")).then(success)
 
     def m_window_workDoneProgress_create(self, params: Any, request_id: Any) -> None:
         """handles the window/workDoneProgress/create request"""

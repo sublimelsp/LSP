@@ -5,7 +5,6 @@ from .core.protocol import Diagnostic
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import LspTextCommand
-from .core.registry import sessions_for_view
 from .core.registry import windows
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
@@ -125,27 +124,32 @@ class CodeActionsManager:
         with collector:
             file_name = view.file_name()
             if file_name:
-                for session in sessions_for_view(view, 'codeActionProvider'):
-                    if on_save_actions:
-                        supported_kinds = session.get_capability('codeActionProvider.codeActionKinds')
-                        matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])
-                        if matching_kinds:
-                            params = text_document_code_action_params(
-                                view, file_name, region, [], matching_kinds)
-                            request = Request.codeAction(params, view)
-                            session.send_request_async(
-                                request, *filtering_collector(session.config.name, matching_kinds, collector))
-                    else:
-                        diagnostics = []  # type: Sequence[Diagnostic]
-                        for sb, diags in session_buffer_diagnostics:
-                            if sb.session == session:
-                                diagnostics = diags
-                                break
-                        if only_with_diagnostics and not diagnostics:
+                listener = windows.listener_for_view(view)
+                if listener:
+                    for sv in listener.session_views_async():
+                        if not sv.has_capability_async('codeActionProvider'):
                             continue
-                        params = text_document_code_action_params(view, file_name, region, diagnostics)
-                        request = Request.codeAction(params, view)
-                        session.send_request_async(request, collector.create_collector(session.config.name))
+                        session = sv.session
+                        if on_save_actions:
+                            supported_kinds = session.get_capability('codeActionProvider.codeActionKinds')
+                            matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])
+                            if matching_kinds:
+                                params = text_document_code_action_params(
+                                    view, file_name, region, [], matching_kinds)
+                                request = Request.codeAction(params, view)
+                                session.send_request_async(
+                                    request, *filtering_collector(session.config.name, matching_kinds, collector))
+                        else:
+                            diagnostics = []  # type: Sequence[Diagnostic]
+                            for sb, diags in session_buffer_diagnostics:
+                                if sb.session == session:
+                                    diagnostics = diags
+                                    break
+                            if only_with_diagnostics and not diagnostics:
+                                continue
+                            params = text_document_code_action_params(view, file_name, region, diagnostics)
+                            request = Request.codeAction(params, view)
+                            session.send_request_async(request, collector.create_collector(session.config.name))
         if use_cache:
             self._response_cache = (location_cache_key, collector)
 

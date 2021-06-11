@@ -371,7 +371,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if key == "lsp.session_with_capability" and operator == sublime.OP_EQUAL and isinstance(operand, str):
             capabilities = [s.strip() for s in operand.split("|")]
             for capability in capabilities:
-                if any(self.sessions(capability)):
+                if any(self.sessions_async(capability)):
                     return True
             return False
         elif key in ("lsp.sessions", "setting.lsp_active"):
@@ -420,7 +420,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         pos = self._stored_region.a
         if pos == -1:
             return
-        session = self.session("signatureHelpProvider", pos)
+        session = self.session_async("signatureHelpProvider", pos)
         if not session:
             return
         triggers = []  # type: List[str]
@@ -515,7 +515,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/documentColor -----------------------------------------------------------------------------------
 
     def _do_color_boxes_async(self) -> None:
-        session = self.session("colorProvider")
+        session = self.session_async("colorProvider")
         if session:
             session.send_request_async(
                 Request.documentColor(document_color_params(self.view), self.view), self._on_color_boxes)
@@ -550,7 +550,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self.view.add_regions(self._code_lens_key(index), [region], "", "", 0, [annotation], accent)
 
     def _do_code_lenses_async(self) -> None:
-        session = self.session("codeLensProvider")
+        session = self.session_async("codeLensProvider")
         if session and session.uses_plugin():
             params = {"textDocument": text_document_identifier(self.view)}
             for sv in self.session_views_async():
@@ -581,7 +581,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._resolve_visible_code_lenses_async()
 
     def _resolve_visible_code_lenses_async(self) -> None:
-        session = self.session("codeLensProvider")
+        session = self.session_async("codeLensProvider")
         if session:
             for index, code_lens, region in self._unresolved_code_lenses(self.view.visible_region()):
                 callback = functools.partial(self._on_resolved_code_lens_async, session.config.name, index, region)
@@ -629,7 +629,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if region is None:
             return
         point = region.b
-        session = self.session("documentHighlightProvider", point)
+        session = self.session_async("documentHighlightProvider", point)
         if session:
             params = text_document_position_params(self.view, point)
             request = Request.documentHighlight(params, self.view)
@@ -660,7 +660,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 
     def _on_query_completions_async(self, resolve_completion_list: ResolveCompletionsFn, location: int) -> None:
-        sessions = list(self.sessions('completionProvider'))
+        sessions = list(self.sessions_async('completionProvider'))
         if not sessions or not self.view.is_valid():
             resolve_completion_list([], 0)
             return
@@ -721,13 +721,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     # --- Public utility methods ---------------------------------------------------------------------------------------
 
-    def sessions(self, capability: Optional[str]) -> Generator[Session, None, None]:
+    def session_async(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
+        return best_session(self.view, self.sessions_async(capability), point)
+
+    def sessions_async(self, capability: Optional[str] = None) -> Generator[Session, None, None]:
         for sb in self.session_buffers_async():
             if capability is None or sb.has_capability(capability):
                 yield sb.session
-
-    def session(self, capability: str, point: Optional[int] = None) -> Optional[Session]:
-        return best_session(self.view, self.sessions(capability), point)
 
     def session_by_name(self, name: Optional[str] = None) -> Optional[Session]:
         for sb in self.session_buffers_async():

@@ -198,25 +198,25 @@ def location_to_encoded_filename(location: Union[Location, LocationLink]) -> str
     return to_encoded_filename(*get_uri_and_position_from_location(location))
 
 
-class MissingFilenameError(Exception):
+class MissingUriError(Exception):
 
     def __init__(self, view_id: int) -> None:
-        super().__init__("View {} has no filename".format(view_id))
+        super().__init__("View {} has no URI".format(view_id))
         self.view_id = view_id
 
 
-def uri_from_view(view: sublime.View) -> str:
-    file_name = view.file_name()
-    if file_name:
-        return filename_to_uri(file_name)
-    raise MissingFilenameError(view.id())
+def uri_from_view(view: sublime.View) -> DocumentUri:
+    uri = view.settings().get("lsp_uri")
+    if isinstance(uri, DocumentUri):
+        return uri
+    raise MissingUriError(view.id())
 
 
-def text_document_identifier(view_or_file_name: Union[str, sublime.View]) -> Dict[str, Any]:
-    if isinstance(view_or_file_name, str):
-        uri = filename_to_uri(view_or_file_name)
+def text_document_identifier(view_or_uri: Union[DocumentUri, sublime.View]) -> Dict[str, Any]:
+    if isinstance(view_or_uri, DocumentUri):
+        uri = view_or_uri
     else:
-        uri = uri_from_view(view_or_file_name)
+        uri = uri_from_view(view_or_uri)
     return {"uri": uri}
 
 
@@ -285,22 +285,22 @@ def did_change_text_document_params(view: sublime.View, version: int,
     return result
 
 
-def will_save_text_document_params(view_or_file_name: Union[str, sublime.View], reason: int) -> Dict[str, Any]:
-    return {"textDocument": text_document_identifier(view_or_file_name), "reason": reason}
+def will_save_text_document_params(view_or_uri: Union[DocumentUri, sublime.View], reason: int) -> Dict[str, Any]:
+    return {"textDocument": text_document_identifier(view_or_uri), "reason": reason}
 
 
 def did_save_text_document_params(
-    view: sublime.View, include_text: bool, file_name: Optional[str] = None
+    view: sublime.View, include_text: bool, uri: Optional[DocumentUri] = None
 ) -> Dict[str, Any]:
-    identifier = text_document_identifier(file_name if file_name is not None else view)
+    identifier = text_document_identifier(uri if uri is not None else view)
     result = {"textDocument": identifier}  # type: Dict[str, Any]
     if include_text:
         result["text"] = entire_content(view)
     return result
 
 
-def did_close_text_document_params(file_name: str) -> Dict[str, Any]:
-    return {"textDocument": text_document_identifier(file_name)}
+def did_close_text_document_params(uri: DocumentUri) -> Dict[str, Any]:
+    return {"textDocument": text_document_identifier(uri)}
 
 
 def did_open(view: sublime.View, language_id: str) -> Notification:
@@ -312,20 +312,20 @@ def did_change(view: sublime.View, version: int,
     return Notification.didChange(did_change_text_document_params(view, version, changes))
 
 
-def will_save(file_name: str, reason: int) -> Notification:
-    return Notification.willSave(will_save_text_document_params(file_name, reason))
+def will_save(uri: DocumentUri, reason: int) -> Notification:
+    return Notification.willSave(will_save_text_document_params(uri, reason))
 
 
 def will_save_wait_until(view: sublime.View, reason: int) -> Request:
     return Request.willSaveWaitUntil(will_save_text_document_params(view, reason), view)
 
 
-def did_save(view: sublime.View, include_text: bool, file_name: Optional[str] = None) -> Notification:
-    return Notification.didSave(did_save_text_document_params(view, include_text, file_name))
+def did_save(view: sublime.View, include_text: bool, uri: Optional[DocumentUri] = None) -> Notification:
+    return Notification.didSave(did_save_text_document_params(view, include_text, uri))
 
 
-def did_close(file_name: str) -> Notification:
-    return Notification.didClose(did_close_text_document_params(file_name))
+def did_close(uri: DocumentUri) -> Notification:
+    return Notification.didClose(did_close_text_document_params(uri))
 
 
 def formatting_options(settings: sublime.Settings) -> Dict[str, Any]:

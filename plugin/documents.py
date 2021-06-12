@@ -13,13 +13,16 @@ from .core.protocol import Request
 from .core.protocol import SignatureHelp
 from .core.registry import best_session
 from .core.registry import windows
+from .core.sessions import get_possible_uri_to_set
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.signature_help import SigHelp
 from .core.types import basescope2languageid
 from .core.types import debounced
 from .core.types import FEATURES_TIMEOUT
+from .core.types import SettingsRegistration
 from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
+from .core.url import view_to_uri
 from .core.views import DIAGNOSTIC_SEVERITY
 from .core.views import document_color_params
 from .core.views import first_selection_region
@@ -41,6 +44,7 @@ import itertools
 import sublime
 import sublime_plugin
 import textwrap
+import weakref
 import webbrowser
 
 
@@ -67,9 +71,8 @@ ResolvedCompletions = Tuple[Union[CompletionResponse, Error], SessionName]
 
 
 def is_regular_view(v: sublime.View) -> bool:
-    # Not from the quick panel (CTRL+P), must have a filename on-disk, and not a special view like a console,
-    # output panel or find-in-files panels.
-    return not v.sheet().is_transient() and bool(v.file_name()) and v.element() is None
+    # Not from the quick panel (CTRL+P), and not a special view like a console, output panel or find-in-files panels.
+    return not v.sheet().is_transient() and v.element() is None
 
 
 def previous_non_whitespace_char(view: sublime.View, pt: int) -> str:
@@ -134,12 +137,25 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     highlights_debounce_time = FEATURES_TIMEOUT
     code_lenses_debounce_time = FEATURES_TIMEOUT
 
+    _uri = None  # type: str
+
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:
         return False
 
     def __init__(self, view: sublime.View) -> None:
         super().__init__(view)
+        weakself = weakref.ref(self)
+
+        def on_change() -> None:
+            nonlocal weakself
+            this = weakself()
+            if this is not None:
+                this._on_settings_object_changed()
+
+        self._current_syntax = None
+        self.set_uri(view_to_uri(view, get_possible_uri_to_set(view.name())))
+        self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._setup()
 
     def __del__(self) -> None:
@@ -151,7 +167,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
         self._sighelp = None  # type: Optional[SigHelp]
-        self._uri = ""
         self._language_id = ""
         self._registered = False
 
@@ -191,7 +206,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         assert not self.view.is_loading()
         added = False
         if session.config.name not in self._session_views:
-            self._session_views[session.config.name] = SessionView(self, session)
+            self._session_views[session.config.name] = SessionView(self, session, self._uri)
             buf = self.view.buffer()
             if buf:
                 text_change_listener = TextChangeListener.ids_to_listeners.get(buf.buffer_id)
@@ -314,6 +329,10 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def get_uri(self) -> str:
         return self._uri
 
+    def set_uri(self, new_uri: str) -> None:
+        self._uri = new_uri
+        self.view.settings().set("lsp_uri", self._uri)
+
     def get_language_id(self) -> str:
         return self._language_id
 
@@ -343,9 +362,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             self._resolve_visible_code_lenses_async()
 
     def on_post_save_async(self) -> None:
+        # Re-determine the URI; this time it's guaranteed to be a file because ST can only save files to a real
+        # filesystem.
+        self.set_uri(view_to_uri(self.view))
         if self.view.is_primary():
             for sv in self.session_views_async():
-                sv.on_post_save_async()
+                sv.on_post_save_async(self._uri)
 
     def on_close(self) -> None:
         if self._registered and self._manager:
@@ -678,7 +700,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def trigger_on_pre_save_async(self) -> None:
         for sv in self.session_views_async():
-            sv.on_pre_save_async(self.view.file_name() or "")
+            sv.on_pre_save_async()
 
     def sum_total_errors_and_warnings_async(self) -> Tuple[int, int]:
         errors = 0
@@ -764,6 +786,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             session_views.clear()
 
         sublime.set_timeout_async(clear_async)
+
+    def _on_settings_object_changed(self) -> None:
+        new_syntax = self.view.settings().get("syntax")
+        if new_syntax != self._current_syntax:
+            self._current_syntax = new_syntax
+            self._cleanup()
+            self._setup()
 
     def __repr__(self) -> str:
         return "ViewListener({})".format(self.view.id())

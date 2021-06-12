@@ -35,7 +35,6 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
-from .url import uri_to_filename
 from .version import __version__
 from .views import COMPLETION_KINDS
 from .views import extract_variables
@@ -316,6 +315,12 @@ class SessionViewProtocol(Protocol):
     listener = None  # type: Any
     session_buffer = None  # type: Any
 
+    def get_uri(self) -> Optional[str]:
+        ...
+
+    def get_language_id(self) -> Optional[str]:
+        ...
+
     def on_capability_added_async(self, registration_id: str, capability_path: str, options: Dict[str, Any]) -> None:
         ...
 
@@ -354,8 +359,12 @@ class SessionBufferProtocol(Protocol):
 
     session = None  # type: Session
     session_views = None  # type: WeakSet[SessionViewProtocol]
-    file_name = None  # type: str
-    language_id = None  # type: str
+
+    def get_uri(self) -> Optional[str]:
+        ...
+
+    def get_language_id(self) -> Optional[str]:
+        ...
 
     def register_capability_async(
         self,
@@ -658,6 +667,12 @@ class AbstractPlugin(metaclass=ABCMeta):
 
 
 _plugins = {}  # type: Dict[str, Tuple[Type[AbstractPlugin], SettingsRegistration]]
+_pending_uris_to_set = {}  # type: Dict[str, DocumentUri]
+
+
+def get_possible_uri_to_set(title: str) -> Optional[str]:
+    global _pending_uris_to_set
+    return _pending_uris_to_set.get(title)
 
 
 def _register_plugin_impl(plugin: Type[AbstractPlugin], notify_listener: bool) -> None:
@@ -920,23 +935,25 @@ class Session(TransportCallbacks):
         """
         yield from self._session_buffers
 
-    def get_session_buffer_for_uri_async(self, uri: str) -> Optional[SessionBufferProtocol]:
-        file_name = uri_to_filename(uri)
+    def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> Optional[SessionBufferProtocol]:
         for sb in self.session_buffers_async():
-            try:
-                if sb.file_name == file_name or os.path.samefile(file_name, sb.file_name):
-                    return sb
-            except FileNotFoundError:
-                pass
+            if sb.get_uri() == uri:
+                return sb
         return None
 
     # --- capability observers -----------------------------------------------------------------------------------------
 
-    def can_handle(self, view: sublime.View, capability: Optional[str], inside_workspace: bool) -> bool:
-        file_name = view.file_name() or ''
-        if (self.config.match_view(view)
-                and self.state == ClientStates.READY
-                and self.handles_path(file_name, inside_workspace)):
+    def can_handle(self, view: sublime.View, scheme: str, capability: Optional[str], inside_workspace: bool) -> bool:
+        if not self.state == ClientStates.READY:
+            return False
+        if scheme == "file":
+            file_name = view.file_name()
+            if not file_name:
+                # We're closing down
+                return False
+            elif not self.handles_path(file_name, inside_workspace):
+                return False
+        if self.config.match_view(view, scheme):
             # If there's no capability requirement then this session can handle the view
             if capability is None:
                 return True
@@ -980,10 +997,11 @@ class Session(TransportCallbacks):
         if self._supports_workspace_folders():
             # A workspace-aware language server handles any path, both inside and outside the workspaces.
             return True
+        # buffer views or URI views
+        if not file_path:
+            return True
         # If we end up here then the language server is workspace-unaware. This means there can be more than one
         # language server with the same config name. So we have to actually do the subpath checks.
-        if not file_path:
-            return False
         if not self._workspace_folders or not inside_workspace:
             return True
         for folder in self._workspace_folders:
@@ -1120,6 +1138,8 @@ class Session(TransportCallbacks):
                 result = Promise.packaged_task()  # type: PackagedTask[bool]
 
                 def open_scratch_buffer(title: str, content: str, syntax: str) -> None:
+                    global _pending_uris_to_set
+                    _pending_uris_to_set[title] = uri
                     v = self.window.new_file(syntax=syntax, flags=flags)
                     v.set_scratch(True)
                     v.set_name(title)

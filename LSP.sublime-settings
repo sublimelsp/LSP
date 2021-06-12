@@ -95,6 +95,42 @@
   // "" - don't show code actions.
   // Note: Due to API limitations, the "bulb" icon can not be clicked so the code actions can only be triggered
   // using a keyboard shortcut or the context menu.
+  
+
+  // Enable semantic highlighting:
+  
+  // Add the following to your color scheme
+  //  "rules":
+  //  [
+  //     {
+  //         "scope": "meta.semantic-token.lsp",
+  //         "background": "#01010101"
+  //     }
+  //  ]
+
+  // Note: most color schemes don't utilise many available SublimeText scopes,
+  // this will result in subpar semantic highlighting. Follow the example given
+  // below to customize your color_scheme.
+
+  // syntax for scopes: meta.semantic.tokenType.modifierType
+  // modifierTypes are optional.
+
+  // example rules:
+  // {
+  //     "scope": "meta.semantic.variable",
+  //     "foreground": "var(blue)",
+  // },
+  // {
+  //     "scope": "meta.semantic.method",
+  //     "foreground": "var(yellow)",
+  // },
+  // {
+  //     "scope": "meta.semantic.method.static",
+  //     "foreground": "var(red)",
+  // },
+  "enable_semantic_tokens": false,
+
+
   "show_code_actions": "annotation",
 
   // Show code lens:

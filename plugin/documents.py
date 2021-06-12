@@ -21,7 +21,7 @@ from .core.types import basescope2languageid
 from .core.types import debounced
 from .core.types import FEATURES_TIMEOUT
 from .core.types import SettingsRegistration
-from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union
+from .core.typing import Any, Callable, Optional, Dict, Generator, Iterable, List, Tuple, Union, cast
 from .core.url import parse_uri
 from .core.url import view_to_uri
 from .core.views import DIAGNOSTIC_SEVERITY
@@ -33,6 +33,7 @@ from .core.views import lsp_color_to_phantom
 from .core.views import make_command_link
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
+from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import AbstractViewListener
@@ -48,7 +49,7 @@ import sublime_plugin
 import textwrap
 import weakref
 import webbrowser
-
+from .semantic import get_semantic_scope_from_modifier
 
 SUBLIME_WORD_MASK = 515
 
@@ -138,6 +139,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     color_boxes_debounce_time = FEATURES_TIMEOUT
     highlights_debounce_time = FEATURES_TIMEOUT
     code_lenses_debounce_time = FEATURES_TIMEOUT
+    code_lenses_debounce_time = FEATURES_TIMEOUT + 2000
+    semantic_tokens_debounce_time = FEATURES_TIMEOUT
 
     _uri = None  # type: str
 
@@ -227,6 +230,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         if added:
             self._do_color_boxes_async()
             self._do_code_lenses_async()
+            self._do_semantic_tokens_async()
 
     def on_session_shutdown_async(self, session: Session) -> None:
         removed_session = self._session_views.pop(session.config.name, None)
@@ -340,6 +344,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self.do_signature_help_async(manual=False)
         self._when_selection_remains_stable_async(self._do_code_lenses_async, current_region,
                                                   after_ms=self.code_lenses_debounce_time)
+
+        self._when_selection_remains_stable_async(self._do_semantic_tokens_async, current_region,
+                                                  after_ms=self.semantic_tokens_debounce_time)
 
     def get_uri(self) -> str:
         return self._uri
@@ -634,6 +641,68 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 self.view.add_regions(key, regions, scope=_kind2scope[kind], flags=flags)
 
         sublime.set_timeout(render_highlights_on_main_thread)
+
+    # --- textDocument/semanticTokens -------------------------------------------------------------------------------
+
+    def _do_semantic_tokens_async(self) -> None:
+        if ("background" not in self.view.style_for_scope("meta.semantic-token.lsp") or
+                not userprefs().enable_semantic_tokens):
+            return
+        session = self.session_async("semanticTokensProvider")
+        if session:
+            semantic_tokens_legend = {}
+            try:
+                semantic_tokens_legend = cast(dict, session.get_capability('semanticTokensProvider'))
+            except ValueError:
+                # print('semantic highlighting capabilies not provided by the server!!!')
+                return
+
+            params = {"textDocument": text_document_identifier(self.view)}
+            session.send_request_async(
+                Request.semanticTokens(params, self.view),
+                lambda response: self._on_semantic_tokens_async(response, semantic_tokens_legend['legend']))
+
+    def _on_semantic_tokens_async(self, response: dict, semantic_tokens_legend: dict) -> None:
+        regions = cast(dict, {})
+        data = response['data']
+        prev_row = None
+        prev_col = None
+        for x in range(0, len(data), 5):
+            encoded_token = data[x:x+5]
+
+            if prev_row is not None:
+                if encoded_token[0] == 0:
+                    encoded_token[1] += prev_col
+                    encoded_token[0] = prev_row
+                else:
+                    encoded_token[0] += prev_row
+
+            point1 = self.view.text_point(encoded_token[0], encoded_token[1])
+            point2 = self.view.text_point(encoded_token[0], encoded_token[1]+encoded_token[2])
+            my_region = sublime.Region(point1, point2)
+
+            scope = get_semantic_scope_from_modifier(encoded_token, semantic_tokens_legend)
+
+            try:
+                regions[scope].append(my_region)
+            except KeyError:
+                regions[scope] = []
+                regions[scope].append(my_region)
+
+            prev_row = encoded_token[0]
+            prev_col = encoded_token[1]
+
+        region_keys = []
+        for key, value in regions.items():
+            if key:
+                reg_key = key.split(', ')[0]  # in case of multiple modifiers, getting a _single modifier_ unique key
+                if reg_key in region_keys:    # instead of a long _combined key_, to comply with init_region_keys()
+                    for i in range(1, len(key.split(', ')) - 1):
+                        if key.split(', ')[i] not in region_keys:
+                            reg_key = key.split(', ')[i]
+                            break
+                region_keys.append(reg_key)
+                self.view.add_regions(reg_key, value, 'meta.semantic-token.lsp ' + key, flags=sublime.DRAW_NO_OUTLINE)
 
     # --- textDocument/complete ----------------------------------------------------------------------------------------
 

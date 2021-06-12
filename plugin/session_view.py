@@ -18,6 +18,7 @@ from weakref import ref
 from weakref import WeakValueDictionary
 import functools
 import sublime
+from .semantic import SEMANTIC_SCOPES
 
 DIAGNOSTIC_TAG_VALUES = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]
 
@@ -37,6 +38,7 @@ class SessionView:
     _session_buffers = WeakValueDictionary()  # type: WeakValueDictionary[Tuple[int, int], SessionBuffer]
 
     def __init__(self, listener: AbstractViewListener, session: Session, uri: DocumentUri) -> None:
+        self.init_region_keys(listener.view, session.config.name, userprefs().document_highlight_style)
         self.view = listener.view
         self.session = session
         self.active_requests = {}  # type: Dict[int, Request]
@@ -322,3 +324,26 @@ class SessionView:
 
     def __str__(self) -> str:
         return '{}:{}'.format(self.session.config.name, self.view.id())
+
+    def init_region_keys(self, view: sublime.View, server: str, doc_highlight_style: str) -> None:
+        r = [sublime.Region(0, 0)]
+        for modifiers in SEMANTIC_SCOPES.values():
+            for scope in modifiers.values():
+                view.add_regions(scope, r)
+
+        doc_highlight_kinds = ["text", "read", "write"]
+        if doc_highlight_style == 'fill':
+            for name in doc_highlight_kinds:
+                view.add_regions('lsp_highlight_{}{}'.format(name, 'm'), r)
+                view.add_regions('lsp_highlight_{}{}'.format(name, 's'), r)
+        for i in range(1, 5):
+            view.add_regions('lsp{}d{}{}'.format(server, 'm', i), r)
+            view.add_regions('lsp{}d{}{}'.format(server, 's', i), r)
+            for j in range(1, 2):
+                view.add_regions('lsp{}d{}{}_tags_{}'.format(server, 'm', i, j), r)
+                view.add_regions('lsp{}d{}{}_tags_{}'.format(server, 's', i, j), r)
+
+        if doc_highlight_style != 'fill':
+            for name in doc_highlight_kinds:
+                view.add_regions('lsp_highlight_{}{}'.format(name, 'm'), r)
+                view.add_regions('lsp_highlight_{}{}'.format(name, 's'), r)

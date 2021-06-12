@@ -305,6 +305,18 @@ class Request:
             "params": self.params
         }
 
+    @classmethod
+    def semanticTokens(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+        return Request("textDocument/semanticTokens/full", params, view)
+
+    @classmethod
+    def semanticTokensDelta(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+        return Request("textDocument/semanticTokens/full/delta", params, view)
+
+    @classmethod
+    def semanticTokensRange(cls, params: Mapping[str, Any], view: sublime.View) -> 'Request':
+        return Request("textDocument/semanticTokens/range", params, view)
+
 
 class ErrorCode:
     # Defined by JSON RPC

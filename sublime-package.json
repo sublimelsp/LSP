@@ -249,6 +249,7 @@
               "enum": [
                 "fill",
                 "underline",
+                "stippled",
                 ""
               ],
               "default": "underline",

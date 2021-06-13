@@ -81,7 +81,7 @@
 
   // Highlighting style of "highlights": accentuating nearby text entities that
   // are related to the one under your cursor.
-  // Valid values are "fill", "underline", or "".
+  // Valid values are "fill", "underline", "stippled", or "".
   // When set to the empty string (""), no document highlighting is requested.
   "document_highlight_style": "underline",
 

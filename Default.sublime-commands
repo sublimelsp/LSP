@@ -55,9 +55,6 @@
     {
         "caption": "LSP: Restart Server",
         "command": "lsp_restart_server",
-        "args": {
-            "show_quick_panel": true
-        }
     },
     {
         "caption": "LSP: Goto Symbol",

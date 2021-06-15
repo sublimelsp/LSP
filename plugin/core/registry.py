@@ -96,7 +96,10 @@ class LspTextCommand(sublime_plugin.TextCommand):
 
 
 class LspRestartServerCommand(LspTextCommand):
-    def run(self, edit: Any, config_name: str = None, show_quick_panel: bool = False) -> None:
+
+    ALL_SERVERS = 'All Servers'
+
+    def run(self, edit: Any, config_name: str = None) -> None:
         window = self.view.window()
         if not window:
             return
@@ -107,24 +110,24 @@ class LspRestartServerCommand(LspTextCommand):
         if len(self._config_names) == 1:
             self.restart_server(0)
         else:
-            self._config_names.insert(0, 'All Servers')
-            if not show_quick_panel:
-                self.restart_server(0)
-            else:
-                window.show_quick_panel(self._config_names, self.restart_server)
+            self._config_names.insert(0, self.ALL_SERVERS)
+            window.show_quick_panel(self._config_names, self.restart_server)
 
     def restart_server(self, index: int) -> None:
-        if index > -1:
+        if index < 0:
+            return
 
-            def run_async() -> None:
-                config_name = self._config_names[index]
-                if not config_name or not self.session_by_name(config_name):
-                    self._wm.restart_sessions_async()
-                else:
-                    self._wm.end_config_sessions_async(config_name)
-                    self._wm.register_listener_async(self._wm.listener_for_view(self.view))  # type: ignore
+        def run_async() -> None:
+            config_name = self._config_names[index]
+            if not config_name or config_name != self.ALL_SERVERS:
+                self._wm.restart_sessions_async()
+            else:
+                self._wm.end_config_sessions_async(config_name)
+                listener = windows.listener_for_view(self.view)
+                if listener:
+                    self._wm.register_listener_async(listener)
 
-            sublime.set_timeout_async(run_async)
+        sublime.set_timeout_async(run_async)
 
 
 class LspRecheckSessionsCommand(sublime_plugin.WindowCommand):

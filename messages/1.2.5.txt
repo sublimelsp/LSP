@@ -1,4 +1,0 @@
-=> 1.2.5
-
-- Make panels consistent (#1524) (Predrag Nikolic)
-- Fix broken panel regexes (Predrag Nikolic)

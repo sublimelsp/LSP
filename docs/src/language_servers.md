@@ -511,6 +511,8 @@ Follow installation instructions on [LSP-tagml](https://github.com/HuygensING/LS
 
 Follow installation instructions on [LSP-typescript](https://github.com/sublimelsp/LSP-typescript).
 
+For development using the Deno framework follow installation instructions on [LSP-Deno](https://github.com/sublimelsp/LSP-Deno).
+
 ## Vue
 
 Follow installation instructions on [LSP-vue](https://github.com/sublimelsp/LSP-vue).

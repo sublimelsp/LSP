@@ -235,6 +235,8 @@ class Settings:
     def document_highlight_style_region_flags(self) -> Tuple[int, int]:
         if self.document_highlight_style == "fill":
             return sublime.DRAW_NO_OUTLINE, sublime.DRAW_NO_OUTLINE
+        elif self.document_highlight_style == "stippled":
+            return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
         else:
             return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE
 

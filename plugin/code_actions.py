@@ -5,7 +5,6 @@ from .core.protocol import Diagnostic
 from .core.protocol import Error
 from .core.protocol import Request
 from .core.registry import LspTextCommand
-from .core.registry import sessions_for_view
 from .core.registry import windows
 from .core.sessions import SessionBufferProtocol
 from .core.settings import userprefs
@@ -75,19 +74,6 @@ class CodeActionsManager:
     def __init__(self) -> None:
         self._response_cache = None  # type: Optional[Tuple[str, CodeActionsCollector]]
 
-    def request_with_diagnostics_async(
-        self,
-        view: sublime.View,
-        region: sublime.Region,
-        session_buffer_diagnostics: Sequence[Tuple[SessionBufferProtocol, Sequence[Diagnostic]]],
-        actions_handler: Callable[[CodeActionsByConfigName], None]
-    ) -> None:
-        """
-        Requests code actions *only* for provided diagnostics. If session has no diagnostics then
-        it will be skipped.
-        """
-        self._request_async(view, region, session_buffer_diagnostics, True, actions_handler)
-
     def request_for_region_async(
         self,
         view: sublime.View,
@@ -138,27 +124,29 @@ class CodeActionsManager:
         with collector:
             file_name = view.file_name()
             if file_name:
-                for session in sessions_for_view(view, 'codeActionProvider'):
-                    if on_save_actions:
-                        supported_kinds = session.get_capability('codeActionProvider.codeActionKinds')
-                        matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])
-                        if matching_kinds:
-                            params = text_document_code_action_params(
-                                view, file_name, region, [], matching_kinds)
+                listener = windows.listener_for_view(view)
+                if listener:
+                    for session in listener.sessions_async('codeActionProvider'):
+                        if on_save_actions:
+                            supported_kinds = session.get_capability('codeActionProvider.codeActionKinds')
+                            matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])
+                            if matching_kinds:
+                                params = text_document_code_action_params(
+                                    view, file_name, region, [], matching_kinds)
+                                request = Request.codeAction(params, view)
+                                session.send_request_async(
+                                    request, *filtering_collector(session.config.name, matching_kinds, collector))
+                        else:
+                            diagnostics = []  # type: Sequence[Diagnostic]
+                            for sb, diags in session_buffer_diagnostics:
+                                if sb.session == session:
+                                    diagnostics = diags
+                                    break
+                            if only_with_diagnostics and not diagnostics:
+                                continue
+                            params = text_document_code_action_params(view, file_name, region, diagnostics)
                             request = Request.codeAction(params, view)
-                            session.send_request_async(
-                                request, *filtering_collector(session.config.name, matching_kinds, collector))
-                    else:
-                        diagnostics = []  # type: Sequence[Diagnostic]
-                        for sb, diags in session_buffer_diagnostics:
-                            if sb.session == session:
-                                diagnostics = diags
-                                break
-                        if only_with_diagnostics and not diagnostics:
-                            continue
-                        params = text_document_code_action_params(view, file_name, region, diagnostics)
-                        request = Request.codeAction(params, view)
-                        session.send_request_async(request, collector.create_collector(session.config.name))
+                            session.send_request_async(request, collector.create_collector(session.config.name))
         if use_cache:
             self._response_cache = (location_cache_key, collector)
 
@@ -256,11 +244,14 @@ class CodeActionOnSaveTask(SaveTask):
                         for code_action in code_actions:
                             tasks.append(session.run_code_action_async(code_action, progress=False))
                         break
-        if document_version != self._task_runner.view.change_count():
+        Promise.all(tasks).then(lambda _: self._on_code_actions_completed(document_version))
+
+    def _on_code_actions_completed(self, previous_document_version: int) -> None:
+        if previous_document_version != self._task_runner.view.change_count():
             # Give on_text_changed_async a chance to trigger.
-            Promise.all(tasks).then(lambda _: sublime.set_timeout_async(self._request_code_actions_async))
+            sublime.set_timeout_async(self._request_code_actions_async)
         else:
-            Promise.all(tasks).then(lambda _: sublime.set_timeout_async(self._on_complete))
+            self._on_complete()
 
 
 LspSaveCommand.register_task(CodeActionOnSaveTask)

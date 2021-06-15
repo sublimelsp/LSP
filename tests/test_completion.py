@@ -73,6 +73,7 @@ class CompletionsTestsBase(TextDocumentTestCase):
         self.set_response("textDocument/completion", completion_items)
         yield from self.select_completion()
         yield from self.await_message("textDocument/completion")
+        yield from self.await_message("textDocument/didChange")
         self.assertEqual(self.read_file(), expected_text)
 
 

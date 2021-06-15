@@ -46,7 +46,15 @@ class AbstractViewListener(metaclass=ABCMeta):
     view = None  # type: sublime.View
 
     @abstractmethod
-    def session(self, capability_path: str, point: Optional[int] = None) -> Optional[Session]:
+    def session_async(self, capability_path: str, point: Optional[int] = None) -> Optional[Session]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def sessions_async(self, capability_path: Optional[str] = None) -> Generator[Session, None, None]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def session_views_async(self) -> Iterable[SessionViewProtocol]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -104,10 +112,6 @@ class AbstractViewListener(metaclass=ABCMeta):
 
     @abstractmethod
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Iterable[CodeLens]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def session_views_async(self) -> Iterable[SessionViewProtocol]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -187,9 +191,6 @@ class WindowManager(Manager):
 
     def disable_config_async(self, config_name: str) -> None:
         self._configs.disable_config(config_name)
-
-    def _register_listener(self, listener: AbstractViewListener) -> None:
-        sublime.set_timeout_async(lambda: self.register_listener_async(listener))
 
     def register_listener_async(self, listener: AbstractViewListener) -> None:
         set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)

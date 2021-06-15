@@ -113,7 +113,7 @@ class LspHoverCommand(LspTextCommand):
         sublime.set_timeout_async(run_async)
 
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
-        session = listener.session('hoverProvider', point)
+        session = listener.session_async('hoverProvider', point)
         if session:
             document_position = text_document_position_params(self.view, point)
             session.send_request_async(
@@ -134,7 +134,7 @@ class LspHoverCommand(LspTextCommand):
         self.show_hover(listener, point, only_diagnostics=False)
 
     def provider_exists(self, listener: AbstractViewListener, link: LinkKind) -> bool:
-        return bool(listener.session('{}Provider'.format(link.lsp_name)))
+        return bool(listener.session_async('{}Provider'.format(link.lsp_name)))
 
     def symbol_actions_content(self, listener: AbstractViewListener, point: int) -> str:
         if userprefs().show_symbol_action_links:

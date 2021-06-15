@@ -1,8 +1,0 @@
-=> 4070-1.0.12
-
-- Account for "trim_trailing_white_space_on_save" being a string (#1304) (Raoul Wols)
-- Iterate over sessions in the listener via the session buffers (Raoul Wols)
-- Fix: manually invoking signature help should not check the triggers (Raoul Wols)
-- Fix color box phantoms background (Janos Wortmann)
-- Add documentation for "feature_selector" (Rafał Chłodnicki)
-- MarkedString rendering fixes (Rafał Chłodnicki)

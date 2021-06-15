@@ -68,7 +68,8 @@ class SessionView:
             self.session.unregister_session_view_async(self)
         self.session.config.erase_view_status(self.view)
         for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            self.view.erase_regions(self.diagnostics_key(severity))
+            self.view.erase_regions(self.diagnostics_key(severity, False))
+            self.view.erase_regions(self.diagnostics_key(severity, True))
 
     def _clear_auto_complete_triggers(self, settings: sublime.Settings) -> None:
         '''Remove all of our modifications to the view's "auto_complete_triggers"'''
@@ -159,10 +160,10 @@ class SessionView:
             if listener:
                 listener.on_code_lens_capability_registered_async()
 
-    def on_capability_removed_async(self, registration_id: str, discarded: Dict[str, Any]) -> None:
-        if self.HOVER_PROVIDER_KEY in discarded:
+    def on_capability_removed_async(self, registration_id: str, discarded_capabilities: Dict[str, Any]) -> None:
+        if self.HOVER_PROVIDER_KEY in discarded_capabilities:
             self._decrement_hover_count()
-        elif self.COMPLETION_PROVIDER_KEY in discarded:
+        elif self.COMPLETION_PROVIDER_KEY in discarded_capabilities:
             self._unregister_auto_complete_triggers(registration_id)
 
     def has_capability_async(self, capability_path: str) -> bool:
@@ -173,8 +174,8 @@ class SessionView:
         if listener:
             listener.on_session_shutdown_async(self.session)
 
-    def diagnostics_key(self, severity: int) -> str:
-        return "lsp{}d{}".format(self.session.config.name, severity)
+    def diagnostics_key(self, severity: int, multiline: bool) -> str:
+        return "lsp{}d{}{}".format(self.session.config.name, "m" if multiline else "s", severity)
 
     def diagnostics_tag_scope(self, tag: int) -> Optional[str]:
         for k, v in DiagnosticTag.__dict__.items():
@@ -182,32 +183,35 @@ class SessionView:
                 return 'markup.{}.lsp'.format(k.lower())
         return None
 
-    def present_diagnostics_async(self, flags: int) -> None:
-        data_per_severity = self.session_buffer.data_per_severity
-        for severity in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
-            key = self.diagnostics_key(severity)
-            key_tags = {tag: '{}_tags_{}'.format(key, tag) for tag in DIAGNOSTIC_TAG_VALUES}
-            for key_tag in key_tags.values():
-                self.view.erase_regions(key_tag)
-            data = data_per_severity.get(severity)
-            if data is None:
-                self.view.erase_regions(key)
-            elif ((severity <= userprefs().show_diagnostics_severity_level) and
-                    (data.icon or flags != (sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE))):
-                non_tag_regions = data.regions
-                for tag, regions in data.regions_with_tag.items():
-                    tag_scope = self.diagnostics_tag_scope(tag)
-                    # Trick to only add tag regions if there is a corresponding color scheme scope defined.
-                    if tag_scope and 'background' in self.view.style_for_scope(tag_scope):
-                        self.view.add_regions(key_tags[tag], regions, tag_scope, flags=sublime.DRAW_NO_OUTLINE)
-                    else:
-                        non_tag_regions.extend(regions)
-                self.view.add_regions(key, non_tag_regions, data.scope, data.icon, flags | sublime.DRAW_EMPTY)
-            else:
-                self.view.erase_regions(key)
+    def present_diagnostics_async(self) -> None:
+        flags = 0 if userprefs().show_diagnostics_highlights else sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
+        level = userprefs().show_diagnostics_severity_level
+        for sev in reversed(range(1, len(DIAGNOSTIC_SEVERITY) + 1)):
+            self._draw_diagnostics(sev, level, DIAGNOSTIC_SEVERITY[sev - 1][4] if flags == 0 else flags, False)
+            self._draw_diagnostics(sev, level, DIAGNOSTIC_SEVERITY[sev - 1][5] if flags == 0 else flags, True)
         listener = self.listener()
         if listener:
             listener.on_diagnostics_updated_async()
+
+    def _draw_diagnostics(self, severity: int, max_severity_level: int, flags: int, multiline: bool) -> None:
+        key = self.diagnostics_key(severity, multiline)
+        key_tags = {tag: '{}_tags_{}'.format(key, tag) for tag in DIAGNOSTIC_TAG_VALUES}
+        for key_tag in key_tags.values():
+            self.view.erase_regions(key_tag)
+        data = self.session_buffer.data_per_severity.get((severity, multiline))
+        # TODO: Why do we have this data.icon check?
+        if data and data.icon and severity <= max_severity_level:
+            non_tag_regions = data.regions
+            for tag, regions in data.regions_with_tag.items():
+                tag_scope = self.diagnostics_tag_scope(tag)
+                # Trick to only add tag regions if there is a corresponding color scheme scope defined.
+                if tag_scope and 'background' in self.view.style_for_scope(tag_scope):
+                    self.view.add_regions(key_tags[tag], regions, tag_scope, flags=sublime.DRAW_NO_OUTLINE)
+                else:
+                    non_tag_regions.extend(regions)
+            self.view.add_regions(key, non_tag_regions, data.scope, data.icon, flags)
+        else:
+            self.view.erase_regions(key)
 
     def on_request_started_async(self, request_id: int, request: Request) -> None:
         self.active_requests[request_id] = request

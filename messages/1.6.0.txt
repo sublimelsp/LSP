@@ -1,0 +1,30 @@
+# Removed Default Configurations
+
+As was mentioned in the release notes of 1.5, the following default
+configurations are now removed:
+
+- haskell-ide-engine
+  -> use haskell-language-server, see lsp.sublimetext.io for instructions
+- rlang
+  -> use the LSP-R helper package: https://packagecontrol.io/packages/LSP-R
+
+# New Helper Packages
+
+- LSP-R: https://packagecontrol.io/packages/LSP-R
+- LSP-Deno: https://packagecontrol.io/packages/LSP-Deno
+
+# Features and Fixes
+
+- Fix a bug where code actions would be requested for transient
+  views (Raoul Wols)
+- Clear all status messages when session ends (Janos Wortmann)
+  This fixes a bug where if you disable the LSP package while
+  a language server is reporting server-initiated progress, the
+  progress message would remain visible in the Status Bar.
+- CI is once again enabled (#1679) (Rafał Chłodnicki)
+- os.path.relpath may throw an exception on Windows (Raoul Wols)
+  This fixes a bug where if you use Find References on Windows,
+  the response handler could fail by not catching this exception.
+- Rename code_action_on_save_timeout_ms to
+  on_save_task_timeout_ms (#1728) (Rafał Chłodnicki)
+  This allows you to adjust the timeout for formatting as well.

@@ -1,9 +1,0 @@
-=> 4070-1.0.17
-
-- Use the system font for sheet css (#1357) (Raoul Wols)
-- Fix some issues with textDocument/didSave and old-style text sync (#1358) (Raoul Wols)
-- Expose language_id on SessionBufferProtocol (#1355) (Rafał Chłodnicki)
-- Renaming is much faster, and we now correctly reply to the langserver when
-  the edits have been aplied.
-- Set progress status on views instead of window (#1350) (Raoul Wols)
-- Various improvements

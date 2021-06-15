@@ -1,4 +1,7 @@
 {
+  // To discover more customization and example client configurations, see
+  // https://lsp.sublimetext.io
+
   // Show permanent language server status in the status bar.
   "show_view_status": true,
 
@@ -24,8 +27,9 @@
     // "source.organizeImports": true,
   },
 
-  // The amount of time the code actions on save are allowed to run for.
-  "code_action_on_save_timeout_ms": 2000,
+  // The amount of time the save tasks (like code actions on save,
+  // formatting or WillSaveWaitUntil) are each allowed to run for.
+  "on_save_task_timeout_ms": 2000,
 
   // Open the diagnostics panel automatically on save when diagnostics level is
   // equal to or less than:
@@ -75,14 +79,9 @@
   // See also: "diagnostics_delay_ms".
   "diagnostics_additional_delay_auto_complete_ms": 0,
 
-  // Highlighting style of code diagnostics.
-  // Valid values are "fill", "box", "underline", "stippled", "squiggly" or "".
-  // When set to the empty string (""), no diagnostics are shown in-line.
-  "diagnostics_highlight_style": "squiggly",
-
   // Highlighting style of "highlights": accentuating nearby text entities that
   // are related to the one under your cursor.
-  // Valid values are "fill", "box", "underline", "stippled", "squiggly" or "".
+  // Valid values are "fill", "underline", "stippled", or "".
   // When set to the empty string (""), no document highlighting is requested.
   "document_highlight_style": "underline",
 
@@ -97,6 +96,14 @@
   // Note: Due to API limitations, the "bulb" icon can not be clicked so the code actions can only be triggered
   // using a keyboard shortcut or the context menu.
   "show_code_actions": "annotation",
+
+  // Show code actions in hover popup if available
+  "show_code_actions_in_hover": true,
+
+  // Show diagnostics (error/warning squigglies) in the view. When disabled,
+  // gutter markers are still drawn, unless "diagnostics_gutter_marker" is
+  // set to "".
+  "show_diagnostics_highlights": true,
 
   // Show symbol action links in hover popup if available
   "show_symbol_action_links": true,
@@ -185,12 +192,6 @@
   // DO NOT MODIFY THIS SETTING!
   // Use "clients" to override settings instead!
   "default_clients": {
-    "pyls": {
-      "command": [
-        "pyls"
-      ],
-      "selector": "source.python",
-    },
     "rust-analyzer": {
       "command": [
         "rust-analyzer"
@@ -204,21 +205,6 @@
       "selector": "source.c | source.c++ | source.objc | source.objc++",
       "auto_complete_selector": "punctuation.accessor | (meta.preprocessor.include string - punctuation.definition.string.end)",
     },
-    "dart": {
-      "command": [
-        // Specify a dart command like the below in your LSP User settings.
-        // "dart", "/usr/local/opt/dart/libexec/bin/snapshots/analysis_server.dart.snapshot", "--lsp"
-      ],
-      "selector": "source.dart",
-    },
-    "elixir-ls": {
-      "command": [
-        // Specify path to language_server.sh from https://github.com/elixir-lsp/elixir-ls here
-        // "/home/someUser/somePlace/elixir-ls/release/language_server.sh"
-      ],
-      "selector": "source.elixir",
-      "settings": {}
-    },
     "erlang-ls": {
       "command": [
         "erlang_ls",
@@ -226,21 +212,6 @@
         "stdio"
       ],
       "selector": "source.erlang",
-    },
-    "flow": {
-      "command": [
-        "flow",
-        "lsp"
-      ],
-      "selector": "source.js", // TODO: should this be source.js.flow ?
-    },
-    // deprecated: please use haskell-language-server, see lsp.readthedocs.io
-    "haskell-ide-engine": {
-      "command": [
-        "hie",
-        "--lsp"
-      ],
-      "selector": "source.haskell",
     },
     "ocaml": {
       "command": [
@@ -254,16 +225,6 @@
         "gopls"
       ],
       "selector": "source.go",
-    },
-    "jdtls": {
-      "command": [
-        "java",
-        "-jar",
-        "PATH_TO_JDT_SERVER/plugins/org.eclipse.equinox.launcher_1.4.0.v20161219-1356.jar",
-        "-configuration",
-        "PATH_TO_CONFIG_DIR"
-      ],
-      "selector": "source.java",
     },
     "polymer-ide": {
       "command": [
@@ -296,22 +257,6 @@
         "--disable-watchman"
       ],
       "selector": "source.ruby | text.html.ruby",
-    },
-    "rlang": {
-      "command": [
-        "R",
-        "--slave",
-        "-e",
-        "languageserver::run()"
-      ],
-      "selector": "source.r | text.html.markdown.rmarkdown",
-    },
-    "sourcekit-lsp": {
-      "command": [
-        "xcrun",
-        "sourcekit-lsp"
-      ],
-      "selector": "source.swift",
     },
   }
 }

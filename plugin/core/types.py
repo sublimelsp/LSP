@@ -69,23 +69,6 @@ def debounced(f: Callable[[], Any], timeout_ms: int = 0, condition: Callable[[],
     runner(run, timeout_ms)
 
 
-def _settings_style_to_add_regions_flag(style: str) -> int:
-    flags = 0
-    if style == "fill":
-        flags = sublime.DRAW_NO_OUTLINE
-    elif style == "box":
-        flags = sublime.DRAW_NO_FILL
-    else:
-        flags = sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE
-        if style == "underline":
-            flags |= sublime.DRAW_SOLID_UNDERLINE
-        elif style == "stippled":
-            flags |= sublime.DRAW_STIPPLED_UNDERLINE
-        elif style == "squiggly":
-            flags |= sublime.DRAW_SQUIGGLY_UNDERLINE
-    return flags
-
-
 class SettingsRegistration:
     __slots__ = ("_settings",)
 
@@ -147,11 +130,9 @@ def read_list_setting(settings_obj: sublime.Settings, key: str, default: list) -
 class Settings:
 
     # This is only for mypy
-    code_action_on_save_timeout_ms = None  # type: int
     diagnostics_additional_delay_auto_complete_ms = None  # type: int
     diagnostics_delay_ms = None  # type: int
     diagnostics_gutter_marker = None  # type: str
-    diagnostics_highlight_style = None  # type: str
     diagnostics_panel_include_severity_level = None  # type: int
     disabled_capabilities = None  # type: List[str]
     document_highlight_style = None  # type: str
@@ -162,11 +143,14 @@ class Settings:
     log_server = None  # type: List[str]
     lsp_code_actions_on_save = None  # type: Dict[str, bool]
     lsp_format_on_save = None  # type: bool
+    on_save_task_timeout_ms = None  # type: int
     only_show_lsp_completions = None  # type: bool
     popup_max_characters_height = None  # type: int
     popup_max_characters_width = None  # type: int
     show_code_actions = None  # type: bool
+    show_code_actions_in_hover = None  # type: bool
     show_diagnostics_count_in_view_status = None  # type: bool
+    show_diagnostics_highlights = None  # type: bool
     show_diagnostics_in_view_status = None  # type: bool
     show_diagnostics_panel_on_save = None  # type: int
     show_diagnostics_severity_level = None  # type: int
@@ -183,24 +167,25 @@ class Settings:
             val = s.get(name)
             setattr(self, name, val if isinstance(val, default.__class__) else default)
 
-        r("code_action_on_save_timeout_ms", 2000)
         r("diagnostics_additional_delay_auto_complete_ms", 0)
         r("diagnostics_delay_ms", 0)
         r("diagnostics_gutter_marker", "dot")
-        r("diagnostics_highlight_style", "underline")
         r("diagnostics_panel_include_severity_level", 4)
         r("disabled_capabilities", [])
-        r("document_highlight_style", "stippled")
+        r("document_highlight_style", "underline")
         r("log_debug", False)
         r("log_max_size", 8 * 1024)
         r("lsp_code_actions_on_save", {})
         r("lsp_format_on_save", False)
+        r("on_save_task_timeout_ms", 2000)
         r("only_show_lsp_completions", False)
         r("popup_max_characters_height", 1000)
         r("popup_max_characters_width", 120)
         r("show_code_actions", "annotation")
+        r("show_code_actions_in_hover", True)
         r("show_diagnostics_count_in_view_status", False)
         r("show_diagnostics_in_view_status", True)
+        r("show_diagnostics_highlights", True)
         r("show_diagnostics_panel_on_save", 2)
         r("show_diagnostics_severity_level", 2)
         r("show_references_in_quick_panel", False)
@@ -234,13 +219,26 @@ class Settings:
             r("inhibit_snippet_completions", False)
             r("inhibit_word_completions", True)
 
+        # Backwards-compatible with "diagnostics_highlight_style"
+        diagnostics_highlight_style = s.get("diagnostics_highlight_style")
+        if isinstance(diagnostics_highlight_style, str):
+            if not diagnostics_highlight_style:
+                self.show_diagnostics_highlights = False
+
+        # Backwards-compatible with "code_action_on_save_timeout_ms"
+        code_action_on_save_timeout_ms = s.get("code_action_on_save_timeout_ms")
+        if isinstance(code_action_on_save_timeout_ms, int):
+            self.on_save_task_timeout_ms = code_action_on_save_timeout_ms
+
         set_debug_logging(self.log_debug)
 
-    def document_highlight_style_to_add_regions_flags(self) -> int:
-        return _settings_style_to_add_regions_flag(self.document_highlight_style)
-
-    def diagnostics_highlight_style_to_add_regions_flag(self) -> int:
-        return _settings_style_to_add_regions_flag(self.diagnostics_highlight_style)
+    def document_highlight_style_region_flags(self) -> Tuple[int, int]:
+        if self.document_highlight_style == "fill":
+            return sublime.DRAW_NO_OUTLINE, sublime.DRAW_NO_OUTLINE
+        elif self.document_highlight_style == "stippled":
+            return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_STIPPLED_UNDERLINE  # noqa: E501
+        else:
+            return sublime.DRAW_NO_FILL, sublime.DRAW_NO_FILL | sublime.DRAW_NO_OUTLINE | sublime.DRAW_SOLID_UNDERLINE
 
 
 class ClientStates:

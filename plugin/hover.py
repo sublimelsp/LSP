@@ -22,8 +22,9 @@ from .core.views import text_document_position_params
 from .core.views import unpack_href_location
 from .core.views import update_lsp_popup
 from .core.windows import AbstractViewListener
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 import functools
+import re
 import sublime
 import webbrowser
 
@@ -104,7 +105,7 @@ class LspHoverCommand(LspTextCommand):
             self._diagnostics_by_config, covering = listener.diagnostics_touching_point_async(hover_point)
             if self._diagnostics_by_config:
                 self.show_hover(listener, hover_point, only_diagnostics)
-            if not only_diagnostics:
+            if not only_diagnostics and userprefs().show_code_actions_in_hover:
                 actions_manager.request_for_region_async(
                     self.view, covering, self._diagnostics_by_config,
                     functools.partial(self.handle_code_actions, listener, hover_point))
@@ -112,7 +113,7 @@ class LspHoverCommand(LspTextCommand):
         sublime.set_timeout_async(run_async)
 
     def request_symbol_hover_async(self, listener: AbstractViewListener, point: int) -> None:
-        session = listener.session('hoverProvider', point)
+        session = listener.session_async('hoverProvider', point)
         if session:
             document_position = text_document_position_params(self.view, point)
             session.send_request_async(
@@ -133,7 +134,7 @@ class LspHoverCommand(LspTextCommand):
         self.show_hover(listener, point, only_diagnostics=False)
 
     def provider_exists(self, listener: AbstractViewListener, link: LinkKind) -> bool:
-        return bool(listener.session('{}Provider'.format(link.lsp_name)))
+        return bool(listener.session_async('{}Provider'.format(link.lsp_name)))
 
     def symbol_actions_content(self, listener: AbstractViewListener, point: int) -> str:
         if userprefs().show_symbol_action_links:
@@ -202,8 +203,12 @@ class LspHoverCommand(LspTextCommand):
         elif href.startswith("file:"):
             window = self.view.window()
             if window:
-                parsed = urlparse(href)
-                fn = "{}:{}".format(parsed.path, parsed.fragment) if parsed.fragment else parsed.path
+                decoded = unquote(href)  # decode percent-encoded characters
+                parsed = urlparse(decoded)
+                filepath = parsed.path
+                if sublime.platform() == "windows":
+                    filepath = re.sub(r"^/([a-zA-Z]:)", r"\1", filepath)  # remove slash preceding drive letter
+                fn = "{}:{}".format(filepath, parsed.fragment) if parsed.fragment else filepath
                 window.open_file(fn, flags=sublime.ENCODED_POSITION)
         elif href.startswith('code-actions:'):
             _, config_name = href.split(":")

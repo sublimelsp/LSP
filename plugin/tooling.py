@@ -1,4 +1,5 @@
 from .core.css import css
+from .core.logging import debug
 from .core.registry import windows
 from .core.sessions import get_plugin
 from .core.transports import create_transport
@@ -41,7 +42,12 @@ def _preprocess_properties(translations: Optional[Dict[str, str]], properties: D
 
     - Replace description translation placeholders by their English translation
     - Discard the "scope" key
+    - Removes key/values whose value is not a dict
     """
+    non_dict_keys = [k for k, v in properties.items() if not isinstance(v, dict)]
+    for k in non_dict_keys:
+        debug("discarding key:", k)
+        properties.pop(k)
     for v in properties.values():
         v.pop("scope", None)
         descr = v.get("description")
@@ -161,6 +167,8 @@ class LspParseVscodePackageJson(sublime_plugin.ApplicationCommand):
         self.view.assign_syntax("Packages/JSON/JSON.sublime-syntax")
         self.writeline("{")
         for k, v in sorted(properties.items()):
+            if not isinstance(v, dict):
+                continue
             description = v.get("description")
             if not isinstance(description, str):
                 description = v.get("markdownDescription")

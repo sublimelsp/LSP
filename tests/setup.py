@@ -68,9 +68,10 @@ def remove_config(config):
     client_configs.remove_for_testing(config)
 
 
-def close_test_view(view: Optional[sublime.View]):
+def close_test_view(view: Optional[sublime.View]) -> 'Generator':
     if view:
         view.set_scratch(True)
+        yield {"condition": lambda: not view.is_loading(), "timeout": TIMEOUT_TIME}
         view.close()
 
 
@@ -92,7 +93,7 @@ class TextDocumentTestCase(DeferrableTestCase):
         window = sublime.active_window()
         filename = expand(join("$packages", "LSP", "tests", "{}.txt".format(test_name)), window)
         open_view = window.find_open_file(filename)
-        close_test_view(open_view)
+        yield from close_test_view(open_view)
         cls.config = cls.get_stdio_test_config()
         cls.config.init_options.set("serverResponse", server_capabilities)
         add_config(cls.config)
@@ -101,12 +102,13 @@ class TextDocumentTestCase(DeferrableTestCase):
         yield {"condition": lambda: not cls.view.is_loading(), "timeout": TIMEOUT_TIME}
         yield cls.ensure_document_listener_created
         yield {
-            "condition": lambda: cls.wm.get_session(cls.config.name, cls.view.file_name()) is not None,
+            "condition": lambda: cls.wm.get_session(cls.config.name, filename) is not None,
             "timeout": TIMEOUT_TIME}
-        cls.session = cls.wm.get_session(cls.config.name, cls.view.file_name())
+        cls.session = cls.wm.get_session(cls.config.name, filename)
         yield {"condition": lambda: cls.session.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
         yield from cls.await_message("initialize")
         yield from cls.await_message("initialized")
+        yield from close_test_view(cls.view)
 
     def setUp(self) -> Generator:
         window = sublime.active_window()
@@ -118,7 +120,8 @@ class TextDocumentTestCase(DeferrableTestCase):
             self.assertTrue(self.wm._configs.match_view(self.view))
         self.init_view_settings()
         yield self.ensure_document_listener_created
-        yield from self.await_message("textDocument/didOpen")
+        params = yield from self.await_message("textDocument/didOpen")
+        self.assertEquals(params['textDocument']['version'], 0)
 
     @classmethod
     def get_test_name(cls) -> str:
@@ -286,5 +289,5 @@ class TextDocumentTestCase(DeferrableTestCase):
 
     def doCleanups(self) -> 'Generator':
         if self.view and self.view.is_valid():
-            close_test_view(self.view)
+            yield from close_test_view(self.view)
         yield from super().doCleanups()

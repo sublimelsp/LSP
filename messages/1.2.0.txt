@@ -1,7 +1,0 @@
-=> 1.2.0
-
-- Don't ignore session_name in LspTextCommand if capability is defined (Janos Wortmann)
-- Add AbstractPlugin.on_settings_changed API (#1482) (Rafał Chłodnicki)
-- Avoid double registration of external plugins (Rafał Chłodnicki)
-- Make renaming more careful (#1461) (Raoul Wols)
-- Let signature help display with auto-complete off (Rasmus Michelsen)

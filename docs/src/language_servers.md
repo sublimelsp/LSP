@@ -323,7 +323,7 @@ Follow installation instructions on [LSP-serenata](https://github.com/Cloudstek/
 
 ## PowerShell
 
-Follow installation instructions on [LSP-PowerShellEditorServices](https://github.com/Cloudstek/LSP-PowerShellEditorServices).
+Follow installation instructions on [LSP-PowerShellEditorServices](https://github.com/sublimelsp/LSP-PowerShellEditorServices).
 
 ## Python
 
@@ -510,6 +510,8 @@ Follow installation instructions on [LSP-tagml](https://github.com/HuygensING/LS
 ## TypeScript / JavaScript
 
 Follow installation instructions on [LSP-typescript](https://github.com/sublimelsp/LSP-typescript).
+
+For development using the Deno framework follow installation instructions on [LSP-Deno](https://github.com/sublimelsp/LSP-Deno).
 
 ## Vue
 

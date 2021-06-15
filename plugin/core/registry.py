@@ -95,11 +95,35 @@ class LspTextCommand(sublime_plugin.TextCommand):
                     yield sv.session
 
 
-class LspRestartClientCommand(sublime_plugin.TextCommand):
-    def run(self, edit: Any) -> None:
+class LspRestartServerCommand(LspTextCommand):
+
+    def run(self, edit: Any, config_name: str = None) -> None:
         window = self.view.window()
-        if window:
-            windows.lookup(window).restart_sessions_async()
+        if not window:
+            return
+        self._config_names = [session.config.name for session in self.sessions()] if not config_name else [config_name]
+        if not self._config_names:
+            return
+        self._wm = windows.lookup(window)
+        if len(self._config_names) == 1:
+            self.restart_server(0)
+        else:
+            window.show_quick_panel(self._config_names, self.restart_server)
+
+    def restart_server(self, index: int) -> None:
+        if index < 0:
+            return
+
+        def run_async() -> None:
+            config_name = self._config_names[index]
+            if not config_name:
+                return
+            self._wm.end_config_sessions_async(config_name)
+            listener = windows.listener_for_view(self.view)
+            if listener:
+                self._wm.register_listener_async(listener)
+
+        sublime.set_timeout_async(run_async)
 
 
 class LspRecheckSessionsCommand(sublime_plugin.WindowCommand):

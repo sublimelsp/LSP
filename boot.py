@@ -24,7 +24,7 @@ from .plugin.core.panels import WindowPanelListener
 from .plugin.core.protocol import Response
 from .plugin.core.protocol import WorkspaceFolder
 from .plugin.core.registry import LspRecheckSessionsCommand
-from .plugin.core.registry import LspRestartClientCommand
+from .plugin.core.registry import LspRestartServerCommand
 from .plugin.core.registry import windows
 from .plugin.core.sessions import AbstractPlugin
 from .plugin.core.sessions import method2attr

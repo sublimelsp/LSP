@@ -3,8 +3,9 @@
         "caption": "Preferences: LSP Settings",
         "command": "edit_settings",
         "args": {
-          "base_file": "${packages}/LSP/LSP.sublime-settings",
-          "default": "// Settings in here override those in \"LSP/LSP.sublime-settings\"\n{\n\t$0\n}\n"}
+            "base_file": "${packages}/LSP/LSP.sublime-settings",
+            "default": "// Settings in here override those in \"LSP/LSP.sublime-settings\"\n{\n\t$0\n}\n"
+        }
     },
     {
         "caption": "Preferences: LSP Key Bindings",
@@ -52,8 +53,8 @@
         "command": "lsp_format_document_range",
     },
     {
-        "caption": "LSP: Restart Servers",
-        "command": "lsp_restart_client",
+        "caption": "LSP: Restart Server",
+        "command": "lsp_restart_server",
     },
     {
         "caption": "LSP: Goto Symbol",

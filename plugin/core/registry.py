@@ -119,7 +119,7 @@ class LspRestartServerCommand(LspTextCommand):
 
         def run_async() -> None:
             config_name = self._config_names[index]
-            if not config_name or config_name != self.ALL_SERVERS:
+            if not config_name or config_name == self.ALL_SERVERS:
                 self._wm.restart_sessions_async()
             else:
                 self._wm.end_config_sessions_async(config_name)

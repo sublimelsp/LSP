@@ -316,6 +316,10 @@ class WindowManager(Manager):
                 if cannot_start_reason:
                     config.erase_view_status(initiating_view)
                     message = "cannot start {}: {}".format(config.name, cannot_start_reason)
+                    self._configs.disable_config(config.name, only_for_session=True)
+                    # Continue with handling pending listeners
+                    self._new_session = None
+                    sublime.set_timeout_async(self._dequeue_listener_async)
                     return self._window.status_message(message)
                 cwd = plugin_class.on_pre_start(self._window, initiating_view, workspace_folders, config)
             config.set_view_status(initiating_view, "starting...")

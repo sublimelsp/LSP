@@ -662,8 +662,11 @@ class ClientConfig:
             # DEPRECATED -- replace {port} with $port or ${port} in your client config
             command = [a.replace('{port}', str(tcp_port)) for a in command]
         env = os.environ.copy()
-        for var, value in self.env.items():
-            env[var] = sublime.expand_variables(value, variables)
+        for key, value in self.env.items():
+            if key == 'PATH':
+                env[key] = value + os.path.pathsep + env[key]
+            else:
+                env[key] = sublime.expand_variables(value, variables)
         return TransportConfig(self.name, command, tcp_port, env, listener_socket)
 
     def set_view_status(self, view: sublime.View, message: str) -> None:

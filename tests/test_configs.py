@@ -1,7 +1,8 @@
 from LSP.plugin.core.settings import read_client_config, update_client_config
 from LSP.plugin.core.views import get_uri_and_position_from_location
 from LSP.plugin.core.views import to_encoded_filename
-from os.path import dirname
+from os import environ
+from os.path import dirname, pathsep
 from unittesting import DeferrableTestCase
 
 test_file_path = dirname(__file__) + "/testfile.txt"
@@ -63,6 +64,20 @@ class ConfigParsingTests(DeferrableTestCase):
         }
         config = read_client_config("pyls", settings)
         self.assertEqual(config.experimental_capabilities, experimental_capabilities)
+
+    def test_transport_config_extends_env_path(self):
+        settings = {
+            "command": ["pyls"],
+            "selector": "source.python",
+            "env": {
+                "PATH": "/a/b/"
+            }
+        }
+        config = read_client_config("pyls", settings)
+        transport_config = config.resolve_transport_config({})
+        original_path = environ.copy()['PATH']
+        resolved_path = transport_config.env['PATH']
+        self.assertEqual(resolved_path, '/a/b/{}{}'.format(pathsep, original_path))
 
     def test_disabled_capabilities(self):
         settings = {

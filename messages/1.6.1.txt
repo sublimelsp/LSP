@@ -2,5 +2,5 @@
 
 - Add back stippled option for document highlights (#1748) (Janos Wortmann)
 - Add command to restart a specific server (#1733) (@husanjun)
-- When helper package cannot start the server,  continue handling listeners (#1716) (Raoul Wols)
+- When helper package cannot start the server, continue handling listeners (#1716) (Raoul Wols)
 - Special-case env.PATH extending to prepend to the original PATH (#1752) (Rafał Chłodnicki)

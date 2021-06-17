@@ -664,7 +664,7 @@ class ClientConfig:
         env = os.environ.copy()
         for key, value in self.env.items():
             if key == 'PATH':
-                env[key] = value + os.path.pathsep + env[key]
+                env[key] = sublime.expand_variables(value, variables) + os.path.pathsep + env[key]
             else:
                 env[key] = sublime.expand_variables(value, variables)
         return TransportConfig(self.name, command, tcp_port, env, listener_socket)

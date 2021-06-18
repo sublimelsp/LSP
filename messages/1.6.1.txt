@@ -1,6 +1,18 @@
+=> 1.6.1
+
 # Features and Fixes
 
 - Add back stippled option for document highlights (#1748) (Janos Wortmann)
 - Add command to restart a specific server (#1733) (@husanjun)
-- When helper package cannot start the server, continue handling listeners (#1716) (Raoul Wols)
+  You can restart specific servers now with "LSP: Restart Servers".
+  Note that this changed the name of the command; if you had it bound to a
+  key binding you should update the key binding.
+- When a helper package cannot start the server, continue handling listeners (#1716) (Raoul Wols)
+  Fixes a subtle bug where if one language server didn't meet the startup
+  requirements, other queued servers wouldn't be handled any more.
 - Special-case env.PATH extending to prepend to the original PATH (#1752) (Rafał Chłodnicki)
+  In preparation for fixing a subtle bug for helper packages that rely on Node.js
+  When you've chosen to use a locally-intalled node local to ST, then any
+  possible subprocess spawned by the language server should use *that* local
+  node executable as well.
+  The same problem is also present for pip-based helper packages like LSP-pylsp.

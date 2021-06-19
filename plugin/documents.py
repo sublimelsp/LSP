@@ -161,6 +161,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         triggers = [trigger for trigger in triggers if 'server' not in trigger]
         settings.set("auto_complete_triggers", triggers)
         self._stored_region = sublime.Region(-1, -1)
+        self._color_phantoms.update([])
         self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
         self._clear_highlight_regions()
         self._clear_session_views_async()

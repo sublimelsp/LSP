@@ -276,8 +276,7 @@ class SessionView:
     # --- textDocument/codeLens ----------------------------------------------------------------------------------------
 
     def start_code_lenses_async(self) -> None:
-        name = self.session.config.name
-        params = { 'textDocument': text_document_identifier(self.view) }
+        params = {'textDocument': text_document_identifier(self.view)}
         for request_id, request in self.active_requests.items():
             if request.method == "codeAction/resolve":
                 self.session.send_notification(Notification("$/cancelRequest", {"id": request_id}))

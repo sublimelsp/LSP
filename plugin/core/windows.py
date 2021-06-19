@@ -6,7 +6,7 @@ from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
 from .panels import log_server_message
-from .protocol import CodeLens, Diagnostic
+from .protocol import Diagnostic
 from .protocol import Error
 from .sessions import get_plugin
 from .sessions import Logger

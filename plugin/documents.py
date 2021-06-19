@@ -3,7 +3,6 @@ from .code_actions import CodeActionsByConfigName
 from .completion import LspResolveDocsCommand
 from .core.logging import debug
 from .core.promise import Promise
-from .core.protocol import CodeLens
 from .core.protocol import CompletionItem
 from .core.protocol import CompletionList
 from .core.protocol import Diagnostic

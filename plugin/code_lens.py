@@ -85,12 +85,12 @@ class CodeLensView:
         self.clear_annotations()
 
     def handle_response(self, session_name: str, response: List[CodeLens]) -> None:
-        result = [CodeLensData(data, self.view, session_name) for data in response]
-        result.sort(key=lambda c: c.region)
+        responses = [CodeLensData(data, self.view, session_name) for data in response]
+        responses.sort(key=lambda c: c.region)
         result = {
             region.to_tuple(): list(groups)
-            for region, groups in itertools.groupby(result, key=lambda c: c.region)
-        }
+            for region, groups in itertools.groupby(responses, key=lambda c: c.region)
+        }  # type: Dict[Tuple[int, int], List[CodeLensData]]
 
         # Fast path: no extra work to do
         if self.is_empty():

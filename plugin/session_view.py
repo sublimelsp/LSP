@@ -1,12 +1,16 @@
+from .code_lens import CodeLensView
 from .core.progress import ViewProgressReporter
+from .core.promise import Promise
+from .core.protocol import CodeLens
 from .core.protocol import DiagnosticTag
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.types import debounced
-from .core.typing import Any, Iterable, List, Tuple, Optional, Dict
+from .core.typing import Any, Iterable, List, Tuple, Optional, Dict, Generator
 from .core.views import DIAGNOSTIC_SEVERITY
+from .core.views import text_document_identifier
 from .core.windows import AbstractViewListener
 from .session_buffer import SessionBuffer
 from weakref import ref
@@ -37,6 +41,7 @@ class SessionView:
         self.active_requests = {}  # type: Dict[int, Request]
         self.listener = ref(listener)
         self.progress = {}  # type: Dict[int, ViewProgressReporter]
+        self._code_lenses = CodeLensView(self.view)
         settings = self.view.settings()
         buffer_id = self.view.buffer_id()
         key = (session.config.name, session.window.id(), buffer_id)
@@ -57,6 +62,7 @@ class SessionView:
     def __del__(self) -> None:
         settings = self.view.settings()  # type: sublime.Settings
         self._clear_auto_complete_triggers(settings)
+        self._code_lenses.clear_view()
         if self.session.has_capability(self.HOVER_PROVIDER_KEY):
             self._decrement_hover_count()
         # If the session is exiting then there's no point in sending textDocument/didClose and there's also no point
@@ -266,6 +272,42 @@ class SessionView:
         )
         self.progress[request_id] = progress
         return progress
+
+    # --- textDocument/codeLens ----------------------------------------------------------------------------------------
+
+    def start_code_lenses_async(self) -> None:
+        params = {'textDocument': text_document_identifier(self.view)}
+        for request_id, request in self.active_requests.items():
+            if request.method == "codeAction/resolve":
+                self.session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
+        self.session.send_request_async(
+            Request("textDocument/codeLens", params, self.view),
+            self._on_code_lenses_async
+        )
+
+    def _on_code_lenses_async(self, response: Optional[List[CodeLens]]) -> None:
+        self._code_lenses.clear_annotations()
+        if not isinstance(response, list):
+            return
+        self._code_lenses.handle_response(self.session.config.name, response)
+        self.resolve_visible_code_lenses_async()
+
+    def resolve_visible_code_lenses_async(self) -> None:
+        if self._code_lenses.is_empty():
+            self.start_code_lenses_async()
+            return
+
+        promises = []  # type: List[Promise[None]]
+        for code_lens in self._code_lenses.unresolved_visible_code_lens(self.view.visible_region()):
+            callback = functools.partial(code_lens.resolve, self.view)
+            promise = self.session.send_request_task(
+                Request("codeLens/resolve", code_lens.data, self.view)
+            ).then(callback)
+            promises.append(promise)
+        Promise.all(promises).then(lambda _: self._code_lenses.render())
+
+    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
+        yield from self._code_lenses.get_resolved_code_lenses_for_region(region)
 
     def __str__(self) -> str:
         return '{}:{}'.format(self.session.config.name, self.view.id())

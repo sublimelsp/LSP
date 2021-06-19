@@ -67,6 +67,7 @@ class CodeLensView:
     def __init__(self, view: sublime.View) -> None:
         self.view = view
         self._init = False
+        self._phantom = sublime.PhantomSet(view, self.CODE_LENS_KEY)
         self._code_lenses = {}  # type: Dict[Tuple[int, int], List[CodeLensData]]
 
     def clear(self) -> None:
@@ -86,6 +87,7 @@ class CodeLensView:
         return '{0}.{1}'.format(self.CODE_LENS_KEY, index)
 
     def clear_view(self) -> None:
+        self._phantom.update([])
         self.clear_annotations()
 
     def handle_response(self, session_name: str, response: List[CodeLens]) -> None:
@@ -136,10 +138,36 @@ class CodeLensView:
             if lens.is_resolved():
                 yield lens
 
-    def render(self) -> None:
-        accent = self.view.style_for_scope("region.greenish markup.accent.codelens.lsp")["foreground"]
-        for index, lens in enumerate(self._flat_iteration()):
-            self.view.add_regions(self._region_key(index), [lens.region], "", "", 0, [lens.small_html], accent)
+    def _get_phantom_region(self, region: sublime.Region) -> sublime.Region:
+        """Takes the current region and puts the phantom on the line above, properly indented.
+
+        Code-lenses are typically shown above the code in VSCode.
+        """
+        line = self.view.substr(self.view.line(region))
+        offset = 0
+        for ch in line:
+            if ch.isspace():
+                offset += 1
+            else:
+                break
+
+        row, _ = self.view.rowcol_utf16(region.a)
+        point = self.view.text_point_utf16(max(row - 1, 0), offset, clamp_column=True)
+        return sublime.Region(point)
+
+    def render(self, mode: str) -> None:
+        if mode == 'annotation':
+            accent = self.view.style_for_scope("region.greenish markup.accent.codelens.lsp")["foreground"]
+            for index, lens in enumerate(self._flat_iteration()):
+                self.view.add_regions(self._region_key(index), [lens.region], "", "", 0, [lens.small_html], accent)
+        else:  # 'phantom'
+            phantoms = []
+            for key, group in self._code_lenses.items():
+                region = sublime.Region(*key)
+                phantom_region = self._get_phantom_region(region)
+                html = '\n<small style="font-family: system">|</small>\n'.join(lens.small_html for lens in group)
+                phantoms.append(sublime.Phantom(phantom_region, html, sublime.LAYOUT_BELOW))
+            self._phantom.update(phantoms)
 
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
         region = self.view.line(region)

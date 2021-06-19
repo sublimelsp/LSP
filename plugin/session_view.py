@@ -314,7 +314,8 @@ class SessionView:
                 Request("codeLens/resolve", code_lens.data, self.view)
             ).then(callback)
             promises.append(promise)
-        Promise.all(promises).then(lambda _: self._code_lenses.render())
+        mode = userprefs().show_code_lens
+        Promise.all(promises).then(lambda _: self._code_lenses.render(mode))
 
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
         yield from self._code_lenses.get_resolved_code_lenses_for_region(region)

@@ -111,10 +111,6 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Iterable[CodeLens]:
-        raise NotImplementedError()
-
-    @abstractmethod
     def get_language_id(self) -> str:
         raise NotImplementedError()
 

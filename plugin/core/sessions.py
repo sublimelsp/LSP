@@ -8,7 +8,7 @@ from .open import open_externally
 from .progress import WindowProgressReporter
 from .promise import PackagedTask
 from .promise import Promise
-from .protocol import CodeAction, Location, LocationLink, Position
+from .protocol import CodeAction, CodeLens, Location, LocationLink, Position
 from .protocol import Command
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
@@ -338,6 +338,15 @@ class SessionViewProtocol(Protocol):
         ...
 
     def on_request_progress(self, request_id: int, params: Dict[str, Any]) -> None:
+        ...
+
+    def start_code_lenses_async(self) -> None:
+        ...
+
+    def resolve_visible_code_lenses_async(self) -> None:
+        ...
+
+    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
         ...
 
 

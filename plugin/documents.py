@@ -4,18 +4,15 @@ from .completion import LspResolveDocsCommand
 from .core.logging import debug
 from .core.promise import Promise
 from .core.protocol import CodeLens
-from .core.protocol import Command
 from .core.protocol import CompletionItem
 from .core.protocol import CompletionList
 from .core.protocol import Diagnostic
 from .core.protocol import DocumentHighlightKind
 from .core.protocol import Error
-from .core.protocol import Notification
 from .core.protocol import Range
 from .core.protocol import Request
 from .core.protocol import SignatureHelp
 from .core.registry import best_session
-from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.sessions import Session
 from .core.settings import userprefs
@@ -32,7 +29,6 @@ from .core.views import lsp_color_to_phantom
 from .core.views import make_command_link
 from .core.views import range_to_region
 from .core.views import show_lsp_popup
-from .core.views import text_document_identifier
 from .core.views import text_document_position_params
 from .core.views import update_lsp_popup
 from .core.windows import AbstractViewListener
@@ -42,7 +38,6 @@ from .session_view import SessionView
 from functools import partial
 from weakref import WeakSet
 from weakref import WeakValueDictionary
-import functools
 import itertools
 import sublime
 import sublime_plugin
@@ -134,12 +129,11 @@ class TextChangeListener(sublime_plugin.TextChangeListener):
 class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListener):
 
     CODE_ACTIONS_KEY = "lsp_code_action"
-    CODE_LENS_KEY = "lsp_code_lens"
     ACTIVE_DIAGNOSTIC = "lsp_active_diagnostic"
     code_actions_debounce_time = FEATURES_TIMEOUT
     color_boxes_debounce_time = FEATURES_TIMEOUT
     highlights_debounce_time = FEATURES_TIMEOUT
-    code_lenses_debounce_time = FEATURES_TIMEOUT + 2000
+    code_lenses_debounce_time = FEATURES_TIMEOUT
 
     @classmethod
     def applies_to_primary_view_only(cls) -> bool:
@@ -157,7 +151,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._session_views = {}  # type: Dict[str, SessionView]
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
-        self._code_lenses = []  # type: List[Tuple[CodeLens, sublime.Region]]
         self._sighelp = None  # type: Optional[SigHelp]
         self._uri = ""
         self._language_id = ""
@@ -169,7 +162,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         triggers = [trigger for trigger in triggers if 'server' not in trigger]
         settings.set("auto_complete_triggers", triggers)
         self._stored_region = sublime.Region(-1, -1)
-        self._color_phantoms.update([])
         self.view.erase_status(AbstractViewListener.TOTAL_ERRORS_AND_WARNINGS_STATUS_KEY)
         self._clear_highlight_regions()
         self._clear_session_views_async()
@@ -324,12 +316,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def get_language_id(self) -> str:
         return self._language_id
-
-    def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
-        region = self.view.line(region)
-        for code_lens in self._code_lenses:
-            if "command" in code_lens[0] and code_lens[1].intersects(region):
-                yield code_lens[0]
 
     # --- Callbacks from Sublime Text ----------------------------------------------------------------------------------
 
@@ -529,80 +515,19 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
     def on_code_lens_capability_registered_async(self) -> None:
         self._do_code_lenses_async()
 
-    def _code_lens_key(self, index: int) -> str:
-        return self.CODE_LENS_KEY + str(index)
-
-    def _render_code_lens(self, name: str, index: int, region: sublime.Region, command: Optional[Command]) -> None:
-        if command is not None:
-            command_name = command.get("command")
-            if command_name:
-                annotation = make_command_link("lsp_execute", command["title"], {
-                    "session_name": name,
-                    "command_name": command_name,
-                    "command_args": command.get("arguments")
-                })
-            else:
-                annotation = command["title"]
-        else:
-            annotation = "..."
-        annotation = '<div class="codelens">{}</div>'.format(annotation)
-        accent = self.view.style_for_scope("region.greenish markup.accent.codelens.lsp")["foreground"]
-        self.view.add_regions(self._code_lens_key(index), [region], "", "", 0, [annotation], accent)
-
     def _do_code_lenses_async(self) -> None:
         session = self.session_async("codeLensProvider")
         if session and session.uses_plugin():
-            params = {"textDocument": text_document_identifier(self.view)}
             for sv in self.session_views_async():
                 if sv.session == session:
-                    for request_id, request in sv.active_requests.items():
-                        if request.method == "codeAction/resolve":
-                            session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
-            name = session.config.name
-            session.send_request_async(
-                Request("textDocument/codeLens", params, self.view),
-                lambda r: self._on_code_lenses_async(name, r))
-
-    def _on_code_lenses_async(self, name: str, response: Optional[List[CodeLens]]) -> None:
-        for i in range(0, len(self._code_lenses)):
-            self.view.erase_regions(self._code_lens_key(i))
-        self._code_lenses.clear()
-        if not isinstance(response, list):
-            return
-        for index, c in enumerate(response):
-            region = range_to_region(Range.from_lsp(c["range"]), self.view)
-            self._code_lenses.append((c, region))
-            if "command" in c:
-                # We consider a code lens that has a command to be already resolved.
-                self._on_resolved_code_lens_async(name, index, region, c)
-            else:
-                self._render_code_lens(name, index, region, None)
-        self._code_lenses = list((c, range_to_region(Range.from_lsp(c["range"]), self.view)) for c in response)
-        self._resolve_visible_code_lenses_async()
+                    sv.start_code_lenses_async()
 
     def _resolve_visible_code_lenses_async(self) -> None:
         session = self.session_async("codeLensProvider")
-        if session:
-            for index, code_lens, region in self._unresolved_code_lenses(self.view.visible_region()):
-                callback = functools.partial(self._on_resolved_code_lens_async, session.config.name, index, region)
-                session.send_request_async(Request("codeLens/resolve", code_lens, self.view), callback)
-
-    def _on_resolved_code_lens_async(self, name: str, index: int, region: sublime.Region, code_lens: CodeLens) -> None:
-        code_lens["session_name"] = name
-        try:
-            self._code_lenses[index] = (code_lens, region)
-        except IndexError:
-            return
-        self._render_code_lens(name, index, region, code_lens["command"])
-
-    def _unresolved_code_lenses(
-        self,
-        visible: sublime.Region
-    ) -> Generator[Tuple[int, CodeLens, sublime.Region], None, None]:
-        for index, tup in enumerate(self._code_lenses):
-            code_lens, region = tup
-            if not code_lens.get("command") and visible.intersects(region):
-                yield index, code_lens, region
+        if session and session.uses_plugin():
+            for sv in self.session_views_async():
+                if sv.session == session:
+                    sv.resolve_visible_code_lenses_async()
 
     # --- textDocument/documentHighlight -------------------------------------------------------------------------------
 
@@ -842,44 +767,3 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def __repr__(self) -> str:
         return "ViewListener({})".format(self.view.id())
-
-
-class LspCodeLensCommand(LspTextCommand):
-
-    def run(self, edit: sublime.Edit) -> None:
-        listener = windows.listener_for_view(self.view)
-        if not listener:
-            return
-        code_lenses = []  # type: List[CodeLens]
-        for region in self.view.sel():
-            code_lenses.extend(listener.get_resolved_code_lenses_for_region(region))
-        if not code_lenses:
-            return
-        elif len(code_lenses) == 1:
-            command = code_lenses[0]["command"]
-            assert command
-            args = {
-                "session_name": code_lenses[0]["session_name"],
-                "command_name": command["command"],
-                "command_args": command["arguments"]
-            }
-            self.view.run_command("lsp_execute", args)
-        else:
-            self.view.show_popup_menu(
-                [c["command"]["title"] for c in code_lenses],  # type: ignore
-                lambda i: self.on_select(code_lenses, i)
-            )
-
-    def on_select(self, code_lenses: List[CodeLens], index: int) -> None:
-        try:
-            code_lens = code_lenses[index]
-        except IndexError:
-            return
-        command = code_lens["command"]
-        assert command
-        args = {
-            "session_name": code_lens["session_name"],
-            "command_name": command["command"],
-            "command_args": command["arguments"]
-        }
-        self.view.run_command("lsp_execute", args)

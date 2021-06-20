@@ -1,6 +1,6 @@
 from .logging import debug
 from .types import ClientConfig
-from .typing import Any, Generator, List, Set, Dict
+from .typing import Generator, List, Set, Dict
 from .workspace import enable_in_project, disable_in_project
 import sublime
 import urllib.parse

@@ -53,9 +53,6 @@ class WindowConfigManager(object):
         except (IndexError, RuntimeError):
             pass
 
-    def is_supported(self, view: Any) -> bool:
-        return any(self.match_view(view))
-
     def update(self) -> None:
         project_settings = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})
         self.all.clear()

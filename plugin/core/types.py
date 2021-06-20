@@ -607,11 +607,14 @@ class ClientConfig:
             disabled_capabilities = DottedDict(disabled_capabilities)
         else:
             disabled_capabilities = DottedDict()
+        schemes = d.get("schemes")
+        if not isinstance(schemes, list):
+            schemes = ["file"]
         return ClientConfig(
             name=name,
             selector=_read_selector(d),
             priority_selector=_read_priority_selector(d),
-            schemes=d.get("schemes"),
+            schemes=schemes,
             command=d.get("command", []),
             tcp_port=d.get("tcp_port"),
             auto_complete_selector=d.get("auto_complete_selector"),

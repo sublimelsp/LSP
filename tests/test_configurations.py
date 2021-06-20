@@ -49,6 +49,7 @@ class WindowConfigManagerTests(unittest.TestCase):
             scope="text.plain",
             hidden=False
         ))
+        view.settings().set("lsp_uri", "file:///foo/bar.txt")
         self.assertEqual(list(manager.match_view(view)), [TEST_CONFIG])
 
     def test_applies_project_settings(self):
@@ -71,6 +72,7 @@ class WindowConfigManagerTests(unittest.TestCase):
             scope="text.plain",
             hidden=False
         ))
+        view.settings().set("lsp_uri", "file:///foo/bar.txt")
         configs = list(manager.match_view(view))
         self.assertEqual(len(configs), 1)
         config = configs[0]

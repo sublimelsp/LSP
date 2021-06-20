@@ -308,7 +308,7 @@ class SessionView:
         if self._code_lenses.is_empty():
             return
         promises = []  # type: List[Promise[None]]
-        for code_lens in self._code_lenses.unresolved_visible_code_lens(self.view.visible_region()):
+        for code_lens in self._code_lenses.unresolved_visible_code_lenses(self.view.visible_region()):
             callback = functools.partial(code_lens.resolve, self.view)
             promise = self.session.send_request_task(
                 Request("codeLens/resolve", code_lens.data, self.view)

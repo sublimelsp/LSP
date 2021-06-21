@@ -294,9 +294,7 @@ class SessionView:
 
     def resolve_visible_code_lenses_async(self) -> None:
         if self._code_lenses.is_empty():
-            self.start_code_lenses_async()
             return
-
         promises = []  # type: List[Promise[None]]
         for code_lens in self._code_lenses.unresolved_visible_code_lens(self.view.visible_region()):
             callback = functools.partial(code_lens.resolve, self.view)

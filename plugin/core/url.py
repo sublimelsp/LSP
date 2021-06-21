@@ -15,14 +15,14 @@ def filename_to_uri(file_name: str) -> str:
     Convert a file name obtained from view.file_name() into an URI
     """
     prefix = sublime.installed_packages_path()
-    if file_name.startswith(prefix) and not os.path.exists(file_name):
+    if file_name.startswith(prefix):
         return _to_resource_uri(file_name, prefix)
     prefix = sublime.packages_path()
     if file_name.startswith(prefix) and not os.path.exists(file_name):
         return _to_resource_uri(file_name, prefix)
-    file_name = os.path.realpath(file_name)
-    file_name = re.sub(r'^([A-Z]):\\', _lowercase_driveletter, file_name)
-    return urljoin("file:", pathname2url(file_name))
+    path = pathname2url(file_name)
+    re.sub(r"^([A-Z]):/", _lowercase_driveletter, path)
+    return urljoin("file:", path)
 
 
 def view_to_uri(view: sublime.View, foreign_uri: Optional[str] = None) -> str:
@@ -62,4 +62,4 @@ def _lowercase_driveletter(match: Any) -> str:
     """
     For compatibility with certain other language clients.
     """
-    return "{}:\\".format(match.group(1).lower())
+    return "{}:/".format(match.group(1).lower())

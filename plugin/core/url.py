@@ -1,4 +1,4 @@
-from .typing import Any, Optional
+from .typing import Any
 from urllib.parse import quote
 from urllib.parse import urljoin
 from urllib.parse import urlparse
@@ -25,9 +25,7 @@ def filename_to_uri(file_name: str) -> str:
     return urljoin("file:", path)
 
 
-def view_to_uri(view: sublime.View, foreign_uri: Optional[str] = None) -> str:
-    if isinstance(foreign_uri, str):
-        return foreign_uri
+def view_to_uri(view: sublime.View) -> str:
     file_name = view.file_name()
     if not file_name:
         return "buffer://sublime/{}".format(view.buffer_id())

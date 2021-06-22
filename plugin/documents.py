@@ -13,7 +13,6 @@ from .core.protocol import Request
 from .core.protocol import SignatureHelp
 from .core.registry import best_session
 from .core.registry import windows
-from .core.sessions import get_possible_uri_to_set
 from .core.sessions import Session
 from .core.settings import userprefs
 from .core.signature_help import SigHelp
@@ -154,7 +153,11 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 this._on_settings_object_changed()
 
         self._current_syntax = None
-        self.set_uri(view_to_uri(view, get_possible_uri_to_set(view.name())))
+        foreign_uri = view.settings().get("lsp_uri")
+        if isinstance(foreign_uri, str):
+            self._uri = foreign_uri
+        else:
+            self.set_uri(view_to_uri(view))
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
         self._setup()
 

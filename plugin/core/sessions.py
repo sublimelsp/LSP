@@ -667,12 +667,6 @@ class AbstractPlugin(metaclass=ABCMeta):
 
 
 _plugins = {}  # type: Dict[str, Tuple[Type[AbstractPlugin], SettingsRegistration]]
-_pending_uris_to_set = {}  # type: Dict[str, DocumentUri]
-
-
-def get_possible_uri_to_set(title: str) -> Optional[str]:
-    global _pending_uris_to_set
-    return _pending_uris_to_set.get(title)
 
 
 def _register_plugin_impl(plugin: Type[AbstractPlugin], notify_listener: bool) -> None:
@@ -1138,9 +1132,10 @@ class Session(TransportCallbacks):
                 result = Promise.packaged_task()  # type: PackagedTask[bool]
 
                 def open_scratch_buffer(title: str, content: str, syntax: str) -> None:
-                    global _pending_uris_to_set
-                    _pending_uris_to_set[title] = uri
                     v = self.window.new_file(syntax=syntax, flags=flags)
+                    # Note: the __init__ of ViewEventListeners is invoked in the next UI frame, so we can fill in the
+                    # settings object here at our leisure.
+                    v.settings().set("lsp_uri", uri)
                     v.set_scratch(True)
                     v.set_name(title)
                     v.run_command("append", {"characters": content})

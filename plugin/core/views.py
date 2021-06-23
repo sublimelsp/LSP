@@ -370,15 +370,12 @@ def selection_range_params(view: sublime.View) -> Dict[str, Any]:
 
 def text_document_code_action_params(
     view: sublime.View,
-    file_name: str,
     region: sublime.Region,
     diagnostics: Sequence[Diagnostic],
     on_save_actions: Optional[Sequence[str]] = None
 ) -> Dict[str, Any]:
     params = {
-        "textDocument": {
-            "uri": filename_to_uri(file_name)
-        },
+        "textDocument": text_document_identifier(view),
         "range": region_to_range(view, region).to_lsp(),
         "context": {
             "diagnostics": diagnostics

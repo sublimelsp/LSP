@@ -17,6 +17,7 @@ from LSP.plugin.core.views import point_to_offset
 from LSP.plugin.core.views import range_to_region
 from LSP.plugin.core.views import selection_range_params
 from LSP.plugin.core.views import text2html
+from LSP.plugin.core.views import text_document_code_action_params
 from LSP.plugin.core.views import text_document_formatting
 from LSP.plugin.core.views import text_document_position_params
 from LSP.plugin.core.views import text_document_range_formatting
@@ -336,7 +337,32 @@ class ViewsTest(DeferrableTestCase):
         self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
         self.assertEqual(
             document_color_params(self.view),
-            {"textDocument": {"uri": filename_to_uri(self.view.file_name() or '')}})
+            {"textDocument": {"uri": filename_to_uri(self.mock_file_name)}})
+
+    def test_text_document_code_action_params(self) -> None:
+        self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
+        diagnostic = {
+            "message": "oops",
+            "severity": 1,
+            "range": {
+                "start": {
+                    "character": 0,
+                    "line": 0
+                },
+                "end": {
+                    "character": 1,
+                    "line": 0
+                }
+            }
+        }  # type: Diagnostic
+        self.view.run_command("append", {"characters": "a b c\n"})
+        params = text_document_code_action_params(
+            view=self.view,
+            region=sublime.Region(0, 1),
+            diagnostics=[diagnostic],
+            on_save_actions=["refactor"]
+        )
+        self.assertEqual(params["textDocument"], {"uri": filename_to_uri(self.mock_file_name)})
 
     def test_format_diagnostic_for_html(self) -> None:
         diagnostic1 = {

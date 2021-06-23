@@ -122,31 +122,28 @@ class CodeActionsManager:
 
         collector = CodeActionsCollector(actions_handler)
         with collector:
-            file_name = view.file_name()
-            if file_name:
-                listener = windows.listener_for_view(view)
-                if listener:
-                    for session in listener.sessions_async('codeActionProvider'):
-                        if on_save_actions:
-                            supported_kinds = session.get_capability('codeActionProvider.codeActionKinds')
-                            matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])
-                            if matching_kinds:
-                                params = text_document_code_action_params(
-                                    view, file_name, region, [], matching_kinds)
-                                request = Request.codeAction(params, view)
-                                session.send_request_async(
-                                    request, *filtering_collector(session.config.name, matching_kinds, collector))
-                        else:
-                            diagnostics = []  # type: Sequence[Diagnostic]
-                            for sb, diags in session_buffer_diagnostics:
-                                if sb.session == session:
-                                    diagnostics = diags
-                                    break
-                            if only_with_diagnostics and not diagnostics:
-                                continue
-                            params = text_document_code_action_params(view, file_name, region, diagnostics)
+            listener = windows.listener_for_view(view)
+            if listener:
+                for session in listener.sessions_async('codeActionProvider'):
+                    if on_save_actions:
+                        supported_kinds = session.get_capability('codeActionProvider.codeActionKinds')
+                        matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])
+                        if matching_kinds:
+                            params = text_document_code_action_params(view, region, [], matching_kinds)
                             request = Request.codeAction(params, view)
-                            session.send_request_async(request, collector.create_collector(session.config.name))
+                            session.send_request_async(
+                                request, *filtering_collector(session.config.name, matching_kinds, collector))
+                    else:
+                        diagnostics = []  # type: Sequence[Diagnostic]
+                        for sb, diags in session_buffer_diagnostics:
+                            if sb.session == session:
+                                diagnostics = diags
+                                break
+                        if only_with_diagnostics and not diagnostics:
+                            continue
+                        params = text_document_code_action_params(view, region, diagnostics)
+                        request = Request.codeAction(params, view)
+                        session.send_request_async(request, collector.create_collector(session.config.name))
         if use_cache:
             self._response_cache = (location_cache_key, collector)
 

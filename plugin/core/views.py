@@ -16,7 +16,6 @@ from .protocol import Request
 from .settings import userprefs
 from .types import ClientConfig
 from .typing import Callable, Optional, Dict, Any, Iterable, List, Union, Tuple, Sequence, cast
-from .url import filename_to_uri
 from .workspace import is_subpath_of
 from urllib.parse import urlparse
 import html

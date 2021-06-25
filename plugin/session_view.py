@@ -48,7 +48,7 @@ class SessionView:
         key = (session.config.name, session.window.id(), buffer_id)
         session_buffer = self._session_buffers.get(key)
         if session_buffer is None:
-            session_buffer = SessionBuffer(self, buffer_id, listener.get_language_id(), uri)
+            session_buffer = SessionBuffer(self, buffer_id, uri)
             self._session_buffers[key] = session_buffer
         else:
             session_buffer.add_session_view(self)

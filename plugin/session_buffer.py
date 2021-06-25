@@ -62,7 +62,7 @@ class SessionBuffer:
     dynamically registered capabilities applicable to this particular buffer.
     """
 
-    def __init__(self, session_view: SessionViewProtocol, buffer_id: int, language_id: str, uri: DocumentUri) -> None:
+    def __init__(self, session_view: SessionViewProtocol, buffer_id: int, uri: DocumentUri) -> None:
         view = session_view.view
         self.opened = False
         # Every SessionBuffer has its own personal capabilities due to "dynamic registration".
@@ -71,7 +71,6 @@ class SessionBuffer:
         self.session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
         self.session_views.add(session_view)
         self.uri = uri
-        self.language_id = language_id
         self.id = buffer_id
         self.pending_changes = None  # type: Optional[PendingChanges]
         self.diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
@@ -100,7 +99,11 @@ class SessionBuffer:
 
     def _check_did_open(self, view: sublime.View) -> None:
         if not self.opened and self.should_notify_did_open():
-            self.session.send_notification(did_open(view, self.language_id))
+            language_id = self.get_language_id()
+            if not language_id:
+                # we're closing
+                return
+            self.session.send_notification(did_open(view, language_id))
             self.opened = True
 
     def _check_did_close(self) -> None:
@@ -120,7 +123,9 @@ class SessionBuffer:
 
     @property
     def language_id(self) -> str:
-        """Deprecated: use get_language_id"""
+        """
+        Deprecated: use get_language_id
+        """
         return self.get_language_id() or ""
 
     def add_session_view(self, sv: SessionViewProtocol) -> None:

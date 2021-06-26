@@ -184,6 +184,13 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._clear_highlight_regions()
         self._clear_session_views_async()
 
+    def _reset(self) -> None:
+        # Have to do this on the main thread, since __init__ and __del__ are invoked on the main thread too
+        self._cleanup()
+        self._setup()
+        # But this has to run on the async thread again
+        sublime.set_timeout_async(self.on_activated_async)
+
     # --- Implements AbstractViewListener ------------------------------------------------------------------------------
 
     def on_post_move_window_async(self) -> None:
@@ -195,15 +202,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
             if new_window.id() == old_window.id():
                 return
             self._manager.unregister_listener_async(self)
-
-            def reset() -> None:
-                # Have to do this on the main thread, since __init__ and __del__ are invoked on the main thread too
-                self._cleanup()
-                self._setup()
-                # But this has to run on the async thread again
-                sublime.set_timeout_async(self.on_activated_async)
-
-            sublime.set_timeout(reset)
+            sublime.set_timeout(self._reset)
 
     def on_session_initialized_async(self, session: Session) -> None:
         assert not self.view.is_loading()
@@ -794,8 +793,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         new_syntax = self.view.settings().get("syntax")
         if new_syntax != self._current_syntax:
             self._current_syntax = new_syntax
-            self._cleanup()
-            self._setup()
+            self._reset()
 
     def __repr__(self) -> str:
         return "ViewListener({})".format(self.view.id())

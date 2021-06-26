@@ -33,7 +33,7 @@ class SessionView:
     COMPLETION_PROVIDER_KEY = "completionProvider"
     TRIGGER_CHARACTERS_KEY = "completionProvider.triggerCharacters"
 
-    _session_buffers = WeakValueDictionary()  # type: WeakValueDictionary[Tuple[int, int, int], SessionBuffer]
+    _session_buffers = WeakValueDictionary()  # type: WeakValueDictionary[Tuple[int, int], SessionBuffer]
 
     def __init__(self, listener: AbstractViewListener, session: Session) -> None:
         self.view = listener.view
@@ -44,7 +44,7 @@ class SessionView:
         self._code_lenses = CodeLensView(self.view)
         settings = self.view.settings()
         buffer_id = self.view.buffer_id()
-        key = (id(session), session.window.id(), buffer_id)
+        key = (id(session), buffer_id)
         session_buffer = self._session_buffers.get(key)
         if session_buffer is None:
             session_buffer = SessionBuffer(self, buffer_id, listener.get_language_id())

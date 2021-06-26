@@ -221,4 +221,4 @@ class Listener(sublime_plugin.EventListener):
         if command_name in ("next_result", "prev_result"):
             view = window.active_view()
             if view:
-                 view.run_command("lsp_hover", {"only_diagnostics": True})
+                view.run_command("lsp_hover", {"only_diagnostics": True})

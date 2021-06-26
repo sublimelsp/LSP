@@ -26,6 +26,41 @@
               "type": "string",
               "deprecationMessage": "Use the \"selector\" key instead."
             },
+            "FileWatcher": {
+              "type": "object",
+              "examples": [
+                {
+                  "glob": "{**/*.js,**/*.ts,**/*.json}",
+                  "kind": ["create", "change", "delete"],
+                  "ignores": ["**/.git/**", "**/node_modules/**", "**/.hg/**"]
+                }
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "glob": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "create",
+                      "change",
+                      "delete"
+                    ]
+                  },
+                  "uniqueItems": true
+                },
+                "ignores": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "uniqueItems": true
+                }
+              }
+            },
             "ClientCommand": {
               "type": "array",
               "default": [
@@ -94,6 +129,9 @@
                 },
                 "enabled": {
                   "$ref": "sublime://settings/LSP#/definitions/ClientEnabled"
+                },
+                "file_watcher": {
+                  "$ref": "sublime://settings/LSP#/definitions/FileWatcher"
                 },
                 "tcp_port": {
                   "type": "integer",
@@ -425,6 +463,9 @@
             },
             "enabled": {
               "$ref": "sublime://settings/LSP#/definitions/ClientEnabled"
+            },
+            "file_watcher": {
+              "$ref": "sublime://settings/LSP#/definitions/FileWatcher"
             },
             "selector": {
               "$ref": "sublime://settings/LSP#/definitions/ClientSelector"

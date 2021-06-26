@@ -1,6 +1,11 @@
 from .collections import DottedDict
 from .edit import apply_workspace_edit
 from .edit import parse_workspace_edit
+from .file_watcher import DEFAULT_IGNORES
+from .file_watcher import FileEvent
+from .file_watcher import FileWatcher
+from .file_watcher import get_file_watcher_implementation
+from .file_watcher import WATCHER_TYPE_TO_KIND
 from .logging import debug
 from .logging import exception_log
 from .open import center_selection
@@ -13,6 +18,7 @@ from .protocol import Command
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticTag
+from .protocol import DidChangeWatchedFilesRegistrationOptions
 from .protocol import DocumentUri
 from .protocol import Error
 from .protocol import ErrorCode
@@ -35,6 +41,7 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
+from .url import filename_to_uri
 from .url import uri_to_filename
 from .version import __version__
 from .views import COMPLETION_KINDS
@@ -295,6 +302,8 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     }
     if config.experimental_capabilities is not None:
         capabilities['experimental'] = config.experimental_capabilities
+    if get_file_watcher_implementation():
+        capabilities["textDocument"]["didChangeWatchedFiles"] = { "dynamicRegistration": True }
     return {
         "processId": os.getpid(),
         "clientInfo": {
@@ -616,30 +625,6 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         return False
 
-    def on_register_capability_async(self, registration_id: str, capability_path: str, options: Dict[str, Any]) -> None:
-        """
-        Notifies about server dynamically registering a capability using the client/registerCapability request.
-        This API is triggered on async thread.
-
-        :param registration_id: The registration identifier
-        :param capability_path: The registration capability path
-        :param options: The registration options
-        """
-        pass
-
-    def on_unregister_capability_async(
-        self, registration_id: str, capability_path: str, options: Dict[str, Any]
-    ) -> None:
-        """
-        Notifies about server un-registering a capability using the client/unregisterCapability request.
-        This API is triggered on async thread.
-
-        :param registration_id: The registration identifier
-        :param capability_path: The registration capability path
-        :param options: The registration options
-        """
-        pass
-
     def on_session_end_async(self) -> None:
         """
         Notifies about the session ending (also if the session has crashed). Provides an opportunity to clean up
@@ -841,6 +826,9 @@ class Session(TransportCallbacks):
         self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
         self._session_buffers = WeakSet()  # type: WeakSet[SessionBufferProtocol]
         self._progress = {}  # type: Dict[str, Optional[WindowProgressReporter]]
+        self._watcher_impl = get_file_watcher_implementation()
+        self._static_file_watchers = []  # type: List[FileWatcher]
+        self._dynamic_file_watchers = {}  # type: Dict[str, List[FileWatcher]]
         self._plugin_class = plugin_class
         self._plugin = None  # type: Optional[AbstractPlugin]
         self._status_messages = {}  # type: Dict[str, str]
@@ -968,6 +956,13 @@ class Session(TransportCallbacks):
     def should_notify_did_close(self) -> bool:
         return self.capabilities.should_notify_did_close()
 
+    # --- FileWatcherProtocol ------------------------------------------------------------------------------------------
+
+    def on_file_event(self, events: List[FileEvent]) -> None:
+        changes = list(map(lambda event: {'uri': filename_to_uri(event[1]), 'type': event[0]}, events))
+        print(self.config.name, changes)
+        self.send_notification(Notification.didChangeWatchedFiles({'changes': changes}))
+
     # --- misc methods -------------------------------------------------------------------------------------------------
 
     def handles_path(self, file_path: Optional[str], inside_workspace: bool) -> bool:
@@ -1023,6 +1018,17 @@ class Session(TransportCallbacks):
         code_action_kinds = self.get_capability('codeActionProvider.codeActionKinds')
         if code_action_kinds:
             debug('{}: supported code action kinds: {}'.format(self.config.name, code_action_kinds))
+        if self._watcher_impl:
+            watcher_config = self.config.file_watcher
+            if watcher_config and 'glob' in watcher_config:
+                kind = 0
+                for kind_type in watcher_config.get('kind', []):
+                    kind |= WATCHER_TYPE_TO_KIND.get(kind_type, 0)
+                if kind:
+                    ignores = watcher_config.get('ignores', DEFAULT_IGNORES)
+                    for folder in self.get_workspace_folders():
+                        self._static_file_watchers.append(
+                            self._watcher_impl.create(folder.path, watcher_config['glob'], kind, ignores, self))
         if self._init_callback:
             self._init_callback(self, False)
             self._init_callback = None
@@ -1238,10 +1244,15 @@ class Session(TransportCallbacks):
                     # Inform only after the response is sent, otherwise we might start doing requests for capabilities
                     # which are technically not yet done registering.
                     sublime.set_timeout_async(inform)
-            if self._plugin:
-                inform = functools.partial(
-                    self._plugin.on_register_capability_async, registration_id, capability_path, options)
-                sublime.set_timeout_async(inform)
+            if self._watcher_impl and capability_path == "workspace.didChangeWatchedFiles":
+                capability_options = cast(DidChangeWatchedFilesRegistrationOptions, options)
+                file_watchers = []  # type: List[FileWatcher]
+                for watcher in capability_options.get("watchers"):
+                    for folder in self.get_workspace_folders():
+                        file_watchers.append(
+                            self._watcher_impl.create(
+                                folder.path, watcher.get("globPattern"), watcher.get("kind", 0), DEFAULT_IGNORES, self))
+                self._dynamic_file_watchers[registration_id] = file_watchers
         self.send_response(Response(request_id, None))
 
     def m_client_unregisterCapability(self, params: Any, request_id: Any) -> None:
@@ -1252,8 +1263,12 @@ class Session(TransportCallbacks):
             capability_path, registration_path = method_to_capability(unregistration["method"])
             debug("{}: unregistering capability:".format(self.config.name), capability_path)
             data = self._registrations.pop(registration_id, None)
-            if data and self._plugin:
-                self._plugin.on_unregister_capability_async(registration_id, capability_path, data.options)
+            if self._watcher_impl and capability_path == "workspace.didChangeWatchedFiles":
+                file_watchers = self._dynamic_file_watchers.get(registration_id)
+                if file_watchers:
+                    for file_watcher in file_watchers:
+                        file_watcher.destroy()
+                    del self._dynamic_file_watchers[registration_id]
             if data and not data.selector:
                 discarded = self.capabilities.unregister(registration_id, capability_path, registration_path)
                 # We must inform our SessionViews of the removed capabilities, in case it's for instance a hoverProvider
@@ -1347,6 +1362,13 @@ class Session(TransportCallbacks):
             sv.shutdown_async()
         self.capabilities.clear()
         self._registrations.clear()
+        for watcher in self._static_file_watchers:
+            watcher.destroy()
+        self._static_file_watchers = []
+        for watchers in self._dynamic_file_watchers.values():
+            for watcher in watchers:
+                watcher.destroy()
+        self._dynamic_file_watchers = {}
         self.state = ClientStates.STOPPING
         self.send_request_async(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
 

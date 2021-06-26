@@ -206,12 +206,21 @@ CompletionList = TypedDict('CompletionList', {
     'items': List[CompletionItem],
 }, total=True)
 
-
 PublishDiagnosticsParams = TypedDict('PublishDiagnosticsParams', {
     'uri': DocumentUri,
     'version': Optional[int],
     'diagnostics': List[Diagnostic],
 }, total=False)
+
+
+FileSystemWatcher = TypedDict('FileSystemWatcher', {
+    'globPattern': str,
+    'kind': int,
+}, total=True)
+
+DidChangeWatchedFilesRegistrationOptions  = TypedDict('DidChangeWatchedFilesRegistrationOptions', {
+    'watchers': List[FileSystemWatcher],
+}, total=True)
 
 
 class Request:
@@ -376,6 +385,10 @@ class Notification:
     @classmethod
     def didChangeConfiguration(cls, params: dict) -> 'Notification':
         return Notification("workspace/didChangeConfiguration", params)
+
+    @classmethod
+    def didChangeWatchedFiles(cls, params: dict) -> 'Notification':
+        return Notification("workspace/didChangeWatchedFiles", params)
 
     @classmethod
     def didChangeWorkspaceFolders(cls, params: dict) -> 'Notification':

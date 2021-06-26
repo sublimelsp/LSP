@@ -542,6 +542,7 @@ class ClientConfig:
                  env: Dict[str, str] = {},
                  experimental_capabilities: Optional[Dict[str, Any]] = None,
                  disabled_capabilities: DottedDict = DottedDict(),
+                 file_watcher: Optional[Dict[str, Any]] = None,
                  path_maps: Optional[List[PathMap]] = None) -> None:
         self.name = name
         self.selector = selector
@@ -559,6 +560,7 @@ class ClientConfig:
         self.env = env
         self.experimental_capabilities = experimental_capabilities
         self.disabled_capabilities = disabled_capabilities
+        self.file_watcher = file_watcher
         self.path_maps = path_maps
         self.status_key = "lsp_{}".format(self.name)
 
@@ -588,6 +590,7 @@ class ClientConfig:
             env=read_dict_setting(s, "env", {}),
             experimental_capabilities=s.get("experimental_capabilities"),
             disabled_capabilities=disabled_capabilities,
+            file_watcher=s.get("file_watcher"),
             path_maps=PathMap.parse(s.get("path_maps"))
         )
 
@@ -611,6 +614,7 @@ class ClientConfig:
             env=d.get("env", dict()),
             experimental_capabilities=d.get("experimental_capabilities"),
             disabled_capabilities=disabled_capabilities,
+            file_watcher=d.get("file_watcher"),
             path_maps=PathMap.parse(d.get("path_maps"))
         )
 
@@ -637,6 +641,7 @@ class ClientConfig:
             experimental_capabilities=override.get(
                 "experimental_capabilities", src_config.experimental_capabilities),
             disabled_capabilities=disabled_capabilities,
+            file_watcher=override.get("file_watcher", src_config.file_watcher),
             path_maps=path_map_override if path_map_override else src_config.path_maps
         )
 

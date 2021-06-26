@@ -280,10 +280,7 @@ class SessionView:
         for request_id, request in self.active_requests.items():
             if request.method == "codeAction/resolve":
                 self.session.send_notification(Notification("$/cancelRequest", {"id": request_id}))
-        self.session.send_request_async(
-            Request("textDocument/codeLens", params, self.view),
-            self._on_code_lenses_async
-        )
+        self.session.send_request_async(Request("textDocument/codeLens", params, self.view), self._on_code_lenses_async)
 
     def _on_code_lenses_async(self, response: Optional[List[CodeLens]]) -> None:
         self._code_lenses.clear_annotations()

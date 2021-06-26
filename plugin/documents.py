@@ -165,6 +165,12 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._cleanup()
 
     def _setup(self) -> None:
+        syntax = self.view.syntax()
+        if syntax:
+            self._language_id = basescope2languageid(syntax.scope)  # type: str
+        else:
+            debug("view", self.view.id(), "has no syntax")
+            self._language_id = ""
         self._manager = None  # type: Optional[WindowManager]
         self._session_views = {}  # type: Dict[str, SessionView]
         self._stored_region = sublime.Region(-1, -1)
@@ -728,11 +734,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         debounced(f, after_ms, lambda: self._stored_region == r, async_thread=True)
 
     def _register_async(self) -> None:
-        syntax = self.view.syntax()
-        if not syntax:
-            debug("view", self.view.id(), "has no syntax")
-            return
-        self._language_id = basescope2languageid(syntax.scope)
         buf = self.view.buffer()
         if not buf:
             debug("not tracking bufferless view", self.view.id())

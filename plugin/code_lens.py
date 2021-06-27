@@ -66,6 +66,7 @@ class CodeLensView:
 
     def __init__(self, view: sublime.View) -> None:
         self.view = view
+        self._init = False
         self._code_lenses = {}  # type: Dict[Tuple[int, int], List[CodeLensData]]
 
     def clear(self) -> None:
@@ -73,6 +74,9 @@ class CodeLensView:
 
     def is_empty(self) -> bool:
         return not self._code_lenses
+
+    def is_initialized(self) -> bool:
+        return self._init
 
     def clear_annotations(self) -> None:
         for index, _ in enumerate(self._flat_iteration()):
@@ -85,6 +89,7 @@ class CodeLensView:
         self.clear_annotations()
 
     def handle_response(self, session_name: str, response: List[CodeLens]) -> None:
+        self._init = True
         responses = [CodeLensData(data, self.view, session_name) for data in response]
         responses.sort(key=lambda c: c.region)
         result = {

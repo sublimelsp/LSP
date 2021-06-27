@@ -302,6 +302,9 @@ class SessionView:
         self.resolve_visible_code_lenses_async()
 
     def resolve_visible_code_lenses_async(self) -> None:
+        if not self._code_lenses.is_initialized():
+            self.start_code_lenses_async()
+            return
         if self._code_lenses.is_empty():
             return
         promises = []  # type: List[Promise[None]]

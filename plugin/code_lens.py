@@ -134,16 +134,15 @@ class CodeLensView:
                 yield lens
 
     def _get_phantom_region(self, region: sublime.Region) -> sublime.Region:
-        line = self.view.substr(self.view.line(region))
+        line = self.view.line(region)
+        code = self.view.substr(line)
         offset = 0
-        for ch in line:
+        for ch in code:
             if ch.isspace():
                 offset += 1
             else:
                 break
-        row, _ = self.view.rowcol(region.a)
-        point = self.view.text_point(max(row - 1, 0), offset, clamp_column=True)
-        return sublime.Region(point)
+        return sublime.Region(line.a + offset, line.b)
 
     def render(self, mode: str) -> None:
         if mode == 'phantom':

@@ -176,7 +176,6 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         self._stored_region = sublime.Region(-1, -1)
         self._color_phantoms = sublime.PhantomSet(self.view, "lsp_color")
         self._sighelp = None  # type: Optional[SigHelp]
-        self._language_id = ""
         self._registered = False
 
     def _cleanup(self) -> None:

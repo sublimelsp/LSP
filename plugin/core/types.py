@@ -2,7 +2,7 @@ from .collections import DottedDict
 from .file_watcher import FileWatcherKind
 from .logging import debug, set_debug_logging
 from .protocol import TextDocumentSyncKindNone
-from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypedDict, TypeVar
+from .typing import Any, cast, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypedDict, TypeVar
 from .url import filename_to_uri
 from .url import uri_to_filename
 from threading import RLock
@@ -579,6 +579,7 @@ class ClientConfig:
         init_options = DottedDict(base.get("initializationOptions", {}))
         init_options.update(read_dict_setting(s, "initializationOptions", {}))
         disabled_capabilities = s.get("disabled_capabilities")
+        file_watcher = cast(FileWatcherConfig, read_dict_setting(s, "file_watcher", {}))
         if isinstance(disabled_capabilities, dict):
             disabled_capabilities = DottedDict(disabled_capabilities)
         else:
@@ -597,7 +598,7 @@ class ClientConfig:
             env=read_dict_setting(s, "env", {}),
             experimental_capabilities=s.get("experimental_capabilities"),
             disabled_capabilities=disabled_capabilities,
-            file_watcher=s.get("file_watcher", {}),
+            file_watcher=file_watcher,
             path_maps=PathMap.parse(s.get("path_maps"))
         )
 

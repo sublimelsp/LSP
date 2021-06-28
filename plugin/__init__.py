@@ -1,8 +1,7 @@
 from .core.collections import DottedDict
 from .core.css import css
-from .core.file_watcher import WatchKind
-from .core.file_watcher import WatchKindValue
 from .core.file_watcher import FileWatcher
+from .core.file_watcher import FileWatcherKind
 from .core.file_watcher import FileWatcherProtocol
 from .core.file_watcher import register_file_watcher_implementation
 from .core.protocol import Notification
@@ -26,19 +25,18 @@ __all__ = [
     'ClientConfig',
     'css',
     'DottedDict',
-    'FileWatcher',
-    'FileWatcherProtocol',
     'filename_to_uri',
+    'FileWatcher',
+    'FileWatcherKind',
+    'FileWatcherProtocol',
     'Notification',
-    'register_plugin',
     'register_file_watcher_implementation',
+    'register_plugin',
     'Request',
     'Response',
     'Session',
     'SessionBufferProtocol',
     'unregister_plugin',
     'uri_to_filename',
-    'WatchKind',
-    'WatchKindValue',
     'WorkspaceFolder',
 ]

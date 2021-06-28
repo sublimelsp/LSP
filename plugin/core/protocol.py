@@ -218,8 +218,23 @@ FileSystemWatcher = TypedDict('FileSystemWatcher', {
     'kind': int,
 }, total=True)
 
-DidChangeWatchedFilesRegistrationOptions  = TypedDict('DidChangeWatchedFilesRegistrationOptions', {
+DidChangeWatchedFilesRegistrationOptions = TypedDict('DidChangeWatchedFilesRegistrationOptions', {
     'watchers': List[FileSystemWatcher],
+}, total=True)
+
+WatchKind = int
+WatchKindCreate = 1
+WatchKindChange = 2
+WatchKindDelete = 4
+
+FileChangeType = int
+FileChangeTypeCreated = 1
+FileChangeTypeChanged = 2
+FileChangeTypeDeleted = 3
+
+FileEvent = TypedDict("FileEvent", {
+    "uri": DocumentUri,
+    "type": FileChangeType,
 }, total=True)
 
 

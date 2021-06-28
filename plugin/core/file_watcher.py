@@ -1,30 +1,38 @@
-from .typing import List, Optional, Protocol, Tuple, Type
+from .protocol import FileChangeType, FileChangeTypeCreated, FileChangeTypeChanged, FileChangeTypeDeleted
+from .protocol import WatchKind, WatchKindCreate, WatchKindChange, WatchKindDelete
+from .typing import List, Literal, Optional, Protocol, Tuple, Type, Union
 from abc import ABCMeta
 from abc import abstractmethod
 
-
 DEFAULT_IGNORES = ['**/.git/**', '**/node_modules/**', '**/.hg/**']
+DEFAULT_KIND = WatchKindCreate | WatchKindChange | WatchKindDelete
 
-WatchKind = int
+FileWatcherKind = Union[Literal['create'], Literal['change'], Literal['delete']]
 FilePath = str
-FileEvent = Tuple[WatchKind, FilePath]
+FileWatcherEvent = Tuple[FileWatcherKind, FilePath]
 
 
-class WatchKindValue:
-    CREATE = 1
-    CHANGE = 2
-    DELETE = 4
+def lsp_watch_kind_to_file_watcher_kind(kind: WatchKind) -> List[FileWatcherKind]:
+    kinds = []  # type: List[FileWatcherKind]
+    if kind & WatchKindCreate:
+        kinds.append('create')
+    if kind & WatchKindChange:
+        kinds.append('change')
+    if kind & WatchKindDelete:
+        kinds.append('delete')
+    return kinds
 
 
-WATCHER_TYPE_TO_KIND = {
-    'create': WatchKindValue.CREATE,
-    'change': WatchKindValue.CHANGE,
-    'delete': WatchKindValue.DELETE,
-}
+def file_watcher_kind_to_lsp_file_change_type(kind: FileWatcherKind) -> FileChangeType:
+    return {
+        'create': FileChangeTypeCreated,
+        'change': FileChangeTypeChanged,
+        'delete': FileChangeTypeDeleted,
+    }[kind]
 
 
 class FileWatcherProtocol(Protocol):
-    def on_file_event(self, events: List[FileEvent]) -> None:
+    def on_file_event(self, events: List[FileWatcherEvent]) -> None:
         ...
 
 
@@ -39,7 +47,7 @@ class FileWatcher(metaclass=ABCMeta):
         cls,
         root_path: str,
         glob: str,
-        kind: WatchKind,
+        kind: List[FileWatcherKind],
         ignores: List[str],
         handler: FileWatcherProtocol
     ) -> 'FileWatcher':

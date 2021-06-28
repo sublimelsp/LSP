@@ -2,10 +2,12 @@ from .collections import DottedDict
 from .edit import apply_workspace_edit
 from .edit import parse_workspace_edit
 from .file_watcher import DEFAULT_IGNORES
-from .file_watcher import FileEvent
+from .file_watcher import DEFAULT_KIND
+from .file_watcher import file_watcher_kind_to_lsp_file_change_type
 from .file_watcher import FileWatcher
+from .file_watcher import FileWatcherEvent
 from .file_watcher import get_file_watcher_implementation
-from .file_watcher import WATCHER_TYPE_TO_KIND
+from .file_watcher import lsp_watch_kind_to_file_watcher_kind
 from .logging import debug
 from .logging import exception_log
 from .open import center_selection
@@ -23,6 +25,7 @@ from .protocol import DocumentUri
 from .protocol import Error
 from .protocol import ErrorCode
 from .protocol import ExecuteCommandParams
+from .protocol import FileEvent
 from .protocol import Notification
 from .protocol import RangeLsp
 from .protocol import Request
@@ -131,179 +134,183 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     completion_tag_value_set = [v for k, v in CompletionItemTag.__dict__.items() if not k.startswith('_')]
     symbol_tag_value_set = [v for k, v in SymbolTag.__dict__.items() if not k.startswith('_')]
     first_folder = workspace_folders[0] if workspace_folders else None
-    capabilities = {
-        "general": {
-            # https://microsoft.github.io/language-server-protocol/specification#regExp
-            "regularExpressions": {
-                # https://www.sublimetext.com/docs/completions.html#ver-dev
-                # https://www.boost.org/doc/libs/1_64_0/libs/regex/doc/html/boost_regex/syntax/perl_syntax.html
-                # ECMAScript syntax is a subset of Perl syntax
-                "engine": "ECMAScript"
+    general_capabilities = {
+        # https://microsoft.github.io/language-server-protocol/specification#regExp
+        "regularExpressions": {
+            # https://www.sublimetext.com/docs/completions.html#ver-dev
+            # https://www.boost.org/doc/libs/1_64_0/libs/regex/doc/html/boost_regex/syntax/perl_syntax.html
+            # ECMAScript syntax is a subset of Perl syntax
+            "engine": "ECMAScript"
+        },
+        # https://microsoft.github.io/language-server-protocol/specification#markupContent
+        "markdown": {
+            # https://python-markdown.github.io
+            "parser": "Python-Markdown",
+            "version": mdpopups.markdown.__version__  # type: ignore
+        }
+    }
+    text_document_capabilities = {
+        "synchronization": {
+            "dynamicRegistration": True,  # exceptional
+            "didSave": True,
+            "willSave": True,
+            "willSaveWaitUntil": True
+        },
+        "hover": {
+            "dynamicRegistration": True,
+            "contentFormat": ["markdown", "plaintext"]
+        },
+        "completion": {
+            "dynamicRegistration": True,
+            "completionItem": {
+                "snippetSupport": True,
+                "deprecatedSupport": True,
+                "documentationFormat": ["markdown", "plaintext"],
+                "tagSupport": {
+                    "valueSet": completion_tag_value_set
+                },
+                "resolveSupport": {
+                    "properties": ["detail", "documentation", "additionalTextEdits"]
+                }
             },
-            # https://microsoft.github.io/language-server-protocol/specification#markupContent
-            "markdown": {
-                # https://python-markdown.github.io
-                "parser": "Python-Markdown",
-                "version": mdpopups.markdown.__version__  # type: ignore
+            "completionItemKind": {
+                "valueSet": completion_kinds
             }
         },
-        "textDocument": {
-            "synchronization": {
-                "dynamicRegistration": True,  # exceptional
-                "didSave": True,
-                "willSave": True,
-                "willSaveWaitUntil": True
-            },
-            "hover": {
-                "dynamicRegistration": True,
-                "contentFormat": ["markdown", "plaintext"]
-            },
-            "completion": {
-                "dynamicRegistration": True,
-                "completionItem": {
-                    "snippetSupport": True,
-                    "deprecatedSupport": True,
-                    "documentationFormat": ["markdown", "plaintext"],
-                    "tagSupport": {
-                        "valueSet": completion_tag_value_set
-                    },
-                    "resolveSupport": {
-                        "properties": ["detail", "documentation", "additionalTextEdits"]
-                    }
-                },
-                "completionItemKind": {
-                    "valueSet": completion_kinds
+        "signatureHelp": {
+            "dynamicRegistration": True,
+            "signatureInformation": {
+                "documentationFormat": ["markdown", "plaintext"],
+                "parameterInformation": {
+                    "labelOffsetSupport": True
                 }
+            }
+        },
+        "references": {
+            "dynamicRegistration": True
+        },
+        "documentHighlight": {
+            "dynamicRegistration": True
+        },
+        "documentSymbol": {
+            "dynamicRegistration": True,
+            "hierarchicalDocumentSymbolSupport": True,
+            "symbolKind": {
+                "valueSet": symbol_kinds
             },
-            "signatureHelp": {
-                "dynamicRegistration": True,
-                "signatureInformation": {
-                    "documentationFormat": ["markdown", "plaintext"],
-                    "parameterInformation": {
-                        "labelOffsetSupport": True
-                    }
-                }
-            },
-            "references": {
-                "dynamicRegistration": True
-            },
-            "documentHighlight": {
-                "dynamicRegistration": True
-            },
-            "documentSymbol": {
-                "dynamicRegistration": True,
-                "hierarchicalDocumentSymbolSupport": True,
-                "symbolKind": {
-                    "valueSet": symbol_kinds
-                },
-                "tagSupport": {
-                    "valueSet": symbol_tag_value_set
-                }
-            },
-            "formatting": {
-                "dynamicRegistration": True  # exceptional
-            },
-            "rangeFormatting": {
-                "dynamicRegistration": True
-            },
-            "declaration": {
-                "dynamicRegistration": True,
-                "linkSupport": True
-            },
-            "definition": {
-                "dynamicRegistration": True,
-                "linkSupport": True
-            },
-            "typeDefinition": {
-                "dynamicRegistration": True,
-                "linkSupport": True
-            },
-            "implementation": {
-                "dynamicRegistration": True,
-                "linkSupport": True
-            },
-            "codeAction": {
-                "dynamicRegistration": True,
-                "codeActionLiteralSupport": {
-                    "codeActionKind": {
-                        "valueSet": [
-                            "quickfix",
-                            "refactor",
-                            "refactor.extract",
-                            "refactor.inline",
-                            "refactor.rewrite",
-                            "source.organizeImports"
-                        ]
-                    }
-                },
-                "dataSupport": True,
-                "resolveSupport": {
-                    "properties": [
-                        "edit"
+            "tagSupport": {
+                "valueSet": symbol_tag_value_set
+            }
+        },
+        "formatting": {
+            "dynamicRegistration": True  # exceptional
+        },
+        "rangeFormatting": {
+            "dynamicRegistration": True
+        },
+        "declaration": {
+            "dynamicRegistration": True,
+            "linkSupport": True
+        },
+        "definition": {
+            "dynamicRegistration": True,
+            "linkSupport": True
+        },
+        "typeDefinition": {
+            "dynamicRegistration": True,
+            "linkSupport": True
+        },
+        "implementation": {
+            "dynamicRegistration": True,
+            "linkSupport": True
+        },
+        "codeAction": {
+            "dynamicRegistration": True,
+            "codeActionLiteralSupport": {
+                "codeActionKind": {
+                    "valueSet": [
+                        "quickfix",
+                        "refactor",
+                        "refactor.extract",
+                        "refactor.inline",
+                        "refactor.rewrite",
+                        "source.organizeImports"
                     ]
                 }
             },
-            "rename": {
-                "dynamicRegistration": True,
-                "prepareSupport": True
-            },
-            "colorProvider": {
-                "dynamicRegistration": True  # exceptional
-            },
-            "publishDiagnostics": {
-                "relatedInformation": True,
-                "tagSupport": {
-                    "valueSet": diagnostic_tag_value_set
-                },
-                "versionSupport": True,
-                "codeDescriptionSupport": True,
-                "dataSupport": True
-            },
-            "selectionRange": {
-                "dynamicRegistration": True
-            },
-            "codeLens": {
-                "dynamicRegistration": True
+            "dataSupport": True,
+            "resolveSupport": {
+                "properties": [
+                    "edit"
+                ]
             }
         },
-        "workspace": {
-            "applyEdit": True,
-            "didChangeConfiguration": {
-                "dynamicRegistration": True
-            },
-            "executeCommand": {},
-            "workspaceEdit": {
-                "documentChanges": True,
-                "failureHandling": "abort",
-            },
-            "workspaceFolders": True,
-            "symbol": {
-                "dynamicRegistration": True,  # exceptional
-                "symbolKind": {
-                    "valueSet": symbol_kinds
-                },
-                "tagSupport": {
-                    "valueSet": symbol_tag_value_set
-                }
-            },
-            "configuration": True
+        "rename": {
+            "dynamicRegistration": True,
+            "prepareSupport": True
         },
-        "window": {
-            "showDocument": {
-                "support": True
+        "colorProvider": {
+            "dynamicRegistration": True  # exceptional
+        },
+        "publishDiagnostics": {
+            "relatedInformation": True,
+            "tagSupport": {
+                "valueSet": diagnostic_tag_value_set
             },
-            "showMessage": {
-                "messageActionItem": {
-                    "additionalPropertiesSupport": True
-                }
-            },
-            "workDoneProgress": True
+            "versionSupport": True,
+            "codeDescriptionSupport": True,
+            "dataSupport": True
+        },
+        "selectionRange": {
+            "dynamicRegistration": True
+        },
+        "codeLens": {
+            "dynamicRegistration": True
         }
+    }
+    workspace_capabilites = {
+        "applyEdit": True,
+        "didChangeConfiguration": {
+            "dynamicRegistration": True
+        },
+        "executeCommand": {},
+        "workspaceEdit": {
+            "documentChanges": True,
+            "failureHandling": "abort",
+        },
+        "workspaceFolders": True,
+        "symbol": {
+            "dynamicRegistration": True,  # exceptional
+            "symbolKind": {
+                "valueSet": symbol_kinds
+            },
+            "tagSupport": {
+                "valueSet": symbol_tag_value_set
+            }
+        },
+        "configuration": True
+    }
+    window_capabilities = {
+        "showDocument": {
+            "support": True
+        },
+        "showMessage": {
+            "messageActionItem": {
+                "additionalPropertiesSupport": True
+            }
+        },
+        "workDoneProgress": True
+    }
+    capabilities = {
+        "general": general_capabilities,
+        "textDocument": text_document_capabilities,
+        "workspace": workspace_capabilites,
+        "window": window_capabilities,
     }
     if config.experimental_capabilities is not None:
         capabilities['experimental'] = config.experimental_capabilities
     if get_file_watcher_implementation():
-        capabilities["textDocument"]["didChangeWatchedFiles"] = { "dynamicRegistration": True }
+        text_document_capabilities["didChangeWatchedFiles"] = {"dynamicRegistration": True}
     return {
         "processId": os.getpid(),
         "clientInfo": {
@@ -958,8 +965,14 @@ class Session(TransportCallbacks):
 
     # --- FileWatcherProtocol ------------------------------------------------------------------------------------------
 
-    def on_file_event(self, events: List[FileEvent]) -> None:
-        changes = list(map(lambda event: {'uri': filename_to_uri(event[1]), 'type': event[0]}, events))
+    def on_file_event(self, events: List[FileWatcherEvent]) -> None:
+        changes = []  # type: List[FileEvent]
+        for event in events:
+            kind, filepath = event
+            changes.append({
+                'uri': filename_to_uri(filepath),
+                'type': file_watcher_kind_to_lsp_file_change_type(kind),
+            })
         print(self.config.name, changes)
         self.send_notification(Notification.didChangeWatchedFiles({'changes': changes}))
 
@@ -1019,16 +1032,14 @@ class Session(TransportCallbacks):
         if code_action_kinds:
             debug('{}: supported code action kinds: {}'.format(self.config.name, code_action_kinds))
         if self._watcher_impl:
-            watcher_config = self.config.file_watcher
-            if watcher_config and 'glob' in watcher_config:
-                kind = 0
-                for kind_type in watcher_config.get('kind', []):
-                    kind |= WATCHER_TYPE_TO_KIND.get(kind_type, 0)
-                if kind:
-                    ignores = watcher_config.get('ignores', DEFAULT_IGNORES)
-                    for folder in self.get_workspace_folders():
-                        self._static_file_watchers.append(
-                            self._watcher_impl.create(folder.path, watcher_config['glob'], kind, ignores, self))
+            config = self.config.file_watcher
+            glob = config.get('glob')
+            if glob:
+                kind = config.get('kind') or ['create', 'change', 'delete']
+                ignores = config.get('ignores') or DEFAULT_IGNORES
+                for folder in self.get_workspace_folders():
+                    watcher = self._watcher_impl.create(folder.path, glob, kind, ignores, self)
+                    self._static_file_watchers.append(watcher)
         if self._init_callback:
             self._init_callback(self, False)
             self._init_callback = None
@@ -1247,11 +1258,12 @@ class Session(TransportCallbacks):
             if self._watcher_impl and capability_path == "workspace.didChangeWatchedFiles":
                 capability_options = cast(DidChangeWatchedFilesRegistrationOptions, options)
                 file_watchers = []  # type: List[FileWatcher]
-                for watcher in capability_options.get("watchers"):
+                for config in capability_options.get("watchers", []):
+                    glob = config.get("globPattern", '')
+                    kind = lsp_watch_kind_to_file_watcher_kind(config.get("kind") or DEFAULT_KIND)
                     for folder in self.get_workspace_folders():
-                        file_watchers.append(
-                            self._watcher_impl.create(
-                                folder.path, watcher.get("globPattern"), watcher.get("kind", 0), DEFAULT_IGNORES, self))
+                        watcher = self._watcher_impl.create(folder.path, glob, kind, DEFAULT_IGNORES, self)
+                        file_watchers.append(watcher)
                 self._dynamic_file_watchers[registration_id] = file_watchers
         self.send_response(Response(request_id, None))
 

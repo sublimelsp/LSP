@@ -7,11 +7,24 @@ from LSP.plugin.core.file_watcher import register_file_watcher_implementation
 from LSP.plugin.core.protocol import WatchKindCreate
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.typing import Generator, List
-from LSP.plugin.core.url import uri_to_filename
 from os.path import join
 from setup import expand
 from setup import TextDocumentTestCase
 import sublime
+
+
+def setup_workspace_folder() -> str:
+    window = sublime.active_window()
+    folder_path = expand(join('$packages', 'LSP', 'tests'), window)
+    window.set_project_data({
+        'folders': [
+            {
+                'name': 'folder',
+                'path': folder_path,
+            }
+        ]
+    })
+    return folder_path
 
 
 class TestFileWatcher(FileWatcher):
@@ -59,7 +72,38 @@ class TestFileWatcher(FileWatcher):
         sublime.set_timeout_async(trigger_async)
 
 
-class FileWatcherStaticTests(TextDocumentTestCase):
+class FileWatcherDocumentTestCase(TextDocumentTestCase):
+    """
+    Changes TextDocumentTestCase behavior so that the initialization and destroy of the config
+    and the view happens before and after every test rather than per-testsuite.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        # Don't call the superclass.
+        register_file_watcher_implementation(TestFileWatcher)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        # Don't call the superclass.
+        pass
+
+    def setUp(self) -> Generator:
+        self.assertEqual(len(TestFileWatcher._active_watchers), 0)
+        # Watchers are only registered when there are workspace folders so add a folder.
+        self.folder_root_path = setup_workspace_folder()
+        yield from super().setUpClass()
+        yield from super().setUp()
+
+    def tearDown(self) -> Generator:
+        yield from super().tearDownClass()
+        self.assertEqual(len(TestFileWatcher._active_watchers), 0)
+        # Restore original project data.
+        window = sublime.active_window()
+        window.set_project_data(None)
+
+
+class FileWatcherStaticTests(FileWatcherDocumentTestCase):
 
     @classmethod
     def get_stdio_test_config(cls) -> ClientConfig:
@@ -73,31 +117,6 @@ class FileWatcherStaticTests(TextDocumentTestCase):
                 }
             }
         )
-
-    @classmethod
-    def setUpClass(cls) -> Generator:
-        # Watchers are only registered when there are workspace folders so add a folder.
-        window = sublime.active_window()
-        cls.original_project_data = window.project_data()
-        cls.folder_root_path = expand(join('$packages', 'LSP', 'tests'), window)
-        window.set_project_data({
-            'folders': [
-                {
-                    'name': 'folder',
-                    'path': cls.folder_root_path,
-                }
-            ]
-        })
-        register_file_watcher_implementation(TestFileWatcher)
-        yield from super().setUpClass()
-
-    @classmethod
-    def tearDownClass(cls) -> Generator:
-        yield from super().tearDownClass()
-        # Restore original project data.
-        window = sublime.active_window()
-        window.set_project_data(cls.original_project_data)
-        cls.original_project_data = None
 
     def test_initialize_params_includes_capability(self) -> None:
         self.assertIn('didChangeWatchedFiles', self.initialize_params['capabilities']['textDocument'])
@@ -120,35 +139,10 @@ class FileWatcherStaticTests(TextDocumentTestCase):
         self.assertEqual(len(sent_notification['changes']), 1)
         change = sent_notification['changes'][0]
         self.assertEqual(change['type'], file_watcher_kind_to_lsp_file_change_type('change'))
-        self.assertEqual(uri_to_filename(change['uri']), filepath)
+        self.assertTrue(change['uri'].endswith('file.js'))
 
 
-class FileWatcherDynamicTests(TextDocumentTestCase):
-
-    @classmethod
-    def setUpClass(cls) -> Generator:
-        # Watchers are only registered when there are workspace folders so add a folder.
-        window = sublime.active_window()
-        cls.original_project_data = window.project_data()
-        cls.folder_root_path = expand(join('$packages', 'LSP', 'tests'), window)
-        window.set_project_data({
-            'folders': [
-                {
-                    'name': 'folder',
-                    'path': cls.folder_root_path,
-                }
-            ]
-        })
-        register_file_watcher_implementation(TestFileWatcher)
-        yield from super().setUpClass()
-
-    @classmethod
-    def tearDownClass(cls) -> Generator:
-        yield from super().tearDownClass()
-        # Restore original project data.
-        window = sublime.active_window()
-        window.set_project_data(cls.original_project_data)
-        cls.original_project_data = None
+class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
 
     def test_handles_dynamic_watcher_registration(self) -> Generator:
         registration_params = {

@@ -17,6 +17,15 @@
         }
     },
     {
+        "caption": "Preferences: LSP Language ID Mapping Overrides",
+        "command": "edit_settings",
+        "args": {
+            "base_file": "${packages}/LSP/language-ids.sublime-settings",
+            "user_file": "${packages}/User/language-ids.sublime-settings",
+            "default": "// SublimeText base scope -> LSP Language ID overrides\n{\n\t// \"source.mylanguage\": \"mylang\"\n\t$0\n}\n"
+        }
+    },
+    {
         "caption": "LSP Development: Parse VSCode Package JSON From Clipboard",
         "command": "lsp_parse_vscode_package_json"
     },

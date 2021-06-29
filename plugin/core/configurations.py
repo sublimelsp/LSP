@@ -1,8 +1,9 @@
 from .logging import debug
 from .types import ClientConfig
-from .typing import Any, Generator, List, Set, Dict
+from .typing import Generator, List, Set, Dict
 from .workspace import enable_in_project, disable_in_project
 import sublime
+import urllib.parse
 
 
 class ConfigManager(object):
@@ -36,17 +37,21 @@ class WindowConfigManager(object):
 
     def match_view(self, view: sublime.View, include_disabled: bool = False) -> Generator[ClientConfig, None, None]:
         """
-        Yields configurations matching with the language's document_selector
+        Yields configurations where:
+
+        - the configuration's "selector" matches with the view's base scope, and
+        - the view's URI scheme is an element of the configuration's "schemes".
         """
         try:
+            uri = view.settings().get("lsp_uri")
+            if not isinstance(uri, str):
+                return
+            scheme = urllib.parse.urlparse(uri).scheme
             for config in self.all.values():
-                if config.match_view(view) and (config.enabled or include_disabled):
+                if config.match_view(view, scheme) and (config.enabled or include_disabled):
                     yield config
         except (IndexError, RuntimeError):
             pass
-
-    def is_supported(self, view: Any) -> bool:
-        return any(self.match_view(view))
 
     def update(self) -> None:
         project_settings = (self._window.project_data() or {}).get("settings", {}).get("LSP", {})

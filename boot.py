@@ -80,6 +80,11 @@ def _register_all_plugins() -> None:
     plugin_classes = []  # type: List[Type[AbstractPlugin]]
     _get_final_subclasses(AbstractPlugin.__subclasses__(), plugin_classes)
     for plugin_class in plugin_classes:
+        try:
+            if not plugin_class.name():
+                continue
+        except NotImplementedError:
+            continue
         register_plugin(plugin_class, notify_listener=False)
     # TODO: Anything below here should be removed about a month after ST4 is released.
     language_handler_classes = []  # type: List[Type[LanguageHandler]]

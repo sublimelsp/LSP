@@ -150,30 +150,56 @@
   // - partially override a configuration in the "default_clients", or
   // - create new configurations.
   //
+  // It is **highly recommended** to download the LSP-json helper package. This
+  // is a package that auto-installs a JSON language server that will provide
+  // auto-completions for all keys in this file, and many others as well.
+  // See: https://packagecontrol.io/packages/LSP-json
+  //
   // "clients":
   // {
   //   // Each new server configuration must have the following structure.
   //   "CLIENT_NAME": // some human-friendly name
   //   {
-  //     # Must-have settings (for new configurations):
+  //     # ----------- The following three settings are **required** -----------
+  //
+  //     // Enable or disable this client configuration.
+  //     "enabled": true,
   //
   //     // The command line required to run the server.
   //     "command": ["pyls"],
   //
-  //     // This selector filters which views apply to this configuration, in the same way that a selector for a build
-  //     // system filters which build system applies to which view. To determine the base scope of your view, click
-  //     // on Tools > Developer > Show Scope Name. The first line in the popup is the base scope.
-  //     "selector": "source.pyls",
+  //     // This selector filters which views apply to this configuration, in
+  //     // the same way that a selector for a build system filters which build
+  //     // system applies to which view. To determine the base scope of your
+  //     // view, click on Tools > Developer > Show Scope Name. The first line
+  //     // in the popup is the base scope.
+  //     "selector": "source.python",
   //
-  //     // When you want to connect to the language server via TCP (on localhost), specify the port here.
-  //     // If you put a value of 0 here, then LSP will select a free port number on localhost. In that case, you can
-  //     // use the string templates $port or ${port} in the "command".
-  //     // The syntax "{port}" is also allowed, but deprecated in favor of $port and ${port}.
+  //     # ------ From this point onward, each key-value is **optional** -------
+  //
+  //     // An optional list of URI schemes which this client configuration
+  //     // should attach to. A well-known URI scheme is the `file` scheme. The
+  //     // scheme `buffer` is used as in-memory scratch buffer (that is when
+  //     // you create a new unsaved tab). Furthermore, the scheme `res` is used
+  //     // to denote Sublime Text resource files inside .sublime-package files,
+  //     // viewable with the _View Package File_ command from the
+  //     // _Command Palette_. Other URI schemes exist, but require different
+  //     // considerations for different language servers.  If this setting is
+  //     // not specified, then only the `file` scheme is used, meaning that this
+  //     // client configuration will only attach to views that are backed by a
+  //     // file on disk.
+  //     "schemes": ["file", "buffer", "res"],
+  //
+  //     // When you want to connect to the language server via TCP (on
+  //     // localhost), specify the port here. If you put a value of 0 here,
+  //     // then LSP will select a free port number on localhost. In that case,
+  //     // you can use the string templates $port or ${port} in the "command".
+  //     // The syntax "{port}" is also allowed, but deprecated in favor of
+  //     // $port and ${port}.
   //     "tcp_port": 1234,
   //
-  //     # Optional settings (key-value pairs):
-  //
-  //     // Sent to server once using workspace/didChangeConfiguration notification
+  //     // Sent to server once using workspace/didChangeConfiguration
+  //     // notification
   //     "settings": { },
   //
   //     // Sent once to server in initialize request

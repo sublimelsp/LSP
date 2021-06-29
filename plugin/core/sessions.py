@@ -965,7 +965,7 @@ class Session(TransportCallbacks):
 
     # --- FileWatcherProtocol ------------------------------------------------------------------------------------------
 
-    def on_file_event(self, events: List[FileWatcherEvent]) -> None:
+    def on_file_event_async(self, events: List[FileWatcherEvent]) -> None:
         changes = []  # type: List[FileEvent]
         for event in events:
             kind, filepath = event

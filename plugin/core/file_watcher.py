@@ -32,13 +32,22 @@ def file_watcher_kind_to_lsp_file_change_type(kind: FileWatcherKind) -> FileChan
 
 
 class FileWatcherProtocol(Protocol):
-    def on_file_event(self, events: List[FileWatcherEvent]) -> None:
+    def on_file_event_async(self, events: List[FileWatcherEvent]) -> None:
+        """
+        Called on file watcher events.
+        This API must be triggered on async thread.
+
+        :param events: The list of events to notify about.
+        """
         ...
 
 
 class FileWatcher(metaclass=ABCMeta):
     """
     A public interface of a file watcher implementation.
+
+    The interface implements the file watcher and notifies the `handler` (through the `on_file_event_async` method)
+    on file event changes.
     """
 
     @classmethod

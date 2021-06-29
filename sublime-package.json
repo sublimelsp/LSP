@@ -115,6 +115,21 @@
               "markdownDescription": "A [selector](https://www.sublimetext.com/docs/3/selectors.html) that defines to which views this language server should be attached, in the same way that a selector for a [Build\u00A0System](https://www.sublimetext.com/docs/3/build_systems.html) is used to filter the Build System to particular views. The selector is matched against the base scope of the syntax of the view. If the selector matches with the base scope of the the file, the associated language server is started. To determine the base scope of your view, click on Tools > Developer > Show Scope Name. The first line in the popup is the base scope.",
               "type": "string",
             },
+            "ClientSchemes": {
+              "markdownDescription": "An optional list of URI schemes which this client configuration should attach to. A well-known URI scheme is the `file` scheme. The scheme `buffer` is used as in-memory scratch buffer (that is when you create a new unsaved tab). Furthermore, the scheme `res` is used to denote Sublime Text resource files inside .sublime-package files, viewable with the _View Package File_ command from the _Command Palette_.\n\nOther URI schemes exist, but require different considerations for different language servers.\n\nIf this setting is not specified, then only the `file` scheme is used, meaning that this client configuration will only attach to views that are backed by a file on disk.",
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string"
+              },
+              "defaultSnippets": [
+                {
+                  "body": [
+                    "${1:file}"
+                  ]
+                }
+              ]
+            },
             "ClientPrioritySelector": {
               "markdownDescription": "While the `\"selector\"` is used to determine which views belong to which language server configuration, the `\"priority_selector\"` is used to determine which language server wins at the caret position in case there are multiple language servers attached to a view. For instance, there can only be one signature help popup visible at any given time. This selector is use to decide which one to use for such capabilities. This setting is optional and you won't need to set it if you're planning on using a single language server for a particular type of view."
             },
@@ -147,6 +162,9 @@
                 },
                 "selector": {
                   "$ref": "#/definitions/ClientSelector"
+                },
+                "schemes": {
+                  "$ref": "#/definitions/ClientSchemes"
                 },
                 "priority_selector": {
                   "$ref": "#/definitions/ClientPrioritySelector",
@@ -469,6 +487,9 @@
             },
             "selector": {
               "$ref": "sublime://settings/LSP#/definitions/ClientSelector"
+            },
+            "schemes": {
+              "$ref": "sublime://settings/LSP#/definitions/ClientSchemes"
             },
             "priority_selector": {
               "$ref": "sublime://settings/LSP#/definitions/ClientPrioritySelector"

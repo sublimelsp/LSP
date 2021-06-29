@@ -13,6 +13,8 @@ import os
 import socket
 import sublime
 import time
+import urllib.parse
+
 
 TCP_CONNECT_TIMEOUT = 5  # seconds
 FEATURES_TIMEOUT = 300  # milliseconds
@@ -279,8 +281,9 @@ class DocumentFilter:
             if not syntax or basescope2languageid(syntax.scope) != self.language:
                 return False
         if self.scheme:
-            # Can be "file" or "untitled"?
-            pass
+            uri = view.settings().get("lsp_uri")
+            if isinstance(uri, str) and urllib.parse.urlparse(uri).scheme != self.scheme:
+                return False
         if self.pattern:
             if not globmatch(view.file_name() or "", self.pattern, flags=GLOBSTAR | BRACE):
                 return False
@@ -532,6 +535,7 @@ class ClientConfig:
                  name: str,
                  selector: str,
                  priority_selector: Optional[str] = None,
+                 schemes: Optional[List[str]] = None,
                  command: Optional[List[str]] = None,
                  binary_args: Optional[List[str]] = None,  # DEPRECATED
                  tcp_port: Optional[int] = None,
@@ -546,6 +550,10 @@ class ClientConfig:
         self.name = name
         self.selector = selector
         self.priority_selector = priority_selector if priority_selector else self.selector
+        if isinstance(schemes, list):
+            self.schemes = schemes  # type: List[str]
+        else:
+            self.schemes = ["file"]
         if isinstance(command, list):
             self.command = command
         else:
@@ -578,6 +586,7 @@ class ClientConfig:
             name=name,
             selector=_read_selector(s),
             priority_selector=_read_priority_selector(s),
+            schemes=s.get("schemes"),
             command=read_list_setting(s, "command", []),
             tcp_port=s.get("tcp_port"),
             auto_complete_selector=s.get("auto_complete_selector"),
@@ -598,10 +607,14 @@ class ClientConfig:
             disabled_capabilities = DottedDict(disabled_capabilities)
         else:
             disabled_capabilities = DottedDict()
+        schemes = d.get("schemes")
+        if not isinstance(schemes, list):
+            schemes = ["file"]
         return ClientConfig(
             name=name,
             selector=_read_selector(d),
             priority_selector=_read_priority_selector(d),
+            schemes=schemes,
             command=d.get("command", []),
             tcp_port=d.get("tcp_port"),
             auto_complete_selector=d.get("auto_complete_selector"),
@@ -626,6 +639,7 @@ class ClientConfig:
             name=src_config.name,
             selector=_read_selector(override) or src_config.selector,
             priority_selector=_read_priority_selector(override) or src_config.priority_selector,
+            schemes=override.get("schemes", src_config.schemes),
             command=override.get("command", src_config.command),
             tcp_port=override.get("tcp_port", src_config.tcp_port),
             auto_complete_selector=override.get("auto_complete_selector", src_config.auto_complete_selector),
@@ -677,15 +691,15 @@ class ClientConfig:
     def erase_view_status(self, view: sublime.View) -> None:
         view.erase_status(self.status_key)
 
-    def match_view(self, view: sublime.View) -> bool:
+    def match_view(self, view: sublime.View, scheme: str) -> bool:
         syntax = view.syntax()
-        if syntax:
-            # Every part of a x.y.z scope seems to contribute 8.
-            # An empty selector result in a score of 1.
-            # A non-matching non-empty selector results in a score of 0.
-            # We want to match at least one part of an x.y.z, and we don't want to match on empty selectors.
-            return sublime.score_selector(syntax.scope, self.selector) >= 8
-        return False
+        if not syntax:
+            return False
+        # Every part of a x.y.z scope seems to contribute 8.
+        # An empty selector result in a score of 1.
+        # A non-matching non-empty selector results in a score of 0.
+        # We want to match at least one part of an x.y.z, and we don't want to match on empty selectors.
+        return scheme in self.schemes and sublime.score_selector(syntax.scope, self.selector) >= 8
 
     def map_client_path_to_server_uri(self, path: str) -> str:
         if self.path_maps:

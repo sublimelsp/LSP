@@ -12,12 +12,12 @@ class GlobalConfigManagerTests(unittest.TestCase):
     def test_empty_configs(self):
         manager = ConfigManager({})
         window_mgr = manager.for_window(sublime.active_window())
-        self.assertEqual(list(window_mgr.all.values()), [])
+        self.assertNotIn(TEST_CONFIG.name, window_mgr.all)
 
     def test_global_config(self):
         manager = ConfigManager({TEST_CONFIG.name: TEST_CONFIG})
         window_mgr = manager.for_window(sublime.active_window())
-        self.assertEqual(list(window_mgr.all.values()), [TEST_CONFIG])
+        self.assertIn(TEST_CONFIG.name, window_mgr.all)
 
     def test_override_config(self):
         manager = ConfigManager({TEST_CONFIG.name: TEST_CONFIG})
@@ -32,12 +32,16 @@ class WindowConfigManagerTests(unittest.TestCase):
 
     def test_no_configs(self):
         view = sublime.active_window().active_view()
+        self.assertIsNotNone(view)
+        assert view
         manager = WindowConfigManager(sublime.active_window(), {})
-        self.assertFalse(manager.is_supported(view))
+        self.assertEqual(list(manager.match_view(view)), [])
 
     def test_with_single_config(self):
         window = sublime.active_window()
         view = window.active_view()
+        self.assertIsNotNone(view)
+        assert view
         manager = WindowConfigManager(window, {TEST_CONFIG.name: TEST_CONFIG})
         view.syntax = MagicMock(return_value=sublime.Syntax(
             path="Packages/Text/Plain text.tmLanguage",
@@ -45,7 +49,7 @@ class WindowConfigManagerTests(unittest.TestCase):
             scope="text.plain",
             hidden=False
         ))
-        self.assertTrue(manager.is_supported(view))
+        view.settings().set("lsp_uri", "file:///foo/bar.txt")
         self.assertEqual(list(manager.match_view(view)), [TEST_CONFIG])
 
     def test_applies_project_settings(self):
@@ -68,6 +72,7 @@ class WindowConfigManagerTests(unittest.TestCase):
             scope="text.plain",
             hidden=False
         ))
+        view.settings().set("lsp_uri", "file:///foo/bar.txt")
         configs = list(manager.match_view(view))
         self.assertEqual(len(configs), 1)
         config = configs[0]

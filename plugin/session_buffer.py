@@ -1,8 +1,9 @@
 from .core.protocol import Diagnostic
 from .core.protocol import DiagnosticSeverity
+from .core.protocol import DocumentUri
+from .core.protocol import Range
 from .core.protocol import TextDocumentSyncKindFull
 from .core.protocol import TextDocumentSyncKindNone
-from .core.protocol import Range
 from .core.sessions import SessionViewProtocol
 from .core.settings import userprefs
 from .core.types import Capabilities
@@ -17,7 +18,7 @@ from .core.views import did_close
 from .core.views import did_open
 from .core.views import did_save
 from .core.views import format_diagnostic_for_panel
-from .core.views import MissingFilenameError
+from .core.views import MissingUriError
 from .core.views import range_to_region
 from .core.views import will_save
 from weakref import WeakSet
@@ -56,24 +57,20 @@ class SessionBuffer:
     """
     Holds state per session per buffer.
 
-    It stores the filename, handles document synchronization for the buffer, and stores/receives diagnostics for the
+    It stores the URI, handles document synchronization for the buffer, and stores/receives diagnostics for the
     buffer. The diagnostics are then published further to the views attached to this buffer. It also maintains the
     dynamically registered capabilities applicable to this particular buffer.
     """
 
-    def __init__(self, session_view: SessionViewProtocol, buffer_id: int, language_id: str) -> None:
+    def __init__(self, session_view: SessionViewProtocol, buffer_id: int, uri: DocumentUri) -> None:
         view = session_view.view
-        file_name = view.file_name()
-        if not file_name:
-            raise ValueError("missing filename")
         self.opened = False
         # Every SessionBuffer has its own personal capabilities due to "dynamic registration".
         self.capabilities = Capabilities()
         self.session = session_view.session
         self.session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
         self.session_views.add(session_view)
-        self.file_name = file_name
-        self.language_id = language_id
+        self.last_known_uri = uri
         self.id = buffer_id
         self.pending_changes = None  # type: Optional[PendingChanges]
         self.diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
@@ -102,13 +99,34 @@ class SessionBuffer:
 
     def _check_did_open(self, view: sublime.View) -> None:
         if not self.opened and self.should_notify_did_open():
-            self.session.send_notification(did_open(view, self.language_id))
+            language_id = self.get_language_id()
+            if not language_id:
+                # we're closing
+                return
+            self.session.send_notification(did_open(view, language_id))
             self.opened = True
 
     def _check_did_close(self) -> None:
         if self.opened and self.should_notify_did_close():
-            self.session.send_notification(did_close(self.file_name))
+            self.session.send_notification(did_close(uri=self.last_known_uri))
             self.opened = False
+
+    def get_uri(self) -> Optional[str]:
+        for sv in self.session_views:
+            return sv.get_uri()
+        return None
+
+    def get_language_id(self) -> Optional[str]:
+        for sv in self.session_views:
+            return sv.get_language_id()
+        return None
+
+    @property
+    def language_id(self) -> str:
+        """
+        Deprecated: use get_language_id
+        """
+        return self.get_language_id() or ""
 
     def add_session_view(self, sv: SessionViewProtocol) -> None:
         self.session_views.add(sv)
@@ -210,28 +228,26 @@ class SessionBuffer:
             try:
                 notification = did_change(view, version, changes)
                 self.session.send_notification(notification)
-            except MissingFilenameError:
+            except MissingUriError:
                 pass  # we're closing
             self.pending_changes = None
 
-    def on_pre_save_async(self, view: sublime.View, old_file_name: str) -> None:
+    def on_pre_save_async(self, view: sublime.View) -> None:
         if self.should_notify_will_save():
             self.purge_changes_async(view)
             # TextDocumentSaveReason.Manual
-            self.session.send_notification(will_save(old_file_name, 1))
+            self.session.send_notification(will_save(self.last_known_uri, 1))
 
-    def on_post_save_async(self, view: sublime.View) -> None:
-        file_name = view.file_name()
-        if file_name and file_name != self.file_name:
+    def on_post_save_async(self, view: sublime.View, new_uri: DocumentUri) -> None:
+        if new_uri != self.last_known_uri:
             self._check_did_close()
-            self.file_name = file_name
+            self.last_known_uri = new_uri
             self._check_did_open(view)
         else:
             send_did_save, include_text = self.should_notify_did_save()
             if send_did_save:
                 self.purge_changes_async(view)
-                # mypy: expected sublime.View, got ViewLike
-                self.session.send_notification(did_save(view, include_text, self.file_name))
+                self.session.send_notification(did_save(view, include_text, self.last_known_uri))
         if self.should_show_diagnostics_panel:
             mgr = self.session.manager()
             if mgr:
@@ -354,4 +370,4 @@ class SessionBuffer:
             mgr.update_diagnostics_panel_async()
 
     def __str__(self) -> str:
-        return '{}:{}:{}'.format(self.session.config.name, self.id, self.file_name)
+        return '{}:{}:{}'.format(self.session.config.name, self.id, self.get_uri())

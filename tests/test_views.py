@@ -2,6 +2,7 @@ from copy import deepcopy
 from LSP.plugin.core.protocol import Diagnostic
 from LSP.plugin.core.protocol import Point
 from LSP.plugin.core.protocol import Range
+from LSP.plugin.core.types import Any
 from LSP.plugin.core.url import filename_to_uri
 from LSP.plugin.core.views import did_change
 from LSP.plugin.core.views import did_open
@@ -11,11 +12,12 @@ from LSP.plugin.core.views import format_diagnostic_for_html
 from LSP.plugin.core.views import FORMAT_STRING, FORMAT_MARKED_STRING, FORMAT_MARKUP_CONTENT, minihtml
 from LSP.plugin.core.views import lsp_color_to_html
 from LSP.plugin.core.views import lsp_color_to_phantom
-from LSP.plugin.core.views import MissingFilenameError
+from LSP.plugin.core.views import MissingUriError
 from LSP.plugin.core.views import point_to_offset
 from LSP.plugin.core.views import range_to_region
 from LSP.plugin.core.views import selection_range_params
 from LSP.plugin.core.views import text2html
+from LSP.plugin.core.views import text_document_code_action_params
 from LSP.plugin.core.views import text_document_formatting
 from LSP.plugin.core.views import text_document_position_params
 from LSP.plugin.core.views import text_document_range_formatting
@@ -43,12 +45,25 @@ class ViewsTest(DeferrableTestCase):
         self.view.close()
         return super().tearDown()
 
-    def test_missing_filename(self) -> None:
-        self.view.file_name = MagicMock(return_value=None)
-        with self.assertRaises(MissingFilenameError):
+    def test_missing_uri(self) -> None:
+        self.view.settings().erase("lsp_uri")
+        with self.assertRaises(MissingUriError):
             uri_from_view(self.view)
 
+    def test_nonmissing_uri(self) -> None:
+
+        class MockSettings:
+
+            def get(value: str, default: Any) -> Any:
+                return "file:///hello/there.txt"
+
+        mock_settings = MockSettings()
+        self.view.settings = MagicMock(return_value=mock_settings)
+        uri = uri_from_view(self.view)
+        self.assertEqual(uri, "file:///hello/there.txt")
+
     def test_did_open(self) -> None:
+        self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
         self.assertEqual(did_open(self.view, "python").params, {
             "textDocument": {
                 "uri": filename_to_uri(self.mock_file_name),
@@ -60,6 +75,7 @@ class ViewsTest(DeferrableTestCase):
 
     def test_did_change_full(self) -> None:
         version = self.view.change_count()
+        self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
         self.assertEqual(did_change(self.view, version).params, {
             "textDocument": {
                 "uri": filename_to_uri(self.mock_file_name),
@@ -69,18 +85,21 @@ class ViewsTest(DeferrableTestCase):
         })
 
     def test_will_save(self) -> None:
-        self.assertEqual(will_save(self.view.file_name() or '', 42).params, {
+        self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
+        self.assertEqual(will_save(filename_to_uri(self.mock_file_name), 42).params, {
             "textDocument": {"uri": filename_to_uri(self.mock_file_name)},
             "reason": 42
         })
 
     def test_will_save_wait_until(self) -> None:
+        self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
         self.assertEqual(will_save_wait_until(self.view, 1337).params, {
             "textDocument": {"uri": filename_to_uri(self.mock_file_name)},
             "reason": 1337
         })
 
     def test_did_save(self) -> None:
+        self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
         self.assertEqual(did_save(self.view, include_text=False).params, {
             "textDocument": {"uri": filename_to_uri(self.mock_file_name)}
         })
@@ -90,6 +109,7 @@ class ViewsTest(DeferrableTestCase):
         })
 
     def test_text_document_position_params(self) -> None:
+        self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
         self.assertEqual(text_document_position_params(self.view, 2), {
             "textDocument": {"uri": filename_to_uri(self.mock_file_name)},
             "position": {"line": 0, "character": 2}
@@ -98,7 +118,10 @@ class ViewsTest(DeferrableTestCase):
     def test_text_document_formatting(self) -> None:
         self.view.settings = MagicMock(return_value={
             "translate_tabs_to_spaces": False,
-            "tab_size": 1234, "ensure_newline_at_eof_on_save": True})
+            "tab_size": 1234,
+            "ensure_newline_at_eof_on_save": True,
+            "lsp_uri": filename_to_uri(self.mock_file_name)
+        })
         self.assertEqual(text_document_formatting(self.view).params, {
             "textDocument": {"uri": filename_to_uri(self.mock_file_name)},
             "options": {
@@ -111,7 +134,10 @@ class ViewsTest(DeferrableTestCase):
         })
 
     def test_text_document_range_formatting(self) -> None:
-        self.view.settings = MagicMock(return_value={"tab_size": 4321})
+        self.view.settings = MagicMock(return_value={
+            "tab_size": 4321,
+            "lsp_uri": filename_to_uri(self.mock_file_name)
+        })
         self.assertEqual(text_document_range_formatting(self.view, sublime.Region(0, 2)).params, {
             "textDocument": {"uri": filename_to_uri(self.mock_file_name)},
             "options": {
@@ -140,8 +166,8 @@ class ViewsTest(DeferrableTestCase):
         self.assertEqual(point_to_offset(Point(1, foobarbaz_length + 2), self.view) - offset, 1)
 
     def test_selection_range_params(self) -> None:
-        self.view.sel().clear()
-        self.view.sel().add_all([sublime.Region(0, 5), sublime.Region(6, 11)])
+        self.view.run_command("lsp_selection_set", {"regions": [(0, 5), (6, 11)]})
+        self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
         self.assertEqual(len(self.view.sel()), 2)
         self.assertEqual(self.view.substr(self.view.sel()[0]), "hello")
         self.assertEqual(self.view.substr(self.view.sel()[1]), "world")
@@ -308,9 +334,35 @@ class ViewsTest(DeferrableTestCase):
         self.assertEqual(phantom.region, range_to_region(Range.from_lsp(response[0]["range"]), self.view))
 
     def test_document_color_params(self) -> None:
+        self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
         self.assertEqual(
             document_color_params(self.view),
-            {"textDocument": {"uri": filename_to_uri(self.view.file_name() or '')}})
+            {"textDocument": {"uri": filename_to_uri(self.mock_file_name)}})
+
+    def test_text_document_code_action_params(self) -> None:
+        self.view.settings().set("lsp_uri", filename_to_uri(self.mock_file_name))
+        diagnostic = {
+            "message": "oops",
+            "severity": 1,
+            "range": {
+                "start": {
+                    "character": 0,
+                    "line": 0
+                },
+                "end": {
+                    "character": 1,
+                    "line": 0
+                }
+            }
+        }  # type: Diagnostic
+        self.view.run_command("append", {"characters": "a b c\n"})
+        params = text_document_code_action_params(
+            view=self.view,
+            region=sublime.Region(0, 1),
+            diagnostics=[diagnostic],
+            on_save_actions=["refactor"]
+        )
+        self.assertEqual(params["textDocument"], {"uri": filename_to_uri(self.mock_file_name)})
 
     def test_format_diagnostic_for_html(self) -> None:
         diagnostic1 = {

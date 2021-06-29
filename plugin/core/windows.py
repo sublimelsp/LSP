@@ -34,6 +34,7 @@ import json
 import os
 import sublime
 import threading
+import urllib.parse
 
 
 _NO_DIAGNOSTICS_PLACEHOLDER = "  No diagnostics. Well done!"
@@ -247,10 +248,15 @@ class WindowManager(Manager):
 
     def _publish_sessions_to_listener_async(self, listener: AbstractViewListener) -> None:
         inside_workspace = self._workspace.contains(listener.view)
+        scheme = urllib.parse.urlparse(listener.get_uri()).scheme
         for session in self._sessions:
-            if session.can_handle(listener.view, None, inside_workspace):
+            if session.can_handle(listener.view, scheme, capability=None, inside_workspace=inside_workspace):
                 # debug("registering session", session.config.name, "to listener", listener)
-                listener.on_session_initialized_async(session)
+                try:
+                    listener.on_session_initialized_async(session)
+                except Exception as ex:
+                    message = "failed to register session {} to listener {}".format(session.config.name, listener)
+                    exception_log(message, ex)
 
     def window(self) -> sublime.Window:
         return self._window
@@ -258,8 +264,12 @@ class WindowManager(Manager):
     def sessions(self, view: sublime.View, capability: Optional[str] = None) -> Generator[Session, None, None]:
         inside_workspace = self._workspace.contains(view)
         sessions = list(self._sessions)
+        uri = view.settings().get("lsp_uri")
+        if not isinstance(uri, str):
+            return
+        scheme = urllib.parse.urlparse(uri).scheme
         for session in sessions:
-            if session.can_handle(view, capability, inside_workspace):
+            if session.can_handle(view, scheme, capability, inside_workspace):
                 yield session
 
     def get_session(self, config_name: str, file_path: str) -> Optional[Session]:
@@ -278,7 +288,7 @@ class WindowManager(Manager):
     def _needed_config(self, view: sublime.View) -> Optional[ClientConfig]:
         configs = self._configs.match_view(view)
         handled = False
-        file_name = view.file_name() or ''
+        file_name = view.file_name()
         inside = self._workspace.contains(view)
         for config in configs:
             handled = False

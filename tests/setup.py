@@ -106,7 +106,7 @@ class TextDocumentTestCase(DeferrableTestCase):
             "timeout": TIMEOUT_TIME}
         cls.session = cls.wm.get_session(cls.config.name, filename)
         yield {"condition": lambda: cls.session.state == ClientStates.READY, "timeout": TIMEOUT_TIME}
-        yield from cls.await_message("initialize")
+        cls.initialize_params = yield from cls.await_message("initialize")
         yield from cls.await_message("initialized")
         yield from close_test_view(cls.view)
 

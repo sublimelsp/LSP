@@ -973,7 +973,6 @@ class Session(TransportCallbacks):
                 'uri': filename_to_uri(filepath),
                 'type': file_watcher_kind_to_lsp_file_change_type(kind),
             })
-        print(self.config.name, changes)
         self.send_notification(Notification.didChangeWatchedFiles({'changes': changes}))
 
     # --- misc methods -------------------------------------------------------------------------------------------------
@@ -1255,7 +1254,7 @@ class Session(TransportCallbacks):
                     # Inform only after the response is sent, otherwise we might start doing requests for capabilities
                     # which are technically not yet done registering.
                     sublime.set_timeout_async(inform)
-            if self._watcher_impl and capability_path == "workspace.didChangeWatchedFiles":
+            if self._watcher_impl and capability_path == "didChangeWatchedFilesProvider":
                 capability_options = cast(DidChangeWatchedFilesRegistrationOptions, options)
                 file_watchers = []  # type: List[FileWatcher]
                 for config in capability_options.get("watchers", []):

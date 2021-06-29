@@ -1,6 +1,7 @@
 from .core.collections import DottedDict
 from .core.css import css
 from .core.file_watcher import FileWatcher
+from .core.file_watcher import FileWatcherEvent
 from .core.file_watcher import FileWatcherKind
 from .core.file_watcher import FileWatcherProtocol
 from .core.file_watcher import register_file_watcher_implementation
@@ -27,6 +28,7 @@ __all__ = [
     'DottedDict',
     'filename_to_uri',
     'FileWatcher',
+    'FileWatcherEvent',
     'FileWatcherKind',
     'FileWatcherProtocol',
     'Notification',

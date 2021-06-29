@@ -489,6 +489,10 @@ Follow installation instructions on [LSP-SourceKit](https://github.com/sublimels
 
 Follow installation instructions on [LSP-tagml](https://github.com/HuygensING/LSP-tagml).
 
+## Tailwind CSS
+
+Follow installation instructions on [LSP-tailwindcss](https://github.com/sublimelsp/LSP-tailwindcss).
+
 ## Terraform
 
 1. Install the [Terraform](https://packagecontrol.io/packages/Terraform) package from Package Control for syntax highlighting.

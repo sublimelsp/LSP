@@ -3,6 +3,7 @@ from .core.progress import ViewProgressReporter
 from .core.promise import Promise
 from .core.protocol import CodeLens
 from .core.protocol import DiagnosticTag
+from .core.protocol import DocumentUri
 from .core.protocol import Notification
 from .core.protocol import Request
 from .core.sessions import Session
@@ -15,8 +16,8 @@ from .core.windows import AbstractViewListener
 from .session_buffer import SessionBuffer
 from weakref import ref
 from weakref import WeakValueDictionary
-import sublime
 import functools
+import sublime
 
 DIAGNOSTIC_TAG_VALUES = [v for (k, v) in DiagnosticTag.__dict__.items() if not k.startswith('_')]
 
@@ -35,7 +36,7 @@ class SessionView:
 
     _session_buffers = WeakValueDictionary()  # type: WeakValueDictionary[Tuple[int, int], SessionBuffer]
 
-    def __init__(self, listener: AbstractViewListener, session: Session) -> None:
+    def __init__(self, listener: AbstractViewListener, session: Session, uri: DocumentUri) -> None:
         self.view = listener.view
         self.session = session
         self.active_requests = {}  # type: Dict[int, Request]
@@ -47,7 +48,7 @@ class SessionView:
         key = (id(session), buffer_id)
         session_buffer = self._session_buffers.get(key)
         if session_buffer is None:
-            session_buffer = SessionBuffer(self, buffer_id, listener.get_language_id())
+            session_buffer = SessionBuffer(self, buffer_id, uri)
             self._session_buffers[key] = session_buffer
         else:
             session_buffer.add_session_view(self)
@@ -150,6 +151,14 @@ class SessionView:
             if count == 0:
                 settings.erase(self.HOVER_PROVIDER_COUNT_KEY)
                 settings.set(self.SHOW_DEFINITIONS_KEY, True)
+
+    def get_uri(self) -> Optional[str]:
+        listener = self.listener()
+        return listener.get_uri() if listener else None
+
+    def get_language_id(self) -> Optional[str]:
+        listener = self.listener()
+        return listener.get_language_id() if listener else None
 
     def get_capability_async(self, capability_path: str) -> Optional[Any]:
         return self.session_buffer.get_capability(capability_path)
@@ -258,11 +267,11 @@ class SessionView:
     def purge_changes_async(self) -> None:
         self.session_buffer.purge_changes_async(self.view)
 
-    def on_pre_save_async(self, old_file_name: str) -> None:
-        self.session_buffer.on_pre_save_async(self.view, old_file_name)
+    def on_pre_save_async(self) -> None:
+        self.session_buffer.on_pre_save_async(self.view)
 
-    def on_post_save_async(self) -> None:
-        self.session_buffer.on_post_save_async(self.view)
+    def on_post_save_async(self, new_uri: DocumentUri) -> None:
+        self.session_buffer.on_post_save_async(self.view, new_uri)
 
     def _start_progress_reporter_async(self, request_id: int, title: str) -> ViewProgressReporter:
         progress = ViewProgressReporter(

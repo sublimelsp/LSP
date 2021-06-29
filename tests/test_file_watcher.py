@@ -2,7 +2,7 @@ from LSP.plugin import FileWatcher
 from LSP.plugin import FileWatcherEvent
 from LSP.plugin import FileWatcherKind
 from LSP.plugin import FileWatcherProtocol
-from LSP.plugin.core.file_watcher import FilePath, file_watcher_kind_to_lsp_file_change_type
+from LSP.plugin.core.file_watcher import file_watcher_kind_to_lsp_file_change_type
 from LSP.plugin.core.file_watcher import register_file_watcher_implementation
 from LSP.plugin.core.protocol import WatchKindChange, WatchKindCreate
 from LSP.plugin.core.types import ClientConfig

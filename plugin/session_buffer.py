@@ -70,7 +70,7 @@ class SessionBuffer:
         self.session = session_view.session
         self.session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
         self.session_views.add(session_view)
-        self.uri = uri
+        self.last_known_uri = uri
         self.id = buffer_id
         self.pending_changes = None  # type: Optional[PendingChanges]
         self.diagnostics = []  # type: List[Tuple[Diagnostic, sublime.Region]]
@@ -108,7 +108,7 @@ class SessionBuffer:
 
     def _check_did_close(self) -> None:
         if self.opened and self.should_notify_did_close():
-            self.session.send_notification(did_close(uri=self.uri))
+            self.session.send_notification(did_close(uri=self.last_known_uri))
             self.opened = False
 
     def get_uri(self) -> Optional[str]:
@@ -236,18 +236,18 @@ class SessionBuffer:
         if self.should_notify_will_save():
             self.purge_changes_async(view)
             # TextDocumentSaveReason.Manual
-            self.session.send_notification(will_save(self.uri, 1))
+            self.session.send_notification(will_save(self.last_known_uri, 1))
 
     def on_post_save_async(self, view: sublime.View, new_uri: DocumentUri) -> None:
-        if new_uri != self.uri:
+        if new_uri != self.last_known_uri:
             self._check_did_close()
-            self.uri = new_uri
+            self.last_known_uri = new_uri
             self._check_did_open(view)
         else:
             send_did_save, include_text = self.should_notify_did_save()
             if send_did_save:
                 self.purge_changes_async(view)
-                self.session.send_notification(did_save(view, include_text, self.uri))
+                self.session.send_notification(did_save(view, include_text, self.last_known_uri))
         if self.should_show_diagnostics_panel:
             mgr = self.session.manager()
             if mgr:

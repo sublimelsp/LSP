@@ -83,6 +83,7 @@
             "ClientSchemes": {
               "markdownDescription": "An optional list of URI schemes which this client configuration should attach to. A well-known URI scheme is the `file` scheme. The scheme `buffer` is used as in-memory scratch buffer (that is when you create a new unsaved tab). Furthermore, the scheme `res` is used to denote Sublime Text resource files inside .sublime-package files, viewable with the _View Package File_ command from the _Command Palette_.\n\nOther URI schemes exist, but require different considerations for different language servers.\n\nIf this setting is not specified, then only the `file` scheme is used, meaning that this client configuration will only attach to views that are backed by a file on disk.",
               "type": "array",
+              "uniqueItems": true,
               "items": {
                 "type": "string"
               },

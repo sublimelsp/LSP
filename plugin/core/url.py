@@ -1,6 +1,5 @@
 from .typing import Any, Tuple
 from urllib.parse import quote
-from urllib.parse import unquote
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 from urllib.request import pathname2url

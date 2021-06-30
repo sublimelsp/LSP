@@ -47,19 +47,19 @@ def uri_to_filename(uri: str) -> str:
         return url2pathname(parsed.path)
 
 
-def parse_uri(uri: str) -> Tuple[bool, str]:
+def parse_uri(uri: str) -> Tuple[str, str]:
     """
-    Parses an URI into a tuple where the first element is True if the URI is a
-    file URI, otherwise False. The second element is the local filesystem path
-    if the URI is a file URI, otherwise the second element is the original URI.
+    Parses an URI into a tuple where the first element is the URI scheme. The
+    second element is the local filesystem path if the URI is a file URI,
+    otherwise the second element is the original URI.
     """
     parsed = urlparse(uri)
     if parsed.scheme == "file":
         if os.name == 'nt':
             # TODO: this is wrong for UNC paths
-            return True, url2pathname(parsed.path).strip('\\')
-        return True, url2pathname(parsed.path)
-    return False, uri
+            return parsed.scheme, url2pathname(parsed.path).strip('\\')
+        return parsed.scheme, url2pathname(parsed.path)
+    return parsed.scheme, uri
 
 
 def _to_resource_uri(path: str, prefix: str) -> str:

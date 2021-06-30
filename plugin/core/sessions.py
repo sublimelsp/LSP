@@ -925,8 +925,8 @@ class Session(TransportCallbacks):
         yield from self._session_buffers
 
     def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> Optional[SessionBufferProtocol]:
-        isfile, parsed = parse_uri(uri)
-        if isfile:
+        scheme, parsed = parse_uri(uri)
+        if scheme == "file":
 
             def compare_by_samefile(sb: Optional[SessionBufferProtocol]) -> bool:
                 if not sb:

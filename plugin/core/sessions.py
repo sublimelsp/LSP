@@ -35,6 +35,7 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
+from .url import path_url_to_fs_path
 from .version import __version__
 from .views import COMPLETION_KINDS
 from .views import extract_variables
@@ -927,7 +928,7 @@ class Session(TransportCallbacks):
     def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> Optional[SessionBufferProtocol]:
         parsed = urllib.parse.urlparse(uri)
         if parsed.scheme == "file":
-            needle = urllib.parse.unquote(parsed.path)
+            needle = path_url_to_fs_path(parsed.path)
 
             def compare_by_samefile(sb: Optional[SessionBufferProtocol]) -> bool:
                 if not sb:
@@ -938,7 +939,7 @@ class Session(TransportCallbacks):
                 p = urllib.parse.urlparse(candidate)
                 if p.scheme != "file":
                     return False
-                return os.path.samefile(needle, urllib.parse.unquote(p.path))
+                return os.path.samefile(needle, path_url_to_fs_path(p.path))
 
             predicate = compare_by_samefile
         else:

@@ -1,5 +1,6 @@
 from .typing import Any
 from urllib.parse import quote
+from urllib.parse import unquote
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 from urllib.request import pathname2url
@@ -45,6 +46,14 @@ def uri_to_filename(uri: str) -> str:
         return url2pathname(parsed.path).strip('\\')
     else:
         return url2pathname(parsed.path)
+
+
+def path_url_to_fs_path(path: str) -> str:
+    """
+    Convert the "path" part of an URI to a path on the local filesystem.
+    The URI must have the "file" scheme.
+    """
+    return re.sub(r'^/([a-zA-Z]:/.+)', r'\1', unquote(path))
 
 
 def _to_resource_uri(path: str, prefix: str) -> str:

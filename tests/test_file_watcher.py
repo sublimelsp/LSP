@@ -4,7 +4,7 @@ from LSP.plugin import FileWatcherKind
 from LSP.plugin import FileWatcherProtocol
 from LSP.plugin.core.file_watcher import file_watcher_kind_to_lsp_file_change_type
 from LSP.plugin.core.file_watcher import register_file_watcher_implementation
-from LSP.plugin.core.protocol import WatchKindChange, WatchKindCreate
+from LSP.plugin.core.protocol import WatchKindChange, WatchKindCreate, WatchKindDelete
 from LSP.plugin.core.types import ClientConfig
 from LSP.plugin.core.typing import Generator, List
 from os.path import join
@@ -154,7 +154,7 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
                         'watchers': [
                             {
                                 'globPattern': '*.py',
-                                'kind': WatchKindCreate | WatchKindChange,
+                                'kind': WatchKindCreate | WatchKindChange | WatchKindDelete,
                             }
                         ]
                     }
@@ -165,7 +165,7 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
         self.assertEqual(len(TestFileWatcher._active_watchers), 1)
         watcher = TestFileWatcher._active_watchers[0]
         self.assertEqual(watcher.glob, '*.py')
-        self.assertEqual(watcher.kind, ['create', 'change'])
+        self.assertEqual(watcher.kind, ['create', 'change', 'delete'])
         self.assertEqual(watcher.root_path, self.folder_root_path)
         # Trigger the file event
         filepath = join(self.folder_root_path, 'file.py')

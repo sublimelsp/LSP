@@ -1290,11 +1290,10 @@ class Session(TransportCallbacks):
             debug("{}: unregistering capability:".format(self.config.name), capability_path)
             data = self._registrations.pop(registration_id, None)
             if self._watcher_impl and capability_path == "workspace.didChangeWatchedFiles":
-                file_watchers = self._dynamic_file_watchers.get(registration_id)
+                file_watchers = self._dynamic_file_watchers.pop(registration_id, None)
                 if file_watchers:
                     for file_watcher in file_watchers:
                         file_watcher.destroy()
-                    del self._dynamic_file_watchers[registration_id]
             if data and not data.selector:
                 discarded = self.capabilities.unregister(registration_id, capability_path, registration_path)
                 # We must inform our SessionViews of the removed capabilities, in case it's for instance a hoverProvider

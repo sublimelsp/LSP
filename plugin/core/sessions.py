@@ -35,6 +35,7 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
+from .url import parse_uri
 from .version import __version__
 from .views import COMPLETION_KINDS
 from .views import extract_variables
@@ -924,10 +925,28 @@ class Session(TransportCallbacks):
         yield from self._session_buffers
 
     def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> Optional[SessionBufferProtocol]:
-        for sb in self.session_buffers_async():
-            if sb.get_uri() == uri:
-                return sb
-        return None
+        scheme, parsed = parse_uri(uri)
+        if scheme == "file":
+
+            def compare_by_samefile(sb: Optional[SessionBufferProtocol]) -> bool:
+                if not sb:
+                    return False
+                candidate = sb.get_uri()
+                if not isinstance(candidate, str):
+                    return False
+                candidate_isfile, candidate_path = parse_uri(candidate)
+                if not candidate_isfile:
+                    return False
+                return os.path.samefile(parsed, candidate_path)
+
+            predicate = compare_by_samefile
+        else:
+
+            def compare_by_string(sb: Optional[SessionBufferProtocol]) -> bool:
+                return sb.get_uri() == parsed if sb else False
+
+            predicate = compare_by_string
+        return next(filter(predicate, self.session_buffers_async()), None)
 
     # --- capability observers -----------------------------------------------------------------------------------------
 

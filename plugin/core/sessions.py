@@ -50,6 +50,7 @@ import functools
 import mdpopups
 import os
 import sublime
+import urllib.parse
 import weakref
 
 
@@ -924,10 +925,29 @@ class Session(TransportCallbacks):
         yield from self._session_buffers
 
     def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> Optional[SessionBufferProtocol]:
-        for sb in self.session_buffers_async():
-            if sb.get_uri() == uri:
-                return sb
-        return None
+        parsed = urllib.parse.urlparse(uri)
+        if parsed.scheme == "file":
+            needle = urllib.parse.unquote(parsed.path)
+
+            def compare_by_samefile(sb: Optional[SessionBufferProtocol]) -> bool:
+                if not sb:
+                    return False
+                candidate = sb.get_uri()
+                if not isinstance(candidate, str):
+                    return False
+                p = urllib.parse.urlparse(candidate)
+                if p.scheme != "file":
+                    return False
+                return os.path.samefile(needle, urllib.parse.unquote(p.path))
+
+            predicate = compare_by_samefile
+        else:
+
+            def compare_by_string(sb: Optional[SessionBufferProtocol]) -> bool:
+                return sb.get_uri() == uri if sb else False
+
+            predicate = compare_by_string
+        return next(filter(predicate, self.session_buffers_async()), None)
 
     # --- capability observers -----------------------------------------------------------------------------------------
 

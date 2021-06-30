@@ -35,7 +35,7 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
-from .url import path_url_to_fs_path
+from .url import parse_uri
 from .version import __version__
 from .views import COMPLETION_KINDS
 from .views import extract_variables
@@ -51,7 +51,6 @@ import functools
 import mdpopups
 import os
 import sublime
-import urllib.parse
 import weakref
 
 
@@ -926,9 +925,8 @@ class Session(TransportCallbacks):
         yield from self._session_buffers
 
     def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> Optional[SessionBufferProtocol]:
-        parsed = urllib.parse.urlparse(uri)
-        if parsed.scheme == "file":
-            needle = path_url_to_fs_path(parsed.path)
+        isfile, parsed = parse_uri(uri)
+        if isfile:
 
             def compare_by_samefile(sb: Optional[SessionBufferProtocol]) -> bool:
                 if not sb:
@@ -936,16 +934,16 @@ class Session(TransportCallbacks):
                 candidate = sb.get_uri()
                 if not isinstance(candidate, str):
                     return False
-                p = urllib.parse.urlparse(candidate)
-                if p.scheme != "file":
+                candidate_isfile, candidate_path = parse_uri(candidate)
+                if not candidate_isfile:
                     return False
-                return os.path.samefile(needle, path_url_to_fs_path(p.path))
+                return os.path.samefile(parsed, candidate_path)
 
             predicate = compare_by_samefile
         else:
 
             def compare_by_string(sb: Optional[SessionBufferProtocol]) -> bool:
-                return sb.get_uri() == uri if sb else False
+                return sb.get_uri() == parsed if sb else False
 
             predicate = compare_by_string
         return next(filter(predicate, self.session_buffers_async()), None)

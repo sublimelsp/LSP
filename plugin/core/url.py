@@ -1,4 +1,4 @@
-from .typing import Any
+from .typing import Any, Tuple
 from urllib.parse import quote
 from urllib.parse import unquote
 from urllib.parse import urljoin
@@ -48,12 +48,19 @@ def uri_to_filename(uri: str) -> str:
         return url2pathname(parsed.path)
 
 
-def path_url_to_fs_path(path: str) -> str:
+def parse_uri(uri: str) -> Tuple[bool, str]:
     """
-    Convert the "path" part of an URI to a path on the local filesystem.
-    The URI must have the "file" scheme.
+    Parses an URI into a tuple where the first element is True if the URI is a
+    file URI, otherwise False. The second element is the local filesystem path
+    if the URI is a file URI, otherwise the second element is the original URI.
     """
-    return re.sub(r'^/([a-zA-Z]:/.+)', r'\1', unquote(path))
+    parsed = urlparse(uri)
+    if parsed.scheme == "file":
+        if os.name == 'nt':
+            # TODO: this is wrong for UNC paths
+            return True, url2pathname(parsed.path).strip('\\')
+        return True, url2pathname(parsed.path)
+    return False, uri
 
 
 def _to_resource_uri(path: str, prefix: str) -> str:

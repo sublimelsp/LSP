@@ -1,5 +1,5 @@
 from .collections import DottedDict
-from .file_watcher import FileWatcherKind
+from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
 from .protocol import TextDocumentSyncKindNone
 from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypedDict, TypeVar
@@ -26,7 +26,7 @@ PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
 
 FileWatcherConfig = TypedDict("FileWatcherConfig", {
     "pattern": Optional[str],
-    "events": Optional[List[FileWatcherKind]],
+    "events": Optional[List[FileWatcherEventType]],
     "ignores": Optional[List[str]],
 }, total=False)
 

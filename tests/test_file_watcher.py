@@ -1,8 +1,8 @@
 from LSP.plugin import FileWatcher
 from LSP.plugin import FileWatcherEvent
-from LSP.plugin import FileWatcherKind
+from LSP.plugin import FileWatcherEventType
 from LSP.plugin import FileWatcherProtocol
-from LSP.plugin.core.file_watcher import file_watcher_kind_to_lsp_file_change_type
+from LSP.plugin.core.file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from LSP.plugin.core.file_watcher import register_file_watcher_implementation
 from LSP.plugin.core.protocol import WatchKindChange, WatchKindCreate, WatchKindDelete
 from LSP.plugin.core.types import ClientConfig
@@ -37,7 +37,7 @@ class TestFileWatcher(FileWatcher):
         cls,
         root_path: str,
         pattern: str,
-        events: List[FileWatcherKind],
+        events: List[FileWatcherEventType],
         ignores: List[str],
         handler: FileWatcherProtocol
     ) -> 'TestFileWatcher':
@@ -49,7 +49,7 @@ class TestFileWatcher(FileWatcher):
         self,
         root_path: str,
         pattern: str,
-        events: List[FileWatcherKind],
+        events: List[FileWatcherEventType],
         ignores: List[str],
         handler: FileWatcherProtocol
     ) -> None:
@@ -138,7 +138,7 @@ class FileWatcherStaticTests(FileWatcherDocumentTestCase):
         self.assertIs(type(sent_notification['changes']), list)
         self.assertEqual(len(sent_notification['changes']), 1)
         change = sent_notification['changes'][0]
-        self.assertEqual(change['type'], file_watcher_kind_to_lsp_file_change_type('change'))
+        self.assertEqual(change['type'], file_watcher_event_type_to_lsp_file_change_type('change'))
         self.assertTrue(change['uri'].endswith('file.js'))
 
 
@@ -174,8 +174,8 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
         self.assertIs(type(sent_notification['changes']), list)
         self.assertEqual(len(sent_notification['changes']), 2)
         change1 = sent_notification['changes'][0]
-        self.assertEqual(change1['type'], file_watcher_kind_to_lsp_file_change_type('create'))
+        self.assertEqual(change1['type'], file_watcher_event_type_to_lsp_file_change_type('create'))
         self.assertTrue(change1['uri'].endswith('file.py'))
         change2 = sent_notification['changes'][1]
-        self.assertEqual(change2['type'], file_watcher_kind_to_lsp_file_change_type('change'))
+        self.assertEqual(change2['type'], file_watcher_event_type_to_lsp_file_change_type('change'))
         self.assertTrue(change2['uri'].endswith('file.py'))

@@ -7,23 +7,23 @@ from abc import abstractmethod
 DEFAULT_IGNORES = ['**/.git/**', '**/node_modules/**', '**/.hg/**']
 DEFAULT_KIND = WatchKindCreate | WatchKindChange | WatchKindDelete
 
-FileWatcherKind = Union[Literal['create'], Literal['change'], Literal['delete']]
+FileWatcherEventType = Union[Literal['create'], Literal['change'], Literal['delete']]
 FilePath = str
-FileWatcherEvent = Tuple[FileWatcherKind, FilePath]
+FileWatcherEvent = Tuple[FileWatcherEventType, FilePath]
 
 
-def lsp_watch_kind_to_file_watcher_kind(kind: WatchKind) -> List[FileWatcherKind]:
-    kinds = []  # type: List[FileWatcherKind]
+def lsp_watch_kind_to_file_watcher_event_types(kind: WatchKind) -> List[FileWatcherEventType]:
+    event_types = []  # type: List[FileWatcherEventType]
     if kind & WatchKindCreate:
-        kinds.append('create')
+        event_types.append('create')
     if kind & WatchKindChange:
-        kinds.append('change')
+        event_types.append('change')
     if kind & WatchKindDelete:
-        kinds.append('delete')
-    return kinds
+        event_types.append('delete')
+    return event_types
 
 
-def file_watcher_kind_to_lsp_file_change_type(kind: FileWatcherKind) -> FileChangeType:
+def file_watcher_event_type_to_lsp_file_change_type(kind: FileWatcherEventType) -> FileChangeType:
     return {
         'create': FileChangeTypeCreated,
         'change': FileChangeTypeChanged,
@@ -56,7 +56,7 @@ class FileWatcher(metaclass=ABCMeta):
         cls,
         root_path: str,
         pattern: str,
-        events: List[FileWatcherKind],
+        events: List[FileWatcherEventType],
         ignores: List[str],
         handler: FileWatcherProtocol
     ) -> 'FileWatcher':

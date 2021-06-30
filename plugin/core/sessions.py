@@ -3,11 +3,11 @@ from .edit import apply_workspace_edit
 from .edit import parse_workspace_edit
 from .file_watcher import DEFAULT_IGNORES
 from .file_watcher import DEFAULT_KIND
-from .file_watcher import file_watcher_kind_to_lsp_file_change_type
+from .file_watcher import file_watcher_event_type_to_lsp_file_change_type
 from .file_watcher import FileWatcher
 from .file_watcher import FileWatcherEvent
 from .file_watcher import get_file_watcher_implementation
-from .file_watcher import lsp_watch_kind_to_file_watcher_kind
+from .file_watcher import lsp_watch_kind_to_file_watcher_event_types
 from .logging import debug
 from .logging import exception_log
 from .open import center_selection
@@ -998,10 +998,10 @@ class Session(TransportCallbacks):
     def on_file_event_async(self, events: List[FileWatcherEvent]) -> None:
         changes = []  # type: List[FileEvent]
         for event in events:
-            kind, filepath = event
+            event_type, filepath = event
             changes.append({
                 'uri': filename_to_uri(filepath),
-                'type': file_watcher_kind_to_lsp_file_change_type(kind),
+                'type': file_watcher_event_type_to_lsp_file_change_type(event_type),
             })
         self.send_notification(Notification.didChangeWatchedFiles({'changes': changes}))
 
@@ -1293,7 +1293,7 @@ class Session(TransportCallbacks):
                 file_watchers = []  # type: List[FileWatcher]
                 for config in capability_options.get("watchers", []):
                     pattern = config.get("globPattern", '')
-                    kind = lsp_watch_kind_to_file_watcher_kind(config.get("kind") or DEFAULT_KIND)
+                    kind = lsp_watch_kind_to_file_watcher_event_types(config.get("kind") or DEFAULT_KIND)
                     for folder in self.get_workspace_folders():
                         watcher = self._watcher_impl.create(folder.path, pattern, kind, DEFAULT_IGNORES, self)
                         file_watchers.append(watcher)

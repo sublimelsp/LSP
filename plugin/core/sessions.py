@@ -1063,12 +1063,12 @@ class Session(TransportCallbacks):
             debug('{}: supported code action kinds: {}'.format(self.config.name, code_action_kinds))
         if self._watcher_impl:
             config = self.config.file_watcher
-            glob = config.get('glob')
-            if glob:
-                kind = config.get('kind') or ['create', 'change', 'delete']
+            pattern = config.get('pattern')
+            if pattern:
+                events = config.get('events') or ['create', 'change', 'delete']
                 ignores = config.get('ignores') or DEFAULT_IGNORES
                 for folder in self.get_workspace_folders():
-                    watcher = self._watcher_impl.create(folder.path, glob, kind, ignores, self)
+                    watcher = self._watcher_impl.create(folder.path, pattern, events, ignores, self)
                     self._static_file_watchers.append(watcher)
         if self._init_callback:
             self._init_callback(self, False)
@@ -1292,10 +1292,10 @@ class Session(TransportCallbacks):
                 capability_options = cast(DidChangeWatchedFilesRegistrationOptions, options)
                 file_watchers = []  # type: List[FileWatcher]
                 for config in capability_options.get("watchers", []):
-                    glob = config.get("globPattern", '')
+                    pattern = config.get("globPattern", '')
                     kind = lsp_watch_kind_to_file_watcher_kind(config.get("kind") or DEFAULT_KIND)
                     for folder in self.get_workspace_folders():
-                        watcher = self._watcher_impl.create(folder.path, glob, kind, DEFAULT_IGNORES, self)
+                        watcher = self._watcher_impl.create(folder.path, pattern, kind, DEFAULT_IGNORES, self)
                         file_watchers.append(watcher)
                 self._dynamic_file_watchers[registration_id] = file_watchers
         self.send_response(Response(request_id, None))

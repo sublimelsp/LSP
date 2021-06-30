@@ -30,17 +30,17 @@
               "type": "object",
               "examples": [
                 {
-                  "glob": "{**/*.js,**/*.ts,**/*.json}",
-                  "kind": ["create", "change", "delete"],
+                  "pattern": "{**/*.js,**/*.ts,**/*.json}",
+                  "events": ["create", "change", "delete"],
                   "ignores": ["**/.git/**", "**/node_modules/**", "**/.hg/**"]
                 }
               ],
               "additionalProperties": false,
               "properties": {
-                "glob": {
+                "pattern": {
                   "type": "string"
                 },
-                "kind": {
+                "events": {
                   "type": "array",
                   "items": {
                     "type": "string",

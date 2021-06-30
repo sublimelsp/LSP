@@ -36,26 +36,26 @@ class TestFileWatcher(FileWatcher):
     def create(
         cls,
         root_path: str,
-        glob: str,
-        kind: List[FileWatcherKind],
+        pattern: str,
+        events: List[FileWatcherKind],
         ignores: List[str],
         handler: FileWatcherProtocol
     ) -> 'TestFileWatcher':
-        watcher = TestFileWatcher(root_path, glob, kind, ignores, handler)
+        watcher = TestFileWatcher(root_path, pattern, events, ignores, handler)
         cls._active_watchers.append(watcher)
         return watcher
 
     def __init__(
         self,
         root_path: str,
-        glob: str,
-        kind: List[FileWatcherKind],
+        pattern: str,
+        events: List[FileWatcherKind],
         ignores: List[str],
         handler: FileWatcherProtocol
     ) -> None:
         self.root_path = root_path
-        self.glob = glob
-        self.kind = kind
+        self.pattern = pattern
+        self.events = events
         self.ignores = ignores
         self.handler = handler
 
@@ -111,8 +111,8 @@ class FileWatcherStaticTests(FileWatcherDocumentTestCase):
             super().get_stdio_test_config(),
             {
                 'file_watcher': {
-                    'glob': '*.js',
-                    'kind': ['change'],
+                    'pattern': '*.js',
+                    'events': ['change'],
                     'ignores': ['.git'],
                 }
             }
@@ -125,8 +125,8 @@ class FileWatcherStaticTests(FileWatcherDocumentTestCase):
         # Starting a session should have created a watcher.
         self.assertEqual(len(TestFileWatcher._active_watchers), 1)
         watcher = TestFileWatcher._active_watchers[0]
-        self.assertEqual(watcher.glob, '*.js')
-        self.assertEqual(watcher.kind, ['change'])
+        self.assertEqual(watcher.pattern, '*.js')
+        self.assertEqual(watcher.events, ['change'])
         self.assertEqual(watcher.ignores, ['.git'])
         self.assertEqual(watcher.root_path, self.folder_root_path)
 
@@ -164,8 +164,8 @@ class FileWatcherDynamicTests(FileWatcherDocumentTestCase):
         yield self.make_server_do_fake_request('client/registerCapability', registration_params)
         self.assertEqual(len(TestFileWatcher._active_watchers), 1)
         watcher = TestFileWatcher._active_watchers[0]
-        self.assertEqual(watcher.glob, '*.py')
-        self.assertEqual(watcher.kind, ['create', 'change', 'delete'])
+        self.assertEqual(watcher.pattern, '*.py')
+        self.assertEqual(watcher.events, ['create', 'change', 'delete'])
         self.assertEqual(watcher.root_path, self.folder_root_path)
         # Trigger the file event
         filepath = join(self.folder_root_path, 'file.py')

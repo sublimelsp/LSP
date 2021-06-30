@@ -1,17 +1,21 @@
 from LSP.plugin.core.collections import DottedDict
+from LSP.plugin.core.protocol import Diagnostic
 from LSP.plugin.core.protocol import Error
-from LSP.plugin.core.protocol import TextDocumentSyncKindFull, TextDocumentSyncKindNone, TextDocumentSyncKindIncremental
+from LSP.plugin.core.protocol import TextDocumentSyncKindFull
+from LSP.plugin.core.protocol import TextDocumentSyncKindIncremental
+from LSP.plugin.core.protocol import TextDocumentSyncKindNone
 from LSP.plugin.core.protocol import WorkspaceFolder
-from LSP.plugin.core.sessions import Logger
 from LSP.plugin.core.sessions import get_initialize_params
+from LSP.plugin.core.sessions import Logger
 from LSP.plugin.core.sessions import Manager
 from LSP.plugin.core.sessions import Session
 from LSP.plugin.core.types import ClientConfig
-from LSP.plugin.core.typing import Any, Optional, Generator
+from LSP.plugin.core.typing import Any, Optional, Generator, List, Dict
 from test_mocks import TEST_CONFIG
 import sublime
 import unittest
 import unittest.mock
+import weakref
 
 
 class MockManager(Manager):
@@ -65,6 +69,41 @@ class MockLogger(Logger):
         pass
 
     def incoming_notification(self, method: str, params: Any, unhandled: bool) -> None:
+        pass
+
+
+class MockSessionBuffer:
+
+    def __init__(self, session: Session, mock_uri: str, mock_language_id: str) -> None:
+        self.session = session
+        self.session_views = weakref.WeakSet()
+        self.mock_uri = mock_uri
+        self.mock_language_id = mock_language_id
+
+    def get_uri(self) -> Optional[str]:
+        return self.mock_uri
+
+    def get_language_id(self) -> Optional[str]:
+        return self.mock_language_id
+
+    def register_capability_async(
+        self,
+        registration_id: str,
+        capability_path: str,
+        registration_path: str,
+        options: Dict[str, Any]
+    ) -> None:
+        pass
+
+    def unregister_capability_async(
+        self,
+        registration_id: str,
+        capability_path: str,
+        registration_path: str
+    ) -> None:
+        pass
+
+    def on_diagnostics_async(self, raw_diagnostics: List[Diagnostic], version: Optional[int]) -> None:
         pass
 
 
@@ -197,3 +236,19 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(session.text_sync_kind(), TextDocumentSyncKindIncremental)
         self.assertFalse(session.should_notify_will_save())
         self.assertEqual(session.should_notify_did_save(), (False, False))
+
+    def test_get_session_buffer_for_uri_with_nonfiles(self) -> None:
+        manager = MockManager(sublime.active_window())
+        session = Session(manager=manager, logger=MockLogger(), workspace_folders=[], config=TEST_CONFIG,
+                          plugin_class=None)
+        original = MockSessionBuffer(session, "some-scheme://whatever", "somelang")
+        session.register_session_buffer_async(original)
+        sb = session.get_session_buffer_for_uri_async("some-scheme://whatever")
+        self.assertIsNotNone(sb)
+        assert sb
+        self.assertEqual(sb.get_language_id(), "somelang")
+        self.assertEqual(sb.get_uri(), "some-scheme://whatever")
+
+    def test_get_session_buffer_for_uri_with_files(self) -> None:
+        # todo: write windows-only test
+        pass

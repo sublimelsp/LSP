@@ -46,13 +46,11 @@ jobs:
       - run: echo "$HOME/Library/Python/3.7/bin" >> $GITHUB_PATH
       - run: python3 tests/server.py --version
       - run: python3 tests/adjust_unittesting_config_for_ci.py && cat unittesting.json
-      - run: curl --silent https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/ci.sh --output ci.sh
+      - run: curl -OL https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/github.sh
       - run: |
-          sh ci.sh bootstrap
-          sh ci.sh install_package_control
-          subl --stay &
-          sleep 8
-          sh ci.sh run_tests
+          sh github.sh bootstrap
+          sh github.sh install_package_control
+          sh github.sh run_tests
         name: Run UnitTesting tests
 
   Linux:
@@ -60,15 +58,14 @@ jobs:
     container: sublimetext/unittesting
     steps:
       - uses: actions/checkout@v1
+      - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
       - run: sudo apt update
       - run: sudo apt install --no-install-recommends -y x11-xserver-utils python3-pip
       - run: sh -e /etc/init.d/xvfb start
       - run: curl -OL https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/github.sh
-      - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
       - run: python3 tests/server.py --version
       - run: python3 tests/adjust_unittesting_config_for_ci.py && cat unittesting.json
       - run: |
-          PATH="$HOME/.local/bin:$PATH"
           sh github.sh bootstrap
           sh github.sh install_package_control
           sh github.sh run_tests

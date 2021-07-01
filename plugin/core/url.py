@@ -21,7 +21,6 @@ def filename_to_uri(file_name: str) -> str:
     if file_name.startswith(prefix) and not os.path.exists(file_name):
         return _to_resource_uri(file_name, prefix)
     path = pathname2url(file_name)
-    re.sub(r"^([A-Z]):/", _lowercase_driveletter, path)
     return urljoin("file:", path)
 
 
@@ -42,7 +41,8 @@ def uri_to_filename(uri: str) -> str:
     assert parsed.scheme == "file"
     if os.name == 'nt':
         # url2pathname does not understand %3A (VS Code's encoding forced on all servers :/)
-        return url2pathname(parsed.path).strip('\\')
+        path = url2pathname(parsed.path).strip('\\')
+        return re.sub(r"^([a-z]):", _uppercase_driveletter, path)
     else:
         return url2pathname(parsed.path)
 
@@ -71,8 +71,8 @@ def _to_resource_uri(path: str, prefix: str) -> str:
     return "res://Packages{}".format(quote(path[len(prefix):]))
 
 
-def _lowercase_driveletter(match: Any) -> str:
+def _uppercase_driveletter(match: Any) -> str:
     """
-    For compatibility with certain other language clients.
+    For compatibility with Sublime's VCS status in the status bar.
     """
-    return "{}:/".format(match.group(1).lower())
+    return "{}:".format(match.group(1).upper())

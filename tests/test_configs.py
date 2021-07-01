@@ -93,7 +93,7 @@ class ConfigParsingTests(DeferrableTestCase):
         }
         config = read_client_config("pyls", settings)
         self.assertTrue(config.is_disabled_capability("colorProvider"))
-        # If only a sub path is disabled, the entire capability should not be disabled as a whole.
+        # If only a sub path is disabled, the entire capability should not be disabled as a whole
         self.assertFalse(config.is_disabled_capability("completionProvider"))
         # This sub path should be disabled.
         self.assertTrue(config.is_disabled_capability("completionProvider.triggerCharacters"))

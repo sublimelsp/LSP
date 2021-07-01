@@ -4,6 +4,8 @@ from LSP.plugin.core.views import to_encoded_filename
 from os import environ
 from os.path import dirname, pathsep
 from unittesting import DeferrableTestCase
+import unittest
+import sys
 
 test_file_path = dirname(__file__) + "/testfile.txt"
 
@@ -97,7 +99,7 @@ class ConfigParsingTests(DeferrableTestCase):
         self.assertTrue(config.is_disabled_capability("completionProvider.triggerCharacters"))
         # But not this sub path
         self.assertFalse(config.is_disabled_capability("completionProvider.resolveProvider"))
-        # The entire codeActionProvider is disabld
+        # The entire codeActionProvider is disabled
         self.assertTrue(config.is_disabled_capability("codeActionProvider"))
         # If codeActionProvider is disabled, all of its sub paths should be disabled as well
         self.assertTrue(config.is_disabled_capability("codeActionProvider.codeActionKinds"))
@@ -117,6 +119,7 @@ class ConfigParsingTests(DeferrableTestCase):
         self.assertNotIn("triggerCharacters", options)
         self.assertIn("resolveProvider", options)
 
+    @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
     def test_path_maps(self):
         config = read_client_config("asdf", {
             "command": ["asdf"],
@@ -129,10 +132,6 @@ class ConfigParsingTests(DeferrableTestCase):
                 {
                     "local": "/home/user/projects/another",
                     "remote": "/workspace2"
-                },
-                {
-                    "local": "C:/Documents",
-                    "remote": "/workspace3"
                 }
             ]
         })
@@ -140,21 +139,12 @@ class ConfigParsingTests(DeferrableTestCase):
         self.assertEqual(uri, "file:///workspace/file.js")
         uri = config.map_client_path_to_server_uri("/home/user/projects/another/foo.js")
         self.assertEqual(uri, "file:///workspace2/foo.js")
-        uri = config.map_client_path_to_server_uri("C:/Documents/bar.ts")
-        self.assertEqual(uri, "file:///workspace3/bar.ts")
         uri = config.map_client_path_to_server_uri("/some/path/with/no/mapping.py")
         self.assertEqual(uri, "file:///some/path/with/no/mapping.py")
         path = config.map_server_uri_to_client_path("file:///workspace/bar.html")
         self.assertEqual(path, "/home/user/projects/myproject/bar.html")
         path = config.map_server_uri_to_client_path("file:///workspace2/style.css")
         self.assertEqual(path, "/home/user/projects/another/style.css")
-        path = config.map_server_uri_to_client_path("file:///workspace3/bar.ts")
-        self.assertEqual(path, "C:/Documents/bar.ts")
-
-        # FIXME: What if the server is running on a Windows VM,
-        # but locally we are running Linux?
-        path = config.map_server_uri_to_client_path("file:///c%3A/dir%20ectory/file.txt")
-        self.assertEqual(path, "/c:/dir ectory/file.txt")
 
         # Test to_encoded_filename
         uri, position = get_uri_and_position_from_location({

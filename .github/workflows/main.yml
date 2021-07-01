@@ -22,6 +22,22 @@ env:
   UNITTESTING_TAG: master
 
 jobs:
+  Windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - run: (new-object net.webclient).DownloadFile("https://raw.githubusercontent.com/SublimeText/UnitTesting/master/sbin/github.ps1","github.ps1")
+      - run: python tests/server.py --version
+      - run: python tests/adjust_unittesting_config_for_ci.py
+      - run: |
+          ./github.ps1 "bootstrap" -verbose
+          ./github.ps1 "install_package_control" -verbose
+          ./github.ps1 "run_tests" -coverage -verbose
+        name: Run UnitTesting tests
+
   macOS:
     runs-on: macos-latest
     steps:

@@ -55,7 +55,9 @@ jobs:
 
   Linux:
     runs-on: ubuntu-latest
-    container: sublimetext/unittesting
+    container:
+      image: sublimetext/unittesting
+      options: --cap-add=NET_ADMIN
     steps:
       - uses: actions/checkout@v1
       - run: echo "$HOME/.local/bin" >> $GITHUB_PATH

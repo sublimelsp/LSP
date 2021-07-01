@@ -16,7 +16,7 @@ class WindowsTests(unittest.TestCase):
     @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
     def test_converts_encoded_bad_drive_uri_to_path(self):
         # url2pathname does not understand %3A
-        self.assertEqual("c:\\dir ectory\\file.txt", uri_to_filename("file:///c%3A/dir%20ectory/file.txt"))
+        self.assertEqual("C:\\dir ectory\\file.txt", uri_to_filename("file:///c%3A/dir%20ectory/file.txt"))
 
 
 class NixTests(unittest.TestCase):

@@ -119,7 +119,6 @@ class ConfigParsingTests(DeferrableTestCase):
         self.assertNotIn("triggerCharacters", options)
         self.assertIn("resolveProvider", options)
 
-
     @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
     def test_path_maps(self):
         config = read_client_config("asdf", {

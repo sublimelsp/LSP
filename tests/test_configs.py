@@ -95,15 +95,15 @@ class ConfigParsingTests(DeferrableTestCase):
         self.assertTrue(config.is_disabled_capability("colorProvider"))
         # If only a sub path is disabled, the entire capability should not be disabled as a whole
         self.assertFalse(config.is_disabled_capability("completionProvider"))
-        # This sub path should be disabled.
+        # This sub path should be disabled
         self.assertTrue(config.is_disabled_capability("completionProvider.triggerCharacters"))
-        # But not this sub path.
+        # But not this sub path
         self.assertFalse(config.is_disabled_capability("completionProvider.resolveProvider"))
-        # The entire codeActionProvider is disabled.
+        # The entire codeActionProvider is disabled
         self.assertTrue(config.is_disabled_capability("codeActionProvider"))
-        # If codeActionProvider is disabled, all of its sub paths should be disabled as well.
+        # If codeActionProvider is disabled, all of its sub paths should be disabled as well
         self.assertTrue(config.is_disabled_capability("codeActionProvider.codeActionKinds"))
-        # This one should be enabled.
+        # This one should be enabled
         self.assertFalse(config.is_disabled_capability("definitionProvider"))
 
     def test_filter_out_disabled_capabilities_ignore_partially(self):

@@ -21,7 +21,6 @@ def filename_to_uri(file_name: str) -> str:
     if file_name.startswith(prefix) and not os.path.exists(file_name):
         return _to_resource_uri(file_name, prefix)
     path = pathname2url(file_name)
-    re.sub(r"^([A-Z]):/", _lowercase_driveletter, path)
     return urljoin("file:", path)
 
 
@@ -77,10 +76,3 @@ def _uppercase_driveletter(match: Any) -> str:
     For compatibility with Sublime's VCS status in the status bar.
     """
     return "{}:".format(match.group(1).upper())
-
-
-def _lowercase_driveletter(match: Any) -> str:
-    """
-    For compatibility with certain other language clients.
-    """
-    return "{}:/".format(match.group(1).lower())

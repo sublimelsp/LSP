@@ -140,8 +140,6 @@ class ConfigParsingTests(DeferrableTestCase):
         self.assertEqual(uri, "file:///workspace/file.js")
         uri = config.map_client_path_to_server_uri("/home/user/projects/another/foo.js")
         self.assertEqual(uri, "file:///workspace2/foo.js")
-        uri = config.map_client_path_to_server_uri("C:/Documents/bar.ts")
-        self.assertEqual(uri, "file:///workspace3/bar.ts")
         uri = config.map_client_path_to_server_uri("/some/path/with/no/mapping.py")
         self.assertEqual(uri, "file:///some/path/with/no/mapping.py")
         path = config.map_server_uri_to_client_path("file:///workspace/bar.html")

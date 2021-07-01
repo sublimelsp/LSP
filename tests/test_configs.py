@@ -4,6 +4,8 @@ from LSP.plugin.core.views import to_encoded_filename
 from os import environ
 from os.path import dirname, pathsep
 from unittesting import DeferrableTestCase
+import unittest
+import sys
 
 test_file_path = dirname(__file__) + "/testfile.txt"
 
@@ -117,6 +119,8 @@ class ConfigParsingTests(DeferrableTestCase):
         self.assertNotIn("triggerCharacters", options)
         self.assertIn("resolveProvider", options)
 
+
+    @unittest.skipIf(sys.platform.startswith("win"), "requires non-Windows")
     def test_path_maps(self):
         config = read_client_config("asdf", {
             "command": ["asdf"],
@@ -129,10 +133,6 @@ class ConfigParsingTests(DeferrableTestCase):
                 {
                     "local": "/home/user/projects/another",
                     "remote": "/workspace2"
-                },
-                {
-                    "local": "C:/Documents",
-                    "remote": "/workspace3"
                 }
             ]
         })
@@ -148,13 +148,6 @@ class ConfigParsingTests(DeferrableTestCase):
         self.assertEqual(path, "/home/user/projects/myproject/bar.html")
         path = config.map_server_uri_to_client_path("file:///workspace2/style.css")
         self.assertEqual(path, "/home/user/projects/another/style.css")
-        path = config.map_server_uri_to_client_path("file:///workspace3/bar.ts")
-        self.assertEqual(path, "C:/Documents/bar.ts")
-
-        # FIXME: What if the server is running on a Windows VM,
-        # but locally we are running Linux?
-        path = config.map_server_uri_to_client_path("file:///c%3A/dir%20ectory/file.txt")
-        self.assertEqual(path, "/c:/dir ectory/file.txt")
 
         # Test to_encoded_filename
         uri, position = get_uri_and_position_from_location({

@@ -42,7 +42,8 @@ def uri_to_filename(uri: str) -> str:
     assert parsed.scheme == "file"
     if os.name == 'nt':
         # url2pathname does not understand %3A (VS Code's encoding forced on all servers :/)
-        return url2pathname(parsed.path).strip('\\')
+        path = url2pathname(parsed.path).strip('\\')
+        return re.sub(r"^([a-z]):", _uppercase_driveletter, path)
     else:
         return url2pathname(parsed.path)
 
@@ -69,6 +70,13 @@ def _to_resource_uri(path: str, prefix: str) -> str:
     See: https://github.com/sublimehq/sublime_text/issues/3742
     """
     return "res://Packages{}".format(quote(path[len(prefix):]))
+
+
+def _uppercase_driveletter(match: Any) -> str:
+    """
+    For compatibility with Sublime's VCS status in the status bar.
+    """
+    return "{}:".format(match.group(1).upper())
 
 
 def _lowercase_driveletter(match: Any) -> str:

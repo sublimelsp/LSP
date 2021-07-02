@@ -928,7 +928,8 @@ class Session(TransportCallbacks):
         scheme, parsed = parse_uri(uri)
         if scheme == "file":
             if not os.path.exists(parsed):
-                return debug("{}: path does not exist:".format(self.config.name), uri)
+                debug("{}: path does not exist:".format(self.config.name), uri)
+                return None
 
             def compare_by_samefile(sb: Optional[SessionBufferProtocol]) -> bool:
                 if not sb:

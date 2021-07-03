@@ -1,7 +1,9 @@
 from .collections import DottedDict
+from .file_watcher import FileWatcherEventType
 from .logging import debug, set_debug_logging
 from .protocol import TextDocumentSyncKindNone
-from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypeVar
+from .typing import Any, Optional, List, Dict, Generator, Callable, Iterable, Union, Set, Tuple, TypedDict, TypeVar
+from .typing import cast
 from .url import filename_to_uri
 from .url import uri_to_filename
 from threading import RLock
@@ -21,6 +23,12 @@ FEATURES_TIMEOUT = 300  # milliseconds
 
 PANEL_FILE_REGEX = r"^(?!\s+\d+:\d+)(.*)(:)$"
 PANEL_LINE_REGEX = r"^\s+(\d+):(\d+)"
+
+FileWatcherConfig = TypedDict("FileWatcherConfig", {
+    "pattern": Optional[str],
+    "events": Optional[List[FileWatcherEventType]],
+    "ignores": Optional[List[str]],
+}, total=False)
 
 
 def basescope2languageid(base_scope: str) -> str:
@@ -548,6 +556,7 @@ class ClientConfig:
                  env: Dict[str, str] = {},
                  experimental_capabilities: Optional[Dict[str, Any]] = None,
                  disabled_capabilities: DottedDict = DottedDict(),
+                 file_watcher: FileWatcherConfig = {},
                  path_maps: Optional[List[PathMap]] = None) -> None:
         self.name = name
         self.selector = selector
@@ -569,6 +578,7 @@ class ClientConfig:
         self.env = env
         self.experimental_capabilities = experimental_capabilities
         self.disabled_capabilities = disabled_capabilities
+        self.file_watcher = file_watcher
         self.path_maps = path_maps
         self.status_key = "lsp_{}".format(self.name)
 
@@ -580,6 +590,7 @@ class ClientConfig:
         init_options = DottedDict(base.get("initializationOptions", {}))
         init_options.update(read_dict_setting(s, "initializationOptions", {}))
         disabled_capabilities = s.get("disabled_capabilities")
+        file_watcher = cast(FileWatcherConfig, read_dict_setting(s, "file_watcher", {}))
         if isinstance(disabled_capabilities, dict):
             disabled_capabilities = DottedDict(disabled_capabilities)
         else:
@@ -599,6 +610,7 @@ class ClientConfig:
             env=read_dict_setting(s, "env", {}),
             experimental_capabilities=s.get("experimental_capabilities"),
             disabled_capabilities=disabled_capabilities,
+            file_watcher=file_watcher,
             path_maps=PathMap.parse(s.get("path_maps"))
         )
 
@@ -626,6 +638,7 @@ class ClientConfig:
             env=d.get("env", dict()),
             experimental_capabilities=d.get("experimental_capabilities"),
             disabled_capabilities=disabled_capabilities,
+            file_watcher=d.get("file_watcher", dict()),
             path_maps=PathMap.parse(d.get("path_maps"))
         )
 
@@ -653,6 +666,7 @@ class ClientConfig:
             experimental_capabilities=override.get(
                 "experimental_capabilities", src_config.experimental_capabilities),
             disabled_capabilities=disabled_capabilities,
+            file_watcher=override.get("file_watcher", src_config.file_watcher),
             path_maps=path_map_override if path_map_override else src_config.path_maps
         )
 

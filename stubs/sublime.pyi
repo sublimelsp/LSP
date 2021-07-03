@@ -485,7 +485,7 @@ class Window:
     def project_data(self) -> Optional[dict]:
         ...
 
-    def set_project_data(self, v: dict) -> None:
+    def set_project_data(self, v: Union[dict, None]) -> None:
         ...
 
     def settings(self) -> Settings:

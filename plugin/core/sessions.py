@@ -1,6 +1,13 @@
 from .collections import DottedDict
 from .edit import apply_workspace_edit
 from .edit import parse_workspace_edit
+from .file_watcher import DEFAULT_IGNORES
+from .file_watcher import DEFAULT_KIND
+from .file_watcher import file_watcher_event_type_to_lsp_file_change_type
+from .file_watcher import FileWatcher
+from .file_watcher import FileWatcherEvent
+from .file_watcher import get_file_watcher_implementation
+from .file_watcher import lsp_watch_kind_to_file_watcher_event_types
 from .logging import debug
 from .logging import exception_log
 from .open import center_selection
@@ -13,10 +20,12 @@ from .protocol import Command
 from .protocol import CompletionItemTag
 from .protocol import Diagnostic
 from .protocol import DiagnosticTag
+from .protocol import DidChangeWatchedFilesRegistrationOptions
 from .protocol import DocumentUri
 from .protocol import Error
 from .protocol import ErrorCode
 from .protocol import ExecuteCommandParams
+from .protocol import FileEvent
 from .protocol import Notification
 from .protocol import RangeLsp
 from .protocol import Request
@@ -35,6 +44,7 @@ from .types import DocumentSelector
 from .types import method_to_capability
 from .types import SettingsRegistration
 from .typing import Callable, cast, Dict, Any, Optional, List, Tuple, Generator, Type, Protocol, Mapping, Union
+from .url import filename_to_uri
 from .url import parse_uri
 from .version import __version__
 from .views import COMPLETION_KINDS
@@ -124,177 +134,183 @@ def get_initialize_params(variables: Dict[str, str], workspace_folders: List[Wor
     completion_tag_value_set = [v for k, v in CompletionItemTag.__dict__.items() if not k.startswith('_')]
     symbol_tag_value_set = [v for k, v in SymbolTag.__dict__.items() if not k.startswith('_')]
     first_folder = workspace_folders[0] if workspace_folders else None
-    capabilities = {
-        "general": {
-            # https://microsoft.github.io/language-server-protocol/specification#regExp
-            "regularExpressions": {
-                # https://www.sublimetext.com/docs/completions.html#ver-dev
-                # https://www.boost.org/doc/libs/1_64_0/libs/regex/doc/html/boost_regex/syntax/perl_syntax.html
-                # ECMAScript syntax is a subset of Perl syntax
-                "engine": "ECMAScript"
+    general_capabilities = {
+        # https://microsoft.github.io/language-server-protocol/specification#regExp
+        "regularExpressions": {
+            # https://www.sublimetext.com/docs/completions.html#ver-dev
+            # https://www.boost.org/doc/libs/1_64_0/libs/regex/doc/html/boost_regex/syntax/perl_syntax.html
+            # ECMAScript syntax is a subset of Perl syntax
+            "engine": "ECMAScript"
+        },
+        # https://microsoft.github.io/language-server-protocol/specification#markupContent
+        "markdown": {
+            # https://python-markdown.github.io
+            "parser": "Python-Markdown",
+            "version": mdpopups.markdown.__version__  # type: ignore
+        }
+    }
+    text_document_capabilities = {
+        "synchronization": {
+            "dynamicRegistration": True,  # exceptional
+            "didSave": True,
+            "willSave": True,
+            "willSaveWaitUntil": True
+        },
+        "hover": {
+            "dynamicRegistration": True,
+            "contentFormat": ["markdown", "plaintext"]
+        },
+        "completion": {
+            "dynamicRegistration": True,
+            "completionItem": {
+                "snippetSupport": True,
+                "deprecatedSupport": True,
+                "documentationFormat": ["markdown", "plaintext"],
+                "tagSupport": {
+                    "valueSet": completion_tag_value_set
+                },
+                "resolveSupport": {
+                    "properties": ["detail", "documentation", "additionalTextEdits"]
+                }
             },
-            # https://microsoft.github.io/language-server-protocol/specification#markupContent
-            "markdown": {
-                # https://python-markdown.github.io
-                "parser": "Python-Markdown",
-                "version": mdpopups.markdown.__version__  # type: ignore
+            "completionItemKind": {
+                "valueSet": completion_kinds
             }
         },
-        "textDocument": {
-            "synchronization": {
-                "dynamicRegistration": True,  # exceptional
-                "didSave": True,
-                "willSave": True,
-                "willSaveWaitUntil": True
-            },
-            "hover": {
-                "dynamicRegistration": True,
-                "contentFormat": ["markdown", "plaintext"]
-            },
-            "completion": {
-                "dynamicRegistration": True,
-                "completionItem": {
-                    "snippetSupport": True,
-                    "deprecatedSupport": True,
-                    "documentationFormat": ["markdown", "plaintext"],
-                    "tagSupport": {
-                        "valueSet": completion_tag_value_set
-                    },
-                    "resolveSupport": {
-                        "properties": ["detail", "documentation", "additionalTextEdits"]
-                    }
-                },
-                "completionItemKind": {
-                    "valueSet": completion_kinds
+        "signatureHelp": {
+            "dynamicRegistration": True,
+            "signatureInformation": {
+                "documentationFormat": ["markdown", "plaintext"],
+                "parameterInformation": {
+                    "labelOffsetSupport": True
                 }
+            }
+        },
+        "references": {
+            "dynamicRegistration": True
+        },
+        "documentHighlight": {
+            "dynamicRegistration": True
+        },
+        "documentSymbol": {
+            "dynamicRegistration": True,
+            "hierarchicalDocumentSymbolSupport": True,
+            "symbolKind": {
+                "valueSet": symbol_kinds
             },
-            "signatureHelp": {
-                "dynamicRegistration": True,
-                "signatureInformation": {
-                    "documentationFormat": ["markdown", "plaintext"],
-                    "parameterInformation": {
-                        "labelOffsetSupport": True
-                    }
-                }
-            },
-            "references": {
-                "dynamicRegistration": True
-            },
-            "documentHighlight": {
-                "dynamicRegistration": True
-            },
-            "documentSymbol": {
-                "dynamicRegistration": True,
-                "hierarchicalDocumentSymbolSupport": True,
-                "symbolKind": {
-                    "valueSet": symbol_kinds
-                },
-                "tagSupport": {
-                    "valueSet": symbol_tag_value_set
-                }
-            },
-            "formatting": {
-                "dynamicRegistration": True  # exceptional
-            },
-            "rangeFormatting": {
-                "dynamicRegistration": True
-            },
-            "declaration": {
-                "dynamicRegistration": True,
-                "linkSupport": True
-            },
-            "definition": {
-                "dynamicRegistration": True,
-                "linkSupport": True
-            },
-            "typeDefinition": {
-                "dynamicRegistration": True,
-                "linkSupport": True
-            },
-            "implementation": {
-                "dynamicRegistration": True,
-                "linkSupport": True
-            },
-            "codeAction": {
-                "dynamicRegistration": True,
-                "codeActionLiteralSupport": {
-                    "codeActionKind": {
-                        "valueSet": [
-                            "quickfix",
-                            "refactor",
-                            "refactor.extract",
-                            "refactor.inline",
-                            "refactor.rewrite",
-                            "source.organizeImports"
-                        ]
-                    }
-                },
-                "dataSupport": True,
-                "resolveSupport": {
-                    "properties": [
-                        "edit"
+            "tagSupport": {
+                "valueSet": symbol_tag_value_set
+            }
+        },
+        "formatting": {
+            "dynamicRegistration": True  # exceptional
+        },
+        "rangeFormatting": {
+            "dynamicRegistration": True
+        },
+        "declaration": {
+            "dynamicRegistration": True,
+            "linkSupport": True
+        },
+        "definition": {
+            "dynamicRegistration": True,
+            "linkSupport": True
+        },
+        "typeDefinition": {
+            "dynamicRegistration": True,
+            "linkSupport": True
+        },
+        "implementation": {
+            "dynamicRegistration": True,
+            "linkSupport": True
+        },
+        "codeAction": {
+            "dynamicRegistration": True,
+            "codeActionLiteralSupport": {
+                "codeActionKind": {
+                    "valueSet": [
+                        "quickfix",
+                        "refactor",
+                        "refactor.extract",
+                        "refactor.inline",
+                        "refactor.rewrite",
+                        "source.organizeImports"
                     ]
                 }
             },
-            "rename": {
-                "dynamicRegistration": True,
-                "prepareSupport": True
-            },
-            "colorProvider": {
-                "dynamicRegistration": True  # exceptional
-            },
-            "publishDiagnostics": {
-                "relatedInformation": True,
-                "tagSupport": {
-                    "valueSet": diagnostic_tag_value_set
-                },
-                "versionSupport": True,
-                "codeDescriptionSupport": True,
-                "dataSupport": True
-            },
-            "selectionRange": {
-                "dynamicRegistration": True
-            },
-            "codeLens": {
-                "dynamicRegistration": True
+            "dataSupport": True,
+            "resolveSupport": {
+                "properties": [
+                    "edit"
+                ]
             }
         },
-        "workspace": {
-            "applyEdit": True,
-            "didChangeConfiguration": {
-                "dynamicRegistration": True
-            },
-            "executeCommand": {},
-            "workspaceEdit": {
-                "documentChanges": True,
-                "failureHandling": "abort",
-            },
-            "workspaceFolders": True,
-            "symbol": {
-                "dynamicRegistration": True,  # exceptional
-                "symbolKind": {
-                    "valueSet": symbol_kinds
-                },
-                "tagSupport": {
-                    "valueSet": symbol_tag_value_set
-                }
-            },
-            "configuration": True
+        "rename": {
+            "dynamicRegistration": True,
+            "prepareSupport": True
         },
-        "window": {
-            "showDocument": {
-                "support": True
+        "colorProvider": {
+            "dynamicRegistration": True  # exceptional
+        },
+        "publishDiagnostics": {
+            "relatedInformation": True,
+            "tagSupport": {
+                "valueSet": diagnostic_tag_value_set
             },
-            "showMessage": {
-                "messageActionItem": {
-                    "additionalPropertiesSupport": True
-                }
-            },
-            "workDoneProgress": True
+            "versionSupport": True,
+            "codeDescriptionSupport": True,
+            "dataSupport": True
+        },
+        "selectionRange": {
+            "dynamicRegistration": True
+        },
+        "codeLens": {
+            "dynamicRegistration": True
         }
+    }
+    workspace_capabilites = {
+        "applyEdit": True,
+        "didChangeConfiguration": {
+            "dynamicRegistration": True
+        },
+        "executeCommand": {},
+        "workspaceEdit": {
+            "documentChanges": True,
+            "failureHandling": "abort",
+        },
+        "workspaceFolders": True,
+        "symbol": {
+            "dynamicRegistration": True,  # exceptional
+            "symbolKind": {
+                "valueSet": symbol_kinds
+            },
+            "tagSupport": {
+                "valueSet": symbol_tag_value_set
+            }
+        },
+        "configuration": True
+    }
+    window_capabilities = {
+        "showDocument": {
+            "support": True
+        },
+        "showMessage": {
+            "messageActionItem": {
+                "additionalPropertiesSupport": True
+            }
+        },
+        "workDoneProgress": True
+    }
+    capabilities = {
+        "general": general_capabilities,
+        "textDocument": text_document_capabilities,
+        "workspace": workspace_capabilites,
+        "window": window_capabilities,
     }
     if config.experimental_capabilities is not None:
         capabilities['experimental'] = config.experimental_capabilities
+    if get_file_watcher_implementation():
+        text_document_capabilities["didChangeWatchedFiles"] = {"dynamicRegistration": True}
     return {
         "processId": os.getpid(),
         "clientInfo": {
@@ -626,30 +642,6 @@ class AbstractPlugin(metaclass=ABCMeta):
         """
         return False
 
-    def on_register_capability_async(self, registration_id: str, capability_path: str, options: Dict[str, Any]) -> None:
-        """
-        Notifies about server dynamically registering a capability using the client/registerCapability request.
-        This API is triggered on async thread.
-
-        :param registration_id: The registration identifier
-        :param capability_path: The registration capability path
-        :param options: The registration options
-        """
-        pass
-
-    def on_unregister_capability_async(
-        self, registration_id: str, capability_path: str, options: Dict[str, Any]
-    ) -> None:
-        """
-        Notifies about server un-registering a capability using the client/unregisterCapability request.
-        This API is triggered on async thread.
-
-        :param registration_id: The registration identifier
-        :param capability_path: The registration capability path
-        :param options: The registration options
-        """
-        pass
-
     def on_session_end_async(self) -> None:
         """
         Notifies about the session ending (also if the session has crashed). Provides an opportunity to clean up
@@ -851,6 +843,9 @@ class Session(TransportCallbacks):
         self._session_views = WeakSet()  # type: WeakSet[SessionViewProtocol]
         self._session_buffers = WeakSet()  # type: WeakSet[SessionBufferProtocol]
         self._progress = {}  # type: Dict[str, Optional[WindowProgressReporter]]
+        self._watcher_impl = get_file_watcher_implementation()
+        self._static_file_watchers = []  # type: List[FileWatcher]
+        self._dynamic_file_watchers = {}  # type: Dict[str, List[FileWatcher]]
         self._plugin_class = plugin_class
         self._plugin = None  # type: Optional[AbstractPlugin]
         self._status_messages = {}  # type: Dict[str, str]
@@ -999,6 +994,18 @@ class Session(TransportCallbacks):
     def should_notify_did_close(self) -> bool:
         return self.capabilities.should_notify_did_close()
 
+    # --- FileWatcherProtocol ------------------------------------------------------------------------------------------
+
+    def on_file_event_async(self, events: List[FileWatcherEvent]) -> None:
+        changes = []  # type: List[FileEvent]
+        for event in events:
+            event_type, filepath = event
+            changes.append({
+                'uri': filename_to_uri(filepath),
+                'type': file_watcher_event_type_to_lsp_file_change_type(event_type),
+            })
+        self.send_notification(Notification.didChangeWatchedFiles({'changes': changes}))
+
     # --- misc methods -------------------------------------------------------------------------------------------------
 
     def handles_path(self, file_path: Optional[str], inside_workspace: bool) -> bool:
@@ -1055,6 +1062,15 @@ class Session(TransportCallbacks):
         code_action_kinds = self.get_capability('codeActionProvider.codeActionKinds')
         if code_action_kinds:
             debug('{}: supported code action kinds: {}'.format(self.config.name, code_action_kinds))
+        if self._watcher_impl:
+            config = self.config.file_watcher
+            pattern = config.get('pattern')
+            if pattern:
+                events = config.get('events') or ['create', 'change', 'delete']
+                ignores = config.get('ignores') or DEFAULT_IGNORES
+                for folder in self.get_workspace_folders():
+                    watcher = self._watcher_impl.create(folder.path, pattern, events, ignores, self)
+                    self._static_file_watchers.append(watcher)
         if self._init_callback:
             self._init_callback(self, False)
             self._init_callback = None
@@ -1273,10 +1289,16 @@ class Session(TransportCallbacks):
                     # Inform only after the response is sent, otherwise we might start doing requests for capabilities
                     # which are technically not yet done registering.
                     sublime.set_timeout_async(inform)
-            if self._plugin:
-                inform = functools.partial(
-                    self._plugin.on_register_capability_async, registration_id, capability_path, options)
-                sublime.set_timeout_async(inform)
+            if self._watcher_impl and capability_path == "didChangeWatchedFilesProvider":
+                capability_options = cast(DidChangeWatchedFilesRegistrationOptions, options)
+                file_watchers = []  # type: List[FileWatcher]
+                for config in capability_options.get("watchers", []):
+                    pattern = config.get("globPattern", '')
+                    kind = lsp_watch_kind_to_file_watcher_event_types(config.get("kind") or DEFAULT_KIND)
+                    for folder in self.get_workspace_folders():
+                        watcher = self._watcher_impl.create(folder.path, pattern, kind, DEFAULT_IGNORES, self)
+                        file_watchers.append(watcher)
+                self._dynamic_file_watchers[registration_id] = file_watchers
         self.send_response(Response(request_id, None))
 
     def m_client_unregisterCapability(self, params: Any, request_id: Any) -> None:
@@ -1287,8 +1309,11 @@ class Session(TransportCallbacks):
             capability_path, registration_path = method_to_capability(unregistration["method"])
             debug("{}: unregistering capability:".format(self.config.name), capability_path)
             data = self._registrations.pop(registration_id, None)
-            if data and self._plugin:
-                self._plugin.on_unregister_capability_async(registration_id, capability_path, data.options)
+            if self._watcher_impl and capability_path == "workspace.didChangeWatchedFiles":
+                file_watchers = self._dynamic_file_watchers.pop(registration_id, None)
+                if file_watchers:
+                    for file_watcher in file_watchers:
+                        file_watcher.destroy()
             if data and not data.selector:
                 discarded = self.capabilities.unregister(registration_id, capability_path, registration_path)
                 # We must inform our SessionViews of the removed capabilities, in case it's for instance a hoverProvider
@@ -1382,6 +1407,13 @@ class Session(TransportCallbacks):
             sv.shutdown_async()
         self.capabilities.clear()
         self._registrations.clear()
+        for watcher in self._static_file_watchers:
+            watcher.destroy()
+        self._static_file_watchers = []
+        for watchers in self._dynamic_file_watchers.values():
+            for watcher in watchers:
+                watcher.destroy()
+        self._dynamic_file_watchers = {}
         self.state = ClientStates.STOPPING
         self.send_request_async(Request.shutdown(), self._handle_shutdown_result, self._handle_shutdown_result)
 

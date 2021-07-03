@@ -621,6 +621,9 @@ class Sheet:
     def window(self) -> Optional[Window]:
         ...
 
+    def group(self) -> int:
+        ...
+
     def view(self) -> 'Optional[View]':
         ...
 

@@ -338,6 +338,9 @@ class SessionViewProtocol(Protocol):
     def get_language_id(self) -> Optional[str]:
         ...
 
+    def get_view_for_group(self, group: int) -> Optional[sublime.View]:
+        ...
+
     def on_capability_added_async(self, registration_id: str, capability_path: str, options: Dict[str, Any]) -> None:
         ...
 
@@ -375,6 +378,9 @@ class SessionBufferProtocol(Protocol):
         ...
 
     def get_language_id(self) -> Optional[str]:
+        ...
+
+    def get_view_in_group(self, group: int) -> sublime.View:
         ...
 
     def register_capability_async(
@@ -937,8 +943,12 @@ class Session(TransportCallbacks):
 
             predicate = compare_by_samefile
         else:
+            print("comparing by string... searching for", parsed)
 
             def compare_by_string(sb: Optional[SessionBufferProtocol]) -> bool:
+                if not sb:
+                    return False
+                print("does", sb.get_uri(), "match?")
                 return sb.get_uri() == parsed if sb else False
 
             predicate = compare_by_string
@@ -1147,6 +1157,16 @@ class Session(TransportCallbacks):
         flags: int = 0,
         group: int = -1
     ) -> Promise[bool]:
+        # Try to find a pre-existing session-buffer
+        sb = self.get_session_buffer_for_uri_async(uri)
+        if sb:
+            view = sb.get_view_in_group(group)
+            self.window.focus_view(view)
+            if r:
+                center_selection(view, r)
+            return Promise.resolve(True)
+        # There is no pre-existing session-buffer, so we either have to open a file the regular old way with
+        # window.open_file or go through AbstractPlugin.on_open_uri_async.
         if uri.startswith("file:"):
             # TODO: open_file_and_center_async seems broken for views that have *just* been opened via on_load
             path = self.config.map_server_uri_to_client_path(uri)

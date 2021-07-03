@@ -97,6 +97,11 @@
   // using a keyboard shortcut or the context menu.
   "show_code_actions": "annotation",
 
+  // Show code lens:
+  // "annotation" - show an annotation on the right when code actions are available
+  // "phantom" - show a phantom on the top when code actions are available
+  "show_code_lens": "annotation",
+
   // Show code actions in hover popup if available
   "show_code_actions_in_hover": true,
 

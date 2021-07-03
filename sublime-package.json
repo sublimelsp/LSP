@@ -298,6 +298,18 @@
               "default": "annotation",
               "markdownDescription": "Where to show `\"code actions\"`. Due to API limitations, the `\"bulb\"` icon can not be clicked so the code actions can only be triggered using a keyboard shortcut or the context menu."
             },
+            "show_code_lens": {
+              "enum": [
+                "annotation",
+                "phantom"
+              ],
+              "enumDescriptions": [
+                "Show code lens to right as a clickable greenish annotation.",
+                "Show code lens as a phantom."
+              ],
+              "default": "annotation",
+              "markdownDescription": "Where to show `\"code lens\"`."
+            },
             "show_code_actions_in_hover": {
               "type": "boolean",
               "default": true,

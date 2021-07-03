@@ -308,13 +308,15 @@ class SessionView:
         if self._code_lenses.is_empty():
             return
         promises = []  # type: List[Promise[None]]
-        for code_lens in self._code_lenses.unresolved_visible_code_lens(self.view.visible_region()):
+        for code_lens in self._code_lenses.unresolved_visible_code_lenses(self.view.visible_region()):
             callback = functools.partial(code_lens.resolve, self.view)
             promise = self.session.send_request_task(
                 Request("codeLens/resolve", code_lens.data, self.view)
             ).then(callback)
             promises.append(promise)
-        Promise.all(promises).then(lambda _: self._code_lenses.render())
+        mode = userprefs().show_code_lens
+        render = functools.partial(self._code_lenses.render, mode)
+        Promise.all(promises).then(lambda _: sublime.set_timeout(render))
 
     def get_resolved_code_lenses_for_region(self, region: sublime.Region) -> Generator[CodeLens, None, None]:
         yield from self._code_lenses.get_resolved_code_lenses_for_region(region)

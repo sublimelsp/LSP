@@ -150,7 +150,8 @@ class CodeLensView:
             for key, group in self._code_lenses.items():
                 region = sublime.Region(*key)
                 phantom_region = self._get_phantom_region(region)
-                html = '\n<small style="font-family: system">|</small>\n'.join(lens.small_html for lens in group)
+                html = '<body id="lsp-code-lens">{}</body>'.format(
+                    '\n<small style="font-family: system">|</small>\n'.join(lens.small_html for lens in group))
                 phantoms.append(sublime.Phantom(phantom_region, html, sublime.LAYOUT_BELOW))
             self._phantom.update(phantoms)
         else:  # 'annotation'

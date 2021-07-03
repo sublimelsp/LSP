@@ -922,6 +922,9 @@ class Session(TransportCallbacks):
     def get_session_buffer_for_uri_async(self, uri: DocumentUri) -> Optional[SessionBufferProtocol]:
         scheme, parsed = parse_uri(uri)
         if scheme == "file":
+            if not os.path.exists(parsed):
+                debug("{}: path does not exist:".format(self.config.name), uri)
+                return None
 
             def compare_by_samefile(sb: Optional[SessionBufferProtocol]) -> bool:
                 if not sb:
@@ -929,10 +932,8 @@ class Session(TransportCallbacks):
                 candidate = sb.get_uri()
                 if not isinstance(candidate, str):
                     return False
-                candidate_isfile, candidate_path = parse_uri(candidate)
-                if not candidate_isfile:
-                    return False
-                return os.path.samefile(parsed, candidate_path)
+                candidate_scheme, candidate_path = parse_uri(candidate)
+                return candidate_scheme == "file" and os.path.samefile(parsed, candidate_path)
 
             predicate = compare_by_samefile
         else:

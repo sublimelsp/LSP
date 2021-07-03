@@ -153,9 +153,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                 this._on_settings_object_changed()
 
         self._current_syntax = None
-        foreign_uri = view.settings().get("lsp_uri")
-        if isinstance(foreign_uri, str):
-            self._uri = foreign_uri
+        existing_uri = view.settings().get("lsp_uri")
+        if isinstance(existing_uri, str):
+            self._uri = existing_uri
         else:
             self.set_uri(view_to_uri(view))
         self._registration = SettingsRegistration(view.settings(), on_change=on_change)
@@ -797,8 +797,15 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
 
     def _on_settings_object_changed(self) -> None:
         new_syntax = self.view.settings().get("syntax")
+        new_uri = self.view.settings().get("lsp_uri")
+        something_changed = False
         if new_syntax != self._current_syntax:
             self._current_syntax = new_syntax
+            something_changed = True
+        if isinstance(new_uri, str) and new_uri != self._uri:
+            self._uri = new_uri
+            something_changed = True
+        if something_changed:
             self._reset()
 
     def __repr__(self) -> str:

@@ -929,7 +929,6 @@ class Session(TransportCallbacks):
         scheme, parsed = parse_uri(uri)
         if scheme == "file":
             if not os.path.exists(parsed):
-                debug("{}: path does not exist:".format(self.config.name), uri)
                 return None
 
             def compare_by_samefile(sb: Optional[SessionBufferProtocol]) -> bool:
@@ -943,12 +942,10 @@ class Session(TransportCallbacks):
 
             predicate = compare_by_samefile
         else:
-            print("comparing by string... searching for", parsed)
 
             def compare_by_string(sb: Optional[SessionBufferProtocol]) -> bool:
                 if not sb:
                     return False
-                print("does", sb.get_uri(), "match?")
                 return sb.get_uri() == parsed if sb else False
 
             predicate = compare_by_string

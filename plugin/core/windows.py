@@ -6,8 +6,10 @@ from .logging import debug
 from .logging import exception_log
 from .message_request_handler import MessageRequestHandler
 from .panels import log_server_message
+from .promise import Promise
 from .protocol import Diagnostic
 from .protocol import Error
+from .protocol import Location
 from .sessions import get_plugin
 from .sessions import Logger
 from .sessions import Manager
@@ -18,6 +20,7 @@ from .settings import userprefs
 from .transports import create_transport
 from .types import ClientConfig
 from .typing import Optional, Any, Dict, Deque, List, Generator, Tuple, Iterable, Sequence, Union
+from .url import parse_uri
 from .views import extract_variables
 from .views import make_link
 from .workspace import ProjectFolders
@@ -188,6 +191,25 @@ class WindowManager(Manager):
 
     def disable_config_async(self, config_name: str) -> None:
         self._configs.disable_config(config_name)
+
+    def open_location_async(
+        self,
+        location: Location,
+        session_name: Optional[str],
+        view: sublime.View,
+        flags: int = 0,
+        group: int = -1
+    ) -> Promise[bool]:
+        uri = view.settings().get("lsp_uri")
+        if not isinstance(uri, str):
+            return Promise.resolve(False)
+        scheme, parsed = parse_uri(uri)
+        inside_workspace = self._workspace.contains(parsed) if scheme == "file" else False
+        for session in self.sessions(view):
+            if session_name is None or session_name == session.config.name:
+                if session.can_handle(view, scheme, capability=None, inside_workspace=inside_workspace):
+                    return session.open_location_async(location, flags, group)
+        return Promise.resolve(False)
 
     def register_listener_async(self, listener: AbstractViewListener) -> None:
         set_diagnostics_count(listener.view, self.total_error_count, self.total_warning_count)

@@ -1157,6 +1157,12 @@ class Session(TransportCallbacks):
         flags: int = 0,
         group: int = -1
     ) -> Promise[bool]:
+        if uri.startswith("file:"):
+            # TODO: open_file_and_center_async seems broken for views that have *just* been opened via on_load
+            path = self.config.map_server_uri_to_client_path(uri)
+            pos = r["start"] if r else {"line": 0, "character": 0}  # type: Position
+            self.window.open_file(to_encoded_filename(path, pos), flags | sublime.ENCODED_POSITION, group)
+            return Promise.resolve(True)
         # Try to find a pre-existing session-buffer
         sb = self.get_session_buffer_for_uri_async(uri)
         if sb:
@@ -1165,14 +1171,7 @@ class Session(TransportCallbacks):
             if r:
                 center_selection(view, r)
             return Promise.resolve(True)
-        # There is no pre-existing session-buffer, so we either have to open a file the regular old way with
-        # window.open_file or go through AbstractPlugin.on_open_uri_async.
-        if uri.startswith("file:"):
-            # TODO: open_file_and_center_async seems broken for views that have *just* been opened via on_load
-            path = self.config.map_server_uri_to_client_path(uri)
-            pos = r["start"] if r else {"line": 0, "character": 0}  # type: Position
-            self.window.open_file(to_encoded_filename(path, pos), flags | sublime.ENCODED_POSITION, group)
-            return Promise.resolve(True)
+        # There is no pre-existing session-buffer, so we have to go through AbstractPlugin.on_open_uri_async.
         if self._plugin:
             # I cannot type-hint an unpacked tuple
             pair = Promise.packaged_task()  # type: PackagedTask[Tuple[str, str, str]]

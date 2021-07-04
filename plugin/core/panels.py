@@ -147,14 +147,11 @@ def log_server_message(window: sublime.Window, prefix: str, message: str) -> Non
     if not window.is_valid():
         return
     window_id = window.id()
-    messages = WindowPanelListener.server_log_map.get(window_id)
-    if messages is None:
-        return
-    messages.append((prefix, message))
-    list_len = len(messages)
+    WindowPanelListener.server_log_map[window_id].append((prefix, message))
+    list_len = len(WindowPanelListener.server_log_map[window_id])
     if list_len >= SERVER_PANEL_MAX_LINES:
         # Trim leading items in the list, leaving only the max allowed count.
-        del messages[:list_len - SERVER_PANEL_MAX_LINES]
+        del WindowPanelListener.server_log_map[window_id][:list_len - SERVER_PANEL_MAX_LINES]
     panel = ensure_server_panel(window)
     if is_server_panel_open(window) and panel:
         update_server_panel(panel, window_id)
